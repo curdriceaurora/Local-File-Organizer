@@ -20,7 +20,7 @@ HashAlgorithm = Literal["md5", "sha256"]
 logger = logging.getLogger(__name__)
 
 
-def _hash_file(path: Path, algorithm: str = "sha256", chunk_size: int = 65536) -> str:
+def _hash_file(path: Path, algorithm: HashAlgorithm = "sha256", chunk_size: int = 65536) -> str:
     """Hash a single file using the specified algorithm.
 
     This is a module-level function so it can be pickled for use with

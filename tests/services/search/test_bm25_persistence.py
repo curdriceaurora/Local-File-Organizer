@@ -141,10 +141,11 @@ class TestBM25PersistenceLoad:
         temp_cache_path: Path,
     ) -> None:
         """Loading from nonexistent file returns (None, [])."""
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
     def test_load_saved_index_succeeds(
         self,
@@ -155,11 +156,14 @@ class TestBM25PersistenceLoad:
     ) -> None:
         """Load returns the same index and paths that were saved."""
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
-        loaded_index, loaded_paths, loaded_documents = persistence.load(temp_cache_path)
+        loaded_index, loaded_paths, loaded_documents, loaded_fingerprint = persistence.load(
+            temp_cache_path
+        )
 
         assert loaded_index is not None
         assert loaded_paths == sample_paths
         assert loaded_documents == []
+        assert loaded_fingerprint == ""
 
     def test_loaded_index_is_functional(
         self,
@@ -170,7 +174,7 @@ class TestBM25PersistenceLoad:
     ) -> None:
         """Loaded index can be used for scoring queries."""
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
-        loaded_index, _, _ = persistence.load(temp_cache_path)
+        loaded_index, _, _, _ = persistence.load(temp_cache_path)
 
         assert loaded_index is not None
         # Test that loaded index works for scoring
@@ -200,10 +204,11 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump("invalid data", f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
     def test_load_missing_paths_key_returns_index_with_empty_paths(
         self,
@@ -216,11 +221,12 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         # Index is present, paths/documents default to empty lists
         assert bm25 is not None  # Index is present
         assert paths == []  # Default value
         assert documents == []
+        assert fingerprint == ""
 
     def test_load_invalid_paths_type_returns_none(
         self,
@@ -233,10 +239,11 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
 
 # ---------------------------------------------------------------------------
@@ -380,12 +387,15 @@ class TestBM25PersistenceIntegration:
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
 
         # Load
-        loaded_index, loaded_paths, loaded_documents = persistence.load(temp_cache_path)
+        loaded_index, loaded_paths, loaded_documents, loaded_fingerprint = persistence.load(
+            temp_cache_path
+        )
 
         # Verify
         assert loaded_index is not None
         assert loaded_paths == sample_paths
         assert loaded_documents == []
+        assert loaded_fingerprint == ""
         assert persistence.is_valid(temp_cache_path)
 
     def test_multiple_save_load_cycles(
@@ -404,16 +414,18 @@ class TestBM25PersistenceIntegration:
 
         # First cycle
         persistence.save(sample_bm25_index, paths1, temp_cache_path)
-        _, loaded_paths1, loaded_documents1 = persistence.load(temp_cache_path)
+        _, loaded_paths1, loaded_documents1, loaded_fingerprint1 = persistence.load(temp_cache_path)
         assert loaded_paths1 == paths1
         assert loaded_documents1 == []
+        assert loaded_fingerprint1 == ""
 
         # Second cycle (overwrite)
         persistence.save(sample_bm25_index, paths2, temp_cache_path)
-        _, loaded_paths2, loaded_documents2 = persistence.load(temp_cache_path)
+        _, loaded_paths2, loaded_documents2, loaded_fingerprint2 = persistence.load(temp_cache_path)
         assert loaded_paths2 == paths2
         assert loaded_paths2 != paths1
         assert loaded_documents2 == []
+        assert loaded_fingerprint2 == ""
 
     def test_delete_invalidates_cache(
         self,
@@ -432,10 +444,11 @@ class TestBM25PersistenceIntegration:
 
         # Verify deletion
         assert not persistence.is_valid(temp_cache_path)
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
 
 # ---------------------------------------------------------------------------
@@ -503,10 +516,11 @@ class TestBM25PersistenceLoadValidationBranches:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
     def test_load_documents_with_non_string_items_returns_none(
         self,
@@ -522,10 +536,33 @@ class TestBM25PersistenceLoadValidationBranches:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
+
+    def test_save_and_load_preserves_fingerprint(
+        self,
+        persistence: BM25Persistence,
+        sample_bm25_index: BM25Okapi,
+        sample_paths: list[Path],
+        temp_cache_path: Path,
+    ) -> None:
+        """Fingerprint metadata round-trips with the saved cache."""
+        persistence.save(
+            sample_bm25_index,
+            sample_paths,
+            temp_cache_path,
+            documents=["finance budget", "legal contract", "recipe chocolate"],
+            fingerprint="docs-hash-123",
+        )
+
+        _, loaded_paths, loaded_documents, fingerprint = persistence.load(temp_cache_path)
+
+        assert loaded_paths == sample_paths
+        assert loaded_documents == ["finance budget", "legal contract", "recipe chocolate"]
+        assert fingerprint == "docs-hash-123"
 
     def test_load_documents_count_mismatch_returns_none(
         self,
@@ -541,10 +578,11 @@ class TestBM25PersistenceLoadValidationBranches:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths, documents = persistence.load(temp_cache_path)
+        bm25, paths, documents, fingerprint = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
         assert documents == []
+        assert fingerprint == ""
 
 
 @pytest.mark.ci
@@ -624,4 +662,3 @@ class TestBM25PersistenceIsValidEdgeCases:
             pickle.dump(data, f)
 
         assert persistence.is_valid(temp_cache_path) is True
-

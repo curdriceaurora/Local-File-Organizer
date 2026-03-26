@@ -19,6 +19,8 @@ from file_organizer.services.deduplication.detector import (
     ScanOptions,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.mark.unit
 class TestScanOptions(unittest.TestCase):

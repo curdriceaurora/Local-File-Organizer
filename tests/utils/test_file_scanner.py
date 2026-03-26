@@ -16,7 +16,7 @@ from file_organizer.utils.file_scanner import (
     StreamingFileScanner,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -471,8 +471,8 @@ class TestProgressCallback:
 
         files = scanner.scan_to_list(sample_dir, config)
 
-        # Callback should be called once per matching file (5 .txt files)
-        assert callback.call_count == 5
+        # Callback reflects every scanned file, even if later filtered out.
+        assert callback.call_count == 7
         assert len(files) == 5
 
 
@@ -504,8 +504,8 @@ class TestCounters:
         config = ScanConfig(file_patterns=["*.txt"])
         files = scanner.scan_to_list(sample_dir, config)
 
-        # Should have scanned 5 .txt files
-        assert scanner.scanned_count == 5
+        # scanned_count tracks all visited files before filtering.
+        assert scanner.scanned_count == 7
         assert scanner.yielded_count == 5
         assert len(files) == 5
 

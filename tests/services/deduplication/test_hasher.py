@@ -10,6 +10,8 @@ import pytest
 
 from file_organizer.services.deduplication.hasher import FileHasher
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.mark.unit
 class TestFileHasherInit:
@@ -379,9 +381,7 @@ class TestHashFileFunction:
         with pytest.raises(ValueError, match="not a file"):
             _hash_file(tmp_path)
 
-    def test_hash_file_unsupported_algorithm_raises_value_error(
-        self, tmp_path: Path
-    ) -> None:
+    def test_hash_file_unsupported_algorithm_raises_value_error(self, tmp_path: Path) -> None:
         """_hash_file raises ValueError for unsupported algorithm."""
         from file_organizer.services.deduplication.hasher import _hash_file
 
@@ -400,9 +400,7 @@ class TestHashFileFunction:
         test_file = tmp_path / "secret.txt"
         test_file.write_text("secret")
 
-        with patch(
-            "builtins.open", side_effect=PermissionError("Permission denied")
-        ):
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
             with pytest.raises(PermissionError, match="Cannot read file"):
                 _hash_file(test_file)
 
@@ -499,12 +497,8 @@ class TestComputeBatchParallelResultProcessing:
             succeeded=2,
             failed=0,
             results=[
-                FileResult(
-                    path=file_a, success=True, result="abcdef1234567890" * 4
-                ),
-                FileResult(
-                    path=file_b, success=True, result="1234567890abcdef" * 4
-                ),
+                FileResult(path=file_a, success=True, result="abcdef1234567890" * 4),
+                FileResult(path=file_b, success=True, result="1234567890abcdef" * 4),
             ],
             total_duration_ms=50.0,
             files_per_second=40.0,
@@ -538,9 +532,7 @@ class TestComputeBatchParallelResultProcessing:
             succeeded=1,
             failed=1,
             results=[
-                FileResult(
-                    path=file_ok, success=True, result="hash_ok" * 8
-                ),
+                FileResult(path=file_ok, success=True, result="hash_ok" * 8),
                 FileResult(
                     path=file_fail,
                     success=False,
@@ -625,9 +617,7 @@ class TestComputeBatchParallelResultProcessing:
             succeeded=2,
             failed=1,
             results=[
-                FileResult(
-                    path=file_a, success=True, result="deadbeef" * 8
-                ),
+                FileResult(path=file_a, success=True, result="deadbeef" * 8),
             ],
             total_duration_ms=123.4,
             files_per_second=24.31,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -387,19 +388,29 @@ class TestBM25IndexIncrementalUpdates:
 
             # Create a new index instance with the same cache
             idx2 = BM25Index(cache_path=cache_path)
-            idx2.index(
-                [
-                    "finance budget report",
-                    "legal contract agreement",
-                    "recipe baking chocolate",
-                    "machine learning",
-                ],
-                paths + [new_path],
-            )
-            # Should load from cache with updated document
             assert idx2.size == 4
             results = idx2.search("machine learning")
             assert any(p == new_path for p, _ in results)
+
+    def test_cache_rebuilds_when_documents_change_without_path_change(self) -> None:
+        """Cache is rejected when the document payload changes for the same paths."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "test_cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+                paths,
+            )
+
+            idx2 = BM25Index(cache_path=cache_path)
+            idx2.index(
+                ["machine learning report", "legal contract agreement", "recipe baking chocolate"],
+                paths,
+            )
+
+            results = idx2.search("machine learning")
+            assert any(p == paths[0] for p, _ in results)
 
 
 # ---------------------------------------------------------------------------
@@ -436,11 +447,7 @@ class TestBM25IndexCacheErrorHandling:
     def test_cache_save_oserror_does_not_prevent_index_use(self) -> None:
         """OSError during cache save is logged but index remains usable."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Use a path where the parent dir will be read-only
-            cache_dir = Path(tmpdir) / "readonly"
-            cache_dir.mkdir()
-            cache_path = cache_dir / "subdir" / "nested" / "cache.pkl"
-
+            cache_path = Path(tmpdir) / "cache.pkl"
             idx = BM25Index(cache_path=cache_path)
             paths = _make_paths(3)
             docs = [
@@ -448,9 +455,13 @@ class TestBM25IndexCacheErrorHandling:
                 "legal contract agreement",
                 "recipe baking chocolate",
             ]
-            # Index should succeed even if the deep nested path works
-            idx.index(docs, paths)
+
+            with patch.object(idx._persistence, "save", side_effect=OSError("disk full")):
+                idx.index(docs, paths)
+
             assert idx.size == 3
+            results = idx.search("finance")
+            assert results, "Index should be usable despite cache save failure"
 
     def test_cache_path_none_skips_caching(self) -> None:
         """No caching operations when cache_path is None."""

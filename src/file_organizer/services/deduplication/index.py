@@ -220,14 +220,15 @@ class DuplicateIndex:
         hash_function: Callable[[Path], str],
         config: IndexBuildConfig | None = None,
     ) -> Generator[int, None, None]:
-        """Build index from directory using streaming approach.
+        """Build index from top-level files in a directory using streaming approach.
 
         This method yields progress updates as chunks are processed, allowing
         memory-efficient processing of large file sets without loading all
-        file metadata into memory at once.
+        file metadata into memory at once. The directory scan is intentionally
+        non-recursive; only immediate child files are included.
 
         Args:
-            directory: Directory to scan for files
+            directory: Directory whose immediate child files should be scanned
             hash_function: Function that takes a file path and returns its hash
             config: Build configuration (uses defaults if None)
 

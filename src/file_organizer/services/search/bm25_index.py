@@ -9,6 +9,7 @@ Requires the ``rank-bm25`` package (``pip install rank-bm25``).
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from pickle import PicklingError, UnpicklingError
@@ -21,6 +22,16 @@ from .bm25_persistence import BM25Persistence
 def _tokenise(text: str) -> list[str]:
     """Lower-case, split on non-alphanumeric runs, filter empty tokens."""
     return [t for t in re.split(r"[^a-z0-9]+", text.lower()) if t]
+
+
+def _documents_fingerprint(documents: list[str]) -> str:
+    """Return a stable fingerprint for the indexed document payload."""
+    digest = hashlib.sha256()
+    for document in documents:
+        encoded = document.encode("utf-8")
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+    return digest.hexdigest()
 
 
 class BM25Index:
@@ -53,10 +64,33 @@ class BM25Index:
         self._bm25: object | None = None  # rank_bm25.BM25Okapi | None
         self._cache_path = cache_path
         self._persistence = BM25Persistence()
+        self._load_cache_snapshot()
 
     # ------------------------------------------------------------------
     # IndexProtocol
     # ------------------------------------------------------------------
+
+    def _load_cache_snapshot(self) -> None:
+        """Load a persisted cache snapshot when no in-memory index exists yet."""
+        if self._cache_path is None or self._bm25 is not None:
+            return
+
+        try:
+            cached_index, cached_paths, cached_documents, _ = self._persistence.load(
+                self._cache_path
+            )
+        except (OSError, UnpicklingError) as exc:
+            logger.debug("BM25Index: initial cache load failed ({}), continuing empty", exc)
+            return
+
+        if cached_index is not None and len(cached_documents) == len(cached_paths) and cached_paths:
+            self._bm25 = cached_index
+            self._paths = cached_paths
+            self._documents = cached_documents
+            logger.debug(
+                "BM25Index: eagerly loaded {} documents from cache snapshot",
+                len(cached_paths),
+            )
 
     def index(self, documents: list[str], paths: list[Path]) -> None:
         """Build the BM25 index from *documents* and *paths*.
@@ -90,15 +124,20 @@ class BM25Index:
         # Try lazy loading from cache if enabled
         if self._cache_path is not None:
             try:
-                cached_index, cached_paths, cached_documents = self._persistence.load(
-                    self._cache_path
-                )
+                (
+                    cached_index,
+                    cached_paths,
+                    cached_documents,
+                    cached_fingerprint,
+                ) = self._persistence.load(self._cache_path)
+                current_fingerprint = _documents_fingerprint(documents)
 
                 # Use cache only if paths match exactly
                 if (
                     cached_index is not None
                     and cached_paths == paths
                     and len(cached_documents) == len(cached_paths)
+                    and cached_fingerprint == current_fingerprint
                 ):
                     self._bm25 = cached_index
                     self._paths = cached_paths
@@ -132,6 +171,7 @@ class BM25Index:
                     self._paths,
                     self._cache_path,
                     documents=self._documents,
+                    fingerprint=_documents_fingerprint(self._documents),
                 )
             except (OSError, PicklingError) as exc:
                 # Cache save failed, but index is still usable
@@ -151,6 +191,7 @@ class BM25Index:
         """
         if top_k <= 0:
             return []
+        self._load_cache_snapshot()
         if self._bm25 is None or not self._paths:
             return []
 
@@ -305,6 +346,7 @@ class BM25Index:
                 self._paths,
                 self._cache_path,
                 documents=self._documents,
+                fingerprint=_documents_fingerprint(self._documents),
             )
             logger.debug("BM25Index: cache updated after incremental change")
         except (OSError, PicklingError) as exc:
@@ -318,6 +360,7 @@ class BM25Index:
     @property
     def size(self) -> int:
         """Number of documents currently indexed."""
+        self._load_cache_snapshot()
         return len(self._paths)
 
     def invalidate_cache(self) -> None:

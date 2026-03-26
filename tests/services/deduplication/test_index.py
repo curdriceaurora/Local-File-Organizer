@@ -20,6 +20,8 @@ from file_organizer.services.deduplication.index import (
     IndexBuildConfig,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.mark.unit
 class TestFileMetadata:

@@ -15,6 +15,8 @@ from file_organizer.api.dependencies import get_current_active_user, get_setting
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.files import router
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
     """Create a minimal FastAPI app with the files router and dependency overrides."""

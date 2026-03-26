@@ -24,7 +24,9 @@ class BM25Persistence:
 
         persistence = BM25Persistence()
         persistence.save(bm25_index, paths, cache_path)
-        loaded_index, loaded_paths = persistence.load(cache_path)
+        loaded_index, loaded_paths, loaded_documents, loaded_fingerprint = persistence.load(
+            cache_path
+        )
     """
 
     def save(
@@ -33,6 +35,7 @@ class BM25Persistence:
         paths: list[Path],
         cache_path: Path,
         documents: list[str] | None = None,
+        fingerprint: str | None = None,
     ) -> None:
         """Save a BM25 index and its paths to disk.
 
@@ -41,6 +44,7 @@ class BM25Persistence:
             paths: List of file paths corresponding to indexed documents.
             cache_path: Path where the serialized index will be saved.
             documents: Original document strings aligned with ``paths``.
+            fingerprint: Stable fingerprint of ``documents`` for cache validity checks.
 
         Raises:
             OSError: If the file cannot be written.
@@ -59,6 +63,7 @@ class BM25Persistence:
                 "bm25_index": bm25_index,
                 "paths": paths,
                 "documents": documents or [],
+                "fingerprint": fingerprint or "",
             }
 
             with open(cache_path, "wb") as f:
@@ -74,15 +79,15 @@ class BM25Persistence:
             logger.error("Failed to save BM25 index to {}: {}", cache_path, exc)
             raise
 
-    def load(self, cache_path: Path) -> tuple[object | None, list[Path], list[str]]:
+    def load(self, cache_path: Path) -> tuple[object | None, list[Path], list[str], str]:
         """Load a BM25 index and its paths from disk.
 
         Args:
             cache_path: Path to the serialized index file.
 
         Returns:
-            A tuple of (bm25_index, paths, documents). Returns (None, [], [])
-            if the file
+            A tuple of (bm25_index, paths, documents, fingerprint). Returns
+            (None, [], [], "") if the file
             does not exist or cannot be loaded.
 
         Raises:
@@ -91,7 +96,7 @@ class BM25Persistence:
         """
         if not cache_path.exists():
             logger.debug("BM25 cache file does not exist: {}", cache_path)
-            return None, [], []
+            return None, [], [], ""
 
         try:
             # NOTE: pickle.load is used intentionally here. The cache file is written
@@ -105,18 +110,19 @@ class BM25Persistence:
                 logger.warning(
                     "Invalid BM25 cache format: expected dict, got {}", type(data).__name__
                 )
-                return None, [], []
+                return None, [], [], ""
 
             bm25_index = data.get("bm25_index")
             paths = data.get("paths", [])
             documents = data.get("documents", [])
+            fingerprint = data.get("fingerprint", "")
 
             if not isinstance(paths, list):
                 logger.warning(
                     "Invalid paths format in BM25 cache: expected list, got {}",
                     type(paths).__name__,
                 )
-                return None, [], []
+                return None, [], [], ""
             if not isinstance(documents, list) or not all(
                 isinstance(document, str) for document in documents
             ):
@@ -124,7 +130,13 @@ class BM25Persistence:
                     "Invalid documents format in BM25 cache: expected list[str], got {}",
                     type(documents).__name__,
                 )
-                return None, [], []
+                return None, [], [], ""
+            if not isinstance(fingerprint, str):
+                logger.warning(
+                    "Invalid fingerprint format in BM25 cache: expected str, got {}",
+                    type(fingerprint).__name__,
+                )
+                return None, [], [], ""
 
             if documents and len(documents) != len(paths):
                 logger.warning(
@@ -132,7 +144,7 @@ class BM25Persistence:
                     len(documents),
                     len(paths),
                 )
-                return None, [], []
+                return None, [], [], ""
 
             logger.info(
                 "Loaded BM25 index with {} documents from {}",
@@ -140,7 +152,7 @@ class BM25Persistence:
                 cache_path,
             )
 
-            return bm25_index, paths, documents
+            return bm25_index, paths, documents, fingerprint
 
         except (OSError, pickle.UnpicklingError) as exc:
             logger.error("Failed to load BM25 index from {}: {}", cache_path, exc)
@@ -190,7 +202,10 @@ class BM25Persistence:
             if not isinstance(data["paths"], list):
                 return False
             documents: Any = data.get("documents", [])
+            fingerprint: Any = data.get("fingerprint", "")
             if not isinstance(documents, list):
+                return False
+            if not isinstance(fingerprint, str):
                 return False
             if documents and len(documents) != len(data["paths"]):
                 return False

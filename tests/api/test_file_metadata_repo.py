@@ -16,9 +16,10 @@ from file_organizer.api.repositories.file_metadata_repo import (
     _cache_key,
     _cache_payload,
     _checksum_cache_key,
+    _chunk_records,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestCacheHelpers:
@@ -68,6 +69,20 @@ class TestCacheHelpers:
 
         payload = _cache_payload(row)
         assert payload["last_modified"] is None
+
+    def test_chunk_records_splits_large_batches(self):
+        records = [
+            {
+                "workspace_id": "ws",
+                "relative_path": f"f{i}",
+                "path": f"/f{i}",
+                "name": f"f{i}",
+                "size_bytes": i,
+            }
+            for i in range(450)
+        ]
+        chunks = _chunk_records(records)
+        assert [len(chunk) for chunk in chunks] == [200, 200, 50]
 
 
 class TestFileMetadataRepositoryUpsert:
@@ -369,12 +384,12 @@ class TestFileMetadataRepositoryPagination:
 
         # Configure session.query to return appropriate mock based on call
         session.query.side_effect = [count_query, items_query]
-        return session
+        return session, items_query
 
     def test_pagination_returns_correct_structure(self):
         """Test that pagination returns all expected metadata fields."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
-        session = self._make_session(total_count=50, items=rows)
+        session, _ = self._make_session(total_count=50, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=0
@@ -391,7 +406,7 @@ class TestFileMetadataRepositoryPagination:
     def test_pagination_first_page(self):
         """Test pagination metadata for first page."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
-        session = self._make_session(total_count=50, items=rows)
+        session, _ = self._make_session(total_count=50, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=0
@@ -407,7 +422,7 @@ class TestFileMetadataRepositoryPagination:
     def test_pagination_middle_page(self):
         """Test pagination metadata for middle page."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
-        session = self._make_session(total_count=50, items=rows)
+        session, _ = self._make_session(total_count=50, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=20
@@ -422,7 +437,7 @@ class TestFileMetadataRepositoryPagination:
     def test_pagination_last_page(self):
         """Test pagination metadata for last page."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
-        session = self._make_session(total_count=45, items=rows)
+        session, _ = self._make_session(total_count=45, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=40
@@ -436,7 +451,7 @@ class TestFileMetadataRepositoryPagination:
 
     def test_pagination_empty_result(self):
         """Test pagination with no results."""
-        session = self._make_session(total_count=0, items=[])
+        session, _ = self._make_session(total_count=0, items=[])
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=0
@@ -450,7 +465,7 @@ class TestFileMetadataRepositoryPagination:
     def test_pagination_sorts_by_name_asc(self):
         """Test sorting by name in ascending order."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
-        session = self._make_session(total_count=5, items=rows)
+        session, items_query = self._make_session(total_count=5, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session,
@@ -462,12 +477,16 @@ class TestFileMetadataRepositoryPagination:
         )
 
         assert result["items"] == rows
-        # Verify order_by was called (implementation detail check via mock)
+        items_query.order_by.assert_called_once()
+        sort_args = items_query.order_by.call_args.args
+        assert len(sort_args) == 2
+        assert "name" in str(sort_args[0]).lower()
+        assert "id" in str(sort_args[1]).lower()
 
     def test_pagination_sorts_by_size_desc(self):
         """Test sorting by size in descending order."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
-        session = self._make_session(total_count=5, items=rows)
+        session, items_query = self._make_session(total_count=5, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session,
@@ -479,11 +498,17 @@ class TestFileMetadataRepositoryPagination:
         )
 
         assert result["items"] == rows
+        items_query.order_by.assert_called_once()
+        sort_args = items_query.order_by.call_args.args
+        assert len(sort_args) == 2
+        assert "size_bytes" in str(sort_args[0]).lower()
+        assert "desc" in str(sort_args[0]).lower()
+        assert "id" in str(sort_args[1]).lower()
 
     def test_pagination_clamps_negative_offset(self):
         """Test that negative offset is clamped to 0."""
         rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
-        session = self._make_session(total_count=50, items=rows)
+        session, _ = self._make_session(total_count=50, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=10, offset=-5
@@ -494,13 +519,93 @@ class TestFileMetadataRepositoryPagination:
     def test_pagination_clamps_zero_limit(self):
         """Test that zero limit is clamped to 1."""
         rows = [MagicMock(spec=FileMetadata)]
-        session = self._make_session(total_count=50, items=rows)
+        session, _ = self._make_session(total_count=50, items=rows)
 
         result = FileMetadataRepository.list_for_workspace_paginated(
             session, workspace_id="ws-1", limit=0, offset=0
         )
 
         assert result["limit"] == 1
+
+    def test_pagination_invalid_sort_field_falls_back_to_relative_path(self):
+        """Invalid sort_by values fall back to deterministic relative_path ordering."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(2)]
+        session, items_query = self._make_session(total_count=2, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            sort_by="bogus",  # type: ignore[arg-type]
+            sort_order="asc",
+        )
+
+        assert result["items"] == rows
+        sort_args = items_query.order_by.call_args.args
+        assert "relative_path" in str(sort_args[0]).lower()
+
+
+class TestFileMetadataRepositoryBulkOperations:
+    """Tests for bulk repository helpers."""
+
+    def test_bulk_upsert_returns_zero_for_empty_records(self):
+        session = MagicMock(spec=Session)
+
+        assert FileMetadataRepository.bulk_upsert(session, records=[]) == 0
+        session.execute.assert_not_called()
+
+    def test_bulk_get_returns_empty_for_empty_paths(self):
+        session = MagicMock(spec=Session)
+
+        assert (
+            FileMetadataRepository.bulk_get(session, workspace_id="ws-1", relative_paths=[]) == {}
+        )
+        session.query.assert_not_called()
+
+    def test_find_by_checksum_returns_empty_for_none_checksum(self):
+        session = MagicMock(spec=Session)
+
+        assert (
+            FileMetadataRepository.find_by_checksum(
+                session, workspace_id="ws-1", checksum_sha256=None
+            )
+            == []
+        )
+        session.query.assert_not_called()
+
+    def test_bulk_upsert_executes_large_batches_in_chunks(self):
+        session = MagicMock(spec=Session)
+
+        records = [
+            {
+                "workspace_id": "ws-1",
+                "path": f"/abs/file-{index}.txt",
+                "relative_path": f"file-{index}.txt",
+                "name": f"file-{index}.txt",
+                "size_bytes": index,
+            }
+            for index in range(450)
+        ]
+
+        count = FileMetadataRepository.bulk_upsert(session, records=records)
+
+        assert count == 450
+        assert session.execute.call_count == 3
+        session.flush.assert_called_once()
+
+    def test_find_by_checksum_returns_cached_empty_result_without_db_lookup(self):
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"file_ids": []})
+
+        result = FileMetadataRepository.find_by_checksum(
+            session,
+            workspace_id="ws-1",
+            checksum_sha256="abc123",
+            cache=cache,
+        )
+
+        assert result == []
+        session.query.assert_not_called()
 
 
 def test_pagination():
@@ -955,9 +1060,7 @@ class TestUpsertCacheInvalidation:
         query.first.return_value = existing_row
         return session
 
-    def _make_existing_row(
-        self, checksum: str | None = None
-    ) -> MagicMock:
+    def _make_existing_row(self, checksum: str | None = None) -> MagicMock:
         """Create a properly configured existing row mock for upsert tests."""
         existing = MagicMock(spec=FileMetadata)
         existing.id = "existing-id"
@@ -1103,9 +1206,7 @@ class TestUpsertCacheInvalidation:
 class TestListForWorkspacePaginatedSorting:
     """Tests for list_for_workspace_paginated sort columns and orders (lines 227-257)."""
 
-    def _make_session(
-        self, total_count: int, items: list[MagicMock]
-    ) -> MagicMock:
+    def _make_session(self, total_count: int, items: list[MagicMock]) -> MagicMock:
         session = MagicMock(spec=Session)
         count_query = MagicMock()
         count_query.filter.return_value = count_query
@@ -1370,9 +1471,7 @@ class TestBulkUpsert:
 class TestBulkGet:
     """Tests for bulk_get (lines 393-439)."""
 
-    def _make_row(
-        self, row_id: str, rel_path: str, workspace_id: str = "ws-1"
-    ) -> MagicMock:
+    def _make_row(self, row_id: str, rel_path: str, workspace_id: str = "ws-1") -> MagicMock:
         row = MagicMock(spec=FileMetadata)
         row.id = row_id
         row.workspace_id = workspace_id
@@ -1389,9 +1488,7 @@ class TestBulkGet:
     def test_bulk_get_empty_paths_returns_empty_dict(self) -> None:
         """Lines 393-394: empty relative_paths returns {} immediately."""
         session = MagicMock(spec=Session)
-        result = FileMetadataRepository.bulk_get(
-            session, workspace_id="ws-1", relative_paths=[]
-        )
+        result = FileMetadataRepository.bulk_get(session, workspace_id="ws-1", relative_paths=[])
         assert result == {}
 
     def test_bulk_get_cache_hit_returns_from_cache(self) -> None:
