@@ -205,19 +205,19 @@ class TestBM25PersistenceLoad:
         assert paths == []
         assert documents == []
 
-    def test_load_missing_paths_key_returns_none(
+    def test_load_missing_paths_key_returns_index_with_empty_paths(
         self,
         persistence: BM25Persistence,
         sample_bm25_index: BM25Okapi,
         temp_cache_path: Path,
     ) -> None:
-        """Load returns None if paths key is missing."""
+        """Load returns the bm25 index and defaults paths/documents to empty lists when keys missing."""
         data = {"bm25_index": sample_bm25_index}  # Missing 'paths'
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
         bm25, paths, documents = persistence.load(temp_cache_path)
-        # Should return None because paths is missing, but will have default []
+        # Index is present, paths/documents default to empty lists
         assert bm25 is not None  # Index is present
         assert paths == []  # Default value
         assert documents == []

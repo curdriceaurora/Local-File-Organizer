@@ -197,13 +197,14 @@ class StreamingFileScanner:
 
                         # Process file
                         if is_file:
+                            # Increment count for every file scanned (before filtering)
+                            self._scanned_count += 1
+
+                            # Call progress callback with scanned count
+                            if config.progress_callback:
+                                config.progress_callback(self._scanned_count)
+
                             if self._matches_criteria(entry_path, entry, config):
-                                self._scanned_count += 1
-
-                                # Call progress callback
-                                if config.progress_callback:
-                                    config.progress_callback(self._scanned_count)
-
                                 yield entry_path
 
                         # Recurse into subdirectory
