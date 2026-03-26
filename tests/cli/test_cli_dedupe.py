@@ -904,3 +904,64 @@ class TestMain:
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
+
+
+# ---------------------------------------------------------------------------
+# Wrapper function tests (compatibility shims in dedupe.py)
+# ---------------------------------------------------------------------------
+
+
+class TestDedupeWrappers:
+    """Tests for the compatibility wrapper functions in dedupe.py."""
+
+    def test_format_size_delegates(self) -> None:
+        from file_organizer.cli.dedupe import format_size as wrapper_format_size
+
+        result = wrapper_format_size(1024)
+        assert "KB" in result or "1" in result
+
+    def test_format_datetime_delegates(self) -> None:
+        import time
+
+        from file_organizer.cli.dedupe import format_datetime as wrapper_format_datetime
+
+        result = wrapper_format_datetime(time.time())
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_select_files_to_keep_delegates(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep as wrapper_select
+
+        files = [
+            {"path": "/a.txt", "size": 100, "mtime": 1.0},
+            {"path": "/b.txt", "size": 200, "mtime": 2.0},
+        ]
+        result = wrapper_select(files, "newest")
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+    def test_get_user_selection_batch_mode(self) -> None:
+        from file_organizer.cli.dedupe import get_user_selection as wrapper_get_sel
+
+        files = [
+            {"path": "/a.txt", "size": 100, "mtime": 1.0, "keep": True},
+            {"path": "/b.txt", "size": 200, "mtime": 2.0, "keep": False},
+        ]
+        result = wrapper_get_sel(files, "newest", batch=True)
+        assert result == [1]
+
+    def test_display_summary_delegates(self) -> None:
+        from file_organizer.cli.dedupe import display_summary as wrapper_summary
+
+        wrapper_summary(5, 10, 3, 1024, dry_run=True)
+
+    def test_display_duplicate_group_delegates(self) -> None:
+        from file_organizer.cli.dedupe import (
+            display_duplicate_group as wrapper_display,
+        )
+
+        files = [
+            {"path": "/a.txt", "size": 100, "mtime": 1.0, "keep": True},
+            {"path": "/b.txt", "size": 100, "mtime": 2.0, "keep": False},
+        ]
+        wrapper_display(1, "abc123", files, 5)

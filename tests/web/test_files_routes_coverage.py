@@ -10,7 +10,7 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.fixture()

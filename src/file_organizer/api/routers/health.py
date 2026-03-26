@@ -70,6 +70,7 @@ async def health(request: Request, response: Response) -> dict[str, object]:
         "error": "unhealthy",
     }
 
+    # Defensive fallback; normally seeded at app startup via lifespan handler.
     startup_time = getattr(request.app.state, "health_startup_time", None)
     if not isinstance(startup_time, float):
         startup_time = time.monotonic()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from PIL import Image, UnidentifiedImageError
@@ -75,7 +77,7 @@ def _build_tree_context(
                         "id": path_id(entry),
                         "name": entry.name,
                         "path": str(entry),
-                        "path_param": str(entry),
+                        "path_param": quote(str(entry)),
                         "has_children": has_children(entry),
                     }
                 )
@@ -88,7 +90,7 @@ def _build_tree_context(
                     "id": path_id(root),
                     "name": root.name or root.as_posix(),
                     "path": str(root),
-                    "path_param": str(root),
+                    "path_param": quote(str(root)),
                     "has_children": has_children(root),
                     "is_root": True,
                 }
@@ -101,7 +103,7 @@ def _build_tree_context(
         "nodes": nodes,
         "depth": depth,
         "active_path": active_path,
-        "active_path_param": active_path,
+        "active_path_param": quote(active_path) if active_path else "",
         "error_message": error_message,
     }
 
@@ -124,8 +126,9 @@ def _build_preview_context(path: str, settings: ApiSettings) -> dict[str, object
 
         info = file_info_from_path(target)
         preview_kind = detect_kind(target)
-        raw_url = f"/ui/files/raw?path={info.path}"
-        download_url = f"/ui/files/raw?path={info.path}&download=1"
+        encoded_path = quote(info.path)
+        raw_url = f"/ui/files/raw?path={encoded_path}"
+        download_url = f"/ui/files/raw?path={encoded_path}&download=1"
         size_display = format_bytes(info.size)
         modified_display = format_timestamp(info.modified)
 

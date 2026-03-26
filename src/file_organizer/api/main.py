@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -77,7 +78,8 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     redoc_url = "/redoc" if settings.enable_docs else None
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(a: FastAPI) -> AsyncIterator[None]:
+        a.state.health_startup_time = time.monotonic()
         logger.info("Starting API in {} mode", settings.environment)
         yield
         logger.info("Shutting down API")
