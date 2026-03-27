@@ -5,7 +5,10 @@ which optional dependency groups should be installed based on detected file type
 """
 
 import importlib.util
+from pathlib import Path
 from typing import Dict, List, Set
+
+from file_organizer.utils import is_hidden
 
 # Extension-to-group registry mapping file extensions to optional dependency groups
 EXTENSION_REGISTRY: Dict[str, str] = {
@@ -110,3 +113,50 @@ def get_missing_groups(detected_groups: Set[str]) -> Set[str]:
         Set of group names that are not installed
     """
     return {group for group in detected_groups if not is_group_installed(group)}
+
+
+def _normalized_extension(path: Path) -> str:
+    """Return a normalized extension, preserving supported compound archives.
+
+    Args:
+        path: File path
+
+    Returns:
+        Normalized extension with leading dot, or empty string if no extension
+    """
+    suffixes = [suffix.lower() for suffix in path.suffixes]
+    if len(suffixes) >= 2:
+        compound = "".join(suffixes[-2:])
+        if compound in {".tar.gz", ".tar.bz2"}:
+            return compound
+    return suffixes[-1] if suffixes else ""
+
+
+def scan_directory(directory: Path) -> Dict[str, int]:
+    """Scan a directory and count files by extension.
+
+    Args:
+        directory: Path to directory to scan
+
+    Returns:
+        Dictionary mapping file extensions to counts
+    """
+    extension_counts: Dict[str, int] = {}
+
+    # Recursively iterate through all files
+    for item in directory.rglob("*"):
+        # Skip hidden files and directories
+        if is_hidden(item):
+            continue
+
+        # Only count files, not directories
+        if item.is_file():
+            ext = _normalized_extension(item)
+            # Count files with extensions and those without
+            if ext:
+                extension_counts[ext] = extension_counts.get(ext, 0) + 1
+            else:
+                # Track files without extensions
+                extension_counts[""] = extension_counts.get("", 0) + 1
+
+    return extension_counts
