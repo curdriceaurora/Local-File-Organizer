@@ -13,9 +13,17 @@ from loguru import logger
 
 router = APIRouter(tags=["health"])
 
-# Module-level startup time used to compute uptime in health responses.
+# Startup time used to compute uptime in health responses.
 # Use monotonic time to avoid issues with system clock adjustments (NTP sync).
+# Defaults to module-import time; call ``reset_startup_time()`` from the app
+# lifespan/startup event so that recreated app instances report accurate uptime.
 _startup_time: float = time.monotonic()
+
+
+def reset_startup_time() -> None:
+    """Reset startup time — call from app lifespan/startup event."""
+    global _startup_time
+    _startup_time = time.monotonic()
 
 
 @router.get("/health")

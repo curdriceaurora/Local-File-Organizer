@@ -240,10 +240,31 @@ class DuplicateDetector:
 
         # Compute hash of target file
         target_hash = self.hasher.compute_hash(file_path, algorithm)
+        target_size = file_path.stat().st_size
 
-        # Scan directory
+        # Scan directory — this hashes files in multi-file size groups
         options = ScanOptions(algorithm=algorithm)
         self.scan_directory(search_directory, options)
+
+        # scan_directory skips singleton size buckets as an optimisation for
+        # general duplicate detection.  However, when searching for duplicates
+        # of a *specific* file, a matching file inside the search directory may
+        # sit alone in its size bucket and never get hashed.  Hash any un-indexed
+        # files whose size matches the target so they are not missed.
+        already_indexed = set(self.index.get_files_by_size(target_size))
+        for entry in self._find_files(search_directory, options):
+            try:
+                if entry.stat().st_size != target_size:
+                    continue
+            except (OSError, PermissionError):
+                continue
+            if entry in already_indexed:
+                continue
+            try:
+                file_hash = self.hasher.compute_hash(entry, algorithm)
+                self.index.add_file(entry, file_hash)
+            except (FileNotFoundError, PermissionError, ValueError) as e:
+                logger.warning("Could not process %s: %s", entry, e, exc_info=True)
 
         # Find files with matching hash (excluding the target itself)
         duplicates = [

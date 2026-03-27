@@ -78,6 +78,9 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        from file_organizer.api.routers.health import reset_startup_time
+
+        reset_startup_time()
         logger.info("Starting API in {} mode", settings.environment)
         yield
         logger.info("Shutting down API")

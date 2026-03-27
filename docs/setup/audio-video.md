@@ -37,11 +37,13 @@ Audio transcription converts speech in audio files to text using state-of-the-ar
 #### Installing FFmpeg
 
 **macOS:**
+
 ```bash
 brew install ffmpeg
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 sudo apt update
 sudo apt install ffmpeg
@@ -49,6 +51,7 @@ sudo apt install ffmpeg
 
 **Windows:**
 Download from [ffmpeg.org](https://ffmpeg.org/download.html) or use:
+
 ```powershell
 choco install ffmpeg
 ```
@@ -175,6 +178,7 @@ for segment in result.segments:
 Whisper supports 100+ languages with automatic detection:
 
 **Auto-Detection (Recommended):**
+
 ```python
 # Language is detected automatically
 result = transcriber.transcribe("audio.mp3")
@@ -182,6 +186,7 @@ print(f"Detected: {result.language}")
 ```
 
 **Manual Language Selection:**
+
 ```python
 options = TranscriptionOptions(language="es")  # Spanish
 result = transcriber.transcribe_with_options("audio.mp3", options)
@@ -223,6 +228,7 @@ print(f"Supported: {is_supported}")
 #### GPU Acceleration
 
 **Check GPU Availability:**
+
 ```python
 import torch
 
@@ -233,6 +239,7 @@ if torch.cuda.is_available():
 ```
 
 **Optimize for GPU:**
+
 ```python
 transcriber = AudioTranscriber(
     model_size=ModelSize.SMALL,
@@ -245,6 +252,7 @@ transcriber = AudioTranscriber(
 #### CPU Optimization
 
 **Optimize for CPU:**
+
 ```python
 transcriber = AudioTranscriber(
     model_size=ModelSize.TINY,  # Smaller model
@@ -332,11 +340,13 @@ file-organizer tui
 #### "FFmpeg not found"
 
 **Error:**
+
 ```text
 FileNotFoundError: FFmpeg not found
 ```
 
 **Solution:**
+
 ```bash
 # Verify FFmpeg installation
 ffmpeg -version
@@ -347,11 +357,13 @@ ffmpeg -version
 #### Out of Memory
 
 **Error:**
+
 ```text
 RuntimeError: CUDA out of memory
 ```
 
 **Solutions:**
+
 ```python
 # 1. Use smaller model
 transcriber = AudioTranscriber(model_size=ModelSize.TINY)
@@ -448,11 +460,13 @@ All features run **100% locally** using OpenCV and PySceneDetect with no cloud d
 FFmpeg is optional but recommended for richer metadata extraction.
 
 **macOS:**
+
 ```bash
 brew install ffmpeg
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 sudo apt update
 sudo apt install ffmpeg
@@ -460,6 +474,7 @@ sudo apt install ffmpeg
 
 **Windows:**
 Download from [ffmpeg.org](https://ffmpeg.org/download.html) or use:
+
 ```powershell
 choco install ffmpeg
 ```
@@ -758,11 +773,13 @@ if is_screen_recording("2025-01-15 14-05-32.mp4"):
 #### "OpenCV not found"
 
 **Error:**
+
 ```text
 ImportError: No module named 'cv2'
 ```
 
 **Solution:**
+
 ```bash
 # Verify installation
 python -c "import cv2; print(cv2.__version__)"
@@ -774,11 +791,13 @@ pip install opencv-python>=4.8.0
 #### "scenedetect not found"
 
 **Error:**
+
 ```text
 ImportError: No module named 'scenedetect'
 ```
 
 **Solution:**
+
 ```bash
 pip install scenedetect[opencv]>=0.6.0
 ```
@@ -786,6 +805,7 @@ pip install scenedetect[opencv]>=0.6.0
 #### Platform-Specific OpenCV Issues
 
 **macOS - Conflicting Installations:**
+
 ```bash
 # Remove brew version if conflicts occur
 brew uninstall opencv
@@ -795,6 +815,7 @@ pip install opencv-python
 ```
 
 **Linux - Missing System Libraries:**
+
 ```bash
 # Ubuntu/Debian
 sudo apt install libgl1-mesa-glx libglib2.0-0
@@ -804,6 +825,7 @@ sudo dnf install mesa-libGL glib2
 ```
 
 **Windows - Binary Compatibility:**
+
 ```bash
 # Use prebuilt binaries
 pip install opencv-python
@@ -814,6 +836,7 @@ pip install opencv-python
 #### Failed to Open Video
 
 **Error:**
+
 ```text
 ValueError: Failed to open video: video.mp4
 ```
@@ -823,6 +846,7 @@ ValueError: Failed to open video: video.mp4
 2. **Check format support**: Try with `.mp4` file first
 3. **Install FFmpeg**: Some codecs require FFmpeg
 4. **Test with OpenCV**:
+
    ```python
    import cv2
    cap = cv2.VideoCapture("video.mp4")
@@ -835,6 +859,7 @@ ValueError: Failed to open video: video.mp4
 **Solutions:**
 
 **Too many scenes:**
+
 ```python
 # Increase threshold (less sensitive)
 detector = SceneDetector(threshold=40.0)
@@ -844,6 +869,7 @@ detector = SceneDetector(min_scene_length=2.0)  # 2 seconds minimum
 ```
 
 **Too few scenes:**
+
 ```python
 # Decrease threshold (more sensitive)
 detector = SceneDetector(threshold=15.0)
@@ -976,6 +1002,7 @@ python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 ```
 
 **Expected Output:**
+
 ```
 ✓ faster-whisper installed
 ✓ PyTorch 2.1.0+ installed
@@ -1033,6 +1060,7 @@ python test_audio.py
 ```
 
 **Expected Output:**
+
 ```
 Initializing transcriber...
 ✓ Transcriber initialized successfully
@@ -1092,6 +1120,7 @@ python -c "import cv2; cap = cv2.VideoCapture(); print('✓ Video capture availa
 ```
 
 **Expected Output:**
+
 ```
 ✓ OpenCV 4.8.0+ installed
 ✓ PySceneDetect 0.6.0+ installed
@@ -1149,6 +1178,7 @@ python test_video.py
 ```
 
 **Expected Output:**
+
 ```
 Initializing scene detector...
 ✓ Scene detector initialized successfully
@@ -1242,6 +1272,7 @@ python test_integration.py
 ```
 
 **Expected Output:**
+
 ```
 ✓ Audio processing modules imported
 ✓ Video processing modules imported
@@ -1276,6 +1307,7 @@ except ImportError as e:
 ```
 
 **Expected Output:**
+
 ```
 ✓ All audio/video dependencies installed
   - PyTorch: 2.1.0+
