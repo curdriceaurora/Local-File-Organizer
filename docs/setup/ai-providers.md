@@ -6,7 +6,7 @@ Complete setup guide for File Organizer's AI provider support: 5 native provider
 
 ## Overview
 
-File Organizer supports **5 native AI providers** for text and vision analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints.
+File Organizer supports **5 native AI providers** for text analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints. Three of the native providers (Ollama, OpenAI, Claude) also support vision analysis; LLaMA.cpp and MLX are text-only for now.
 
 **Native Providers:**
 - **Ollama** (default)
@@ -82,7 +82,9 @@ ollama pull qwen2.5vl:7b-q4_K_M
 
 No environment variables needed. Ollama is used by default.
 
-Optionally, set the Ollama server URL:
+Optionally, set the Ollama server URL (this is an Ollama-native
+environment variable consumed by the Ollama client library, not part of
+the `FO_*` configuration namespace):
 
 ```bash
 export OLLAMA_HOST=http://localhost:11434
@@ -90,7 +92,7 @@ export OLLAMA_HOST=http://localhost:11434
 
 #### Model Selection
 
-Edit `config/file-organizer/config.yaml`:
+Edit your config file (run `file-organizer config show` to find its location):
 
 ```yaml
 models:
@@ -160,7 +162,7 @@ Environment variables (highest priority):
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FO_PROVIDER` | Set to `openai` | `ollama` |
-| `FO_OPENAI_API_KEY` | OpenAI API key | Required (or `OPENAI_API_KEY`) |
+| `FO_OPENAI_API_KEY` | OpenAI API key | Required when `FO_OPENAI_BASE_URL` is not set. The OpenAI SDK also reads `OPENAI_API_KEY` natively, so either variable works. |
 | `FO_OPENAI_BASE_URL` | Custom endpoint URL | `https://api.openai.com/v1` |
 | `FO_OPENAI_MODEL` | Text model name | `gpt-4o-mini` |
 | `FO_OPENAI_VISION_MODEL` | Vision model name | Falls back to `FO_OPENAI_MODEL` |
@@ -169,8 +171,8 @@ Environment variables (highest priority):
 
 Recommended models:
 
-- **Text + Vision**: `gpt-4o` (best quality), `gpt-4o-mini` (cost-effective)
-- **Text-only**: `gpt-4-turbo`, `gpt-3.5-turbo`
+- **Text + Vision**: `gpt-4o` (best quality), `gpt-4o-mini` (cost-effective), `gpt-4-turbo`
+- **Text-only**: `gpt-3.5-turbo`
 
 ```bash
 export FO_OPENAI_MODEL=gpt-4o
@@ -247,6 +249,8 @@ Recommended models:
 export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
 ```
 
+Check [Anthropic's model documentation](https://docs.anthropic.com/en/docs/about-claude/models) for the latest available models.
+
 #### Verification
 
 ```bash
@@ -274,7 +278,7 @@ LLaMA.cpp provides direct inference from GGUF model files without requiring a se
 
 #### Installation
 
-Install the llama extra dependency:
+Install the LLaMA.cpp extra dependency:
 
 ```bash
 # From PyPI
@@ -309,7 +313,7 @@ Environment variables:
 |----------|-------------|---------|
 | `FO_PROVIDER` | Set to `llama_cpp` | `ollama` |
 | `FO_LLAMA_CPP_MODEL_PATH` | Path to .gguf file | Required |
-| `FO_LLAMA_CPP_N_GPU_LAYERS` | Layers to offload to GPU | Auto-detected based on device |
+| `FO_LLAMA_CPP_N_GPU_LAYERS` | Layers to offload to GPU | Not set (CPU only; set higher to offload layers to GPU) |
 
 #### Model Selection
 
@@ -463,7 +467,7 @@ Available Groq models:
 - **mixtral-8x7b-32768**: Long context
 - **gemma-7b-it**: Efficient
 
-See [Groq documentation](https://console.groq.com/docs/models) for the latest models.
+Model availability changes frequently. See [Groq documentation](https://console.groq.com/docs/models) for current models.
 
 #### Verification
 
@@ -584,30 +588,26 @@ unset FO_PROVIDER
 
 ### Via Configuration File
 
-Edit `config/file-organizer/config.yaml`:
+Edit your config file (run `file-organizer config show` to find its location):
 
 ```yaml
 models:
-  framework: "ollama"  # or "openai", "llama_cpp", "mlx", "claude"
+  framework: "ollama"  # or "llama_cpp", "mlx"
   text_model: "qwen2.5:3b-instruct-q4_K_M"
   vision_model: "qwen2.5vl:7b-q4_K_M"
 ```
 
-### Via CLI Flag
-
-Some commands support provider override (check `--help`):
-
-```bash
-file-organizer organize ~/Downloads --provider openai
-```
+Note: The config file `framework` field supports `ollama`, `llama_cpp`, and `mlx`.
+For `openai` and `claude` providers, use the `FO_PROVIDER` environment variable instead.
 
 ### Priority Order
 
 Configuration priority (highest wins):
 
-1. Environment variables (`FO_PROVIDER`, `FO_OPENAI_*`, etc.)
-2. Configuration profile (`config/file-organizer/config.yaml`)
-3. Hardcoded defaults (Ollama)
+1. Explicit `ModelConfig` parameters passed to `FileOrganizer` (programmatic use)
+2. Environment variables (`FO_PROVIDER`, `FO_OPENAI_*`, etc.)
+3. Configuration profile (resolved via `platformdirs.user_config_dir`)
+4. Hardcoded defaults (Ollama)
 
 ---
 
@@ -616,7 +616,7 @@ Configuration priority (highest wins):
 ### Provider Not Found Error
 
 ```text
-ValueError: Unknown provider 'openai'. Registered providers: ['ollama'].
+Unknown provider 'openai'. Registered providers: ['ollama'].
 ```
 
 **Solution:** Install the required extra dependency:
@@ -632,9 +632,12 @@ pip install "local-file-organizer[mlx]"     # For MLX
 
 ```text
 FO_PROVIDER=openai but neither FO_OPENAI_API_KEY nor FO_OPENAI_BASE_URL is set
+(and OPENAI_API_KEY is also absent).  Requests will likely fail.
+For local providers (LM Studio, Ollama OpenAI-compat) set FO_OPENAI_BASE_URL.
 ```
 
 **Solution:** Set the required environment variables for your provider (see provider-specific sections above).
+If you have the standard `OPENAI_API_KEY` env var set, this warning is suppressed automatically.
 
 ### Model Path Not Set (LLaMA.cpp / MLX)
 
