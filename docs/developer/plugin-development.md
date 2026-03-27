@@ -334,13 +334,16 @@ This section covers installing and testing plugins locally during development, b
 
 #### Method 1: Direct Directory Installation (Recommended for Development)
 
-Install your plugin directly from its source directory:
+Install your plugin directly from its source directory when it includes standard
+packaging metadata such as `pyproject.toml` or `setup.py`. If you only have the
+minimal `plugin.json` + `plugin.py` layout shown above, use **Method 3 (Manual
+Registration)** instead.
 
 ```bash
 # Navigate to your plugin directory
 cd ~/projects/my_plugin
 
-# Install in development mode (editable)
+# Install in development mode (editable) when pyproject.toml/setup.py is present
 pip install -e .
 
 # Changes to plugin code are immediately reflected

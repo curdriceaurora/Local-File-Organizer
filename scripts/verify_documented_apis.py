@@ -362,8 +362,8 @@ def verify_hook_event_enum() -> bool:
     print_success(f"HookEvent enum found in {hooks_file}")
     print_success(f"  Found {len(enum_values)} events: {', '.join(enum_values)}")
 
-    # Check for events used in documentation
-    documented_events = ["FILE_ORGANIZED", "FILE_SCANNED"]
+    # Check for event values used in documentation
+    documented_events = ["file.organized", "file.scanned"]
     for event in documented_events:
         if event in enum_values:
             print_success(f"  Event '{event}' exists")
@@ -465,6 +465,7 @@ def verify_manifest_schema() -> bool:
         "dependencies",
         "min_organizer_version",
         "max_organizer_version",
+        "allowed_paths",
     }
 
     # Validate MANIFEST_REQUIRED_FIELDS
