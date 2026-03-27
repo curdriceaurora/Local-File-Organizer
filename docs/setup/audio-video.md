@@ -393,14 +393,527 @@ audio:
 
 ---
 
+---
+
+## Video Analysis
+
+### Overview
+
+Video analysis provides advanced scene detection and metadata extraction capabilities for intelligent video file organization. This enables:
+
+- **Scene Detection**: Automatically detect scene changes and transitions
+- **Keyframe Extraction**: Extract representative frames from each scene
+- **Content-based Organization**: Organize videos by visual content, not just filenames
+- **Metadata Extraction**: Resolution, codec, duration, bitrate, and creation date
+- **Screen Recording Detection**: Identify and categorize screen recordings
+
+All features run **100% locally** using OpenCV and PySceneDetect with no cloud dependencies.
+
+### System Requirements
+
+| Component | Requirement | Notes |
+|-----------|------------|-------|
+| **Python** | 3.11+ | Required |
+| **OpenCV** | 4.8.0+ | Core video processing |
+| **FFmpeg** | Latest | Metadata extraction (optional) |
+| **RAM** | 2-4 GB | Depends on video resolution |
+| **Storage** | Minimal | No models to download |
+
+#### Installing FFmpeg (Optional)
+
+FFmpeg is optional but recommended for richer metadata extraction.
+
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+**Windows:**
+Download from [ffmpeg.org](https://ffmpeg.org/download.html) or use:
+```powershell
+choco install ffmpeg
+```
+
+### Installation
+
+Install the video processing dependencies:
+
+```bash
+# From your File Organizer directory
+pip install -e ".[video]"
+```
+
+This installs:
+- `opencv-python>=4.8.0` - Video frame processing and analysis
+- `scenedetect[opencv]>=0.6.0` - Advanced scene detection algorithms
+
+### Verify Installation
+
+```bash
+python -c "import cv2; import scenedetect; print('✓ Video analysis ready')"
+```
+
+If successful, you're ready to analyze video files.
+
+### Detection Methods
+
+PySceneDetect supports multiple scene detection algorithms with different characteristics:
+
+| Method | Algorithm | Speed | Accuracy | Use Case |
+|--------|-----------|-------|----------|----------|
+| `content` | Content-aware analysis | Moderate | Excellent | General use (recommended) |
+| `threshold` | Simple pixel difference | Fast | Good | Quick previews, low-resource systems |
+| `adaptive` | Adaptive threshold | Slow | Very Good | Variable lighting, complex scenes |
+| `histogram` | Color histogram comparison | Moderate | Very Good | Color-based transitions |
+
+**Recommendation:** Start with `content` for best balance of speed and accuracy.
+
+### Detection Thresholds
+
+Control sensitivity with threshold parameters:
+
+| Threshold | Sensitivity | Scene Count | Use Case |
+|-----------|-------------|-------------|----------|
+| `15.0` | Very High | Many scenes | Subtle transitions, slow-paced content |
+| `27.0` | High | Moderate | **Default - recommended for most videos** |
+| `40.0` | Medium | Fewer scenes | Action videos, music videos |
+| `60.0` | Low | Minimal scenes | Only major scene changes |
+
+**Lower threshold = more sensitive = more scenes detected**
+
+### Basic Usage
+
+#### Programmatic API
+
+```python
+from pathlib import Path
+from file_organizer.services.video.scene_detector import SceneDetector, DetectionMethod
+
+# Initialize detector
+detector = SceneDetector(
+    method=DetectionMethod.CONTENT,
+    threshold=27.0,
+    min_scene_length=1.0  # seconds
+)
+
+# Detect scenes in video
+video_file = Path("~/Videos/movie.mp4")
+result = detector.detect_scenes(video_file)
+
+# Access results
+print(f"Video: {result.video_path.name}")
+print(f"Duration: {result.total_duration:.1f} seconds")
+print(f"FPS: {result.fps:.2f}")
+print(f"Detected {len(result.scenes)} scenes")
+
+# Access individual scenes
+for scene in result.scenes:
+    print(f"Scene {scene.scene_number}: {scene.start_time:.2f}s - {scene.end_time:.2f}s "
+          f"({scene.duration:.2f}s, {scene.frame_count} frames)")
+```
+
+#### Advanced Options
+
+```python
+from file_organizer.services.video.scene_detector import SceneDetector, DetectionMethod
+
+# High-sensitivity detection for subtle transitions
+detector = SceneDetector(
+    method=DetectionMethod.ADAPTIVE,
+    threshold=15.0,  # Lower = more sensitive
+    min_scene_length=0.5  # Allow shorter scenes
+)
+
+result = detector.detect_scenes("interview.mp4")
+
+# Override method/threshold per video
+result = detector.detect_scenes(
+    "action-movie.mp4",
+    method=DetectionMethod.CONTENT,
+    threshold=40.0  # Less sensitive for fast-paced content
+)
+```
+
+#### Extract Scene Thumbnails
+
+```python
+from pathlib import Path
+from file_organizer.services.video.scene_detector import SceneDetector
+
+detector = SceneDetector()
+result = detector.detect_scenes("video.mp4")
+
+# Extract thumbnail for each scene
+output_dir = Path("~/Videos/thumbnails")
+SceneDetector.extract_scene_thumbnails(
+    video_path="video.mp4",
+    result=result,
+    output_dir=output_dir,
+    frame_offset=0.5  # Extract frame 0.5s into each scene
+)
+
+print(f"Saved {len(result.scenes)} thumbnails to {output_dir}")
+```
+
+#### Save Scene List
+
+```python
+from file_organizer.services.video.scene_detector import SceneDetector
+
+detector = SceneDetector()
+result = detector.detect_scenes("video.mp4")
+
+# Save scene list as CSV
+SceneDetector.save_scene_list(result, "scenes.csv")
+
+# CSV format:
+# Scene,Start Time,End Time,Duration,Start Frame,End Frame,Frame Count,Score
+# 1,0.00,5.23,5.23,0,157,157,0.850
+# 2,5.23,12.45,7.22,157,373,216,0.920
+```
+
+### Video Metadata Extraction
+
+#### Extract Metadata
+
+```python
+from pathlib import Path
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+
+# Initialize extractor
+extractor = VideoMetadataExtractor()
+
+# Extract metadata
+video_file = Path("~/Videos/movie.mp4")
+metadata = extractor.extract(video_file)
+
+# Access metadata
+print(f"File: {metadata.file_path.name}")
+print(f"Size: {metadata.file_size / 1024 / 1024:.1f} MB")
+print(f"Format: {metadata.format}")
+print(f"Duration: {metadata.duration:.1f} seconds")
+print(f"Resolution: {metadata.width}x{metadata.height}")
+print(f"FPS: {metadata.fps:.2f}")
+print(f"Codec: {metadata.codec}")
+print(f"Bitrate: {metadata.bitrate / 1000:.0f} kbps")
+```
+
+#### Resolution Classification
+
+```python
+from file_organizer.services.video.metadata_extractor import resolution_label
+
+# Classify resolution
+label = resolution_label(1920, 1080)
+print(label)  # "1080p"
+
+label = resolution_label(3840, 2160)
+print(label)  # "4k"
+
+label = resolution_label(1280, 720)
+print(label)  # "720p"
+```
+
+### Batch Processing
+
+Process multiple videos efficiently:
+
+```python
+from pathlib import Path
+from file_organizer.services.video.scene_detector import SceneDetector
+
+detector = SceneDetector()
+video_files = list(Path("~/Videos").glob("*.mp4"))
+
+# Batch detect scenes
+results = detector.detect_scenes_batch(video_files)
+
+# Process results
+for result in results:
+    print(f"{result.video_path.name}: {len(result.scenes)} scenes")
+
+    # Save scene list for each video
+    output_csv = result.video_path.with_suffix(".scenes.csv")
+    SceneDetector.save_scene_list(result, output_csv)
+```
+
+### Supported Video Formats
+
+Video analysis supports all formats compatible with OpenCV and FFmpeg:
+
+**Common Formats:**
+- **MP4** (`.mp4`) - Most common, recommended
+- **MKV** (`.mkv`) - High-quality container
+- **AVI** (`.avi`) - Legacy Windows format
+- **MOV** (`.mov`) - QuickTime format
+- **WebM** (`.webm`) - Web-optimized format
+- **FLV** (`.flv`) - Flash video
+- **WMV** (`.wmv`) - Windows Media Video
+- **MPEG** (`.mpeg`, `.mpg`) - MPEG-1/2 format
+- **M4V** (`.m4v`) - iTunes video format
+- **3GP** (`.3gp`) - Mobile video format
+
+**Note:** Format support depends on OpenCV and FFmpeg codecs installed on your system.
+
+### Integration with File Organization
+
+#### Organize by Scene Count
+
+```python
+from pathlib import Path
+from file_organizer.services.video.organizer import VideoOrganizer
+from file_organizer.services.video.scene_detector import SceneDetector
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+
+# Extract metadata
+metadata_extractor = VideoMetadataExtractor()
+metadata = metadata_extractor.extract("video.mp4")
+
+# Detect scenes
+detector = SceneDetector()
+scene_result = detector.detect_scenes("video.mp4")
+
+# Organize based on video characteristics
+if len(scene_result.scenes) > 50:
+    category = "long-form"
+elif scene_result.total_duration < 60:
+    category = "short-clips"
+else:
+    category = "standard"
+
+print(f"Category: {category}")
+print(f"Scenes: {len(scene_result.scenes)}")
+print(f"Duration: {scene_result.total_duration:.1f}s")
+```
+
+#### Screen Recording Detection
+
+```python
+from file_organizer.services.video.organizer import is_screen_recording
+
+# Detect screen recordings by filename
+if is_screen_recording("Screen Recording 2025-01-15 at 3.45.22 PM.mp4"):
+    print("macOS QuickTime screen recording detected")
+
+if is_screen_recording("2025-01-15 14-05-32.mp4"):
+    print("OBS Studio recording detected")
+
+# Supports patterns from:
+# - macOS QuickTime
+# - Windows Snipping Tool
+# - OBS Studio
+# - Xbox Game Bar
+# - Camtasia
+```
+
+### TUI Integration
+
+View video files and analysis results in the Terminal UI:
+
+```bash
+file-organizer tui
+```
+
+**Press `6` to access the Video view**, which displays:
+- Discovered video files in current directory
+- Metadata (resolution, duration, codec, bitrate)
+- Scene detection results (if available)
+- Screen recording detection
+
+### Troubleshooting
+
+#### "OpenCV not found"
+
+**Error:**
+```
+ImportError: No module named 'cv2'
+```
+
+**Solution:**
+```bash
+# Verify installation
+python -c "import cv2; print(cv2.__version__)"
+
+# If not installed
+pip install opencv-python>=4.8.0
+```
+
+#### "scenedetect not found"
+
+**Error:**
+```
+ImportError: No module named 'scenedetect'
+```
+
+**Solution:**
+```bash
+pip install scenedetect[opencv]>=0.6.0
+```
+
+#### Platform-Specific OpenCV Issues
+
+**macOS - Conflicting Installations:**
+```bash
+# Remove brew version if conflicts occur
+brew uninstall opencv
+
+# Use pip version only
+pip install opencv-python
+```
+
+**Linux - Missing System Libraries:**
+```bash
+# Ubuntu/Debian
+sudo apt install libgl1-mesa-glx libglib2.0-0
+
+# Fedora/RHEL
+sudo dnf install mesa-libGL glib2
+```
+
+**Windows - Binary Compatibility:**
+```bash
+# Use prebuilt binaries
+pip install opencv-python
+
+# Avoid building from source unless necessary
+```
+
+#### Failed to Open Video
+
+**Error:**
+```
+ValueError: Failed to open video: video.mp4
+```
+
+**Solutions:**
+1. **Check file exists**: Verify path is correct
+2. **Check format support**: Try with `.mp4` file first
+3. **Install FFmpeg**: Some codecs require FFmpeg
+4. **Test with OpenCV**:
+   ```python
+   import cv2
+   cap = cv2.VideoCapture("video.mp4")
+   print(f"Opened: {cap.isOpened()}")
+   cap.release()
+   ```
+
+#### Too Many/Few Scenes Detected
+
+**Solutions:**
+
+**Too many scenes:**
+```python
+# Increase threshold (less sensitive)
+detector = SceneDetector(threshold=40.0)
+
+# Increase minimum scene length
+detector = SceneDetector(min_scene_length=2.0)  # 2 seconds minimum
+```
+
+**Too few scenes:**
+```python
+# Decrease threshold (more sensitive)
+detector = SceneDetector(threshold=15.0)
+
+# Try different detection method
+detector = SceneDetector(method=DetectionMethod.ADAPTIVE)
+```
+
+### Best Practices
+
+#### Detection Method Selection
+
+- **General videos**: `content` method (recommended)
+- **Fast previews**: `threshold` method
+- **Variable lighting**: `adaptive` method
+- **Color-based transitions**: `histogram` method
+
+#### Threshold Selection
+
+- **Subtle transitions** (interviews, documentaries): `15.0 - 20.0`
+- **General content** (movies, TV shows): `27.0` (default)
+- **Fast-paced** (action, music videos): `40.0 - 50.0`
+- **Major changes only**: `60.0+`
+
+#### Processing Strategy
+
+1. **Start with defaults**: Test with `content` method and threshold `27.0`
+2. **Validate on sample**: Check scene detection quality on representative video
+3. **Adjust parameters**: Tune threshold based on content type
+4. **Batch process**: Use `detect_scenes_batch()` for multiple files
+5. **Save results**: Export scene lists to CSV for review
+6. **Extract thumbnails**: Visual verification of scene boundaries
+
+### Performance Optimization
+
+#### Fast Processing
+
+```python
+# Use threshold method for speed
+detector = SceneDetector(
+    method=DetectionMethod.THRESHOLD,
+    threshold=30.0
+)
+
+# Skip scene extraction, metadata only
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+extractor = VideoMetadataExtractor()
+metadata = extractor.extract("video.mp4")  # Much faster than scene detection
+```
+
+#### High-Quality Processing
+
+```python
+# Use adaptive method for accuracy
+detector = SceneDetector(
+    method=DetectionMethod.ADAPTIVE,
+    min_scene_length=0.5  # Detect shorter scenes
+)
+
+# Extract high-resolution thumbnails
+SceneDetector.extract_scene_thumbnails(
+    video_path="video.mp4",
+    result=result,
+    output_dir="thumbnails",
+    frame_offset=1.0  # Use frame 1s into scene
+)
+```
+
+### Configuration
+
+Configure video analysis settings in `~/.config/file-organizer/config.yaml`:
+
+```yaml
+video:
+  scene_detection:
+    enabled: true
+    method: content  # content, threshold, adaptive, histogram
+    threshold: 27.0
+    min_scene_length: 1.0
+  metadata:
+    use_ffprobe: true  # Prefer ffprobe over OpenCV
+    extract_thumbnails: false
+  organization:
+    detect_screen_recordings: true
+    short_clip_threshold: 60.0  # seconds
+```
+
+---
+
 ## Next Steps
 
-- **Video Processing**: See the video section below for scene detection and keyframe extraction
+- **Audio Transcription**: See the audio section above for speech-to-text capabilities
 - **Audio Classification**: Learn about automatic audio type detection (music, podcast, etc.)
-- **Integration**: Combine transcription with organization workflows
-- **Advanced**: Explore speaker diarization and custom model training
+- **Integration**: Combine audio and video analysis in organization workflows
+- **Advanced**: Explore custom scene detection algorithms and ML-based classification
 
 For more information, see:
 - [User Guide](../USER_GUIDE.md) - General usage patterns
 - [Dependencies](./dependencies.md) - Installation and requirements
-- [API Reference](../api/audio.md) - Detailed API documentation
+- [API Reference](../api/video.md) - Detailed API documentation
