@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -161,8 +162,47 @@ def extract_enum_values(source_file: Path, enum_name: str) -> list[str]:
     return []
 
 
-def extract_constants(source_file: Path, constant_names: list[str]) -> dict[str, Any]:
-    """Extract constant values."""
+def _convert_constant_node(node: ast.AST) -> Any:
+    """Convert simple AST literals/containers into Python values."""
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Tuple):
+        return tuple(_convert_constant_node(elt) for elt in node.elts)
+    if isinstance(node, ast.List):
+        return [_convert_constant_node(elt) for elt in node.elts]
+    if isinstance(node, ast.Set):
+        return {_convert_constant_node(elt) for elt in node.elts}
+    if isinstance(node, ast.Dict):
+        return _convert_constant_dict(node)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        return -_convert_constant_node(node.operand)
+    raise ValueError(f"Unsupported constant node: {ast.dump(node, include_attributes=False)}")
+
+
+def _convert_constant_dict(node: ast.Dict) -> dict[Any, Any]:
+    """Convert an AST dictionary node into a Python dictionary."""
+    return {
+        _convert_constant_node(key): _convert_constant_node(value)
+        for key, value in zip(node.keys, node.values, strict=True)
+    }
+
+
+def _store_constant(
+    constants: dict[str, Any],
+    name: str,
+    value_node: ast.AST,
+) -> None:
+    """Store a parsed constant, falling back to source text on unsupported nodes."""
+    try:
+        constants[name] = _convert_constant_node(value_node)
+    except (ValueError, TypeError, SyntaxError):
+        constants[name] = ast.unparse(value_node)
+
+
+def extract_constants(source_file: Path, constant_names: list[str] | None = None) -> dict[str, Any]:
+    """Extract top-level constant values from a source file."""
     content = source_file.read_text()
     tree = ast.parse(content)
 
@@ -172,14 +212,16 @@ def extract_constants(source_file: Path, constant_names: list[str]) -> dict[str,
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id in constant_names:
-                    # Try to evaluate the value
-                    try:
-                        value = ast.literal_eval(node.value)
-                        constants[target.id] = value
-                    except (ValueError, TypeError, SyntaxError):
-                        # Can't evaluate, store the unparsed representation
-                        constants[target.id] = ast.unparse(node.value)
+                if isinstance(target, ast.Name) and (
+                    constant_names is None or target.id in constant_names
+                ):
+                    _store_constant(constants, target.id, node.value)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            if constant_names is not None and node.target.id not in constant_names:
+                continue
+            if node.value is None:
+                continue
+            _store_constant(constants, node.target.id, node.value)
 
     return constants
 
@@ -359,25 +401,28 @@ def verify_manifest_schema() -> bool:
         print_error("MANIFEST_OPTIONAL_FIELDS not found in base.py")
         return False
 
-    print_success("MANIFEST_REQUIRED_FIELDS found in base.py")
+    constants = extract_constants(
+        base_file,
+        ["MANIFEST_REQUIRED_FIELDS", "MANIFEST_OPTIONAL_FIELDS"],
+    )
+    required_fields = constants.get("MANIFEST_REQUIRED_FIELDS")
+    optional_fields = constants.get("MANIFEST_OPTIONAL_FIELDS")
 
-    # Extract the fields from MANIFEST_REQUIRED_FIELDS
-    required_pattern = r"MANIFEST_REQUIRED_FIELDS.*?{([^}]+)}"
-    required_match = re.search(required_pattern, content, re.DOTALL)
-    if required_match:
-        required_fields = re.findall(r'"([^"]+)":\s*\w+', required_match.group(1))
-        for field in required_fields:
-            print_success(f"  {field}")
+    if not isinstance(required_fields, dict):
+        print_error("MANIFEST_REQUIRED_FIELDS could not be parsed as a dictionary")
+        return False
+
+    if not isinstance(optional_fields, dict):
+        print_error("MANIFEST_OPTIONAL_FIELDS could not be parsed as a dictionary")
+        return False
+
+    print_success("MANIFEST_REQUIRED_FIELDS found in base.py")
+    for field in required_fields:
+        print_success(f"  {field}")
 
     print_success("\nMANIFEST_OPTIONAL_FIELDS found in base.py")
-
-    # Extract the fields from MANIFEST_OPTIONAL_FIELDS
-    optional_pattern = r"MANIFEST_OPTIONAL_FIELDS.*?{([^}]+)}"
-    optional_match = re.search(optional_pattern, content, re.DOTALL)
-    if optional_match:
-        optional_fields = re.findall(r'"([^"]+)":', optional_match.group(1))
-        for field in optional_fields:
-            print_success(f"  {field}")
+    for field in optional_fields:
+        print_success(f"  {field}")
 
     return True
 
@@ -438,10 +483,10 @@ def main() -> None:
 
     if passed == total:
         print(f"\n{GREEN}{BOLD}✓ All {total} verification checks passed!{RESET}\n")
-        exit(0)
+        sys.exit(0)
     else:
         print(f"\n{RED}{BOLD}✗ {total - passed}/{total} checks failed{RESET}\n")
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

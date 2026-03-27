@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ast
 import sys
+import textwrap
 from pathlib import Path
 
 
@@ -46,7 +47,7 @@ def validate_python_code(code: str, line_number: int) -> tuple[bool, str]:
         Tuple of (is_valid, error_message)
     """
     try:
-        ast.parse(code)
+        ast.parse(textwrap.dedent(code))
         return True, ""
     except SyntaxError as e:
         error_msg = f"Syntax error at line {line_number + (e.lineno or 1)}: {e.msg}"
@@ -54,7 +55,7 @@ def validate_python_code(code: str, line_number: int) -> tuple[bool, str]:
             error_msg += f"\n  {e.text.strip()}"
         return False, error_msg
     except Exception as e:
-        return False, f"Validation error at line {line_number}: {str(e)}"
+        return False, f"Validation error at line {line_number}: {e!s}"
 
 
 def main():

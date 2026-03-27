@@ -678,8 +678,10 @@ class MyPlugin(Plugin):
         return {"processed": True}
 EOF
 
-# 4. Install in development mode
-pip install -e .
+# 4. Register using Method 3 (Manual Registration)
+# This minimal example only creates plugin.json and plugin.py, so it does not
+# include the pyproject.toml/setup.py packaging metadata required by pip install -e .
+# Add ~/projects/my_plugin to config/plugins.yaml under plugin_paths and enable my_plugin.
 
 # 5. Test the plugin
 pytest tests/ -v
@@ -894,7 +896,11 @@ from pathlib import Path
 
 from file_organizer.plugins.sdk.testing import PluginTestCase
 
-from exif_image_tagger import ExifImageTaggerPlugin
+# ExifImageTaggerPlugin is defined in plugin.py.
+# When running tests inside the plugin directory, import it directly:
+from plugin import ExifImageTaggerPlugin
+# When testing an installed package, use:
+# from exif_image_tagger.plugin import ExifImageTaggerPlugin
 
 
 class TestExifImageTaggerPlugin(PluginTestCase):
