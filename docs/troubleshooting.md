@@ -54,7 +54,9 @@ file-organizer serve --port 8001
 
 # Or find and stop the process using port 8000
 lsof -i :8000
-kill -9 <PID>
+kill <PID>          # graceful shutdown (SIGTERM)
+# If the process doesn't stop:
+kill -9 <PID>       # force kill (SIGKILL) as last resort
 ```
 
 ## Optional Dependency Issues
