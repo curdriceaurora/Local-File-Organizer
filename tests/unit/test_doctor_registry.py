@@ -336,6 +336,44 @@ def test_normalized_extension_hidden_file_with_extension():
 # -----------------------------------------------------------------------
 
 
+def test_scan_directory(tmp_path):
+    """scan_directory scans recursively, counts by extension, and skips hidden files."""
+    # Create nested structure with mixed file types
+    subdir = tmp_path / "music"
+    subdir.mkdir()
+    hidden_dir = tmp_path / ".hidden"
+    hidden_dir.mkdir()
+
+    # Create visible files
+    (tmp_path / "song.mp3").touch()
+    (tmp_path / "video.mp4").touch()
+    (tmp_path / "document.pdf").touch()
+    (tmp_path / "another.mp3").touch()
+    (subdir / "nested.wav").touch()
+    (tmp_path / "README").touch()  # No extension
+
+    # Create hidden files (should be skipped)
+    (tmp_path / ".hidden_file.txt").touch()
+    (hidden_dir / "secret.mp3").touch()
+
+    # Scan directory
+    counts = scan_directory(tmp_path)
+
+    # Verify correct counts
+    assert counts[".mp3"] == 2  # song.mp3 + another.mp3 (not .hidden/secret.mp3)
+    assert counts[".mp4"] == 1  # video.mp4
+    assert counts[".pdf"] == 1  # document.pdf
+    assert counts[".wav"] == 1  # music/nested.wav
+    assert counts[""] == 1  # README (no extension)
+
+    # Verify hidden files were skipped
+    assert counts.get(".txt", 0) == 0  # .hidden_file.txt was skipped
+
+    # Verify total file count (hidden files and dirs excluded)
+    total_files = sum(counts.values())
+    assert total_files == 6  # 2 mp3 + 1 mp4 + 1 pdf + 1 wav + 1 no-ext
+
+
 def test_scan_directory_basic(tmp_path):
     """scan_directory counts files by extension."""
     # Create test files
@@ -493,6 +531,33 @@ def test_scan_directory_special_characters_in_names(tmp_path):
     counts = scan_directory(tmp_path)
 
     assert counts[".txt"] == 4
+
+
+def test_scan_directory_permission_denied(tmp_path):
+    """scan_directory handles permission denied gracefully without crashing."""
+    import os
+    import stat
+
+    # Create a subdirectory with a file
+    restricted_dir = tmp_path / "restricted"
+    restricted_dir.mkdir()
+    (restricted_dir / "secret.txt").touch()
+    (tmp_path / "accessible.txt").touch()
+
+    # Remove read and execute permissions from the subdirectory
+    # This will cause permission denied when trying to iterate its contents
+    try:
+        os.chmod(restricted_dir, 0o000)
+
+        # Should not crash, but may skip the restricted directory
+        counts = scan_directory(tmp_path)
+
+        # Should at least count the accessible file
+        assert counts.get(".txt", 0) >= 1
+
+    finally:
+        # Restore permissions for cleanup
+        os.chmod(restricted_dir, stat.S_IRWXU)
 
 
 # -----------------------------------------------------------------------
