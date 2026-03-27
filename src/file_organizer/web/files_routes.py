@@ -2,185 +2,34 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
-
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
-from PIL import Image, UnidentifiedImageError
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
-from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
+from file_organizer.api.utils import resolve_path
 from file_organizer.web._helpers import (
     MAX_NAV_DEPTH,
-    MAX_THUMBNAIL_BYTES,
     PAGE_SIZE,
-    THUMBNAIL_SIZE,
-    allowed_roots,
     build_content_disposition,
     clamp_limit,
-    detect_kind,
-    format_bytes,
-    format_timestamp,
-    has_children,
-    is_probably_text,
     normalize_sort_by,
     normalize_sort_order,
     normalize_view,
-    path_id,
-    render_image_thumbnail,
-    render_placeholder_thumbnail,
     resolve_selected_path,
     templates,
-    validate_depth,
-)
-from file_organizer.web._helpers import (
-    sanitize_upload_name as _sanitize_upload_name,
 )
 from file_organizer.web.file_operations import (
     build_file_results_context,
+    build_preview_context,
+    build_tree_context,
+    generate_thumbnail,
     process_file_uploads,
-)
-from file_organizer.web.file_operations import (
-    build_file_results_context as _build_file_results_context,
 )
 from file_organizer.web.file_validators import validate_upload_path
 
 files_router = APIRouter(tags=["web"])
-sanitize_upload_name = _sanitize_upload_name
-
-
-def _build_tree_context(
-    path: str | None,
-    settings: ApiSettings,
-    depth: int,
-    active: str | None,
-) -> dict[str, object]:
-    """Build tree context using route-module patch points for compatibility."""
-    roots = allowed_roots(settings)
-    nodes: list[dict[str, object]] = []
-    error_message: str | None = None
-    active_path = active or ""
-
-    if path:
-        try:
-            current = resolve_path(path, settings.allowed_paths)
-            validate_depth(current, roots)
-            child_dirs = sorted(
-                [entry for entry in current.iterdir() if entry.is_dir() and not is_hidden(entry)],
-                key=lambda entry: entry.name.lower(),
-            )
-            for entry in child_dirs:
-                nodes.append(
-                    {
-                        "id": path_id(entry),
-                        "name": entry.name,
-                        "path": str(entry),
-                        "path_param": quote(str(entry)),
-                        "has_children": has_children(entry),
-                    }
-                )
-        except ApiError as exc:
-            error_message = exc.message
-        except OSError as exc:
-            error_message = str(exc)
-    else:
-        for root in roots:
-            nodes.append(
-                {
-                    "id": path_id(root),
-                    "name": root.name or root.as_posix(),
-                    "path": str(root),
-                    "path_param": quote(str(root)),
-                    "has_children": has_children(root),
-                    "is_root": True,
-                }
-            )
-
-    if not nodes and not path:
-        error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
-
-    return {
-        "nodes": nodes,
-        "depth": depth,
-        "active_path": active_path,
-        "active_path_param": quote(active_path) if active_path else "",
-        "error_message": error_message,
-    }
-
-
-def _build_preview_context(path: str, settings: ApiSettings) -> dict[str, object]:
-    """Build preview context using module-level compatibility patch points."""
-    error_message: str | None = None
-    preview_kind = "file"
-    preview_text: str | None = None
-    download_url = ""
-    raw_url = ""
-    size_display = ""
-    modified_display = ""
-    info = None
-
-    try:
-        target = resolve_path(path, settings.allowed_paths)
-        if not target.exists() or not target.is_file():
-            raise ApiError(status_code=404, error="not_found", message="File not found")
-
-        info = file_info_from_path(target)
-        preview_kind = detect_kind(target)
-        encoded_path = quote(info.path)
-        raw_url = f"/ui/files/raw?path={encoded_path}"
-        download_url = f"/ui/files/raw?path={encoded_path}&download=1"
-        size_display = format_bytes(info.size)
-        modified_display = format_timestamp(info.modified)
-
-        if preview_kind == "text" and is_probably_text(target):
-            try:
-                preview_text = target.read_text(encoding="utf-8", errors="replace")[:4000]
-            except OSError:
-                preview_text = "Preview not available."
-        elif preview_kind == "text":
-            preview_kind = "file"
-    except ApiError as exc:
-        error_message = exc.message
-
-    return {
-        "info": info,
-        "preview_kind": preview_kind,
-        "preview_text": preview_text,
-        "raw_url": raw_url,
-        "download_url": download_url,
-        "size_display": size_display,
-        "modified_display": modified_display,
-        "error_message": error_message,
-    }
-
-
-def _generate_thumbnail(path: str, kind: str, settings: ApiSettings) -> bytes:
-    """Generate thumbnails using module-level symbols that tests patch directly."""
-    target = resolve_path(path, settings.allowed_paths)
-    if not target.exists() or not target.is_file():
-        raise ApiError(status_code=404, error="not_found", message="File not found")
-
-    if kind == "image":
-        try:
-            stat = target.stat()
-        except OSError:
-            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
-
-        if stat.st_size > MAX_THUMBNAIL_BYTES:
-            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
-
-        try:
-            return render_image_thumbnail(target)
-        except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
-            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
-
-    if kind == "pdf":
-        return render_placeholder_thumbnail("PDF", THUMBNAIL_SIZE)
-    if kind == "video":
-        return render_placeholder_thumbnail("VID", THUMBNAIL_SIZE)
-    return render_placeholder_thumbnail("FILE", THUMBNAIL_SIZE)
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +57,7 @@ def files_browser(
     from file_organizer.web._helpers import base_context
 
     context = base_context(request, settings, active="files", title="Files")
-    results = _build_file_results_context(
+    results = build_file_results_context(
         request,
         settings,
         path=path,
@@ -243,7 +92,7 @@ def files_list(
     Returns:
         HTML fragment of the file results panel.
     """
-    context = _build_file_results_context(
+    context = build_file_results_context(
         request,
         settings,
         path=path,
@@ -278,7 +127,7 @@ def files_tree(
     Returns:
         HTML fragment of tree nodes.
     """
-    context = _build_tree_context(path, settings, depth, active)
+    context = build_tree_context(path, settings, depth, active)
     context["request"] = request
     return templates.TemplateResponse(request, "files/_tree.html", context)
 
@@ -299,7 +148,7 @@ def files_thumbnail(
     Returns:
         PNG image response.
     """
-    data = _generate_thumbnail(path, kind, settings)
+    data = generate_thumbnail(path, kind, settings)
     return Response(content=data, media_type="image/png")
 
 
@@ -341,7 +190,7 @@ def files_preview(
     Returns:
         HTML fragment for the preview sidebar.
     """
-    context = _build_preview_context(path, settings)
+    context = build_preview_context(path, settings)
     context["request"] = request
     return templates.TemplateResponse(request, "files/_preview.html", context)
 

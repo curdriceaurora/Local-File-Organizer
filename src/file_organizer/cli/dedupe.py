@@ -24,82 +24,14 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.cli import dedupe_display, dedupe_removal
-from file_organizer.cli.dedupe_display import (
-    display_duplicate_group as _display_duplicate_group,
-)
-from file_organizer.cli.dedupe_display import (
-    display_summary as _display_summary,
-)
-from file_organizer.cli.dedupe_display import (
-    format_datetime as _format_datetime,
-)
-from file_organizer.cli.dedupe_display import (
-    format_size as _format_size,
-)
 from file_organizer.cli.dedupe_hash import (
     ProgressTracker,
     create_scan_options,
     initialize_hash_detector,
     scan_for_duplicates,
 )
-from file_organizer.cli.dedupe_strategy import (
-    get_user_selection as _get_user_selection,
-)
-from file_organizer.cli.dedupe_strategy import (
-    select_files_to_keep as _select_files_to_keep,
-)
 
 console = Console()
-
-
-def format_size(size_bytes: int) -> str:
-    """Return a human-readable size string."""
-    return _format_size(size_bytes)
-
-
-def format_datetime(timestamp: float) -> str:
-    """Return a formatted UTC timestamp string."""
-    return _format_datetime(timestamp)
-
-
-def select_files_to_keep(files: list[dict], strategy: str) -> list[dict]:
-    """Apply the keep strategy while preserving the original list identity."""
-    updated_files = _select_files_to_keep(files, strategy)
-    files[:] = updated_files
-    return files
-
-
-def get_user_selection(files: list[dict], strategy: str, batch: bool = False) -> list[int]:
-    """Return indices to remove using the module console by default."""
-    return _get_user_selection(files, strategy, batch=batch, console=console)
-
-
-def display_summary(
-    total_groups: int,
-    total_duplicates: int,
-    total_removed: int,
-    space_saved: int,
-    dry_run: bool,
-) -> None:
-    """Display the operation summary using the module console."""
-    _display_summary(
-        console,
-        total_groups,
-        total_duplicates,
-        total_removed,
-        space_saved,
-        dry_run,
-    )
-
-
-def display_duplicate_group(
-    group_id: int,
-    file_hash: str,
-    files: list[dict],
-    total_groups: int,
-) -> None:
-    """Display a duplicate group using the module console."""
-    _display_duplicate_group(console, group_id, file_hash, files, total_groups)
 
 
 class DedupeConfig:

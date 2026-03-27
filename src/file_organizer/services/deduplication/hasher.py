@@ -6,65 +6,14 @@ for large files, and batch processing capabilities.
 
 from __future__ import annotations
 
-import functools
 import hashlib
 import logging
 from pathlib import Path
 from typing import Literal
 
-from file_organizer.parallel.config import ExecutorType, ParallelConfig
-from file_organizer.parallel.processor import ParallelProcessor
-
 HashAlgorithm = Literal["md5", "sha256"]
 
 logger = logging.getLogger(__name__)
-
-
-def _hash_file(path: Path, algorithm: HashAlgorithm = "sha256", chunk_size: int = 65536) -> str:
-    """Hash a single file using the specified algorithm.
-
-    This is a module-level function so it can be pickled for use with
-    ProcessPoolExecutor.
-
-    Args:
-        path: File path to hash.
-        algorithm: Hash algorithm to use ("md5" or "sha256").
-        chunk_size: Size of chunks to read at a time (in bytes).
-
-    Returns:
-        Hexadecimal string representation of the file hash.
-
-    Raises:
-        FileNotFoundError: If file doesn't exist.
-        PermissionError: If file can't be read.
-        ValueError: If algorithm is not supported or path is not a file.
-    """
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}")
-
-    if not path.is_file():
-        raise ValueError(f"Path is not a file: {path}")
-
-    # Create hash object
-    if algorithm == "md5":
-        hasher = hashlib.md5()
-    elif algorithm == "sha256":
-        hasher = hashlib.sha256()
-    else:
-        raise ValueError(f"Unsupported algorithm: {algorithm}. Use 'md5' or 'sha256'.")
-
-    # Read file in chunks for memory efficiency
-    try:
-        with open(path, "rb") as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                hasher.update(chunk)
-    except PermissionError as e:
-        raise PermissionError(f"Cannot read file: {path}") from e
-
-    return hasher.hexdigest()
 
 
 class FileHasher:
@@ -176,79 +125,6 @@ class FileHasher:
                 # Log error but continue processing
                 logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
                 continue
-
-        return results
-
-    def compute_batch_parallel(
-        self,
-        file_paths: list[Path],
-        algorithm: HashAlgorithm = "sha256",
-        config: ParallelConfig | None = None,
-    ) -> dict[Path, str]:
-        """Compute hashes for multiple files using parallel processing.
-
-        This method uses multiprocessing to hash files in parallel, which is
-        significantly faster for large batches of files. It automatically
-        retries failed files and handles errors gracefully.
-
-        Args:
-            file_paths: List of file paths to hash
-            algorithm: Hash algorithm to use ("md5" or "sha256")
-            config: Parallel processing configuration. If None, uses defaults:
-                   - executor_type: PROCESS (for CPU-bound hashing)
-                   - max_workers: CPU count
-                   - retry_count: 2 attempts for failed files
-
-        Returns:
-            Dictionary mapping file paths to their hash values.
-            Files that couldn't be hashed are excluded from results.
-
-        Note:
-            For small batches (< 10 files), consider using compute_batch()
-            instead to avoid multiprocessing overhead.
-        """
-        if not file_paths:
-            return {}
-
-        # Use default config optimized for CPU-bound hashing if not provided
-        if config is None:
-            config = ParallelConfig(
-                executor_type=ExecutorType.PROCESS,
-                max_workers=None,  # Use CPU count
-                retry_count=2,
-            )
-
-        # Create processor and process batch
-        processor = ParallelProcessor(config)
-
-        # Use functools.partial instead of a closure so the callable is picklable
-        # by ProcessPoolExecutor.
-        hash_fn = functools.partial(_hash_file, algorithm=algorithm, chunk_size=self.chunk_size)
-
-        # Process files and collect results
-        batch_result = processor.process_batch(file_paths, hash_fn)
-
-        # Convert BatchResult to dictionary
-        results = {}
-        for file_result in batch_result.results:
-            if file_result.success and file_result.result is not None:
-                results[file_result.path] = file_result.result
-            else:
-                # Log failures
-                logger.warning(
-                    "Could not hash %s: %s",
-                    file_result.path,
-                    file_result.error,
-                )
-
-        # Log batch summary
-        logger.info(
-            "Batch hashing complete: %d/%d files succeeded in %.1fms (%.2f files/sec)",
-            batch_result.succeeded,
-            batch_result.total,
-            batch_result.total_duration_ms,
-            batch_result.files_per_second,
-        )
 
         return results
 

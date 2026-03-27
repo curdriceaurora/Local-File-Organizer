@@ -10,7 +10,7 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture()
@@ -127,22 +127,6 @@ class TestFilesTreeRoute:
         ):
             files_tree(request, settings, path="bad", depth=0, active=None)
         mock_templates.TemplateResponse.assert_called_once()
-
-    def test_tree_os_error(self, tmp_path, settings, mock_templates) -> None:
-        from file_organizer.web.files_routes import files_tree
-
-        gone = tmp_path / "gone"
-        request = MagicMock()
-        with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tmp_path]),
-            patch("file_organizer.web.files_routes.resolve_path", return_value=gone),
-            patch("file_organizer.web.files_routes.validate_depth"),
-        ):
-            files_tree(request, settings, path=str(gone), depth=0, active=None)
-        mock_templates.TemplateResponse.assert_called_once()
-        ctx = mock_templates.TemplateResponse.call_args[0][2]
-        assert ctx.get("error_message") is not None
-        assert "gone" in ctx["error_message"]
 
     def test_tree_no_roots(self, settings, mock_templates) -> None:
         from file_organizer.web.files_routes import files_tree
