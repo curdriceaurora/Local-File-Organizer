@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import sys
 import textwrap
@@ -58,9 +59,24 @@ def validate_python_code(code: str, line_number: int) -> tuple[bool, str]:
         return False, f"Validation error at line {line_number}: {e!s}"
 
 
-def main():
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Validate Python code blocks in markdown documentation."
+    )
+    parser.add_argument(
+        "doc_path",
+        nargs="?",
+        default="./docs/developer/plugin-development.md",
+        help="Markdown file to validate (default: %(default)s)",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
     """Main validation function."""
-    doc_path = Path("./docs/developer/plugin-development.md")
+    args = parse_args()
+    doc_path = Path(args.doc_path)
 
     if not doc_path.exists():
         print(f"Error: Documentation file not found: {doc_path}")
