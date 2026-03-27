@@ -474,11 +474,10 @@ Use the File Organizer Python API to test your plugin interactively:
 
 ```python
 # test_plugin_interactive.py
-from file_organizer.plugins import load_plugin
-from pathlib import Path
+from plugin import ExifImageTaggerPlugin
 
-# Load your plugin
-plugin = load_plugin("/path/to/my_plugin")
+# Instantiate your plugin class directly from the source tree
+plugin = ExifImageTaggerPlugin()
 plugin.on_enable()
 
 # Test hook manually

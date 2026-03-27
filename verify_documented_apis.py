@@ -243,17 +243,23 @@ def verify_hook_decorator() -> bool:
     print_success(f"hook() decorator found in {decorators_file}")
 
     # Check signature: hook(event: HookEvent | str, *, priority: int = 10)
-    if func_info["args"][0] == "event: HookEvent | str":
+    all_correct = True
+    args = func_info.get("args", [])
+    kwonlyargs = func_info.get("kwonlyargs", [])
+
+    if args and args[0] == "event: HookEvent | str":
         print_success("  Parameter 'event' has correct type hint (HookEvent | str)")
     else:
-        print_warning(f"  Parameter 'event' type: {func_info['args'][0]}")
+        print_error(f"  Parameter 'event' signature: {args or 'missing'}")
+        all_correct = False
 
-    if "priority" in func_info["kwonlyargs"][0]:
+    if kwonlyargs and "priority" in kwonlyargs[0]:
         print_success("  Parameter 'priority' is keyword-only with default")
     else:
-        print_warning(f"  Parameter 'priority' signature: {func_info['kwonlyargs']}")
+        print_error(f"  Parameter 'priority' signature: {kwonlyargs or 'missing'}")
+        all_correct = False
 
-    return True
+    return all_correct
 
 
 def verify_hook_event_enum() -> bool:
