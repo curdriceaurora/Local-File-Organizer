@@ -194,6 +194,30 @@ result = transcriber.transcribe_with_options("audio.mp3", options)
 - Italian (`it`), Dutch (`nl`), Polish (`pl`)
 - And 90+ more...
 
+### Supported Audio Formats
+
+Audio transcription supports the following file formats:
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| **MP3** | `.mp3` | Most common, widely supported |
+| **WAV** | `.wav` | Uncompressed, highest quality |
+| **FLAC** | `.flac` | Lossless compression |
+| **M4A** | `.m4a` | Apple/iTunes format |
+| **Ogg Vorbis** | `.ogg` | Open-source format |
+
+**Requirements**: FFmpeg must be installed for format conversion and preprocessing.
+
+**Verification**: Check if a file is supported:
+
+```python
+from file_organizer.core.types import AUDIO_EXTENSIONS
+
+file_path = "my-file.mp3"
+is_supported = any(file_path.endswith(ext) for ext in AUDIO_EXTENSIONS)
+print(f"Supported: {is_supported}")
+```
+
 ### Performance Optimization
 
 #### GPU Acceleration
@@ -645,21 +669,38 @@ for result in results:
 
 ### Supported Video Formats
 
-Video analysis supports all formats compatible with OpenCV and FFmpeg:
+#### Core Formats (Recognized by File Organizer)
 
-**Common Formats:**
-- **MP4** (`.mp4`) - Most common, recommended
-- **MKV** (`.mkv`) - High-quality container
-- **AVI** (`.avi`) - Legacy Windows format
-- **MOV** (`.mov`) - QuickTime format
+These formats are explicitly supported by File Organizer's VIDEO_EXTENSIONS:
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| **MP4** | `.mp4` | Most common, recommended |
+| **MKV** | `.mkv` | High-quality container |
+| **AVI** | `.avi` | Legacy Windows format |
+| **MOV** | `.mov` | QuickTime format |
+| **WMV** | `.wmv` | Windows Media Video |
+
+**Verification**: Check if a file is recognized:
+
+```python
+from file_organizer.core.types import VIDEO_EXTENSIONS
+
+file_path = "my-video.mp4"
+is_recognized = any(file_path.endswith(ext) for ext in VIDEO_EXTENSIONS)
+print(f"Recognized: {is_recognized}")
+```
+
+#### Additional Formats (OpenCV/FFmpeg Runtime Support)
+
+Depending on your OpenCV and FFmpeg installation, these formats may also work for scene detection:
 - **WebM** (`.webm`) - Web-optimized format
 - **FLV** (`.flv`) - Flash video
-- **WMV** (`.wmv`) - Windows Media Video
 - **MPEG** (`.mpeg`, `.mpg`) - MPEG-1/2 format
 - **M4V** (`.m4v`) - iTunes video format
 - **3GP** (`.3gp`) - Mobile video format
 
-**Note:** Format support depends on OpenCV and FFmpeg codecs installed on your system.
+**Note**: Additional formats may work for scene detection via OpenCV, but are not recognized by File Organizer's file organization logic (filtering, categorization). For best compatibility, use core formats.
 
 ### Integration with File Organization
 
