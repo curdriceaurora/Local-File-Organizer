@@ -20,7 +20,7 @@ ollama serve
 curl http://localhost:11434/api/version
 
 # If using a custom port, set the environment variable
-export OLLAMA_HOST=http://localhost:11434
+export OLLAMA_HOST=http://localhost:12345
 ```
 
 ### Model Not Found
@@ -173,7 +173,7 @@ For production deployments with high memory demands, see [Performance Tuning](ad
 
 **Solution**:
 
-The audio transcription model is configured through Ollama and the application config, not CLI flags. To reduce memory usage:
+Audio transcription uses `faster-whisper` (not Ollama). Model size and device are configured via the application config. To reduce memory usage:
 
 ```bash
 # Process files sequentially to limit concurrent memory use
