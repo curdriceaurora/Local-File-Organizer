@@ -196,7 +196,7 @@
     "wasm-pack"
   ],
   "script_commands": [],
-  "custom_commands": [],
+  "custom_commands": ["pymarkdown"],
   "detected_stack": {
     "languages": [
       "python",
