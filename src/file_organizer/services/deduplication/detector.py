@@ -128,6 +128,7 @@ class DuplicateDetector:
                 if options.max_file_size is not None and size > options.max_file_size:
                     continue
             except (OSError, PermissionError):
+                logger.debug("Skipping %s: cannot stat file", path)
                 continue
 
             # Check include patterns

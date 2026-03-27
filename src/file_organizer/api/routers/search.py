@@ -7,8 +7,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
@@ -21,7 +20,7 @@ router = APIRouter(tags=["search"])
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000
-_MAX_LIMIT = 500
+_MAX_LIMIT = 1000
 
 
 class _ScoringTiers:
@@ -45,14 +44,35 @@ class SearchResult(BaseModel):
     created: str | None = None
 
 
-def _relative_path(fp: Path, roots: list[Path]) -> str:
-    """Return *fp* relative to the first matching root, or absolute as fallback."""
+def _relative_path(fp: Path, roots: list[Path]) -> str | None:
+    """Return *fp* relative to the first matching root, or ``None`` if outside all roots."""
     for root in roots:
         try:
             return str(fp.relative_to(root))
         except ValueError:
             continue
-    return str(fp)
+    return None
+
+
+def _build_result(fp: Path, score: float, roots: list[Path]) -> SearchResult | None:
+    """Build a SearchResult from a file path, or None if outside all roots."""
+    rel = _relative_path(fp, roots)
+    if rel is None:
+        return None
+    try:
+        stat = fp.stat()
+    except OSError:
+        return None
+    creation_ts = getattr(stat, "st_birthtime", stat.st_mtime)
+    created_str = datetime.fromtimestamp(creation_ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return SearchResult(
+        filename=fp.name,
+        path=rel,
+        score=round(score, 6),
+        type=fp.suffix.lower().lstrip(".") or "unknown",
+        size=stat.st_size,
+        created=created_str,
+    )
 
 
 def _compute_score(file_path: Path, query: str) -> float:
@@ -222,29 +242,16 @@ def _semantic_search(
     for fp, score in raw_results:
         if ext_filter and fp.suffix.lower() != ext_filter:
             continue
-        try:
-            stat = fp.stat()
-        except OSError:
-            continue
-        creation_ts = getattr(stat, "st_birthtime", stat.st_mtime)
-        created_str = datetime.fromtimestamp(creation_ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        results.append(
-            SearchResult(
-                filename=fp.name,
-                path=_relative_path(fp, roots),
-                score=round(score, 6),
-                type=fp.suffix.lower().lstrip(".") or "unknown",
-                size=stat.st_size,
-                created=created_str,
-            )
-        )
+        result = _build_result(fp, score, roots)
+        if result is not None:
+            results.append(result)
         if len(results) >= top_k:
             break
 
     return results
 
 
-@router.get("/search", response_model=None)
+@router.get("/search", response_model=list[SearchResult])
 def search(
     q: str | None = Query(None, description="Search query"),
     file_type: str | None = Query(None, alias="type"),
@@ -253,7 +260,7 @@ def search(
     path: str | None = None,
     semantic: bool = Query(False, description="Use hybrid BM25+vector semantic search"),
     settings: ApiSettings = Depends(get_settings),
-) -> list[SearchResult] | JSONResponse:
+) -> list[SearchResult]:
     """Search for files by query.
 
     Supports filtering, pagination, and relevance scoring.
@@ -266,10 +273,7 @@ def search(
     (see ``file_organizer.api.middleware``), not per-route.
     """
     if q is None or q == "":
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Query parameter 'q' is required"},
-        )
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
 
     # Clamp limit to a safe upper bound to prevent unbounded allocations.
     effective_limit: int | None = None
@@ -303,16 +307,14 @@ def search(
                 # limit=0 or limit=None → no explicit cap (consistent with keyword path)
                 results = _semantic_search(search_roots, q, file_type, top_k=_MAX_SEMANTIC)
                 return results[skip:]
-        except ImportError:
-            return JSONResponse(
+        except ImportError as exc:
+            raise HTTPException(
                 status_code=503,
-                content={
-                    "detail": (
-                        "Semantic search is not available: search dependencies not installed. "
-                        "Install with: pip install 'file-organizer[search]'"
-                    )
-                },
-            )
+                detail=(
+                    "Semantic search is not available: search dependencies not installed. "
+                    "Install with: pip install 'file-organizer[search]'"
+                ),
+            ) from exc
 
     # ------------------------------------------------------------------
     # Default keyword path — unchanged
@@ -329,28 +331,10 @@ def search(
             break
         for fp in _collect_matching_files(root, q, file_type, max_files=remaining):
             total_traversed += 1
-            try:
-                stat = fp.stat()
-            except OSError:
-                continue
             score = _compute_score(fp, q)
-            if hasattr(stat, "st_birthtime"):
-                creation_ts = stat.st_birthtime
-            else:
-                creation_ts = stat.st_mtime
-            created_dt = datetime.fromtimestamp(creation_ts, tz=UTC)
-            # Format as ISO 8601 with Z suffix for UTC
-            created_str = created_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-            results.append(
-                SearchResult(
-                    filename=fp.name,
-                    path=_relative_path(fp, search_roots),
-                    score=score,
-                    type=fp.suffix.lower().lstrip(".") or "unknown",
-                    size=stat.st_size,
-                    created=created_str,
-                )
-            )
+            result = _build_result(fp, score, search_roots)
+            if result is not None:
+                results.append(result)
 
     # Sort by score descending, then by filename for deterministic pagination
     results.sort(key=lambda r: (-r.score, r.filename))

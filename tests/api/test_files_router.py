@@ -837,3 +837,27 @@ class TestCollectFiles:
         (tmp_path / "file.txt").write_text("hello")
         result = _collect_files(tmp_path, recursive=False, include_hidden=False)
         assert len(result) == 1
+
+    def test_collect_skips_symlinks(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.files import _collect_files
+
+        real_file = tmp_path / "real.txt"
+        real_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(real_file)
+        result = _collect_files(tmp_path, recursive=False, include_hidden=False)
+        assert len(result) == 1
+        assert result[0].name == "real.txt"
+
+    def test_collect_skips_symlinks_recursive(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.files import _collect_files
+
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        real_file = sub / "deep.txt"
+        real_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(real_file)
+        result = _collect_files(tmp_path, recursive=True, include_hidden=False)
+        assert len(result) == 1
+        assert result[0].name == "deep.txt"

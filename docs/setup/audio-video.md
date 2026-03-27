@@ -112,7 +112,7 @@ Control precision and performance with compute types:
 
 ```python
 from pathlib import Path
-from file_organizer.models.audio_transcriber import AudioTranscriber, ModelSize, ComputeType
+from file_organizer.services.audio.transcriber import AudioTranscriber, ModelSize, ComputeType
 
 # Initialize transcriber
 transcriber = AudioTranscriber(
@@ -161,7 +161,7 @@ transcriber = AudioTranscriber(
     compute_type=ComputeType.INT8_FLOAT16
 )
 
-result = transcriber.transcribe_with_options("interview.wav", options)
+result = transcriber.transcribe("interview.wav", options=options)
 
 # Word-level timestamps
 for segment in result.segments:
@@ -305,12 +305,12 @@ print(f"Confidence: {classification.confidence:.2%}")
 print(f"Reasoning: {classification.reasoning}")
 
 # Organize with AudioOrganizer
-organizer = AudioOrganizer(
-    input_dir="~/Downloads",
-    output_dir="~/Audio",
-    enable_transcription=True
+organizer = AudioOrganizer()
+plan = organizer.preview_organization(
+    files=[(Path("podcast.mp3"), classification.audio_type, metadata)],
+    base_path=Path("~/Audio").expanduser(),
 )
-results = organizer.organize()
+print(f"Planned moves: {len(plan.planned_moves)}")
 ```
 
 ### TUI Integration
@@ -1314,4 +1314,4 @@ rm -f test_audio.py test_audio_metadata.py test_video.py test_video_metadata.py 
 For more information, see:
 - [User Guide](../USER_GUIDE.md) - General usage patterns
 - [Dependencies](./dependencies.md) - Installation and requirements
-- [API Reference](../api/video.md) - Detailed API documentation
+- [Audio and Video Setup](./audio-video.md) - This guide
