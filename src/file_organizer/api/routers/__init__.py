@@ -11,6 +11,7 @@ from file_organizer.api.routers.marketplace import router as marketplace_router
 from file_organizer.api.routers.organize import router as organize_router
 from file_organizer.api.routers.realtime import router as realtime_router
 from file_organizer.api.routers.search import router as search_router
+from file_organizer.api.routers.setup import router as setup_router
 from file_organizer.api.routers.system import router as system_router
 
 try:
@@ -36,5 +37,6 @@ __all__ = [
     "dedupe_router",
     "realtime_router",
     "search_router",
+    "setup_router",
     "system_router",
 ]

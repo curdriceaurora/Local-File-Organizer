@@ -29,6 +29,7 @@ from file_organizer.api.routers import (
     organize_router,
     realtime_router,
     search_router,
+    setup_router,
     system_router,
 )
 from file_organizer.api.routers.integrations import (
@@ -116,6 +117,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     app.include_router(dedupe_router, prefix="/api/v1")
     app.include_router(realtime_router, prefix="/api/v1")
     app.include_router(system_router, prefix="/api/v1")
+    app.include_router(setup_router, prefix="/api/v1")
     app.include_router(integrations_router, prefix="/api/v1")
     app.include_router(marketplace_router, prefix="/api/v1")
     app.include_router(plugin_api_router, prefix="/api/v1")
