@@ -436,6 +436,25 @@
     font-size: 0.875rem;
 }
 
+.status-checking {
+    color: #666;
+}
+
+.status-success {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.status-warning {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.status-error {
+    color: #dc3545;
+    font-weight: 500;
+}
+
 .recommendation-panel {
     background: #e8f4f8;
     border-left: 4px solid #007bff;
@@ -603,11 +622,5 @@
 }
 </style>
 
-<script>
-// Setup wizard JavaScript will be added in the next subtask
-// For now, this is a static template placeholder
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Setup wizard loaded');
-});
-</script>
+<script src="/static/js/setup_wizard.js" defer></script>
 {% endblock %}
