@@ -183,7 +183,7 @@ file-organizer organize /audio /output --sequential
 file-organizer organize /audio /output --text-only
 ```
 
-For GPU memory issues with Ollama models, reduce the model size in your Ollama configuration or use CPU-only mode by adjusting the `OLLAMA_HOST` settings.
+For GPU memory issues with Ollama models, reduce the model size or restrict GPU access via environment variables like `CUDA_VISIBLE_DEVICES=""` (NVIDIA) or `HIP_VISIBLE_DEVICES=""` (AMD) to force CPU-only inference.
 
 Available Whisper model sizes (smallest to largest):
 
@@ -224,7 +224,7 @@ file-organizer config show
 
 - **Linux**: `~/.config/file-organizer/`
 - **macOS**: `~/Library/Application Support/file-organizer/`
-- **Windows**: `%LOCALAPPDATA%\file-organizer\`
+- **Windows**: `%APPDATA%\file-organizer\`
 
 **Solution**:
 
