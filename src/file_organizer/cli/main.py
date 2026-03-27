@@ -18,6 +18,7 @@ from file_organizer.cli.config_cli import config_app
 from file_organizer.cli.copilot import copilot_app
 from file_organizer.cli.daemon import daemon_app
 from file_organizer.cli.dedupe_v2 import dedupe_app
+from file_organizer.cli.doctor import doctor
 from file_organizer.cli.marketplace import marketplace_app
 from file_organizer.cli.models_cli import model_app
 from file_organizer.cli.organize import organize, preview
@@ -74,6 +75,7 @@ app.command()(organize)
 app.command()(preview)
 app.command()(search)
 app.command()(analyze)
+app.command()(doctor)
 
 
 @app.command()

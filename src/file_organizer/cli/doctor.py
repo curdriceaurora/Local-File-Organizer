@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Set
 
+import typer
 from rich.console import Console
 from rich.table import Table
 
@@ -306,3 +307,70 @@ def install_groups(groups: Set[str]) -> None:
             console.print(f"  [dim]pip install file-organizer[{group}][/dim]")
     else:
         console.print(f"[green]✓ All {len(groups_list)} group(s) installed successfully![/green]")
+
+
+def doctor(
+    path: Path = typer.Argument(
+        ...,
+        help="Directory path to scan for file types.",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True,
+    ),
+    install: bool = typer.Option(
+        False,
+        "--install",
+        help="Automatically install recommended dependency groups.",
+    ),
+) -> None:
+    """Scan directory for file types and recommend optional dependencies.
+
+    Detects file types in the specified directory and recommends which optional
+    dependency groups should be installed to support those file types.
+    """
+    console.print(f"\n[bold]Scanning directory:[/bold] {path}")
+
+    # Scan the directory
+    extension_counts = scan_directory(path)
+
+    if not extension_counts:
+        console.print("[yellow]No files found in directory.[/yellow]")
+        raise typer.Exit(code=0)
+
+    # Get the set of extensions
+    extensions = set(extension_counts.keys())
+
+    # Determine which groups are needed
+    detected_groups = get_groups_for_extensions(extensions)
+
+    if not detected_groups:
+        console.print(
+            "\n[green]No optional dependencies needed for detected file types.[/green]"
+        )
+        raise typer.Exit(code=0)
+
+    # Display recommendations
+    console.print()
+    display_recommendations(extension_counts, detected_groups)
+
+    # Check which groups are missing
+    missing_groups = get_missing_groups(detected_groups)
+
+    if not missing_groups:
+        console.print(
+            "\n[green]✓ All recommended dependency groups are already installed![/green]"
+        )
+        raise typer.Exit(code=0)
+
+    # Install if requested
+    if install:
+        install_groups(missing_groups)
+    else:
+        # Show summary of what's missing
+        console.print(
+            f"\n[yellow]Found {len(missing_groups)} missing dependency group(s).[/yellow]"
+        )
+        console.print(
+            "[dim]Run with --install flag to install them automatically.[/dim]"
+        )
