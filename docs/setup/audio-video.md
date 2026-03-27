@@ -906,6 +906,377 @@ video:
 
 ---
 
+## Verification
+
+This section provides comprehensive tests to verify your audio and video processing setup is working correctly.
+
+### System Dependencies
+
+Verify all required system dependencies are installed:
+
+```bash
+# Check Python version (requires 3.11+)
+python3 --version
+
+# Check FFmpeg installation
+ffmpeg -version
+
+# Check pip installation
+pip --version
+```
+
+**Expected Output:**
+- Python 3.11.0 or higher
+- FFmpeg version information (any recent version)
+- pip 23.0 or higher
+
+### Audio Processing Verification
+
+#### 1. Verify Audio Dependencies
+
+```bash
+# Test faster-whisper installation
+python -c "from faster_whisper import WhisperModel; print('✓ faster-whisper installed')"
+
+# Test torch installation
+python -c "import torch; print(f'✓ PyTorch {torch.__version__} installed')"
+
+# Test audio metadata libraries
+python -c "import mutagen; import tinytag; print('✓ Audio metadata libraries installed')"
+
+# Check GPU availability (if applicable)
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+```
+
+**Expected Output:**
+```
+✓ faster-whisper installed
+✓ PyTorch 2.1.0+ installed
+✓ Audio metadata libraries installed
+CUDA available: True  # or False if no GPU
+```
+
+#### 2. Test Audio Transcription
+
+Create a test script to verify transcription works:
+
+```bash
+# Create test script
+cat > test_audio.py << 'EOF'
+from file_organizer.services.audio.transcriber import AudioTranscriber, ModelSize, ComputeType
+from pathlib import Path
+import sys
+
+try:
+    # Initialize with smallest model for quick test
+    print("Initializing transcriber...")
+    transcriber = AudioTranscriber(
+        model_size=ModelSize.TINY,
+        compute_type=ComputeType.INT8,
+        device="cpu"
+    )
+    print("✓ Transcriber initialized successfully")
+
+    # Test with a sample file if provided
+    if len(sys.argv) > 1:
+        audio_file = Path(sys.argv[1])
+        if audio_file.exists():
+            print(f"Transcribing {audio_file.name}...")
+            result = transcriber.transcribe(audio_file)
+            print(f"✓ Transcription completed")
+            print(f"  Language: {result.language}")
+            print(f"  Duration: {result.duration:.1f}s")
+            print(f"  Text preview: {result.text[:100]}...")
+        else:
+            print(f"✗ File not found: {audio_file}")
+            sys.exit(1)
+    else:
+        print("✓ Ready to transcribe (pass audio file path as argument)")
+
+except Exception as e:
+    print(f"✗ Error: {e}")
+    sys.exit(1)
+EOF
+
+# Run test (without audio file)
+python test_audio.py
+
+# Or test with your own audio file
+# python test_audio.py ~/path/to/your/audio.mp3
+```
+
+**Expected Output:**
+```
+Initializing transcriber...
+✓ Transcriber initialized successfully
+✓ Ready to transcribe (pass audio file path as argument)
+```
+
+#### 3. Test Audio Metadata Extraction
+
+```bash
+# Create metadata test script
+cat > test_audio_metadata.py << 'EOF'
+from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+from pathlib import Path
+import sys
+
+if len(sys.argv) < 2:
+    print("Usage: python test_audio_metadata.py <audio_file>")
+    print("Note: Metadata extraction requires an actual audio file")
+    sys.exit(0)
+
+try:
+    extractor = AudioMetadataExtractor()
+    audio_file = Path(sys.argv[1])
+
+    print(f"Extracting metadata from {audio_file.name}...")
+    metadata = extractor.extract(audio_file)
+
+    print("✓ Metadata extraction successful")
+    print(f"  Title: {metadata.title or 'N/A'}")
+    print(f"  Artist: {metadata.artist or 'N/A'}")
+    print(f"  Duration: {metadata.duration:.1f}s")
+    print(f"  Bitrate: {metadata.bitrate / 1000:.0f} kbps")
+    print(f"  Format: {metadata.format}")
+
+except Exception as e:
+    print(f"✗ Error: {e}")
+    sys.exit(1)
+EOF
+
+# This requires an actual audio file to test
+echo "✓ Metadata test script created (run with: python test_audio_metadata.py <audio_file>)"
+```
+
+### Video Processing Verification
+
+#### 1. Verify Video Dependencies
+
+```bash
+# Test OpenCV installation
+python -c "import cv2; print(f'✓ OpenCV {cv2.__version__} installed')"
+
+# Test PySceneDetect installation
+python -c "import scenedetect; print(f'✓ PySceneDetect {scenedetect.__version__} installed')"
+
+# Test video capture capability
+python -c "import cv2; cap = cv2.VideoCapture(); print('✓ Video capture available')"
+```
+
+**Expected Output:**
+```
+✓ OpenCV 4.8.0+ installed
+✓ PySceneDetect 0.6.0+ installed
+✓ Video capture available
+```
+
+#### 2. Test Video Scene Detection
+
+Create a test script to verify scene detection works:
+
+```bash
+# Create test script
+cat > test_video.py << 'EOF'
+from file_organizer.services.video.scene_detector import SceneDetector, DetectionMethod
+from pathlib import Path
+import sys
+
+try:
+    # Initialize detector
+    print("Initializing scene detector...")
+    detector = SceneDetector(
+        method=DetectionMethod.CONTENT,
+        threshold=27.0
+    )
+    print("✓ Scene detector initialized successfully")
+
+    # Test with a sample file if provided
+    if len(sys.argv) > 1:
+        video_file = Path(sys.argv[1])
+        if video_file.exists():
+            print(f"Detecting scenes in {video_file.name}...")
+            result = detector.detect_scenes(video_file)
+            print(f"✓ Scene detection completed")
+            print(f"  Duration: {result.total_duration:.1f}s")
+            print(f"  FPS: {result.fps:.2f}")
+            print(f"  Scenes detected: {len(result.scenes)}")
+            if result.scenes:
+                print(f"  First scene: {result.scenes[0].start_time:.2f}s - {result.scenes[0].end_time:.2f}s")
+        else:
+            print(f"✗ File not found: {video_file}")
+            sys.exit(1)
+    else:
+        print("✓ Ready to detect scenes (pass video file path as argument)")
+
+except Exception as e:
+    print(f"✗ Error: {e}")
+    sys.exit(1)
+EOF
+
+# Run test (without video file)
+python test_video.py
+
+# Or test with your own video file
+# python test_video.py ~/path/to/your/video.mp4
+```
+
+**Expected Output:**
+```
+Initializing scene detector...
+✓ Scene detector initialized successfully
+✓ Ready to detect scenes (pass video file path as argument)
+```
+
+#### 3. Test Video Metadata Extraction
+
+```bash
+# Create metadata test script
+cat > test_video_metadata.py << 'EOF'
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor, resolution_label
+from pathlib import Path
+import sys
+
+if len(sys.argv) < 2:
+    print("Usage: python test_video_metadata.py <video_file>")
+    print("Note: Metadata extraction requires an actual video file")
+    sys.exit(0)
+
+try:
+    extractor = VideoMetadataExtractor()
+    video_file = Path(sys.argv[1])
+
+    print(f"Extracting metadata from {video_file.name}...")
+    metadata = extractor.extract(video_file)
+
+    print("✓ Metadata extraction successful")
+    print(f"  Size: {metadata.file_size / 1024 / 1024:.1f} MB")
+    print(f"  Format: {metadata.format}")
+    print(f"  Duration: {metadata.duration:.1f}s")
+    print(f"  Resolution: {metadata.width}x{metadata.height} ({resolution_label(metadata.width, metadata.height)})")
+    print(f"  FPS: {metadata.fps:.2f}")
+    print(f"  Codec: {metadata.codec}")
+    print(f"  Bitrate: {metadata.bitrate / 1000:.0f} kbps")
+
+except Exception as e:
+    print(f"✗ Error: {e}")
+    sys.exit(1)
+EOF
+
+# This requires an actual video file to test
+echo "✓ Metadata test script created (run with: python test_video_metadata.py <video_file>)"
+```
+
+### Integration Verification
+
+Test the complete audio/video processing pipeline:
+
+```bash
+# Create integration test script
+cat > test_integration.py << 'EOF'
+import sys
+from pathlib import Path
+
+def test_audio_video_integration():
+    """Test that audio and video processing can be imported together"""
+    try:
+        # Import audio components
+        from file_organizer.services.audio.transcriber import AudioTranscriber
+        from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+        print("✓ Audio processing modules imported")
+
+        # Import video components
+        from file_organizer.services.video.scene_detector import SceneDetector
+        from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+        print("✓ Video processing modules imported")
+
+        # Test initialization
+        audio_transcriber = AudioTranscriber()
+        audio_metadata = AudioMetadataExtractor()
+        video_detector = SceneDetector()
+        video_metadata = VideoMetadataExtractor()
+        print("✓ All processors initialized successfully")
+
+        print("\n✓ Integration test PASSED")
+        print("  Audio and video processing are ready to use")
+        return True
+
+    except Exception as e:
+        print(f"\n✗ Integration test FAILED: {e}")
+        return False
+
+if __name__ == "__main__":
+    success = test_audio_video_integration()
+    sys.exit(0 if success else 1)
+EOF
+
+# Run integration test
+python test_integration.py
+```
+
+**Expected Output:**
+```
+✓ Audio processing modules imported
+✓ Video processing modules imported
+✓ All processors initialized successfully
+
+✓ Integration test PASSED
+  Audio and video processing are ready to use
+```
+
+### Quick Verification Command
+
+Run all basic checks at once:
+
+```bash
+# One-line verification
+python -c "
+import sys
+try:
+    from faster_whisper import WhisperModel
+    import torch, cv2, scenedetect
+    from file_organizer.services.audio.transcriber import AudioTranscriber
+    from file_organizer.services.video.scene_detector import SceneDetector
+    print('✓ All audio/video dependencies installed')
+    print(f'  - PyTorch: {torch.__version__}')
+    print(f'  - OpenCV: {cv2.__version__}')
+    print(f'  - PySceneDetect: {scenedetect.__version__}')
+    print(f'  - CUDA: {torch.cuda.is_available()}')
+except ImportError as e:
+    print(f'✗ Missing dependency: {e}')
+    sys.exit(1)
+"
+```
+
+**Expected Output:**
+```
+✓ All audio/video dependencies installed
+  - PyTorch: 2.1.0+
+  - OpenCV: 4.8.0+
+  - PySceneDetect: 0.6.0+
+  - CUDA: True/False
+```
+
+### Troubleshooting Verification Issues
+
+If any verification step fails, refer to the troubleshooting sections in the Audio Transcription and Video Analysis sections above, or check:
+
+1. **Import errors**: Reinstall dependencies with `pip install -e ".[audio]"` or `pip install -e ".[video]"`
+2. **FFmpeg not found**: Install FFmpeg following instructions in the respective sections
+3. **CUDA errors**: Update GPU drivers or use CPU mode
+4. **File not found**: Ensure file paths are correct and files exist
+5. **Permission errors**: Check file/directory permissions
+
+### Cleanup Test Scripts
+
+After verification, remove test scripts:
+
+```bash
+rm -f test_audio.py test_audio_metadata.py test_video.py test_video_metadata.py test_integration.py
+```
+
+---
+
 ## Next Steps
 
 - **Audio Transcription**: See the audio section above for speech-to-text capabilities
