@@ -308,7 +308,7 @@ file-organizer tui
 #### "FFmpeg not found"
 
 **Error:**
-```
+```text
 FileNotFoundError: FFmpeg not found
 ```
 
@@ -323,7 +323,7 @@ ffmpeg -version
 #### Out of Memory
 
 **Error:**
-```
+```text
 RuntimeError: CUDA out of memory
 ```
 
@@ -731,7 +731,7 @@ file-organizer tui
 #### "OpenCV not found"
 
 **Error:**
-```
+```text
 ImportError: No module named 'cv2'
 ```
 
@@ -747,7 +747,7 @@ pip install opencv-python>=4.8.0
 #### "scenedetect not found"
 
 **Error:**
-```
+```text
 ImportError: No module named 'scenedetect'
 ```
 
@@ -787,7 +787,7 @@ pip install opencv-python
 #### Failed to Open Video
 
 **Error:**
-```
+```text
 ValueError: Failed to open video: video.mp4
 ```
 
