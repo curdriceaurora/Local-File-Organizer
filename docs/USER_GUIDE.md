@@ -39,19 +39,26 @@ file-organizer version
 
 Extend functionality by installing optional dependency groups:
 
+!!! tip
+    For a complete feature-to-install matrix with platform-specific notes, see [Optional Features](getting-started.md#optional-features) in the Getting Started guide.
+
 | Pack | Install Command | Features |
 |------|----------------|----------|
-| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
+| Parsers | `pip install -e ".[parsers]"` | PDF, Word, Excel, PowerPoint, eBook, HTML parsing |
+| Web | `pip install -e ".[web]"` | Web interface, REST API server, WebSocket support |
+| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API providers (OpenAI, Groq, LM Studio, vLLM) |
 | Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
 | LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
+| MLX | `pip install -e ".[mlx]"` | Apple Silicon MLX acceleration for faster local inference |
 | Audio | `pip install -e ".[audio]"` | Speech-to-text transcription (faster-whisper, torch) |
 | Video | `pip install -e ".[video]"` | Scene detection, keyframe extraction (OpenCV) |
 | Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
 | Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
 | Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB file support |
 | CAD | `pip install -e ".[cad]"` | DXF and other CAD format support |
+| Search | `pip install -e ".[search]"` | BM25-based search ranking algorithms |
 | Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
-| All | `pip install -e ".[all]"` | Everything above |
+| All | `pip install -e ".[all]"` | All packs above, plus development tools and PyQt6 GUI dependencies |
 
 !!! note
     The audio pack requires FFmpeg and optionally a CUDA-capable GPU. See the [Installation Guide](admin/installation.md) for detailed prerequisites.
