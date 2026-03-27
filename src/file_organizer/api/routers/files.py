@@ -66,16 +66,16 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
         iterator = path.glob("*")
 
     for entry in iterator:
-        if entry.is_symlink():
-            continue
-        if not entry.is_file():
-            continue
-        if not include_hidden and is_hidden(entry):
-            continue
         try:
-            files.append(entry)
-        except OSError:
+            if entry.is_symlink():
+                continue
+            if not entry.is_file():
+                continue
+            if not include_hidden and is_hidden(entry):
+                continue
+        except (OSError, PermissionError):
             continue
+        files.append(entry)
     return files
 
 

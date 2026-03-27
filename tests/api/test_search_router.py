@@ -33,13 +33,11 @@ class TestSearch:
     """Tests for GET /api/v1/search."""
 
     def test_search_missing_query_required(self, tmp_path: Path) -> None:
-        """Test that query parameter is required."""
+        """Test that query parameter is required (enforced by FastAPI)."""
         _, client = _build_app(tmp_path)
 
         resp = client.get("/api/v1/search")
-        assert resp.status_code == 400
-        body = resp.json()
-        assert "Query parameter 'q' is required" in body["detail"]
+        assert resp.status_code == 422
 
     def test_search_empty_query_required(self, tmp_path: Path) -> None:
         """Test that empty query is rejected."""
@@ -269,12 +267,12 @@ class TestSemanticSearch:
         assert "type" in result
         assert "size" in result
 
-    def test_semantic_true_missing_query_returns_400(self, tmp_path: Path) -> None:
-        """semantic=true still requires the q param."""
+    def test_semantic_true_missing_query_returns_422(self, tmp_path: Path) -> None:
+        """semantic=true still requires the q param (enforced by FastAPI)."""
         _, client = _build_app(tmp_path)
 
         resp = client.get("/api/v1/search?semantic=true")
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_semantic_true_keyword_path_unchanged(self, tmp_path: Path) -> None:
         """Existing keyword search path is unaffected when semantic=false."""

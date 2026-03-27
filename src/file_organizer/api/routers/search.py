@@ -253,7 +253,7 @@ def _semantic_search(
 
 @router.get("/search", response_model=list[SearchResult])
 def search(
-    q: str | None = Query(None, description="Search query"),
+    q: str = Query(..., description="Search query"),
     file_type: str | None = Query(None, alias="type"),
     limit: int | None = None,
     offset: int | None = None,
@@ -272,7 +272,7 @@ def search(
     Authentication is enforced at the middleware layer
     (see ``file_organizer.api.middleware``), not per-route.
     """
-    if q is None or q == "":
+    if q == "":
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
 
     # Clamp limit to a safe upper bound to prevent unbounded allocations.
@@ -340,7 +340,7 @@ def search(
     results.sort(key=lambda r: (-r.score, r.filename))
 
     # Apply pagination (handle limit=0 as explicit "no limit")
-    skip = offset or 0
+    skip = max(offset or 0, 0)
     if effective_limit is not None:
         results = results[skip : skip + effective_limit]
     else:
