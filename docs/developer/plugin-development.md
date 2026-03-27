@@ -366,6 +366,95 @@ async def test_on_upload(plugin):
     await plugin.on_upload(MockFile())
 ```
 
+### Using PluginTestCase
+
+The SDK provides `PluginTestCase` for testing plugins with isolated filesystem helpers:
+
+```python
+"""Tests for EXIF Image Tagger Plugin."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from file_organizer.plugins.sdk.testing import PluginTestCase
+
+from exif_image_tagger import ExifImageTaggerPlugin
+
+
+class TestExifImageTaggerPlugin(PluginTestCase):
+    """Test suite for ExifImageTaggerPlugin using SDK test utilities."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures with isolated filesystem."""
+        super().setUp()
+        self.plugin = ExifImageTaggerPlugin()
+        self.plugin.on_enable()
+
+    def test_handles_non_image_files(self) -> None:
+        """Test that plugin skips non-image files."""
+        # Create test text file using SDK helper
+        test_file = self.create_test_file("document.txt", "Hello, world!")
+        self.assert_file_exists(test_file)
+
+        payload = {"destination_path": str(test_file)}
+        result = self.plugin.on_file_organized(payload)
+
+        self.assertFalse(result["tagged"])
+        self.assertEqual(result["reason"], "not an image file")
+
+    def test_handles_missing_destination(self) -> None:
+        """Test that plugin handles missing destination_path gracefully."""
+        payload = {}
+        result = self.plugin.on_file_organized(payload)
+
+        self.assertFalse(result["tagged"])
+        self.assertEqual(result["reason"], "missing destination_path")
+
+    def test_handles_nonexistent_file(self) -> None:
+        """Test that plugin handles nonexistent files."""
+        nonexistent = self.test_dir / "missing.jpg"
+        self.assert_file_not_exists(nonexistent)
+
+        payload = {"destination_path": str(nonexistent)}
+        result = self.plugin.on_file_organized(payload)
+
+        self.assertFalse(result["tagged"])
+        self.assertEqual(result["reason"], "destination file missing")
+
+    def test_processes_image_without_exif(self) -> None:
+        """Test that plugin handles images without EXIF data."""
+        # Create minimal PNG file without EXIF data
+        image_file = self.create_test_file("test_images/photo.png", "")
+
+        # Write minimal valid PNG header
+        with open(image_file, "wb") as f:
+            # PNG signature
+            f.write(b"\x89PNG\r\n\x1a\n")
+            # Minimal IHDR chunk for 1x1 image
+            f.write(b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01")
+            f.write(b"\x08\x02\x00\x00\x00\x90wS\xde")
+            # IEND chunk
+            f.write(b"\x00\x00\x00\x00IEND\xaeB`\x82")
+
+        self.assert_file_exists(image_file)
+
+        payload = {"destination_path": str(image_file)}
+        result = self.plugin.on_file_organized(payload)
+
+        # Should not tag images without EXIF data
+        self.assertFalse(result["tagged"])
+        self.assertEqual(result["reason"], "no EXIF data found")
+```
+
+**Key Features:**
+
+- **Isolated Testing**: Each test gets a fresh temporary directory via `self.test_dir`
+- **File Fixtures**: Use `create_test_file()` to create test files with proper paths
+- **Path Assertions**: Use `assert_file_exists()` and `assert_file_not_exists()` for verification
+- **Automatic Cleanup**: Temporary directories are cleaned up after each test
+- **Real Filesystem**: Tests run against actual files, not mocks
+
 ### Integration Tests
 
 ```python
