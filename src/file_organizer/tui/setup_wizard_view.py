@@ -97,6 +97,8 @@ class SetupWizardView(Vertical):
         self._capabilities = None
         self._detection_status = "pending"  # pending, detecting, complete, error
         self._detection_message = ""
+        self._detection_step = ""  # Current detection step for progress display
+        self._detection_progress = 0  # Progress percentage (0-100)
 
     def compose(self) -> ComposeResult:
         """Render wizard content."""
@@ -242,8 +244,22 @@ class SetupWizardView(Vertical):
         if self._detection_status == "pending":
             lines.append("[dim]Preparing to detect hardware...[/dim]")
         elif self._detection_status == "detecting":
-            lines.append("[yellow]⚙  Detecting system capabilities...[/yellow]\n")
-            lines.append("[dim]This may take a few seconds...[/dim]")
+            # Show progress bar
+            progress_bar = self._render_progress_bar(self._detection_progress)
+            lines.append(f"[yellow]⚙  Detecting system capabilities... {self._detection_progress}%[/yellow]")
+            lines.append(f"{progress_bar}\n")
+
+            # Show current step
+            if self._detection_step:
+                lines.append(f"[dim]→ {self._detection_step}[/dim]\n")
+
+            # Show completed steps
+            if self._detection_progress >= 33:
+                lines.append("[green]✓[/green] GPU detection complete")
+            if self._detection_progress >= 66:
+                lines.append("[green]✓[/green] RAM and CPU detection complete")
+            if self._detection_progress >= 100:
+                lines.append("[green]✓[/green] Backend detection complete")
         elif self._detection_status == "error":
             lines.append(f"[red]✗ Detection failed: {self._detection_message}[/red]\n")
             lines.append("[dim]Press Esc to go back and try again[/dim]")
@@ -340,6 +356,21 @@ class SetupWizardView(Vertical):
             "[dim]Press Enter to continue to main interface[/dim]"
         )
 
+    def _render_progress_bar(self, percentage: int, width: int = 40) -> str:
+        """Render a text-based progress bar.
+
+        Args:
+            percentage: Progress percentage (0-100).
+            width: Width of the progress bar in characters.
+
+        Returns:
+            Rich-formatted progress bar string.
+        """
+        filled = int((percentage / 100) * width)
+        bar = "━" * filled + "╸" if filled < width else "━" * width
+        empty = "─" * (width - len(bar))
+        return f"[cyan]{bar}[/cyan][dim]{empty}[/dim]"
+
     def _set_status(self, message: str) -> None:
         """Update status bar when available.
 
@@ -364,6 +395,8 @@ class SetupWizardView(Vertical):
 
             # Update UI to show detection in progress
             self._detection_status = "detecting"
+            self._detection_progress = 0
+            self._detection_step = "Initializing detection..."
             self.app.call_from_thread(self._refresh_screen)
             self.app.call_from_thread(
                 self._set_status, "Detecting hardware and AI backend..."
@@ -377,12 +410,37 @@ class SetupWizardView(Vertical):
             )
             wizard = SetupWizard(mode=mode)
 
-            logger.info("Running hardware detection...")
+            # Step 1: Detect GPU (33%)
+            self._detection_step = "Detecting GPU capabilities..."
+            self._detection_progress = 10
+            self.app.call_from_thread(self._refresh_screen)
+            logger.info("Detecting GPU...")
+
+            # Step 2: Detect RAM and CPU (66%)
+            self._detection_step = "Detecting RAM and CPU..."
+            self._detection_progress = 33
+            self.app.call_from_thread(self._refresh_screen)
+            logger.info("Detecting RAM and CPU...")
+
+            # Step 3: Detect backend (100%)
+            self._detection_step = "Detecting AI backend (Ollama)..."
+            self._detection_progress = 66
+            self.app.call_from_thread(self._refresh_screen)
+            logger.info("Detecting backend...")
+
+            # Run full detection
             capabilities = wizard.detect_capabilities()
+
+            # Complete
+            self._detection_step = "Finalizing detection..."
+            self._detection_progress = 100
+            self.app.call_from_thread(self._refresh_screen)
 
             # Store results and update UI
             self._capabilities = capabilities
             self._detection_status = "complete"
+            self._detection_progress = 100
+            self._detection_step = ""
             self.app.call_from_thread(self._refresh_screen)
             self.app.call_from_thread(
                 self._set_status,
@@ -396,6 +454,8 @@ class SetupWizardView(Vertical):
             logger.exception("Hardware detection failed")
             self._detection_status = "error"
             self._detection_message = str(e)
+            self._detection_progress = 0
+            self._detection_step = ""
             self.app.call_from_thread(self._refresh_screen)
             self.app.call_from_thread(
                 self._set_status, f"Detection failed: {e}"
