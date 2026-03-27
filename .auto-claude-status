@@ -3,14 +3,14 @@
   "spec": "014-testing-d1-audio-transcriber-test-coverage-deferre",
   "state": "building",
   "subtasks": {
-    "completed": 0,
+    "completed": 2,
     "total": 2,
-    "in_progress": 1,
+    "in_progress": 0,
     "failed": 0
   },
   "phase": {
-    "current": "Verification",
-    "id": 1,
+    "current": "Verification Complete",
+    "id": 2,
     "total": 2
   },
   "workers": {
