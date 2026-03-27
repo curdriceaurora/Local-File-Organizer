@@ -55,6 +55,7 @@ contains the RRF score.
 Semantic search (`semantic=true`) requires optional dependencies to be installed:
 
 **Installation:**
+
 ```bash
 pip install 'file-organizer[search]'
 ```
@@ -68,6 +69,7 @@ This installs:
 If semantic search is requested (`semantic=true`) but dependencies are not installed, the API returns:
 - **Status**: `503 Service Unavailable`
 - **Response body**:
+
   ```json
   {
     "detail": "Semantic search is not available: search dependencies not installed. Install with: pip install 'file-organizer[search]'"
