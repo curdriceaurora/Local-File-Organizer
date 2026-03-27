@@ -40,7 +40,7 @@ models:
   framework: "ollama"
 ```
 
-> **See also:** [AI Provider Setup Guide](setup/ai-providers.md) for detailed setup instructions for all 7 supported providers (Ollama, OpenAI, Claude, LLaMA.cpp, MLX, Groq, LM Studio).
+> **See also:** [AI Provider Setup Guide](setup/ai-providers.md) for detailed setup instructions for all 5 native providers (Ollama, OpenAI, Claude, LLaMA.cpp, MLX) plus 2 OpenAI-compatible services (Groq, LM Studio).
 
 ### OpenAI-Compatible Provider (Cloud or Local API)
 

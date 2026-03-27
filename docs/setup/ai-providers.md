@@ -1,12 +1,23 @@
 # AI Provider Setup Guide
 
-Complete setup guide for all 7 supported AI providers with comparison table, installation instructions, and configuration details.
+Complete setup guide for File Organizer's AI provider support: 5 native providers plus 2 OpenAI-compatible services.
 
 ---
 
 ## Overview
 
-File Organizer supports multiple AI providers for text and vision analysis. Choose the provider that best fits your privacy requirements, budget, and hardware capabilities.
+File Organizer supports **5 native AI providers** for text and vision analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints.
+
+**Native Providers:**
+- **Ollama** (default)
+- **OpenAI**
+- **Claude** (Anthropic)
+- **LLaMA.cpp**
+- **MLX** (Apple Silicon only)
+
+**OpenAI-Compatible Services:** (use `FO_PROVIDER=openai` with custom `FO_OPENAI_BASE_URL`)
+- **Groq** - Fast cloud inference
+- **LM Studio** - Local GUI model management
 
 **Quick comparison:**
 
@@ -20,19 +31,28 @@ File Organizer supports multiple AI providers for text and vision analysis. Choo
 
 ## Provider Comparison
 
-| Provider | Local/Cloud | Cost | Setup Difficulty | GPU Required | Best For |
-|----------|-------------|------|------------------|--------------|----------|
-| **Ollama** | Local | Free | Easy | No (CPU works) | Default choice, beginners, general use |
-| **OpenAI** | Cloud | Paid (API) | Easy | No | Production quality, vision tasks, cloud OK |
-| **Claude** | Cloud | Paid (API) | Easy | No | Strong reasoning, vision analysis, cloud OK |
-| **LLaMA.cpp** | Local | Free | Medium | No (CPU works) | Advanced users, GGUF models, offline use |
-| **MLX** | Local | Free | Medium | Apple Silicon only | Mac users with M1/M2/M3 chips |
-| **Groq** | Cloud | Free/Paid | Easy | No | Fast inference, OpenAI-compatible API |
-| **LM Studio** | Local | Free | Medium | No (CPU works) | GUI model management, OpenAI-compatible |
+### Native Providers
+
+| Provider | `FO_PROVIDER` Value | Local/Cloud | Cost | Setup Difficulty | GPU Required | Vision Support | Best For |
+|----------|---------------------|-------------|------|------------------|--------------|----------------|----------|
+| **Ollama** | `ollama` | Local | Free | Easy | No (CPU works) | ✅ Yes | Default choice, beginners, general use |
+| **OpenAI** | `openai` | Cloud | Paid (API) | Easy | No | ✅ Yes | Production quality, vision tasks, cloud OK |
+| **Claude** | `claude` | Cloud | Paid (API) | Easy | No | ✅ Yes | Strong reasoning, vision analysis, cloud OK |
+| **LLaMA.cpp** | `llama_cpp` | Local | Free | Medium | No (CPU works) | ⏳ Phase 2 | Advanced users, GGUF models, offline use |
+| **MLX** | `mlx` | Local | Free | Medium | Apple Silicon only | ⏳ Phase 3 | Mac users with M1/M2/M3 chips |
+
+### OpenAI-Compatible Services
+
+These services use `FO_PROVIDER=openai` with a custom `FO_OPENAI_BASE_URL`:
+
+| Service | Local/Cloud | Cost | Setup Difficulty | Vision Support | Best For |
+|---------|-------------|------|------------------|----------------|----------|
+| **Groq** | Cloud | Free/Paid | Easy | ❌ Not yet | Fast inference, low latency |
+| **LM Studio** | Local | Free | Medium | Varies | GUI model management, local control |
 
 ---
 
-## Provider Setup Guides
+## Native Provider Setup Guides
 
 ### 1. Ollama (Default)
 
@@ -387,9 +407,15 @@ file-organizer analyze ~/Downloads
 
 ---
 
+## OpenAI-Compatible Service Setup
+
+The following services are **not separate providers** in the codebase. They use the `openai` provider (`FO_PROVIDER=openai`) with a custom API endpoint configured via `FO_OPENAI_BASE_URL`.
+
 ### 6. Groq
 
 **Best for:** Fast cloud inference, OpenAI-compatible API
+
+**Important:** Groq is not a separate provider. It uses `FO_PROVIDER=openai` with Groq's API endpoint.
 
 Groq provides extremely fast inference through their LPU infrastructure.
 
@@ -462,6 +488,8 @@ file-organizer analyze ~/Downloads
 ### 7. LM Studio
 
 **Best for:** Local inference with GUI model management
+
+**Important:** LM Studio is not a separate provider. It uses `FO_PROVIDER=openai` with LM Studio's local API endpoint.
 
 LM Studio provides a user-friendly GUI for downloading and running models locally with an OpenAI-compatible API.
 
