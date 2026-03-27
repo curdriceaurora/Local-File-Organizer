@@ -612,9 +612,9 @@ tail -f ~/.file-organizer/logs/plugins.log | grep my_plugin
 4. Add logging to confirm hook registration:
 
    ```python
-class MyPlugin(Plugin):
-    def on_enable(self):
-        logger.info(f"Registering hooks for {self.name}")
+   class MyPlugin(Plugin):
+       def on_enable(self):
+           logger.info(f"Registering hooks for {self.name}")
    ```
 
 ### Uninstalling Plugins
