@@ -5,12 +5,15 @@ which optional dependency groups should be installed based on detected file type
 """
 
 import importlib.util
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Set
 
 from rich.console import Console
 from rich.table import Table
 
+import file_organizer.cli._globals as _g
+from file_organizer.cli.interactive import confirm_action
 from file_organizer.utils import is_hidden
 
 console = Console()
@@ -219,3 +222,87 @@ def display_recommendations(
         )
 
     console.print(table)
+
+
+def install_groups(groups: Set[str]) -> None:
+    """Interactively install optional dependency groups using pip.
+
+    Prompts the user for confirmation before installing each group.
+    Respects the --dry-run flag to skip actual installation.
+    Handles subprocess failures gracefully and continues with remaining groups.
+
+    Args:
+        groups: Set of dependency group names to install
+    """
+    if not groups:
+        console.print("[yellow]No groups to install.[/yellow]")
+        return
+
+    # Display groups to be installed
+    groups_list = sorted(groups)
+    console.print(f"\n[bold]Recommended groups to install:[/bold] {', '.join(groups_list)}")
+
+    # Show system prerequisites if any
+    has_prerequisites = False
+    for group in groups_list:
+        if group in SYSTEM_PREREQUISITES:
+            if not has_prerequisites:
+                console.print("\n[bold yellow]System Prerequisites:[/bold yellow]")
+                has_prerequisites = True
+            prereqs = ", ".join(SYSTEM_PREREQUISITES[group])
+            console.print(f"  • {group}: {prereqs}")
+
+    if has_prerequisites:
+        console.print()
+
+    # Ask for confirmation
+    if not confirm_action(
+        f"Install {len(groups_list)} optional dependency group(s)?",
+        default=False,
+    ):
+        console.print("[yellow]Installation cancelled.[/yellow]")
+        return
+
+    # Dry-run mode: skip actual installation
+    if _g.dry_run:
+        console.print("[yellow]Dry-run mode: skipping actual installation.[/yellow]")
+        for group in groups_list:
+            console.print(f"  [dim]Would install: file-organizer[{group}][/dim]")
+        return
+
+    # Install each group
+    failed_groups: List[str] = []
+    for group in groups_list:
+        install_cmd = ["pip", "install", f"file-organizer[{group}]"]
+        console.print(f"\n[bold]Installing {group}...[/bold]")
+
+        try:
+            result = subprocess.run(
+                install_cmd,
+                check=False,
+                capture_output=False,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                console.print(f"[green]✓ Successfully installed {group}[/green]")
+            else:
+                console.print(f"[red]✗ Failed to install {group} (exit code {result.returncode})[/red]")
+                failed_groups.append(group)
+
+        except Exception as exc:
+            console.print(f"[red]✗ Error installing {group}: {exc}[/red]")
+            failed_groups.append(group)
+
+    # Summary
+    console.print()
+    if failed_groups:
+        console.print(
+            f"[yellow]Installation completed with errors. "
+            f"Failed groups: {', '.join(failed_groups)}[/yellow]"
+        )
+        console.print("\n[dim]You can retry failed installations manually:[/dim]")
+        for group in failed_groups:
+            console.print(f"  [dim]pip install file-organizer[{group}][/dim]")
+    else:
+        console.print(f"[green]✓ All {len(groups_list)} group(s) installed successfully![/green]")
