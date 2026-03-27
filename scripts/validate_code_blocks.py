@@ -41,10 +41,10 @@ def extract_python_code_blocks(markdown_content: str) -> list[tuple[int, str]]:
 
     if in_code_block and is_python_block and current_block:
         print(
-            f"Warning: Unclosed Python code block starting at line {block_start_line}",
+            f"Error: Unclosed Python code block starting at line {block_start_line}",
             file=sys.stderr,
         )
-        code_blocks.append((block_start_line, "\n".join(current_block)))
+        sys.exit(1)
 
     return code_blocks
 

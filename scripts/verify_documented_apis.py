@@ -155,9 +155,11 @@ def extract_enum_values(source_file: Path, enum_name: str) -> list[str]:
             values = []
             for item in node.body:
                 if isinstance(item, ast.Assign):
-                    for target in item.targets:
-                        if isinstance(target, ast.Name):
-                            values.append(target.id)
+                    # Extract the literal value, not the name
+                    if isinstance(item.value, ast.Constant):
+                        values.append(item.value.value)
+                    elif isinstance(item.value, ast.Str):  # Python 3.7 compatibility
+                        values.append(item.value.s)
             return values
 
     return []
@@ -254,7 +256,7 @@ def verify_plugin_class() -> bool:
     ]
 
     all_methods_found = True
-    for method_name, _expected_args, _expected_return in required_methods:
+    for method_name, expected_args, expected_return in required_methods:
         method = next((m for m in class_info["methods"] if m["name"] == method_name), None)
         if not method:
             print_error(f"  Method '{method_name}' not found")
@@ -263,8 +265,28 @@ def verify_plugin_class() -> bool:
             # Check if it's abstract
             if not method["is_abstract"]:
                 print_warning(f"  Method '{method_name}' exists but is not abstract")
+                all_methods_found = False
             else:
-                print_success(f"  Method '{method_name}' found (abstract)")
+                # Validate signature
+                # Remove 'self' from args for comparison
+                method_args = [arg for arg in method["args"] if arg != "self"]
+
+                # Check argument list
+                if method_args != expected_args:
+                    print_error(
+                        f"  Method '{method_name}' has incorrect arguments: "
+                        f"expected {expected_args}, got {method_args}"
+                    )
+                    all_methods_found = False
+                # Check return type
+                elif method["return_type"] != expected_return:
+                    print_error(
+                        f"  Method '{method_name}' has incorrect return type: "
+                        f"expected '{expected_return}', got '{method['return_type']}'"
+                    )
+                    all_methods_found = False
+                else:
+                    print_success(f"  Method '{method_name}' found (abstract, signature correct)")
 
     return all_methods_found
 
