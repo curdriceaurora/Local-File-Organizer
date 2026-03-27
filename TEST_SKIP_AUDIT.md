@@ -1,7 +1,7 @@
 # Test Skip Audit - Alpha.3 Release
 
 **Audit Date:** 2026-03-26
-**Total Skips Found:** 38 (14 unconditional + 24 conditional)
+**Total Skips Found:** 35 (14 unconditional + 21 conditional)
 
 ## Executive Summary
 
@@ -49,7 +49,7 @@ Server-Sent Events functionality not yet implemented:
 **Status:** Planned feature - Not yet implemented
 **Action:** Document in CHANGELOG Known Limitations
 
-### PLATFORM Category: OS/Environment-Specific (Total: 24)
+### PLATFORM Category: OS/Environment-Specific (Total: 21)
 
 #### 1. Platform-Specific Behavior (14 tests)
 
@@ -63,7 +63,7 @@ Tests that correctly skip on platforms where the tested functionality is unavail
 - `tests/undo/test_rollback_extended.py:154, 362` - /dev/null is writable on Windows (2 tests)
 - `tests/integration/test_organize_text_workflow.py:99` - Hardlinks require admin privileges on Windows
 
-**macOS-Specific Tests (1)**:
+**macOS-Specific Tests (2)**:
 - `tests/config/test_config_paths.py:52` - macOS-specific path test (skipped on non-macOS)
 - `tests/integration/test_context_menu_macos.py:11` - macOS-only test (skipped on non-macOS)
 
@@ -76,14 +76,13 @@ Tests that correctly skip on platforms where the tested functionality is unavail
 **Status:** Expected behavior - Tests correctly skip on unsupported platforms
 **Action:** No documentation needed (normal conditional testing)
 
-#### 2. Optional Dependencies (4-5 tests)
+#### 2. Optional Dependencies (4 tests)
 
 Tests that skip when optional packages are not installed:
 
-**ebooklib-dependent (2-3 tests)**:
+**ebooklib-dependent (2 tests)**:
 - `tests/utils/test_epub_enhanced.py:43` - Module-level pytestmark (skips all tests in module if ebooklib not installed)
-- `tests/unit/utils/test_file_readers.py:222` - EPUB reading test
-- `tests/utils/test_file_readers.py:222` - EPUB reading test (duplicate reference)
+- `tests/utils/test_file_readers.py:222` - EPUB reading test
 
 **Pillow-dependent (1 test)**:
 - `tests/utils/test_epub_enhanced.py:350` - EPUB image extraction test
@@ -121,18 +120,18 @@ Tests that skip if SuggestionEngine cannot be imported:
 | Platform-Specific | 14 | OS-specific conditions | PLATFORM - Expected |
 | Optional Dependencies | 4 | Optional packages not required | PLATFORM - Expected |
 | Import-Dependent | 3 | SuggestionEngine import protection | PLATFORM - Expected |
-| **Total** | **35** | **(38 with duplicate references)** | |
+| **Total** | **35** | | |
 
 ## Verification Commands
 
 ```bash
 # Count unconditional skips
 grep -rn "@pytest.mark.skip\b" tests/ --include="*.py" | grep -v "skipif" | wc -l
-# Result: 14 (2 are in comments, so 14 actual skips)
+# Result: 14
 
-# Count conditional skips
+# Count conditional skips (unique, deduplicated)
 grep -rn "@pytest.mark.skipif\|pytestmark = pytest.mark.skipif" tests/ --include="*.py" | grep -v "conftest.py" | wc -l
-# Result: 22 individual skipif decorators
+# Result: 22 (includes 1 duplicate reference; 21 unique skips)
 
 # List Phase 3 skips
 grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "Phase 3"

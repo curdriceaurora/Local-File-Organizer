@@ -50,7 +50,7 @@ These skips are **expected behavior** for different platforms/environments:
 - Linux-specific: 1 test (path tests)
 
 #### Optional Dependencies (4 tests)
-- ebooklib: 2-3 tests (EPUB processing)
+- ebooklib: 2 tests (EPUB processing)
 - Pillow: 1 test (image extraction)
 - pytest-benchmark: 1 test (performance benchmarking)
 
@@ -59,22 +59,33 @@ These skips are **expected behavior** for different platforms/environments:
 
 ## Verification Commands
 
+### Canonical Counts (deduplicated)
+- **Unconditional skips:** 14 tests
+- **Conditional skips:** 21 tests (unique)
+- **Phase 3 skips:** 12 tests
+- **SSE skips:** 2 tests
+- **Total skips:** 35 tests
+
+### Raw Verification Totals (duplicate-inclusive)
+
+These are raw grep outputs that may include duplicate references:
+
 ```bash
 # Count Phase 3 skips
 grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "Phase 3" | wc -l
-# Expected: 12
+# Raw result: 12
 
 # Count SSE skips
 grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "SSE" | wc -l
-# Expected: 2
+# Raw result: 2
 
 # Total unconditional skips
 grep -rn "@pytest.mark.skip\b" tests/ --include="*.py" | grep -v "skipif" | wc -l
-# Expected: 14 (excluding 2 in comments)
+# Raw result: 14
 
-# Count all conditional skips
+# Count all conditional skips (includes 1 duplicate reference)
 grep -rn "@pytest.mark.skipif\|pytestmark = pytest.mark.skipif" tests/ --include="*.py" | grep -v "conftest.py" | wc -l
-# Expected: 22 (includes some duplicates)
+# Raw result: 22 (after deduplication: 21 unique skips)
 ```
 
 ## Files Modified
