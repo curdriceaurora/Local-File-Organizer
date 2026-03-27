@@ -5,9 +5,10 @@ which optional dependency groups should be installed based on detected file type
 """
 
 import importlib.util
+import json
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 import typer
 from rich.console import Console
@@ -323,19 +324,32 @@ def doctor(
         "--install",
         help="Automatically install recommended dependency groups.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON.",
+    ),
 ) -> None:
     """Scan directory for file types and recommend optional dependencies.
 
     Detects file types in the specified directory and recommends which optional
     dependency groups should be installed to support those file types.
     """
-    console.print(f"\n[bold]Scanning directory:[/bold] {path}")
-
     # Scan the directory
     extension_counts = scan_directory(path)
 
     if not extension_counts:
-        console.print("[yellow]No files found in directory.[/yellow]")
+        if json_output:
+            result: Dict[str, Any] = {
+                "directory": str(path),
+                "files_found": 0,
+                "extensions": {},
+                "detected_groups": [],
+                "missing_groups": [],
+            }
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            console.print("[yellow]No files found in directory.[/yellow]")
         raise typer.Exit(code=0)
 
     # Get the set of extensions
@@ -345,17 +359,61 @@ def doctor(
     detected_groups = get_groups_for_extensions(extensions)
 
     if not detected_groups:
-        console.print(
-            "\n[green]No optional dependencies needed for detected file types.[/green]"
-        )
+        if json_output:
+            result = {
+                "directory": str(path),
+                "files_found": sum(extension_counts.values()),
+                "extensions": extension_counts,
+                "detected_groups": [],
+                "missing_groups": [],
+            }
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            console.print(
+                "\n[green]No optional dependencies needed for detected file types.[/green]"
+            )
         raise typer.Exit(code=0)
 
-    # Display recommendations
-    console.print()
-    display_recommendations(extension_counts, detected_groups)
+    # Calculate file counts per group
+    group_file_counts: Dict[str, int] = {}
+    for ext, count in extension_counts.items():
+        if ext in EXTENSION_REGISTRY:
+            group = EXTENSION_REGISTRY[ext]
+            group_file_counts[group] = group_file_counts.get(group, 0) + count
 
     # Check which groups are missing
     missing_groups = get_missing_groups(detected_groups)
+
+    # Build group information
+    groups_info: List[Dict[str, Any]] = []
+    for group in sorted(detected_groups):
+        file_count = group_file_counts.get(group, 0)
+        is_installed = is_group_installed(group)
+        prerequisites = SYSTEM_PREREQUISITES.get(group, [])
+
+        groups_info.append({
+            "group": group,
+            "files_found": file_count,
+            "installed": is_installed,
+            "install_command": f"pip install file-organizer[{group}]",
+            "prerequisites": prerequisites,
+        })
+
+    if json_output:
+        result = {
+            "directory": str(path),
+            "files_found": sum(extension_counts.values()),
+            "extensions": extension_counts,
+            "detected_groups": groups_info,
+            "missing_groups": sorted(missing_groups),
+        }
+        typer.echo(json.dumps(result, indent=2))
+        raise typer.Exit(code=0)
+
+    # Display recommendations (non-JSON mode)
+    console.print(f"\n[bold]Scanning directory:[/bold] {path}")
+    console.print()
+    display_recommendations(extension_counts, detected_groups)
 
     if not missing_groups:
         console.print(
