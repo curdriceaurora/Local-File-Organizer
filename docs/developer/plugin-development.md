@@ -592,11 +592,13 @@ tail -f ~/.file-organizer/logs/plugins.log | grep my_plugin
 **Solution:**
 1. Install dependencies: `pip install -r requirements.txt`
 2. Add dependencies to `plugin.json`:
+
    ```json
    {
        "dependencies": ["pillow>=10.0.0", "requests>=2.28.0"]
    }
    ```
+
 3. Reinstall plugin: `pip install -e .`
 
 #### Issue: Hook Not Triggering
@@ -608,6 +610,7 @@ tail -f ~/.file-organizer/logs/plugins.log | grep my_plugin
 2. Check that `on_enable()` is called (plugin must be enabled)
 3. Ensure hook priority doesn't conflict with other plugins
 4. Add logging to confirm hook registration:
+
    ```python
    def on_enable(self):
        logger.info(f"Registering hooks for {self.name}")
