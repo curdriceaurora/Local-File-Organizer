@@ -180,6 +180,152 @@ This example demonstrates:
 - **Type Safety**: Type hints and validation for payload data
 - **Real-world Logic**: Extracting and processing EXIF data from images
 
+## Plugin Directory Structure
+
+Every plugin must follow a standard directory structure with a `plugin.json` manifest file:
+
+```text
+my_plugin/
+├── plugin.json          # Required: Plugin manifest
+├── plugin.py            # Plugin implementation (entry_point)
+├── __init__.py          # Optional: Package initialization
+├── requirements.txt     # Optional: Python dependencies
+├── README.md            # Optional: Documentation
+└── tests/               # Optional: Test files
+    └── test_plugin.py
+```
+
+### Minimal Example
+
+The simplest plugin requires only two files:
+
+```text
+hello_world/
+├── plugin.json
+└── plugin.py
+```
+
+### Complete Example Structure
+
+For production plugins, use this structure:
+
+```text
+exif_image_tagger/
+├── plugin.json
+├── plugin.py
+├── __init__.py
+├── requirements.txt
+├── README.md
+├── config/
+│   └── defaults.yaml
+└── tests/
+    ├── __init__.py
+    └── test_exif_tagger.py
+```
+
+## Plugin Manifest (plugin.json)
+
+The `plugin.json` file is **required** and defines plugin metadata, dependencies, and entry point.
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Unique plugin identifier (lowercase, underscores) |
+| `version` | string | Semantic version (e.g., "1.0.0") |
+| `author` | string | Plugin author name or organization |
+| `description` | string | Brief description of plugin functionality |
+| `entry_point` | string | Python file containing plugin class (e.g., "plugin.py") |
+
+### Optional Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `license` | string | `"MIT"` | Plugin license identifier |
+| `homepage` | string | `null` | URL to plugin homepage or repository |
+| `dependencies` | array | `[]` | List of Python package dependencies |
+| `min_organizer_version` | string | `"2.0.0"` | Minimum File Organizer version required |
+| `max_organizer_version` | string | `null` | Maximum compatible File Organizer version |
+| `allowed_paths` | array | `[]` | List of filesystem paths plugin can access |
+
+### Minimal Manifest Example
+
+```json
+{
+    "name": "hello_world",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "description": "A simple hello world plugin.",
+    "entry_point": "plugin.py"
+}
+```
+
+### Complete Manifest Example
+
+```json
+{
+    "name": "exif_image_tagger",
+    "version": "1.2.0",
+    "author": "File Organizer Team",
+    "description": "Automatically tags images based on EXIF metadata.",
+    "entry_point": "plugin.py",
+    "license": "MIT",
+    "homepage": "https://github.com/yourorg/exif-tagger",
+    "dependencies": [
+        "pillow>=10.0.0",
+        "piexif>=1.1.3"
+    ],
+    "min_organizer_version": "2.0.0",
+    "max_organizer_version": "3.0.0",
+    "allowed_paths": [
+        "/Users/shared/photos",
+        "/mnt/nas/media"
+    ]
+}
+```
+
+### Naming Conventions
+
+- **Plugin name**: Use lowercase with underscores (e.g., `exif_image_tagger`, not `ExifImageTagger`)
+- **Entry point**: Typically `plugin.py`, but can be any Python file
+- **Dependencies**: Use pip-style version specifiers (e.g., `"pillow>=10.0.0,<11.0.0"`)
+
+### Version Compatibility
+
+Specify version constraints to ensure compatibility:
+
+```json
+{
+    "min_organizer_version": "2.1.0",
+    "max_organizer_version": "2.9.99",
+    "dependencies": [
+        "requests>=2.28.0,<3.0.0",
+        "pyyaml~=6.0"
+    ]
+}
+```
+
+**Version specifiers:**
+- `>=2.0.0` - Minimum version
+- `<3.0.0` - Maximum version (exclusive)
+- `~=6.0` - Compatible release (>= 6.0, < 7.0)
+- `==1.2.3` - Exact version (not recommended)
+
+### Security: Allowed Paths
+
+Restrict plugin filesystem access using `allowed_paths`:
+
+```json
+{
+    "allowed_paths": [
+        "/Users/shared/uploads",
+        "/mnt/storage/organized"
+    ]
+}
+```
+
+The plugin sandbox will enforce these restrictions, preventing access to other directories.
+
 ## Plugin Hooks
 
 ### Available Hooks
