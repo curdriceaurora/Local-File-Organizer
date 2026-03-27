@@ -15,6 +15,7 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def print_success(message: str) -> None:
@@ -40,7 +41,7 @@ def print_section(title: str) -> None:
 
 def extract_class_info(source_file: Path, class_name: str) -> dict[str, Any]:
     """Extract class definition and methods from source file."""
-    content = source_file.read_text()
+    content = source_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
     for node in ast.walk(tree):
@@ -83,7 +84,7 @@ def extract_class_info(source_file: Path, class_name: str) -> dict[str, Any]:
 
 def extract_function_signature(source_file: Path, func_name: str) -> dict[str, Any] | None:
     """Extract function signature from source file."""
-    content = source_file.read_text()
+    content = source_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
     for node in ast.walk(tree):
@@ -120,7 +121,7 @@ def extract_function_signature(source_file: Path, func_name: str) -> dict[str, A
 
 def extract_dataclass_fields(source_file: Path, class_name: str) -> dict[str, Any]:
     """Extract dataclass fields."""
-    content = source_file.read_text()
+    content = source_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
     for node in ast.walk(tree):
@@ -146,7 +147,7 @@ def extract_dataclass_fields(source_file: Path, class_name: str) -> dict[str, An
 
 def extract_enum_values(source_file: Path, enum_name: str) -> list[str]:
     """Extract enum member values."""
-    content = source_file.read_text()
+    content = source_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
     for node in ast.walk(tree):
@@ -203,7 +204,7 @@ def _store_constant(
 
 def extract_constants(source_file: Path, constant_names: list[str] | None = None) -> dict[str, Any]:
     """Extract top-level constant values from a source file."""
-    content = source_file.read_text()
+    content = source_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
     constants = {}
@@ -230,7 +231,7 @@ def verify_plugin_class() -> bool:
     """Verify Plugin base class exists with correct methods."""
     print_section("1. Plugin Base Class")
 
-    base_file = Path("src/file_organizer/plugins/base.py")
+    base_file = PROJECT_ROOT / "src/file_organizer/plugins/base.py"
     if not base_file.exists():
         print_error(f"Source file not found: {base_file}")
         return False
@@ -272,7 +273,7 @@ def verify_hook_decorator() -> bool:
     """Verify @hook decorator exists with correct signature."""
     print_section("2. Hook Decorator")
 
-    decorators_file = Path("src/file_organizer/plugins/sdk/decorators.py")
+    decorators_file = PROJECT_ROOT / "src/file_organizer/plugins/sdk/decorators.py"
     if not decorators_file.exists():
         print_error(f"Source file not found: {decorators_file}")
         return False
@@ -308,7 +309,7 @@ def verify_hook_event_enum() -> bool:
     """Verify HookEvent enum exists with correct values."""
     print_section("3. HookEvent Enum")
 
-    hooks_file = Path("src/file_organizer/plugins/api/hooks.py")
+    hooks_file = PROJECT_ROOT / "src/file_organizer/plugins/api/hooks.py"
     if not hooks_file.exists():
         print_error(f"Source file not found: {hooks_file}")
         return False
@@ -337,7 +338,7 @@ def verify_plugin_metadata() -> bool:
     """Verify PluginMetadata dataclass fields."""
     print_section("4. PluginMetadata Dataclass")
 
-    base_file = Path("src/file_organizer/plugins/base.py")
+    base_file = PROJECT_ROOT / "src/file_organizer/plugins/base.py"
     if not base_file.exists():
         print_error(f"Source file not found: {base_file}")
         return False
@@ -385,7 +386,7 @@ def verify_manifest_schema() -> bool:
     """Verify plugin.json manifest schema constants."""
     print_section("5. Manifest Schema Constants")
 
-    base_file = Path("src/file_organizer/plugins/base.py")
+    base_file = PROJECT_ROOT / "src/file_organizer/plugins/base.py"
     if not base_file.exists():
         print_error(f"Source file not found: {base_file}")
         return False
@@ -431,12 +432,12 @@ def verify_documentation_usage() -> bool:
     """Verify that documented code uses correct API names."""
     print_section("6. Documentation API Usage")
 
-    doc_file = Path("docs/developer/plugin-development.md")
+    doc_file = PROJECT_ROOT / "docs/developer/plugin-development.md"
     if not doc_file.exists():
         print_error(f"Documentation file not found: {doc_file}")
         return False
 
-    content = doc_file.read_text()
+    content = doc_file.read_text(encoding="utf-8")
 
     checks = [
         ("class.*Plugin", "Plugin class usage"),

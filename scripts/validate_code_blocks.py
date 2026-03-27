@@ -24,12 +24,13 @@ def extract_python_code_blocks(markdown_content: str) -> list[tuple[int, str]]:
     block_start_line = 0
 
     for i, line in enumerate(lines, start=1):
-        if line.strip().startswith("```python"):
+        stripped = line.strip()
+        if stripped == "```python" or stripped.startswith("```python "):
             in_code_block = True
             is_python_block = True
             current_block = []
             block_start_line = i
-        elif line.strip().startswith("```") and in_code_block:
+        elif stripped.startswith("```") and in_code_block:
             in_code_block = False
             if is_python_block and current_block:
                 code_blocks.append((block_start_line, "\n".join(current_block)))
@@ -37,6 +38,13 @@ def extract_python_code_blocks(markdown_content: str) -> list[tuple[int, str]]:
             current_block = []
         elif in_code_block and is_python_block:
             current_block.append(line)
+
+    if in_code_block and is_python_block and current_block:
+        print(
+            f"Warning: Unclosed Python code block starting at line {block_start_line}",
+            file=sys.stderr,
+        )
+        code_blocks.append((block_start_line, "\n".join(current_block)))
 
     return code_blocks
 
@@ -55,7 +63,7 @@ def validate_python_code(code: str, line_number: int) -> tuple[bool, str]:
         if e.text:
             error_msg += f"\n  {e.text.strip()}"
         return False, error_msg
-    except Exception as e:
+    except (ValueError, RecursionError) as e:
         return False, f"Validation error at line {line_number}: {e!s}"
 
 
@@ -85,7 +93,7 @@ def main() -> None:
     print(f"Validating Python code blocks in {doc_path}...")
     print()
 
-    content = doc_path.read_text()
+    content = doc_path.read_text(encoding="utf-8")
     code_blocks = extract_python_code_blocks(content)
 
     print(f"Found {len(code_blocks)} Python code block(s)")

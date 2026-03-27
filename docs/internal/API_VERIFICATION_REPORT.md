@@ -126,7 +126,7 @@ This verification confirms that the documentation matches the source code:
 
 ## Verification Method
 
-Verification performed using automated Python script (`verify_documented_apis.py`) that:
+Verification performed using automated Python script (`scripts/verify_documented_apis.py`) that:
 1. Parses source code using Python's `ast` module
 2. Extracts class definitions, method signatures, function parameters
 3. Extracts dataclass fields and enum values
@@ -144,7 +144,7 @@ All documented APIs are accurate and match the source code implementation. The d
 **Automated Verification Command:**
 
 ```bash
-python3 verify_documented_apis.py
+python3 scripts/verify_documented_apis.py
 ```
 
 **Result:** All 6 verification checks passed (100% success rate)
