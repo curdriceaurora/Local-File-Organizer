@@ -6,9 +6,9 @@
 ## Quick Stats
 
 - **Total Unconditional Skips:** 14 tests
-- **Total Conditional Skips (skipif):** 21 tests
+- **Total Conditional Skips (skipif):** 22 skip conditions
 - **Tests Requiring Documentation:** 14 (Phase 3 + SSE)
-- **Platform/Environment Skips:** 21 (no documentation needed)
+- **Platform/Environment Skips:** 22 (no documentation needed)
 
 ## Categorization for CHANGELOG
 
@@ -40,14 +40,16 @@ These tests are **intentionally skipped** and should be documented in CHANGELOG 
 | `tests/test_web_organize_routes.py` | 330 | `test_organize_stream_cancellation` | SSE streaming not implemented |
 | `tests/test_web_files_routes.py` | 246 | `test_files_sse_placeholder` | SSE routes not implemented |
 
-### PLATFORM Category (21 tests - No Documentation Needed)
+### PLATFORM Category (22 skip conditions - No Documentation Needed)
 
 These skips are **expected behavior** for different platforms/environments:
 
-#### Platform-Specific Skips (14 tests)
-- Windows-specific: 11 tests (signal handling, chmod, fsync, hardlinks)
-- macOS-specific: 2 tests (path tests, context menu)
-- Linux-specific: 1 test (path tests)
+#### Platform-Specific Skips (15 skip conditions)
+- Windows-specific: 10 skip conditions (signal handling, chmod, fsync, hardlinks)
+- Windows/macOS: 1 skip condition (creation time sorting)
+- macOS-specific: 2 skip conditions (path tests, context menu)
+- Linux-specific: 1 skip condition (path tests)
+- Windows-only: 1 skip condition (path tests)
 
 #### Optional Dependencies (4 tests)
 - ebooklib: 2 tests (EPUB processing)
@@ -61,10 +63,10 @@ These skips are **expected behavior** for different platforms/environments:
 
 ### Canonical Counts (deduplicated)
 - **Unconditional skips:** 14 tests
-- **Conditional skips:** 21 tests (unique)
+- **Conditional skips:** 22 skip conditions (unique)
 - **Phase 3 skips:** 12 tests
 - **SSE skips:** 2 tests
-- **Total skips:** 35 tests
+- **Total skips:** 36 skip conditions
 
 ### Raw Verification Totals (duplicate-inclusive)
 
@@ -85,13 +87,13 @@ grep -rn "@pytest.mark.skip\b" tests/ --include="*.py" | grep -v "skipif" | wc -
 
 # Count all conditional skips (includes 1 duplicate reference)
 grep -rn "@pytest.mark.skipif\|pytestmark = pytest.mark.skipif" tests/ --include="*.py" | grep -v "conftest.py" | wc -l
-# Raw result: 22 (after deduplication: 21 unique skips)
+# Raw result: 22 unique conditional skip decorators
 ```
 
 ## Files Modified
 
-1. ✅ **TEST_SKIP_AUDIT.md** - Comprehensive audit of all skipped tests
-2. ✅ **TEST_SKIP_SUMMARY.md** - This summary document
+1. ✅ **docs/test-skip-audit.md** - Comprehensive audit of all skipped tests
+2. ✅ **docs/test-skip-summary.md** - This summary document
 3. ✅ **CHANGELOG.md** - Added Known Limitations section to alpha.3 entry
 
 ## CHANGELOG Entry
@@ -119,6 +121,6 @@ Total skipped tests: 14
 
 ## Notes
 
-- Platform-specific skipifs (21 tests) are **not** included in the CHANGELOG count as they represent correct conditional testing behavior
+- Platform-specific skipifs (22 skip conditions) are **not** included in the CHANGELOG count as they represent correct conditional testing behavior
 - No RESOLVE-category skips were found - all temporary skips have been resolved or properly documented
 - SuggestionEngine module exists in codebase; skipif decorators correctly protect against import failures in test environments

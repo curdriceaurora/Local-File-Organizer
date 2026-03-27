@@ -40,7 +40,7 @@ Server-Sent Events functionality for real-time progress updates:
 - Organization stream cancellation
 - File listing SSE endpoints
 
-**Note:** Platform-specific conditional skips (21 tests) are not included in this count as they represent expected behavior on different operating systems and environments.
+**Note:** Platform-specific conditional skips (22 skip conditions) are not included in this count as they represent expected behavior on different operating systems and environments.
 
 ## [2.0.0-alpha.2] - 2026-03-09
 

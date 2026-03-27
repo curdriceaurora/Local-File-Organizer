@@ -1,7 +1,14 @@
 # Test Skip Audit - Alpha.3 Release
 
 **Audit Date:** 2026-03-26
-**Total Skips Found:** 35 (14 unconditional + 21 conditional)
+**Total Skips Found:** 36 (14 unconditional + 22 conditional)
+
+## Counting Methodology
+
+Counts in this document represent unique skip *decorators* (i.e., `@pytest.mark.skip`,
+`@pytest.mark.skipif`, or module-level `pytestmark` assignments), not individual test
+methods. A single class-level or module-level decorator may cover multiple test methods
+within that scope.
 
 ## Executive Summary
 
@@ -49,19 +56,22 @@ Server-Sent Events functionality not yet implemented:
 **Status:** Planned feature - Not yet implemented
 **Action:** Document in CHANGELOG Known Limitations
 
-### PLATFORM Category: OS/Environment-Specific (Total: 21)
+### PLATFORM Category: OS/Environment-Specific (Total: 22)
 
-#### 1. Platform-Specific Behavior (14 tests)
+#### 1. Platform-Specific Behavior (15 skip conditions)
 
 Tests that correctly skip on platforms where the tested functionality is unavailable:
 
-**Windows-Specific Skips (11)**:
+**Windows-Specific Skips (10)**:
 - `tests/daemon/test_service_signal_safety.py:90, 132, 171` - Signal pipe not available on Windows (3 tests)
 - `tests/plugins/test_base_coverage.py:79` - chmod does not restrict reads on Windows
 - `tests/integration/test_error_propagation.py:30, 123` - chmod does not restrict reads on Windows (2 tests)
 - `tests/parallel/test_checkpoint.py:446` - directory fsync is a no-op on Windows
 - `tests/undo/test_rollback_extended.py:154, 362` - /dev/null is writable on Windows (2 tests)
 - `tests/integration/test_organize_text_workflow.py:99` - Hardlinks require admin privileges on Windows
+
+**Windows/macOS Skip (1)**:
+- `tests/test_web_files_routes.py:87` - `test_files_sort_by_created`: Creation time sorting skipped on Windows/macOS (st_birthtime/st_ctime unreliable)
 
 **macOS-Specific Tests (2)**:
 - `tests/config/test_config_paths.py:52` - macOS-specific path test (skipped on non-macOS)
@@ -117,10 +127,10 @@ Tests that skip if SuggestionEngine cannot be imported:
 |----------|-------|--------|--------|
 | Phase 3 Features | 12 | Audio/video metadata deferred to Phase 3 | DOCUMENT - Intentional |
 | SSE Streaming | 2 | Server-Sent Events not yet implemented | DOCUMENT - Planned |
-| Platform-Specific | 14 | OS-specific conditions | PLATFORM - Expected |
+| Platform-Specific | 15 | OS-specific conditions | PLATFORM - Expected |
 | Optional Dependencies | 4 | Optional packages not required | PLATFORM - Expected |
 | Import-Dependent | 3 | SuggestionEngine import protection | PLATFORM - Expected |
-| **Total** | **35** | | |
+| **Total** | **36** | | |
 
 ## Verification Commands
 
@@ -131,7 +141,7 @@ grep -rn "@pytest.mark.skip\b" tests/ --include="*.py" | grep -v "skipif" | wc -
 
 # Count conditional skips (unique, deduplicated)
 grep -rn "@pytest.mark.skipif\|pytestmark = pytest.mark.skipif" tests/ --include="*.py" | grep -v "conftest.py" | wc -l
-# Result: 22 (includes 1 duplicate reference; 21 unique skips)
+# Result: 22 unique conditional skip decorators
 
 # List Phase 3 skips
 grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "Phase 3"
@@ -149,7 +159,7 @@ grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "SSE"
    - 2 SSE streaming tests (planned feature)
 
 2. **NO ACTION NEEDED** for:
-   - 14 platform-specific skipifs (correct behavior)
+   - 15 platform-specific skipifs (correct behavior)
    - 4 optional dependency skipifs (correct behavior)
    - 3 SuggestionEngine skipifs (correct behavior - protects against import failures)
 
@@ -163,4 +173,4 @@ grep -rn "@pytest.mark.skip" tests/ --include="*.py" | grep "SSE"
 ## Conclusion
 
 **Total tests requiring CHANGELOG documentation: 14** (12 Phase 3 + 2 SSE)
-**Total platform/environment skips (no action needed): 21** (14 platform + 4 optional deps + 3 import-dependent)
+**Total platform/environment skips (no action needed): 22** (15 platform + 4 optional deps + 3 import-dependent)
