@@ -81,6 +81,11 @@ Install the appropriate optional dependency group based on the feature you're us
 | Scientific formats | `h5py`, `netCDF4` | `pip install "local-file-organizer[scientific]"` |
 | CAD file support | `ezdxf` | `pip install "local-file-organizer[cad]"` |
 | Claude API provider | `anthropic` | `pip install "local-file-organizer[claude]"` |
+| Document parsers | `fitz`, `docx`, `openpyxl`, `pptx`, `ebooklib`, `bs4` | `pip install "local-file-organizer[parsers]"` |
+| OpenAI-compatible API | `openai` | `pip install "local-file-organizer[cloud]"` |
+| llama.cpp inference | `llama_cpp` | `pip install "local-file-organizer[llama]"` |
+| MLX inference (macOS) | `mlx_lm` | `pip install "local-file-organizer[mlx]"` |
+| GUI interface | `PyQt6` | `pip install "local-file-organizer[gui]"` |
 | All features | Any of the above | `pip install "local-file-organizer[all]"` |
 
 For more details, see [Dependencies & Setup](setup/dependencies.md).
