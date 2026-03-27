@@ -34,6 +34,152 @@ class MyPlugin(Plugin):
         print(f"Organization complete: {result}")
 ```
 
+## Complete Example
+
+Here's a production-ready plugin that automatically tags images based on EXIF metadata:
+
+```python
+"""EXIF-based image tagger plugin."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from file_organizer.plugins import Plugin, PluginMetadata
+from file_organizer.plugins.sdk import hook
+
+
+class ExifImageTaggerPlugin(Plugin):
+    """Automatically tags images with EXIF-derived metadata."""
+
+    name = "exif_image_tagger"
+    version = "1.0.0"
+    allowed_paths: list = []
+
+    def on_load(self) -> None:
+        """Handle plugin load event."""
+        return None
+
+    def on_enable(self) -> None:
+        """Handle plugin enable event and configure settings."""
+        self.include_camera_model = self.config.get("include_camera_model", True)
+        self.include_location = self.config.get("include_location", True)
+        self.date_format = self.config.get("date_format", "%Y-%m-%d")
+
+    def on_disable(self) -> None:
+        """Handle plugin disable event."""
+        return None
+
+    def on_unload(self) -> None:
+        """Handle plugin unload event."""
+        return None
+
+    def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata."""
+        return PluginMetadata(
+            name="exif_image_tagger",
+            version="1.0.0",
+            author="File Organizer Team",
+            description="Automatically tags images based on EXIF metadata.",
+            dependencies=("pillow>=10.0.0",),
+        )
+
+    @hook("file.organized", priority=10)
+    def on_file_organized(self, payload: dict[str, Any]) -> dict[str, object]:
+        """Extract EXIF data and add tags to organized image files."""
+        destination = payload.get("destination_path")
+        if not isinstance(destination, str) or not destination:
+            return {"tagged": False, "reason": "missing destination_path"}
+
+        target = Path(destination)
+        if not target.exists():
+            return {"tagged": False, "reason": "destination file missing"}
+
+        # Only process image files
+        if target.suffix.lower() not in {".jpg", ".jpeg", ".tiff", ".png"}:
+            return {"tagged": False, "reason": "not an image file"}
+
+        tags = self._extract_exif_tags(target)
+        if not tags:
+            return {"tagged": False, "reason": "no EXIF data found"}
+
+        # Store tags in payload for downstream plugins/processing
+        payload["tags"] = tags
+        return {"tagged": True, "tags": tags, "tag_count": len(tags)}
+
+    def _extract_exif_tags(self, image_path: Path) -> list[str]:
+        """Extract relevant tags from image EXIF data."""
+        try:
+            from PIL import Image
+            from PIL.ExifTags import TAGS
+        except ImportError:
+            return []
+
+        tags: list[str] = []
+
+        try:
+            with Image.open(image_path) as img:
+                exif_data = img.getexif()
+                if not exif_data:
+                    return tags
+
+                # Extract camera model
+                if self.include_camera_model:
+                    model = exif_data.get(272)  # Model tag
+                    if model:
+                        tags.append(f"camera:{model.strip()}")
+
+                # Extract date taken
+                date_taken = exif_data.get(36867)  # DateTimeOriginal
+                if date_taken:
+                    try:
+                        dt = datetime.strptime(date_taken, "%Y:%m:%d %H:%M:%S")
+                        tags.append(f"date:{dt.strftime(self.date_format)}")
+                        tags.append(f"year:{dt.year}")
+                    except ValueError:
+                        pass
+
+                # Extract location (GPS data)
+                if self.include_location:
+                    gps_info = exif_data.get(34853)  # GPSInfo
+                    if gps_info:
+                        tags.append("location:geotagged")
+
+        except Exception:
+            # Silently handle any PIL errors
+            pass
+
+        return tags
+```
+
+### Plugin Configuration
+
+Create `config/plugins.yaml` to configure the plugin:
+
+```yaml
+plugins:
+  exif_image_tagger:
+    enabled: true
+    config:
+      include_camera_model: true
+      include_location: true
+      date_format: "%Y-%m-%d"
+```
+
+### Key Features
+
+This example demonstrates:
+
+- **Lifecycle Methods**: Proper implementation of `on_load`, `on_enable`, `on_disable`, and `on_unload`
+- **Hook Registration**: Using `@hook` decorator with priority for event handling
+- **Configuration**: Reading plugin config with sensible defaults
+- **Error Handling**: Graceful handling of missing EXIF data and import errors
+- **Metadata**: Complete `PluginMetadata` with dependencies
+- **Type Safety**: Type hints and validation for payload data
+- **Real-world Logic**: Extracting and processing EXIF data from images
+
 ## Plugin Hooks
 
 ### Available Hooks
