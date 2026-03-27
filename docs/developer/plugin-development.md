@@ -326,6 +326,372 @@ Restrict plugin filesystem access using `allowed_paths`:
 
 The plugin sandbox will enforce these restrictions, preventing access to other directories.
 
+## Local Installation and Registration
+
+This section covers installing and testing plugins locally during development, before publishing them.
+
+### Development Installation Methods
+
+#### Method 1: Direct Directory Installation (Recommended for Development)
+
+Install your plugin directly from its source directory:
+
+```bash
+# Navigate to your plugin directory
+cd ~/projects/my_plugin
+
+# Install in development mode (editable)
+pip install -e .
+
+# Changes to plugin code are immediately reflected
+```
+
+**Advantages:**
+- Code changes take effect immediately without reinstalling
+- Easy to debug and iterate quickly
+- Preserves your development environment
+
+#### Method 2: Install from Local Path
+
+Install from a specific directory path:
+
+```bash
+# Install from absolute path
+pip install /path/to/my_plugin
+
+# Install from relative path
+pip install ../plugins/my_plugin
+
+# Install with dependencies
+pip install -e /path/to/my_plugin[dev]
+```
+
+#### Method 3: Manual Registration
+
+Register a plugin without pip installation by adding it to the plugin path:
+
+**Step 1:** Create or edit `config/plugins.yaml`:
+
+```yaml
+plugin_paths:
+  - /Users/yourname/projects/my_plugin
+  - ./local_plugins
+
+plugins:
+  my_plugin:
+    enabled: true
+    config:
+      debug_mode: true
+```
+
+**Step 2:** Ensure your plugin directory has a valid `plugin.json`:
+
+```json
+{
+    "name": "my_plugin",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "description": "My development plugin.",
+    "entry_point": "plugin.py"
+}
+```
+
+**Step 3:** Restart File Organizer to load the plugin:
+
+```bash
+file-organizer restart
+```
+
+### Plugin Registration Process
+
+File Organizer automatically discovers and registers plugins during startup:
+
+1. **Discovery**: Scans configured plugin paths and installed packages
+2. **Validation**: Checks `plugin.json` for required fields and compatibility
+3. **Loading**: Imports the entry point and instantiates the plugin class
+4. **Registration**: Calls `on_load()` and `on_enable()` lifecycle methods
+5. **Hook Binding**: Registers all `@hook` decorated methods
+
+### Verifying Plugin Installation
+
+Check that your plugin was installed and registered successfully:
+
+```bash
+# List all installed plugins
+file-organizer plugins list
+
+# Show detailed plugin information
+file-organizer plugins info my_plugin
+
+# Check plugin status
+file-organizer plugins status
+```
+
+Expected output:
+
+```text
+Installed Plugins:
+  ✓ my_plugin (v1.0.0) - Enabled
+    Location: /Users/yourname/projects/my_plugin
+    Entry Point: plugin.py
+    Hooks: 2 registered
+```
+
+### Testing Locally
+
+#### Running Plugin Tests
+
+```bash
+# Run plugin tests with pytest
+cd ~/projects/my_plugin
+pytest tests/
+
+# Run with coverage
+pytest --cov=my_plugin tests/
+
+# Run specific test
+pytest tests/test_plugin.py::test_on_file_organized
+```
+
+#### Manual Testing with File Organizer
+
+Test your plugin with actual file operations:
+
+```bash
+# Enable debug logging
+export FILE_ORGANIZER_LOG_LEVEL=DEBUG
+
+# Run File Organizer with test files
+file-organizer organize ~/test-files/ --dry-run
+
+# Check plugin output in logs
+tail -f ~/.file-organizer/logs/plugins.log
+```
+
+#### Interactive Testing
+
+Use the File Organizer Python API to test your plugin interactively:
+
+```python
+# test_plugin_interactive.py
+from file_organizer.plugins import load_plugin
+from pathlib import Path
+
+# Load your plugin
+plugin = load_plugin("/path/to/my_plugin")
+plugin.on_enable()
+
+# Test hook manually
+payload = {
+    "destination_path": "/tmp/test-image.jpg",
+    "source_path": "/tmp/uploads/photo.jpg"
+}
+
+result = plugin.on_file_organized(payload)
+print(f"Result: {result}")
+```
+
+Run the test:
+
+```bash
+python test_plugin_interactive.py
+```
+
+### Hot-Reloading During Development
+
+Enable hot-reloading to see code changes without restarting:
+
+**Step 1:** Enable development mode in `config/plugins.yaml`:
+
+```yaml
+development:
+  hot_reload: true
+  watch_paths:
+    - /Users/yourname/projects/my_plugin
+
+plugins:
+  my_plugin:
+    enabled: true
+```
+
+**Step 2:** Start File Organizer in watch mode:
+
+```bash
+file-organizer serve --watch
+```
+
+Code changes are now automatically detected and the plugin is reloaded.
+
+### Debugging Plugins
+
+#### Using Python Debugger
+
+Add breakpoints in your plugin code:
+
+```python
+class MyPlugin(Plugin):
+    @hook("file.organized")
+    def on_file_organized(self, payload):
+        import pdb; pdb.set_trace()  # Debugger breakpoint
+        # Your plugin logic
+        return {"status": "processed"}
+```
+
+Run File Organizer with debugging enabled:
+
+```bash
+python -m pdb -m file_organizer organize ~/test-files/
+```
+
+#### Logging for Debugging
+
+Add detailed logging to your plugin:
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+class MyPlugin(Plugin):
+    @hook("file.organized")
+    def on_file_organized(self, payload):
+        logger.debug(f"Processing file: {payload}")
+        logger.info(f"Destination: {payload.get('destination_path')}")
+
+        try:
+            result = self.process(payload)
+            logger.info(f"Successfully processed: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Error processing file: {e}", exc_info=True)
+            raise
+```
+
+View logs in real-time:
+
+```bash
+tail -f ~/.file-organizer/logs/plugins.log | grep my_plugin
+```
+
+### Common Installation Issues
+
+#### Issue: Plugin Not Found
+
+**Error:** `Plugin 'my_plugin' not found in registered plugins`
+
+**Solution:**
+1. Verify `plugin.json` exists and has correct `name` field
+2. Check that plugin path is in `config/plugins.yaml`
+3. Ensure entry point file exists and is named correctly
+4. Restart File Organizer to trigger re-discovery
+
+#### Issue: Import Errors
+
+**Error:** `ModuleNotFoundError: No module named 'my_dependency'`
+
+**Solution:**
+1. Install dependencies: `pip install -r requirements.txt`
+2. Add dependencies to `plugin.json`:
+   ```json
+   {
+       "dependencies": ["pillow>=10.0.0", "requests>=2.28.0"]
+   }
+   ```
+3. Reinstall plugin: `pip install -e .`
+
+#### Issue: Hook Not Triggering
+
+**Error:** Plugin loads but hooks don't execute
+
+**Solution:**
+1. Verify hook name is correct: `@hook("file.organized")`
+2. Check that `on_enable()` is called (plugin must be enabled)
+3. Ensure hook priority doesn't conflict with other plugins
+4. Add logging to confirm hook registration:
+   ```python
+   def on_enable(self):
+       logger.info(f"Registering hooks for {self.name}")
+   ```
+
+### Uninstalling Plugins
+
+Remove a locally installed plugin:
+
+```bash
+# Uninstall with pip
+pip uninstall my_plugin
+
+# Remove from plugin paths
+# Edit config/plugins.yaml and remove plugin entry
+
+# Clear plugin cache
+file-organizer plugins clear-cache
+
+# Restart to apply changes
+file-organizer restart
+```
+
+### Best Practices for Local Development
+
+1. **Use Editable Installs**: Always use `pip install -e .` during development
+2. **Version Control**: Keep `plugin.json` and code in git, exclude `__pycache__` and `.pyc` files
+3. **Isolated Testing**: Use `PluginTestCase` with temporary directories for tests
+4. **Logging Over Print**: Use proper logging instead of print statements
+5. **Graceful Errors**: Handle all exceptions and return meaningful error messages
+6. **Document Config**: Provide clear documentation for all config options
+7. **Test Edge Cases**: Test with missing files, invalid data, and permission errors
+
+### Example Development Workflow
+
+Here's a typical workflow for developing and testing a plugin locally:
+
+```bash
+# 1. Create plugin directory
+mkdir -p ~/projects/my_plugin
+cd ~/projects/my_plugin
+
+# 2. Create plugin structure
+cat > plugin.json <<EOF
+{
+    "name": "my_plugin",
+    "version": "0.1.0",
+    "author": "Your Name",
+    "description": "Development plugin",
+    "entry_point": "plugin.py"
+}
+EOF
+
+# 3. Write plugin code
+cat > plugin.py <<EOF
+from file_organizer.plugins import Plugin
+from file_organizer.plugins.sdk import hook
+
+class MyPlugin(Plugin):
+    def on_enable(self):
+        print(f"Plugin {self.name} enabled")
+
+    @hook("file.organized")
+    def on_file_organized(self, payload):
+        return {"processed": True}
+EOF
+
+# 4. Install in development mode
+pip install -e .
+
+# 5. Test the plugin
+pytest tests/ -v
+
+# 6. Run with File Organizer
+file-organizer organize ~/test-files/ --dry-run
+
+# 7. Check logs
+tail -f ~/.file-organizer/logs/plugins.log
+
+# 8. Make changes and retest (no reinstall needed with -e flag)
+# Edit plugin.py...
+file-organizer organize ~/test-files/ --dry-run
+```
+
 ## Plugin Hooks
 
 ### Available Hooks
