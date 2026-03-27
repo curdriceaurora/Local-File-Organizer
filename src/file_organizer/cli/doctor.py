@@ -8,7 +8,12 @@ import importlib.util
 from pathlib import Path
 from typing import Dict, List, Set
 
+from rich.console import Console
+from rich.table import Table
+
 from file_organizer.utils import is_hidden
+
+console = Console()
 
 # Extension-to-group registry mapping file extensions to optional dependency groups
 EXTENSION_REGISTRY: Dict[str, str] = {
@@ -160,3 +165,57 @@ def scan_directory(directory: Path) -> Dict[str, int]:
                 extension_counts[""] = extension_counts.get("", 0) + 1
 
     return extension_counts
+
+
+def display_recommendations(
+    extension_counts: Dict[str, int],
+    detected_groups: Set[str],
+) -> None:
+    """Display recommendations for optional dependencies using Rich tables.
+
+    Args:
+        extension_counts: Dictionary mapping extensions to file counts
+        detected_groups: Set of detected dependency groups
+    """
+    # Calculate file counts per group
+    group_file_counts: Dict[str, int] = {}
+    for ext, count in extension_counts.items():
+        if ext in EXTENSION_REGISTRY:
+            group = EXTENSION_REGISTRY[ext]
+            group_file_counts[group] = group_file_counts.get(group, 0) + count
+
+    # Create and configure the table
+    table = Table(title="Optional Dependency Recommendations")
+    table.add_column("Group", style="cyan", no_wrap=True)
+    table.add_column("Files Found", justify="right")
+    table.add_column("Install Command", no_wrap=True)
+    table.add_column("Prerequisites")
+
+    # Add rows for each detected group, sorted by name for consistency
+    for group in sorted(detected_groups):
+        file_count = group_file_counts.get(group, 0)
+        # Escape square brackets for Rich markup
+        install_cmd = f"pip install file-organizer\\[{group}]"
+        prerequisites = ", ".join(SYSTEM_PREREQUISITES.get(group, ["-"]))
+
+        # Check if group is already installed
+        is_installed = is_group_installed(group)
+
+        # Color code based on installation status
+        if is_installed:
+            # Green for installed
+            group_name = f"[green]{group} ✓[/green]"
+            status_style = "dim"
+        else:
+            # Yellow for recommended (not installed)
+            group_name = f"[yellow]{group}[/yellow]"
+            status_style = ""
+
+        table.add_row(
+            group_name,
+            f"{file_count}" if not is_installed else f"[dim]{file_count}[/dim]",
+            f"[{status_style}]{install_cmd}[/{status_style}]" if status_style else install_cmd,
+            f"[{status_style}]{prerequisites}[/{status_style}]" if status_style else prerequisites,
+        )
+
+    console.print(table)
