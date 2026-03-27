@@ -311,6 +311,8 @@ def verify_hook_decorator() -> bool:
     all_correct = True
     args = func_info.get("args", [])
     kwonlyargs = func_info.get("kwonlyargs", [])
+    defaults = func_info.get("defaults", [])
+    return_type = func_info.get("return_type")
 
     if args and args[0] == "event: HookEvent | str":
         print_success("  Parameter 'event' has correct type hint (HookEvent | str)")
@@ -318,10 +320,26 @@ def verify_hook_decorator() -> bool:
         print_error(f"  Parameter 'event' signature: {args or 'missing'}")
         all_correct = False
 
-    if kwonlyargs and "priority" in kwonlyargs[0]:
+    if (
+        kwonlyargs
+        and len(kwonlyargs) > 0
+        and kwonlyargs[0] == "priority: int"
+        and defaults
+        and len(defaults) > 0
+        and defaults[0] == "10"
+    ):
         print_success("  Parameter 'priority' is keyword-only with default")
     else:
-        print_error(f"  Parameter 'priority' signature: {kwonlyargs or 'missing'}")
+        print_error(
+            f"  Parameter 'priority' signature: kwonlyargs={kwonlyargs or 'missing'}, "
+            f"defaults={defaults or 'missing'}"
+        )
+        all_correct = False
+
+    if return_type == "Callable[[F], F]":
+        print_success("  Return type is Callable[[F], F]")
+    else:
+        print_error(f"  Return type: expected 'Callable[[F], F]', got '{return_type}'")
         all_correct = False
 
     return all_correct
@@ -439,15 +457,65 @@ def verify_manifest_schema() -> bool:
         print_error("MANIFEST_OPTIONAL_FIELDS could not be parsed as a dictionary")
         return False
 
-    print_success("MANIFEST_REQUIRED_FIELDS found in base.py")
-    for field in required_fields:
-        print_success(f"  {field}")
+    # Define authoritative schema
+    expected_required = {"name", "version", "author", "description", "entry_point"}
+    expected_optional = {
+        "homepage",
+        "license",
+        "dependencies",
+        "min_organizer_version",
+        "max_organizer_version",
+    }
 
-    print_success("\nMANIFEST_OPTIONAL_FIELDS found in base.py")
-    for field in optional_fields:
-        print_success(f"  {field}")
+    # Validate MANIFEST_REQUIRED_FIELDS
+    actual_required_keys = set(required_fields.keys())
+    missing_required = expected_required - actual_required_keys
+    extra_required = actual_required_keys - expected_required
 
-    return True
+    all_valid = True
+
+    if missing_required:
+        print_error(
+            f"MANIFEST_REQUIRED_FIELDS missing expected keys: {', '.join(sorted(missing_required))}"
+        )
+        all_valid = False
+    if extra_required:
+        print_error(
+            f"MANIFEST_REQUIRED_FIELDS has unexpected keys: {', '.join(sorted(extra_required))}"
+        )
+        all_valid = False
+
+    if not missing_required and not extra_required:
+        print_success("MANIFEST_REQUIRED_FIELDS found in base.py")
+        for field in sorted(required_fields.keys()):
+            print_success(f"  {field}")
+    else:
+        print_error("MANIFEST_REQUIRED_FIELDS has schema drift")
+
+    # Validate MANIFEST_OPTIONAL_FIELDS
+    actual_optional_keys = set(optional_fields.keys())
+    missing_optional = expected_optional - actual_optional_keys
+    extra_optional = actual_optional_keys - expected_optional
+
+    if missing_optional:
+        print_error(
+            f"MANIFEST_OPTIONAL_FIELDS missing expected keys: {', '.join(sorted(missing_optional))}"
+        )
+        all_valid = False
+    if extra_optional:
+        print_error(
+            f"MANIFEST_OPTIONAL_FIELDS has unexpected keys: {', '.join(sorted(extra_optional))}"
+        )
+        all_valid = False
+
+    if not missing_optional and not extra_optional:
+        print_success("\nMANIFEST_OPTIONAL_FIELDS found in base.py")
+        for field in sorted(optional_fields.keys()):
+            print_success(f"  {field}")
+    else:
+        print_error("MANIFEST_OPTIONAL_FIELDS has schema drift")
+
+    return all_valid
 
 
 def verify_documentation_usage() -> bool:
