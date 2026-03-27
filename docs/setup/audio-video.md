@@ -753,20 +753,6 @@ if is_screen_recording("2025-01-15 14-05-32.mp4"):
 # - Camtasia
 ```
 
-### TUI Integration
-
-View video files and analysis results in the Terminal UI:
-
-```bash
-file-organizer tui
-```
-
-**Press `6` to access the Video view**, which displays:
-- Discovered video files in current directory
-- Metadata (resolution, duration, codec, bitrate)
-- Scene detection results (if available)
-- Screen recording detection
-
 ### Troubleshooting
 
 #### "OpenCV not found"
