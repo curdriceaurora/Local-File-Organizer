@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import ast
-import re
 import sys
 from pathlib import Path
 
@@ -16,22 +15,22 @@ def extract_python_code_blocks(markdown_content: str) -> list[tuple[int, str]]:
         List of tuples (line_number, code_content)
     """
     code_blocks = []
-    lines = markdown_content.split('\n')
+    lines = markdown_content.split("\n")
     in_code_block = False
     is_python_block = False
     current_block = []
     block_start_line = 0
 
     for i, line in enumerate(lines, start=1):
-        if line.strip().startswith('```python'):
+        if line.strip().startswith("```python"):
             in_code_block = True
             is_python_block = True
             current_block = []
             block_start_line = i
-        elif line.strip().startswith('```') and in_code_block:
+        elif line.strip().startswith("```") and in_code_block:
             in_code_block = False
             if is_python_block and current_block:
-                code_blocks.append((block_start_line, '\n'.join(current_block)))
+                code_blocks.append((block_start_line, "\n".join(current_block)))
             is_python_block = False
             current_block = []
         elif in_code_block and is_python_block:

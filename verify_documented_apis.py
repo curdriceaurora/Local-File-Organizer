@@ -59,15 +59,17 @@ def extract_class_info(source_file: Path, class_name: str) -> dict[str, Any]:
                     if item.returns:
                         return_type = ast.unparse(item.returns)
 
-                    methods.append({
-                        "name": item.name,
-                        "args": args,
-                        "return_type": return_type,
-                        "is_abstract": any(
-                            isinstance(dec, ast.Name) and dec.id == "abstractmethod"
-                            for dec in item.decorator_list
-                        ),
-                    })
+                    methods.append(
+                        {
+                            "name": item.name,
+                            "args": args,
+                            "return_type": return_type,
+                            "is_abstract": any(
+                                isinstance(dec, ast.Name) and dec.id == "abstractmethod"
+                                for dec in item.decorator_list
+                            ),
+                        }
+                    )
 
             return {
                 "name": class_name,
@@ -128,11 +130,13 @@ def extract_dataclass_fields(source_file: Path, class_name: str) -> dict[str, An
                     field_name = item.target.id
                     field_type = ast.unparse(item.annotation)
                     default_value = ast.unparse(item.value) if item.value else None
-                    fields.append({
-                        "name": field_name,
-                        "type": field_type,
-                        "default": default_value,
-                    })
+                    fields.append(
+                        {
+                            "name": field_name,
+                            "type": field_type,
+                            "default": default_value,
+                        }
+                    )
 
             return {"name": class_name, "fields": fields}
 
@@ -207,7 +211,7 @@ def verify_plugin_class() -> bool:
     ]
 
     all_methods_found = True
-    for method_name, expected_args, expected_return in required_methods:
+    for method_name, _expected_args, _expected_return in required_methods:
         method = next((m for m in class_info["methods"] if m["name"] == method_name), None)
         if not method:
             print_error(f"  Method '{method_name}' not found")
@@ -239,9 +243,6 @@ def verify_hook_decorator() -> bool:
     print_success(f"hook() decorator found in {decorators_file}")
 
     # Check signature: hook(event: HookEvent | str, *, priority: int = 10)
-    expected_args = ["event"]
-    expected_kwonly = ["priority"]
-
     if func_info["args"][0] == "event: HookEvent | str":
         print_success("  Parameter 'event' has correct type hint (HookEvent | str)")
     else:
@@ -355,7 +356,7 @@ def verify_manifest_schema() -> bool:
     print_success("MANIFEST_REQUIRED_FIELDS found in base.py")
 
     # Extract the fields from MANIFEST_REQUIRED_FIELDS
-    required_pattern = r'MANIFEST_REQUIRED_FIELDS.*?{([^}]+)}'
+    required_pattern = r"MANIFEST_REQUIRED_FIELDS.*?{([^}]+)}"
     required_match = re.search(required_pattern, content, re.DOTALL)
     if required_match:
         required_fields = re.findall(r'"([^"]+)":\s*\w+', required_match.group(1))
@@ -365,7 +366,7 @@ def verify_manifest_schema() -> bool:
     print_success("\nMANIFEST_OPTIONAL_FIELDS found in base.py")
 
     # Extract the fields from MANIFEST_OPTIONAL_FIELDS
-    optional_pattern = r'MANIFEST_OPTIONAL_FIELDS.*?{([^}]+)}'
+    optional_pattern = r"MANIFEST_OPTIONAL_FIELDS.*?{([^}]+)}"
     optional_match = re.search(optional_pattern, content, re.DOTALL)
     if optional_match:
         optional_fields = re.findall(r'"([^"]+)":', optional_match.group(1))
