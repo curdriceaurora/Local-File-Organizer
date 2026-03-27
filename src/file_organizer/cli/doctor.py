@@ -8,7 +8,7 @@ import importlib.util
 import json
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -21,7 +21,7 @@ from file_organizer.utils import is_hidden
 console = Console()
 
 # Extension-to-group registry mapping file extensions to optional dependency groups
-EXTENSION_REGISTRY: Dict[str, str] = {
+EXTENSION_REGISTRY: dict[str, str] = {
     # Audio files
     ".mp3": "audio",
     ".wav": "audio",
@@ -59,7 +59,7 @@ EXTENSION_REGISTRY: Dict[str, str] = {
 }
 
 # Dependency check packages - maps groups to representative packages to check
-DEPENDENCY_CHECK_PACKAGES: Dict[str, str] = {
+DEPENDENCY_CHECK_PACKAGES: dict[str, str] = {
     "audio": "faster_whisper",
     "video": "cv2",
     "parsers": "fitz",
@@ -70,7 +70,7 @@ DEPENDENCY_CHECK_PACKAGES: Dict[str, str] = {
 }
 
 # System prerequisites for optional groups
-SYSTEM_PREREQUISITES: Dict[str, List[str]] = {
+SYSTEM_PREREQUISITES: dict[str, list[str]] = {
     "audio": ["FFmpeg (required)", "CUDA GPU (optional, for acceleration)"],
     "archive": ["unrar tool (required for RAR files)"],
 }
@@ -95,7 +95,7 @@ def is_group_installed(group: str) -> bool:
     return spec is not None
 
 
-def get_groups_for_extensions(extensions: Set[str]) -> Set[str]:
+def get_groups_for_extensions(extensions: set[str]) -> set[str]:
     """Get the set of dependency groups needed for the given file extensions.
 
     Args:
@@ -113,7 +113,7 @@ def get_groups_for_extensions(extensions: Set[str]) -> Set[str]:
     return groups
 
 
-def get_missing_groups(detected_groups: Set[str]) -> Set[str]:
+def get_missing_groups(detected_groups: set[str]) -> set[str]:
     """Filter detected groups to only those not already installed.
 
     Args:
@@ -142,7 +142,7 @@ def _normalized_extension(path: Path) -> str:
     return suffixes[-1] if suffixes else ""
 
 
-def scan_directory(directory: Path) -> Dict[str, int]:
+def scan_directory(directory: Path) -> dict[str, int]:
     """Scan a directory and count files by extension.
 
     Args:
@@ -151,7 +151,7 @@ def scan_directory(directory: Path) -> Dict[str, int]:
     Returns:
         Dictionary mapping file extensions to counts
     """
-    extension_counts: Dict[str, int] = {}
+    extension_counts: dict[str, int] = {}
 
     # Recursively iterate through all files
     for item in directory.rglob("*"):
@@ -173,8 +173,8 @@ def scan_directory(directory: Path) -> Dict[str, int]:
 
 
 def display_recommendations(
-    extension_counts: Dict[str, int],
-    detected_groups: Set[str],
+    extension_counts: dict[str, int],
+    detected_groups: set[str],
 ) -> None:
     """Display recommendations for optional dependencies using Rich tables.
 
@@ -183,7 +183,7 @@ def display_recommendations(
         detected_groups: Set of detected dependency groups
     """
     # Calculate file counts per group
-    group_file_counts: Dict[str, int] = {}
+    group_file_counts: dict[str, int] = {}
     for ext, count in extension_counts.items():
         if ext in EXTENSION_REGISTRY:
             group = EXTENSION_REGISTRY[ext]
@@ -226,7 +226,7 @@ def display_recommendations(
     console.print(table)
 
 
-def install_groups(groups: Set[str]) -> None:
+def install_groups(groups: set[str]) -> None:
     """Interactively install optional dependency groups using pip.
 
     Prompts the user for confirmation before installing each group.
@@ -273,7 +273,7 @@ def install_groups(groups: Set[str]) -> None:
         return
 
     # Install each group
-    failed_groups: List[str] = []
+    failed_groups: list[str] = []
     for group in groups_list:
         install_cmd = ["pip", "install", f"file-organizer[{group}]"]
         console.print(f"\n[bold]Installing {group}...[/bold]")
@@ -340,7 +340,7 @@ def doctor(
 
     if not extension_counts:
         if json_output:
-            result: Dict[str, Any] = {
+            result: dict[str, Any] = {
                 "directory": str(path),
                 "files_found": 0,
                 "extensions": {},
@@ -375,7 +375,7 @@ def doctor(
         raise typer.Exit(code=0)
 
     # Calculate file counts per group
-    group_file_counts: Dict[str, int] = {}
+    group_file_counts: dict[str, int] = {}
     for ext, count in extension_counts.items():
         if ext in EXTENSION_REGISTRY:
             group = EXTENSION_REGISTRY[ext]
@@ -385,7 +385,7 @@ def doctor(
     missing_groups = get_missing_groups(detected_groups)
 
     # Build group information
-    groups_info: List[Dict[str, Any]] = []
+    groups_info: list[dict[str, Any]] = []
     for group in sorted(detected_groups):
         file_count = group_file_counts.get(group, 0)
         is_installed = is_group_installed(group)
