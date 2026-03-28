@@ -62,7 +62,7 @@ async def health(response: Response) -> dict[str, object]:
     try:
         payload = await facade.health_check()
     except Exception as exc:
-        logger.warning("health_check failed: {}", exc)
+        logger.warning("health_check failed: {}", exc, exc_info=True)
         payload = {}
 
     # Use the status derived by the facade rather than re-deriving it here.

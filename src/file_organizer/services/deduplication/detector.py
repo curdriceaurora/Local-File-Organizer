@@ -215,9 +215,11 @@ class DuplicateDetector:
                 finally:
                     processed += 1
 
-                    # Call progress callback if provided
                     if options.progress_callback:
-                        options.progress_callback(processed, total)
+                        try:
+                            options.progress_callback(processed, total)
+                        except Exception:
+                            logger.debug("Progress callback failed", exc_info=True)
 
     def find_duplicates_of_file(
         self, file_path: Path, search_directory: Path, algorithm: HashAlgorithm = "sha256"
@@ -242,7 +244,7 @@ class DuplicateDetector:
             target_hash = self.hasher.compute_hash(file_path, algorithm)
             target_size = file_path.stat().st_size
         except OSError as e:
-            raise FileNotFoundError(f"Cannot read target file {file_path}: {e}") from e
+            raise OSError(f"Cannot read target file {file_path}: {e}") from e
 
         # Scan directory — this hashes files in multi-file size groups
         options = ScanOptions(algorithm=algorithm)

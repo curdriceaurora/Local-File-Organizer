@@ -46,9 +46,10 @@ class SearchResult(BaseModel):
 
 def _relative_path(fp: Path, roots: list[Path]) -> str | None:
     """Return *fp* relative to the first matching root, or ``None`` if outside all roots."""
+    resolved = fp.resolve()
     for root in roots:
         try:
-            return str(fp.relative_to(root))
+            return str(resolved.relative_to(root.resolve()))
         except ValueError:
             continue
     return None
@@ -182,7 +183,8 @@ def _build_semantic_corpus(
                 try:
                     rel_entry = entry.relative_to(root)
                 except ValueError:
-                    continue  # skip entries outside root to avoid absolute path leakage
+                    logger.debug("Skipping entry outside root: %s", entry)
+                    continue
                 if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
                 text = read_text_safe(entry)

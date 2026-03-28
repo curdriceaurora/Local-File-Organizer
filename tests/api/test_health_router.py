@@ -261,5 +261,4 @@ class TestHealthEndpoint:
         old = health._startup_time
         health._startup_time = old - 100.0  # artificially stale
         health.reset_startup_time()
-        assert health._startup_time > old - 100.0
         assert health._startup_time >= old  # at least as recent as before
