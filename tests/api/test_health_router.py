@@ -16,6 +16,9 @@ from file_organizer.api.routers.health import router
 
 def _build_app() -> tuple[FastAPI, TestClient]:
     """Create a FastAPI app with health router."""
+    from file_organizer.api.routers.health import reset_startup_time
+
+    reset_startup_time()
     settings = ApiSettings(environment="test")
     app = FastAPI()
     setup_exception_handlers(app)
