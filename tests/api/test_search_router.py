@@ -437,3 +437,52 @@ class TestRelativePathHelper:
         # root_a matches first and gives shorter relative path
         result = _relative_path(fp, [root_a, root_b])
         assert result == str(Path("b") / "file.txt")
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBuildResultHelper:
+    """Unit tests for the _build_result helper."""
+
+    def test_returns_none_for_outside_roots(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "file.txt"
+        fp.write_text("x")
+        other_root = (tmp_path / "other").resolve()
+        assert _build_result(fp, 1.0, [other_root]) is None
+
+    def test_returns_none_on_oserror(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "ghost.txt"  # does not exist — stat() raises
+        assert _build_result(fp, 1.0, [tmp_path]) is None
+
+    def test_success_populates_all_fields(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "hello.txt"
+        fp.write_text("content")
+        result = _build_result(fp, 0.85, [tmp_path])
+        assert result is not None
+        assert result.filename == "hello.txt"
+        assert result.path == "hello.txt"
+        assert result.score == 0.85
+        assert result.type == "txt"
+        assert result.size == 7  # len("content")
+        assert result.created is not None
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestNegativeOffsetClamping:
+    """Verify negative offsets are clamped to zero."""
+
+    def test_negative_offset_clamped_to_zero(self, tmp_path: Path) -> None:
+        (tmp_path / "file.txt").write_text("content")
+        _, client = _build_app(tmp_path)
+
+        resp_zero = client.get("/api/v1/search?q=file&offset=0")
+        resp_neg = client.get("/api/v1/search?q=file&offset=-5")
+        assert resp_neg.status_code == 200
+        assert resp_neg.json() == resp_zero.json()

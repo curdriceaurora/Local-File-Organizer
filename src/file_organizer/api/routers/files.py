@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -25,6 +26,8 @@ from file_organizer.api.models import (
 )
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
 
@@ -74,6 +77,7 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
             if not include_hidden and is_hidden(entry):
                 continue
         except (OSError, PermissionError):
+            logger.debug("Skipping entry %s: filesystem error", entry, exc_info=True)
             continue
         files.append(entry)
     return files

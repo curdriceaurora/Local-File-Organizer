@@ -861,3 +861,16 @@ class TestCollectFiles:
         result = _collect_files(tmp_path, recursive=True, include_hidden=False)
         assert len(result) == 1
         assert result[0].name == "deep.txt"
+
+    def test_collect_skips_entries_raising_oserror(self, tmp_path: Path) -> None:
+        """Entries that raise OSError on filesystem checks are silently skipped."""
+        from file_organizer.api.routers.files import _collect_files
+
+        good = tmp_path / "good.txt"
+        good.write_text("ok")
+        # Create a broken symlink — is_symlink() returns True but target missing
+        broken = tmp_path / "broken_link"
+        broken.symlink_to(tmp_path / "nonexistent")
+        result = _collect_files(tmp_path, recursive=False, include_hidden=False)
+        assert len(result) == 1
+        assert result[0].name == "good.txt"

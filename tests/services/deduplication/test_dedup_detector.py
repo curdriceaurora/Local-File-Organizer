@@ -311,6 +311,24 @@ class TestDuplicateDetector(unittest.TestCase):
         detector.clear()
         mock_index.clear.assert_called_once()
 
+    def test_find_duplicates_singleton_size_bucket(self):
+        """A duplicate in a unique-size bucket must still be detected."""
+        # Target file lives outside search directory
+        target = self.test_dir / "target.txt"
+        content = "unique_content_singleton_test" * 10
+        target.write_text(content)
+
+        # Search directory with one file that has identical content
+        search_dir = self.test_dir / "search"
+        search_dir.mkdir()
+        dup = search_dir / "copy.txt"
+        dup.write_text(content)
+
+        detector = DuplicateDetector()
+        duplicates = detector.find_duplicates_of_file(target, search_dir)
+        assert len(duplicates) == 1
+        assert duplicates[0].path == dup
+
 
 if __name__ == "__main__":
     unittest.main()

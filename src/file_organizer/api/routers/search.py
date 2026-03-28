@@ -20,7 +20,7 @@ router = APIRouter(tags=["search"])
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000
-_MAX_LIMIT = 1000
+_MAX_LIMIT = 500  # Maximum results per search request; prevents large response payloads
 
 
 class _ScoringTiers:
@@ -55,13 +55,14 @@ def _relative_path(fp: Path, roots: list[Path]) -> str | None:
 
 
 def _build_result(fp: Path, score: float, roots: list[Path]) -> SearchResult | None:
-    """Build a SearchResult from a file path, or None if outside all roots."""
+    """Build a SearchResult from a file path, or None if outside all roots or inaccessible."""
     rel = _relative_path(fp, roots)
     if rel is None:
         return None
     try:
         stat = fp.stat()
     except OSError:
+        logger.debug("Cannot stat %s, excluding from results", fp, exc_info=True)
         return None
     creation_ts = getattr(stat, "st_birthtime", stat.st_mtime)
     created_str = datetime.fromtimestamp(creation_ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -85,9 +86,6 @@ def _compute_score(file_path: Path, query: str) -> float:
     - 0.3 (PATH_CONTAINS): Query appears anywhere in file path
     - 0.0 (NO_MATCH): No match found
 
-    Note: Changed from checking full filename to stem only in tier-2.
-    This prevents queries matching both the stem and extension from
-    scoring higher than extension-only matches.
     """
     q_lower = query.lower()
     name_lower = file_path.name.lower()
@@ -153,7 +151,7 @@ def _build_semantic_corpus(
     """Walk *roots* and build a text corpus for semantic indexing.
 
     Each document is the concatenation of the file stem, relative path parts,
-    and up to :data:`_SEMANTIC_TEXT_LIMIT` characters of extracted text.
+    and extracted text content.
 
     Args:
         roots: Directory roots to traverse.
@@ -184,7 +182,7 @@ def _build_semantic_corpus(
                 try:
                     rel_entry = entry.relative_to(root)
                 except ValueError:
-                    rel_entry = entry
+                    continue  # skip entries outside root to avoid absolute path leakage
                 if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
                 text = read_text_safe(entry)
@@ -266,8 +264,7 @@ def search(
     Supports filtering, pagination, and relevance scoring.
 
     When ``semantic=true`` the search uses hybrid BM25+vector retrieval
-    (Reciprocal Rank Fusion) instead of the default keyword scan.  The
-    existing ``semantic=false`` path is unchanged.
+    (Reciprocal Rank Fusion) instead of the default keyword scan.
 
     Authentication is enforced at the middleware layer
     (see ``file_organizer.api.middleware``), not per-route.
@@ -317,7 +314,7 @@ def search(
             ) from exc
 
     # ------------------------------------------------------------------
-    # Default keyword path — unchanged
+    # Default keyword path
     # ------------------------------------------------------------------
     results: list[SearchResult] = []
     total_traversed = 0

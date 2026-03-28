@@ -239,8 +239,11 @@ class DuplicateDetector:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         # Compute hash of target file
-        target_hash = self.hasher.compute_hash(file_path, algorithm)
-        target_size = file_path.stat().st_size
+        try:
+            target_hash = self.hasher.compute_hash(file_path, algorithm)
+            target_size = file_path.stat().st_size
+        except OSError as e:
+            raise FileNotFoundError(f"Cannot read target file {file_path}: {e}") from e
 
         # Scan directory — this hashes files in multi-file size groups
         options = ScanOptions(algorithm=algorithm)
@@ -257,6 +260,7 @@ class DuplicateDetector:
                 if entry.stat().st_size != target_size:
                     continue
             except (OSError, PermissionError):
+                logger.debug("Skipping %s during singleton backfill: cannot stat file", entry)
                 continue
             if entry in already_indexed:
                 continue

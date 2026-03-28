@@ -248,3 +248,14 @@ class TestHealthEndpoint:
 
             # Uptime should be non-decreasing (time.time() advances monotonically)
             assert uptime2 >= uptime1
+
+    def test_reset_startup_time_updates_module_state(self) -> None:
+        """reset_startup_time() resets the module-level _startup_time."""
+        import time
+
+        from file_organizer.api.routers import health
+
+        old = health._startup_time
+        time.sleep(0.01)
+        health.reset_startup_time()
+        assert health._startup_time > old
