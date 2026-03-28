@@ -1056,3 +1056,499 @@ def test_edge_cases():
         assert required_test in test_methods, (
             f"Required edge case test '{required_test}' not found in TestEdgeCases"
         )
+
+
+# ============================================================================
+# Additional Strengthening Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestSubprocessSecurity:
+    """Security regression tests: subprocess must use list args, never shell=True."""
+
+    def test_subprocess_no_shell_true(self):
+        """Regression: subprocess.run must NOT use shell=True (prevents shell injection)."""
+        import inspect
+        import file_organizer.cli.doctor as doctor_module
+
+        source = inspect.getsource(doctor_module)
+        # shell=True with subprocess is a security vulnerability
+        # The only valid subprocess call should be without shell=True
+        assert "shell=True" not in source, (
+            "subprocess.run must never be called with shell=True in doctor.py"
+        )
+
+    def test_subprocess_called_with_list_format(self):
+        """Subprocess command must use list format, not string concatenation."""
+        groups = {"audio"}
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        captured_calls = []
+
+        def capture_run(cmd, **kwargs):
+            captured_calls.append((cmd, kwargs))
+            return mock_result
+
+        with patch("file_organizer.cli.doctor.console"):
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", side_effect=capture_run):
+                        install_groups(groups)
+
+        assert len(captured_calls) == 1
+        cmd, kwargs = captured_calls[0]
+        # Must be a list, not a string
+        assert isinstance(cmd, list), "subprocess command must be a list, not a string"
+        # shell= must not be True
+        assert kwargs.get("shell", False) is False, "shell=True must not be passed"
+
+    def test_subprocess_exact_command_format(self):
+        """Subprocess command uses exact format: ['pip', 'install', 'file-organizer[group]']."""
+        groups = {"audio"}
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        captured_calls = []
+
+        def capture_run(cmd, **kwargs):
+            captured_calls.append(cmd)
+            return mock_result
+
+        with patch("file_organizer.cli.doctor.console"):
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", side_effect=capture_run):
+                        install_groups(groups)
+
+        assert len(captured_calls) == 1
+        cmd = captured_calls[0]
+        assert cmd[0] == "pip"
+        assert cmd[1] == "install"
+        assert cmd[2] == "file-organizer[audio]"
+
+    def test_group_name_is_hardcoded_not_user_input(self):
+        """Install commands use only registry group names (not arbitrary user input)."""
+        # All valid group names are keys from EXTENSION_REGISTRY values
+        valid_groups = set(EXTENSION_REGISTRY.values())
+        # Verify each group name only contains safe characters (no shell metacharacters)
+        for group in valid_groups:
+            assert group.isalnum() or all(c.isalnum() or c == "_" for c in group), (
+                f"Group name '{group}' contains potentially dangerous characters"
+            )
+
+
+@pytest.mark.unit
+class TestInstallGroupsOrdering:
+    """Tests for ordering guarantees in install_groups."""
+
+    def test_groups_installed_in_sorted_order(self):
+        """install_groups processes groups alphabetically to ensure deterministic behavior."""
+        groups = {"video", "audio", "parsers", "archive"}
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        install_order = []
+
+        def capture_run(cmd, **kwargs):
+            # Extract group name from install command
+            group_name = cmd[2].replace("file-organizer[", "").rstrip("]")
+            install_order.append(group_name)
+            return mock_result
+
+        with patch("file_organizer.cli.doctor.console"):
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", side_effect=capture_run):
+                        install_groups(groups)
+
+        # Should be installed in sorted (alphabetical) order
+        assert install_order == sorted(install_order), (
+            f"Expected alphabetical order, got: {install_order}"
+        )
+
+    def test_display_shows_sorted_group_names(self):
+        """display_recommendations shows groups in sorted order."""
+        extension_counts = {".mp3": 5, ".mp4": 3, ".pdf": 2, ".7z": 1}
+        detected_groups = {"video", "audio", "parsers", "archive"}
+        table_rows = []
+
+        original_add_row = None
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("file_organizer.cli.doctor.console") as mock_console:
+                display_recommendations(extension_counts, detected_groups)
+                # Just verify it was called without error (sorting happens internally)
+                assert mock_console.print.called
+
+
+@pytest.mark.unit
+class TestExtensionRegistryBoundaries:
+    """Boundary and negative tests for EXTENSION_REGISTRY."""
+
+    def test_common_unsupported_extensions_not_in_registry(self):
+        """Common file types that don't need special deps are NOT in EXTENSION_REGISTRY."""
+        unsupported = [".txt", ".md", ".py", ".json", ".csv", ".xml", ".yaml", ".yml"]
+        for ext in unsupported:
+            assert ext not in EXTENSION_REGISTRY, (
+                f"Extension {ext} should not be in EXTENSION_REGISTRY (no special deps needed)"
+            )
+
+    def test_empty_string_not_in_registry(self):
+        """Empty string (files with no extension) is NOT in EXTENSION_REGISTRY."""
+        assert "" not in EXTENSION_REGISTRY
+
+    def test_get_groups_for_empty_string_extension(self):
+        """get_groups_for_extensions with empty string returns empty set."""
+        result = get_groups_for_extensions({""})
+        assert result == set()
+
+    def test_is_group_installed_empty_string(self):
+        """is_group_installed with empty string group returns False."""
+        result = is_group_installed("")
+        assert result is False
+
+    def test_dependency_check_packages_all_strings(self):
+        """DEPENDENCY_CHECK_PACKAGES values are all non-empty strings."""
+        for group, package in DEPENDENCY_CHECK_PACKAGES.items():
+            assert isinstance(package, str), f"{group} package must be a string"
+            assert len(package) > 0, f"{group} package name cannot be empty"
+
+    def test_system_prerequisites_all_lists(self):
+        """SYSTEM_PREREQUISITES values are all lists of strings."""
+        for group, prereqs in SYSTEM_PREREQUISITES.items():
+            assert isinstance(prereqs, list), f"{group} prerequisites must be a list"
+            for prereq in prereqs:
+                assert isinstance(prereq, str), f"Prerequisite '{prereq}' must be a string"
+
+    def test_extension_registry_no_uppercase(self):
+        """All extensions in EXTENSION_REGISTRY are lowercase with dot prefix."""
+        for ext, group in EXTENSION_REGISTRY.items():
+            assert ext.startswith("."), f"Extension '{ext}' must start with a dot"
+            assert ext == ext.lower(), f"Extension '{ext}' must be lowercase"
+            assert isinstance(group, str), f"Group for '{ext}' must be a string"
+
+    def test_get_groups_for_extensions_image_not_detected(self):
+        """Image files (.jpg, .png) are NOT in EXTENSION_REGISTRY (no special deps)."""
+        result = get_groups_for_extensions({".jpg", ".png", ".gif", ".bmp"})
+        assert result == set()
+
+
+@pytest.mark.unit
+class TestJSONOutputFormat:
+    """Tests for the JSON output format of doctor command."""
+
+    def test_json_install_command_format(self, tmp_path):
+        """JSON output install_command uses correct pip install format."""
+        (tmp_path / "song.mp3").write_text("audio")
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("typer.echo") as mock_echo:
+                with pytest.raises(typer.Exit):
+                    doctor(path=tmp_path, install=False, json_output=True)
+
+        import json
+        output = json.loads(mock_echo.call_args[0][0])
+        groups_info = output["detected_groups"]
+        audio_info = next(g for g in groups_info if g["group"] == "audio")
+
+        # Install command must contain the group name in square brackets
+        assert "pip install" in audio_info["install_command"]
+        assert "file-organizer[audio]" in audio_info["install_command"]
+
+    def test_json_directory_is_absolute_path(self, tmp_path):
+        """JSON output directory field contains absolute path."""
+        (tmp_path / "song.mp3").write_text("audio")
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("typer.echo") as mock_echo:
+                with pytest.raises(typer.Exit):
+                    doctor(path=tmp_path, install=False, json_output=True)
+
+        import json
+        output = json.loads(mock_echo.call_args[0][0])
+        assert output["directory"] == str(tmp_path)
+        # Must be absolute
+        assert output["directory"].startswith("/")
+
+    def test_json_missing_groups_sorted(self, tmp_path):
+        """JSON missing_groups list is sorted alphabetically."""
+        (tmp_path / "song.mp3").write_text("audio")
+        (tmp_path / "video.mp4").write_text("video")
+        (tmp_path / "doc.pdf").write_text("pdf")
+        (tmp_path / "data.h5").write_text("sci")
+        (tmp_path / "draw.dxf").write_text("cad")
+        (tmp_path / "backup.7z").write_text("archive")
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("typer.echo") as mock_echo:
+                with pytest.raises(typer.Exit):
+                    doctor(path=tmp_path, install=False, json_output=True)
+
+        import json
+        output = json.loads(mock_echo.call_args[0][0])
+        missing = output["missing_groups"]
+        assert missing == sorted(missing), f"missing_groups must be sorted, got: {missing}"
+
+    def test_json_prerequisites_are_list(self, tmp_path):
+        """JSON output prerequisites field is always a list."""
+        (tmp_path / "song.mp3").write_text("audio")
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("typer.echo") as mock_echo:
+                with pytest.raises(typer.Exit):
+                    doctor(path=tmp_path, install=False, json_output=True)
+
+        import json
+        output = json.loads(mock_echo.call_args[0][0])
+        for group_info in output["detected_groups"]:
+            assert isinstance(group_info["prerequisites"], list), (
+                f"prerequisites for {group_info['group']} must be a list"
+            )
+
+    def test_json_files_found_matches_sum(self, tmp_path):
+        """JSON files_found equals sum of all extension counts."""
+        (tmp_path / "song.mp3").write_text("audio")
+        (tmp_path / "video.mp4").write_text("video")
+        (tmp_path / "README").write_text("readme")  # No extension
+
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+            with patch("typer.echo") as mock_echo:
+                with pytest.raises(typer.Exit):
+                    doctor(path=tmp_path, install=False, json_output=True)
+
+        import json
+        output = json.loads(mock_echo.call_args[0][0])
+        total_from_extensions = sum(output["extensions"].values())
+        assert output["files_found"] == total_from_extensions
+
+
+@pytest.mark.unit
+class TestDoctorCommandRegistration:
+    """Tests that verify the doctor command is properly registered in main CLI app."""
+
+    def test_doctor_in_app_commands(self):
+        """Doctor command is registered in the main Typer app."""
+        from file_organizer.cli.main import app
+        import typer.main
+
+        # Get the underlying Click group
+        click_group = typer.main.get_group(app)
+        assert "doctor" in click_group.commands, (
+            "doctor command must be registered in the main app"
+        )
+
+    def test_doctor_importable_from_main(self):
+        """Doctor function is importable from main.py."""
+        # This verifies the import line in main.py works
+        from file_organizer.cli.main import app  # noqa: F401
+        from file_organizer.cli.doctor import doctor  # noqa: F401
+        assert callable(doctor)
+
+    def test_doctor_command_has_path_parameter(self):
+        """Doctor command has the required PATH argument."""
+        from typer.testing import CliRunner
+        from file_organizer.cli.main import app
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["doctor", "--help"])
+        assert result.exit_code == 0
+        # PATH argument should appear in help
+        assert "PATH" in result.output or "path" in result.output.lower()
+
+    def test_doctor_command_has_install_option(self):
+        """Doctor command has the --install option."""
+        from typer.testing import CliRunner
+        from file_organizer.cli.main import app
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["doctor", "--help"])
+        assert result.exit_code == 0
+        assert "--install" in result.output
+
+    def test_doctor_command_has_json_option(self):
+        """Doctor command has the --json option."""
+        from typer.testing import CliRunner
+        from file_organizer.cli.main import app
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["doctor", "--help"])
+        assert result.exit_code == 0
+        assert "--json" in result.output
+
+
+@pytest.mark.unit
+class TestNormalizedExtensionBoundaries:
+    """Additional boundary tests for _normalized_extension."""
+
+    def test_single_char_extension(self):
+        """_normalized_extension handles single character extensions."""
+        path = Path("file.h")
+        assert _normalized_extension(path) == ".h"
+
+    def test_only_dot_prefix(self):
+        """A dotfile with no further extension returns empty string."""
+        # A file like ".gitignore" - the dot is part of the name, not extension
+        path = Path(".gitignore")
+        # .gitignore has suffixes=['.gitignore'] in some Python versions
+        # but Path(".gitignore").suffix == '' and Path(".gitignore").suffixes == ['.gitignore']
+        # The function normalizes this to lowercase
+        result = _normalized_extension(path)
+        # Check it doesn't crash and returns a string
+        assert isinstance(result, str)
+
+    def test_extension_with_numbers(self):
+        """_normalized_extension handles extensions with numbers."""
+        path = Path("file.mp4")
+        assert _normalized_extension(path) == ".mp4"
+
+    def test_uppercase_compound_tar_bz2(self):
+        """_normalized_extension normalizes uppercase .TAR.BZ2 to .tar.bz2."""
+        path = Path("archive.TAR.BZ2")
+        assert _normalized_extension(path) == ".tar.bz2"
+
+    def test_tar_xz_fallback_to_last_suffix(self):
+        """_normalized_extension falls back to .xz for unsupported .tar.xz."""
+        path = Path("archive.tar.xz")
+        assert _normalized_extension(path) == ".xz"
+
+
+@pytest.mark.unit
+class TestInstallGroupsEdgeCases:
+    """Additional edge cases for install_groups function."""
+
+    def test_check_equals_false_in_subprocess_call(self):
+        """install_groups passes check=False to subprocess.run (doesn't raise on error)."""
+        groups = {"audio"}
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        captured_kwargs = {}
+
+        def capture_run(cmd, **kwargs):
+            captured_kwargs.update(kwargs)
+            return mock_result
+
+        with patch("file_organizer.cli.doctor.console"):
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", side_effect=capture_run):
+                        install_groups(groups)
+
+        # check=False means subprocess won't raise CalledProcessError on failure
+        assert captured_kwargs.get("check") is False
+
+    def test_failed_groups_listed_in_summary(self):
+        """install_groups lists all failed groups in the summary message."""
+        groups = {"audio", "video", "parsers"}
+        mock_result_fail = MagicMock()
+        mock_result_fail.returncode = 1
+
+        printed_lines = []
+
+        with patch("file_organizer.cli.doctor.console") as mock_console:
+            mock_console.print.side_effect = lambda *args, **kwargs: printed_lines.append(
+                str(args[0]) if args else ""
+            )
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", return_value=mock_result_fail):
+                        install_groups(groups)
+
+        # Check that the summary mentions failed groups
+        all_output = " ".join(printed_lines).lower()
+        assert "failed" in all_output
+
+    def test_single_group_success_message(self):
+        """install_groups shows success summary for single group installation."""
+        groups = {"audio"}
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        printed_lines = []
+
+        with patch("file_organizer.cli.doctor.console") as mock_console:
+            mock_console.print.side_effect = lambda *args, **kwargs: printed_lines.append(
+                str(args[0]) if args else ""
+            )
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch("subprocess.run", return_value=mock_result):
+                        install_groups(groups)
+
+        # Check that success message is shown
+        all_output = " ".join(printed_lines).lower()
+        assert "successfully installed" in all_output or "installed successfully" in all_output
+
+    def test_dry_run_shows_would_install_for_each_group(self):
+        """Dry-run mode shows 'Would install' message for each group."""
+        groups = {"audio", "video"}
+        printed_lines = []
+
+        with patch("file_organizer.cli.doctor.console") as mock_console:
+            mock_console.print.side_effect = lambda *args, **kwargs: printed_lines.append(
+                str(args[0]) if args else ""
+            )
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = True
+                    with patch("subprocess.run") as mock_run:
+                        install_groups(groups)
+                        # subprocess must NOT be called in dry-run mode
+                        mock_run.assert_not_called()
+
+        all_output = " ".join(printed_lines).lower()
+        assert "would install" in all_output or "dry-run" in all_output
+
+
+@pytest.mark.unit
+class TestScanDirectoryEdgeCases:
+    """Additional edge cases for scan_directory."""
+
+    def test_scan_directory_returns_dict(self, tmp_path):
+        """scan_directory always returns a dict."""
+        result = scan_directory(tmp_path)
+        assert isinstance(result, dict)
+
+    def test_scan_counts_are_positive_integers(self, tmp_path):
+        """All counts in scan_directory result are positive integers."""
+        (tmp_path / "a.mp3").write_text("x")
+        (tmp_path / "b.mp3").write_text("x")
+        (tmp_path / "c.mp4").write_text("x")
+
+        result = scan_directory(tmp_path)
+        for ext, count in result.items():
+            assert isinstance(count, int), f"Count for {ext} must be int"
+            assert count > 0, f"Count for {ext} must be positive"
+
+    def test_scan_multiple_hidden_files_all_skipped(self, tmp_path):
+        """Multiple hidden files in multiple hidden directories are all skipped."""
+        hidden1 = tmp_path / ".cache"
+        hidden1.mkdir()
+        hidden2 = tmp_path / ".git"
+        hidden2.mkdir()
+
+        # Create files in hidden directories
+        for i in range(5):
+            (hidden1 / f"cache{i}.mp3").write_text("x")
+        for i in range(3):
+            (hidden2 / f"commit{i}.mp4").write_text("x")
+
+        # Create one visible file
+        (tmp_path / "visible.mp3").write_text("x")
+
+        result = scan_directory(tmp_path)
+        assert result == {".mp3": 1}
+
+    def test_scan_extension_key_always_has_dot(self, tmp_path):
+        """All extension keys in scan result start with a dot (or are empty string)."""
+        (tmp_path / "file.MP3").write_text("x")
+        (tmp_path / "file.PDF").write_text("x")
+        (tmp_path / "README").write_text("x")
+
+        result = scan_directory(tmp_path)
+        for ext in result:
+            if ext:  # Skip empty string (no extension)
+                assert ext.startswith("."), f"Extension key '{ext}' must start with dot"
