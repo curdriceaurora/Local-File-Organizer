@@ -1,0 +1,61 @@
+{
+  "feature": "Close Testing Umbrella Issue #611",
+  "spec_name": "022-testing-deferred-test-implementation-plan-umbrella",
+  "workflow_type": "simple",
+  "total_phases": 1,
+  "recommended_workers": 1,
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Finalize and Close",
+      "description": "Merge PRs and close completed sub-issues",
+      "depends_on": [],
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Merge PRs #670, #669, #668 in order and verify tests pass",
+          "service": "github",
+          "status": "completed",
+          "files_to_create": [],
+          "files_to_modify": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "run": "Check all PRs merged, CI green on main branch"
+          }
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Close sub-issues #388-#392, #394; comment on #393 (deferred); close #611",
+          "service": "github",
+          "status": "pending",
+          "files_to_create": [],
+          "files_to_modify": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "run": "Verify 6 issues closed, #393 has deferral comment, #611 closed"
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "created_at": "2026-03-26T00:00:00Z",
+    "complexity": "simple",
+    "estimated_sessions": 1,
+    "work_type": "coordination",
+    "github_issue": "611"
+  },
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "coding",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-26T21:46:53.553Z",
+  "lastEvent": {
+    "eventId": "30509a52-45e7-4b12-a874-c5496adea1b2",
+    "sequence": 0,
+    "type": "PLANNING_COMPLETE",
+    "timestamp": "2026-03-26T21:46:42.252312Z"
+  }
+}
