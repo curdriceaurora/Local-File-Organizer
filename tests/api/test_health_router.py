@@ -30,6 +30,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHealthEndpoint:
     """Tests for GET /api/v1/health."""

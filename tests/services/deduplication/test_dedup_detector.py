@@ -20,6 +20,7 @@ from file_organizer.services.deduplication.detector import (
 )
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestScanOptions(unittest.TestCase):
     """Test ScanOptions dataclass."""
@@ -56,6 +57,7 @@ class TestScanOptions(unittest.TestCase):
         self.assertEqual(opts.max_file_size, 1000000)
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestDuplicateDetector(unittest.TestCase):
     """Test cases for DuplicateDetector."""

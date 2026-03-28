@@ -802,6 +802,7 @@ class TestTrashTarget:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestCollectFiles:
     """Tests for _collect_files helper function."""
