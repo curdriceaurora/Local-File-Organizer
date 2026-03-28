@@ -209,16 +209,15 @@ class DuplicateDetector:
                     # Add to index
                     self.index.add_file(file_path, file_hash)
 
+                except (FileNotFoundError, PermissionError, ValueError) as e:
+                    # Log error but continue
+                    logger.warning("Could not process %s: %s", file_path, e, exc_info=True)
+                finally:
                     processed += 1
 
                     # Call progress callback if provided
                     if options.progress_callback:
                         options.progress_callback(processed, total)
-
-                except (FileNotFoundError, PermissionError, ValueError) as e:
-                    # Log error but continue
-                    logger.warning("Could not process %s: %s", file_path, e, exc_info=True)
-                    continue
 
     def find_duplicates_of_file(
         self, file_path: Path, search_directory: Path, algorithm: HashAlgorithm = "sha256"

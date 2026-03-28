@@ -865,13 +865,18 @@ class TestCollectFiles:
 
     def test_collect_skips_entries_raising_oserror(self, tmp_path: Path) -> None:
         """Entries that raise OSError on filesystem checks are silently skipped."""
+        from unittest.mock import MagicMock, patch
+
         from file_organizer.api.routers.files import _collect_files
 
         good = tmp_path / "good.txt"
         good.write_text("ok")
-        # Create a broken symlink — is_symlink() returns True but target missing
-        broken = tmp_path / "broken_link"
-        broken.symlink_to(tmp_path / "nonexistent")
-        result = _collect_files(tmp_path, recursive=False, include_hidden=False)
+
+        # Create a mock Path that raises OSError on is_symlink()
+        bad_entry = MagicMock(spec=Path)
+        bad_entry.is_symlink.side_effect = OSError("device error")
+
+        with patch.object(Path, "glob", return_value=iter([good, bad_entry])):
+            result = _collect_files(tmp_path, recursive=False, include_hidden=False)
         assert len(result) == 1
         assert result[0].name == "good.txt"
