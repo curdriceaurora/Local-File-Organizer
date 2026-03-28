@@ -61,7 +61,7 @@ Extend functionality by installing optional dependency groups:
 | All | `pip install -e ".[all]"` | All packs above, plus development tools and PyQt6 GUI dependencies |
 
 !!! note
-    The audio pack requires FFmpeg and optionally a CUDA-capable GPU. See the [Installation Guide](admin/installation.md) for detailed prerequisites.
+    The audio and video packs require FFmpeg and optionally a CUDA-capable GPU. See the [Audio & Video Setup Guide](setup/audio-video.md) for detailed installation instructions, model selection, and configuration.
 
 ## CLI Commands Overview
 
@@ -159,6 +159,9 @@ file-organizer tui
 | `8` | Copilot chat |
 
 Navigation: Use arrow keys to move, `Enter` to select, `q` to quit, `?` for help.
+
+!!! tip
+    The Audio view (key `5`) provides transcription and analysis features. See the [Audio & Video Setup Guide](setup/audio-video.md) to enable audio transcription.
 
 ## Copilot
 
@@ -523,7 +526,7 @@ file-organizer update install --dry-run
 *Legacy formats (`.doc`, `.xls`) have limited support and may return `None` or require additional dependencies. See the [File Format Reference](admin/file-format-reference.md) for details.
 
 !!! tip
-    Some format categories require optional feature packs. See [Optional Feature Packs](#optional-feature-packs) above.
+    Some format categories require optional feature packs. See [Optional Feature Packs](#optional-feature-packs) above. For audio transcription and video analysis features, see the [Audio & Video Setup Guide](setup/audio-video.md).
 
 ## Privacy and Security
 

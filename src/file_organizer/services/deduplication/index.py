@@ -2,20 +2,14 @@
 
 Maintains an efficient hash-to-files mapping for quick duplicate detection
 and provides statistics about duplicates and potential space savings.
-Supports streaming index building for memory-efficient processing of large
-file sets.
 """
 
 from __future__ import annotations
 
-import logging
-from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,16 +55,6 @@ class DuplicateGroup:
             return 0
         # Keep one copy, delete the rest
         return self.files[0].size * (self.count - 1)
-
-
-@dataclass
-class IndexBuildConfig:
-    """Configuration for streaming index building operations."""
-
-    chunk_size: int = 1000  # Number of files to process per chunk
-    max_files: int | None = None  # Maximum number of files to process (None = no limit)
-    progress_callback: Callable[[int], None] | None = None  # Called with file count
-    hash_function: Callable[[Path], str] | None = None  # Custom hash function (path -> hash)
 
 
 class DuplicateIndex:
@@ -213,186 +197,6 @@ class DuplicateIndex:
         """Clear all data from the index."""
         self._index.clear()
         self._size_index.clear()
-
-    def build_from_directory_streaming(
-        self,
-        directory: Path,
-        hash_function: Callable[[Path], str],
-        config: IndexBuildConfig | None = None,
-    ) -> Generator[int, None, None]:
-        """Build index from top-level files in a directory using streaming approach.
-
-        This method yields progress updates as chunks are processed, allowing
-        memory-efficient processing of large file sets without loading all
-        file metadata into memory at once. The directory scan is intentionally
-        non-recursive; only immediate child files are included.
-
-        Args:
-            directory: Directory whose immediate child files should be scanned
-            hash_function: Function that takes a file path and returns its hash
-            config: Build configuration (uses defaults if None)
-
-        Yields:
-            Number of files processed so far
-
-        Raises:
-            ValueError: If directory doesn't exist or isn't a directory
-
-        Example:
-            index = DuplicateIndex()
-            config = IndexBuildConfig(chunk_size=1000)
-
-            for progress in index.build_from_directory_streaming(
-                Path("/data"), compute_hash, config
-            ):
-                print(f"Processed {progress} files")
-        """
-        if not directory.exists():
-            raise ValueError(f"Directory not found: {directory}")
-
-        if not directory.is_dir():
-            raise ValueError(f"Path is not a directory: {directory}")
-
-        config = config or IndexBuildConfig()
-        processed_count = 0
-
-        # Get all files from directory
-        files = [f for f in directory.iterdir() if f.is_file()]
-
-        # Limit files if max_files is set
-        if config.max_files is not None:
-            files = files[: config.max_files]
-
-        # Process files in chunks
-        for i in range(0, len(files), config.chunk_size):
-            chunk = files[i : i + config.chunk_size]
-
-            for file_path in chunk:
-                try:
-                    # Compute hash using provided function
-                    file_hash = hash_function(file_path)
-
-                    # Add to index
-                    self.add_file(file_path, file_hash)
-
-                    processed_count += 1
-
-                    # Call progress callback if provided
-                    if config.progress_callback is not None:
-                        config.progress_callback(processed_count)
-
-                except (OSError, PermissionError) as e:
-                    logger.warning(f"Failed to process file {file_path}: {e}")
-                    continue
-
-            # Yield progress after each chunk
-            yield processed_count
-
-    def build_from_files_streaming(
-        self,
-        files: list[Path],
-        hash_function: Callable[[Path], str],
-        config: IndexBuildConfig | None = None,
-    ) -> Generator[int, None, None]:
-        """Build index from list of files using streaming approach.
-
-        This method processes files in chunks and yields progress updates,
-        allowing memory-efficient processing of large file lists.
-
-        Args:
-            files: List of file paths to index
-            hash_function: Function that takes a file path and returns its hash
-            config: Build configuration (uses defaults if None)
-
-        Yields:
-            Number of files processed so far
-
-        Example:
-            index = DuplicateIndex()
-            config = IndexBuildConfig(chunk_size=500)
-            file_list = [Path(f) for f in my_files]
-
-            for progress in index.build_from_files_streaming(
-                file_list, compute_hash, config
-            ):
-                print(f"Processed {progress} files")
-        """
-        config = config or IndexBuildConfig()
-        processed_count = 0
-
-        # Limit files if max_files is set
-        if config.max_files is not None:
-            files = files[: config.max_files]
-
-        # Process files in chunks
-        for i in range(0, len(files), config.chunk_size):
-            chunk = files[i : i + config.chunk_size]
-
-            for file_path in chunk:
-                try:
-                    # Skip non-files
-                    if not file_path.is_file():
-                        continue
-
-                    # Compute hash using provided function
-                    file_hash = hash_function(file_path)
-
-                    # Add to index
-                    self.add_file(file_path, file_hash)
-
-                    processed_count += 1
-
-                    # Call progress callback if provided
-                    if config.progress_callback is not None:
-                        config.progress_callback(processed_count)
-
-                except (OSError, PermissionError) as e:
-                    logger.warning(f"Failed to process file {file_path}: {e}")
-                    continue
-
-            # Yield progress after each chunk
-            yield processed_count
-
-    def add_files_batch(
-        self,
-        file_hash_pairs: list[tuple[Path, str]],
-        metadata_dict: dict[Path, dict[str, Any]] | None = None,
-    ) -> int:
-        """Add multiple files to the index in a batch.
-
-        This method is more efficient than calling add_file() repeatedly
-        for large numbers of files.
-
-        Args:
-            file_hash_pairs: List of (file_path, hash) tuples
-            metadata_dict: Optional dict mapping paths to metadata dicts
-
-        Returns:
-            Number of files successfully added
-
-        Example:
-            index = DuplicateIndex()
-            pairs = [(Path("/a.txt"), "hash1"), (Path("/b.txt"), "hash2")]
-            count = index.add_files_batch(pairs)
-        """
-        added_count = 0
-
-        for file_path, file_hash in file_hash_pairs:
-            try:
-                # Get metadata if provided
-                metadata = None
-                if metadata_dict is not None:
-                    metadata = metadata_dict.get(file_path)
-
-                # Add to index
-                self.add_file(file_path, file_hash, metadata)
-                added_count += 1
-
-            except (OSError, PermissionError) as e:
-                logger.warning(f"Failed to add file {file_path}: {e}")
-                continue
-
-        return added_count
 
     def __len__(self) -> int:
         """Return total number of files in the index."""

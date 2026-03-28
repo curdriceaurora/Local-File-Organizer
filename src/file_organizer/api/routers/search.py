@@ -2,20 +2,16 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
-from file_organizer.api.cache import CacheBackend, InMemoryCache
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
-from file_organizer.api.models import SearchResult
 from file_organizer.api.utils import is_hidden, resolve_path
 
 logger = logging.getLogger(__name__)
@@ -24,11 +20,7 @@ router = APIRouter(tags=["search"])
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000
-_MAX_LIMIT = 1000
-_CACHE_TTL_SECONDS = 300  # 5 minutes
-
-# Global cache instance for search results
-_search_cache: CacheBackend = InMemoryCache()
+_MAX_LIMIT = 500  # Maximum results per search request; prevents large response payloads
 
 
 class _ScoringTiers:
@@ -41,99 +33,48 @@ class _ScoringTiers:
     NO_MATCH = 0.0
 
 
-def _generate_cache_key(
-    query: str,
-    file_type: str | None,
-    search_roots: list[Path],
-    semantic: bool,
-    offset: int | None,
-    limit: int | None,
-) -> str:
-    """Generate a cache key for search results.
+class SearchResult(BaseModel):
+    """Single search result."""
 
-    Creates a deterministic hash from search parameters to use as cache key.
-    """
-    params = {
-        "q": query,
-        "type": file_type,
-        "roots": [str(root) for root in search_roots],
-        "semantic": semantic,
-        "offset": offset,
-        "limit": limit,
-    }
-    # Create deterministic JSON string and hash it
-    params_json = json.dumps(params, sort_keys=True)
-    hash_digest = hashlib.sha256(params_json.encode()).hexdigest()
-    return f"search:{hash_digest[:16]}"
+    filename: str
+    path: str
+    score: float
+    type: str | None = None
+    size: int | None = None
+    created: str | None = None
 
 
-def _relative_path(fp: Path, roots: list[Path]) -> str:
-    """Return *fp* relative to the first matching root, or absolute as fallback."""
+def _relative_path(fp: Path, roots: list[Path]) -> str | None:
+    """Return *fp* relative to the first matching root, or ``None`` if outside all roots."""
+    resolved = fp.resolve()
     for root in roots:
         try:
-            return str(fp.relative_to(root))
+            return str(resolved.relative_to(root.resolve()))
         except ValueError:
             continue
-    return str(fp)
+    return None
 
 
-def _load_cached_results(cache_key: str) -> list[SearchResult] | None:
-    """Return cached search results if present and valid."""
-    cached_result = _search_cache.get(cache_key)
-    if not cached_result:
+def _build_result(fp: Path, score: float, roots: list[Path]) -> SearchResult | None:
+    """Build a SearchResult from a file path, or None if outside all roots or inaccessible."""
+    rel = _relative_path(fp, roots)
+    if rel is None:
         return None
-
     try:
-        cached_data = json.loads(cached_result)
-        return [SearchResult(**item) for item in cached_data]
-    except (json.JSONDecodeError, ValueError) as exc:
-        logger.warning("Failed to deserialize cached search result: %s", exc, exc_info=True)
+        stat = fp.stat()
+    except OSError:
+        logger.debug("Cannot stat %s, excluding from results", fp, exc_info=True)
         return None
-
-
-def _store_cached_results(cache_key: str, results: list[SearchResult]) -> None:
-    """Store search results in the response cache."""
-    _search_cache.set(
-        cache_key,
-        json.dumps([item.model_dump() for item in results]),
-        ttl_seconds=_CACHE_TTL_SECONDS,
+    creation_ts = getattr(stat, "st_birthtime", stat.st_mtime)
+    created_str = datetime.fromtimestamp(creation_ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return SearchResult(
+        filename=fp.name,
+        path=rel,
+        score=round(score, 6),
+        type=fp.suffix.lower().lstrip(".") or "unknown",
+        size=stat.st_size,
+        created=created_str,
     )
-
-
-def _paginate_results(
-    results: list[SearchResult],
-    offset: int | None,
-    limit: int | None,
-) -> list[SearchResult]:
-    """Return a stable slice of results using the legacy offset/limit contract."""
-    skip = offset or 0
-    if limit is None:
-        return results[skip:]
-    return results[skip : skip + limit]
-
-
-def _semantic_search_with_cache(
-    cache_key: str,
-    search_roots: list[Path],
-    query: str,
-    file_type: str | None,
-    offset: int | None,
-    limit: int | None,
-) -> list[SearchResult]:
-    """Run semantic search and cache the paginated results."""
-    skip = max(0, offset or 0)
-    if skip >= _MAX_SEMANTIC:
-        return []
-
-    if limit is not None:
-        top_k = min(skip + limit, _MAX_SEMANTIC)
-        results = _semantic_search(search_roots, query, file_type, top_k=top_k)
-    else:
-        results = _semantic_search(search_roots, query, file_type, top_k=_MAX_SEMANTIC)
-
-    paged_results = _paginate_results(results, offset, limit)
-    _store_cached_results(cache_key, paged_results)
-    return paged_results
 
 
 def _compute_score(file_path: Path, query: str) -> float:
@@ -146,9 +87,6 @@ def _compute_score(file_path: Path, query: str) -> float:
     - 0.3 (PATH_CONTAINS): Query appears anywhere in file path
     - 0.0 (NO_MATCH): No match found
 
-    Note: Changed from checking full filename to stem only in tier-2.
-    This prevents queries matching both the stem and extension from
-    scoring higher than extension-only matches.
     """
     q_lower = query.lower()
     name_lower = file_path.name.lower()
@@ -214,7 +152,7 @@ def _build_semantic_corpus(
     """Walk *roots* and build a text corpus for semantic indexing.
 
     Each document is the concatenation of the file stem, relative path parts,
-    and up to :data:`_SEMANTIC_TEXT_LIMIT` characters of extracted text.
+    and extracted text content.
 
     Args:
         roots: Directory roots to traverse.
@@ -245,7 +183,8 @@ def _build_semantic_corpus(
                 try:
                     rel_entry = entry.relative_to(root)
                 except ValueError:
-                    rel_entry = entry
+                    logger.debug("Skipping entry outside root: %s", entry)
+                    continue
                 if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
                 text = read_text_safe(entry)
@@ -303,22 +242,9 @@ def _semantic_search(
     for fp, score in raw_results:
         if ext_filter and fp.suffix.lower() != ext_filter:
             continue
-        try:
-            stat = fp.stat()
-        except OSError:
-            continue
-        creation_ts = getattr(stat, "st_birthtime", stat.st_mtime)
-        created_str = datetime.fromtimestamp(creation_ts, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        results.append(
-            SearchResult(
-                filename=fp.name,
-                path=_relative_path(fp, roots),
-                score=round(score, 6),
-                type=fp.suffix.lower().lstrip(".") or "unknown",
-                size=stat.st_size,
-                created=created_str,
-            )
-        )
+        result = _build_result(fp, score, roots)
+        if result is not None:
+            results.append(result)
         if len(results) >= top_k:
             break
 
@@ -327,30 +253,26 @@ def _semantic_search(
 
 @router.get("/search", response_model=list[SearchResult])
 def search(
-    q: str | None = Query(None, description="Search query"),
+    q: str = Query(..., description="Search query"),
     file_type: str | None = Query(None, alias="type"),
     limit: int | None = None,
     offset: int | None = None,
     path: str | None = None,
     semantic: bool = Query(False, description="Use hybrid BM25+vector semantic search"),
     settings: ApiSettings = Depends(get_settings),
-) -> list[SearchResult] | JSONResponse:
+) -> list[SearchResult]:
     """Search for files by query.
 
-    Supports filtering, pagination, relevance scoring, and result caching.
+    Supports filtering, pagination, and relevance scoring.
 
     When ``semantic=true`` the search uses hybrid BM25+vector retrieval
-    (Reciprocal Rank Fusion) instead of the default keyword scan.  The
-    existing ``semantic=false`` path is unchanged.
+    (Reciprocal Rank Fusion) instead of the default keyword scan.
 
     Authentication is enforced at the middleware layer
     (see ``file_organizer.api.middleware``), not per-route.
     """
-    if q is None or q == "":
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Query parameter 'q' is required"},
-        )
+    if q == "":
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
 
     # Clamp limit to a safe upper bound to prevent unbounded allocations.
     effective_limit: int | None = None
@@ -367,37 +289,34 @@ def search(
             Path(p).resolve() for p in settings.allowed_paths
         ]
 
-    cache_key = _generate_cache_key(q, file_type, search_roots, semantic, offset, effective_limit)
-    cached_results = _load_cached_results(cache_key)
-    if cached_results is not None:
-        return cached_results
-
     # ------------------------------------------------------------------
     # Semantic path — hybrid BM25 + vector retrieval
     # ------------------------------------------------------------------
     if semantic:
+        skip = max(0, offset or 0)
+        if skip >= _MAX_SEMANTIC:
+            return []
         try:
-            return _semantic_search_with_cache(
-                cache_key,
-                search_roots,
-                q,
-                file_type,
-                offset,
-                effective_limit,
-            )
-        except ImportError:
-            return JSONResponse(
+            if effective_limit is not None:
+                # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
+                top_k = min(skip + effective_limit, _MAX_SEMANTIC)
+                results = _semantic_search(search_roots, q, file_type, top_k=top_k)
+                return results[skip : skip + effective_limit]
+            else:
+                # limit=0 or limit=None → no explicit cap (consistent with keyword path)
+                results = _semantic_search(search_roots, q, file_type, top_k=_MAX_SEMANTIC)
+                return results[skip:]
+        except ImportError as exc:
+            raise HTTPException(
                 status_code=503,
-                content={
-                    "detail": (
-                        "Semantic search is not available: search dependencies not installed. "
-                        "Install with: pip install 'file-organizer[search]'"
-                    )
-                },
-            )
+                detail=(
+                    "Semantic search is not available: search dependencies not installed. "
+                    "Install with: pip install 'file-organizer[search]'"
+                ),
+            ) from exc
 
     # ------------------------------------------------------------------
-    # Default keyword path — unchanged response shape, with cached results
+    # Default keyword path
     # ------------------------------------------------------------------
     results: list[SearchResult] = []
     total_traversed = 0
@@ -411,33 +330,19 @@ def search(
             break
         for fp in _collect_matching_files(root, q, file_type, max_files=remaining):
             total_traversed += 1
-            try:
-                stat = fp.stat()
-            except OSError:
-                continue
             score = _compute_score(fp, q)
-            if hasattr(stat, "st_birthtime"):
-                creation_ts = stat.st_birthtime
-            else:
-                creation_ts = stat.st_mtime
-            created_dt = datetime.fromtimestamp(creation_ts, tz=UTC)
-            # Format as ISO 8601 with Z suffix for UTC
-            created_str = created_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-            results.append(
-                SearchResult(
-                    filename=fp.name,
-                    path=_relative_path(fp, search_roots),
-                    score=score,
-                    type=fp.suffix.lower().lstrip(".") or "unknown",
-                    size=stat.st_size,
-                    created=created_str,
-                )
-            )
+            result = _build_result(fp, score, search_roots)
+            if result is not None:
+                results.append(result)
 
     # Sort by score descending, then by filename for deterministic pagination
     results.sort(key=lambda r: (-r.score, r.filename))
 
-    paged_results = _paginate_results(results, offset, effective_limit)
-    _store_cached_results(cache_key, paged_results)
+    # Apply pagination (handle limit=0 as explicit "no limit")
+    skip = max(offset or 0, 0)
+    if effective_limit is not None:
+        results = results[skip : skip + effective_limit]
+    else:
+        results = results[skip:]
 
-    return paged_results
+    return results

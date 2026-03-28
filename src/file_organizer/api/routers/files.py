@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -25,7 +26,8 @@ from file_organizer.api.models import (
 )
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
-from file_organizer.utils.file_scanner import ScanConfig, StreamingFileScanner
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
 
@@ -55,32 +57,29 @@ def _parse_file_types(file_type: str | None) -> set[str] | None:
 
 
 def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
-    """Collect files using the streaming scanner for better performance.
-
-    Uses StreamingFileScanner which leverages os.scandir() instead of
-    Path.rglob() for significantly better performance on large directories.
-    """
-    # Handle single file path
+    files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):
-            return [path]
-        return []
+            files.append(path)
+        return files
 
-    # Configure streaming scanner
-    config = ScanConfig(
-        recursive=recursive,
-        follow_symlinks=False,
-    )
+    if recursive:
+        iterator = path.rglob("*")
+    else:
+        iterator = path.glob("*")
 
-    scanner = StreamingFileScanner()
-    files = scanner.scan_to_list(path, config)
-
-    # Filter hidden files if needed
-    # Note: We filter after scanning because is_hidden() checks all path
-    # components, which can't be easily expressed as a glob pattern
-    if not include_hidden:
-        files = [f for f in files if not is_hidden(f)]
-
+    for entry in iterator:
+        try:
+            if entry.is_symlink():
+                continue
+            if not entry.is_file():
+                continue
+            if not include_hidden and is_hidden(entry):
+                continue
+        except (OSError, PermissionError):
+            logger.debug("Skipping entry %s: filesystem error", entry, exc_info=True)
+            continue
+        files.append(entry)
     return files
 
 

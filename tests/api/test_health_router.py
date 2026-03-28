@@ -16,6 +16,9 @@ from file_organizer.api.routers.health import router
 
 def _build_app() -> tuple[FastAPI, TestClient]:
     """Create a FastAPI app with health router."""
+    from file_organizer.api.routers.health import reset_startup_time
+
+    reset_startup_time()
     settings = ApiSettings(environment="test")
     app = FastAPI()
     setup_exception_handlers(app)
@@ -30,6 +33,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHealthEndpoint:
     """Tests for GET /api/v1/health."""
@@ -248,3 +252,13 @@ class TestHealthEndpoint:
 
             # Uptime should be non-decreasing (time.time() advances monotonically)
             assert uptime2 >= uptime1
+
+    def test_reset_startup_time_updates_module_state(self) -> None:
+        """reset_startup_time() resets the module-level _startup_time."""
+        from file_organizer.api.routers import health
+
+        # Force a stale timestamp, then verify reset overwrites it
+        old = health._startup_time
+        health._startup_time = old - 100.0  # artificially stale
+        health.reset_startup_time()
+        assert health._startup_time >= old  # at least as recent as before

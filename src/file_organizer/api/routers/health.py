@@ -8,18 +8,26 @@ from __future__ import annotations
 
 import time
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Response
 from loguru import logger
 
 router = APIRouter(tags=["health"])
 
-# Module-level startup time used to compute uptime in health responses.
+# Startup time used to compute uptime in health responses.
 # Use monotonic time to avoid issues with system clock adjustments (NTP sync).
+# Defaults to module-import time; call ``reset_startup_time()`` from the app
+# lifespan/startup event so that recreated app instances report accurate uptime.
 _startup_time: float = time.monotonic()
 
 
+def reset_startup_time() -> None:
+    """Reset startup time — call from app lifespan/startup event."""
+    global _startup_time
+    _startup_time = time.monotonic()
+
+
 @router.get("/health")
-async def health(request: Request, response: Response) -> dict[str, object]:
+async def health(response: Response) -> dict[str, object]:
     """Return rich health status for the API and sidecar readiness probe.
 
     Response shape::
@@ -54,7 +62,7 @@ async def health(request: Request, response: Response) -> dict[str, object]:
     try:
         payload = await facade.health_check()
     except Exception as exc:
-        logger.warning("health_check failed: {}", exc)
+        logger.warning("health_check failed: {}", exc, exc_info=True)
         payload = {}
 
     # Use the status derived by the facade rather than re-deriving it here.
@@ -70,19 +78,13 @@ async def health(request: Request, response: Response) -> dict[str, object]:
         "error": "unhealthy",
     }
 
-    # Defensive fallback; normally seeded at app startup via lifespan handler.
-    startup_time = getattr(request.app.state, "health_startup_time", None)
-    if not isinstance(startup_time, float):
-        startup_time = time.monotonic()
-        request.app.state.health_startup_time = startup_time
-
     result: dict[str, object] = {
         "status": status,
         "readiness": _READINESS_MAP.get(status, "unhealthy"),
         "version": payload.get("version", ""),
         "provider": payload.get("provider", "ollama"),
         "ollama": bool(payload.get("ollama", False)),
-        "uptime": time.monotonic() - startup_time,
+        "uptime": time.monotonic() - _startup_time,
     }
 
     if status == "degraded":
