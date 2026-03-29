@@ -204,13 +204,14 @@ class SetupWizard:
                 text_model = capabilities.installed_models[0].name
                 logger.info("Using first available model: {}", text_model)
 
-        # Create model preset
+        # Create model preset with auto-detected framework
+        # Framework will be set based on custom_settings or left as default
         models = ModelPreset(
             text_model=text_model,
             temperature=0.5,
             max_tokens=3000,
             device="auto",
-            framework="ollama",
+            framework=custom_settings.get("framework", "ollama") if custom_settings else "ollama",
         )
 
         # Apply custom overrides if in POWER_USER mode

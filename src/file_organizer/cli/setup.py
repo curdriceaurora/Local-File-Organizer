@@ -120,21 +120,16 @@ def setup_run(  # noqa: C901
             # Use recommended model if available, otherwise first available
             if recommended in model_choices:
                 selected_model = recommended
+                custom_settings["text_model"] = selected_model
                 console.print(
                     f"[green]\u2713[/green] Selected recommended model: [bold]{selected_model}[/bold]"
                 )
-            elif model_choices:
+            else:
                 selected_model = model_choices[0]
+                custom_settings["text_model"] = selected_model
                 console.print(
                     f"[yellow]\u26a0[/yellow] Recommended model '{recommended}' not found, using: [bold]{selected_model}[/bold]"
                 )
-            else:
-                selected_model = recommended
-                console.print(
-                    f"[yellow]\u26a0[/yellow] No models installed, will use: [bold]{selected_model}[/bold]"
-                )
-
-            custom_settings["text_model"] = selected_model
         else:
             # No models installed - use recommended anyway
             custom_settings["text_model"] = recommended

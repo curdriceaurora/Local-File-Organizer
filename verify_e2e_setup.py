@@ -164,7 +164,7 @@ def main() -> int:  # noqa: C901
         print_info(f"  - RAM: {capabilities.hardware.ram_gb:.2f} GB")
         print_info(f"  - Ollama running: {capabilities.ollama_status.running}")
 
-        # Generate and execute config
+        # Generate config
         config = wizard.generate_config()
 
         print_success("Wizard execution completed")
@@ -172,14 +172,17 @@ def main() -> int:  # noqa: C901
         print_info(f"  - Text model: {config.models.text_model}")
         print_info(f"  - Default methodology: {config.default_methodology}")
 
-        # Save the config
-        wizard.config_manager.save(config)
-        print_info("Config saved to disk")
-
-        # Verify config was marked as completed (default is False until manually set)
+        # Mark setup as completed and save using wizard's save_config method
         config.setup_completed = True
-        wizard.config_manager.save(config)
-        print_success("Config properly marked as setup_completed=True")
+        wizard.save_config(config)
+        print_info("Config saved to disk via wizard.save_config()")
+
+        # Reload config and verify persistence
+        loaded_config = wizard.config_manager.load()
+        if not loaded_config.setup_completed:
+            raise Exception("setup_completed was not persisted")
+
+        print_success("Config properly marked as setup_completed=True and persisted")
     except Exception as e:
         error = f"SetupWizard quick-start mode failed: {e}"
         print_error(error)

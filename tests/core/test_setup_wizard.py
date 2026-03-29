@@ -422,10 +422,17 @@ class TestWizardRun:
         mock_hw.ram_gb = 8.0
         mock_hw.cpu_cores = 4
 
-        mock_capabilities = Mock(spec=SystemCapabilities)
-        mock_capabilities.hardware = mock_hw
-        mock_capabilities.ollama_status = OllamaStatus(installed=False, running=False)
-        mock_detect.return_value = mock_capabilities
+        mock_capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=False, running=False),
+            installed_models=[],
+        )
+
+        def assign_capabilities(wizard):
+            wizard.capabilities = mock_capabilities
+            return mock_capabilities
+
+        mock_detect.side_effect = lambda: assign_capabilities(wizard)
 
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
         result = wizard.run()

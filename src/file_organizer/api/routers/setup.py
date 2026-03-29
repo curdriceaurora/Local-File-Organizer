@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.config.manager import ConfigManager
+from file_organizer.core.hardware_profile import GpuType
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode
 
 router = APIRouter(tags=["setup"])
@@ -98,9 +99,9 @@ def detect_capabilities(
     capabilities = wizard.detect_capabilities()
 
     hardware_info = HardwareInfo(
-        total_ram_gb=capabilities.hardware.total_ram_gb,
-        gpu_available=capabilities.hardware.gpu_available,
-        gpu_vram_gb=capabilities.hardware.gpu_vram_gb,
+        total_ram_gb=capabilities.hardware.ram_gb,
+        gpu_available=(capabilities.hardware.gpu_type != GpuType.NONE),
+        gpu_vram_gb=capabilities.hardware.vram_gb,
         gpu_name=capabilities.hardware.gpu_name,
         cpu_cores=capabilities.hardware.cpu_cores,
         recommended_model=capabilities.hardware.recommended_text_model(),

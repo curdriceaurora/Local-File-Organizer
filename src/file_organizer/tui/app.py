@@ -16,12 +16,16 @@ from textual.widget import Widget
 from textual.widgets import Footer, Header, Static
 
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.schema import AppConfig
 
 
 class WizardCompleteMessage(Message):
     """Message posted when the setup wizard completes."""
 
-    pass
+    def __init__(self, config: AppConfig | None = None) -> None:
+        """Initialize with optional AppConfig."""
+        super().__init__()
+        self.config = config
 
 
 class SetupWizardViewIntegrated:
@@ -239,15 +243,21 @@ class FileOrganizerApp(App[None]):
     # Setup wizard integration
     # ------------------------------------------------------------------
 
-    async def complete_wizard_and_transition(self) -> None:
+    async def complete_wizard_and_transition(self, config: AppConfig | None = None) -> None:
         """Complete the setup wizard and transition to main app.
+
+        Args:
+            config: AppConfig from wizard. If None, loads current config.
 
         Saves configuration with setup_completed=True, removes the wizard
         view, and mounts the main application layout.
         """
         try:
-            # Load or create config and mark setup as complete
-            config = self._config_manager.load()
+            # Use provided config or load existing
+            if config is None:
+                config = self._config_manager.load()
+
+            # Mark setup as complete and save
             config.setup_completed = True
             self._config_manager.save(config)
 
@@ -290,8 +300,8 @@ class FileOrganizerApp(App[None]):
             message: WizardCompleteMessage posted by the setup wizard.
         """
         if self._in_wizard:
-            # Run transition asynchronously
-            self.call_later(self.complete_wizard_and_transition)
+            # Run transition asynchronously with config from wizard
+            self.call_later(self.complete_wizard_and_transition, message.config)
 
     # ------------------------------------------------------------------
     # View switching

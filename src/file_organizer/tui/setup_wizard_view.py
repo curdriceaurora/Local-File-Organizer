@@ -117,8 +117,13 @@ class SetupWizardView(Vertical):
     def action_select_option_1(self) -> None:
         """Select option 1 (context-dependent)."""
         if self._current_screen == WizardScreen.WELCOME:
-            self._current_screen = WizardScreen.MODE_SELECT
+            # Quick Start mode selected from welcome
+            self._selected_mode = "quick_start"
+            self._set_status("Quick Start mode selected. Hardware detection will begin...")
+            logger.info("User selected Quick Start mode from welcome")
+            self._current_screen = WizardScreen.HARDWARE_DETECT
             self._refresh_screen()
+            self._run_hardware_detection()
         elif self._current_screen == WizardScreen.MODE_SELECT:
             # Quick Start mode
             self._selected_mode = "quick_start"
@@ -139,8 +144,13 @@ class SetupWizardView(Vertical):
     def action_select_option_2(self) -> None:
         """Select option 2 (context-dependent)."""
         if self._current_screen == WizardScreen.WELCOME:
-            self._current_screen = WizardScreen.MODE_SELECT
+            # Power User mode selected from welcome
+            self._selected_mode = "power_user"
+            self._set_status("Power User mode selected. Full configuration options available.")
+            logger.info("User selected Power User mode from welcome")
+            self._current_screen = WizardScreen.HARDWARE_DETECT
             self._refresh_screen()
+            self._run_hardware_detection()
         elif self._current_screen == WizardScreen.MODE_SELECT:
             # Power User mode
             self._selected_mode = "power_user"
@@ -227,12 +237,16 @@ class SetupWizardView(Vertical):
                 self._set_status("Please select a model first (press 1, 2, or 3).")
                 return
             # Check if model needs to be downloaded
+            model_installed = False
             if self._capabilities and self._capabilities.installed_models:
                 installed_names = {m.name for m in self._capabilities.installed_models}
-                if self._selected_model not in installed_names:
-                    if self._download_status != "complete":
-                        self._set_status("Please download the model first (press d).")
-                        return
+                model_installed = self._selected_model in installed_names
+
+            # Require download if model is not installed
+            if not model_installed and self._download_status != "complete":
+                self._set_status("Please download the model first (press d).")
+                return
+
             self._current_screen = WizardScreen.COMPLETE
             self._set_status("Setup complete!")
             self._refresh_screen()

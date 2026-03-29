@@ -171,10 +171,15 @@ class TestListInstalledModels:
         assert result == []
 
     @patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True)
+    @patch("file_organizer.core.backend_detector.subprocess.run")
     @patch("ollama.Client")
-    def test_list_models_connection_error(self, mock_client):
+    def test_list_models_connection_error(self, mock_client, mock_run):
         """When Ollama service not reachable, return empty list."""
+        import subprocess
+
         mock_client.return_value.list.side_effect = ConnectionError("Cannot connect to Ollama")
+        # Mock CLI fallback to also fail
+        mock_run.side_effect = subprocess.CalledProcessError(1, "ollama")
 
         result = list_installed_models()
 
