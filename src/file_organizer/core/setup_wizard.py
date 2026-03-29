@@ -290,6 +290,7 @@ class SetupWizard:
             profile: Profile name override. Uses config.profile_name if None.
         """
         profile = profile or config.profile_name
+        config.setup_completed = True
         self.config_manager.save(config, profile)
         logger.info("Saved configuration profile: {}", profile)
 

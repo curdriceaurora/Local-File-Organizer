@@ -360,7 +360,10 @@ class TestSaveConfig:
 
         wizard.save_config(config)
 
-        mock_manager.save.assert_called_once_with(config, "test-profile")
+        mock_manager.save.assert_called_once()
+        saved_config, saved_profile = mock_manager.save.call_args[0]
+        assert saved_config.setup_completed is True
+        assert saved_profile == "test-profile"
 
     def test_save_config_with_profile_override(self):
         mock_manager = Mock()
@@ -370,7 +373,10 @@ class TestSaveConfig:
 
         wizard.save_config(config, profile="override")
 
-        mock_manager.save.assert_called_once_with(config, "override")
+        mock_manager.save.assert_called_once()
+        saved_config, saved_profile = mock_manager.save.call_args[0]
+        assert saved_config.setup_completed is True
+        assert saved_profile == "override"
 
 
 class TestWizardRun:
