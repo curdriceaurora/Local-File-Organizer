@@ -7,6 +7,7 @@ which optional dependency groups should be installed based on detected file type
 import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,8 @@ EXTENSION_REGISTRY: dict[str, str] = {
     # Archive files
     ".7z": "archive",
     ".rar": "archive",
+    ".tar.gz": "archive",
+    ".tar.bz2": "archive",
     # Scientific data files
     ".hdf5": "scientific",
     ".h5": "scientific",
@@ -233,12 +236,45 @@ def display_recommendations(
     console.print(table)
 
 
+def _install_single_group(group: str) -> bool:
+    """Install a single optional dependency group via pip.
+
+    Returns True on success, False on failure.
+    """
+    install_cmd = [sys.executable, "-m", "pip", "install", f"file-organizer[{group}]"]
+    console.print(f"\n[bold]Installing {group}...[/bold]")
+
+    try:
+        result = subprocess.run(
+            install_cmd,
+            check=False,
+            capture_output=False,
+            text=True,
+            timeout=300,
+        )
+
+        if result.returncode == 0:
+            console.print(f"[green]✓ Successfully installed {group}[/green]")
+            return True
+
+        console.print(f"[red]✗ Failed to install {group} (exit code {result.returncode})[/red]")
+    except FileNotFoundError:
+        console.print("[red]✗ Cannot find 'pip' executable. Is pip installed?[/red]")
+    except subprocess.TimeoutExpired:
+        console.print(f"[red]✗ Timed out installing {group}[/red]")
+    except (subprocess.SubprocessError, OSError) as exc:
+        console.print(f"[red]✗ Error installing {group}: {exc}[/red]")
+
+    return False
+
+
 def install_groups(groups: set[str]) -> None:
     """Interactively install optional dependency groups using pip.
 
     Prompts the user for confirmation before installing.
     Respects the global ``_g.dry_run`` flag to skip actual installation.
-    Handles subprocess failures gracefully and continues with remaining groups.
+    Handles subprocess failures and timeouts gracefully and continues with
+    remaining groups.  Each install has a 300-second timeout.
 
     Args:
         groups: Set of dependency group names to install
@@ -282,28 +318,7 @@ def install_groups(groups: set[str]) -> None:
     # Install each group
     failed_groups: list[str] = []
     for group in groups_list:
-        install_cmd = ["pip", "install", f"file-organizer[{group}]"]
-        console.print(f"\n[bold]Installing {group}...[/bold]")
-
-        try:
-            result = subprocess.run(
-                install_cmd,
-                check=False,
-                capture_output=False,
-                text=True,
-            )
-
-            if result.returncode == 0:
-                console.print(f"[green]✓ Successfully installed {group}[/green]")
-            else:
-                console.print(f"[red]✗ Failed to install {group} (exit code {result.returncode})[/red]")
-                failed_groups.append(group)
-
-        except FileNotFoundError:
-            console.print("[red]✗ Cannot find 'pip' executable. Is pip installed?[/red]")
-            failed_groups.append(group)
-        except (subprocess.SubprocessError, OSError) as exc:
-            console.print(f"[red]✗ Error installing {group}: {exc}[/red]")
+        if not _install_single_group(group):
             failed_groups.append(group)
 
     # Summary

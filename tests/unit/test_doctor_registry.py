@@ -66,7 +66,7 @@ def test_extension_registry_cad_formats():
 def test_extension_registry_completeness():
     """Registry contains all extensions from spec."""
     # From spec.md - verify we have the complete set
-    expected_count = 8 + 6 + 6 + 2 + 4 + 2  # audio + video + parsers + archive + scientific + cad
+    expected_count = 8 + 6 + 6 + 4 + 4 + 2  # audio + video + parsers + archive + scientific + cad
     assert len(EXTENSION_REGISTRY) == expected_count
 
 
