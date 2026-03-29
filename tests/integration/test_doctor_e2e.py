@@ -361,7 +361,9 @@ class TestDoctorInstallation:
                 mock_globals.dry_run = False
                 mock_globals.yes = True
                 with patch("subprocess.run", return_value=mock_result) as mock_run:
-                    result = runner.invoke(app, ["--yes", "doctor", str(audio_files_dir), "--install"])
+                    result = runner.invoke(
+                        app, ["--yes", "doctor", str(audio_files_dir), "--install"]
+                    )
                     # Should succeed without prompting
                     assert result.exit_code == 0
                     assert mock_run.called
@@ -377,7 +379,10 @@ class TestDoctorInstallation:
                     assert result.exit_code == 0
                     # Should NOT call subprocess in dry-run mode
                     assert not mock_run.called
-                    assert "dry-run" in result.output.lower() or "would install" in result.output.lower()
+                    assert (
+                        "dry-run" in result.output.lower()
+                        or "would install" in result.output.lower()
+                    )
 
     def test_user_cancels_installation(self, audio_files_dir: Path) -> None:
         """User can cancel installation at confirmation prompt."""

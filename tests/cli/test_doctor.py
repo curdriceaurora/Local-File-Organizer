@@ -10,7 +10,6 @@ Tests the doctor CLI command including:
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -386,7 +385,10 @@ class TestInstallGroups:
                     # Should not run subprocess
                     # Should display dry-run messages
                     calls = [str(call) for call in mock_console.print.call_args_list]
-                    assert any("dry-run" in call.lower() or "would install" in call.lower() for call in calls)
+                    assert any(
+                        "dry-run" in call.lower() or "would install" in call.lower()
+                        for call in calls
+                    )
 
     def test_successful_installation(self):
         groups = {"audio"}
@@ -448,7 +450,7 @@ class TestInstallGroups:
         mock_result = MagicMock()
         mock_result.returncode = 0
 
-        with patch("file_organizer.cli.doctor.console") as mock_console:
+        with patch("file_organizer.cli.doctor.console"):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
@@ -518,6 +520,7 @@ class TestDoctorCommand:
             # Should output JSON
             assert mock_echo.called
             import json
+
             output = json.loads(mock_echo.call_args[0][0])
             assert output["files_found"] == 0
             assert output["detected_groups"] == []
@@ -554,6 +557,7 @@ class TestDoctorCommand:
 
                 assert exc_info.value.exit_code == 0
                 import json
+
                 output = json.loads(mock_echo.call_args[0][0])
                 assert output["files_found"] == 2
                 assert "audio" in output["missing_groups"]
@@ -612,6 +616,7 @@ class TestDoctorCommand:
 
                 assert exc_info.value.exit_code == 0
                 import json
+
                 output = json.loads(mock_echo.call_args[0][0])
                 detected_group_names = [g["group"] for g in output["detected_groups"]]
                 assert "audio" in detected_group_names
@@ -636,6 +641,7 @@ class TestDoctorCommand:
 
                 assert exc_info.value.exit_code == 0
                 import json
+
                 output = json.loads(mock_echo.call_args[0][0])
                 assert "audio" in output["missing_groups"]
                 assert "video" in output["missing_groups"]
@@ -652,13 +658,18 @@ class TestRegistryConsistency:
 
     def test_extension_registry_has_valid_groups(self):
         # All groups in EXTENSION_REGISTRY should be in DEPENDENCY_CHECK_PACKAGES
-        groups_in_registry = set(EXTENSION_REGISTRY.values())
         groups_with_checks = set(DEPENDENCY_CHECK_PACKAGES.keys())
 
-        # Some groups in registry might not need dependency checks (like 'dedup')
-        # but we should verify the common ones are there
+        # Verify common groups are in DEPENDENCY_CHECK_PACKAGES
         common_groups = {"audio", "video", "parsers", "archive", "scientific", "cad"}
         assert common_groups.issubset(groups_with_checks)
+
+        # Also verify every group in EXTENSION_REGISTRY has a check entry
+        registry_groups = set(EXTENSION_REGISTRY.values())
+        for group in registry_groups:
+            assert group in groups_with_checks, (
+                f"Group '{group}' in EXTENSION_REGISTRY has no entry in DEPENDENCY_CHECK_PACKAGES"
+            )
 
     def test_dependency_check_packages_not_empty(self):
         assert len(DEPENDENCY_CHECK_PACKAGES) > 0
@@ -673,7 +684,9 @@ class TestRegistryConsistency:
         groups_with_checks = set(DEPENDENCY_CHECK_PACKAGES.keys())
 
         for group in groups_with_prereqs:
-            assert group in groups_with_checks, f"Group {group} has prerequisites but no dependency check"
+            assert group in groups_with_checks, (
+                f"Group {group} has prerequisites but no dependency check"
+            )
 
     def test_extension_registry_lowercase(self):
         # All extensions in registry should be lowercase
@@ -720,6 +733,7 @@ class TestEdgeCases:
 
             assert exc_info.value.exit_code == 0
             import json
+
             output = json.loads(mock_echo.call_args[0][0])
             assert output["files_found"] == 0
             assert output["detected_groups"] == []
@@ -854,6 +868,7 @@ class TestEdgeCases:
 
                 assert exc_info.value.exit_code == 0
                 import json
+
                 output = json.loads(mock_echo.call_args[0][0])
 
                 # Audio should be marked as installed
@@ -863,8 +878,12 @@ class TestEdgeCases:
                 assert "audio" not in output["missing_groups"]
 
                 # Check detected_groups array shows proper status
-                audio_group = next((g for g in output["detected_groups"] if g["group"] == "audio"), None)
-                video_group = next((g for g in output["detected_groups"] if g["group"] == "video"), None)
+                audio_group = next(
+                    (g for g in output["detected_groups"] if g["group"] == "audio"), None
+                )
+                video_group = next(
+                    (g for g in output["detected_groups"] if g["group"] == "video"), None
+                )
 
                 assert audio_group is not None
                 assert audio_group["installed"] is True
@@ -942,6 +961,7 @@ class TestEdgeCases:
             (tmp_path / f"song{i}.mp3").write_text("audio")
 
         import time
+
         start = time.time()
         result = scan_directory(tmp_path)
         duration = time.time() - start
@@ -1037,9 +1057,7 @@ def test_edge_cases():
     ]
 
     # Verify minimum number of edge case tests exist
-    assert len(test_methods) >= 7, (
-        f"Expected at least 7 edge case tests, found {len(test_methods)}"
-    )
+    assert len(test_methods) >= 7, f"Expected at least 7 edge case tests, found {len(test_methods)}"
 
     # Verify specific required edge case tests are present
     required_tests = [
@@ -1070,6 +1088,7 @@ class TestSubprocessSecurity:
     def test_subprocess_no_shell_true(self):
         """Regression: subprocess.run must NOT use shell=True (prevents shell injection)."""
         import inspect
+
         import file_organizer.cli.doctor as doctor_module
 
         source = inspect.getsource(doctor_module)
@@ -1172,9 +1191,6 @@ class TestInstallGroupsOrdering:
         """display_recommendations shows groups in sorted order."""
         extension_counts = {".mp3": 5, ".mp4": 3, ".pdf": 2, ".7z": 1}
         detected_groups = {"video", "audio", "parsers", "archive"}
-        table_rows = []
-
-        original_add_row = None
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.console") as mock_console:
@@ -1219,8 +1235,10 @@ class TestExtensionRegistryBoundaries:
         """SYSTEM_PREREQUISITES values are all lists of strings."""
         for group, prereqs in SYSTEM_PREREQUISITES.items():
             assert isinstance(prereqs, list), f"{group} prerequisites must be a list"
+            assert len(prereqs) > 0, f"{group} prerequisites must not be empty"
             for prereq in prereqs:
                 assert isinstance(prereq, str), f"Prerequisite '{prereq}' must be a string"
+                assert len(prereq) > 0, f"Prerequisite for {group} must not be empty"
 
     def test_extension_registry_no_uppercase(self):
         """All extensions in EXTENSION_REGISTRY are lowercase with dot prefix."""
@@ -1249,6 +1267,7 @@ class TestJSONOutputFormat:
                     doctor(path=tmp_path, install=False, json_output=True)
 
         import json
+
         output = json.loads(mock_echo.call_args[0][0])
         groups_info = output["detected_groups"]
         audio_info = next(g for g in groups_info if g["group"] == "audio")
@@ -1267,6 +1286,7 @@ class TestJSONOutputFormat:
                     doctor(path=tmp_path, install=False, json_output=True)
 
         import json
+
         output = json.loads(mock_echo.call_args[0][0])
         assert output["directory"] == str(tmp_path)
         # Must be absolute
@@ -1287,12 +1307,13 @@ class TestJSONOutputFormat:
                     doctor(path=tmp_path, install=False, json_output=True)
 
         import json
+
         output = json.loads(mock_echo.call_args[0][0])
         missing = output["missing_groups"]
         assert missing == sorted(missing), f"missing_groups must be sorted, got: {missing}"
 
     def test_json_prerequisites_are_list(self, tmp_path):
-        """JSON output prerequisites field is always a list."""
+        """JSON output prerequisites field is always a list of strings."""
         (tmp_path / "song.mp3").write_text("audio")
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
@@ -1301,11 +1322,18 @@ class TestJSONOutputFormat:
                     doctor(path=tmp_path, install=False, json_output=True)
 
         import json
+
         output = json.loads(mock_echo.call_args[0][0])
+        assert len(output["detected_groups"]) >= 1, "Should detect at least one group"
         for group_info in output["detected_groups"]:
-            assert isinstance(group_info["prerequisites"], list), (
+            prereqs = group_info["prerequisites"]
+            assert isinstance(prereqs, list), (
                 f"prerequisites for {group_info['group']} must be a list"
             )
+            for prereq in prereqs:
+                assert isinstance(prereq, str), (
+                    f"Each prerequisite must be a string, got {type(prereq)}"
+                )
 
     def test_json_files_found_matches_sum(self, tmp_path):
         """JSON files_found equals sum of all extension counts."""
@@ -1319,6 +1347,7 @@ class TestJSONOutputFormat:
                     doctor(path=tmp_path, install=False, json_output=True)
 
         import json
+
         output = json.loads(mock_echo.call_args[0][0])
         total_from_extensions = sum(output["extensions"].values())
         assert output["files_found"] == total_from_extensions
@@ -1330,25 +1359,26 @@ class TestDoctorCommandRegistration:
 
     def test_doctor_in_app_commands(self):
         """Doctor command is registered in the main Typer app."""
-        from file_organizer.cli.main import app
         import typer.main
+
+        from file_organizer.cli.main import app
 
         # Get the underlying Click group
         click_group = typer.main.get_group(app)
-        assert "doctor" in click_group.commands, (
-            "doctor command must be registered in the main app"
-        )
+        assert "doctor" in click_group.commands, "doctor command must be registered in the main app"
 
     def test_doctor_importable_from_main(self):
         """Doctor function is importable from main.py."""
         # This verifies the import line in main.py works
+        from file_organizer.cli.doctor import doctor
         from file_organizer.cli.main import app  # noqa: F401
-        from file_organizer.cli.doctor import doctor  # noqa: F401
+
         assert callable(doctor)
 
     def test_doctor_command_has_path_parameter(self):
         """Doctor command has the required PATH argument."""
         from typer.testing import CliRunner
+
         from file_organizer.cli.main import app
 
         runner = CliRunner()
@@ -1359,23 +1389,33 @@ class TestDoctorCommandRegistration:
 
     def test_doctor_command_has_install_option(self):
         """Doctor command has the --install option."""
+        import re
+
         from typer.testing import CliRunner
+
         from file_organizer.cli.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["doctor", "--help"])
         assert result.exit_code == 0
-        assert "--install" in result.output
+        # Strip ANSI escape codes before checking — Rich adds formatting
+        clean = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--install" in clean
 
     def test_doctor_command_has_json_option(self):
         """Doctor command has the --json option."""
+        import re
+
         from typer.testing import CliRunner
+
         from file_organizer.cli.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["doctor", "--help"])
         assert result.exit_code == 0
-        assert "--json" in result.output
+        # Strip ANSI escape codes before checking — Rich adds formatting
+        clean = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--json" in clean
 
 
 @pytest.mark.unit
@@ -1388,15 +1428,13 @@ class TestNormalizedExtensionBoundaries:
         assert _normalized_extension(path) == ".h"
 
     def test_only_dot_prefix(self):
-        """A dotfile with no further extension returns empty string."""
+        """A dotfile with no further extension returns empty or dotfile suffix."""
         # A file like ".gitignore" - the dot is part of the name, not extension
         path = Path(".gitignore")
-        # .gitignore has suffixes=['.gitignore'] in some Python versions
-        # but Path(".gitignore").suffix == '' and Path(".gitignore").suffixes == ['.gitignore']
-        # The function normalizes this to lowercase
         result = _normalized_extension(path)
-        # Check it doesn't crash and returns a string
-        assert isinstance(result, str)
+        # Path(".gitignore").suffix returns "" or ".gitignore" depending on Python version
+        # Either way, the result should be a lowercase string
+        assert result == "" or result == ".gitignore"
 
     def test_extension_with_numbers(self):
         """_normalized_extension handles extensions with numbers."""
@@ -1507,10 +1545,10 @@ class TestInstallGroupsEdgeCases:
 class TestScanDirectoryEdgeCases:
     """Additional edge cases for scan_directory."""
 
-    def test_scan_directory_returns_dict(self, tmp_path):
-        """scan_directory always returns a dict."""
+    def test_scan_directory_returns_empty_for_empty_dir(self, tmp_path):
+        """scan_directory returns empty dict for empty directory."""
         result = scan_directory(tmp_path)
-        assert isinstance(result, dict)
+        assert result == {}
 
     def test_scan_counts_are_positive_integers(self, tmp_path):
         """All counts in scan_directory result are positive integers."""

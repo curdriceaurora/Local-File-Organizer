@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from file_organizer.cli.doctor import (
     DEPENDENCY_CHECK_PACKAGES,
     EXTENSION_REGISTRY,
@@ -17,7 +15,6 @@ from file_organizer.cli.doctor import (
     is_group_installed,
     scan_directory,
 )
-
 
 # -----------------------------------------------------------------------
 # Extension Registry Tests
@@ -56,9 +53,7 @@ def test_extension_registry_scientific_formats():
     """Scientific data formats map to scientific group."""
     scientific_extensions = [".hdf5", ".h5", ".nc", ".mat"]
     for ext in scientific_extensions:
-        assert (
-            EXTENSION_REGISTRY[ext] == "scientific"
-        ), f"{ext} should map to scientific group"
+        assert EXTENSION_REGISTRY[ext] == "scientific", f"{ext} should map to scientific group"
 
 
 def test_extension_registry_cad_formats():
