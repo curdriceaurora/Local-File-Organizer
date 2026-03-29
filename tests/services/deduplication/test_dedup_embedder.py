@@ -210,9 +210,9 @@ class TestTransform:
         import logging
 
         embedder.is_fitted = True
-        with caplog.at_level(
-            logging.DEBUG, logger="file_organizer.services.deduplication.embedder"
-        ):
+        embedder_logger = logging.getLogger("file_organizer.services.deduplication.embedder")
+        embedder_logger.propagate = True
+        with caplog.at_level(logging.DEBUG):
             embedder.transform("cache test doc")  # populates cache
             embedder.transform("cache test doc")  # hits cache → executes logger.debug
         assert "Cache hit" in caplog.text

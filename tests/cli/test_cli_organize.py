@@ -18,6 +18,16 @@ pytestmark = [pytest.mark.unit]
 
 runner = CliRunner()
 
+# Auto-mock the setup gate so tests don't require a completed setup wizard.
+_SETUP_PATCH = "file_organizer.cli.organize._check_setup_completed"
+
+
+@pytest.fixture(autouse=True)
+def _bypass_setup_check():
+    """Bypass the setup-completed gate for all tests in this module."""
+    with patch(_SETUP_PATCH, return_value=True):
+        yield
+
 
 def _mock_result(
     total: int = 10,

@@ -175,7 +175,16 @@ async def test_undo_history_view_mounts() -> None:
     """UndoHistoryView should mount and render panels."""
     from file_organizer.tui.app import FileOrganizerApp
 
-    with patch.object(UndoHistoryView, "_load_history"):
+    mock_config = MagicMock()
+    mock_config.setup_completed = True
+
+    mock_cm = MagicMock()
+    mock_cm.load.return_value = mock_config
+
+    with (
+        patch("file_organizer.tui.app.ConfigManager", return_value=mock_cm),
+        patch.object(UndoHistoryView, "_load_history"),
+    ):
         app = FileOrganizerApp()
         async with app.run_test() as pilot:
             await app.action_switch_view("history")
