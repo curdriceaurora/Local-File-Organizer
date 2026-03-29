@@ -6,6 +6,7 @@ which optional dependency groups should be installed based on detected file type
 
 import importlib.util
 import json
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +20,10 @@ import file_organizer.cli._globals as _g
 from file_organizer.cli.interactive import confirm_action
 from file_organizer.utils import is_hidden
 
+logger = logging.getLogger(__name__)
 console = Console()
+
+_INSTALL_TIMEOUT_SECONDS = 300
 
 # Extension-to-group registry mapping file extensions to optional dependency groups
 EXTENSION_REGISTRY: dict[str, str] = {
@@ -96,7 +100,8 @@ def is_group_installed(group: str) -> bool:
 
     try:
         spec = importlib.util.find_spec(package_name)
-    except (ModuleNotFoundError, ValueError):
+    except (ModuleNotFoundError, ValueError) as exc:
+        logger.debug("find_spec(%r) failed: %s", package_name, exc)
         return False
     return spec is not None
 
@@ -161,8 +166,15 @@ def scan_directory(directory: Path) -> dict[str, int]:
         Dictionary mapping file extensions to counts
     """
     extension_counts: dict[str, int] = {}
+    skipped = 0
 
-    for item in directory.rglob("*"):
+    try:
+        entries = directory.rglob("*")
+    except (OSError, PermissionError) as exc:
+        logger.error("Cannot scan directory %s: %s", directory, exc)
+        return extension_counts
+
+    for item in entries:
         try:
             if item.is_symlink():
                 continue
@@ -170,7 +182,9 @@ def scan_directory(directory: Path) -> dict[str, int]:
                 continue
             if not item.is_file():
                 continue
-        except (OSError, PermissionError):
+        except (OSError, PermissionError) as exc:
+            logger.debug("Skipping %s: %s", item, exc)
+            skipped += 1
             continue
 
         ext = _normalized_extension(item)
@@ -178,6 +192,9 @@ def scan_directory(directory: Path) -> dict[str, int]:
             extension_counts[ext] = extension_counts.get(ext, 0) + 1
         else:
             extension_counts[""] = extension_counts.get("", 0) + 1
+
+    if skipped:
+        logger.warning("Skipped %d entries due to filesystem errors", skipped)
 
     return extension_counts
 
@@ -250,7 +267,7 @@ def _install_single_group(group: str) -> bool:
             check=False,
             capture_output=False,
             text=True,
-            timeout=300,
+            timeout=_INSTALL_TIMEOUT_SECONDS,
         )
 
         if result.returncode == 0:
@@ -274,7 +291,7 @@ def install_groups(groups: set[str]) -> None:
     Prompts the user for confirmation before installing.
     Respects the global ``_g.dry_run`` flag to skip actual installation.
     Handles subprocess failures and timeouts gracefully and continues with
-    remaining groups.  Each install has a 300-second timeout.
+    remaining groups.  Each install has a timeout (see ``_INSTALL_TIMEOUT_SECONDS``).
 
     Args:
         groups: Set of dependency group names to install

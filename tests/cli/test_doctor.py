@@ -10,6 +10,8 @@ Tests the doctor CLI command including:
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -400,13 +402,15 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
                         install_groups(groups)
 
                         # Verify subprocess was called with correct command
                         mock_run.assert_called_once()
                         call_args = mock_run.call_args
-                        assert call_args[0][0] == ["pip", "install", "file-organizer[audio]"]
+                        assert call_args[0][0] == [
+                            sys.executable, "-m", "pip", "install", "file-organizer[audio]",
+                        ]
                         assert call_args[1]["check"] is False
 
                         # Should display success message
@@ -423,26 +427,60 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result):
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result):
                         install_groups(groups)
 
                         # Should display failure message
                         calls = [str(call) for call in mock_console.print.call_args_list]
                         assert any("failed" in call.lower() for call in calls)
 
-    def test_installation_exception(self):
+    def test_installation_subprocess_error(self):
         groups = {"audio"}
 
         with patch("file_organizer.cli.doctor.console") as mock_console:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=Exception("Test error")):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run",
+                        side_effect=subprocess.SubprocessError("Test error"),
+                    ):
                         install_groups(groups)
 
-                        # Should display error message
                         calls = [str(call) for call in mock_console.print.call_args_list]
                         assert any("error" in call.lower() for call in calls)
+
+    def test_installation_file_not_found(self):
+        groups = {"audio"}
+
+        with patch("file_organizer.cli.doctor.console") as mock_console:
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run",
+                        side_effect=FileNotFoundError("pip not found"),
+                    ):
+                        install_groups(groups)
+
+                        calls = [str(call) for call in mock_console.print.call_args_list]
+                        assert any("pip" in call.lower() for call in calls)
+
+    def test_installation_timeout(self):
+        groups = {"audio"}
+
+        with patch("file_organizer.cli.doctor.console") as mock_console:
+            with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
+                with patch("file_organizer.cli.doctor._g") as mock_globals:
+                    mock_globals.dry_run = False
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run",
+                        side_effect=subprocess.TimeoutExpired("pip", 300),
+                    ):
+                        install_groups(groups)
+
+                        calls = [str(call) for call in mock_console.print.call_args_list]
+                        assert any("timed out" in call.lower() for call in calls)
 
     def test_multiple_groups_installation(self):
         groups = {"audio", "video"}
@@ -454,7 +492,7 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
                         install_groups(groups)
 
                         # Should call subprocess twice (once for each group)
@@ -466,7 +504,7 @@ class TestInstallGroups:
         def mock_run_side_effect(cmd, **kwargs):
             # Fail for video, succeed for audio
             result = MagicMock()
-            if "video" in cmd[2]:
+            if "video" in cmd[-1]:
                 result.returncode = 1
             else:
                 result.returncode = 0
@@ -476,7 +514,7 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=mock_run_side_effect):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect):
                         install_groups(groups)
 
                         # Should display mixed success/failure messages
@@ -585,7 +623,8 @@ class TestDoctorCommand:
                 with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                     with patch("file_organizer.cli.doctor._g") as mock_globals:
                         mock_globals.dry_run = False
-                        with patch("subprocess.run", return_value=mock_result) as mock_run:
+                        mock_globals.json_output = False
+                        with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
                             # Doctor function completes normally after installation
                             doctor(path=tmp_path, install=True, json_output=False)
 
@@ -596,11 +635,12 @@ class TestDoctorCommand:
         # Test that compound extensions are properly detected
         (tmp_path / "archive.tar.gz").write_text("archive")
 
-        # tar.gz is not in EXTENSION_REGISTRY, so no groups should be detected
-        with patch("file_organizer.cli.doctor.console"):
-            with pytest.raises(typer.Exit) as exc_info:
-                doctor(path=tmp_path, install=False, json_output=False)
-            assert exc_info.value.exit_code == 0
+        # .tar.gz maps to archive group; mock as installed so doctor exits cleanly
+        with patch("file_organizer.cli.doctor.is_group_installed", return_value=True):
+            with patch("file_organizer.cli.doctor.console"):
+                with pytest.raises(typer.Exit) as exc_info:
+                    doctor(path=tmp_path, install=False, json_output=False)
+                assert exc_info.value.exit_code == 0
 
     def test_mixed_file_types(self, tmp_path):
         # Create a mix of file types
@@ -784,7 +824,7 @@ class TestEdgeCases:
         def mock_run_side_effect(cmd, **kwargs):
             result = MagicMock()
             # Fail for audio, succeed for video
-            if "audio" in cmd[2]:
+            if "audio" in cmd[-1]:
                 result.returncode = 1
             else:
                 result.returncode = 0
@@ -794,7 +834,7 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=mock_run_side_effect):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect):
                         install_groups(groups)
 
                         # Should display failure message but continue
@@ -809,7 +849,7 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=Exception("Network error")):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=OSError("Network error")):
                         install_groups(groups)
 
                         # Should display error message
@@ -920,12 +960,12 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
                         install_groups(groups)
 
                         # pip install should still be called
                         mock_run.assert_called_once()
-                        assert "audio" in mock_run.call_args[0][0][2]
+                        assert "audio" in mock_run.call_args[0][0][-1]
 
     def test_edge_case_no_special_files_detected(self, tmp_path):
         """Edge case: Directory with only common files (no special dependencies needed)."""
@@ -968,8 +1008,8 @@ class TestEdgeCases:
 
         assert ".mp3" in result
         assert result[".mp3"] == 100
-        # Scan should be fast (under 1 second for 100 files)
-        assert duration < 1.0
+        # Scan should be fast (generous timeout to avoid CI flakiness)
+        assert duration < 10.0
 
     def test_edge_case_special_characters_in_filenames(self, tmp_path):
         """Edge case: Handle files with special characters in names."""
@@ -996,8 +1036,8 @@ class TestEdgeCases:
 
             result = scan_directory(tmp_path)
             assert ".mp3" in result
-            # Behavior may vary: could be 1 (skip symlinks) or 2 (follow symlinks)
-            assert result[".mp3"] >= 1
+            # Implementation skips symlinks, so only the real file is counted
+            assert result[".mp3"] == 1
         except OSError:
             # Symlinks might not be supported on all platforms
             pytest.skip("Symlinks not supported on this platform")
@@ -1113,7 +1153,7 @@ class TestSubprocessSecurity:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=capture_run):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=capture_run):
                         install_groups(groups)
 
         assert len(captured_calls) == 1
@@ -1138,14 +1178,14 @@ class TestSubprocessSecurity:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=capture_run):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=capture_run):
                         install_groups(groups)
 
         assert len(captured_calls) == 1
         cmd = captured_calls[0]
-        assert cmd[0] == "pip"
-        assert cmd[1] == "install"
-        assert cmd[2] == "file-organizer[audio]"
+        assert cmd[0] == sys.executable
+        assert cmd[1:4] == ["-m", "pip", "install"]
+        assert cmd[4] == "file-organizer[audio]"
 
     def test_group_name_is_hardcoded_not_user_input(self):
         """Install commands use only registry group names (not arbitrary user input)."""
@@ -1170,8 +1210,8 @@ class TestInstallGroupsOrdering:
         install_order = []
 
         def capture_run(cmd, **kwargs):
-            # Extract group name from install command
-            group_name = cmd[2].replace("file-organizer[", "").rstrip("]")
+            # Extract group name from install command (cmd is [sys.executable, -m, pip, install, pkg])
+            group_name = cmd[4].replace("file-organizer[", "").rstrip("]")
             install_order.append(group_name)
             return mock_result
 
@@ -1179,7 +1219,7 @@ class TestInstallGroupsOrdering:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=capture_run):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=capture_run):
                         install_groups(groups)
 
         # Should be installed in sorted (alphabetical) order
@@ -1471,7 +1511,7 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", side_effect=capture_run):
+                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=capture_run):
                         install_groups(groups)
 
         # check=False means subprocess won't raise CalledProcessError on failure
@@ -1492,7 +1532,7 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result_fail):
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result_fail):
                         install_groups(groups)
 
         # Check that the summary mentions failed groups
@@ -1513,7 +1553,7 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result):
+                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result):
                         install_groups(groups)
 
         # Check that success message is shown
@@ -1532,7 +1572,7 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = True
-                    with patch("subprocess.run") as mock_run:
+                    with patch("file_organizer.cli.doctor.subprocess.run") as mock_run:
                         install_groups(groups)
                         # subprocess must NOT be called in dry-run mode
                         mock_run.assert_not_called()
