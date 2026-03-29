@@ -171,7 +171,7 @@ def scan_directory(directory: Path) -> dict[str, int]:
     try:
         entries = directory.rglob("*")
     except (OSError, PermissionError) as exc:
-        logger.error("Cannot scan directory %s: %s", directory, exc)
+        logger.error("Cannot scan directory %s: %s", directory, exc, exc_info=True)
         return extension_counts
 
     for item in entries:
@@ -437,13 +437,15 @@ def doctor(
         is_installed = is_group_installed(group)
         prerequisites = SYSTEM_PREREQUISITES.get(group, [])
 
-        groups_info.append({
-            "group": group,
-            "files_found": file_count,
-            "installed": is_installed,
-            "install_command": f"pip install file-organizer[{group}]",
-            "prerequisites": prerequisites,
-        })
+        groups_info.append(
+            {
+                "group": group,
+                "files_found": file_count,
+                "installed": is_installed,
+                "install_command": f"pip install file-organizer[{group}]",
+                "prerequisites": prerequisites,
+            }
+        )
 
     if json_output:
         result = {
@@ -462,9 +464,7 @@ def doctor(
     display_recommendations(extension_counts, detected_groups)
 
     if not missing_groups:
-        console.print(
-            "\n[green]✓ All recommended dependency groups are already installed![/green]"
-        )
+        console.print("\n[green]✓ All recommended dependency groups are already installed![/green]")
         raise typer.Exit(code=0)
 
     # Install if requested
@@ -475,6 +475,4 @@ def doctor(
         console.print(
             f"\n[yellow]Found {len(missing_groups)} missing dependency group(s).[/yellow]"
         )
-        console.print(
-            "[dim]Run with --install flag to install them automatically.[/dim]"
-        )
+        console.print("[dim]Run with --install flag to install them automatically.[/dim]")

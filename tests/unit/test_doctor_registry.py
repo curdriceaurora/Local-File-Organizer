@@ -44,7 +44,7 @@ def test_extension_registry_parser_formats():
 
 def test_extension_registry_archive_formats():
     """Archive formats map to archive group."""
-    archive_extensions = [".7z", ".rar"]
+    archive_extensions = [".7z", ".rar", ".tar.gz", ".tar.bz2"]
     for ext in archive_extensions:
         assert EXTENSION_REGISTRY[ext] == "archive", f"{ext} should map to archive group"
 

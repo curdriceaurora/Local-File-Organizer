@@ -402,14 +402,20 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                    ) as mock_run:
                         install_groups(groups)
 
                         # Verify subprocess was called with correct command
                         mock_run.assert_called_once()
                         call_args = mock_run.call_args
                         assert call_args[0][0] == [
-                            sys.executable, "-m", "pip", "install", "file-organizer[audio]",
+                            sys.executable,
+                            "-m",
+                            "pip",
+                            "install",
+                            "file-organizer[audio]",
                         ]
                         assert call_args[1]["check"] is False
 
@@ -427,7 +433,9 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                    ):
                         install_groups(groups)
 
                         # Should display failure message
@@ -492,7 +500,9 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                    ) as mock_run:
                         install_groups(groups)
 
                         # Should call subprocess twice (once for each group)
@@ -514,7 +524,9 @@ class TestInstallGroups:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect
+                    ):
                         install_groups(groups)
 
                         # Should display mixed success/failure messages
@@ -624,7 +636,9 @@ class TestDoctorCommand:
                     with patch("file_organizer.cli.doctor._g") as mock_globals:
                         mock_globals.dry_run = False
                         mock_globals.json_output = False
-                        with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
+                        with patch(
+                            "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                        ) as mock_run:
                             # Doctor function completes normally after installation
                             doctor(path=tmp_path, install=True, json_output=False)
 
@@ -834,7 +848,9 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", side_effect=mock_run_side_effect
+                    ):
                         install_groups(groups)
 
                         # Should display failure message but continue
@@ -849,7 +865,10 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", side_effect=OSError("Network error")):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run",
+                        side_effect=OSError("Network error"),
+                    ):
                         install_groups(groups)
 
                         # Should display error message
@@ -960,7 +979,9 @@ class TestEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result) as mock_run:
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                    ) as mock_run:
                         install_groups(groups)
 
                         # pip install should still be called
@@ -1532,7 +1553,9 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result_fail):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result_fail
+                    ):
                         install_groups(groups)
 
         # Check that the summary mentions failed groups
@@ -1553,7 +1576,9 @@ class TestInstallGroupsEdgeCases:
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("file_organizer.cli.doctor._g") as mock_globals:
                     mock_globals.dry_run = False
-                    with patch("file_organizer.cli.doctor.subprocess.run", return_value=mock_result):
+                    with patch(
+                        "file_organizer.cli.doctor.subprocess.run", return_value=mock_result
+                    ):
                         install_groups(groups)
 
         # Check that success message is shown
