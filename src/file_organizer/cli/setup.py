@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typer
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -14,7 +13,7 @@ setup_app = typer.Typer(help="Interactive setup wizard for first-run configurati
 
 
 @setup_app.command(name="run")
-def setup_run(
+def setup_run(  # noqa: C901
     mode: str = typer.Option(
         "quick-start",
         "--mode",
@@ -38,9 +37,7 @@ def setup_run(
         raise typer.Exit(code=1)
 
     # Convert to enum
-    wizard_mode = (
-        WizardMode.QUICK_START if mode == "quick-start" else WizardMode.POWER_USER
-    )
+    wizard_mode = WizardMode.QUICK_START if mode == "quick-start" else WizardMode.POWER_USER
 
     # Display welcome message
     console.print()
@@ -96,15 +93,11 @@ def setup_run(
 
             console.print(model_table)
     elif capabilities.ollama_status.installed:
-        console.print(
-            "[yellow]\u26A0[/yellow] Ollama is installed but not running"
-        )
+        console.print("[yellow]\u26a0[/yellow] Ollama is installed but not running")
         console.print("  Start it with: [bold]ollama serve[/bold]")
     else:
-        console.print("[yellow]\u26A0[/yellow] Ollama is not installed")
-        console.print(
-            "  Install from: [bold]https://ollama.ai[/bold]"
-        )
+        console.print("[yellow]\u26a0[/yellow] Ollama is not installed")
+        console.print("  Install from: [bold]https://ollama.ai[/bold]")
 
     console.print()
 
@@ -133,12 +126,12 @@ def setup_run(
             elif model_choices:
                 selected_model = model_choices[0]
                 console.print(
-                    f"[yellow]\u26A0[/yellow] Recommended model '{recommended}' not found, using: [bold]{selected_model}[/bold]"
+                    f"[yellow]\u26a0[/yellow] Recommended model '{recommended}' not found, using: [bold]{selected_model}[/bold]"
                 )
             else:
                 selected_model = recommended
                 console.print(
-                    f"[yellow]\u26A0[/yellow] No models installed, will use: [bold]{selected_model}[/bold]"
+                    f"[yellow]\u26a0[/yellow] No models installed, will use: [bold]{selected_model}[/bold]"
                 )
 
             custom_settings["text_model"] = selected_model
@@ -146,7 +139,7 @@ def setup_run(
             # No models installed - use recommended anyway
             custom_settings["text_model"] = recommended
             console.print(
-                f"[yellow]\u26A0[/yellow] No models installed, will use: [bold]{recommended}[/bold]"
+                f"[yellow]\u26a0[/yellow] No models installed, will use: [bold]{recommended}[/bold]"
             )
 
         # Use sensible defaults
@@ -154,12 +147,8 @@ def setup_run(
         custom_settings["temperature"] = 0.5
         custom_settings["profile_name"] = profile
 
-        console.print(
-            "[green]\u2713[/green] Using default methodology: [bold]none[/bold]"
-        )
-        console.print(
-            "[green]\u2713[/green] Using default temperature: [bold]0.5[/bold]"
-        )
+        console.print("[green]\u2713[/green] Using default methodology: [bold]none[/bold]")
+        console.print("[green]\u2713[/green] Using default temperature: [bold]0.5[/bold]")
         console.print()
 
     elif wizard_mode == WizardMode.POWER_USER:
@@ -256,9 +245,7 @@ def setup_run(
     else:
         if confirm_action("Save this configuration?", default=True):
             wizard.save_config(config, profile)
-            console.print(
-                f"[green]\u2713[/green] Configuration saved to profile '{profile}'"
-            )
+            console.print(f"[green]\u2713[/green] Configuration saved to profile '{profile}'")
             console.print()
             console.print(
                 Panel.fit(

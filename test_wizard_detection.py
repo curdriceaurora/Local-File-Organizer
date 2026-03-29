@@ -8,7 +8,7 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen
+from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen  # noqa: E402
 
 
 def test_wizard_initialization():
@@ -137,11 +137,13 @@ def main():
     except AssertionError as e:
         print(f"\n✗ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
     except Exception as e:
         print(f"\n✗ Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

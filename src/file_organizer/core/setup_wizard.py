@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
@@ -260,17 +259,13 @@ class SetupWizard:
                 self.detect_capabilities()
 
             if self.capabilities and not self.capabilities.ollama_status.running:
-                errors.append(
-                    "Ollama framework selected but Ollama service is not running"
-                )
+                errors.append("Ollama framework selected but Ollama service is not running")
 
         # Validate model availability
         if self.capabilities and self.capabilities.ollama_status.running:
             available_models = {m.name for m in self.capabilities.installed_models}
             if config.models.text_model not in available_models:
-                errors.append(
-                    f"Selected text model '{config.models.text_model}' is not installed"
-                )
+                errors.append(f"Selected text model '{config.models.text_model}' is not installed")
 
         # Validate temperature range
         if not 0.0 <= config.models.temperature <= 1.0:
@@ -336,9 +331,7 @@ class SetupWizard:
                     "Ollama is installed but not running. Start it with: ollama serve"
                 )
             else:
-                result.warnings.append(
-                    "Ollama not detected. Install from: https://ollama.ai"
-                )
+                result.warnings.append("Ollama not detected. Install from: https://ollama.ai")
 
             # Step 2: Generate configuration
             result.messages.append("Generating configuration...")

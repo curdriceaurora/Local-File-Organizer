@@ -245,8 +245,6 @@ class FileOrganizerApp(App[None]):
         Saves configuration with setup_completed=True, removes the wizard
         view, and mounts the main application layout.
         """
-        from file_organizer.core.setup_wizard import SetupWizard, WizardMode
-
         try:
             # Load or create config and mark setup as complete
             config = self._config_manager.load()

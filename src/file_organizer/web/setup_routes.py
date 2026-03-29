@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from loguru import logger
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -21,7 +20,7 @@ from file_organizer.web._helpers import base_context, templates
 setup_router = APIRouter(tags=["web"])
 
 
-@setup_router.get("/ui/setup", response_class=HTMLResponse)
+@setup_router.get("/setup", response_class=HTMLResponse)
 def setup_wizard(
     request: Request,
     settings: ApiSettings = Depends(get_settings),

@@ -1,20 +1,19 @@
 """Unit tests for setup_wizard module."""
+
 from __future__ import annotations
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import Mock, patch
 
-from file_organizer.core.setup_wizard import (
-    SetupWizard,
-    WizardMode,
-    SetupStatus,
-    WizardResult,
-    SystemCapabilities,
-)
-from file_organizer.core.backend_detector import OllamaStatus, InstalledModel
-from file_organizer.core.hardware_profile import HardwareProfile, GpuType
 from file_organizer.config.schema import AppConfig
+from file_organizer.core.backend_detector import InstalledModel, OllamaStatus
+from file_organizer.core.hardware_profile import GpuType, HardwareProfile
+from file_organizer.core.setup_wizard import (
+    SetupStatus,
+    SetupWizard,
+    SystemCapabilities,
+    WizardMode,
+    WizardResult,
+)
 
 
 class TestSetupWizardInitialization:
@@ -41,9 +40,9 @@ class TestSetupWizardInitialization:
 class TestDetectCapabilities:
     """Tests for detect_capabilities() method."""
 
-    @patch('file_organizer.core.setup_wizard.list_installed_models')
-    @patch('file_organizer.core.setup_wizard.detect_ollama')
-    @patch('file_organizer.core.setup_wizard.detect_hardware')
+    @patch("file_organizer.core.setup_wizard.list_installed_models")
+    @patch("file_organizer.core.setup_wizard.detect_ollama")
+    @patch("file_organizer.core.setup_wizard.detect_hardware")
     def test_detect_capabilities_ollama_running(
         self, mock_detect_hw, mock_detect_ollama, mock_list_models
     ):
@@ -77,9 +76,9 @@ class TestDetectCapabilities:
         mock_detect_ollama.assert_called_once()
         mock_list_models.assert_called_once()
 
-    @patch('file_organizer.core.setup_wizard.list_installed_models')
-    @patch('file_organizer.core.setup_wizard.detect_ollama')
-    @patch('file_organizer.core.setup_wizard.detect_hardware')
+    @patch("file_organizer.core.setup_wizard.list_installed_models")
+    @patch("file_organizer.core.setup_wizard.detect_ollama")
+    @patch("file_organizer.core.setup_wizard.detect_hardware")
     def test_detect_capabilities_ollama_not_running(
         self, mock_detect_hw, mock_detect_ollama, mock_list_models
     ):
@@ -93,9 +92,9 @@ class TestDetectCapabilities:
         assert len(capabilities.installed_models) == 0
         mock_list_models.assert_not_called()  # Should not list models if not running
 
-    @patch('file_organizer.core.setup_wizard.list_installed_models')
-    @patch('file_organizer.core.setup_wizard.detect_ollama')
-    @patch('file_organizer.core.setup_wizard.detect_hardware')
+    @patch("file_organizer.core.setup_wizard.list_installed_models")
+    @patch("file_organizer.core.setup_wizard.detect_ollama")
+    @patch("file_organizer.core.setup_wizard.detect_hardware")
     def test_detect_capabilities_ollama_not_installed(
         self, mock_detect_hw, mock_detect_ollama, mock_list_models
     ):
@@ -123,7 +122,7 @@ class TestGenerateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=mock_hw,
             ollama_status=OllamaStatus(installed=True, running=True, models_count=1),
-            installed_models=[InstalledModel(name="qwen2.5:3b-instruct-q4_K_M")]
+            installed_models=[InstalledModel(name="qwen2.5:3b-instruct-q4_K_M")],
         )
 
         # Execute
@@ -144,14 +143,10 @@ class TestGenerateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=mock_hw,
             ollama_status=OllamaStatus(installed=True, running=True),
-            installed_models=[InstalledModel(name="llama2:13b")]
+            installed_models=[InstalledModel(name="llama2:13b")],
         )
 
-        custom_settings = {
-            "text_model": "llama2:13b",
-            "temperature": 0.8,
-            "max_tokens": 4096
-        }
+        custom_settings = {"text_model": "llama2:13b", "temperature": 0.8, "max_tokens": 4096}
 
         config = wizard.generate_config(custom_settings=custom_settings)
 
@@ -171,8 +166,8 @@ class TestGenerateConfig:
             ollama_status=OllamaStatus(installed=True, running=True),
             installed_models=[
                 InstalledModel(name="custom-model:latest"),
-                InstalledModel(name="another-model:7b")
-            ]
+                InstalledModel(name="another-model:7b"),
+            ],
         )
 
         config = wizard.generate_config()
@@ -180,9 +175,9 @@ class TestGenerateConfig:
         # Should use first available model since recommended not found
         assert config.models.text_model == "custom-model:latest"
 
-    @patch('file_organizer.core.setup_wizard.detect_hardware')
-    @patch('file_organizer.core.setup_wizard.detect_ollama')
-    @patch('file_organizer.core.setup_wizard.list_installed_models')
+    @patch("file_organizer.core.setup_wizard.detect_hardware")
+    @patch("file_organizer.core.setup_wizard.detect_ollama")
+    @patch("file_organizer.core.setup_wizard.list_installed_models")
     def test_generate_config_auto_detect_if_no_capabilities(
         self, mock_list_models, mock_detect_ollama, mock_detect_hw
     ):
@@ -215,7 +210,7 @@ class TestGenerateConfig:
             installed_models=[
                 InstalledModel(name="qwen2.5:7b-instruct-q4_K_M"),
                 InstalledModel(name="qwen2.5:3b-instruct-q4_K_M"),
-            ]
+            ],
         )
 
         config = wizard.generate_config()
@@ -235,7 +230,7 @@ class TestGenerateConfig:
             installed_models=[
                 InstalledModel(name="qwen2.5:3b-instruct-q4_K_M"),
                 InstalledModel(name="llama2:7b"),
-            ]
+            ],
         )
 
         config = wizard.generate_config()
@@ -251,7 +246,7 @@ class TestValidateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=Mock(spec=HardwareProfile),
             ollama_status=OllamaStatus(installed=True, running=True),
-            installed_models=[InstalledModel(name="qwen2.5:3b")]
+            installed_models=[InstalledModel(name="qwen2.5:3b")],
         )
 
         config = AppConfig()
@@ -269,7 +264,7 @@ class TestValidateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=Mock(spec=HardwareProfile),
             ollama_status=OllamaStatus(installed=False, running=False),
-            installed_models=[]
+            installed_models=[],
         )
 
         config = AppConfig()
@@ -286,7 +281,7 @@ class TestValidateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=Mock(spec=HardwareProfile),
             ollama_status=OllamaStatus(installed=True, running=True),
-            installed_models=[InstalledModel(name="llama2:7b")]
+            installed_models=[InstalledModel(name="llama2:7b")],
         )
 
         config = AppConfig()
@@ -302,7 +297,7 @@ class TestValidateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=Mock(spec=HardwareProfile),
             ollama_status=OllamaStatus(installed=True, running=True),
-            installed_models=[InstalledModel(name="qwen2.5:3b")]
+            installed_models=[InstalledModel(name="qwen2.5:3b")],
         )
 
         config = AppConfig()
@@ -319,7 +314,7 @@ class TestValidateConfig:
         wizard.capabilities = SystemCapabilities(
             hardware=Mock(spec=HardwareProfile),
             ollama_status=OllamaStatus(installed=True, running=True),
-            installed_models=[InstalledModel(name="qwen2.5:3b")]
+            installed_models=[InstalledModel(name="qwen2.5:3b")],
         )
 
         config = AppConfig()
@@ -331,9 +326,9 @@ class TestValidateConfig:
         assert is_valid is False
         assert any("max_tokens" in err for err in errors)
 
-    @patch('file_organizer.core.setup_wizard.detect_hardware')
-    @patch('file_organizer.core.setup_wizard.detect_ollama')
-    @patch('file_organizer.core.setup_wizard.list_installed_models')
+    @patch("file_organizer.core.setup_wizard.detect_hardware")
+    @patch("file_organizer.core.setup_wizard.detect_ollama")
+    @patch("file_organizer.core.setup_wizard.list_installed_models")
     def test_validate_config_auto_detects_if_no_capabilities(
         self, mock_list_models, mock_detect_ollama, mock_detect_hw
     ):
@@ -381,13 +376,11 @@ class TestSaveConfig:
 class TestWizardRun:
     """Tests for run() method - full wizard flow."""
 
-    @patch.object(SetupWizard, 'save_config')
-    @patch.object(SetupWizard, 'validate_config')
-    @patch.object(SetupWizard, 'generate_config')
-    @patch.object(SetupWizard, 'detect_capabilities')
-    def test_run_quick_start_success(
-        self, mock_detect, mock_generate, mock_validate, mock_save
-    ):
+    @patch.object(SetupWizard, "save_config")
+    @patch.object(SetupWizard, "validate_config")
+    @patch.object(SetupWizard, "generate_config")
+    @patch.object(SetupWizard, "detect_capabilities")
+    def test_run_quick_start_success(self, mock_detect, mock_generate, mock_validate, mock_save):
         # Setup mocks
         mock_hw = Mock(spec=HardwareProfile)
         mock_hw.gpu_type = GpuType.NVIDIA
@@ -422,7 +415,7 @@ class TestWizardRun:
         mock_validate.assert_called_once()
         mock_save.assert_called_once()
 
-    @patch.object(SetupWizard, 'detect_capabilities')
+    @patch.object(SetupWizard, "detect_capabilities")
     def test_run_ollama_not_installed(self, mock_detect):
         mock_hw = Mock(spec=HardwareProfile)
         mock_hw.gpu_type = GpuType.NONE
@@ -442,12 +435,10 @@ class TestWizardRun:
         assert len(result.warnings) > 0
         assert any("Ollama" in w for w in result.warnings)
 
-    @patch.object(SetupWizard, 'validate_config')
-    @patch.object(SetupWizard, 'generate_config')
-    @patch.object(SetupWizard, 'detect_capabilities')
-    def test_run_validation_fails(
-        self, mock_detect, mock_generate, mock_validate
-    ):
+    @patch.object(SetupWizard, "validate_config")
+    @patch.object(SetupWizard, "generate_config")
+    @patch.object(SetupWizard, "detect_capabilities")
+    def test_run_validation_fails(self, mock_detect, mock_generate, mock_validate):
         mock_hw = Mock(spec=HardwareProfile)
         mock_hw.gpu_type = GpuType.NVIDIA
         mock_hw.ram_gb = 16.0
@@ -471,7 +462,7 @@ class TestWizardRun:
         assert len(result.errors) == 2
         assert wizard.status == SetupStatus.FAILED
 
-    @patch.object(SetupWizard, 'detect_capabilities')
+    @patch.object(SetupWizard, "detect_capabilities")
     def test_run_handles_exception(self, mock_detect):
         mock_detect.side_effect = Exception("Hardware detection failed")
 
@@ -482,10 +473,10 @@ class TestWizardRun:
         assert len(result.errors) > 0
         assert wizard.status == SetupStatus.FAILED
 
-    @patch.object(SetupWizard, 'save_config')
-    @patch.object(SetupWizard, 'validate_config')
-    @patch.object(SetupWizard, 'generate_config')
-    @patch.object(SetupWizard, 'detect_capabilities')
+    @patch.object(SetupWizard, "save_config")
+    @patch.object(SetupWizard, "validate_config")
+    @patch.object(SetupWizard, "generate_config")
+    @patch.object(SetupWizard, "detect_capabilities")
     def test_run_with_custom_settings_power_user(
         self, mock_detect, mock_generate, mock_validate, mock_save
     ):
@@ -512,12 +503,10 @@ class TestWizardRun:
         assert result.success is True
         mock_generate.assert_called_once_with(mock_capabilities, custom_settings)
 
-    @patch.object(SetupWizard, 'validate_config')
-    @patch.object(SetupWizard, 'generate_config')
-    @patch.object(SetupWizard, 'detect_capabilities')
-    def test_run_no_auto_save(
-        self, mock_detect, mock_generate, mock_validate
-    ):
+    @patch.object(SetupWizard, "validate_config")
+    @patch.object(SetupWizard, "generate_config")
+    @patch.object(SetupWizard, "detect_capabilities")
+    def test_run_no_auto_save(self, mock_detect, mock_generate, mock_validate):
         """When auto_save=False, config should not be saved."""
         mock_hw = Mock(spec=HardwareProfile)
         mock_hw.gpu_type = GpuType.NVIDIA
@@ -580,9 +569,7 @@ class TestWizardResult:
     def test_success_result(self):
         config = Mock(spec=AppConfig)
         result = WizardResult(
-            success=True,
-            config=config,
-            messages=["Setup completed successfully"]
+            success=True, config=config, messages=["Setup completed successfully"]
         )
 
         assert result.success is True
@@ -590,20 +577,14 @@ class TestWizardResult:
         assert len(result.errors) == 0
 
     def test_failure_result(self):
-        result = WizardResult(
-            success=False,
-            errors=["Ollama not installed", "No models available"]
-        )
+        result = WizardResult(success=False, errors=["Ollama not installed", "No models available"])
 
         assert result.success is False
         assert len(result.errors) == 2
         assert result.config is None
 
     def test_result_with_warnings(self):
-        result = WizardResult(
-            success=True,
-            warnings=["Ollama not running", "Limited VRAM"]
-        )
+        result = WizardResult(success=True, warnings=["Ollama not running", "Limited VRAM"])
 
         assert result.success is True
         assert len(result.warnings) == 2

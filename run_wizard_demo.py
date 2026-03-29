@@ -8,11 +8,11 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
-from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.widgets import Footer, Header
+from textual.app import App, ComposeResult  # noqa: E402
+from textual.binding import Binding  # noqa: E402
+from textual.widgets import Footer, Header  # noqa: E402
 
-from file_organizer.tui.setup_wizard_view import SetupWizardView
+from file_organizer.tui.setup_wizard_view import SetupWizardView  # noqa: E402
 
 
 class WizardDemoApp(App[None]):

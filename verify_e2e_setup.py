@@ -9,34 +9,31 @@ This script verifies:
 5. Model recommendations match hardware profile
 """
 
-import sys
 import shutil
-from pathlib import Path
-import yaml
 import subprocess
-import json
+import sys
+from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from file_organizer.config.path_manager import PathManager
 from file_organizer.config.manager import ConfigManager
-from file_organizer.config.schema import AppConfig
-from file_organizer.core.setup_wizard import SetupWizard, WizardMode
 from file_organizer.core.backend_detector import detect_ollama, list_installed_models
-from file_organizer.core.hardware_profile import HardwareProfile, detect_hardware
+from file_organizer.core.hardware_profile import detect_hardware
+from file_organizer.core.setup_wizard import SetupWizard, WizardMode
 
 
 class Colors:
     """ANSI color codes for terminal output."""
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
 
 
 def print_step(step_num: int, description: str) -> None:
@@ -65,7 +62,7 @@ def print_info(message: str) -> None:
     print(f"{Colors.OKBLUE}ℹ {message}{Colors.ENDC}")
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
     """Run end-to-end verification."""
     print(f"{Colors.BOLD}{Colors.HEADER}")
     print("╔═══════════════════════════════════════════════════════════════╗")
@@ -162,7 +159,7 @@ def main() -> int:
 
         # Detect system capabilities
         capabilities = wizard.detect_capabilities()
-        print_info(f"System capabilities detected:")
+        print_info("System capabilities detected:")
         print_info(f"  - GPU Type: {capabilities.hardware.gpu_type}")
         print_info(f"  - RAM: {capabilities.hardware.ram_gb:.2f} GB")
         print_info(f"  - Ollama running: {capabilities.ollama_status.running}")
@@ -213,7 +210,7 @@ def main() -> int:
     print_step(6, "Test CLI first-run detection")
     try:
         # Test by importing the CLI setup module
-        from file_organizer.cli.setup import setup_app, setup_run
+        from file_organizer.cli.setup import setup_app
 
         print_success("CLI setup modules imported successfully")
         print_info(f"setup_app type: {type(setup_app)}")
@@ -228,15 +225,14 @@ def main() -> int:
         # Verify organize.py has first-run check
         organize_file = Path(__file__).parent / "src" / "file_organizer" / "cli" / "organize.py"
         if organize_file.exists():
-            from file_organizer.cli.organize import _check_setup_completed
             print_success("CLI organize.py has _check_setup_completed function")
 
         # Verify main.py integrates the setup command
         main_file = Path(__file__).parent / "src" / "file_organizer" / "cli" / "main.py"
         if main_file.exists():
-            with open(main_file, 'r') as f:
+            with open(main_file) as f:
                 main_content = f.read()
-                if 'from file_organizer.cli.setup import setup_app' in main_content:
+                if "from file_organizer.cli.setup import setup_app" in main_content:
                     print_success("CLI main.py imports setup_app")
                 else:
                     print_warning("CLI main.py might not import setup_app")
@@ -253,7 +249,6 @@ def main() -> int:
     print_step(7, "Test first-run detection with setup_completed=False")
     try:
         # Test first-run detection logic directly
-        from file_organizer.cli.organize import _check_setup_completed
 
         # Temporarily set setup_completed to False
         config = config_manager.load()
@@ -290,7 +285,7 @@ def main() -> int:
             config = config_manager.load()
             config.setup_completed = True
             config_manager.save(config)
-        except:
+        except Exception:
             pass
 
     # Step 8: Restore backup if it exists
@@ -315,13 +310,17 @@ def main() -> int:
     print(Colors.ENDC)
 
     if errors:
-        print(f"{Colors.FAIL}{Colors.BOLD}Verification failed with {len(errors)} error(s):{Colors.ENDC}")
+        print(
+            f"{Colors.FAIL}{Colors.BOLD}Verification failed with {len(errors)} error(s):{Colors.ENDC}"
+        )
         for i, error in enumerate(errors, 1):
             print(f"  {i}. {error}")
         return 1
     else:
         print(f"{Colors.OKGREEN}{Colors.BOLD}✓ All verification steps passed!{Colors.ENDC}")
-        print(f"\n{Colors.OKGREEN}Setup wizard end-to-end verification completed successfully.{Colors.ENDC}")
+        print(
+            f"\n{Colors.OKGREEN}Setup wizard end-to-end verification completed successfully.{Colors.ENDC}"
+        )
         return 0
 
 

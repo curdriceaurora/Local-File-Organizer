@@ -13,7 +13,7 @@ to handle the backend logic while focusing on the TUI presentation layer.
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from textual import work
 from textual.app import ComposeResult
@@ -24,7 +24,7 @@ from textual.widgets import Static
 logger = logging.getLogger(__name__)
 
 
-class WizardScreen(str, Enum):
+class WizardScreen(StrEnum):
     """Enumeration of setup wizard screen states."""
 
     WELCOME = "welcome"
@@ -324,7 +324,7 @@ class SetupWizardView(Vertical):
             "[dim]Press 1 or 2 to select, Enter to continue, Esc to go back[/dim]"
         )
 
-    def _render_hardware_detect_screen(self) -> str:
+    def _render_hardware_detect_screen(self) -> str:  # noqa: C901
         """Render the hardware detection screen with live progress."""
         mode_text = "Quick Start" if self._selected_mode == "quick_start" else "Power User"
         lines = [f"[b]Hardware Detection[/b] ([dim]{mode_text} mode[/dim])\n"]
@@ -334,7 +334,9 @@ class SetupWizardView(Vertical):
         elif self._detection_status == "detecting":
             # Show progress bar
             progress_bar = self._render_progress_bar(self._detection_progress)
-            lines.append(f"[yellow]⚙  Detecting system capabilities... {self._detection_progress}%[/yellow]")
+            lines.append(
+                f"[yellow]⚙  Detecting system capabilities... {self._detection_progress}%[/yellow]"
+            )
             lines.append(f"{progress_bar}\n")
 
             # Show current step
@@ -378,7 +380,9 @@ class SetupWizardView(Vertical):
             lines.append("\n[b]AI Backend:[/b]")
             if ollama.running:
                 model_text = f"{ollama.models_count} model{'s' if ollama.models_count != 1 else ''}"
-                lines.append(f"  [green]✓[/green]  Ollama: Running (v{ollama.version}, {model_text})")
+                lines.append(
+                    f"  [green]✓[/green]  Ollama: Running (v{ollama.version}, {model_text})"
+                )
             elif ollama.installed:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Installed but not running")
                 lines.append("      [dim]Start with: ollama serve[/dim]")
@@ -403,7 +407,7 @@ class SetupWizardView(Vertical):
             # Available models if Ollama is running
             if ollama.running and self._capabilities.installed_models:
                 lines.append("\n[b]Installed Models:[/b]")
-                for i, model in enumerate(self._capabilities.installed_models[:5]):
+                for _i, model in enumerate(self._capabilities.installed_models[:5]):
                     lines.append(f"  • {model.name}")
                 if len(self._capabilities.installed_models) > 5:
                     remaining = len(self._capabilities.installed_models) - 5
@@ -413,7 +417,7 @@ class SetupWizardView(Vertical):
 
         return "\n".join(lines)
 
-    def _render_model_select_screen(self) -> str:
+    def _render_model_select_screen(self) -> str:  # noqa: C901
         """Render the model selection screen with available models and download progress."""
         mode_text = "Quick Start" if self._selected_mode == "quick_start" else "Power User"
         lines = [f"[b]Model Selection & Download[/b] ([dim]{mode_text} mode[/dim])\n"]
@@ -438,7 +442,11 @@ class SetupWizardView(Vertical):
         lines.append("[b]Select a model:[/b]\n")
 
         # Option 1: Recommended model
-        recommended_status = "[green]✓ Installed[/green]" if recommended_model in installed_names else "[yellow]⚠ Needs download[/yellow]"
+        recommended_status = (
+            "[green]✓ Installed[/green]"
+            if recommended_model in installed_names
+            else "[yellow]⚠ Needs download[/yellow]"
+        )
         selected_1 = " [cyan]← Selected[/cyan]" if self._selected_model == recommended_model else ""
 
         # Determine model size
@@ -452,11 +460,17 @@ class SetupWizardView(Vertical):
         lines.append(f"[1] [b]{recommended_model}[/b] [green](Recommended)[/green]{selected_1}")
         lines.append(f"    {recommended_status}")
         lines.append(f"    • Size: {model_size} ({model_params}, Q4_K_M quantization)")
-        lines.append(f"    • Optimized for: {hardware.gpu_type.value.upper()} with {hardware.ram_gb}GB RAM")
+        lines.append(
+            f"    • Optimized for: {hardware.gpu_type.value.upper()} with {hardware.ram_gb}GB RAM"
+        )
         lines.append("")
 
         # Option 2: Alternative model
-        alternative_status = "[green]✓ Installed[/green]" if alternative_model in installed_names else "[yellow]⚠ Needs download[/yellow]"
+        alternative_status = (
+            "[green]✓ Installed[/green]"
+            if alternative_model in installed_names
+            else "[yellow]⚠ Needs download[/yellow]"
+        )
         selected_2 = " [cyan]← Selected[/cyan]" if self._selected_model == alternative_model else ""
 
         if "7b" in alternative_model:
@@ -478,11 +492,19 @@ class SetupWizardView(Vertical):
         if self._capabilities.installed_models:
             first_installed = self._capabilities.installed_models[0].name
             if first_installed not in {recommended_model, alternative_model}:
-                selected_3 = " [cyan]← Selected[/cyan]" if self._selected_model == first_installed else ""
-                size_text = f"{first_installed.size / (1024**3):.1f}GB" if first_installed.size else "Unknown size"
+                selected_3 = (
+                    " [cyan]← Selected[/cyan]" if self._selected_model == first_installed else ""
+                )
+                size_text = (
+                    f"{first_installed.size / (1024**3):.1f}GB"
+                    if first_installed.size
+                    else "Unknown size"
+                )
 
-                lines.append(f"[3] [b]{first_installed}[/b] [dim](Already installed)[/dim]{selected_3}")
-                lines.append(f"    [green]✓ Installed[/green]")
+                lines.append(
+                    f"[3] [b]{first_installed}[/b] [dim](Already installed)[/dim]{selected_3}"
+                )
+                lines.append("    [green]✓ Installed[/green]")
                 lines.append(f"    • Size: {size_text}")
                 lines.append("")
 
@@ -490,7 +512,9 @@ class SetupWizardView(Vertical):
         if self._download_status == "downloading":
             lines.append("\n[b]Download Progress:[/b]")
             progress_bar = self._render_progress_bar(self._download_progress)
-            lines.append(f"[yellow]⚙  Downloading {self._selected_model}... {self._download_progress}%[/yellow]")
+            lines.append(
+                f"[yellow]⚙  Downloading {self._selected_model}... {self._download_progress}%[/yellow]"
+            )
             lines.append(f"{progress_bar}")
 
             if self._download_message:
@@ -504,8 +528,10 @@ class SetupWizardView(Vertical):
 
         # Installed models summary
         if self._capabilities.installed_models:
-            lines.append(f"[b]Installed Models:[/b] {len(self._capabilities.installed_models)} available")
-            for i, model in enumerate(self._capabilities.installed_models[:3]):
+            lines.append(
+                f"[b]Installed Models:[/b] {len(self._capabilities.installed_models)} available"
+            )
+            for _i, model in enumerate(self._capabilities.installed_models[:3]):
                 size_text = f"{model.size / (1024**3):.1f}GB" if model.size else "Unknown"
                 lines.append(f"  • {model.name} ({size_text})")
             if len(self._capabilities.installed_models) > 3:
@@ -595,9 +621,7 @@ class SetupWizardView(Vertical):
             self._detection_progress = 0
             self._detection_step = "Initializing detection..."
             self.app.call_from_thread(self._refresh_screen)
-            self.app.call_from_thread(
-                self._set_status, "Detecting hardware and AI backend..."
-            )
+            self.app.call_from_thread(self._set_status, "Detecting hardware and AI backend...")
 
             # Create wizard and run detection
             mode = (
@@ -654,9 +678,7 @@ class SetupWizardView(Vertical):
             self._detection_progress = 0
             self._detection_step = ""
             self.app.call_from_thread(self._refresh_screen)
-            self.app.call_from_thread(
-                self._set_status, f"Detection failed: {e}"
-            )
+            self.app.call_from_thread(self._set_status, f"Detection failed: {e}")
 
     @work(thread=True)
     def _run_model_download(self) -> None:
@@ -682,9 +704,7 @@ class SetupWizardView(Vertical):
             self._download_progress = 0
             self._download_message = "Initializing download..."
             self.app.call_from_thread(self._refresh_screen)
-            self.app.call_from_thread(
-                self._set_status, f"Downloading {self._selected_model}..."
-            )
+            self.app.call_from_thread(self._set_status, f"Downloading {self._selected_model}...")
 
             # Start the pull/download
             client = ollama.Client()
@@ -734,6 +754,4 @@ class SetupWizardView(Vertical):
             self._download_message = str(e)
             self._download_progress = 0
             self.app.call_from_thread(self._refresh_screen)
-            self.app.call_from_thread(
-                self._set_status, f"Download failed: {e}"
-            )
+            self.app.call_from_thread(self._set_status, f"Download failed: {e}")
