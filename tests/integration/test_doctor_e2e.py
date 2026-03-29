@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
+import file_organizer.cli._globals as _cli_globals
 from file_organizer.cli.main import app
 
 pytestmark = [pytest.mark.integration]
@@ -336,37 +337,38 @@ class TestDoctorDependencyDetection:
 class TestDoctorInstallation:
     """Tests for the --install flag and installation workflow."""
 
-    def test_install_flag_without_confirmation_prompts(self, audio_files_dir: Path) -> None:
+    def test_install_flag_without_confirmation_prompts(
+        self, audio_files_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """--install flag triggers installation flow."""
         mock_result = MagicMock()
         mock_result.returncode = 0
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
-                with patch("file_organizer.cli.doctor._g") as mock_globals:
-                    mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
-                        result = runner.invoke(app, ["doctor", str(audio_files_dir), "--install"])
-                        assert result.exit_code == 0
-                        # Should have called subprocess to install
-                        assert mock_run.called
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["doctor", str(audio_files_dir), "--install"])
+                    assert result.exit_code == 0
+                    # Should have called subprocess to install
+                    assert mock_run.called
 
-    def test_install_with_yes_flag_auto_confirms(self, audio_files_dir: Path) -> None:
+    def test_install_with_yes_flag_auto_confirms(
+        self, audio_files_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Global --yes flag auto-confirms installation."""
         mock_result = MagicMock()
         mock_result.returncode = 0
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
-            with patch("file_organizer.cli.doctor._g") as mock_globals:
-                mock_globals.dry_run = False
-                mock_globals.yes = True
-                with patch("subprocess.run", return_value=mock_result) as mock_run:
-                    result = runner.invoke(
-                        app, ["--yes", "doctor", str(audio_files_dir), "--install"]
-                    )
-                    # Should succeed without prompting
-                    assert result.exit_code == 0
-                    assert mock_run.called
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                result = runner.invoke(
+                    app, ["--yes", "doctor", str(audio_files_dir), "--install"]
+                )
+                # Should succeed without prompting
+                assert result.exit_code == 0
+                assert mock_run.called
 
     def test_install_with_dry_run_flag(self, audio_files_dir: Path) -> None:
         """Global --dry-run flag prevents actual installation."""
@@ -395,35 +397,37 @@ class TestDoctorInstallation:
                     assert not mock_run.called
                     assert "cancelled" in result.output.lower()
 
-    def test_install_handles_subprocess_failure(self, audio_files_dir: Path) -> None:
+    def test_install_handles_subprocess_failure(
+        self, audio_files_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Installation handles subprocess failures gracefully."""
         mock_result = MagicMock()
         mock_result.returncode = 1  # Failure
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
-                with patch("file_organizer.cli.doctor._g") as mock_globals:
-                    mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result):
-                        result = runner.invoke(app, ["doctor", str(audio_files_dir), "--install"])
-                        # Command should complete even if installation fails
-                        assert result.exit_code == 0
-                        assert "failed" in result.output.lower()
+                with patch("subprocess.run", return_value=mock_result):
+                    result = runner.invoke(app, ["doctor", str(audio_files_dir), "--install"])
+                    # Command should complete even if installation fails
+                    assert result.exit_code == 0
+                    assert "failed" in result.output.lower()
 
-    def test_install_multiple_groups_sequentially(self, mixed_media_dir: Path) -> None:
+    def test_install_multiple_groups_sequentially(
+        self, mixed_media_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Installation processes multiple groups sequentially."""
         mock_result = MagicMock()
         mock_result.returncode = 0
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
-                with patch("file_organizer.cli.doctor._g") as mock_globals:
-                    mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
-                        result = runner.invoke(app, ["doctor", str(mixed_media_dir), "--install"])
-                        assert result.exit_code == 0
-                        # Should have called pip install for each detected group
-                        assert mock_run.call_count >= 2  # At least audio and video
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["doctor", str(mixed_media_dir), "--install"])
+                    assert result.exit_code == 0
+                    # Should have called pip install for each detected group
+                    assert mock_run.call_count >= 2  # At least audio and video
 
 
 # ============================================================================
@@ -504,28 +508,32 @@ class TestDoctorGlobalFlags:
             assert result.exit_code == 0
 
     def test_json_flag_at_global_level(self, audio_files_dir: Path) -> None:
-        """Global --json flag produces JSON output."""
+        """Global --json flag produces JSON output with expected structure."""
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             result = runner.invoke(app, ["--json", "doctor", str(audio_files_dir)])
             assert result.exit_code == 0
-            # Should produce JSON even without command-level --json
-            # Note: This depends on implementation details
+            # Parse output as JSON and verify structure keys
+            data = json.loads(result.output)
+            assert "directory" in data
+            assert "files_found" in data
+            assert "detected_groups" in data
+            assert "missing_groups" in data
 
-    def test_no_interactive_flag_with_install(self, audio_files_dir: Path) -> None:
+    def test_no_interactive_flag_with_install(
+        self, audio_files_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Global --no-interactive flag is handled properly."""
         mock_result = MagicMock()
         mock_result.returncode = 0
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
-            with patch("file_organizer.cli.doctor._g") as mock_globals:
-                mock_globals.dry_run = False
-                mock_globals.no_interactive = True
-                with patch("subprocess.run", return_value=mock_result):
-                    result = runner.invoke(
-                        app, ["--no-interactive", "doctor", str(audio_files_dir), "--install"]
-                    )
-                    # Should handle non-interactive mode gracefully
-                    assert result.exit_code == 0
+            with patch("subprocess.run", return_value=mock_result):
+                result = runner.invoke(
+                    app, ["--no-interactive", "doctor", str(audio_files_dir), "--install"]
+                )
+                # Should handle non-interactive mode gracefully
+                assert result.exit_code == 0
 
 
 # ============================================================================
@@ -631,8 +639,8 @@ class TestDoctorRecommendations:
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             result = runner.invoke(app, ["doctor", str(audio_files_dir)])
             assert result.exit_code == 0
-            # Audio group has FFmpeg prerequisite
-            # Check in table or prerequisites section
+            # Audio group has FFmpeg prerequisite — verify it appears in output
+            assert "FFmpeg" in result.output or "ffmpeg" in result.output.lower()
 
     def test_installed_groups_marked_differently(self, mixed_media_dir: Path) -> None:
         """Installed groups are visually distinguished from missing ones."""
@@ -643,7 +651,10 @@ class TestDoctorRecommendations:
         with patch("file_organizer.cli.doctor.is_group_installed", side_effect=mock_is_installed):
             result = runner.invoke(app, ["doctor", str(mixed_media_dir)])
             assert result.exit_code == 0
-            # Output should distinguish installed vs not installed
+            # Installed groups show checkmark; non-installed don't get "already installed"
+            output = result.output.lower()
+            assert "already installed" in output or "\u2713" in result.output
+            assert "missing" in output
 
 
 # ============================================================================
@@ -654,10 +665,13 @@ class TestDoctorRecommendations:
 class TestDoctorEndToEndWorkflows:
     """Comprehensive end-to-end workflow tests."""
 
-    def test_first_time_user_workflow(self, mixed_media_dir: Path) -> None:
+    def test_first_time_user_workflow(
+        self, mixed_media_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Simulate first-time user discovering and installing dependencies."""
         mock_result = MagicMock()
         mock_result.returncode = 0
+        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         # Step 1: Run doctor without install to see recommendations
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
@@ -668,12 +682,10 @@ class TestDoctorEndToEndWorkflows:
         # Step 2: Run doctor with --install to install dependencies
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
-                with patch("file_organizer.cli.doctor._g") as mock_globals:
-                    mock_globals.dry_run = False
-                    with patch("subprocess.run", return_value=mock_result) as mock_run:
-                        result = runner.invoke(app, ["doctor", str(mixed_media_dir), "--install"])
-                        assert result.exit_code == 0
-                        assert mock_run.called
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    result = runner.invoke(app, ["doctor", str(mixed_media_dir), "--install"])
+                    assert result.exit_code == 0
+                    assert mock_run.called
 
     def test_ci_automation_workflow(self, audio_files_dir: Path) -> None:
         """Simulate CI/automation usage with --dry-run and --json flags."""

@@ -266,10 +266,11 @@ def test_get_missing_groups_partial_installation(mock_is_installed):
 
 @patch("file_organizer.cli.doctor.is_group_installed")
 def test_get_missing_groups_empty_input(mock_is_installed):
-    """get_missing_groups returns empty set for empty input."""
+    """get_missing_groups returns empty set for empty input and short-circuits."""
     detected = set()
     missing = get_missing_groups(detected)
     assert missing == set()
+    mock_is_installed.assert_not_called()
 
 
 # -----------------------------------------------------------------------
@@ -530,29 +531,23 @@ def test_scan_directory_special_characters_in_names(tmp_path):
 
 def test_scan_directory_permission_denied(tmp_path):
     """scan_directory handles permission denied gracefully without crashing."""
-    import os
-    import stat
-
-    # Create a subdirectory with a file
-    restricted_dir = tmp_path / "restricted"
-    restricted_dir.mkdir()
-    (restricted_dir / "secret.txt").touch()
+    # Create files: one accessible, one that will trigger PermissionError
     (tmp_path / "accessible.txt").touch()
+    restricted_file = tmp_path / "restricted.txt"
+    restricted_file.touch()
 
-    # Remove read and execute permissions from the subdirectory
-    # This will cause permission denied when trying to iterate its contents
-    try:
-        os.chmod(restricted_dir, 0o000)
+    original_is_symlink = Path.is_symlink
 
-        # Should not crash, but may skip the restricted directory
+    def _is_symlink_with_error(self):
+        if self == restricted_file:
+            raise PermissionError(f"Permission denied: {self}")
+        return original_is_symlink(self)
+
+    with patch.object(Path, "is_symlink", _is_symlink_with_error):
         counts = scan_directory(tmp_path)
 
-        # Should at least count the accessible file
-        assert counts.get(".txt", 0) >= 1
-
-    finally:
-        # Restore permissions for cleanup
-        os.chmod(restricted_dir, stat.S_IRWXU)
+    # Accessible file counted, restricted file skipped due to PermissionError
+    assert counts.get(".txt", 0) == 1
 
 
 # -----------------------------------------------------------------------

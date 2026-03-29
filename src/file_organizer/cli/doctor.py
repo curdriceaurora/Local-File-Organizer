@@ -91,7 +91,10 @@ def is_group_installed(group: str) -> bool:
     if not package_name:
         return False
 
-    spec = importlib.util.find_spec(package_name)
+    try:
+        spec = importlib.util.find_spec(package_name)
+    except (ModuleNotFoundError, ValueError):
+        return False
     return spec is not None
 
 
@@ -145,6 +148,9 @@ def _normalized_extension(path: Path) -> str:
 def scan_directory(directory: Path) -> dict[str, int]:
     """Scan a directory and count files by extension.
 
+    Skips symlinks, hidden files, and entries that raise filesystem errors
+    (e.g. permission denied).  Continues scanning on per-entry failures.
+
     Args:
         directory: Path to directory to scan
 
@@ -153,21 +159,22 @@ def scan_directory(directory: Path) -> dict[str, int]:
     """
     extension_counts: dict[str, int] = {}
 
-    # Recursively iterate through all files
     for item in directory.rglob("*"):
-        # Skip hidden files and directories
-        if is_hidden(item):
+        try:
+            if item.is_symlink():
+                continue
+            if is_hidden(item):
+                continue
+            if not item.is_file():
+                continue
+        except (OSError, PermissionError):
             continue
 
-        # Only count files, not directories
-        if item.is_file():
-            ext = _normalized_extension(item)
-            # Count files with extensions and those without
-            if ext:
-                extension_counts[ext] = extension_counts.get(ext, 0) + 1
-            else:
-                # Track files without extensions
-                extension_counts[""] = extension_counts.get("", 0) + 1
+        ext = _normalized_extension(item)
+        if ext:
+            extension_counts[ext] = extension_counts.get(ext, 0) + 1
+        else:
+            extension_counts[""] = extension_counts.get("", 0) + 1
 
     return extension_counts
 
@@ -229,8 +236,8 @@ def display_recommendations(
 def install_groups(groups: set[str]) -> None:
     """Interactively install optional dependency groups using pip.
 
-    Prompts the user for confirmation before installing each group.
-    Respects the --dry-run flag to skip actual installation.
+    Prompts the user for confirmation before installing.
+    Respects the global ``_g.dry_run`` flag to skip actual installation.
     Handles subprocess failures gracefully and continues with remaining groups.
 
     Args:
@@ -292,7 +299,10 @@ def install_groups(groups: set[str]) -> None:
                 console.print(f"[red]✗ Failed to install {group} (exit code {result.returncode})[/red]")
                 failed_groups.append(group)
 
-        except Exception as exc:
+        except FileNotFoundError:
+            console.print("[red]✗ Cannot find 'pip' executable. Is pip installed?[/red]")
+            failed_groups.append(group)
+        except (subprocess.SubprocessError, OSError) as exc:
             console.print(f"[red]✗ Error installing {group}: {exc}[/red]")
             failed_groups.append(group)
 
@@ -335,6 +345,10 @@ def doctor(
     Detects file types in the specified directory and recommends which optional
     dependency groups should be installed to support those file types.
     """
+    # Respect global --json flag if command-level --json not given
+    if not json_output and _g.json_output:
+        json_output = True
+
     # Scan the directory
     extension_counts = scan_directory(path)
 
