@@ -54,7 +54,9 @@ class TestVisionModel:
                 "total_duration": 1000000000,
             }
 
-            with patch("ollama.Client", return_value=mock_client):
+            with patch(
+                "file_organizer.models.vision_model.ollama.Client", return_value=mock_client
+            ):
                 # Mock Path.exists to return True
                 with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
@@ -78,7 +80,9 @@ class TestVisionModel:
             mock_client = MagicMock()
             mock_client.generate.side_effect = Exception("Ollama error")
 
-            with patch("ollama.Client", return_value=mock_client):
+            with patch(
+                "file_organizer.models.vision_model.ollama.Client", return_value=mock_client
+            ):
                 with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
                     with pytest.raises(Exception) as excinfo:
@@ -126,7 +130,7 @@ class TestVisionModelInitialize:
     ) -> None:
         """Test model is pulled when not found locally."""
         with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
-            import ollama
+            from file_organizer.models.vision_model import ollama
 
             model = VisionModel(vision_model_config)
             mock_client = MagicMock()

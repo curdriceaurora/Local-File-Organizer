@@ -44,7 +44,7 @@ class TestTextModel:
                 "total_duration": 1000000000,
             }
 
-            with patch("ollama.Client", return_value=mock_client):
+            with patch("file_organizer.models.text_model.ollama.Client", return_value=mock_client):
                 model.initialize()
                 response = model.generate("Process this file")
 
@@ -62,7 +62,7 @@ class TestTextModel:
             mock_client = MagicMock()
             mock_client.generate.side_effect = Exception("Ollama error")
 
-            with patch("ollama.Client", return_value=mock_client):
+            with patch("file_organizer.models.text_model.ollama.Client", return_value=mock_client):
                 model.initialize()
                 with pytest.raises(Exception) as excinfo:
                     model.generate("Process this file")
@@ -93,7 +93,7 @@ class TestTextModel:
             model = TextModel(text_model_config)
 
             mock_client = MagicMock()
-            import ollama
+            from file_organizer.models.text_model import ollama
 
             # Raise an error on show() to simulate missing model
             mock_client.show.side_effect = ollama.ResponseError("model not found")
@@ -151,7 +151,7 @@ class TestTextModel:
                 {"response": "", "done": True},
             ]
 
-            with patch("ollama.Client", return_value=mock_client):
+            with patch("file_organizer.models.text_model.ollama.Client", return_value=mock_client):
                 model.initialize()
                 chunks = list(model.generate_streaming("Stream this"))
 
