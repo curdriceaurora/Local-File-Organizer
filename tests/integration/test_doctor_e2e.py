@@ -363,9 +363,7 @@ class TestDoctorInstallation:
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("subprocess.run", return_value=mock_result) as mock_run:
-                result = runner.invoke(
-                    app, ["--yes", "doctor", str(audio_files_dir), "--install"]
-                )
+                result = runner.invoke(app, ["--yes", "doctor", str(audio_files_dir), "--install"])
                 # Should succeed without prompting
                 assert result.exit_code == 0
                 assert mock_run.called
