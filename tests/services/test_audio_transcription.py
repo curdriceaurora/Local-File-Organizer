@@ -30,7 +30,7 @@ class TestAudioTranscriptionPlaceholder:
         except (ImportError, NotImplementedError):
             pytest.skip("AudioTranscriber not yet fully implemented (Phase 3)")
 
-    @pytest.mark.skip(reason="Phase 3 - Audio transcription not yet implemented")
+    @pytest.mark.skip(reason="See #1028 - Phase 3 audio transcription feature not yet implemented")
     def test_transcribe_mp3_file(self, tmp_path):
         """Test transcribing MP3 file."""
         from file_organizer.services.audio.transcriber import AudioTranscriber
@@ -45,7 +45,7 @@ class TestAudioTranscriptionPlaceholder:
         assert result is not None
         assert "text" in result
 
-    @pytest.mark.skip(reason="Phase 3 - Audio transcription not yet implemented")
+    @pytest.mark.skip(reason="See #1028 - Phase 3 audio transcription feature not yet implemented")
     def test_transcribe_wav_file(self, tmp_path):
         """Test transcribing WAV file."""
         from file_organizer.services.audio.transcriber import AudioTranscriber
@@ -58,7 +58,7 @@ class TestAudioTranscriptionPlaceholder:
 
         assert result is not None
 
-    @pytest.mark.skip(reason="Phase 3 - Audio transcription not yet implemented")
+    @pytest.mark.skip(reason="See #1028 - Phase 3 audio transcription feature not yet implemented")
     def test_language_detection(self, tmp_path):
         """Test language detection in transcription."""
         from file_organizer.services.audio.transcriber import AudioTranscriber
