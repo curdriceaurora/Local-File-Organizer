@@ -309,7 +309,6 @@ class TestPipelineTiming:
         assert elapsed < 1.0, f"_collect_files too slow: {elapsed:.3f}s"
 
     @pytest.mark.benchmark
-    @pytest.mark.skipif(not HAS_PYTEST_BENCHMARK, reason="pytest-benchmark not installed")
     def test_benchmark_organize(
         self,
         benchmark: Any,
@@ -325,6 +324,7 @@ class TestPipelineTiming:
         ``organizer`` instance is reused deliberately (its in-memory undo history
         accumulates across rounds but does not affect timing materially).
         """
+        pytest.importorskip("pytest_benchmark", reason="See #1042 - Optional benchmarking dependency")
         organizer = FileOrganizer(dry_run=False, use_hardlinks=False)
         out_dir = tmp_path / "bench_out"
 
