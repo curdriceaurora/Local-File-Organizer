@@ -397,6 +397,10 @@ class TestEdgeCasesAndErrorHandling:
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
 
+        # Mock exists() to return True so we pass the initial check
+        monkeypatch.setattr(Path, "exists", lambda self: True)
+
+        # Mock stat() to raise OSError for the explicit stat() call
         def mock_stat(_self: Path) -> None:
             raise OSError("Permission denied")
 

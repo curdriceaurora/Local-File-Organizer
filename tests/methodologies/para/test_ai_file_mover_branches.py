@@ -388,10 +388,15 @@ class TestSuggestArchive:
         file2 = src_dir / "file2.txt"
         file2.write_text("content2")
 
-        # Mock stat to raise OSError for first file only
+        # Mock stat to raise OSError for first file only on second call (inside loop)
+        # We use a counter to skip the first call (from is_file() during collection)
         original_stat = Path.stat
+        call_counts = {}
         def mock_stat(self):
-            if self.name == "file1.txt":
+            path_key = str(self)
+            call_counts[path_key] = call_counts.get(path_key, 0) + 1
+            # For file1, raise error on second call (when accessing st_mtime in loop)
+            if self.name == "file1.txt" and call_counts[path_key] >= 2:
                 raise OSError("Cannot stat file")
             return original_stat(self)
 

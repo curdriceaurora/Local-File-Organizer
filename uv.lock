@@ -2029,7 +2029,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/e4/b4/c8cd17629ced0b964
 
 [[package]]
 name = "local-file-organizer"
-version = "2.0.0a2"
+version = "2.0.0a3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
