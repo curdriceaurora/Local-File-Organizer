@@ -129,7 +129,7 @@ dev = [
     "interrogate~=1.5",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
     "deptry>=0.16.0",  # 0.x — unstable API, keep >=; Unused dependency detection
-    "diff-cover~=7.0",  # Diff coverage gate (local pre-commit + CI validation)
+    "diff-cover~=10.2",  # Diff coverage gate (local pre-commit + CI validation)
     "asgi-lifespan~=2.1",  # ASGI lifespan management for integration tests
 ]
 
