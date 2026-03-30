@@ -47,7 +47,7 @@ class AnonymousUser:
     email: str = "anonymous@example.com"
     full_name: str | None = None
     is_active: bool = True
-    is_admin: bool = True
+    is_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_login: datetime | None = None
 
