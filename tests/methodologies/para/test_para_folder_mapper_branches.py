@@ -386,7 +386,9 @@ class TestFolderMapperBranches:
         assert "Reason: Contains project keywords" in report
         assert "Confidence: 85%" in report
 
-    def test_map_file_rule_result_with_none_category(self, config: PARAConfig, tmp_path: Path) -> None:
+    def test_map_file_rule_result_with_none_category(
+        self, config: PARAConfig, tmp_path: Path
+    ) -> None:
         """map_file doesn't override when rule result has None category (line 119->125)."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("test")
@@ -407,7 +409,9 @@ class TestFolderMapperBranches:
         mock_heuristic_result.scores = {}
         heuristic_engine.evaluate.return_value = mock_heuristic_result
 
-        mapper = CategoryFolderMapper(config, heuristic_engine=heuristic_engine, rule_engine=rule_engine)
+        mapper = CategoryFolderMapper(
+            config, heuristic_engine=heuristic_engine, rule_engine=rule_engine
+        )
         result = mapper.map_file(test_file, root, use_rules=True)
 
         # Should keep heuristic category since rule category is None
@@ -510,7 +514,9 @@ class TestFolderMapperBranches:
 
         assert result is None
 
-    def test_determine_subfolder_type_not_in_mapping(self, config: PARAConfig, tmp_path: Path) -> None:
+    def test_determine_subfolder_type_not_in_mapping(
+        self, config: PARAConfig, tmp_path: Path
+    ) -> None:
         """_determine_subfolder when extension not in type_mapping (line 256->260)."""
         test_file = tmp_path / "doc.xyz"  # Extension not in mapping
         test_file.write_text("test")
@@ -521,7 +527,9 @@ class TestFolderMapperBranches:
 
         assert result is None
 
-    def test_determine_subfolder_keyword_no_match_returns_none(self, config: PARAConfig, tmp_path: Path) -> None:
+    def test_determine_subfolder_keyword_no_match_returns_none(
+        self, config: PARAConfig, tmp_path: Path
+    ) -> None:
         """_determine_subfolder when keyword doesn't match (line 262->266)."""
         test_file = tmp_path / "random_file.txt"
         test_file.write_text("test")

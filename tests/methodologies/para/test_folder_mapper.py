@@ -669,6 +669,7 @@ class TestCategoryFolderMapperEdgeCases:
 
         # Mock map_file to raise an exception
         original_map_file = mapper.map_file
+
         def failing_map_file(file_path, root_path, use_rules=True):
             if "failing" in file_path.name:
                 raise ValueError("Mapping failed")
@@ -713,7 +714,9 @@ class TestCategoryFolderMapperEdgeCases:
         assert isinstance(result, MappingResult)
         assert result.subfolder_path is None
 
-    def test_extract_reasoning_with_category_in_scores(self, config, temp_source, temp_target, mocker):
+    def test_extract_reasoning_with_category_in_scores(
+        self, config, temp_source, temp_target, mocker
+    ):
         """Test extracting reasoning when category is in heuristic result scores."""
         from file_organizer.methodologies.para.detection.heuristics import (
             CategoryScore,
@@ -775,7 +778,9 @@ class TestCategoryFolderMapperEdgeCases:
         # Should return None when rule_engine is None
         assert result is None
 
-    def test_extract_reasoning_category_not_in_scores(self, config, temp_source, temp_target, mocker):
+    def test_extract_reasoning_category_not_in_scores(
+        self, config, temp_source, temp_target, mocker
+    ):
         """Test extracting reasoning when category is NOT in heuristic result scores."""
         from file_organizer.methodologies.para.detection.heuristics import HeuristicResult
 

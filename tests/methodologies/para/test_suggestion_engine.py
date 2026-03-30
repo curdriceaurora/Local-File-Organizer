@@ -1109,8 +1109,10 @@ class TestReasoningAndSubfolders:
         f = tmp_path / "file.txt"
         f.write_text("x")
 
-        with patch.object(engine._feature_extractor, "extract_metadata_features") as mock_meta, \
-             patch.object(engine._feature_extractor, "extract_structural_features") as mock_struct:
+        with (
+            patch.object(engine._feature_extractor, "extract_metadata_features") as mock_meta,
+            patch.object(engine._feature_extractor, "extract_structural_features") as mock_struct,
+        ):
             mock_meta.return_value = MetadataFeatures(
                 file_type=".txt",
                 file_size=1,
@@ -1296,7 +1298,9 @@ class TestReasoningAndSubfolders:
         f.write_text("content")
 
         # Mock the parent name to be "."
-        with patch.object(Path, "parent", new_callable=lambda: property(lambda self: type(self)("."))):
+        with patch.object(
+            Path, "parent", new_callable=lambda: property(lambda self: type(self)("."))
+        ):
             result = engine.suggest(f)
             # Should not suggest subfolder for special parent name
             # But this is tricky to test, let's just verify it works

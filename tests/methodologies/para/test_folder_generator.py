@@ -340,6 +340,7 @@ class TestPARAFolderGenerator:
 
     def test_get_category_path_invalid_category(self, generator, temp_dir):
         """Test getting path with invalid category that maps to None."""
+
         # Use an invalid category enum value
         class InvalidCategory:
             value = "invalid"

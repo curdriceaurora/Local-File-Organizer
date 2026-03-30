@@ -641,9 +641,7 @@ class TestBulkOrganizeAdvanced:
         # Mock move_file to return a failed result
         from file_organizer.methodologies.para.ai.file_mover import MoveResult
 
-        def mock_move_file(
-            suggestion: MoveSuggestion, dry_run: bool = True
-        ) -> MoveResult:
+        def mock_move_file(suggestion: MoveSuggestion, dry_run: bool = True) -> MoveResult:
             return MoveResult(
                 success=False,
                 source=suggestion.file_path,

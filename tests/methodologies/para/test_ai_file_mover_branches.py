@@ -319,6 +319,7 @@ class TestBulkOrganize:
         # Mock move_file to return failure
         def mock_move_file(suggestion, dry_run=True):
             from file_organizer.methodologies.para.ai.file_mover import MoveResult
+
             return MoveResult(
                 success=False,
                 source=suggestion.file_path,
@@ -455,6 +456,7 @@ class TestIsAlreadyOrganized:
 
         # Mock is_relative_to to raise ValueError
         original_resolve = Path.resolve
+
         def mock_resolve(self):
             result = original_resolve(self)
             if self == file_path:

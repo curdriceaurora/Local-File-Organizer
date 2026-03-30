@@ -889,11 +889,10 @@ class TestMigrationManagerEdgeCases:
         self, migration_manager, temp_source, temp_target, monkeypatch
     ):
         """Test that None category falls back to RESOURCE."""
+
         # Mock heuristic engine to return None category
         def mock_evaluate(file_path):
-            return HeuristicResult(
-                recommended_category=None, overall_confidence=0.0, scores={}
-            )
+            return HeuristicResult(recommended_category=None, overall_confidence=0.0, scores={})
 
         monkeypatch.setattr(migration_manager.heuristic_engine, "evaluate", mock_evaluate)
 
@@ -912,6 +911,7 @@ class TestMigrationManagerEdgeCases:
         self, migration_manager, temp_source, temp_target, monkeypatch
     ):
         """Test reasoning extraction when category is in scores."""
+
         # Mock heuristic engine to return result with reasoning
         def mock_evaluate(file_path):
             return HeuristicResult(
@@ -934,7 +934,9 @@ class TestMigrationManagerEdgeCases:
         # Verify reasoning was extracted
         if plan.files:
             assert len(plan.files[0].reasoning) > 0
-            assert "deadline" in plan.files[0].reasoning or "active project" in plan.files[0].reasoning
+            assert (
+                "deadline" in plan.files[0].reasoning or "active project" in plan.files[0].reasoning
+            )
 
     def test_execute_migration_target_already_exists(
         self, migration_manager, temp_source, temp_target
@@ -1057,11 +1059,10 @@ class TestMigrationManagerEdgeCases:
         self, migration_manager, temp_source, temp_target, monkeypatch
     ):
         """Test None category fallback when RESOURCE not in scores."""
+
         # Mock heuristic engine to return None category with empty scores
         def mock_evaluate(file_path):
-            return HeuristicResult(
-                recommended_category=None, overall_confidence=0.0, scores={}
-            )
+            return HeuristicResult(recommended_category=None, overall_confidence=0.0, scores={})
 
         monkeypatch.setattr(migration_manager.heuristic_engine, "evaluate", mock_evaluate)
 
@@ -1226,9 +1227,7 @@ class TestMigrationManagerEdgeCases:
         def mock_checksum(file_entries):
             raise RuntimeError("Simulated checksum calculation error")
 
-        monkeypatch.setattr(
-            migration_manager, "_calculate_manifest_checksum", mock_checksum
-        )
+        monkeypatch.setattr(migration_manager, "_calculate_manifest_checksum", mock_checksum)
 
         # Should raise and cleanup
         with pytest.raises(RuntimeError):

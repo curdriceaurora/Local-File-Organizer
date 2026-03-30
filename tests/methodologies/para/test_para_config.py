@@ -306,10 +306,13 @@ class TestLoadConfig:
         with open(config_file, "w") as f:
             yaml.dump(data, f)
 
-        with patch(
-            "file_organizer.methodologies.para.config._get_para_config_dir",
-            return_value=Path("/nonexistent/dir"),
-        ), patch("file_organizer.methodologies.para.config.Path.cwd", return_value=tmp_path):
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent/dir"),
+            ),
+            patch("file_organizer.methodologies.para.config.Path.cwd", return_value=tmp_path),
+        ):
             cfg = load_config(None)
             assert cfg.area_dir == "CWD_Areas"
 
@@ -323,11 +326,15 @@ class TestLoadConfig:
         # Mock the module's __file__ path to be in tmp_path
         import file_organizer.methodologies.para.config as config_module
 
-        with patch(
-            "file_organizer.methodologies.para.config._get_para_config_dir",
-            return_value=Path("/nonexistent/dir"),
-        ), patch("file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nowhere")), patch.object(
-            config_module, "__file__", str(tmp_path / "config.py")
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent/dir"),
+            ),
+            patch(
+                "file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nowhere")
+            ),
+            patch.object(config_module, "__file__", str(tmp_path / "config.py")),
         ):
             cfg = load_config(None)
             assert cfg.resource_dir == "Module_Resources"
@@ -336,12 +343,17 @@ class TestLoadConfig:
         """When all default paths are missing, returns DEFAULT_CONFIG."""
         import file_organizer.methodologies.para.config as config_module
 
-        with patch(
-            "file_organizer.methodologies.para.config._get_para_config_dir",
-            return_value=Path("/nonexistent1"),
-        ), patch(
-            "file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nonexistent2")
-        ), patch.object(config_module, "__file__", "/nonexistent3/config.py"):
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent1"),
+            ),
+            patch(
+                "file_organizer.methodologies.para.config.Path.cwd",
+                return_value=Path("/nonexistent2"),
+            ),
+            patch.object(config_module, "__file__", "/nonexistent3/config.py"),
+        ):
             cfg = load_config(None)
             # Should return DEFAULT_CONFIG
             assert cfg.auto_categorize is True

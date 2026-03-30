@@ -771,9 +771,7 @@ class TestRollbackSuccessful:
 class TestListBackupsEdgeCases:
     """Cover list_backups edge cases — line 535, 542->537."""
 
-    def test_list_backups_when_backup_root_missing(
-        self, manager: PARAMigrationManager
-    ) -> None:
+    def test_list_backups_when_backup_root_missing(self, manager: PARAMigrationManager) -> None:
         """list_backups returns empty when backup_root doesn't exist (line 535)."""
         # Remove backup root
         if manager.backup_root.exists():
@@ -782,9 +780,7 @@ class TestListBackupsEdgeCases:
         result = manager.list_backups()
         assert result == []
 
-    def test_list_backups_with_directory_no_manifest(
-        self, manager: PARAMigrationManager
-    ) -> None:
+    def test_list_backups_with_directory_no_manifest(self, manager: PARAMigrationManager) -> None:
         """Directory without manifest.json is skipped (line 542->537)."""
         # Create a directory without manifest.json
         empty_dir = manager.backup_root / "empty_backup"
@@ -797,9 +793,7 @@ class TestListBackupsEdgeCases:
 class TestVerifyBackupEdgeCases:
     """Cover verify_backup exception handling and success — lines 577-578, 601, 607."""
 
-    def test_verify_backup_successful(
-        self, manager: PARAMigrationManager, tmp_path: Path
-    ) -> None:
+    def test_verify_backup_successful(self, manager: PARAMigrationManager, tmp_path: Path) -> None:
         """Successful verify_backup returns True (lines 577-578)."""
         backup_dir = manager.backup_root / "good_backup"
         backup_dir.mkdir(parents=True)
@@ -830,9 +824,7 @@ class TestVerifyBackupEdgeCases:
         result = manager.verify_backup("good_backup")
         assert result is True
 
-    def test_verify_backup_with_missing_backup_file(
-        self, manager: PARAMigrationManager
-    ) -> None:
+    def test_verify_backup_with_missing_backup_file(self, manager: PARAMigrationManager) -> None:
         """Verify backup fails when backup file is missing (lines 577-578, 642)."""
         backup_dir = manager.backup_root / "incomplete_backup"
         backup_dir.mkdir(parents=True)
@@ -858,9 +850,7 @@ class TestVerifyBackupEdgeCases:
         with pytest.raises(BackupIntegrityError, match="Backup file missing"):
             manager.verify_backup("incomplete_backup")
 
-    def test_verify_backup_with_file_hash_mismatch(
-        self, manager: PARAMigrationManager
-    ) -> None:
+    def test_verify_backup_with_file_hash_mismatch(self, manager: PARAMigrationManager) -> None:
         """Verify backup fails when file hash doesn't match (line 648)."""
         backup_dir = manager.backup_root / "bad_hash_backup"
         backup_dir.mkdir(parents=True)
@@ -890,9 +880,7 @@ class TestVerifyBackupEdgeCases:
         with pytest.raises(BackupIntegrityError, match="File hash mismatch"):
             manager.verify_backup("bad_hash_backup")
 
-    def test_verify_backup_with_corrupt_manifest_json(
-        self, manager: PARAMigrationManager
-    ) -> None:
+    def test_verify_backup_with_corrupt_manifest_json(self, manager: PARAMigrationManager) -> None:
         """verify_backup wraps JSON decode errors (lines 577-578)."""
         backup_dir = manager.backup_root / "corrupt_backup"
         backup_dir.mkdir(parents=True)

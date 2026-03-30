@@ -838,7 +838,9 @@ class TestContentHeuristicComprehensive:
         f_neg = tmp_path / "sales_projection.xlsx"
         f_neg.write_text("forecast")
         result_neg = h.evaluate(f_neg)
-        project_keywords_neg = [s for s in result_neg.scores[PARACategory.PROJECT].signals if s == "keyword:project"]
+        project_keywords_neg = [
+            s for s in result_neg.scores[PARACategory.PROJECT].signals if s == "keyword:project"
+        ]
         assert len(project_keywords_neg) == 0
 
         # "project" as standalone word in path SHOULD match (directory separator acts as boundary)
@@ -847,7 +849,9 @@ class TestContentHeuristicComprehensive:
         f_pos = project_folder / "plan.docx"
         f_pos.write_text("plan")
         result_pos = h.evaluate(f_pos)
-        project_keywords_pos = [s for s in result_pos.scores[PARACategory.PROJECT].signals if s == "keyword:project"]
+        project_keywords_pos = [
+            s for s in result_pos.scores[PARACategory.PROJECT].signals if s == "keyword:project"
+        ]
         assert len(project_keywords_pos) > 0
 
     def test_content_area_keywords(self, tmp_path: Path) -> None:
@@ -1085,7 +1089,9 @@ class TestHeuristicEngineEdgeCases:
         engine = HeuristicEngine(enable_temporal=True, enable_content=True)
 
         # Make all heuristics raise exceptions by replacing their evaluate methods
-        def failing_evaluate(file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+        def failing_evaluate(
+            file_path: Path, metadata: dict[str, Any] | None = None
+        ) -> HeuristicResult:
             raise RuntimeError("heuristic failed")
 
         for heuristic in engine.heuristics:
@@ -1117,7 +1123,9 @@ class TestHeuristicEngineEdgeCases:
             abstained=False,  # Not abstained, just zero scores
         )
 
-        def zero_evaluate(file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+        def zero_evaluate(
+            file_path: Path, metadata: dict[str, Any] | None = None
+        ) -> HeuristicResult:
             return mock_result
 
         # Replace all heuristics with the zero-returning mock
@@ -1135,7 +1143,9 @@ class TestHeuristicEngineEdgeCases:
         f.write_text("test")
 
         # Use only structural heuristic which tends to give lower scores
-        engine = HeuristicEngine(enable_structural=True, enable_temporal=False, enable_content=False)
+        engine = HeuristicEngine(
+            enable_structural=True, enable_temporal=False, enable_content=False
+        )
 
         result = engine.evaluate(f)
 
@@ -1247,7 +1257,9 @@ class TestRemainingCoverage:
 class TestPlatformSpecificPaths:
     """Tests for platform-specific code paths in TemporalHeuristic."""
 
-    def test_windows_platform_uses_ctime_for_creation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_windows_platform_uses_ctime_for_creation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """On Windows, st_ctime is used for file creation time."""
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 
@@ -1270,7 +1282,9 @@ class TestPlatformSpecificPaths:
 
         assert "stable_reference" in result.scores[PARACategory.RESOURCE].signals
 
-    def test_linux_platform_uses_mtime_for_creation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_linux_platform_uses_mtime_for_creation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """On Linux (without birthtime), st_mtime is used as creation proxy."""
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
@@ -1342,7 +1356,9 @@ class TestAIHeuristicEnsureClientEdgeCases:
 class TestPlatformSpecificBranches:
     """Tests to cover platform-specific code branches."""
 
-    def test_windows_platform_stat_ctime(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_windows_platform_stat_ctime(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Windows branch uses st_ctime when no st_birthtime."""
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
@@ -1370,7 +1386,9 @@ class TestPlatformSpecificBranches:
         # The Windows branch should execute
         assert result is not None
 
-    def test_linux_platform_stat_mtime_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_linux_platform_stat_mtime_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Linux branch uses st_mtime as creation time proxy."""
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
@@ -1398,7 +1416,9 @@ class TestPlatformSpecificBranches:
         # The Linux/else branch should execute
         assert result is not None
 
-    def test_resource_stable_reference_signal(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resource_stable_reference_signal(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """RESOURCE stable_reference signal when create/modify gap > 30 days."""
         import time
 
