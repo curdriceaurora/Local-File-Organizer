@@ -123,6 +123,109 @@ def list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
     return nodes
 
 
+def _filter_children(
+    children: list[Path],
+    *,
+    query_token: str | None,
+    include_hidden: bool,
+    allowed_types: set[str] | None,
+) -> tuple[list[Path], list[Path]]:
+    """Split and filter children into directories and files."""
+    directories = [p for p in children if p.is_dir()]
+    files = [p for p in children if p.is_file()]
+
+    if not include_hidden:
+        directories = [p for p in directories if not is_hidden(p)]
+        files = [p for p in files if not is_hidden(p)]
+
+    if query_token:
+        directories = [p for p in directories if query_token in p.name.lower()]
+        files = [p for p in files if query_token in p.name.lower()]
+
+    if allowed_types is not None:
+        files = [p for p in files if _normalized_extension(p) in allowed_types]
+
+    return directories, files
+
+
+def _sort_files(
+    files: list[Path],
+    sort_by: str,
+    sort_order: str,
+    file_stats: dict[Path, os.stat_result | None],
+) -> None:
+    """Sort files in-place according to the requested column and order."""
+    reverse = sort_order == "desc"
+
+    if sort_by == "name":
+        files.sort(key=lambda p: p.name.lower(), reverse=reverse)
+    elif sort_by == "size":
+        files.sort(
+            key=lambda p: s.st_size if (s := file_stats.get(p)) else 0,
+            reverse=reverse,
+        )
+    elif sort_by == "created":
+        files.sort(key=lambda p: _creation_sort_key(file_stats.get(p)), reverse=reverse)
+    elif sort_by == "type":
+        files.sort(key=lambda p: _normalized_extension(p), reverse=reverse)
+    else:
+        files.sort(
+            key=lambda p: s.st_mtime if (s := file_stats.get(p)) else 0,
+            reverse=reverse,
+        )
+
+
+def _creation_sort_key(s: os.stat_result | None) -> float:
+    """Return a file creation timestamp for sorting, with platform fallbacks."""
+    if s is None:
+        return 0.0
+    if hasattr(s, "st_birthtime"):
+        return s.st_birthtime
+    if os.name == "nt":
+        return s.st_ctime
+    return s.st_mtime
+
+
+def _dir_entry(entry: Path) -> dict[str, Any]:
+    """Build a directory entry dict for the file browser."""
+    try:
+        stat = entry.stat()
+        modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+    except OSError:
+        modified = datetime.now(UTC)
+    return {
+        "name": entry.name,
+        "path": str(entry),
+        "path_param": quote(str(entry)),
+        "is_dir": True,
+        "kind": "folder",
+        "size_display": "-",
+        "modified_display": format_timestamp(modified),
+        "thumbnail_url": None,
+        "meta": "Folder",
+    }
+
+
+def _file_entry(entry: Path) -> dict[str, Any]:
+    """Build a file entry dict for the file browser."""
+    info = file_info_from_path(entry)
+    kind = detect_kind(entry)
+    thumbnail_url = None
+    if kind in {"image", "pdf", "video"}:
+        thumbnail_url = f"/ui/files/thumbnail?path={quote(info.path)}&kind={kind}"
+    return {
+        "name": info.name,
+        "path": info.path,
+        "path_param": quote(info.path),
+        "is_dir": False,
+        "kind": kind,
+        "size_display": format_bytes(info.size),
+        "modified_display": format_timestamp(info.modified),
+        "thumbnail_url": thumbnail_url,
+        "meta": f"{info.file_type or 'file'}",
+    }
+
+
 def collect_entries(
     path: Path,
     *,
@@ -147,28 +250,20 @@ def collect_entries(
     Returns:
         Tuple of ``(entries, total)`` where *entries* is the page slice.
     """
-    entries: list[dict[str, Any]] = []
     try:
         children = list(path.iterdir())
     except OSError:
-        return entries, 0
+        return [], 0
 
     query_token = query.lower() if query else None
     allowed_types = parse_file_type_filter(file_type)
 
-    directories = [p for p in children if p.is_dir()]
-    files = [p for p in children if p.is_file()]
-
-    directories = [p for p in directories if include_hidden or not is_hidden(p)]
-    files = [p for p in files if include_hidden or not is_hidden(p)]
-
-    if query_token:
-        directories = [p for p in directories if query_token in p.name.lower()]
-        files = [p for p in files if query_token in p.name.lower()]
-
-    if allowed_types is not None:
-        files = [p for p in files if _normalized_extension(p) in allowed_types]
-
+    directories, files = _filter_children(
+        children,
+        query_token=query_token,
+        include_hidden=include_hidden,
+        allowed_types=allowed_types,
+    )
     directories.sort(key=lambda p: p.name.lower())
 
     file_stats: dict[Path, os.stat_result | None] = {}
@@ -179,96 +274,17 @@ def collect_entries(
             except OSError:
                 file_stats[entry] = None
 
-    reverse = sort_order == "desc"
-    if sort_by == "name":
-        files.sort(key=lambda p: p.name.lower(), reverse=reverse)
-    elif sort_by == "size":
-        files.sort(
-            key=lambda p: s.st_size if (s := file_stats.get(p)) else 0,
-            reverse=reverse,
-        )
-    elif sort_by == "created":
-        # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
-        def _creation_key(p: Path) -> float:
-            """Get file creation timestamp with platform-specific fallbacks.
-
-            Returns the file's creation timestamp when available. On platforms
-            without st_birthtime support (e.g., Linux), falls back to the
-            modification timestamp (st_mtime).
-
-            Args:
-                p: File path to get creation time for.
-
-            Returns:
-                Creation timestamp (or modification time as fallback), or 0.0
-                if stat information is unavailable.
-            """
-            s = file_stats.get(p)
-            if s is None:
-                return 0.0
-            if hasattr(s, "st_birthtime"):
-                return s.st_birthtime
-            if os.name == "nt":
-                return s.st_ctime
-            return s.st_mtime
-
-        files.sort(key=_creation_key, reverse=reverse)
-    elif sort_by == "type":
-        files.sort(key=lambda p: _normalized_extension(p), reverse=reverse)
-    else:
-        files.sort(
-            key=lambda p: s.st_mtime if (s := file_stats.get(p)) else 0,
-            reverse=reverse,
-        )
+    _sort_files(files, sort_by, sort_order, file_stats)
 
     total = len(directories) + len(files)
     if limit <= 0:
-        return entries, total
+        return [], total
 
     dir_limit = min(limit, len(directories))
-    selected_dirs = directories[:dir_limit]
     remaining = max(limit - dir_limit, 0)
-    selected_files = files[:remaining] if remaining else []
 
-    for entry in selected_dirs:
-        try:
-            stat = entry.stat()
-            modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-        except OSError:
-            modified = datetime.now(UTC)
-        entries.append(
-            {
-                "name": entry.name,
-                "path": str(entry),
-                "path_param": quote(str(entry)),
-                "is_dir": True,
-                "kind": "folder",
-                "size_display": "-",
-                "modified_display": format_timestamp(modified),
-                "thumbnail_url": None,
-                "meta": "Folder",
-            }
-        )
-
-    for entry in selected_files:
-        info = file_info_from_path(entry)
-        kind = detect_kind(entry)
-        thumbnail_url = None
-        if kind in {"image", "pdf", "video"}:
-            thumbnail_url = f"/ui/files/thumbnail?path={quote(info.path)}&kind={kind}"
-        entries.append(
-            {
-                "name": info.name,
-                "path": info.path,
-                "path_param": quote(info.path),
-                "is_dir": False,
-                "kind": kind,
-                "size_display": format_bytes(info.size),
-                "modified_display": format_timestamp(info.modified),
-                "thumbnail_url": thumbnail_url,
-                "meta": f"{info.file_type or 'file'}",
-            }
-        )
+    entries: list[dict[str, Any]] = [_dir_entry(d) for d in directories[:dir_limit]]
+    entries.extend(_file_entry(f) for f in files[:remaining])
 
     return entries, total
 
@@ -515,6 +531,75 @@ def build_preview_context(path: str, settings: ApiSettings) -> dict[str, Any]:
     }
 
 
+def _save_upload(upload: UploadFile, target_dir: Path, allow_hidden: bool) -> str | None:
+    """Validate and save a single upload file.
+
+    Args:
+        upload: The uploaded file.
+        target_dir: Destination directory.
+        allow_hidden: Whether hidden files are allowed.
+
+    Returns:
+        An error message string if the upload failed, empty string if skipped
+        (no filename), or ``None`` on success.
+    """
+    from file_organizer.web.file_validators import (
+        validate_file_not_exists,
+        validate_upload_filename,
+    )
+
+    if not upload.filename:
+        return ""  # skipped — no filename, not an error but not saved
+
+    try:
+        validate_upload_filename(upload.filename, allow_hidden=allow_hidden)
+    except ApiError as exc:
+        return exc.message
+
+    safe_name = sanitize_upload_name(upload.filename)
+    if safe_name is None:
+        return f"Rejected {upload.filename}: invalid filename."
+
+    destination = target_dir / safe_name
+    try:
+        validate_file_not_exists(destination, safe_name)
+    except ApiError as exc:
+        return exc.message
+
+    try:
+        _write_upload_chunks(upload, destination, safe_name)
+    except ApiError as exc:
+        destination.unlink(missing_ok=True)
+        return exc.message
+    except OSError:
+        destination.unlink(missing_ok=True)
+        return f"Failed to save {safe_name}."
+
+    return None
+
+
+def _write_upload_chunks(upload: UploadFile, destination: Path, safe_name: str) -> None:
+    """Stream upload chunks to disk, enforcing size limit."""
+    from file_organizer.web.file_validators import validate_file_size
+
+    total_bytes = 0
+    with destination.open("wb") as handle:
+        while True:
+            chunk = upload.file.read(UPLOAD_CHUNK_SIZE)
+            if not chunk:
+                break
+            total_bytes += len(chunk)
+            try:
+                validate_file_size(total_bytes, MAX_UPLOAD_BYTES)
+            except ApiError:
+                raise ApiError(
+                    status_code=400,
+                    error="file_too_large",
+                    message=f"{safe_name} exceeds upload size limit.",
+                ) from None
+            handle.write(chunk)
+
+
 def process_file_uploads(
     files: list[UploadFile],
     target_dir: Path,
@@ -530,77 +615,19 @@ def process_file_uploads(
     Returns:
         Tuple of (saved_count, error_messages).
     """
-    from file_organizer.web.file_validators import (
-        validate_file_not_exists,
-        validate_file_size,
-        validate_upload_filename,
-    )
-
     saved = 0
     errors: list[str] = []
 
     for upload in files:
-        if not upload.filename:
-            continue
-
         try:
-            validate_upload_filename(upload.filename, allow_hidden=allow_hidden)
-        except ApiError as exc:
-            errors.append(exc.message)
+            error = _save_upload(upload, target_dir, allow_hidden)
+        finally:
             if upload.file:
                 upload.file.close()
-            continue
 
-        safe_name = sanitize_upload_name(upload.filename)
-        if safe_name is None:
-            errors.append(f"Rejected {upload.filename}: invalid filename.")
-            if upload.file:
-                upload.file.close()
-            continue
-
-        destination = target_dir / safe_name
-        try:
-            validate_file_not_exists(destination, safe_name)
-        except ApiError as exc:
-            errors.append(exc.message)
-            if upload.file:
-                upload.file.close()
-            continue
-
-        total_bytes = 0
-        try:
-            with destination.open("wb") as handle:
-                while True:
-                    chunk = upload.file.read(UPLOAD_CHUNK_SIZE)
-                    if not chunk:
-                        break
-                    total_bytes += len(chunk)
-                    try:
-                        validate_file_size(total_bytes, MAX_UPLOAD_BYTES)
-                    except ApiError:
-                        raise ApiError(
-                            status_code=400,
-                            error="file_too_large",
-                            message=f"{safe_name} exceeds upload size limit.",
-                        ) from None
-                    handle.write(chunk)
-        except ApiError as exc:
-            if destination.exists():
-                destination.unlink(missing_ok=True)
-            errors.append(exc.message)
-            if upload.file:
-                upload.file.close()
-            continue
-        except OSError:
-            if destination.exists():
-                destination.unlink(missing_ok=True)
-            errors.append(f"Failed to save {safe_name}.")
-            if upload.file:
-                upload.file.close()
-            continue
-
-        if upload.file:
-            upload.file.close()
-        saved += 1
+        if error is None:
+            saved += 1
+        elif upload.filename:
+            errors.append(error)
 
     return saved, errors
