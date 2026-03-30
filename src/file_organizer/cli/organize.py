@@ -6,10 +6,44 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
 
 import file_organizer.cli._globals as _g
 
 console = Console()
+
+
+def _check_setup_completed() -> bool:
+    """Check if the initial setup wizard has been completed.
+
+    Returns:
+        True if setup is complete, False otherwise.
+
+    Raises:
+        typer.Exit: With code 1 if setup is not completed.
+    """
+    from file_organizer.config.manager import ConfigManager
+
+    config_manager = ConfigManager()
+    config = config_manager.load()
+
+    if not config.setup_completed:
+        console.print()
+        console.print(
+            Panel.fit(
+                "[bold yellow]First-time setup required[/bold yellow]\n\n"
+                "File Organizer needs to be configured before use.\n"
+                "Run the setup wizard to get started:\n\n"
+                "  [bold cyan]file-organizer setup[/bold cyan]\n\n"
+                "This will detect your system capabilities and configure\n"
+                "the optimal AI models for your hardware.",
+                border_style="yellow",
+            )
+        )
+        console.print()
+        raise typer.Exit(code=1)
+
+    return True
 
 
 def _resolve_parallel_settings(
@@ -76,6 +110,9 @@ def organize(
     ),
 ) -> None:
     """Organize files in a directory using AI models."""
+    # Check if setup has been completed
+    _check_setup_completed()
+
     console.print(f"[bold]Organizing[/bold] {input_dir} -> {output_dir}")
     if dry_run or _g.dry_run:
         console.print("[yellow]Dry run mode — no files will be moved.[/yellow]")
@@ -138,6 +175,9 @@ def preview(
     ),
 ) -> None:
     """Preview how files would be organized (dry-run)."""
+    # Check if setup has been completed
+    _check_setup_completed()
+
     console.print(f"[bold]Previewing[/bold] {input_dir}")
     resolved_workers, resolved_prefetch_depth = _resolve_parallel_settings(
         sequential, max_workers, prefetch_depth, no_prefetch

@@ -19,7 +19,7 @@ from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.web.files_routes import files_router
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit]
 
 _HTML_OK = HTMLResponse("<html>ok</html>")
 
@@ -151,7 +151,7 @@ class TestFilesThumbnail:
     def test_image_thumbnail(self, client, tree):
         img_path = tree / "photo.png"
         with patch(
-            "file_organizer.web.files_routes.render_image_thumbnail",
+            "file_organizer.web.file_operations.render_image_thumbnail",
             return_value=b"\x89PNG_THUMB",
         ):
             response = client.get(f"/ui/files/thumbnail?path={img_path}&kind=image")
@@ -162,7 +162,7 @@ class TestFilesThumbnail:
         pdf_path = tree / "doc.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 dummy")
         with patch(
-            "file_organizer.web.files_routes.render_placeholder_thumbnail",
+            "file_organizer.web.file_operations.render_placeholder_thumbnail",
             return_value=b"\x89PNG_PLACEHOLDER",
         ):
             response = client.get(f"/ui/files/thumbnail?path={pdf_path}&kind=pdf")

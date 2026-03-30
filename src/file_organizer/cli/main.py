@@ -18,10 +18,12 @@ from file_organizer.cli.config_cli import config_app
 from file_organizer.cli.copilot import copilot_app
 from file_organizer.cli.daemon import daemon_app
 from file_organizer.cli.dedupe_v2 import dedupe_app
+from file_organizer.cli.doctor import doctor
 from file_organizer.cli.marketplace import marketplace_app
 from file_organizer.cli.models_cli import model_app
 from file_organizer.cli.organize import organize, preview
 from file_organizer.cli.rules import rules_app
+from file_organizer.cli.setup import setup_app
 from file_organizer.cli.suggest import suggest_app
 from file_organizer.cli.update import update_app
 from file_organizer.cli.utilities import analyze, search
@@ -74,6 +76,7 @@ app.command()(organize)
 app.command()(preview)
 app.command()(search)
 app.command()(analyze)
+app.command()(doctor)
 
 
 @app.command()
@@ -172,6 +175,7 @@ app.add_typer(dedupe_app, name="dedupe")
 app.add_typer(api_app, name="api")
 app.add_typer(marketplace_app, name="marketplace")
 app.add_typer(rules_app, name="rules")
+app.add_typer(setup_app, name="setup")
 app.add_typer(suggest_app, name="suggest")
 app.add_typer(update_app, name="update")
 

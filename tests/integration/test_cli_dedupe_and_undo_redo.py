@@ -184,12 +184,13 @@ class TestSelectFilesToKeep:
         result = select_files_to_keep(files, "manual")
         assert all(not f.get("keep", False) for f in result)
 
-    def test_returns_same_list(self) -> None:
+    def test_returns_new_list_of_same_length(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep
 
         files = self._files()
         result = select_files_to_keep(files, "oldest")
-        assert result is files
+        assert len(result) == len(files)
+        assert result is not files
 
 
 # ---------------------------------------------------------------------------
@@ -294,29 +295,31 @@ class TestGetUserSelection:
 
 class TestDisplaySummary:
     def test_dry_run_summary(self) -> None:
-        from file_organizer.cli.dedupe import display_summary
+        from file_organizer.cli.dedupe_display import display_summary
 
-        with patch("file_organizer.cli.dedupe.console") as mock_console:
-            display_summary(
-                total_groups=3,
-                total_duplicates=6,
-                total_removed=0,
-                space_saved=0,
-                dry_run=True,
-            )
+        mock_console = MagicMock()
+        display_summary(
+            console=mock_console,
+            total_groups=3,
+            total_duplicates=6,
+            total_removed=0,
+            space_saved=0,
+            dry_run=True,
+        )
         assert mock_console.print.called
 
     def test_real_summary(self) -> None:
-        from file_organizer.cli.dedupe import display_summary
+        from file_organizer.cli.dedupe_display import display_summary
 
-        with patch("file_organizer.cli.dedupe.console") as mock_console:
-            display_summary(
-                total_groups=2,
-                total_duplicates=4,
-                total_removed=2,
-                space_saved=1024 * 1024,
-                dry_run=False,
-            )
+        mock_console = MagicMock()
+        display_summary(
+            console=mock_console,
+            total_groups=2,
+            total_duplicates=4,
+            total_removed=2,
+            space_saved=1024 * 1024,
+            dry_run=False,
+        )
         assert mock_console.print.called
 
 

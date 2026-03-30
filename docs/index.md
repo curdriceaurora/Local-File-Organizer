@@ -86,6 +86,12 @@ File Organizer processes **43+ file formats** including:
 - [CLI Reference](cli-reference.md) - Command-line interface guide
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
+### Setup
+
+- [AI Provider Setup](setup/ai-providers.md) - Configure Ollama, OpenAI, Claude, and more
+- [Dependencies](setup/dependencies.md) - Installation and dependencies
+- [Models](setup/models.md) - AI model configuration
+
 ### API & Integration
 
 - [API Reference](api/index.md) - Complete REST API documentation
@@ -97,6 +103,7 @@ File Organizer processes **43+ file formats** including:
 - [Installation](admin/installation.md) - Setup instructions
 - [Deployment Guide](admin/deployment.md) - Production deployment
 - [Configuration](admin/configuration.md) - Environment setup
+- [Audio & Video Processing](setup/audio-video.md) - Audio and video processing setup
 - [Security](admin/security.md) - Security best practices
 - [Monitoring](admin/monitoring.md) - Health checks and logging
 

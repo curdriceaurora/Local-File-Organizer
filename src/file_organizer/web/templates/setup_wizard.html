@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="setup-wizard">
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1 class="wizard-title">Welcome to {{ app_name }}</h1>
+            <p class="wizard-subtitle">Let's get you set up in under 5 minutes</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="wizard-progress">
+            <div class="progress-step progress-step-active" data-step="1">
+                <div class="progress-circle">1</div>
+                <span class="progress-label">Mode</span>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="progress-circle">2</div>
+                <span class="progress-label">Detection</span>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="progress-circle">3</div>
+                <span class="progress-label">Configuration</span>
+            </div>
+            <div class="progress-step" data-step="4">
+                <div class="progress-circle">4</div>
+                <span class="progress-label">Complete</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Mode Selection -->
+        <div class="wizard-step wizard-step-active" data-step="1">
+            <div class="step-content">
+                <h2 class="step-title">Choose Your Setup Mode</h2>
+                <p class="step-description">Select how you'd like to configure your file organizer</p>
+
+                <div class="mode-grid">
+                    <article class="mode-card mode-card-recommended">
+                        <div class="mode-badge">Recommended</div>
+                        <h3 class="mode-title">Quick Start</h3>
+                        <p class="mode-description">
+                            Auto-detect your system capabilities and use sensible defaults.
+                            Perfect for getting started quickly with minimal configuration.
+                        </p>
+                        <ul class="mode-features">
+                            <li>Automatic hardware detection</li>
+                            <li>Smart model recommendations</li>
+                            <li>Sensible defaults</li>
+                            <li>5-minute setup</li>
+                        </ul>
+                        <button class="btn-primary mode-select" data-mode="quick_start">
+                            Use Quick Start
+                        </button>
+                    </article>
+
+                    <article class="mode-card">
+                        <h3 class="mode-title">Power User</h3>
+                        <p class="mode-description">
+                            Full control over all configuration options.
+                            Choose your AI backend, models, and methodology manually.
+                        </p>
+                        <ul class="mode-features">
+                            <li>Custom AI backend selection</li>
+                            <li>Manual model configuration</li>
+                            <li>Advanced methodology options</li>
+                            <li>Full configuration control</li>
+                        </ul>
+                        <button class="btn-ghost mode-select" data-mode="power_user">
+                            Use Power User Mode
+                        </button>
+                    </article>
+                </div>
+
+                <div class="step-actions">
+                    <a href="/ui/" class="btn-text">Skip setup for now</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Hardware Detection -->
+        <div class="wizard-step" data-step="2">
+            <div class="step-content">
+                <h2 class="step-title">Detecting System Capabilities</h2>
+                <p class="step-description">Checking your hardware and available AI backends...</p>
+
+                <div class="detection-panel">
+                    <div class="detection-item">
+                        <div class="detection-icon">🔍</div>
+                        <div class="detection-info">
+                            <h4>Ollama Installation</h4>
+                            <p class="detection-status" id="ollama-status">Checking...</p>
+                        </div>
+                    </div>
+
+                    <div class="detection-item">
+                        <div class="detection-icon">🧠</div>
+                        <div class="detection-info">
+                            <h4>System Memory</h4>
+                            <p class="detection-status" id="memory-status">Checking...</p>
+                        </div>
+                    </div>
+
+                    <div class="detection-item">
+                        <div class="detection-icon">🎮</div>
+                        <div class="detection-info">
+                            <h4>GPU Availability</h4>
+                            <p class="detection-status" id="gpu-status">Checking...</p>
+                        </div>
+                    </div>
+
+                    <div class="detection-item">
+                        <div class="detection-icon">📦</div>
+                        <div class="detection-info">
+                            <h4>Available Models</h4>
+                            <p class="detection-status" id="models-status">Checking...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recommendation-panel" id="recommendation-panel" style="display: none;">
+                    <h3>Recommended Configuration</h3>
+                    <p id="recommendation-text">Based on your system capabilities...</p>
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn-ghost" id="btn-back-step2">Back</button>
+                    <button class="btn-primary" id="btn-next-step2" disabled>Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Configuration -->
+        <div class="wizard-step" data-step="3">
+            <div class="step-content">
+                <h2 class="step-title">Configure Your Organizer</h2>
+                <p class="step-description">Review and adjust your configuration</p>
+
+                <form class="wizard-form" id="setup-form">
+                    <div class="form-section">
+                        <h3 class="form-section-title">AI Models</h3>
+
+                        <div class="form-group">
+                            <label for="text-model">Text Model</label>
+                            <select id="text-model" name="text_model" class="form-select">
+                                <option value="">Select a model...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vision-model">Vision Model</label>
+                            <select id="vision-model" name="vision_model" class="form-select">
+                                <option value="">Select a model...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Organization Methodology</h3>
+
+                        <div class="form-group">
+                            <label for="methodology">Methodology</label>
+                            <select id="methodology" name="methodology" class="form-select">
+                                <option value="content_based">Content-Based (Recommended)</option>
+                                <option value="johnny_decimal">Johnny Decimal</option>
+                                <option value="para">PARA</option>
+                                <option value="date_based">Date-Based</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Default Directories</h3>
+
+                        <div class="form-group">
+                            <label for="input-dir">Input Directory</label>
+                            <input type="text" id="input-dir" name="input_dir" class="form-input" placeholder="/path/to/input">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="output-dir">Output Directory</label>
+                            <input type="text" id="output-dir" name="output_dir" class="form-input" placeholder="/path/to/output">
+                        </div>
+                    </div>
+                </form>
+
+                <div class="step-actions">
+                    <button class="btn-ghost" id="btn-back-step3">Back</button>
+                    <button class="btn-primary" id="btn-complete">Complete Setup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Complete -->
+        <div class="wizard-step" data-step="4">
+            <div class="step-content">
+                <div class="completion-panel">
+                    <div class="completion-icon">✅</div>
+                    <h2 class="completion-title">Setup Complete!</h2>
+                    <p class="completion-message">
+                        Your file organizer is ready to use. You can now organize your files
+                        with AI-powered automation.
+                    </p>
+
+                    <div class="completion-summary">
+                        <h3>What's Next?</h3>
+                        <ul class="next-steps">
+                            <li>Browse your files in the File Browser</li>
+                            <li>Run your first organization task</li>
+                            <li>Adjust settings as needed</li>
+                            <li>Explore the marketplace for plugins</li>
+                        </ul>
+                    </div>
+
+                    <div class="step-actions">
+                        <a href="/ui/" class="btn-primary">Go to Dashboard</a>
+                        <a href="/ui/files" class="btn-ghost">Browse Files</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+/* Setup Wizard Styles */
+.setup-wizard {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.wizard-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.wizard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.wizard-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a1a;
+}
+
+.wizard-subtitle {
+    font-size: 1.125rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Progress Steps */
+.wizard-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.wizard-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.progress-step-active .progress-circle {
+    background: #007bff;
+    color: white;
+}
+
+.progress-label {
+    font-size: 0.875rem;
+    color: #666;
+}
+
+/* Wizard Steps */
+.wizard-step {
+    display: none;
+}
+
+.wizard-step-active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.step-content {
+    min-height: 400px;
+}
+
+.step-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a1a;
+}
+
+.step-description {
+    color: #666;
+    margin: 0 0 2rem 0;
+}
+
+/* Mode Selection */
+.mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.mode-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.mode-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+}
+
+.mode-card-recommended {
+    border-color: #007bff;
+}
+
+.mode-badge {
+    position: absolute;
+    top: -10px;
+    right: 1rem;
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.mode-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.mode-description {
+    color: #666;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.mode-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+
+.mode-features li {
+    padding: 0.5rem 0;
+    color: #666;
+}
+
+.mode-features li::before {
+    content: '✓ ';
+    color: #28a745;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+/* Detection Panel */
+.detection-panel {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.detection-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.detection-icon {
+    font-size: 2rem;
+}
+
+.detection-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.detection-status {
+    margin: 0;
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.status-checking {
+    color: #666;
+}
+
+.status-success {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.status-warning {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.status-error {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.recommendation-panel {
+    background: #e8f4f8;
+    border-left: 4px solid #007bff;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+}
+
+.recommendation-panel h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    color: #007bff;
+}
+
+/* Form Styles */
+.wizard-form {
+    display: grid;
+    gap: 2rem;
+}
+
+.form-section {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.form-select,
+.form-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-select:focus,
+.form-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Completion Panel */
+.completion-panel {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.completion-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.completion-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #28a745;
+}
+
+.completion-message {
+    color: #666;
+    font-size: 1.125rem;
+    margin: 0 0 2rem 0;
+}
+
+.completion-summary {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.completion-summary h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+}
+
+.next-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.next-steps li {
+    padding: 0.5rem 0;
+    color: #666;
+}
+
+.next-steps li::before {
+    content: '→ ';
+    color: #007bff;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+/* Step Actions */
+.step-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+}
+
+.btn-text:hover {
+    color: #333;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .wizard-container {
+        background: #2a2a2a;
+    }
+
+    .wizard-title,
+    .step-title,
+    .mode-title {
+        color: #f0f0f0;
+    }
+
+    .wizard-subtitle,
+    .step-description,
+    .mode-description {
+        color: #b0b0b0;
+    }
+
+    .mode-card {
+        border-color: #444;
+        background: #333;
+    }
+
+    .detection-item {
+        background: #333;
+    }
+}
+</style>
+
+<script src="/static/js/setup_wizard.js" defer></script>
+{% endblock %}

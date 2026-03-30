@@ -173,6 +173,7 @@ Full undo and redo support for all file operations:
 | `?` | Show help |
 | `Tab` | Switch panel focus |
 | `1`–`8` | Jump to view |
+| `Ctrl+w` | Complete setup wizard |
 
 ### File Browser
 

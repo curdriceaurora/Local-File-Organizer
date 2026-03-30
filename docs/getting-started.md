@@ -105,6 +105,42 @@ file-organizer serve
 - **Node.js**: For plugin development
 - **Docker**: For containerized deployment
 
+## Optional Features
+
+File Organizer supports modular installation through optional dependency groups. Install only the features you need:
+
+| Feature | Install Command | What It Enables | Platform Notes |
+|---------|----------------|-----------------|----------------|
+| **Core** | `pip install local-file-organizer` | Basic file organization, Ollama integration, YAML/JSON/TXT parsing | All platforms |
+| **parsers** | `pip install local-file-organizer[parsers]` | PDF, Word, Excel, PowerPoint, eBook, HTML parsing | All platforms |
+| **web** | `pip install local-file-organizer[web]` | Web interface, REST API server, WebSocket support | All platforms |
+| **cloud** | `pip install local-file-organizer[cloud]` | OpenAI-compatible API providers (OpenAI, Groq, LM Studio, vLLM) | Requires `OPENAI_API_KEY` |
+| **llama** | `pip install local-file-organizer[llama]` | Direct GGUF inference via llama.cpp (no Ollama server needed) | All platforms |
+| **mlx** | `pip install local-file-organizer[mlx]` | Apple Silicon MLX acceleration for faster local inference | **macOS only** |
+| **claude** | `pip install local-file-organizer[claude]` | Anthropic Claude API provider (text and vision) | Requires `ANTHROPIC_API_KEY` |
+| **audio** | `pip install local-file-organizer[audio]` | Audio transcription (Faster Whisper), metadata extraction | GPU recommended |
+| **video** | `pip install local-file-organizer[video]` | Video frame processing, scene detection | All platforms |
+| **dedup** | `pip install local-file-organizer[dedup]` | Image and text similarity-based duplicate detection | All platforms |
+| **archive** | `pip install local-file-organizer[archive]` | 7Z and RAR archive extraction | RAR requires `unrar` tool |
+| **scientific** | `pip install local-file-organizer[scientific]` | HDF5, NetCDF, MATLAB file format support | All platforms |
+| **cad** | `pip install local-file-organizer[cad]` | DXF/DWG CAD file parsing | All platforms |
+| **build** | `pip install local-file-organizer[build]` | PyInstaller-based executable packaging | All platforms |
+| **search** | `pip install local-file-organizer[search]` | BM25-based search ranking algorithms | All platforms |
+| **all** | `pip install local-file-organizer[all]` | All optional packs above, plus development tools (`pytest`, `mypy`, `ruff`, etc.) and PyQt6 GUI dependencies | Includes `dev` and `gui` extras in addition to feature/build packs |
+
+**Example usage:**
+
+```bash
+# Install multiple features at once
+pip install local-file-organizer[parsers,web,cloud]
+
+# Install from source with features
+pip install -e .[parsers,web]
+
+# Install everything
+pip install local-file-organizer[all]
+```
+
 ## First Run Setup
 
 After installation, File Organizer will guide you through initial setup:

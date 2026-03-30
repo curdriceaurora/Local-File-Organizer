@@ -33,13 +33,11 @@ class TestSearch:
     """Tests for GET /api/v1/search."""
 
     def test_search_missing_query_required(self, tmp_path: Path) -> None:
-        """Test that query parameter is required."""
+        """Test that query parameter is required (enforced by FastAPI)."""
         _, client = _build_app(tmp_path)
 
         resp = client.get("/api/v1/search")
-        assert resp.status_code == 400
-        body = resp.json()
-        assert "Query parameter 'q' is required" in body["detail"]
+        assert resp.status_code == 422
 
     def test_search_empty_query_required(self, tmp_path: Path) -> None:
         """Test that empty query is rejected."""
@@ -269,12 +267,12 @@ class TestSemanticSearch:
         assert "type" in result
         assert "size" in result
 
-    def test_semantic_true_missing_query_returns_400(self, tmp_path: Path) -> None:
-        """semantic=true still requires the q param."""
+    def test_semantic_true_missing_query_returns_422(self, tmp_path: Path) -> None:
+        """semantic=true still requires the q param (enforced by FastAPI)."""
         _, client = _build_app(tmp_path)
 
         resp = client.get("/api/v1/search?semantic=true")
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_semantic_true_keyword_path_unchanged(self, tmp_path: Path) -> None:
         """Existing keyword search path is unaffected when semantic=false."""
@@ -421,13 +419,13 @@ class TestRelativePathHelper:
         result = _relative_path(fp, [tmp_path])
         assert result == str(Path("subdir") / "file.txt")
 
-    def test_fallback_to_absolute_when_no_root_matches(self, tmp_path: Path) -> None:
+    def test_returns_none_when_no_root_matches(self, tmp_path: Path) -> None:
         from file_organizer.api.routers.search import _relative_path
 
         fp = (tmp_path / "area_a" / "file.txt").resolve()
         roots = [(tmp_path / "area_b").resolve()]
         result = _relative_path(fp, roots)
-        assert result == str(fp)
+        assert result is None
 
     def test_first_matching_root_wins(self, tmp_path: Path) -> None:
         from file_organizer.api.routers.search import _relative_path
@@ -441,59 +439,50 @@ class TestRelativePathHelper:
         assert result == str(Path("b") / "file.txt")
 
 
-# ---------------------------------------------------------------------------
-# _load_cached_results deserialization error path (lines 89-91)
-# ---------------------------------------------------------------------------
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBuildResultHelper:
+    """Unit tests for the _build_result helper."""
+
+    def test_returns_none_for_outside_roots(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "file.txt"
+        fp.write_text("x")
+        other_root = (tmp_path / "other").resolve()
+        assert _build_result(fp, 1.0, [other_root]) is None
+
+    def test_returns_none_on_oserror(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "ghost.txt"  # does not exist — stat() raises
+        assert _build_result(fp, 1.0, [tmp_path]) is None
+
+    def test_success_populates_all_fields(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _build_result
+
+        fp = tmp_path / "hello.txt"
+        fp.write_text("content")
+        result = _build_result(fp, 0.85, [tmp_path])
+        assert result is not None
+        assert result.filename == "hello.txt"
+        assert result.path == "hello.txt"
+        assert result.score == 0.85
+        assert result.type == "txt"
+        assert result.size == 7  # len("content")
+        assert result.created is not None
 
 
 @pytest.mark.ci
 @pytest.mark.unit
-class TestLoadCachedResultsErrorPath:
-    """Tests for _load_cached_results handling corrupt/invalid cached data."""
+class TestNegativeOffsetClamping:
+    """Verify negative offsets are clamped to zero."""
 
-    def test_corrupt_json_returns_none(self) -> None:
-        """Corrupt JSON in cache returns None instead of raising (line 89-91)."""
-        from file_organizer.api.routers.search import (
-            _load_cached_results,
-            _search_cache,
-        )
+    def test_negative_offset_clamped_to_zero(self, tmp_path: Path) -> None:
+        (tmp_path / "file.txt").write_text("content")
+        _, client = _build_app(tmp_path)
 
-        cache_key = "search:test_corrupt_json"
-        # Store invalid JSON in the cache
-        _search_cache.set(cache_key, "not valid json {{{", ttl_seconds=60)
-
-        result = _load_cached_results(cache_key)
-        assert result is None
-
-        # Clean up
-        _search_cache.delete(cache_key)
-
-    def test_valid_json_but_invalid_schema_returns_none(self) -> None:
-        """Valid JSON that cannot be deserialized to SearchResult returns None."""
-        import json
-
-        from file_organizer.api.routers.search import (
-            _load_cached_results,
-            _search_cache,
-        )
-
-        cache_key = "search:test_bad_schema"
-        # Store valid JSON but with fields that don't match SearchResult
-        _search_cache.set(
-            cache_key,
-            json.dumps([{"bad_field": "value"}]),
-            ttl_seconds=60,
-        )
-
-        result = _load_cached_results(cache_key)
-        assert result is None
-
-        # Clean up
-        _search_cache.delete(cache_key)
-
-    def test_missing_cache_key_returns_none(self) -> None:
-        """Non-existent cache key returns None (not an error)."""
-        from file_organizer.api.routers.search import _load_cached_results
-
-        result = _load_cached_results("search:nonexistent_key_12345")
-        assert result is None
+        resp_zero = client.get("/api/v1/search?q=file&offset=0")
+        resp_neg = client.get("/api/v1/search?q=file&offset=-5")
+        assert resp_neg.status_code == 200
+        assert resp_neg.json() == resp_zero.json()

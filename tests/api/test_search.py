@@ -201,7 +201,7 @@ class TestSearchReturnsRealFiles:
         assert resp.status_code == 400, f"Empty query should return 400, got {resp.status_code}"
 
         resp = client.get("/search")
-        assert resp.status_code == 400, f"Missing query should return 400, got {resp.status_code}"
+        assert resp.status_code == 422, f"Missing query should return 422, got {resp.status_code}"
 
     def test_search_no_results(self, tmp_path: Path) -> None:
         (tmp_path / "hello.txt").write_text("x")

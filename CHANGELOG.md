@@ -13,6 +13,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accepted risk for `ecdsa` (GHSA-wj6h-64fc-37mp, HIGH): transitive via `python-jose`; JWT algorithm is HS256 so `ecdsa` is never invoked
 - Accepted risk for `diskcache` (GHSA-w8v5-vhqr-4h9v, MODERATE): transitive via `llama-cpp-python`; never imported by application code
 
+## [2.0.0-alpha.3] - TBD
+
+### Known Limitations
+
+The following tests are currently skipped in the alpha.3 release:
+
+| Category | Count | Reason | Status |
+|----------|-------|--------|--------|
+| Phase 3 Features | 12 | Audio/video metadata deferred to Phase 3 | Intentional |
+| SSE Streaming | 2 | Server-Sent Events not yet implemented | Planned |
+
+**Total skipped tests: 14**
+
+#### Phase 3 Audio/Video Features (12 tests)
+
+Deferred to Phase 3 roadmap:
+- **Audio Metadata** (3 tests): MP3/WAV extraction, music tag parsing
+- **Video Metadata** (3 tests): MP4 extraction, resolution detection, codec identification
+- **Audio Transcription** (3 tests): MP3/WAV transcription, language detection
+- **Video Processing** (3 tests): MP4 processing, scene detection, frame extraction
+
+#### SSE Streaming (2 tests)
+
+Server-Sent Events functionality for real-time progress updates:
+- Organization stream cancellation
+- File listing SSE endpoints
+
+**Note:** Platform-specific conditional skips (22 skip conditions) are not included in this count as they represent expected behavior on different operating systems and environments.
+
 ## [2.0.0-alpha.2] - 2026-03-09
 
 ### Added

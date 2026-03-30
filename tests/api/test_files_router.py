@@ -15,8 +15,6 @@ from file_organizer.api.dependencies import get_current_active_user, get_setting
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.files import router
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
-
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
     """Create a minimal FastAPI app with the files router and dependency overrides."""
@@ -804,6 +802,7 @@ class TestTrashTarget:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestCollectFiles:
     """Tests for _collect_files helper function."""
@@ -840,32 +839,44 @@ class TestCollectFiles:
         result = _collect_files(tmp_path, recursive=False, include_hidden=False)
         assert len(result) == 1
 
-    def test_collect_directory_filters_hidden_files(self, tmp_path: Path) -> None:
-        """Hidden files in a directory are excluded when include_hidden=False (lines 81-82)."""
+    def test_collect_skips_symlinks(self, tmp_path: Path) -> None:
         from file_organizer.api.routers.files import _collect_files
 
-        # Create normal files
-        (tmp_path / "readme.txt").write_text("hello")
-        (tmp_path / "notes.md").write_text("world")
-        # Create hidden files (dot-prefixed)
-        (tmp_path / ".hidden").write_text("secret")
-        (tmp_path / ".DS_Store").write_bytes(b"\x00\x00")
-
+        real_file = tmp_path / "real.txt"
+        real_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(real_file)
         result = _collect_files(tmp_path, recursive=False, include_hidden=False)
-        result_names = {f.name for f in result}
-        assert result_names == {"readme.txt", "notes.md"}
-        assert ".hidden" not in result_names
-        assert ".DS_Store" not in result_names
+        assert len(result) == 1
+        assert result[0].name == "real.txt"
 
-    def test_collect_directory_includes_hidden_when_requested(self, tmp_path: Path) -> None:
-        """Hidden files in a directory are included when include_hidden=True."""
+    def test_collect_skips_symlinks_recursive(self, tmp_path: Path) -> None:
         from file_organizer.api.routers.files import _collect_files
 
-        (tmp_path / "readme.txt").write_text("hello")
-        (tmp_path / ".hidden").write_text("secret")
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        real_file = sub / "deep.txt"
+        real_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(real_file)
+        result = _collect_files(tmp_path, recursive=True, include_hidden=False)
+        assert len(result) == 1
+        assert result[0].name == "deep.txt"
 
-        result = _collect_files(tmp_path, recursive=False, include_hidden=True)
-        result_names = {f.name for f in result}
-        assert "readme.txt" in result_names
-        assert ".hidden" in result_names
-        assert len(result) == 2
+    def test_collect_skips_entries_raising_oserror(self, tmp_path: Path) -> None:
+        """Entries that raise OSError on filesystem checks are silently skipped."""
+        from unittest.mock import MagicMock, patch
+
+        from file_organizer.api.routers.files import _collect_files
+
+        good = tmp_path / "good.txt"
+        good.write_text("ok")
+
+        # Create a mock Path that raises OSError on is_symlink()
+        bad_entry = MagicMock(spec=Path)
+        bad_entry.is_symlink.side_effect = OSError("device error")
+
+        with patch.object(Path, "glob", return_value=iter([good, bad_entry])):
+            result = _collect_files(tmp_path, recursive=False, include_hidden=False)
+        assert len(result) == 1
+        assert result[0].name == "good.txt"

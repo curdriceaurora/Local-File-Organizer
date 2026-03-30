@@ -351,6 +351,7 @@ class ConfigManager:
         data: dict[str, Any] = {
             "version": config.version,
             "default_methodology": config.default_methodology,
+            "setup_completed": config.setup_completed,
             "models": asdict(config.models),
             "updates": asdict(config.updates),
         }
@@ -396,6 +397,7 @@ class ConfigManager:
             profile_name=profile,
             version=data.get("version", "1.0"),
             default_methodology=data.get("default_methodology", "none"),
+            setup_completed=data.get("setup_completed", False),
             models=models,
             updates=updates,
             watcher=data.get("watcher"),
