@@ -27,121 +27,120 @@ classifiers = [
 
 dependencies = [
     # Core AI inference
-    "ollama>=0.1.0",
+    "ollama>=0.1.0",  # 0.x — unstable API, keep >=
 
     # File processing (core image only)
-    "Pillow>=10.0.0",
+    "Pillow~=10.0",
 
     # NLP and data science
-    "nltk>=3.8.0",
-    "numpy>=1.24.0",  # Numerical computing (used in dedup, video, optimization)
-    "tqdm>=4.66.0",  # Progress bars (used in CLI dedup)
+    "nltk~=3.8",
+    "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
+    "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
     # CLI and UI
-    "typer[all]>=0.12.0",
-    "rich>=13.0.0",
-    "textual>=0.50.0",
+    "typer[all]~=0.12",
+    "rich~=13.0",
+    "textual~=0.50",
 
     # API and async
-    "fastapi>=0.109.0",
-    "starlette>=0.35.0",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
-    "aiofiles>=23.0.0",  # Required by Starlette StaticFiles for async file serving
-    "jinja2>=3.1.0",
-    "uvicorn[standard]>=0.27.0",
-    "websockets>=12.0",
-    "httpx>=0.26.0",
-    "python-multipart>=0.0.9",
+    "fastapi~=0.109",
+    "starlette~=0.35",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
+    "aiofiles~=23.0",  # Required by Starlette StaticFiles for async file serving
+    "jinja2~=3.1",
+    "uvicorn[standard]~=0.27",
+    "websockets~=12.0",
+    "httpx~=0.26",
+    "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
     # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
-    "python-jose>=3.3.0",
+    "python-jose~=3.3",
     "bcrypt>=4.0.0,<6.0.0",
     # Database
-    "sqlalchemy>=2.0.0",
-    "alembic>=1.13.0",
+    "sqlalchemy~=2.0",
+    "alembic~=1.13",
 
     # Task queue
-    "redis>=5.0.0",
+    "redis~=5.0",
     # Configuration
-    "pyyaml>=6.0.0",  # YAML config parsing
-    "platformdirs>=3.0.0",  # Cross-platform config/data directory resolution
+    "pyyaml~=6.0",  # YAML config parsing
+    "platformdirs~=3.0",  # Cross-platform config/data directory resolution
 
     # Utilities
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.1.0",
-    "email-validator>=2.1.0",
-    "python-dotenv>=1.0.0",
-    "click>=8.1.0",
-    "aiofiles>=23.0.0",
-    "watchdog>=3.0.0",  # File system event handler
+    "pydantic~=2.5",
+    "pydantic-settings~=2.1",
+    "email-validator~=2.1",
+    "python-dotenv~=1.0",
+    "click~=8.1",
+    "watchdog~=3.0",  # File system event handler
 
     # System utilities
-    "psutil>=5.9.0",  # System resource monitoring
+    "psutil~=5.9",  # System resource monitoring
 
     # Logging
-    "loguru>=0.7.0",
+    "loguru>=0.7.0",  # 0.x — unstable API, keep >=
 ]
 
 [project.optional-dependencies]
 parsers = [
-    "PyMuPDF>=1.23.0",
-    "python-docx>=1.0.0",
-    "openpyxl>=3.1.0",
-    "python-pptx>=0.6.0",
-    "ebooklib>=0.18",
-    "beautifulsoup4>=4.12.0",
-    "lxml>=4.9.0",
+    "PyMuPDF~=1.23",
+    "python-docx~=1.0",
+    "openpyxl~=3.1",
+    "python-pptx>=0.6.0",  # 0.x — unstable API, keep >=
+    "ebooklib>=0.18",  # 0.x — unstable API, keep >=
+    "beautifulsoup4~=4.12",
+    "lxml~=4.9",
 ]
 
 web = [
-    "fastapi>=0.109.0",
-    "jinja2>=3.1.0",
-    "uvicorn[standard]>=0.27.0",
-    "websockets>=12.0",
-    "httpx>=0.26.0",
-    "python-multipart>=0.0.9",
+    "fastapi~=0.109",
+    "jinja2~=3.1",
+    "uvicorn[standard]~=0.27",
+    "websockets~=12.0",
+    "httpx~=0.26",
+    "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
     # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
-    "python-jose>=3.3.0",
+    "python-jose~=3.3",
     "bcrypt>=4.0.0,<6.0.0",
 
-    "redis>=5.0.0",
+    "redis~=5.0",
 ]
 
 dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.12.0",
+    "pytest~=7.4",
+    "pytest-asyncio~=0.23",
+    "pytest-cov~=4.1",
+    "pytest-mock~=3.12",
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
-    "pytest-xdist>=3.5.0",
-    "pytest-randomly>=3.15.0",
-    "mypy>=1.8.0",
-    "types-PyYAML>=6.0.0",
-    "ruff>=0.1.0",
-    "black>=23.12.0",
-    "isort>=5.13.0",
-    "pre-commit>=3.6.0",
-    "codespell>=2.2.0",
-    "faker>=26.0",
-    "pytest-benchmark>=4.0",
-    "interrogate>=1.5.0",  # Docstring coverage measurement
-    "pymarkdownlnt>=0.9.25",  # Markdown linting
-    "deptry>=0.16.0",  # Unused dependency detection
-    "diff-cover>=7.0.0",  # Diff coverage gate (local pre-commit + CI validation)
-    "asgi-lifespan>=2.1.0",  # ASGI lifespan management for integration tests
+    "pytest-xdist~=3.5",
+    "pytest-randomly~=3.15",
+    "mypy~=1.8",
+    "types-PyYAML~=6.0",
+    "ruff>=0.1.0",  # 0.x — unstable API, keep >=
+    "black~=23.12",
+    "isort~=5.13",
+    "pre-commit~=3.6",
+    "codespell~=2.2",
+    "faker~=26.0",
+    "pytest-benchmark~=4.0",
+    "interrogate~=1.5",  # Docstring coverage measurement
+    "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
+    "deptry>=0.16.0",  # 0.x — unstable API, keep >=; Unused dependency detection
+    "diff-cover~=7.0",  # Diff coverage gate (local pre-commit + CI validation)
+    "asgi-lifespan~=2.1",  # ASGI lifespan management for integration tests
 ]
 
 cloud = [
-    "openai>=1.0.0",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
+    "openai~=1.0",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
 ]
 
 llama = [
     # Security note (2026-03-16): diskcache 5.6.3 (GHSA-w8v5-vhqr-4h9v) is a transitive
     # dep of llama-cpp-python. Risk accepted: diskcache is never imported or called by
     # application code. No patched version exists upstream.
-    "llama-cpp-python>=0.2.0",  # llama.cpp C bindings — direct GGUF inference, no Ollama server
+    "llama-cpp-python>=0.2.0",  # 0.x — unstable API, keep >=; llama.cpp C bindings
 ]
 
 mlx = [
@@ -149,63 +148,63 @@ mlx = [
 ]
 
 claude = [
-    "anthropic>=0.20.0",  # Anthropic Claude API provider (Claude 3.x text and vision)
+    "anthropic>=0.20.0",  # 0.x — unstable API, keep >=; Anthropic Claude API provider
 ]
 
 gui = [
-    "PyQt6>=6.6.0",
+    "PyQt6~=6.6",
 ]
 
 audio = [
-    "faster-whisper>=1.0.0",
-    "torch>=2.1.0",  # GPU acceleration for audio transcription
-    "mutagen>=1.47.0",  # Audio metadata extraction
-    "tinytag>=1.10.0",  # Lightweight audio metadata fallback
-    "pydub>=0.25.0",  # Audio manipulation
+    "faster-whisper~=1.0",
+    "torch~=2.1",  # GPU acceleration for audio transcription
+    "mutagen~=1.47",  # Audio metadata extraction
+    "tinytag~=1.10",  # Lightweight audio metadata fallback
+    "pydub>=0.25.0",  # 0.x — unstable API, keep >=; Audio manipulation
 ]
 
 video = [
-    "opencv-python>=4.8.0",  # Video frame processing
-    "scenedetect[opencv]>=0.6.0",  # Scene detection algorithms
+    "opencv-python~=4.8",  # Video frame processing
+    "scenedetect[opencv]>=0.6.0",  # 0.x — unstable API, keep >=; Scene detection algorithms
 ]
 
 dedup = [
-    "imagededup>=0.3.0",  # Image similarity and duplicate detection
-    "scikit-learn>=1.4.0",  # ML-based text similarity for deduplication
-    "pypdf>=4.0.0",  # PDF text extraction fallback in dedup extractor
-    "striprtf>=0.0.26",  # RTF file text extraction in dedup extractor
+    "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
+    "scikit-learn~=1.4",  # ML-based text similarity for deduplication
+    "pypdf~=4.0",  # PDF text extraction fallback in dedup extractor
+    "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
 ]
 
 archive = [
-    "py7zr>=0.20.0",  # 7Z archive support
-    "rarfile>=4.1",  # RAR archive support (requires unrar tool)
+    "py7zr>=0.20.0",  # 0.x — unstable API, keep >=; 7Z archive support
+    "rarfile~=4.1",  # RAR archive support (requires unrar tool)
 ]
 
 scientific = [
-    "h5py>=3.10.0",  # HDF5 file format support
-    "netCDF4>=1.6.5",  # NetCDF file format support
-    "scipy>=1.11.0",  # MATLAB .mat file support
+    "h5py~=3.10",  # HDF5 file format support
+    "netCDF4~=1.6",  # NetCDF file format support
+    "scipy~=1.11",  # MATLAB .mat file support
 ]
 
 cad = [
-    "ezdxf>=1.1.0",  # DXF/DWG CAD file format support
+    "ezdxf~=1.1",  # DXF/DWG CAD file format support
 ]
 
 build = [
-    "pyinstaller>=6.0.0",  # Cross-platform executable packaging
+    "pyinstaller~=6.0",  # Cross-platform executable packaging
 ]
 
 docs = [
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.5.0",
-    "pymdown-extensions>=10.7.0",
-    "mkdocs-minify-plugin>=0.8.0",
-    "mkdocstrings[python]>=0.24.0",
+    "mkdocs~=1.5",
+    "mkdocs-material~=9.5",
+    "pymdown-extensions~=10.7",
+    "mkdocs-minify-plugin>=0.8.0",  # 0.x — unstable API, keep >=
+    "mkdocstrings[python]>=0.24.0",  # 0.x — unstable API, keep >=
 ]
 
 search = [
-    "rank-bm25>=0.2.0",
-    "scikit-learn>=1.4.0",
+    "rank-bm25>=0.2.0",  # 0.x — unstable API, keep >=
+    "scikit-learn~=1.4",
 ]
 
 all = [
