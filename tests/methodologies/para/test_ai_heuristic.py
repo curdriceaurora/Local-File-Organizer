@@ -129,6 +129,8 @@ class TestAIHeuristicClassification:
             result = h.evaluate(test_file)
 
         mock_client.generate.assert_called_once()
+        prompt = mock_client.generate.call_args.kwargs["prompt"]
+        assert "proposal.txt" in prompt
         assert result.metadata["ai_analysis"] == "complete"
         assert result.recommended_category == PARACategory.PROJECT
         # Scores are normalised — project should be highest
@@ -168,6 +170,8 @@ class TestAIHeuristicClassification:
             result = h.evaluate(test_file)
 
         mock_client.generate.assert_called_once()
+        prompt = mock_client.generate.call_args.kwargs["prompt"]
+        assert "budget.xlsx" in prompt
         assert result.metadata["ai_analysis"] == "complete"
         assert result.recommended_category == PARACategory.AREA
 
