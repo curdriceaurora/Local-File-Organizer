@@ -347,10 +347,11 @@ class TestEnhancedEPUBReader:
         mock_book.get_items = Mock(return_value=[])
         assert reader._has_cover(mock_book) is False
 
-    @pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_cover(self, mock_read, tmp_path):
         """Test extracting cover image."""
+        # Skip if Pillow not available - See #1036
+        PIL_Image = pytest.importorskip("PIL.Image")
         reader = EnhancedEPUBReader()
 
         # Create mock cover item
@@ -358,7 +359,7 @@ class TestEnhancedEPUBReader:
         mock_cover.get_type = Mock(return_value=ebooklib.ITEM_COVER)
 
         # Create a minimal PNG image
-        img = Image.new("RGB", (100, 150), color="red")
+        img = PIL_Image.new("RGB", (100, 150), color="red")
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)

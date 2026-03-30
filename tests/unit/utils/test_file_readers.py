@@ -219,14 +219,15 @@ class TestFileReaders:
         with pytest.raises(ImportError, match="python-pptx is not installed"):
             read_presentation_file("test.pptx")
 
-    @pytest.mark.skipif(not EBOOKLIB_AVAILABLE, reason="ebooklib not installed")
     @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", True)
     @patch("file_organizer.utils.readers.ebook.epub", create=True)
     def test_read_ebook_file(self, mock_epub: MagicMock, tmp_path: Path) -> None:
         """Test reading EPUB."""
+        # Skip if ebooklib not available - See #1036
+        ebooklib = pytest.importorskip("ebooklib")
         mock_book = MagicMock()
         mock_item = MagicMock()
-        mock_item.get_type.return_value = ebooklib.ITEM_DOCUMENT if ebooklib is not None else 9
+        mock_item.get_type.return_value = ebooklib.ITEM_DOCUMENT
         mock_item.get_content.return_value = b"<html><body>Ebook Content</body></html>"
         mock_book.get_items.return_value = [mock_item]
         mock_epub.read_epub.return_value = mock_book
