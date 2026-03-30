@@ -284,3 +284,85 @@ class TestRuleEngine:
         ctx = EvaluationContext(file_path=Path("/test.txt"))
         engine.get_category_scores(ctx)
         evaluator.evaluate_condition.assert_not_called()
+
+    def test_evaluate_file_with_flag_review_only_action(self) -> None:
+        """Test branch 542->548: actions loop completes without finding CATEGORIZE/SUGGEST."""
+        engine, _, evaluator, *_ = self._make_engine()
+        evaluator.evaluate_condition.return_value = True
+        rule = Rule(
+            name="flag_only",
+            description="Only flags for review",
+            priority=1,
+            conditions=[RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["test"])],
+            actions=[RuleAction(type=ActionType.FLAG_REVIEW)],
+        )
+        engine.rules = [rule]
+        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        result = engine.evaluate_file(ctx)
+        assert result is not None
+        assert result.matched is True
+        assert result.confidence is None
+        assert result.category is None
+
+    def test_evaluate_file_multiple_actions_with_flag_first(self) -> None:
+        """Test branch 543->542: loop continues when action is not CATEGORIZE/SUGGEST."""
+        engine, _, evaluator, *_ = self._make_engine()
+        evaluator.evaluate_condition.return_value = True
+        rule = Rule(
+            name="multi_action",
+            description="Multiple actions",
+            priority=1,
+            conditions=[RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["test"])],
+            actions=[
+                RuleAction(type=ActionType.FLAG_REVIEW),
+                RuleAction(type=ActionType.CATEGORIZE, category="project", confidence=0.7),
+            ],
+        )
+        engine.rules = [rule]
+        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        result = engine.evaluate_file(ctx)
+        assert result is not None
+        assert result.matched is True
+        assert result.confidence == 0.7
+        assert result.category == "project"
+
+    def test_get_category_scores_with_mixed_conditions(self) -> None:
+        """Test branch 581->573: continues when all_conditions_met is False."""
+        engine, _, evaluator, _, _, scorer = self._make_engine()
+
+        # Create two rules with different conditions
+        r1_cond = RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["pass"])
+        r1 = Rule(
+            name="passing",
+            description="desc",
+            priority=1,
+            conditions=[r1_cond],
+            actions=[RuleAction(type=ActionType.CATEGORIZE, category="project", confidence=0.8)],
+        )
+
+        r2_cond = RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["fail"])
+        r2 = Rule(
+            name="failing",
+            description="desc",
+            priority=1,
+            conditions=[r2_cond],
+            actions=[RuleAction(type=ActionType.CATEGORIZE, category="area", confidence=0.7)],
+        )
+
+        engine.rules = [r1, r2]
+
+        # Set up side effect: r1 conditions pass, r2 conditions fail
+        call_count = 0
+
+        def eval_side_effect(cond: RuleCondition, ctx: EvaluationContext) -> bool:
+            nonlocal call_count
+            call_count += 1
+            return cond == r1_cond
+
+        evaluator.evaluate_condition.side_effect = eval_side_effect
+        scorer.calculate_category_scores.return_value = {"project": 0.8}
+        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        scores = engine.get_category_scores(ctx)
+        assert scores == {"project": 0.8}
+        # Both rules' conditions are evaluated (r1 passes, r2 fails and continues loop)
+        assert call_count == 2
