@@ -124,7 +124,7 @@ dev = [
     "isort~=5.13",
     "pre-commit~=3.6",
     "codespell~=2.2",
-    "faker~=26.0",
+    "faker~=40.12",
     "pytest-benchmark~=4.0",
     "interrogate~=1.5",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
