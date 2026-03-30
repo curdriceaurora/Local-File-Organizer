@@ -233,6 +233,55 @@ file-organizer tui
 
 ---
 
+### `doctor`
+
+Scan a directory for file types and recommend optional dependencies.
+
+**Usage:**
+
+```bash
+file-organizer doctor PATH [OPTIONS]
+```
+
+**Arguments:**
+
+- `PATH` — Directory to scan for file types
+
+**Options:**
+
+- `--install` — Automatically install recommended dependency groups
+- `--json` — Output results as JSON
+
+---
+
+### `setup`
+
+Interactive setup wizard for first-run configuration.
+
+**Usage:**
+
+```bash
+file-organizer setup [COMMAND]
+```
+
+Running `setup` without a subcommand launches the wizard with default settings.
+
+#### `setup run`
+
+Run the setup wizard to configure File Organizer.
+
+```bash
+file-organizer setup run [OPTIONS]
+```
+
+**Options:**
+
+- `--mode, -m` — Setup mode: `quick-start` (default) or `power-user`
+- `--profile, -p` — Profile name (default: `default`)
+- `--dry-run` — Preview configuration without saving
+
+---
+
 ### `hardware-info`
 
 Detect hardware capabilities and print model-sizing recommendations.

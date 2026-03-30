@@ -47,13 +47,17 @@ class TestHomeRoute:
     def test_home_returns_200(self, client):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html>home</html>")
-            response = client.get("/ui/")
+            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
+                mock_cm.return_value.load.return_value.setup_completed = True
+                response = client.get("/ui/")
         assert response.status_code == 200
 
     def test_home_uses_index_template(self, client):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html></html>")
-            client.get("/ui/")
+            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
+                mock_cm.return_value.load.return_value.setup_completed = True
+                client.get("/ui/")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
         assert "index.html" in str(call_args)
@@ -61,7 +65,9 @@ class TestHomeRoute:
     def test_home_response_body(self, client):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html>home-page</html>")
-            response = client.get("/ui/")
+            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
+                mock_cm.return_value.load.return_value.setup_completed = True
+                response = client.get("/ui/")
         assert "home-page" in response.text
 
 

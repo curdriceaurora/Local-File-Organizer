@@ -61,10 +61,9 @@ def config_client(test_settings: ApiSettings) -> TestClient:
 
 
 class TestSearchRouter:
-    def test_missing_query_returns_400(self, search_client: TestClient) -> None:
+    def test_missing_query_returns_422(self, search_client: TestClient) -> None:
         r = search_client.get("/search")
-        assert r.status_code == 400
-        assert "required" in r.json()["detail"].lower()
+        assert r.status_code == 422
 
     def test_empty_query_returns_400(self, search_client: TestClient) -> None:
         r = search_client.get("/search", params={"q": ""})

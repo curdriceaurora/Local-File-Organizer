@@ -24,7 +24,12 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.cli import dedupe_display, dedupe_removal
-from file_organizer.cli.dedupe_display import format_datetime, format_size  # noqa: F401
+from file_organizer.cli.dedupe_display import (  # noqa: F401
+    display_duplicate_group,
+    display_summary,
+    format_datetime,
+    format_size,
+)
 from file_organizer.cli.dedupe_hash import (
     ProgressTracker,
     create_scan_options,

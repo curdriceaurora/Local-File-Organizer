@@ -20,8 +20,9 @@ def test_version_command():
         assert "file-organizer 1.2.3" in result.stdout
 
 
+@patch("file_organizer.cli.organize._check_setup_completed")
 @patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_live(mock_organizer_cls, tmp_path):
+def test_organize_command_live(mock_organizer_cls, _mock_setup, tmp_path):
     """Test organize command executes FileOrganizer correctly."""
     mock_instance = MagicMock()
     mock_result = MagicMock(processed_files=5, skipped_files=1, failed_files=0)
@@ -47,8 +48,9 @@ def test_organize_command_live(mock_organizer_cls, tmp_path):
     mock_instance.organize.assert_called_once_with(in_dir, out_dir)
 
 
+@patch("file_organizer.cli.organize._check_setup_completed")
 @patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_dry_run(mock_organizer_cls, tmp_path):
+def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
     """Test organize command processes dry-run flag."""
     mock_instance = MagicMock()
     mock_result = MagicMock(processed_files=3, skipped_files=0, failed_files=0)
@@ -72,8 +74,9 @@ def test_organize_command_dry_run(mock_organizer_cls, tmp_path):
     mock_instance.organize.assert_called_once_with(in_dir, out_dir)
 
 
+@patch("file_organizer.cli.organize._check_setup_completed")
 @patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_error(mock_organizer_cls, tmp_path):
+def test_organize_command_error(mock_organizer_cls, _mock_setup, tmp_path):
     """Test organize command handles exceptions gracefully."""
     mock_instance = MagicMock()
     mock_instance.organize.side_effect = RuntimeError("Something broke")
@@ -85,8 +88,9 @@ def test_organize_command_error(mock_organizer_cls, tmp_path):
     assert "Error: Something broke" in result.stdout
 
 
+@patch("file_organizer.cli.organize._check_setup_completed")
 @patch("file_organizer.core.organizer.FileOrganizer")
-def test_preview_command(mock_organizer_cls, tmp_path):
+def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
     """Test preview command runs organizer in dry_run mode."""
     mock_instance = MagicMock()
     mock_result = MagicMock(total_files=10)
@@ -107,8 +111,9 @@ def test_preview_command(mock_organizer_cls, tmp_path):
     mock_instance.organize.assert_called_once_with(Path("in_dir"), Path("in_dir"))
 
 
+@patch("file_organizer.cli.organize._check_setup_completed")
 @patch("file_organizer.core.organizer.FileOrganizer")
-def test_preview_command_error(mock_organizer_cls, tmp_path):
+def test_preview_command_error(mock_organizer_cls, _mock_setup, tmp_path):
     """Test preview command handles exceptions."""
     mock_instance = MagicMock()
     mock_instance.organize.side_effect = ValueError("Bad input")

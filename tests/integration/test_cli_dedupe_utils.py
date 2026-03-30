@@ -8,7 +8,7 @@ and get_user_selection (batch mode for automatic strategies).
 from __future__ import annotations
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -215,12 +215,13 @@ class TestSelectFilesToKeep:
         result = select_files_to_keep(files, "unknown_strategy")
         assert all(not f["keep"] for f in result)
 
-    def test_returns_same_list_object(self) -> None:
+    def test_returns_list_with_keep_flags(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep
 
         files = self._files()
         result = select_files_to_keep(files, "oldest")
-        assert result is files
+        assert len(result) == len(files)
+        assert result[0]["keep"] is True
 
     def test_two_file_oldest(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep
@@ -290,8 +291,9 @@ class TestDisplaySummary:
         from file_organizer.cli.dedupe import display_summary
 
         mock_console = MagicMock()
-        with patch("file_organizer.cli.dedupe.console", mock_console):
-            display_summary(total_groups, total_duplicates, total_removed, space_saved, dry_run)
+        display_summary(
+            mock_console, total_groups, total_duplicates, total_removed, space_saved, dry_run
+        )
         assert mock_console.print.call_count == 4
         # Verify the Panel content (4th print call, 1st positional arg)
         panel = mock_console.print.call_args_list[3][0][0]
@@ -321,8 +323,7 @@ class TestDisplayDuplicateGroup:
             _make_file("/b/file2.txt", size=1024),
         ]
         mock_console = MagicMock()
-        with patch("file_organizer.cli.dedupe.console", mock_console):
-            display_duplicate_group(1, "abc123", files, 3)
+        display_duplicate_group(mock_console, 1, "abc123", files, 3)
         assert mock_console.print.call_count == 4
 
     def test_single_file_group(self) -> None:
@@ -330,6 +331,5 @@ class TestDisplayDuplicateGroup:
 
         files = [_make_file("/a/only.txt", size=2048)]
         mock_console = MagicMock()
-        with patch("file_organizer.cli.dedupe.console", mock_console):
-            display_duplicate_group(2, "deadbeef", files, 5)
+        display_duplicate_group(mock_console, 2, "deadbeef", files, 5)
         assert mock_console.print.call_count == 4
