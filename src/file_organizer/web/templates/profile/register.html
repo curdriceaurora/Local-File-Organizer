@@ -4,6 +4,7 @@
     <p class="error-text">{{ error }}</p>
     {% endif %}
     <form method="post" action="/ui/profile/register">
+        {{ csrf_input(csrf_token) }}
         <div class="form-group">
             <label for="reg-username">Username</label>
             <input id="reg-username" name="username" type="text" required autocomplete="username">

@@ -21,6 +21,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
 from file_organizer.web.settings_routes import settings_router
 
 pytestmark = pytest.mark.integration
@@ -49,6 +50,7 @@ def settings_client(settings_settings: ApiSettings, tmp_path: Path) -> TestClien
     setup_exception_handlers(app)
     app.include_router(settings_router, prefix="/ui")
     client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
     settings_file = tmp_path / "web-settings.json"
     with patch("file_organizer.web.settings_routes._SETTINGS_FILE", settings_file):
         with patch("file_organizer.web.settings_routes._SETTINGS_DIR", tmp_path):
@@ -327,6 +329,7 @@ class TestSettingsGeneralPost:
                             "default_input_dir": "/mock/in",
                             "default_output_dir": "/mock/out",
                         },
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -339,6 +342,7 @@ class TestSettingsGeneralPost:
                     r = settings_client.post(
                         "/ui/settings/general",
                         data={"language": "klingon", "timezone": "UTC"},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
         assert ws_file.exists()
@@ -364,6 +368,7 @@ class TestSettingsModelsPost:
                             "vision_model": "llava:7b",
                             "ollama_url": "http://localhost:11434",
                         },
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -376,6 +381,7 @@ class TestSettingsModelsPost:
                     r = settings_client.post(
                         "/ui/settings/models",
                         data={"text_model": "", "vision_model": "", "ollama_url": ""},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
         if ws_file.exists():
@@ -403,6 +409,7 @@ class TestSettingsModelsTest:
                         r = settings_client.post(
                             "/ui/settings/models/test",
                             data={"ollama_url": "http://localhost:11434"},
+                            headers=csrf_headers(settings_client),
                         )
         assert r.status_code == 200
         ctx = tpl.TemplateResponse.call_args[0][2]
@@ -421,6 +428,7 @@ class TestSettingsModelsTest:
                         r = settings_client.post(
                             "/ui/settings/models/test",
                             data={"ollama_url": "http://localhost:11434"},
+                            headers=csrf_headers(settings_client),
                         )
         assert r.status_code == 200
         ctx = tpl.TemplateResponse.call_args[0][2]
@@ -442,6 +450,7 @@ class TestSettingsOrganizationValidate:
                     r = settings_client.post(
                         "/ui/settings/organization/validate",
                         data={"organization_rules": "docs/* -> Documents"},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -452,6 +461,7 @@ class TestSettingsOrganizationValidate:
                 r = settings_client.post(
                     "/ui/settings/organization/validate",
                     data={"organization_rules": "BAD RULE NO ARROW"},
+                    headers=csrf_headers(settings_client),
                 )
         assert r.status_code == 200
 
@@ -476,6 +486,7 @@ class TestSettingsOrganizationPost:
                             "file_filter_glob": "*.txt",
                             "organization_rules": "docs/* -> Documents",
                         },
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -489,6 +500,7 @@ class TestSettingsOrganizationPost:
                         "default_methodology": "para",
                         "organization_rules": "no arrow here",
                     },
+                    headers=csrf_headers(settings_client),
                 )
         assert r.status_code == 200
 
@@ -507,6 +519,7 @@ class TestSettingsAppearancePost:
                     r = settings_client.post(
                         "/ui/settings/appearance",
                         data={"theme": "dark", "custom_theme_name": ""},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -519,6 +532,7 @@ class TestSettingsAppearancePost:
                     r = settings_client.post(
                         "/ui/settings/appearance",
                         data={"theme": "rainbow", "custom_theme_name": ""},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
         if ws_file.exists():
@@ -545,6 +559,7 @@ class TestSettingsAdvancedPost:
                             "debug_mode": "on",
                             "performance_mode": "performance",
                         },
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -559,6 +574,7 @@ class TestSettingsAdvancedPost:
                     r = settings_client.post(
                         "/ui/settings/advanced",
                         data={"log_level": "VERBOSE", "performance_mode": "balanced"},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
         if ws_file.exists():
@@ -577,7 +593,11 @@ class TestSettingsReset:
             tpl.TemplateResponse.return_value = _HTML
             with patch("file_organizer.web.settings_routes._SETTINGS_FILE", tmp_path / "ws.json"):
                 with patch("file_organizer.web.settings_routes._SETTINGS_DIR", tmp_path):
-                    r = settings_client.post("/ui/settings/reset", data={"section": "general"})
+                    r = settings_client.post(
+                        "/ui/settings/reset",
+                        data={"section": "general"},
+                        headers=csrf_headers(settings_client),
+                    )
         assert r.status_code == 200
 
     def test_reset_writes_defaults(self, settings_client: TestClient, tmp_path: Path) -> None:
@@ -587,7 +607,11 @@ class TestSettingsReset:
             tpl.TemplateResponse.return_value = _HTML
             with patch("file_organizer.web.settings_routes._SETTINGS_FILE", ws_file):
                 with patch("file_organizer.web.settings_routes._SETTINGS_DIR", tmp_path):
-                    settings_client.post("/ui/settings/reset", data={"section": "general"})
+                    settings_client.post(
+                        "/ui/settings/reset",
+                        data={"section": "general"},
+                        headers=csrf_headers(settings_client),
+                    )
         data = json.loads(ws_file.read_text())
         assert data["theme"] == "light"
         assert data["language"] == "en"
@@ -599,7 +623,11 @@ class TestSettingsReset:
             tpl.TemplateResponse.return_value = _HTML
             with patch("file_organizer.web.settings_routes._SETTINGS_FILE", tmp_path / "ws.json"):
                 with patch("file_organizer.web.settings_routes._SETTINGS_DIR", tmp_path):
-                    r = settings_client.post("/ui/settings/reset", data={"section": "nonexistent"})
+                    r = settings_client.post(
+                        "/ui/settings/reset",
+                        data={"section": "nonexistent"},
+                        headers=csrf_headers(settings_client),
+                    )
         assert r.status_code == 200
 
 
@@ -621,6 +649,7 @@ class TestSettingsImport:
                         "/ui/settings/import",
                         data={"section": "general"},
                         files={"settings_file": ("ws.json", payload, "application/json")},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
 
@@ -634,6 +663,7 @@ class TestSettingsImport:
                     "/ui/settings/import",
                     data={"section": "general"},
                     files={"settings_file": ("ws.json", b"NOT JSON !!!!", "application/json")},
+                    headers=csrf_headers(settings_client),
                 )
         assert r.status_code == 200
 
@@ -646,6 +676,7 @@ class TestSettingsImport:
                     "/ui/settings/import",
                     data={"section": "general"},
                     files={"settings_file": ("ws.json", payload, "application/json")},
+                    headers=csrf_headers(settings_client),
                 )
         assert r.status_code == 200
 
@@ -660,6 +691,7 @@ class TestSettingsImport:
                         "/ui/settings/import",
                         data={"section": "general"},
                         files={"settings_file": ("ws.json", payload, "application/json")},
+                        headers=csrf_headers(settings_client),
                     )
         assert ws_file.exists()
         data = json.loads(ws_file.read_text())
@@ -677,5 +709,6 @@ class TestSettingsImport:
                         "/ui/settings/import",
                         data={"section": "badname"},
                         files={"settings_file": ("ws.json", payload, "application/json")},
+                        headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200

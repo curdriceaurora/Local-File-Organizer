@@ -83,7 +83,7 @@ class TestAnonymousUser:
         assert anon.id == "anonymous"
         assert anon.username == "anonymous"
         assert anon.is_active is True
-        assert anon.is_admin is True
+        assert anon.is_admin is False
         assert anon.email == "anonymous@example.com"
 
     def test_has_expected_attributes(self) -> None:

@@ -24,6 +24,7 @@
             <td>
                 <form method="post" action="/ui/profile/api-keys/revoke"
                       hx-post="/ui/profile/api-keys/revoke" hx-target="#api-keys">
+                    {{ csrf_input(csrf_token) }}
                     <input type="hidden" name="key_id" value="{{ key.id }}">
                     <button class="btn-ghost btn-sm" type="submit">Revoke</button>
                 </form>
@@ -38,6 +39,7 @@
 
 <form method="post" action="/ui/profile/api-keys/generate"
       hx-post="/ui/profile/api-keys/generate" hx-target="#api-keys" class="api-key-form">
+    {{ csrf_input(csrf_token) }}
     <div class="form-group form-inline">
         <label for="key-label">Label</label>
         <input id="key-label" name="label" type="text" value="default" placeholder="Key label">

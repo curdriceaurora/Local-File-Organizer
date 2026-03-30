@@ -229,6 +229,14 @@ class ParallelProcessor:
         """Return whether a failed result should stop retries for the batch."""
         return result.non_retryable
 
+    @staticmethod
+    def _collect_result(future: Future[FileResult], path: Path) -> FileResult:
+        """Extract a FileResult from a completed future, wrapping exceptions."""
+        try:
+            return future.result()
+        except Exception as exc:
+            return FileResult(path=path, success=False, error=str(exc))
+
     def _process_with_executor(
         self,
         exec_instance: ThreadPoolExecutor | ProcessPoolExecutor,
@@ -312,13 +320,7 @@ class ParallelProcessor:
                 pending.remove(future)
                 path = future_paths.pop(future)
                 future_started.pop(future, None)
-
-                try:
-                    file_result = future.result()
-                except Exception as exc:
-                    file_result = FileResult(path=path, success=False, error=str(exc))
-
-                yield finalize_result(file_result)
+                yield finalize_result(self._collect_result(future, path))
                 submit_round_of_work()
 
             # Check for and handle timeouts

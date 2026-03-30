@@ -17,6 +17,7 @@
                 <span class="action-meta">Active</span>
                 {% else %}
                 <form method="post" action="/ui/profile/workspaces/switch" hx-post="/ui/profile/workspaces/switch" hx-target="#profile-workspaces">
+                    {{ csrf_input(csrf_token) }}
                     <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
                     <button class="btn-ghost btn-sm" type="submit">Switch</button>
                 </form>
@@ -31,6 +32,7 @@
 {% endif %}
 
 <form method="post" action="/ui/profile/workspaces/create" hx-post="/ui/profile/workspaces/create" hx-target="#profile-workspaces">
+    {{ csrf_input(csrf_token) }}
     <div class="form-group">
         <label for="workspace-name">Workspace name</label>
         <input id="workspace-name" name="name" type="text" required>

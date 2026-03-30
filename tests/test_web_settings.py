@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
-from file_organizer.api.test_utils import build_test_settings
+from file_organizer.api.test_utils import build_test_settings, csrf_headers, seed_csrf_token
 
 
 def _build_client(tmp_path: Path) -> TestClient:
@@ -20,7 +20,9 @@ def _build_client(tmp_path: Path) -> TestClient:
         auth_overrides={"auth_enabled": False},
     )
     app = create_app(settings)
-    return TestClient(app)
+    client = TestClient(app)
+    seed_csrf_token(client)
+    return client
 
 
 @pytest.fixture()
@@ -152,6 +154,7 @@ class TestSettingsSectionSaves:
                 "default_input_dir": "/tmp/input",
                 "default_output_dir": "/tmp/output",
             },
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "General settings saved" in response.text
@@ -170,6 +173,7 @@ class TestSettingsSectionSaves:
                 "text_model": "llama3:8b",
                 "vision_model": "llava:7b",
             },
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Model settings saved" in response.text
@@ -187,6 +191,7 @@ class TestSettingsSectionSaves:
                 "default_methodology": "para",
                 "auto_organize": "1",
             },
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Organization settings saved" in response.text
@@ -201,6 +206,7 @@ class TestSettingsSectionSaves:
         response = client.post(
             "/ui/settings/appearance",
             data={"theme": "dark"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Appearance settings saved" in response.text
@@ -218,6 +224,7 @@ class TestSettingsSectionSaves:
                 "cache_enabled": "1",
                 "debug_mode": "1",
             },
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Advanced settings saved" in response.text
@@ -245,6 +252,7 @@ class TestSettingsValidation:
         response = client.post(
             "/ui/settings/organization",
             data={"default_methodology": "not_a_real_method"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Organization settings saved" in response.text
@@ -260,6 +268,7 @@ class TestSettingsValidation:
         response = client.post(
             "/ui/settings/appearance",
             data={"theme": "neon"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
 
@@ -274,6 +283,7 @@ class TestSettingsValidation:
         response = client.post(
             "/ui/settings/advanced",
             data={"log_level": "INVALID_LEVEL"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
 
@@ -288,6 +298,7 @@ class TestSettingsValidation:
         response = client.post(
             "/ui/settings/models",
             data={"text_model": "", "vision_model": ""},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
 
@@ -304,11 +315,13 @@ class TestSettingsValidation:
         client.post(
             "/ui/settings/advanced",
             data={"log_level": "INFO", "cache_enabled": "1", "debug_mode": "1"},
+            headers=csrf_headers(client),
         )
         # Then save without checkboxes (unchecked = not sent)
         client.post(
             "/ui/settings/advanced",
             data={"log_level": "INFO"},
+            headers=csrf_headers(client),
         )
 
         data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
@@ -326,6 +339,7 @@ class TestSettingsValidation:
                 "default_input_dir": "/my/custom/path",
                 "default_output_dir": "/my/output",
             },
+            headers=csrf_headers(client),
         )
 
         # Read back via GET
@@ -374,6 +388,7 @@ class TestSettingsUtilities:
             "/ui/settings/import",
             data={"section": "general"},
             files={"settings_file": ("settings.json", json.dumps(payload), "application/json")},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Settings imported successfully" in response.text
@@ -387,8 +402,13 @@ class TestSettingsUtilities:
         client.post(
             "/ui/settings/general",
             data={"default_input_dir": "/custom", "default_output_dir": "/custom-out"},
+            headers=csrf_headers(client),
         )
-        response = client.post("/ui/settings/reset", data={"section": "general"})
+        response = client.post(
+            "/ui/settings/reset",
+            data={"section": "general"},
+            headers=csrf_headers(client),
+        )
         assert response.status_code == 200
         assert "Settings reset to defaults" in response.text
         data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
@@ -401,6 +421,7 @@ class TestSettingsUtilities:
         ok = client.post(
             "/ui/settings/organization/validate",
             data={"organization_rules": "docs/* -> Documents"},
+            headers=csrf_headers(client),
         )
         assert ok.status_code == 200
         assert "Rules look valid" in ok.text
@@ -408,6 +429,7 @@ class TestSettingsUtilities:
         bad = client.post(
             "/ui/settings/organization/validate",
             data={"organization_rules": "invalid rule line"},
+            headers=csrf_headers(client),
         )
         assert bad.status_code == 200
         assert "invalid" in bad.text.lower()
@@ -435,6 +457,7 @@ class TestSettingsUtilities:
         response = client.post(
             "/ui/settings/models/test",
             data={"ollama_url": "http://localhost:11434"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "connection failed" in response.text

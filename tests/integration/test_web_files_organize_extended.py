@@ -20,6 +20,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
 from file_organizer.web.files_routes import files_router
 from file_organizer.web.organize_routes import organize_router
 
@@ -86,7 +87,9 @@ def files_client(files_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: files_settings
     setup_exception_handlers(app)
     app.include_router(files_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +330,7 @@ class TestFilesUpload:
                 "/ui/files/upload",
                 data={"path": f"{root}/files"},
                 files={"files": ("upload.txt", b"file content", "text/plain")},
+                headers=csrf_headers(files_client),
             )
         assert r.status_code == 200
 
@@ -341,6 +345,7 @@ class TestFilesUpload:
                 "/ui/files/upload",
                 data={"path": str(target_dir)},
                 files={"files": (".hidden", b"x", "text/plain")},
+                headers=csrf_headers(files_client),
             )
         assert r.status_code == 200
         assert not (target_dir / ".hidden").exists()
@@ -354,6 +359,7 @@ class TestFilesUpload:
             r = files_client.post(
                 "/ui/files/upload",
                 data={"path": f"{root}/files"},
+                headers=csrf_headers(files_client),
             )
         assert r.status_code == 200
 
@@ -365,6 +371,7 @@ class TestFilesUpload:
             r = files_client.post(
                 "/ui/files/upload",
                 data={"path": ""},
+                headers=csrf_headers(files_client),
             )
         assert r.status_code == 200
 
@@ -391,7 +398,9 @@ def org_client(org_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: org_settings
     setup_exception_handlers(app)
     app.include_router(organize_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -531,7 +540,9 @@ class TestOrganizeRollback:
             patch("file_organizer.web.organize_routes.get_job", return_value=None),
         ):
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/jobs/missing-job/rollback")
+            r = org_client.post(
+                "/ui/organize/jobs/missing-job/rollback", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 404
 
     def test_rollback_completed_job_returns_200(self, org_client: TestClient) -> None:
@@ -543,5 +554,7 @@ class TestOrganizeRollback:
             ),
         ):
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/jobs/job-1/rollback")
+            r = org_client.post(
+                "/ui/organize/jobs/job-1/rollback", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 200

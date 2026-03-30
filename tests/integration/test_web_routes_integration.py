@@ -27,6 +27,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
 from file_organizer.web.files_routes import files_router
 from file_organizer.web.organize_routes import organize_router
 from file_organizer.web.profile_routes import profile_router
@@ -92,7 +93,9 @@ def org_client(org_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: org_settings
     setup_exception_handlers(app)
     app.include_router(organize_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +133,11 @@ class TestOrganizeScan:
     def test_missing_input_dir_returns_200(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/scan", data={"input_dir": "", "output_dir": "/out"})
+            r = org_client.post(
+                "/ui/organize/scan",
+                data={"input_dir": "", "output_dir": "/out"},
+                headers=csrf_headers(org_client),
+            )
         assert r.status_code == 200
 
     def test_missing_output_dir_returns_200(self, org_client: TestClient, file_tree: Path) -> None:
@@ -139,6 +146,7 @@ class TestOrganizeScan:
             r = org_client.post(
                 "/ui/organize/scan",
                 data={"input_dir": str(file_tree / "in"), "output_dir": ""},
+                headers=csrf_headers(org_client),
             )
         assert r.status_code == 200
 
@@ -152,6 +160,7 @@ class TestOrganizeScan:
                     "output_dir": str(file_tree / "out"),
                     "include_hidden": "1",
                 },
+                headers=csrf_headers(org_client),
             )
         assert r.status_code == 200
 
@@ -180,6 +189,7 @@ class TestOrganizeScan:
                     "recursive": "1",
                     "include_hidden": "0",
                 },
+                headers=csrf_headers(org_client),
             )
         assert r.status_code == 200
 
@@ -192,6 +202,7 @@ class TestOrganizeScan:
                     "input_dir": str(file_tree / "nonexistent"),
                     "output_dir": str(file_tree / "out"),
                 },
+                headers=csrf_headers(org_client),
             )
         assert r.status_code == 200  # returns error template, not 4xx
 
@@ -210,6 +221,7 @@ class TestOrganizeScan:
                     "input_dir": str(file_tree / "in"),
                     "output_dir": str(file_tree / "out"),
                 },
+                headers=csrf_headers(org_client),
             )
         assert r.status_code == 200
 
@@ -223,7 +235,7 @@ class TestOrganizePlanClear:
     def test_clear_plan_returns_200(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/plan/clear")
+            r = org_client.post("/ui/organize/plan/clear", headers=csrf_headers(org_client))
         assert r.status_code == 200
 
 
@@ -236,7 +248,7 @@ class TestOrganizerExecute:
     def test_execute_no_plan_renders_error(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/execute")
+            r = org_client.post("/ui/organize/execute", headers=csrf_headers(org_client))
         assert r.status_code == 200
 
     def test_execute_with_plan_queues_job(self, org_client: TestClient, file_tree: Path) -> None:
@@ -268,7 +280,7 @@ class TestOrganizerExecute:
             mock_create.return_value = mock_job
             mock_org.return_value.organize.return_value = mock_result
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/execute")
+            r = org_client.post("/ui/organize/execute", headers=csrf_headers(org_client))
         assert r.status_code == 200
 
 
@@ -321,7 +333,7 @@ class TestJobStatus:
             patch("file_organizer.web.organize_routes.update_job"),
         ):
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/jobs/job-1/cancel")
+            r = org_client.post("/ui/organize/jobs/job-1/cancel", headers=csrf_headers(org_client))
         assert r.status_code == 200
 
 
@@ -349,7 +361,9 @@ def files_client(files_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: files_settings
     setup_exception_handlers(app)
     app.include_router(files_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 class TestFilesRoutes:
@@ -418,7 +432,9 @@ def settings_client(settings_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: settings_settings
     setup_exception_handlers(app)
     app.include_router(settings_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 class TestSettingsRoutes:
@@ -438,13 +454,14 @@ class TestSettingsRoutes:
                 data={
                     "allowed_paths": str(tmp_path),
                 },
+                headers=csrf_headers(settings_client),
             )
         assert r.status_code == 200
 
     def test_settings_reset_returns_200(self, settings_client: TestClient) -> None:
         with patch("file_organizer.web.settings_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = settings_client.post("/ui/settings/reset")
+            r = settings_client.post("/ui/settings/reset", headers=csrf_headers(settings_client))
         assert r.status_code == 200
 
 
@@ -468,7 +485,9 @@ def profile_client(profile_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: profile_settings
     setup_exception_handlers(app)
     app.include_router(profile_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 class TestProfileRoutes:
@@ -496,9 +515,14 @@ class TestProfileRoutes:
             r = profile_client.post(
                 "/ui/profile/login",
                 data={"username": "user@example.com", "password": "secret"},
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code in (200, 303, 302)
 
     def test_profile_logout_returns_redirect(self, profile_client: TestClient) -> None:
-        r = profile_client.post("/ui/profile/logout", follow_redirects=False)
+        r = profile_client.post(
+            "/ui/profile/logout",
+            headers=csrf_headers(profile_client),
+            follow_redirects=False,
+        )
         assert r.status_code in (200, 303, 302, 401)

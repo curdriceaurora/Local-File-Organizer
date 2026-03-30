@@ -151,6 +151,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 def setup_middleware(app: FastAPI, settings: ApiSettings) -> None:
     """Configure middleware on the FastAPI app."""
+    from file_organizer.web.csrf import CSRFMiddleware
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -164,3 +166,4 @@ def setup_middleware(app: FastAPI, settings: ApiSettings) -> None:
         limiter=build_rate_limiter(settings.auth_redis_url),
     )
     app.add_middleware(SecurityHeadersMiddleware, settings=settings)
+    app.add_middleware(CSRFMiddleware, exempt_paths=["/api/", "/docs", "/openapi.json"])

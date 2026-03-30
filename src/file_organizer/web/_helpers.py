@@ -24,6 +24,17 @@ STATIC_DIR = BASE_DIR / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+
+def _csrf_input(token: str) -> str:
+    """Render a hidden CSRF input field for use in Jinja2 templates."""
+    from markupsafe import Markup, escape
+
+    escaped_token = escape(token)
+    return Markup(f'<input type="hidden" name="csrf_token" value="{escaped_token}">')
+
+
+templates.env.globals["csrf_input"] = _csrf_input
+
 NAV_ITEMS = [
     ("Home", "/ui/"),
     ("Files", "/ui/files"),
@@ -69,6 +80,7 @@ def base_context(
     extras: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the base Jinja2 template context."""
+    csrf_token: str = getattr(request.state, "csrf_token", "")
     context: dict[str, Any] = {
         "request": request,
         "app_name": settings.app_name,
@@ -77,6 +89,7 @@ def base_context(
         "page_title": title,
         "nav_items": NAV_ITEMS,
         "year": datetime.now(UTC).year,
+        "csrf_token": csrf_token,
     }
     if extras:
         context.update(extras)

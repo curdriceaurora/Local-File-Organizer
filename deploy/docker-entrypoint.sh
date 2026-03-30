@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # ---- Configuration ----
-REDIS_URL="${FO_REDIS_URL:-redis://localhost:6379/0}"
+RESOLVED_REDIS_URL="${FO_REDIS_URL:-${REDIS_URL:-redis://localhost:6379/0}}"
 DATA_DIR="${FO_DATA_DIR:-/data}"
 LOG_LEVEL="${FO_LOG_LEVEL:-INFO}"
 MAX_WORKERS="${FO_MAX_WORKERS:-4}"
@@ -63,10 +63,12 @@ check_environment() {
 # ---- Wait for Redis ----
 wait_for_redis() {
     # Extract host and port from Redis URL
-    local redis_url="${REDIS_URL}"
+    local redis_url="${RESOLVED_REDIS_URL}"
 
     # Remove redis:// prefix
     local redis_addr="${redis_url#redis://}"
+    # Strip userinfo (user:password@) if present
+    redis_addr="${redis_addr#*@}"
     # Remove database number suffix
     redis_addr="${redis_addr%%/*}"
     # Split host and port
@@ -127,7 +129,7 @@ main() {
     check_environment || exit 1
 
     # Wait for Redis if URL is configured and not localhost in prod
-    if [ "${ENVIRONMENT}" != "dev" ] || [ "${REDIS_URL}" != "redis://localhost:6379/0" ]; then
+    if [ "${ENVIRONMENT}" != "dev" ] || [ "${RESOLVED_REDIS_URL}" != "redis://localhost:6379/0" ]; then
         wait_for_redis || exit 1
     fi
 

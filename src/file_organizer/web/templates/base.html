@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{{ page_title }} | {{ app_name }}</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <script src="/static/js/htmx.min.js" defer></script>
@@ -29,6 +30,7 @@
                 <div class="nav-actions">
                     {% if workspace_options %}
                     <form class="workspace-switcher" method="post" action="/ui/profile/workspaces/switch">
+                        {{ csrf_input(csrf_token) }}
                         <label for="workspace-switch" class="sr-only">Workspace</label>
                         <select id="workspace-switch" name="workspace_id" onchange="this.form.submit()">
                             {% for workspace in workspace_options %}
@@ -66,5 +68,13 @@
         </footer>
     </div>
     <script src="/static/js/app.js" defer></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var token = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+        document.body.addEventListener("htmx:configRequest", function(evt) {
+            evt.detail.headers["x-csrf-token"] = token;
+        });
+    });
+    </script>
 </body>
 </html>

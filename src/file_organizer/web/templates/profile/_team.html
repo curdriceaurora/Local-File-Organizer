@@ -16,6 +16,7 @@
             <td>{{ member.status }}</td>
             <td>
                 <form method="post" action="/ui/profile/team/role" hx-post="/ui/profile/team/role" hx-target="#profile-team">
+                    {{ csrf_input(csrf_token) }}
                     <input type="hidden" name="member_id" value="{{ member.id }}">
                     <select name="role">
                         <option value="viewer" {% if member.role == "viewer" %}selected{% endif %}>viewer</option>
@@ -34,6 +35,7 @@
 {% endif %}
 
 <form method="post" action="/ui/profile/team/invite" hx-post="/ui/profile/team/invite" hx-target="#profile-team">
+    {{ csrf_input(csrf_token) }}
     <div class="form-group">
         <label for="team-email">Invite by email</label>
         <input id="team-email" name="email" type="email" required>

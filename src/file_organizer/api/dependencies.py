@@ -47,7 +47,7 @@ class AnonymousUser:
     email: str = "anonymous@example.com"
     full_name: str | None = None
     is_active: bool = True
-    is_admin: bool = True
+    is_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_login: datetime | None = None
 
@@ -192,7 +192,12 @@ def require_admin_user(
     user: UserLike = Depends(get_current_active_user),
     settings: ApiSettings = Depends(get_settings),
 ) -> UserLike:
-    """Return the current user, raising 403 if not an admin."""
+    """Return the current user, raising 403 if not an admin.
+
+    When ``settings.auth_enabled`` is ``False`` the admin check is bypassed
+    and *user* is returned unconditionally.  ``HTTPException(403)`` is raised
+    only when auth is enabled and ``user.is_admin`` is ``False``.
+    """
     if not settings.auth_enabled:
         return user
     if not user.is_admin:

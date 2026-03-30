@@ -31,7 +31,17 @@ def _build_client(tmp_path: Path, allowed_root: Path | None = None) -> TestClien
         auth_overrides={"auth_enabled": False},
     )
     app = create_app(settings)
-    return TestClient(app)
+    client = TestClient(app)
+    # Pre-seed the CSRF cookie so POST requests can include the token.
+    resp = client.get("/ui/")
+    client._csrf_token = resp.cookies.get("_csrf_token", "")  # type: ignore[attr-defined]
+    return client
+
+
+def _csrf_headers(client: TestClient) -> dict[str, str]:
+    """Return headers dict with CSRF token for POST requests."""
+    token = getattr(client, "_csrf_token", "")
+    return {"x-csrf-token": token}
 
 
 def _write_marketplace_repo(repo_dir: Path) -> None:
@@ -163,9 +173,11 @@ def test_marketplace_ui_browse_and_install(
     assert page.status_code == 200
     assert "ui-plugin" in page.text
 
+    # Use form-field token (not header) to exercise the csrf_input() path
+    csrf_token = client.cookies.get("_csrf_token", "")
     install = client.post(
         "/ui/marketplace/plugins/ui-plugin/install",
-        data={"q": "", "category": "", "tag_csv": ""},
+        data={"q": "", "category": "", "tag_csv": "", "csrf_token": csrf_token},
     )
     assert install.status_code == 200
     assert "Installed ui-plugin" in install.text
@@ -215,6 +227,7 @@ def test_file_browser_endpoints(tmp_path: Path) -> None:
         "/ui/files/upload",
         data={"path": str(root)},
         files={"files": ("upload.txt", b"data")},
+        headers=_csrf_headers(client),
     )
     assert upload.status_code == 200
     assert (root / "upload.txt").exists()
@@ -229,6 +242,7 @@ def test_upload_rejects_hidden_files(tmp_path: Path) -> None:
         "/ui/files/upload",
         data={"path": str(root)},
         files={"files": (".secret", b"data")},
+        headers=_csrf_headers(client),
     )
     assert response.status_code == 200
     assert "hidden files are not allowed" in response.text.lower()
@@ -262,6 +276,7 @@ def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
             "skip_existing": "1",
             "use_hardlinks": "1",
         },
+        headers=_csrf_headers(client),
     )
     assert scan.status_code == 200
     assert "Plan summary" in scan.text
@@ -275,6 +290,7 @@ def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
             "dry_run": "0",
             "schedule_delay_minutes": "0",
         },
+        headers=_csrf_headers(client),
     )
     assert execute.status_code == 200
     job_id = _extract_attr(execute.text, "data-job-id")
@@ -326,6 +342,7 @@ def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) 
             "output_dir": str(root / "organized"),
             "methodology": "content_based",
         },
+        headers=_csrf_headers(client),
     )
     assert scan.status_code == 200
     assert "outside allowed roots" in scan.text.lower()
@@ -348,6 +365,7 @@ def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> No
             "methodology": "content_based",
             "include_hidden": "1",
         },
+        headers=_csrf_headers(client),
     )
     assert scan.status_code == 200
     assert "not supported" in scan.text.lower()
@@ -370,6 +388,7 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
             "output_dir": str(root / "organized"),
             "methodology": "johnny_decimal",
         },
+        headers=_csrf_headers(client),
     )
     assert scan.status_code == 200
     plan_id = _extract_input_value(scan.text, "plan_id")
@@ -381,13 +400,14 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
             "dry_run": "0",
             "schedule_delay_minutes": "1",
         },
+        headers=_csrf_headers(client),
     )
     assert execute.status_code == 200
     assert "scheduled to start" in execute.text.lower()
     assert "Cancel scheduled job" in execute.text
     job_id = _extract_attr(execute.text, "data-job-id")
 
-    cancel = client.post(f"/ui/organize/jobs/{job_id}/cancel")
+    cancel = client.post(f"/ui/organize/jobs/{job_id}/cancel", headers=_csrf_headers(client))
     assert cancel.status_code == 200
     assert "cancelled" in cancel.text.lower()
 

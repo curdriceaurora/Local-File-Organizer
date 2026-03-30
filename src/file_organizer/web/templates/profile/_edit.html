@@ -15,12 +15,14 @@
         hx-target="#profile-edit"
         enctype="multipart/form-data"
     >
+        {{ csrf_input(csrf_token) }}
         <input type="file" name="avatar" accept="image/*" required>
         <button class="btn-ghost btn-sm" type="submit">Upload avatar</button>
     </form>
 </div>
 
 <form method="post" action="/ui/profile/edit" hx-post="/ui/profile/edit" hx-target="#profile-edit">
+    {{ csrf_input(csrf_token) }}
     <div class="form-group">
         <label for="edit-username">Username</label>
         <input id="edit-username" type="text" value="{{ user.username }}" disabled>

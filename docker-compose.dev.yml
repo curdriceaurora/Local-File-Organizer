@@ -15,14 +15,14 @@ services:
       - FILE_ORGANIZER_DATA_DIR=/data
       - FILE_ORGANIZER_LOG_LEVEL=DEBUG
       - FILE_ORGANIZER_DEBUG=1
-      - REDIS_URL=redis://redis:6379/0
+      - FO_REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
     ports:
       - "8000:8000"
       - "5678:5678"
 
   redis:
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   test-runner:
     build:
@@ -33,7 +33,7 @@ services:
       - ./src:/app/src
       - ./tests:/app/tests
     environment:
-      - REDIS_URL=redis://redis:6379/0
+      - FO_REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
       - FILE_ORGANIZER_LOG_LEVEL=DEBUG
     command: ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
     networks:
