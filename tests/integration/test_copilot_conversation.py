@@ -7,6 +7,8 @@ Covers:
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from file_organizer.services.copilot.conversation import ConversationManager
@@ -17,6 +19,23 @@ from file_organizer.services.copilot.models import (
 )
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module", autouse=True)
+def mock_directory_tree():
+    """Mock DirectoryTree to prevent coroutine creation in copilot tests."""
+    def mock_init(self, *args, **kwargs):
+        """Mock DirectoryTree.__init__ to prevent async watch_path coroutine."""
+        return None
+
+    def mock_reload(self):
+        """Mock DirectoryTree.reload to prevent async _reload coroutine."""
+        return None
+
+    with patch("textual.widgets.DirectoryTree.__init__", mock_init), patch(
+        "textual.widgets.DirectoryTree.reload", mock_reload
+    ):
+        yield
 
 
 def _user(content: str) -> CopilotMessage:
