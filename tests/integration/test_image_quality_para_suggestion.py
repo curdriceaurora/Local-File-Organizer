@@ -445,14 +445,20 @@ except Exception:
     _suggestion_engine_available = False
 
 
-@pytest.mark.skipif(not _suggestion_engine_available, reason="SuggestionEngine not importable")
+@pytest.mark.skipif(
+    not _suggestion_engine_available,
+    reason="See #1034 - SuggestionEngine API not yet implemented (tests expect SuggestionEngine, but PARASuggestionEngine exists)",
+)
 class TestSuggestionEngineInit:
     def test_creates(self) -> None:
         se = SuggestionEngine()
         assert se is not None
 
 
-@pytest.mark.skipif(not _suggestion_engine_available, reason="SuggestionEngine not importable")
+@pytest.mark.skipif(
+    not _suggestion_engine_available,
+    reason="See #1034 - SuggestionEngine API not yet implemented (tests expect SuggestionEngine, but PARASuggestionEngine exists)",
+)
 class TestSuggestionEngineAPI:
     @pytest.fixture()
     def engine(self) -> SuggestionEngine:
