@@ -20,7 +20,7 @@ class TestAudioMetadataPlaceholder:
         except ImportError:
             pytest.skip("Audio metadata extraction not yet implemented (Phase 3)")
 
-    @pytest.mark.skip(reason="Phase 3 - Audio metadata not yet implemented")
+    @pytest.mark.skip(reason="See #611 - Needs real audio fixtures with metadata, not fake bytes")
     def test_extract_mp3_metadata(self, tmp_path):
         """Test extracting metadata from MP3 file."""
         from file_organizer.services.audio.metadata_extractor import (
@@ -36,7 +36,7 @@ class TestAudioMetadataPlaceholder:
         assert "duration" in metadata
         assert "format" in metadata
 
-    @pytest.mark.skip(reason="Phase 3 - Audio metadata not yet implemented")
+    @pytest.mark.skip(reason="See #611 - Needs real WAV fixtures with proper headers")
     def test_extract_wav_metadata(self, tmp_path):
         """Test extracting metadata from WAV file."""
         from file_organizer.services.audio.metadata_extractor import (
@@ -51,7 +51,7 @@ class TestAudioMetadataPlaceholder:
 
         assert metadata is not None
 
-    @pytest.mark.skip(reason="Phase 3 - Music metadata not yet implemented")
+    @pytest.mark.skip(reason="See #611 - Needs MP3 fixtures with ID3 tags for testing")
     def test_extract_music_tags(self, tmp_path):
         """Test extracting music tags (artist, album, etc.)."""
         from file_organizer.services.audio.metadata_extractor import (
