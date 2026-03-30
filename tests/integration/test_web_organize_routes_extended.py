@@ -33,6 +33,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError, setup_exception_handlers
+from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
 from file_organizer.web.organize_routes import (
     ORGANIZE_MAX_DELAY_MIN,
     _build_job_view,
@@ -100,7 +101,9 @@ def org_client(org_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: org_settings
     setup_exception_handlers(app)
     app.include_router(organize_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -372,13 +375,19 @@ class TestOrganizeExecute:
     def test_missing_plan_id_returns_error(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/execute", data={"plan_id": ""})
+            r = org_client.post(
+                "/ui/organize/execute", data={"plan_id": ""}, headers=csrf_headers(org_client)
+            )
         assert r.status_code == 200
 
     def test_plan_not_found_returns_error(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/execute", data={"plan_id": "no-such-plan"})
+            r = org_client.post(
+                "/ui/organize/execute",
+                data={"plan_id": "no-such-plan"},
+                headers=csrf_headers(org_client),
+            )
         assert r.status_code == 200
 
 
@@ -421,7 +430,9 @@ class TestOrganizeJobStatus:
 class TestOrganizeJobCancel:
     def test_cancel_nonexistent_job_returns_404(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.get_job", return_value=None):
-            r = org_client.post("/ui/organize/jobs/ghost-job/cancel")
+            r = org_client.post(
+                "/ui/organize/jobs/ghost-job/cancel", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 404
 
     def test_cancel_non_scheduled_job_shows_error(self, org_client: TestClient) -> None:
@@ -431,7 +442,9 @@ class TestOrganizeJobCancel:
             patch("file_organizer.web.organize_routes.templates") as tpl,
         ):
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/jobs/cancel-test/cancel")
+            r = org_client.post(
+                "/ui/organize/jobs/cancel-test/cancel", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 200
 
 
@@ -443,7 +456,9 @@ class TestOrganizeJobCancel:
 class TestOrganizeJobRollback:
     def test_rollback_nonexistent_job_returns_404(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.get_job", return_value=None):
-            r = org_client.post("/ui/organize/jobs/ghost/rollback")
+            r = org_client.post(
+                "/ui/organize/jobs/ghost/rollback", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 404
 
     def test_rollback_dry_run_job_shows_error(self, org_client: TestClient) -> None:
@@ -454,7 +469,9 @@ class TestOrganizeJobRollback:
         ):
             _set_job_metadata("rollback-dry", {"dry_run": True})
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/jobs/rollback-dry/rollback")
+            r = org_client.post(
+                "/ui/organize/jobs/rollback-dry/rollback", headers=csrf_headers(org_client)
+            )
         assert r.status_code == 200
 
 
@@ -545,11 +562,17 @@ class TestOrganizeClearPlan:
         record = _store_organize_plan({"input_dir": "plan_in", "output_dir": "plan_out"})
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/plan/clear", data={"plan_id": record["plan_id"]})
+            r = org_client.post(
+                "/ui/organize/plan/clear",
+                data={"plan_id": record["plan_id"]},
+                headers=csrf_headers(org_client),
+            )
         assert r.status_code == 200
 
     def test_clear_without_plan_id_returns_200(self, org_client: TestClient) -> None:
         with patch("file_organizer.web.organize_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            r = org_client.post("/ui/organize/plan/clear", data={"plan_id": ""})
+            r = org_client.post(
+                "/ui/organize/plan/clear", data={"plan_id": ""}, headers=csrf_headers(org_client)
+            )
         assert r.status_code == 200

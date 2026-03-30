@@ -8,6 +8,7 @@
             read
             {% else %}
             <form method="post" action="/ui/profile/notifications/mark-read" hx-post="/ui/profile/notifications/mark-read" hx-target="#profile-notifications">
+                {{ csrf_input(csrf_token) }}
                 <input type="hidden" name="notification_id" value="{{ item.id }}">
                 <button class="btn-ghost btn-sm" type="submit">Mark read</button>
             </form>

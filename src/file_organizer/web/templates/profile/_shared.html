@@ -14,6 +14,7 @@
             <td>{{ folder.permission }}</td>
             <td>
                 <form method="post" action="/ui/profile/shared/remove" hx-post="/ui/profile/shared/remove" hx-target="#profile-shared">
+                    {{ csrf_input(csrf_token) }}
                     <input type="hidden" name="folder_id" value="{{ folder.id }}">
                     <button class="btn-ghost btn-sm" type="submit">Remove</button>
                 </form>
@@ -27,6 +28,7 @@
 {% endif %}
 
 <form method="post" action="/ui/profile/shared/add" hx-post="/ui/profile/shared/add" hx-target="#profile-shared">
+    {{ csrf_input(csrf_token) }}
     <div class="form-group">
         <label for="shared-path">Folder path</label>
         <input id="shared-path" name="folder_path" type="text" required>

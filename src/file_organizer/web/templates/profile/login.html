@@ -4,6 +4,7 @@
     <p class="error-text">{{ error }}</p>
     {% endif %}
     <form method="post" action="/ui/profile/login">
+        {{ csrf_input(csrf_token) }}
         <div class="form-group">
             <label for="login-username">Email or Username</label>
             <input id="login-username" name="username" type="text" required autocomplete="username email">

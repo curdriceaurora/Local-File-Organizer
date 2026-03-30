@@ -13,7 +13,7 @@ from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
-from file_organizer.api.test_utils import build_test_settings
+from file_organizer.api.test_utils import build_test_settings, csrf_headers, seed_csrf_token
 
 
 def _build_settings(tmp_path: Path, auth_enabled: bool = True) -> ApiSettings:
@@ -27,7 +27,9 @@ def _build_settings(tmp_path: Path, auth_enabled: bool = True) -> ApiSettings:
 def _build_client(tmp_path: Path, auth_enabled: bool = True) -> TestClient:
     settings = _build_settings(tmp_path, auth_enabled=auth_enabled)
     app = create_app(settings)
-    return TestClient(app)
+    client = TestClient(app)
+    seed_csrf_token(client)
+    return client
 
 
 def _seed_user(
@@ -57,6 +59,7 @@ def _login(
     response = client.post(
         "/ui/profile/login",
         data={"username": username, "password": password},
+        headers=csrf_headers(client),
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -92,6 +95,7 @@ class TestProfilePage:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         response = client.get("/ui/profile")
@@ -122,10 +126,12 @@ class TestLoginForm:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
 
         response = client.post(
             "/ui/profile/login",
             data={"username": "alice", "password": "wrong"},
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         # Should re-render the login form with error, not redirect
@@ -137,10 +143,12 @@ class TestLoginForm:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
 
         response = client.post(
             "/ui/profile/login",
             data={"username": "alice", "password": "P@ssword1Test!"},
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert response.status_code == 303
@@ -168,6 +176,7 @@ class TestRegisterForm:
                 "password": "P@ssword1Test!",
                 "full_name": "Bob User",
             },
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert response.status_code == 303
@@ -178,6 +187,7 @@ class TestRegisterForm:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
 
         response = client.post(
             "/ui/profile/register",
@@ -186,6 +196,7 @@ class TestRegisterForm:
                 "email": "alice2@example.com",
                 "password": "P@ssword1Test!",
             },
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert response.status_code == 200
@@ -200,6 +211,7 @@ class TestRegisterForm:
                 "email": "charlie@example.com",
                 "password": "short",
             },
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert response.status_code == 200
@@ -227,6 +239,7 @@ class TestFullAuthFlow:
                 "password": "P@ssword1Test!",
                 "full_name": "Test User",
             },
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert reg.status_code == 303
@@ -235,6 +248,7 @@ class TestFullAuthFlow:
         login = client.post(
             "/ui/profile/login",
             data={"username": "testuser", "password": "P@ssword1Test!"},
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert login.status_code == 303
@@ -265,6 +279,7 @@ class TestProfileEdit:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         response = client.get("/ui/profile/edit")
@@ -277,11 +292,13 @@ class TestProfileEdit:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         response = client.post(
             "/ui/profile/edit",
             data={"full_name": "Alice Updated", "email": "alice_new@example.com"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "Profile updated" in response.text
@@ -302,6 +319,7 @@ class TestLogout:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         # Confirm authenticated
@@ -309,7 +327,9 @@ class TestLogout:
         assert "Alice Test" in profile.text
 
         # Logout
-        logout = client.post("/ui/profile/logout", follow_redirects=False)
+        logout = client.post(
+            "/ui/profile/logout", headers=csrf_headers(client), follow_redirects=False
+        )
         assert logout.status_code == 303
         assert logout.headers["location"] == "/ui/profile"
 
@@ -338,6 +358,7 @@ class TestApiKeys:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         response = client.get("/ui/profile/api-keys")
@@ -349,11 +370,13 @@ class TestApiKeys:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         response = client.post(
             "/ui/profile/api-keys/generate",
             data={"label": "my-key"},
+            headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "New API key created" in response.text
@@ -365,12 +388,14 @@ class TestApiKeys:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         # Generate a key first
         gen = client.post(
             "/ui/profile/api-keys/generate",
             data={"label": "to-revoke"},
+            headers=csrf_headers(client),
         )
         assert gen.status_code == 200
         assert "to-revoke" in gen.text
@@ -386,6 +411,7 @@ class TestApiKeys:
         revoke = client.post(
             "/ui/profile/api-keys/revoke",
             data={"key_id": key_id},
+            headers=csrf_headers(client),
         )
         assert revoke.status_code == 200
         assert "No active API keys" in revoke.text
@@ -406,8 +432,13 @@ class TestPasswordResetFlow:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
 
-        forgot = client.post("/ui/profile/forgot-password", data={"email": "alice@example.com"})
+        forgot = client.post(
+            "/ui/profile/forgot-password",
+            data={"email": "alice@example.com"},
+            headers=csrf_headers(client),
+        )
         assert forgot.status_code == 200
         assert "Local dev token" in forgot.text
 
@@ -424,6 +455,7 @@ class TestPasswordResetFlow:
                 "new_password": "NewP@ssw0rd1!",
                 "confirm_password": "NewP@ssw0rd1!",
             },
+            headers=csrf_headers(client),
         )
         assert reset.status_code == 200
         assert "Password reset complete" in reset.text
@@ -431,6 +463,7 @@ class TestPasswordResetFlow:
         login = client.post(
             "/ui/profile/login",
             data={"username": "alice", "password": "NewP@ssw0rd1!"},
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert login.status_code == 303
@@ -445,11 +478,13 @@ class TestWorkspaceAndTeamUi:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         create_one = client.post(
             "/ui/profile/workspaces/create",
             data={"name": "Alpha", "root_path": "/tmp/alpha", "description": "A"},
+            headers=csrf_headers(client),
         )
         assert create_one.status_code == 200
         assert "Alpha" in create_one.text
@@ -457,6 +492,7 @@ class TestWorkspaceAndTeamUi:
         create_two = client.post(
             "/ui/profile/workspaces/create",
             data={"name": "Beta", "root_path": "/tmp/beta", "description": "B"},
+            headers=csrf_headers(client),
         )
         assert create_two.status_code == 200
         assert "Beta" in create_two.text
@@ -465,7 +501,11 @@ class TestWorkspaceAndTeamUi:
 
         ids = re.findall(r'name="workspace_id" value="([^"]+)"', create_two.text)
         assert ids
-        switch = client.post("/ui/profile/workspaces/switch", data={"workspace_id": ids[-1]})
+        switch = client.post(
+            "/ui/profile/workspaces/switch",
+            data={"workspace_id": ids[-1]},
+            headers=csrf_headers(client),
+        )
         assert switch.status_code == 200
         assert "Active" in switch.text
 
@@ -474,11 +514,13 @@ class TestWorkspaceAndTeamUi:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         invite = client.post(
             "/ui/profile/team/invite",
             data={"email": "teammate@example.com", "role": "viewer"},
+            headers=csrf_headers(client),
         )
         assert invite.status_code == 200
         assert "teammate@example.com" in invite.text
@@ -492,6 +534,7 @@ class TestWorkspaceAndTeamUi:
         update = client.post(
             "/ui/profile/team/role",
             data={"member_id": member_id, "role": "admin"},
+            headers=csrf_headers(client),
         )
         assert update.status_code == 200
         assert "admin" in update.text
@@ -501,11 +544,13 @@ class TestWorkspaceAndTeamUi:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         add = client.post(
             "/ui/profile/shared/add",
             data={"folder_path": "/tmp/shared", "permission": "edit"},
+            headers=csrf_headers(client),
         )
         assert add.status_code == 200
         assert "/tmp/shared" in add.text
@@ -516,7 +561,11 @@ class TestWorkspaceAndTeamUi:
         assert folder_match is not None
         folder_id = folder_match.group(1)
 
-        remove = client.post("/ui/profile/shared/remove", data={"folder_id": folder_id})
+        remove = client.post(
+            "/ui/profile/shared/remove",
+            data={"folder_id": folder_id},
+            headers=csrf_headers(client),
+        )
         assert remove.status_code == 200
         assert "/tmp/shared" not in remove.text
 
@@ -530,6 +579,7 @@ class TestAccountSettingsAndFeeds:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         change = client.post(
@@ -539,17 +589,23 @@ class TestAccountSettingsAndFeeds:
                 "new_password": "P@ssword2Test!",
                 "confirm_password": "P@ssword2Test!",
             },
+            headers=csrf_headers(client),
         )
         assert change.status_code == 200
         assert "Password updated" in change.text
 
-        toggle = client.post("/ui/profile/account-settings/2fa", data={"enabled": "1"})
+        toggle = client.post(
+            "/ui/profile/account-settings/2fa",
+            data={"enabled": "1"},
+            headers=csrf_headers(client),
+        )
         assert toggle.status_code == 200
         assert "Two-factor preference updated" in toggle.text
 
         relogin = client.post(
             "/ui/profile/login",
             data={"username": "alice", "password": "P@ssword2Test!"},
+            headers=csrf_headers(client),
             follow_redirects=False,
         )
         assert relogin.status_code == 303
@@ -559,11 +615,13 @@ class TestAccountSettingsAndFeeds:
         _seed_user(settings)
         app = create_app(settings)
         client = TestClient(app)
+        seed_csrf_token(client)
         _login(client)
 
         client.post(
             "/ui/profile/workspaces/create",
             data={"name": "Work", "root_path": "/tmp/work", "description": ""},
+            headers=csrf_headers(client),
         )
 
         activity = client.get("/ui/profile/activity")

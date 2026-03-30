@@ -84,3 +84,25 @@ def create_auth_client(
     tokens = login.json()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     return client, headers, tokens
+
+
+def seed_csrf_token(client: TestClient) -> str:
+    """Do a GET to /ui/ to obtain a CSRF cookie, return the token value.
+
+    After calling this, the TestClient's cookie jar holds the ``_csrf_token``
+    cookie.  All subsequent requests through the same client will send it back
+    automatically — callers only need to add the ``x-csrf-token`` header (or
+    the ``csrf_token`` form field) on state-changing requests.
+    """
+    resp = client.get("/ui/")
+    return resp.cookies.get("_csrf_token", "")
+
+
+def csrf_headers(client: TestClient) -> dict[str, str]:
+    """Return a headers dict containing the CSRF token for the given client.
+
+    Assumes :func:`seed_csrf_token` was called first (or a prior GET to /ui/
+    populated the cookie jar).
+    """
+    token = client.cookies.get("_csrf_token", "")
+    return {"x-csrf-token": token}

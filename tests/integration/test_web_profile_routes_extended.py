@@ -21,6 +21,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
 from file_organizer.web.profile_routes import _PASSWORD_RESET_TOKENS, profile_router
 
 pytestmark = pytest.mark.integration
@@ -47,7 +48,9 @@ def profile_client(profile_settings: ApiSettings) -> TestClient:
     app.dependency_overrides[get_settings] = lambda: profile_settings
     setup_exception_handlers(app)
     app.include_router(profile_router, prefix="/ui")
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    seed_csrf_token(client)
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +71,7 @@ class TestRegisterPost:
                     "full_name": "New User",
                 },
                 follow_redirects=False,
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code in (200, 303, 302)
 
@@ -82,6 +86,7 @@ class TestRegisterPost:
                     "password": "abc",
                     "full_name": "",
                 },
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
         tpl.TemplateResponse.assert_called_once()
@@ -95,9 +100,13 @@ class TestRegisterPost:
         }
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            profile_client.post("/ui/profile/register", data=payload)
+            profile_client.post(
+                "/ui/profile/register", data=payload, headers=csrf_headers(profile_client)
+            )
             payload["email"] = "dup_ext2@example.com"
-            r = profile_client.post("/ui/profile/register", data=payload)
+            r = profile_client.post(
+                "/ui/profile/register", data=payload, headers=csrf_headers(profile_client)
+            )
         assert r.status_code in (200, 303)
 
     def test_register_duplicate_email_returns_200(self, profile_client: TestClient) -> None:
@@ -109,9 +118,13 @@ class TestRegisterPost:
         }
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
-            profile_client.post("/ui/profile/register", data=payload)
+            profile_client.post(
+                "/ui/profile/register", data=payload, headers=csrf_headers(profile_client)
+            )
             payload["username"] = "dupmail2_ext"
-            r = profile_client.post("/ui/profile/register", data=payload)
+            r = profile_client.post(
+                "/ui/profile/register", data=payload, headers=csrf_headers(profile_client)
+            )
         assert r.status_code == 200
 
 
@@ -135,6 +148,7 @@ class TestForgotPassword:
             r = profile_client.post(
                 "/ui/profile/forgot-password",
                 data={"email": "nobody@example.com"},
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
         tpl.TemplateResponse.assert_called_once()
@@ -153,11 +167,13 @@ class TestForgotPassword:
                     "full_name": "",
                 },
                 follow_redirects=False,
+                headers=csrf_headers(profile_client),
             )
             _PASSWORD_RESET_TOKENS.clear()
             r = profile_client.post(
                 "/ui/profile/forgot-password",
                 data={"email": "fptest_ext@example.com"},
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
         assert len(_PASSWORD_RESET_TOKENS) == 1
@@ -200,6 +216,7 @@ class TestResetPassword:
                     "new_password": "NewP@ssword1!",
                     "confirm_password": "NewP@ssword1!",
                 },
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
 
@@ -221,6 +238,7 @@ class TestResetPassword:
                     "new_password": "NewP@ssword1!",
                     "confirm_password": "DifferentP@ssword1!",
                 },
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
         _PASSWORD_RESET_TOKENS.pop(token, None)
@@ -243,6 +261,7 @@ class TestResetPassword:
                     "new_password": "abc",
                     "confirm_password": "abc",
                 },
+                headers=csrf_headers(profile_client),
             )
         assert r.status_code == 200
         _PASSWORD_RESET_TOKENS.pop(token, None)
@@ -284,7 +303,9 @@ class TestAuthRequiredRoutesUnauthenticated:
 
     def test_edit_post_returns_200(self, profile_client: TestClient) -> None:
         r = profile_client.post(
-            "/ui/profile/edit", data={"full_name": "Name", "email": "e@example.com"}
+            "/ui/profile/edit",
+            data={"full_name": "Name", "email": "e@example.com"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
@@ -292,6 +313,7 @@ class TestAuthRequiredRoutesUnauthenticated:
         r = profile_client.post(
             "/ui/profile/edit-avatar",
             files={"avatar": ("avatar.png", b"\x89PNG\r\n" + b"\x00" * 10, "image/png")},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
@@ -303,11 +325,16 @@ class TestAuthRequiredRoutesUnauthenticated:
         r = profile_client.post(
             "/ui/profile/workspaces/create",
             data={"name": "My WS", "root_path": "/tmp", "description": "desc"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
     def test_workspaces_switch_returns_200(self, profile_client: TestClient) -> None:
-        r = profile_client.post("/ui/profile/workspaces/switch", data={"workspace_id": "ws-id-1"})
+        r = profile_client.post(
+            "/ui/profile/workspaces/switch",
+            data={"workspace_id": "ws-id-1"},
+            headers=csrf_headers(profile_client),
+        )
         assert r.status_code == 200
 
     def test_team_get_returns_200(self, profile_client: TestClient) -> None:
@@ -316,13 +343,17 @@ class TestAuthRequiredRoutesUnauthenticated:
 
     def test_team_invite_returns_200(self, profile_client: TestClient) -> None:
         r = profile_client.post(
-            "/ui/profile/team/invite", data={"email": "invite@example.com", "role": "viewer"}
+            "/ui/profile/team/invite",
+            data={"email": "invite@example.com", "role": "viewer"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
     def test_team_role_returns_200(self, profile_client: TestClient) -> None:
         r = profile_client.post(
-            "/ui/profile/team/role", data={"member_id": "mem-1", "role": "editor"}
+            "/ui/profile/team/role",
+            data={"member_id": "mem-1", "role": "editor"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
@@ -334,11 +365,16 @@ class TestAuthRequiredRoutesUnauthenticated:
         r = profile_client.post(
             "/ui/profile/shared/add",
             data={"folder_path": "/some/folder", "permission": "view"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 
     def test_shared_remove_returns_200(self, profile_client: TestClient) -> None:
-        r = profile_client.post("/ui/profile/shared/remove", data={"folder_id": "folder-id-1"})
+        r = profile_client.post(
+            "/ui/profile/shared/remove",
+            data={"folder_id": "folder-id-1"},
+            headers=csrf_headers(profile_client),
+        )
         assert r.status_code == 200
 
     def test_activity_get_returns_200(self, profile_client: TestClient) -> None:
@@ -351,7 +387,9 @@ class TestAuthRequiredRoutesUnauthenticated:
 
     def test_notifications_mark_read_returns_200(self, profile_client: TestClient) -> None:
         r = profile_client.post(
-            "/ui/profile/notifications/mark-read", data={"notification_id": "notif-1"}
+            "/ui/profile/notifications/mark-read",
+            data={"notification_id": "notif-1"},
+            headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200
 

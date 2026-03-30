@@ -8,6 +8,7 @@
     </div>
     {% if user %}
     <form method="post" action="/ui/profile/logout">
+        {{ csrf_input(csrf_token) }}
         <button class="btn-ghost" type="submit">Log out</button>
     </form>
     {% endif %}
