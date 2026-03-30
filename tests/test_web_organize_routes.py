@@ -327,7 +327,7 @@ class TestOrganizeProgressStreaming:
         # Verify response includes progress indication
         assert "plan" in response.text.lower() or "organize" in response.text.lower()
 
-    @pytest.mark.skip(reason="SSE streaming not yet implemented")
+    @pytest.mark.skip(reason="See #1037 - SSE streaming not yet implemented")
     def test_organize_stream_cancellation(self) -> None:
         """Stream should handle cancellation/timeout gracefully."""
         # Progress stream endpoint not yet implemented
