@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import pickle
+import unittest.mock
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -203,19 +204,13 @@ class TestTransform:
         assert mock_vectorizer.transform.call_count == 1
 
     @pytest.mark.ci
-    def test_cache_hit_emits_debug_log(
-        self, embedder, mock_vectorizer, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_cache_hit_emits_debug_log(self, embedder, mock_vectorizer) -> None:
         """Cache-hit path logs a debug message (covers embedder.py logger.debug line)."""
-        import logging
-
         embedder.is_fitted = True
-        embedder_logger = logging.getLogger("file_organizer.services.deduplication.embedder")
-        embedder_logger.propagate = True
-        with caplog.at_level(logging.DEBUG):
+        with patch("file_organizer.services.deduplication.embedder.logger") as mock_logger:
             embedder.transform("cache test doc")  # populates cache
             embedder.transform("cache test doc")  # hits cache → executes logger.debug
-        assert "Cache hit" in caplog.text
+        mock_logger.debug.assert_any_call("Cache hit for document (hash=%s)", unittest.mock.ANY)
         assert mock_vectorizer.transform.call_count == 1
 
     def test_cache_key_is_hash(self, embedder):
