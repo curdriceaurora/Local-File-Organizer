@@ -48,7 +48,7 @@ dependencies = [
     "aiofiles~=23.0",  # Required by Starlette StaticFiles for async file serving
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12,<17",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
@@ -96,7 +96,7 @@ web = [
     "fastapi~=0.109",
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12,<17",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
