@@ -16,6 +16,8 @@ from file_organizer.web.csrf import (
     validate_csrf_token,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 # ---------------------------------------------------------------------------
 # Token generation / validation unit tests
 # ---------------------------------------------------------------------------
@@ -101,6 +103,10 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
     async def exempt_endpoint() -> JSONResponse:
         return JSONResponse({"ok": True})
 
+    @app.post("/api/session/refresh")
+    async def exempt_prefix_endpoint() -> JSONResponse:
+        return JSONResponse({"ok": True})
+
     return app
 
 
@@ -183,6 +189,14 @@ class TestCSRFMiddleware:
 
     def test_exempt_path_bypasses_csrf(self, client: TestClient) -> None:
         response = client.post("/exempt")
+        assert response.status_code == 200
+
+    def test_exempt_prefix_with_trailing_slash_bypasses_csrf(self) -> None:
+        app = _make_app(exempt_paths=["/api/"])
+        client = TestClient(app)
+
+        response = client.post("/api/session/refresh")
+
         assert response.status_code == 200
 
     def test_cookie_is_httponly(self, client: TestClient) -> None:

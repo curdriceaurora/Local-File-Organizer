@@ -27,9 +27,10 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 def _csrf_input(token: str) -> str:
     """Render a hidden CSRF input field for use in Jinja2 templates."""
-    from markupsafe import Markup
+    from markupsafe import Markup, escape
 
-    return Markup(f'<input type="hidden" name="csrf_token" value="{token}">')
+    escaped_token = escape(token)
+    return Markup(f'<input type="hidden" name="csrf_token" value="{escaped_token}">')
 
 
 templates.env.globals["csrf_input"] = _csrf_input

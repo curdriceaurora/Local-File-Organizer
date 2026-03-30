@@ -19,6 +19,7 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.web._helpers import (
+    _csrf_input,
     allowed_roots,
     as_bool,
     base_context,
@@ -124,6 +125,26 @@ class TestBaseContext:
         nav_labels = [item[0] for item in ctx["nav_items"]]
         assert "Home" in nav_labels
         assert "Settings" in nav_labels
+
+    @pytest.mark.ci
+    def test_base_context_includes_request_csrf_token(self, mock_request, settings):
+        """Base context should surface request.state.csrf_token for templates."""
+        mock_request.state.csrf_token = "csrf-token-123"
+
+        ctx = base_context(mock_request, settings, active="home", title="Home")
+
+        assert ctx["csrf_token"] == "csrf-token-123"
+
+
+class TestCSRFInput:
+    """Test CSRF input helper rendering."""
+
+    @pytest.mark.ci
+    def test_csrf_input_escapes_token_value(self) -> None:
+        rendered = _csrf_input('"><script>alert(1)</script>&')
+
+        assert 'name="csrf_token"' in rendered
+        assert 'value="&#34;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&amp;"' in rendered
 
 
 # ---------------------------------------------------------------------------
