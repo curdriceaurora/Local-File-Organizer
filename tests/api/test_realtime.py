@@ -298,8 +298,16 @@ class TestConnectionManager:
 
         task = asyncio.create_task(failing_coro())
         await asyncio.sleep(0.01)
-        # Should not raise, just log
-        await manager._await_task(task)
+
+        # Mock Queue.put to use AsyncMock to avoid RuntimeWarning
+        with patch("asyncio.Queue") as mock_queue_cls:
+            mock_queue = AsyncMock()
+            mock_queue.put = AsyncMock()
+            mock_queue.get = AsyncMock()
+            mock_queue_cls.return_value = mock_queue
+
+            # Should not raise, just log
+            await manager._await_task(task)
 
     @pytest.mark.asyncio
     async def test_enqueue_event_runtime_error(self, manager, mock_ws):
