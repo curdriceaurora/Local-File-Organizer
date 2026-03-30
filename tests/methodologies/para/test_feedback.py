@@ -286,7 +286,6 @@ class TestFeedbackCollector:
     def test_save_oserror_handled(self, tmp_path: Path) -> None:
         """Should handle OSError when saving feedback file."""
         import json
-        from unittest.mock import MagicMock
 
         storage = tmp_path / "feedback"
         collector = FeedbackCollector(storage_dir=storage)

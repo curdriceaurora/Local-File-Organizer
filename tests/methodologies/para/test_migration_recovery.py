@@ -609,6 +609,8 @@ class TestMigrationManagerEdgeCases:
             # Backup should handle ValueError and fall back to file.name
             backup_id = migration_manager._create_backup(plan)
             assert backup_id is not None
+            backups = migration_manager.list_backups()
+            assert any(b["backup_id"] == backup_id for b in backups)
 
         finally:
             # Cleanup
@@ -636,6 +638,8 @@ class TestMigrationManagerEdgeCases:
         # Backup should continue despite exceptions
         backup_id = migration_manager._create_backup(plan)
         assert backup_id is not None
+        backups = migration_manager.list_backups()
+        assert any(b["backup_id"] == backup_id for b in backups)
 
     def test_backup_no_files_warning(self, migration_manager, temp_source, temp_target):
         """Test backup with no files generates warning."""
@@ -650,9 +654,13 @@ class TestMigrationManagerEdgeCases:
             if file.is_file():
                 file.unlink()
 
-        # Should handle missing files and still create backup
+        # Should handle missing files and still create backup (files_backed_up == 0)
         backup_id = migration_manager._create_backup(plan)
         assert backup_id is not None
+        backups = migration_manager.list_backups()
+        backup_entry = next((b for b in backups if b["backup_id"] == backup_id), None)
+        assert backup_entry is not None
+        assert backup_entry["files_backed_up"] == 0
 
     def test_backup_creation_exception_cleanup(
         self, migration_manager, temp_source, temp_target, monkeypatch
@@ -735,7 +743,7 @@ class TestMigrationManagerEdgeCases:
 
         # Create a valid backup
         plan = migration_manager.analyze_source(temp_source, temp_target, recursive=False)
-        backup_id = migration_manager._create_backup(plan)
+        migration_manager._create_backup(plan)
 
         # Should only list valid backups
         backups = migration_manager.list_backups()
@@ -853,7 +861,7 @@ class TestMigrationManagerEdgeCases:
         # With few files, should not have the "more files" indicator
         if plan.total_count <= 20:
             lines = preview.split("\n")
-            more_files_lines = [l for l in lines if "more files" in l]
+            more_files_lines = [line for line in lines if "more files" in line]
             assert len(more_files_lines) == 0
 
     def test_analyze_source_category_none_fallback(
@@ -1163,7 +1171,6 @@ class TestMigrationManagerEdgeCases:
 
         # Mock copy2 to succeed but then mock hash calculation to fail
         original_copy2 = shutil.copy2
-        call_count = [0]
 
         def mock_copy2(src, dst):
             result = original_copy2(src, dst)
@@ -1195,8 +1202,6 @@ class TestMigrationManagerEdgeCases:
         monkeypatch.setattr(shutil, "rmtree", tracked_rmtree)
 
         # Mock the _calculate_manifest_checksum to fail after files are backed up
-        original_checksum = migration_manager._calculate_manifest_checksum
-
         def mock_checksum(file_entries):
             raise RuntimeError("Simulated checksum calculation error")
 

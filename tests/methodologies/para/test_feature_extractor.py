@@ -190,7 +190,7 @@ class TestExtractMetadataFeatures:
     ) -> None:
         """Days since modified should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
-        assert features.days_since_modified >= 0.0
+        assert features.days_since_modified < 1.0  # file was just created
 
     def test_days_since_created_is_positive(
         self,
@@ -199,7 +199,7 @@ class TestExtractMetadataFeatures:
     ) -> None:
         """Days since created should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
-        assert features.days_since_created >= 0.0
+        assert features.days_since_created < 1.0  # file was just created
 
     def test_access_frequency_in_range(
         self,
@@ -371,7 +371,7 @@ class TestEdgeCasesAndErrorHandling:
         text = f"{long_action}\nTODO: normal task"
         features = extractor.extract_text_features(text)
         # Should have 1 action item (the normal one), not the long one
-        assert len(features.action_items) >= 1
+        assert len(features.action_items) == 1
         # Verify none of the action items are >= 200 chars
         for action in features.action_items:
             assert len(action) < 200
@@ -384,8 +384,8 @@ class TestEdgeCasesAndErrorHandling:
         # Pattern that might match but result in empty strings after strip
         text = "   \nTODO: actual task"
         features = extractor.extract_text_features(text)
-        # Should have at least the actual task
-        assert len(features.action_items) >= 1
+        # Should have exactly the actual task (spaces-only lines are filtered)
+        assert len(features.action_items) == 1
 
     def test_metadata_extraction_with_stat_error(
         self,
@@ -501,7 +501,7 @@ class TestEdgeCasesAndErrorHandling:
         features = extractor.extract_structural_features(fake_file)
         # Should handle gracefully - parent doesn't exist
         assert features.sibling_count == 0
-        assert features.directory_depth >= 0
+        assert features.directory_depth == 3  # /nonexistent/directory/file.txt is 3 levels deep
 
     def test_action_items_exactly_200_chars_filtered(
         self,
@@ -562,7 +562,7 @@ class TestEdgeCasesAndErrorHandling:
 
         # Should only have the normal TODO task
         assert len(features.action_items) >= 1
-        assert "TODO" in features.action_items[0] or len(features.action_items) >= 0
+        assert "TODO" in features.action_items[0]
 
     def test_metadata_windows_platform_creation_time(
         self,

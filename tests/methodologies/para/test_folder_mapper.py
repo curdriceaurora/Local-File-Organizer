@@ -414,29 +414,20 @@ class TestCategoryFolderMapperEdgeCases:
     """Test edge cases for folder mapper."""
 
     @pytest.fixture
-    def temp_source(self):
+    def temp_source(self, tmp_path: Path) -> Path:
         """Create temporary source directory with test files."""
-        temp_path = Path(tempfile.mkdtemp())
-
-        # Create test files
-        (temp_path / "test.txt").write_text("Test content")
-        (temp_path / "data.json").write_text('{"test": true}')
-
-        yield temp_path
-
-        # Cleanup
-        if temp_path.exists():
-            shutil.rmtree(temp_path)
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "test.txt").write_text("Test content")
+        (source / "data.json").write_text('{"test": true}')
+        return source
 
     @pytest.fixture
-    def temp_target(self):
+    def temp_target(self, tmp_path: Path) -> Path:
         """Create temporary target directory."""
-        temp_path = Path(tempfile.mkdtemp())
-        yield temp_path
-
-        # Cleanup
-        if temp_path.exists():
-            shutil.rmtree(temp_path)
+        target = tmp_path / "target"
+        target.mkdir()
+        return target
 
     @pytest.fixture
     def config(self):
@@ -550,6 +541,7 @@ class TestCategoryFolderMapperEdgeCases:
 
         # Should handle gracefully, subfolder might be None or have no date part
         assert isinstance(result, MappingResult)
+        assert result.subfolder_path is None
 
     def test_keyword_folder_no_match(self, config, temp_source, temp_target):
         """Test keyword folder when no keywords match."""
@@ -593,7 +585,6 @@ class TestCategoryFolderMapperEdgeCases:
         results = [mapper.map_file(test_file, temp_target)]
 
         # Mock mkdir to raise PermissionError
-        original_mkdir = Path.mkdir
         def failing_mkdir(self, *args, **kwargs):
             raise PermissionError("No permission")
 
@@ -662,7 +653,6 @@ class TestCategoryFolderMapperEdgeCases:
 
     def test_extract_reasoning_with_category_scores(self, config, temp_source, temp_target):
         """Test reasoning extraction includes category scores."""
-        from file_organizer.methodologies.para.detection.heuristics import CategoryScore
 
         mapper = CategoryFolderMapper(config)
 
@@ -721,10 +711,14 @@ class TestCategoryFolderMapperEdgeCases:
         result = mapper.map_file(test_file, temp_target)
 
         assert isinstance(result, MappingResult)
+        assert result.subfolder_path is None
 
     def test_extract_reasoning_with_category_in_scores(self, config, temp_source, temp_target, mocker):
         """Test extracting reasoning when category is in heuristic result scores."""
-        from file_organizer.methodologies.para.detection.heuristics import CategoryScore, HeuristicResult
+        from file_organizer.methodologies.para.detection.heuristics import (
+            CategoryScore,
+            HeuristicResult,
+        )
 
         mapper = CategoryFolderMapper(config)
 
@@ -804,6 +798,7 @@ class TestCategoryFolderMapperEdgeCases:
         assert isinstance(result, MappingResult)
         # Reasoning might be empty since category not in scores
         assert isinstance(result.reasoning, list)
+        assert result.target_category == PARACategory.PROJECT
 
     def test_match_keyword_folder_with_false_mapping(self, config, temp_source, temp_target):
         """Test keyword folder when strategy has keyword_folders enabled but no mapping."""
@@ -818,6 +813,7 @@ class TestCategoryFolderMapperEdgeCases:
 
         # Since use_keyword_folders is False, should not use keyword mapping
         assert isinstance(result, MappingResult)
+        assert result.subfolder_path is None
 
     def test_match_keyword_folder_directly_with_none(self, config, temp_source):
         """Test _match_keyword_folder directly when keyword_mapping is None."""

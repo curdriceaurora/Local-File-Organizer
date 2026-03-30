@@ -353,5 +353,7 @@ class TestLoadConfig:
 
         # This should successfully import and call get_config_dir
         result = _get_para_config_dir()
-        # Verify it returns a Path object
+        # Verify it returns a Path object with expected properties
         assert isinstance(result, Path)
+        assert result.is_absolute()
+        assert "file-organizer" in str(result)

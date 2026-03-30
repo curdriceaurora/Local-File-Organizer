@@ -764,9 +764,9 @@ class TestTemporalHeuristicComprehensive:
         # RESOURCE signal triggered when modify time > 60 days
         # The gap check requires birthtime/ctime difference > 30 days
         # On macOS/Windows with birthtime, or simulated via file creation timing
-        resource_signals = result.scores[PARACategory.RESOURCE].signals
         # This may or may not appear depending on platform and file creation time
         # Just verify the heuristic runs without error
+        assert result is not None
 
     def test_temporal_archive_old_untouched(self, tmp_path: Path) -> None:
         """ARCHIVE score for files modified >180 days and accessed >90 days ago."""
@@ -1075,7 +1075,6 @@ class TestHeuristicEngineEdgeCases:
     def test_engine_all_heuristics_fail_returns_zero_result(self, tmp_path: Path) -> None:
         """When all heuristics raise exceptions, engine returns zero result."""
         from file_organizer.methodologies.para.detection.heuristics import (
-            CategoryScore,
             HeuristicResult,
         )
 
@@ -1130,7 +1129,6 @@ class TestHeuristicEngineEdgeCases:
 
     def test_engine_confidence_below_threshold_needs_review(self, tmp_path: Path) -> None:
         """Engine sets needs_manual_review when confidence < 0.60."""
-        from file_organizer.methodologies.para.config import CategoryThresholds
 
         f = tmp_path / "ambiguous.txt"
         f.write_text("test")
@@ -1273,7 +1271,6 @@ class TestPlatformSpecificPaths:
 
     def test_linux_platform_uses_mtime_for_creation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """On Linux (without birthtime), st_mtime is used as creation proxy."""
-        import time
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 
@@ -1352,7 +1349,6 @@ class TestPlatformSpecificBranches:
 
     def test_windows_platform_stat_ctime(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Windows branch uses st_ctime when no st_birthtime."""
-        import time
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 
@@ -1381,7 +1377,6 @@ class TestPlatformSpecificBranches:
 
     def test_linux_platform_stat_mtime_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Linux branch uses st_mtime as creation time proxy."""
-        import time
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 

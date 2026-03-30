@@ -742,8 +742,6 @@ class TestRollbackSuccessful:
             json.dump(manifest_data, f)
 
         # Inject a non-RollbackError exception during json.load
-        original_json_load = json.load
-
         def _failing_json_load(*args: object, **kwargs: object) -> object:
             # Raise a ValueError (not RollbackError or BackupIntegrityError)
             raise ValueError("injected JSON parsing error")
@@ -1131,7 +1129,7 @@ class TestCreateBackupEdgeCases:
 
         def _failing_open(file_arg: object, *args: object, **kwargs: object) -> object:
             if isinstance(file_arg, Path) and file_arg.name == "manifest.json":
-                raise IOError("injected manifest write failure")
+                raise OSError("injected manifest write failure")
             return original_open(file_arg, *args, **kwargs)
 
         monkeypatch.setattr("builtins.open", _failing_open)
@@ -1175,7 +1173,7 @@ class TestCreateBackupEdgeCases:
 
         def _failing_open(file_arg: object, *args: object, **kwargs: object) -> object:
             if isinstance(file_arg, Path) and file_arg.name == "manifest.json":
-                raise IOError("injected manifest write failure")
+                raise OSError("injected manifest write failure")
             return original_open(file_arg, *args, **kwargs)
 
         def _failing_rmtree(*args: object, **kwargs: object) -> None:
@@ -1227,7 +1225,7 @@ class TestCreateBackupEdgeCases:
                 # Delete backup_dir before raising exception
                 if backup_dir_ref[0] and backup_dir_ref[0].exists():
                     shutil.rmtree(backup_dir_ref[0])
-                raise IOError("injected manifest write failure")
+                raise OSError("injected manifest write failure")
             return original_open(file_arg, *args, **kwargs)
 
         monkeypatch.setattr(Path, "mkdir", _track_mkdir)

@@ -229,7 +229,7 @@ class TestBulkOrganize:
         engine.suggest.return_value = mock_suggestion
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
         report = mover.bulk_organize(src_dir, min_confidence=0.5)
-        assert report.skipped >= 1
+        assert report.skipped == 1  # exactly 1 file placed in source
 
     def test_bulk_organize_error_handling(self, tmp_path: Path) -> None:
         """Exception during processing increments errors (lines 291-293)."""
@@ -242,7 +242,7 @@ class TestBulkOrganize:
         engine.suggest.side_effect = RuntimeError("engine failure")
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
         report = mover.bulk_organize(src_dir)
-        assert report.errors >= 1
+        assert report.errors == 1  # exactly 1 file placed in source
 
     def test_bulk_organize_recursive(self, tmp_path: Path) -> None:
         """Recursive mode scans subdirectories (lines 257-260)."""
@@ -292,7 +292,7 @@ class TestBulkOrganize:
 
         report = mover.bulk_organize(projects_dir, dry_run=True)
         # File is already in Projects, so it should be skipped
-        assert report.skipped >= 1
+        assert report.skipped == 1  # exactly 1 file placed in source
         assert report.moved == 0
 
     def test_bulk_organize_move_fails(self, tmp_path: Path) -> None:
@@ -326,7 +326,7 @@ class TestBulkOrganize:
         with patch.object(mover, "move_file", side_effect=mock_move_file):
             report = mover.bulk_organize(src_dir, dry_run=True)
 
-        assert report.errors >= 1
+        assert report.errors == 1  # exactly 1 file placed in source
         assert report.moved == 0
 
 
@@ -357,7 +357,7 @@ class TestSuggestArchive:
             mock_time.time.return_value = time.time() + 200 * 86400
             suggestions = mover.suggest_archive(src_dir, inactive_days=180)
 
-        assert len(suggestions) >= 1
+        assert len(suggestions) == 1  # exactly 1 file placed in source
         assert suggestions[0].target_category == PARACategory.ARCHIVE
 
     def test_suggest_archive_os_error_during_scan(self, tmp_path: Path) -> None:
@@ -377,8 +377,6 @@ class TestSuggestArchive:
 
     def test_suggest_archive_file_stat_error(self, tmp_path: Path) -> None:
         """OSError during file.stat() is caught and file skipped."""
-        import inspect
-
         config = PARAConfig()
         engine = MagicMock()
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
@@ -390,22 +388,20 @@ class TestSuggestArchive:
         file2 = src_dir / "file2.txt"
         file2.write_text("content2")
 
-        # Use call stack inspection to distinguish between is_file() and explicit stat()
+        # Use a call counter to distinguish is_file() (1st stat call) from
+        # the explicit stat() call in the loop body (2nd call) for file1.txt.
+        # is_file() internally calls stat() on CPython's pathlib implementation.
         original_stat = Path.stat
+        call_counts: dict[str, int] = {}
 
-        def mock_stat(self):
-            if self.name == "file1.txt" and "file1.txt" in str(self):
-                # Check the call stack to see if we're being called from is_file()
-                # or from the explicit stat() call
-                frame = inspect.currentframe()
-                if frame and frame.f_back:
-                    caller_code = frame.f_back.f_code
-                    # If called from is_file(), allow it to succeed
-                    # is_file() is usually in posixpath or pathlib internals
-                    if "is_file" not in caller_code.co_name:
-                        # This is the explicit stat() call - raise OSError
-                        raise OSError("Cannot stat file")
-            return original_stat(self)
+        def mock_stat(self: Path, **kwargs: object) -> object:
+            if self.name == "file1.txt":
+                count = call_counts.get("file1", 0) + 1
+                call_counts["file1"] = count
+                if count >= 2:
+                    # Second+ call is the explicit stat() in the loop body
+                    raise OSError("Cannot stat file")
+            return original_stat(self, **kwargs)
 
         with patch.object(Path, "stat", mock_stat):
             with patch("file_organizer.methodologies.para.ai.file_mover.time") as mock_time:

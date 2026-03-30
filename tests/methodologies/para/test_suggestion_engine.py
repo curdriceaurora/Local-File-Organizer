@@ -793,6 +793,7 @@ class TestFeatureScoring:
 
         # Create an old file by mocking the feature extractor
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "old.txt"
@@ -832,6 +833,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "old_medium.txt"
@@ -867,6 +869,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "medium.txt"
@@ -902,6 +905,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "rarely_accessed.txt"
@@ -937,6 +941,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "frequently_accessed.txt"
@@ -972,6 +977,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import StructuralFeatures
 
         f = tmp_path / "file.txt"
@@ -1009,6 +1015,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import StructuralFeatures
 
         f = tmp_path / "file.txt"
@@ -1043,6 +1050,7 @@ class TestFeatureScoring:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import StructuralFeatures
 
         f = tmp_path / "file.txt"
@@ -1092,6 +1100,7 @@ class TestReasoningAndSubfolders:
 
         # Mock all feature extractors to return empty/neutral features
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import (
             MetadataFeatures,
             StructuralFeatures,
@@ -1292,6 +1301,7 @@ class TestReasoningAndSubfolders:
             # Should not suggest subfolder for special parent name
             # But this is tricky to test, let's just verify it works
             assert isinstance(result, PARASuggestion)
+            assert result.suggested_subfolder is None
 
     def test_tags_with_empty_file_type(
         self,
@@ -1309,6 +1319,7 @@ class TestReasoningAndSubfolders:
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
         from unittest.mock import patch
+
         from file_organizer.methodologies.para.ai.feature_extractor import MetadataFeatures
 
         f = tmp_path / "file"  # No extension
