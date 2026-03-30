@@ -44,31 +44,39 @@ def client(settings):
 class TestHomeRoute:
     """Test the GET / (home) route."""
 
-    def test_home_returns_200(self, client):
+    @pytest.fixture()
+    def mock_setup_completed(self):
+        """Mock ConfigManager to report setup as completed."""
+        with patch("file_organizer.web.router.ConfigManager") as mock_cm:
+            mock_cm.return_value.load.return_value.setup_completed = True
+            yield mock_cm
+
+    def test_home_returns_200(self, client, mock_setup_completed):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html>home</html>")
-            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
-                mock_cm.return_value.load.return_value.setup_completed = True
-                response = client.get("/ui/")
+            response = client.get("/ui/")
         assert response.status_code == 200
 
-    def test_home_uses_index_template(self, client):
+    def test_home_uses_index_template(self, client, mock_setup_completed):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html></html>")
-            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
-                mock_cm.return_value.load.return_value.setup_completed = True
-                client.get("/ui/")
+            client.get("/ui/")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
         assert "index.html" in str(call_args)
 
-    def test_home_response_body(self, client):
+    def test_home_response_body(self, client, mock_setup_completed):
         with patch("file_organizer.web.router.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html>home-page</html>")
-            with patch("file_organizer.web.router.ConfigManager") as mock_cm:
-                mock_cm.return_value.load.return_value.setup_completed = True
-                response = client.get("/ui/")
+            response = client.get("/ui/")
         assert "home-page" in response.text
+
+    def test_home_redirects_when_setup_incomplete(self, client):
+        with patch("file_organizer.web.router.ConfigManager") as mock_cm:
+            mock_cm.return_value.load.return_value.setup_completed = False
+            response = client.get("/ui/", follow_redirects=False)
+        assert response.status_code == 303
+        assert "/ui/setup" in response.headers["location"]
 
 
 class TestSubRouterInclusion:

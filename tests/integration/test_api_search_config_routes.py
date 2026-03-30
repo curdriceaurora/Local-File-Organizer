@@ -64,6 +64,9 @@ class TestSearchRouter:
     def test_missing_query_returns_422(self, search_client: TestClient) -> None:
         r = search_client.get("/search")
         assert r.status_code == 422
+        body = r.json()
+        assert "details" in body
+        assert any("q" in str(err) for err in body["details"])
 
     def test_empty_query_returns_400(self, search_client: TestClient) -> None:
         r = search_client.get("/search", params={"q": ""})
