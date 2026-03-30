@@ -63,10 +63,12 @@ check_environment() {
 # ---- Wait for Redis ----
 wait_for_redis() {
     # Extract host and port from Redis URL
-    local redis_url="${REDIS_URL}"
+    local redis_url="${FO_REDIS_URL:-${REDIS_URL}}"
 
     # Remove redis:// prefix
     local redis_addr="${redis_url#redis://}"
+    # Strip userinfo (user:password@) if present
+    redis_addr="${redis_addr#*@}"
     # Remove database number suffix
     redis_addr="${redis_addr%%/*}"
     # Split host and port
