@@ -76,7 +76,7 @@ dependencies = [
     "watchdog~=3.0",  # File system event handler
 
     # System utilities
-    "psutil~=5.9",  # System resource monitoring
+    "psutil~=7.2",  # System resource monitoring
 
     # Logging
     "loguru>=0.7.0",  # 0.x — unstable API, keep >=
