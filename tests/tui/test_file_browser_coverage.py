@@ -74,6 +74,23 @@ class TestFormatSize:
 class TestFileBrowserTree:
     """Test FileBrowserTree filtering and actions."""
 
+    @pytest.fixture(autouse=True)
+    def mock_directory_tree(self):
+        """Mock DirectoryTree to prevent coroutine creation."""
+        def mock_init(self, *args, **kwargs):
+            # Initialize only the attributes needed by FileBrowserTree
+            pass
+
+        def mock_reload(self):
+            # No-op reload to avoid event loop issues
+            pass
+
+        with (
+            patch("file_organizer.tui.file_browser.DirectoryTree.__init__", mock_init),
+            patch("file_organizer.tui.file_browser.DirectoryTree.reload", mock_reload),
+        ):
+            yield
+
     def test_init_default_path(self) -> None:
         tree = FileBrowserTree()
         assert tree._extension_filter == set()
