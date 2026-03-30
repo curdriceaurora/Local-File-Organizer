@@ -377,6 +377,8 @@ class TestSuggestArchive:
 
     def test_suggest_archive_file_stat_error(self, tmp_path: Path) -> None:
         """OSError during file.stat() is caught and file skipped."""
+        import inspect
+
         config = PARAConfig()
         engine = MagicMock()
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
@@ -388,12 +390,21 @@ class TestSuggestArchive:
         file2 = src_dir / "file2.txt"
         file2.write_text("content2")
 
-        # Deterministic approach: Always raise for file1, never for file2
+        # Use call stack inspection to distinguish between is_file() and explicit stat()
         original_stat = Path.stat
+
         def mock_stat(self):
-            # Check both name and path to ensure we're targeting the right file
             if self.name == "file1.txt" and "file1.txt" in str(self):
-                raise OSError("Cannot stat file")
+                # Check the call stack to see if we're being called from is_file()
+                # or from the explicit stat() call
+                frame = inspect.currentframe()
+                if frame and frame.f_back:
+                    caller_code = frame.f_back.f_code
+                    # If called from is_file(), allow it to succeed
+                    # is_file() is usually in posixpath or pathlib internals
+                    if "is_file" not in caller_code.co_name:
+                        # This is the explicit stat() call - raise OSError
+                        raise OSError("Cannot stat file")
             return original_stat(self)
 
         with patch.object(Path, "stat", mock_stat):
