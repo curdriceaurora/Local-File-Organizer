@@ -1,19 +1,39 @@
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: /
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: weekly
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "pre-commit"
+          - "coverage"
+      security:
+        patterns:
+          - "bcrypt"
+          - "python-jose"
+          - "cryptography"
 
-  - package-ecosystem: github-actions
-    directory: /
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: weekly
+      interval: "weekly"
     open-pull-requests-limit: 5
+    labels:
+      - "ci"
 
-  - package-ecosystem: docker
-    directory: /
+  - package-ecosystem: "docker"
+    directory: "/"
     schedule:
-      interval: weekly
+      interval: "weekly"
     open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
