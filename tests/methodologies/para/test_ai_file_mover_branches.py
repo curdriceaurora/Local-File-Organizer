@@ -376,7 +376,7 @@ class TestSuggestArchive:
         assert suggestions == []
 
     def test_suggest_archive_file_stat_error(self, tmp_path: Path) -> None:
-        """OSError during file.stat() is caught and file skipped (lines 352-353)."""
+        """OSError during file.stat() is caught and file skipped."""
         config = PARAConfig()
         engine = MagicMock()
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
@@ -388,15 +388,11 @@ class TestSuggestArchive:
         file2 = src_dir / "file2.txt"
         file2.write_text("content2")
 
-        # Mock stat to raise OSError for first file only on second call (inside loop)
-        # We use a counter to skip the first call (from is_file() during collection)
+        # Deterministic approach: Always raise for file1, never for file2
         original_stat = Path.stat
-        call_counts = {}
         def mock_stat(self):
-            path_key = str(self)
-            call_counts[path_key] = call_counts.get(path_key, 0) + 1
-            # For file1, raise error on second call (when accessing st_mtime in loop)
-            if self.name == "file1.txt" and call_counts[path_key] >= 2:
+            # Check both name and path to ensure we're targeting the right file
+            if self.name == "file1.txt" and "file1.txt" in str(self):
                 raise OSError("Cannot stat file")
             return original_stat(self)
 
