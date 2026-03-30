@@ -283,27 +283,29 @@ class TestFeedbackCollector:
         events = collector.get_events()
         assert events == []
 
-    def test_save_oserror_handled(self, tmp_path: Path) -> None:
+    def test_save_oserror_handled(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Should handle OSError when saving feedback file."""
         import json
 
         storage = tmp_path / "feedback"
         collector = FeedbackCollector(storage_dir=storage)
 
-        # Mock json.dump to raise OSError
-        original_dump = json.dump
+        dump_called = False
 
         def mock_dump(*args, **kwargs):
+            nonlocal dump_called
+            dump_called = True
             raise OSError("Disk full")
 
-        # Temporarily replace json.dump
-        json.dump = mock_dump
-        try:
-            # This should not raise, but log error instead
-            collector.record_acceptance(Path("/test/file.txt"), _make_suggestion())
-            # Cannot verify saved data, but test that no exception propagated
-        finally:
-            json.dump = original_dump
+        monkeypatch.setattr(json, "dump", mock_dump)
+        collector.record_acceptance(Path("/test/file.txt"), _make_suggestion())
+
+        assert dump_called is True
+        assert len(collector.get_events()) == 1
 
 
 # =========================================================================

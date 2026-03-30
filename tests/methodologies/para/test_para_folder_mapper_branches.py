@@ -151,7 +151,18 @@ class TestFolderMapperBranches:
         rule_result.rule = mock_rule
         rule_engine.evaluate_file.return_value = rule_result
 
-        mapper = CategoryFolderMapper(config, rule_engine=rule_engine)
+        heuristic_engine = MagicMock()
+        heuristic_result = MagicMock()
+        heuristic_result.recommended_category = PARACategory.AREA
+        heuristic_result.overall_confidence = 0.2
+        heuristic_result.scores = {}
+        heuristic_engine.evaluate.return_value = heuristic_result
+
+        mapper = CategoryFolderMapper(
+            config,
+            heuristic_engine=heuristic_engine,
+            rule_engine=rule_engine,
+        )
         result = mapper.map_file(test_file, root, use_rules=True)
 
         assert result.target_category == PARACategory.PROJECT
@@ -410,12 +421,24 @@ class TestFolderMapperBranches:
         test_file2.write_text("test2")
         root = tmp_path / "para_root"
 
-        mapper = CategoryFolderMapper(config)
+        heuristic_engine = MagicMock()
+        heuristic_result = MagicMock()
+        heuristic_result.recommended_category = PARACategory.PROJECT
+        heuristic_result.overall_confidence = 0.8
+        heuristic_result.scores = {}
+        heuristic_engine.evaluate.return_value = heuristic_result
+
+        mapper = CategoryFolderMapper(config, heuristic_engine=heuristic_engine)
         results = mapper.map_batch([test_file1, test_file2], root, use_rules=False)
 
         assert len(results) == 2
         assert results[0].source_path == test_file1
         assert results[1].source_path == test_file2
+        assert all(result.confidence == 0.8 for result in results)
+        assert all(
+            not result.reasoning or not result.reasoning[0].startswith("Error during mapping")
+            for result in results
+        )
 
     def test_extract_reasoning_category_not_in_scores(self, config: PARAConfig) -> None:
         """_extract_reasoning returns empty when category not in scores (line 222->226)."""

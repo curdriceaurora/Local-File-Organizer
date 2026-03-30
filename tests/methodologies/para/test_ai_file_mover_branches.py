@@ -64,10 +64,14 @@ class TestComputeTargetPath:
 
         target_path = mover._compute_target_path(file_path, suggestion)
 
-        # Should include Projects/work/reports/document.txt
-        assert "Projects" in str(target_path)
-        assert "work" in str(target_path)
-        assert "reports" in str(target_path)
+        expected = (
+            tmp_path
+            / config.get_category_directory(PARACategory.PROJECT)
+            / "work"
+            / "reports"
+            / "document.txt"
+        )
+        assert target_path == expected
         assert target_path.name == "document.txt"
 
 
@@ -388,25 +392,18 @@ class TestSuggestArchive:
         file2 = src_dir / "file2.txt"
         file2.write_text("content2")
 
-        # Use a call counter to distinguish is_file() (1st stat call) from
-        # the explicit stat() call in the loop body (2nd call) for file1.txt.
-        # is_file() internally calls stat() on CPython's pathlib implementation.
         original_stat = Path.stat
-        call_counts: dict[str, int] = {}
 
         def mock_stat(self: Path, **kwargs: object) -> object:
             if self.name == "file1.txt":
-                count = call_counts.get("file1", 0) + 1
-                call_counts["file1"] = count
-                if count >= 2:
-                    # Second+ call is the explicit stat() in the loop body
-                    raise OSError("Cannot stat file")
+                raise OSError("Cannot stat file")
             return original_stat(self, **kwargs)
 
-        with patch.object(Path, "stat", mock_stat):
-            with patch("file_organizer.methodologies.para.ai.file_mover.time") as mock_time:
-                mock_time.time.return_value = time.time() + (200 * 86400)
-                suggestions = mover.suggest_archive(src_dir, inactive_days=180)
+        with patch.object(Path, "is_file", return_value=True):
+            with patch.object(Path, "stat", mock_stat):
+                with patch("file_organizer.methodologies.para.ai.file_mover.time") as mock_time:
+                    mock_time.time.return_value = time.time() + (200 * 86400)
+                    suggestions = mover.suggest_archive(src_dir, inactive_days=180)
 
         # Should have suggestion for file2 only, file1 was skipped
         assert len(suggestions) == 1

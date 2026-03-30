@@ -489,7 +489,10 @@ class TestExecuteMigrationAdvanced:
         assert not target_path.exists()
 
     def test_execute_migration_without_preserve_timestamps(
-        self, manager: PARAMigrationManager, tmp_path: Path
+        self,
+        manager: PARAMigrationManager,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Migration without timestamp preservation (lines 264-270)."""
         src = tmp_path / "source.txt"
@@ -510,6 +513,18 @@ class TestExecuteMigrationAdvanced:
             estimated_size=7,
             created_at=datetime.now(UTC),
         )
+        utime_calls: list[tuple[object, object]] = []
+
+        original_utime = os.utime
+
+        def track_utime(path: object, times: object) -> None:
+            utime_calls.append((path, times))
+            original_utime(path, times)
+
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.migration_manager.os.utime",
+            track_utime,
+        )
 
         report = manager.execute_migration(
             plan, dry_run=False, create_backup=False, preserve_timestamps=False
@@ -517,6 +532,7 @@ class TestExecuteMigrationAdvanced:
         assert report.success is True
         assert len(report.migrated) == 1
         assert target_path.exists()
+        assert utime_calls == []
 
 
 class TestRollbackSuccessful:
@@ -627,7 +643,7 @@ class TestRollbackSuccessful:
         assert result is True
 
         # Verify the existing file was backed up with .migrated suffix
-        migrated_files = list(restore_target.parent.glob("*.migrated.txt"))
+        migrated_files = list(restore_target.parent.glob(f"*.*.migrated{restore_target.suffix}"))
         assert len(migrated_files) == 1
 
         # Verify original content was restored
@@ -1031,6 +1047,7 @@ class TestCreateBackupEdgeCases:
             estimated_size=200,
             created_at=datetime.now(UTC),
         )
+        plan.source_root = src1.parent
 
         backup_id = manager._create_backup(plan)
         assert backup_id is not None
@@ -1038,6 +1055,10 @@ class TestCreateBackupEdgeCases:
         backups = manager.list_backups()
         backup = next(b for b in backups if b["backup_id"] == backup_id)
         assert backup["files_backed_up"] == 2
+        flattened_entry = next(
+            entry for entry in backup["file_entries"] if entry["original_path"] == str(src2)
+        )
+        assert Path(flattened_entry["backup_path"]).name == src2.name
 
     def test_create_backup_file_copy_failure(
         self, manager: PARAMigrationManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1138,13 +1159,8 @@ class TestCreateBackupEdgeCases:
             manager._create_backup(plan)
 
         # Verify backup directory was cleaned up
-        # (It should not exist or should be empty)
         backup_dirs = list(manager.backup_root.glob("backup_*"))
-        # Either no backup dirs created, or none for this failed backup
-        for backup_dir in backup_dirs:
-            manifest_file = backup_dir / "manifest.json"
-            # If directory exists, it shouldn't have a manifest (cleanup worked)
-            assert not manifest_file.exists()
+        assert backup_dirs == []
 
     def test_create_backup_cleanup_also_fails(
         self, manager: PARAMigrationManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

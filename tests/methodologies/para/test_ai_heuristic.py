@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -1250,54 +1251,48 @@ class TestPlatformSpecificPaths:
         """On Windows, st_ctime is used for file creation time."""
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_mtime = now - (120 * 86400)
+                self.st_atime = now - (120 * 86400)
+                self.st_ctime = now - 86400
+
         # Simulate Windows platform
         monkeypatch.setattr(os, "name", "nt")
+        now = time.time()
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
 
         h = TemporalHeuristic(weight=0.25)
         f = tmp_path / "test.txt"
         f.write_text("test")
 
-        # Remove st_birthtime if it exists (simulating Windows without birthtime)
-        stat_result = f.stat()
-        if hasattr(stat_result, "st_birthtime"):
-            # Can't actually remove the attribute, but we can test the code path
-            # by ensuring os.name == "nt" is checked
-            pass
-
         result = h.evaluate(f)
 
-        # The test exercises the Windows code path
-        assert result is not None
+        assert "stable_reference" in result.scores[PARACategory.RESOURCE].signals
 
     def test_linux_platform_uses_mtime_for_creation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """On Linux (without birthtime), st_mtime is used as creation proxy."""
 
         from file_organizer.methodologies.para.detection.heuristics import TemporalHeuristic
 
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_mtime = now - (120 * 86400)
+                self.st_atime = now - (120 * 86400)
+                self.st_ctime = now - 86400
+
         # Simulate Linux platform
         monkeypatch.setattr(os, "name", "posix")
+        now = time.time()
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
 
         h = TemporalHeuristic(weight=0.25)
         f = tmp_path / "test.txt"
         f.write_text("test")
 
-        # Ensure the stat object doesn't have st_birthtime
-        orig_stat = f.stat
-
-        def mock_stat() -> os.stat_result:
-            st = orig_stat()
-            # Return a stat result without birthtime attribute
-            # We can't easily modify stat_result, so this test primarily
-            # exercises the code path through platform detection
-            return st
-
-        # The code checks hasattr(stat, "st_birthtime") which will be False
-        # on Linux naturally, exercising the else branch
-
         result = h.evaluate(f)
 
-        # The test exercises the Linux code path
-        assert result is not None
+        assert "stable_reference" not in result.scores[PARACategory.RESOURCE].signals
 
 
 @pytest.mark.ci

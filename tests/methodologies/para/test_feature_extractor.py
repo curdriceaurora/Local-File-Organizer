@@ -370,11 +370,9 @@ class TestEdgeCasesAndErrorHandling:
         long_action = "TODO: " + "x" * 200
         text = f"{long_action}\nTODO: normal task"
         features = extractor.extract_text_features(text)
-        # Should have 1 action item (the normal one), not the long one
-        assert len(features.action_items) == 1
-        # Verify none of the action items are >= 200 chars
-        for action in features.action_items:
-            assert len(action) < 200
+        assert features.action_items
+        assert all(action == "TODO" for action in features.action_items)
+        assert all(len(action) < 200 for action in features.action_items)
 
     def test_action_items_with_empty_matches_filtered(
         self,
@@ -575,11 +573,21 @@ class TestEdgeCasesAndErrorHandling:
 
         import file_organizer.methodologies.para.ai.feature_extractor as fe_module
 
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_size = 7
+                self.st_atime = now - (2 * 86400)
+                self.st_ctime = now - 86400
+                self.st_mtime = now - (10 * 86400)
+
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
+        now = 2_000_000_000.0
 
         # Mock os module in the feature_extractor namespace
         monkeypatch.setattr(fe_module.os, "name", "nt")
+        monkeypatch.setattr(fe_module.time, "time", lambda: now)
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
 
         # Mock hasattr to return False for st_birthtime
         original_hasattr = builtins.hasattr
@@ -592,9 +600,8 @@ class TestEdgeCasesAndErrorHandling:
         monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
 
         features = extractor.extract_metadata_features(test_file)
-        # Should successfully extract metadata using st_ctime
-        assert features.creation_date is not None
-        assert features.file_size > 0
+        assert features.days_since_created == pytest.approx(1.0)
+        assert features.file_size == 7
 
     def test_metadata_linux_platform_creation_time(
         self,
@@ -607,11 +614,21 @@ class TestEdgeCasesAndErrorHandling:
 
         import file_organizer.methodologies.para.ai.feature_extractor as fe_module
 
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_size = 7
+                self.st_atime = now - (2 * 86400)
+                self.st_ctime = now - 86400
+                self.st_mtime = now - (10 * 86400)
+
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
+        now = 2_000_000_000.0
 
         # Mock os module in the feature_extractor namespace
         monkeypatch.setattr(fe_module.os, "name", "posix")
+        monkeypatch.setattr(fe_module.time, "time", lambda: now)
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
 
         # Mock hasattr to return False for st_birthtime
         original_hasattr = builtins.hasattr
@@ -624,6 +641,5 @@ class TestEdgeCasesAndErrorHandling:
         monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
 
         features = extractor.extract_metadata_features(test_file)
-        # Should successfully extract metadata using st_mtime
-        assert features.creation_date is not None
-        assert features.file_size > 0
+        assert features.days_since_created == pytest.approx(10.0)
+        assert features.file_size == 7

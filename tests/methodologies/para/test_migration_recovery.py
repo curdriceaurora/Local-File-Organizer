@@ -530,19 +530,38 @@ class TestMigrationManagerEdgeCases:
         assert len(report.migrated) > 0
 
         # Find migrated file and check timestamps
-        if test_migration and test_migration.target_path.exists():
-            migrated_stat = test_migration.target_path.stat()
-            # Timestamps should be preserved (within 2 second tolerance for filesystem precision)
-            assert abs(migrated_stat.st_mtime - original_stat.st_mtime) < 2
+        assert test_migration is not None, "Test file should be in migration plan"
+        assert test_migration.target_path.exists(), "Migrated file should exist"
+        migrated_stat = test_migration.target_path.stat()
+        # Timestamps should be preserved (within 2 second tolerance for filesystem precision)
+        assert abs(migrated_stat.st_mtime - original_stat.st_mtime) < 2
 
     def test_execute_migration_without_preserve_timestamps(
-        self, migration_manager, temp_source, temp_target
+        self,
+        migration_manager,
+        temp_source,
+        temp_target,
+        monkeypatch: pytest.MonkeyPatch,
     ):
         """Test migration without preserving timestamps."""
         test_file = temp_source / "no_preserve_test.txt"
         test_file.write_text("content")
 
         plan = migration_manager.analyze_source(temp_source, temp_target, recursive=False)
+        test_migration = next((f for f in plan.files if f.source_path == test_file), None)
+        assert test_migration is not None
+        utime_calls: list[tuple[object, object]] = []
+
+        original_utime = os.utime
+
+        def track_utime(path: object, times: object) -> None:
+            utime_calls.append((path, times))
+            original_utime(path, times)
+
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.migration_manager.os.utime",
+            track_utime,
+        )
 
         # Execute with preserve_timestamps=False
         report = migration_manager.execute_migration(
@@ -550,6 +569,8 @@ class TestMigrationManagerEdgeCases:
         )
 
         assert report.success
+        assert test_migration.target_path.exists()
+        assert utime_calls == []
 
     def test_backup_with_missing_source_file(self, migration_manager, temp_source, temp_target):
         """Test backup handles missing source files gracefully."""
