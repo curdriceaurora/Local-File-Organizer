@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+@pytest.fixture
+def mock_directory_tree():
+    """Mock DirectoryTree async methods to prevent coroutine creation in tests."""
+    with patch("file_organizer.tui.file_browser.DirectoryTree.__init__", return_value=None):
+        yield
 
 
 @pytest.mark.unit
@@ -44,43 +51,51 @@ class TestFileBrowserTree:
 
         assert FileBrowserTree is not None
 
-    def test_instantiation(self, tmp_path: Path) -> None:
+    def test_instantiation(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
+        tree._extension_filter = set()
         assert tree is not None
 
-    def test_extension_filter_set(self, tmp_path: Path) -> None:
+    def test_extension_filter_set(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
+        tree._extension_filter = set()
+        tree.reload = MagicMock()
         tree.set_extension_filter({".py", ".txt"})
         assert tree._extension_filter == {".py", ".txt"}
 
-    def test_extension_filter_normalizes_dots(self, tmp_path: Path) -> None:
+    def test_extension_filter_normalizes_dots(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
+        tree._extension_filter = set()
+        tree.reload = MagicMock()
         tree.set_extension_filter({"py", "txt"})
         assert tree._extension_filter == {".py", ".txt"}
 
-    def test_extension_filter_clear(self, tmp_path: Path) -> None:
+    def test_extension_filter_clear(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
+        tree._extension_filter = set()
+        tree.reload = MagicMock()
         tree.set_extension_filter({".py"})
         tree.set_extension_filter(set())
         assert tree._extension_filter == set()
 
-    def test_filter_paths_no_filter(self, tmp_path: Path) -> None:
+    def test_filter_paths_no_filter(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
+        tree._extension_filter = set()
         paths = [tmp_path / "a.py", tmp_path / "b.txt"]
         result = list(tree.filter_paths(paths))
         assert result == paths
 
-    def test_filter_paths_with_extension(self, tmp_path: Path) -> None:
+    def test_filter_paths_with_extension(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         # Create real files so is_dir() works
@@ -177,7 +192,7 @@ class TestFileBrowserView:
 
         assert FileBrowserView is not None
 
-    def test_instantiation(self, tmp_path: Path) -> None:
+    def test_instantiation(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserView
 
         view = FileBrowserView(tmp_path, id="view")
