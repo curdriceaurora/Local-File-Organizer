@@ -671,6 +671,7 @@ class TestCategoryFolderMapperEdgeCases:
 
         # Result should have reasoning from heuristics
         assert isinstance(result.reasoning, list)
+        assert len(result.reasoning) > 0  # Should have at least one reasoning entry
 
     def test_map_batch_with_real_exception(self, config, temp_target, mocker):
         """Test map_batch handles exceptions during mapping."""

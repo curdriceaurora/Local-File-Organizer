@@ -758,6 +758,7 @@ class TestMigrationManagerEdgeCases:
         backups = migration_manager.list_backups()
         # May still have other backups, so just verify no exception is raised
         assert isinstance(backups, list)
+        assert backups == []  # Corrupted backup should be skipped
 
     def test_verify_backup_not_found(self, migration_manager):
         """Test verify_backup fails when backup doesn't exist."""

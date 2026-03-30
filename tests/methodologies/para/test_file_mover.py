@@ -711,6 +711,7 @@ class TestSuggestArchiveErrors:
         suggestions = mover.suggest_archive(src, inactive_days=0)
         # Should return empty or skip the problematic file
         assert isinstance(suggestions, list)
+        assert suggestions == []  # File should be skipped due to stat error
 
 
 @pytest.mark.unit
