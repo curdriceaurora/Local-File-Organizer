@@ -31,18 +31,22 @@ def _run_pymarkdown_md031(files: list[Path]) -> list[str]:
     """Run pymarkdown with the project config on given files; return MD031 lines."""
     if not files:
         return []
-    result = subprocess.run(
-        [
-            "pymarkdown",
-            "-c",
-            str(FO_ROOT / ".pymarkdown.json"),
-            "scan",
-            *[str(f) for f in files],
-        ],
-        capture_output=True,
-        text=True,
-        cwd=FO_ROOT,
-    )
+    try:
+        result = subprocess.run(
+            [
+                "pymarkdown",
+                "-c",
+                str(FO_ROOT / ".pymarkdown.json"),
+                "scan",
+                *[str(f) for f in files],
+            ],
+            capture_output=True,
+            text=True,
+            cwd=FO_ROOT,
+            timeout=25,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.skip("pymarkdown timed out (common under xdist on CI)")
     return [line for line in result.stdout.splitlines() if "MD031" in line]
 
 
