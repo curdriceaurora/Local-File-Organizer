@@ -243,7 +243,7 @@ class TestFilesSSEHandling:
     #     # Endpoint should exist or be explicitly not implemented
     #     assert response.status_code in (200, 404)
 
-    @pytest.mark.skip(reason="SSE routes not yet implemented")
+    @pytest.mark.skip(reason="See #1033 - SSE routes for file browser not yet implemented")
     def test_files_sse_placeholder(self) -> None:
         """Placeholder test for SSE handling until SSE routes are implemented."""
 
