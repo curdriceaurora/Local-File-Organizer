@@ -9,6 +9,7 @@ import re
 import time
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +22,23 @@ from file_organizer.plugins.marketplace import compute_sha256
 _PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAn8B9p4n9QAAAABJRU5ErkJggg=="
 )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def mock_directory_tree():
+    """Mock DirectoryTree to prevent coroutine creation in web UI tests."""
+    def mock_init(self, *args, **kwargs):
+        """Mock DirectoryTree.__init__ to prevent async watch_path coroutine."""
+        return None
+
+    def mock_reload(self):
+        """Mock DirectoryTree.reload to prevent async _reload coroutine."""
+        return None
+
+    with patch("textual.widgets.DirectoryTree.__init__", mock_init), patch(
+        "textual.widgets.DirectoryTree.reload", mock_reload
+    ):
+        yield
 
 
 def _build_client(tmp_path: Path, allowed_root: Path | None = None) -> TestClient:
