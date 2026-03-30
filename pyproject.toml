@@ -109,22 +109,22 @@ web = [
 ]
 
 dev = [
-    "pytest~=7.4",
-    "pytest-asyncio~=0.23",
-    "pytest-cov~=4.1",
+    "pytest>=7.4,<10.0",
+    "pytest-asyncio>=0.23,<2.0",
+    "pytest-cov>=4.1,<8.0",
     "pytest-mock~=3.12",
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
     "pytest-xdist~=3.5",
-    "pytest-randomly~=3.15",
+    "pytest-randomly>=3.15,<5.0",
     "mypy~=1.8",
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
     "black~=23.12",
     "isort~=5.13",
-    "pre-commit~=3.6",
+    "pre-commit>=3.6,<5.0",
     "codespell~=2.2",
     "faker~=26.0",
-    "pytest-benchmark~=4.0",
+    "pytest-benchmark>=4,<6",
     "interrogate~=1.5",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
     "deptry>=0.16.0",  # 0.x — unstable API, keep >=; Unused dependency detection
