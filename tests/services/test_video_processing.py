@@ -30,7 +30,7 @@ class TestVideoProcessingPlaceholder:
         except (ImportError, Exception):
             pytest.skip("VisionProcessor not yet fully implemented")
 
-    @pytest.mark.skip(reason="Phase 3 - Advanced video processing not yet implemented")
+    @pytest.mark.skip(reason="See #1029 - Phase 3 advanced video processing not yet implemented")
     def test_process_mp4_video(self, tmp_path):
         """Test processing MP4 video file."""
         from file_organizer.services.vision_processor import VisionProcessor
@@ -43,7 +43,7 @@ class TestVideoProcessingPlaceholder:
 
         assert result is not None
 
-    @pytest.mark.skip(reason="Phase 3 - Scene detection not yet implemented")
+    @pytest.mark.skip(reason="See #1029 - Phase 3 scene detection not yet implemented")
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
         from file_organizer.services.video.scene_detector import SceneDetector
@@ -56,7 +56,7 @@ class TestVideoProcessingPlaceholder:
 
         assert isinstance(scenes, list) and all(hasattr(s, "start_time") for s in scenes)
 
-    @pytest.mark.skip(reason="Phase 3 - Frame extraction not yet implemented")
+    @pytest.mark.skip(reason="See #1029 - Phase 3 frame extraction not yet implemented")
     def test_frame_extraction(self, tmp_path):
         """Test extracting frames from video."""
         from file_organizer.services.vision_processor import VisionProcessor
