@@ -208,7 +208,11 @@ def test_search_semantic_json_output(tmp_path: Path):
 
     result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--json"])
     assert result.exit_code == 0
-    records = json.loads(result.output)
+    # Extract the JSON array from output — loguru may append error messages after it
+    output = result.output
+    bracket_end = output.rfind("]")
+    assert bracket_end != -1, f"No JSON array found in output: {output!r}"
+    records = json.loads(output[: bracket_end + 1])
     assert isinstance(records, list)
     assert len(records) >= 1, "single-file corpus with matching query must return ≥1 result"
     assert "path" in records[0]
@@ -223,8 +227,10 @@ def test_search_semantic_respects_limit(tmp_path: Path):
 
     result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--limit", "2"])
     assert result.exit_code == 0
-    # Count result lines — each result line starts with two spaces
-    result_lines = [ln for ln in result.output.splitlines() if ln.startswith("  ")]
+    # Count result lines by matching file paths from tmp_path (not just leading spaces,
+    # because loguru tracebacks can also start with spaces under xdist)
+    tmp_str = str(tmp_path)
+    result_lines = [ln for ln in result.output.splitlines() if tmp_str in ln]
     assert len(result_lines) == 2
 
 
