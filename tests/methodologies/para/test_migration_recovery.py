@@ -474,9 +474,7 @@ class TestMigrationManagerEdgeCases:
 
         # Should only include .txt files
         file_names = [f.source_path.name for f in plan.files]
-        assert "test_file.txt" in file_names or "doc.txt" in file_names
-        assert "image.png" not in file_names
-        assert "data.json" not in file_names
+        assert set(file_names) == {"test_file.txt", "doc.txt"}
 
     def test_analyze_source_categorization_exception_handling(
         self, migration_manager, temp_source, temp_target, monkeypatch
@@ -919,7 +917,10 @@ class TestMigrationManagerEdgeCases:
                 overall_confidence=0.9,
                 scores={
                     PARACategory.PROJECT: CategoryScore(
-                        score=0.9, signals=["deadline", "active project"], source="test"
+                        category=PARACategory.PROJECT,
+                        score=0.9,
+                        confidence=0.9,
+                        signals=["deadline", "active project"],
                     )
                 },
             )
@@ -1001,7 +1002,7 @@ class TestMigrationManagerEdgeCases:
         monkeypatch.setattr(shutil, "copy2", mock_copy2)
 
         # Rollback should collect errors and raise
-        with pytest.raises(RollbackError, match="completed with.*failures"):
+        with pytest.raises(RollbackError, match=r"completed with.*failures"):
             migration_manager.rollback(backup_id)
 
     def test_verify_backup_missing_file_in_internal_method(

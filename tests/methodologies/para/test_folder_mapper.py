@@ -702,17 +702,20 @@ class TestCategoryFolderMapperEdgeCases:
         assert result.subfolder_path is None
 
     def test_date_folder_format_error(self, config, temp_source, temp_target):
-        """Test date folder with invalid date format."""
-        # Use an invalid date format
-        strategy = MappingStrategy(use_date_folders=True, date_format="%Q")  # Invalid format
+        """Test date folder with unsupported strftime directive."""
+        # Use an unsupported strftime directive — Python does not raise, it produces
+        # a literal output (platform-dependent: macOS strips % giving "Q", Linux may vary).
+        strategy = MappingStrategy(
+            use_date_folders=True, date_format="%Q"
+        )  # %Q is not a valid directive
         mapper = CategoryFolderMapper(config, strategy=strategy)
 
         test_file = temp_source / "test.txt"
-        # Should handle format error gracefully
         result = mapper.map_file(test_file, temp_target)
 
         assert isinstance(result, MappingResult)
-        assert result.subfolder_path is None
+        # strftime does not raise for unknown directives — a non-None string is returned
+        assert isinstance(result.subfolder_path, str)
 
     def test_extract_reasoning_with_category_in_scores(
         self, config, temp_source, temp_target, mocker

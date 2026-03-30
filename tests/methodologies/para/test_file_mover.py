@@ -605,7 +605,7 @@ class TestBulkOrganizeAdvanced:
         f.write_text("content")
 
         report = mover.bulk_organize(projects_dir, dry_run=True)
-        assert report.skipped >= 1
+        assert report.skipped == 1
 
     def test_exception_during_file_processing(
         self,
@@ -625,7 +625,7 @@ class TestBulkOrganizeAdvanced:
         monkeypatch.setattr(mover, "suggest_move", mock_suggest_move)
 
         report = mover.bulk_organize(src, dry_run=True)
-        assert report.errors >= 1
+        assert report.errors == 1
 
     def test_failed_move_counts_as_error(
         self,
@@ -653,7 +653,7 @@ class TestBulkOrganizeAdvanced:
         monkeypatch.setattr(mover, "move_file", mock_move_file)
 
         report = mover.bulk_organize(src, dry_run=False)
-        assert report.errors >= 1
+        assert report.errors == 1
         assert report.moved == 0
 
 

@@ -1153,9 +1153,9 @@ class TestHeuristicEngineEdgeCases:
 
         result = engine.evaluate(f)
 
-        # Structural heuristic alone may produce low confidence for non-special paths
-        if result.overall_confidence < 0.60:
-            assert result.needs_manual_review is True
+        # Structural heuristic with no special path signals may not meet recommendation
+        # threshold — engine sets needs_manual_review=True when no category qualifies
+        assert result.needs_manual_review is True
 
     def test_engine_no_recommendation_needs_review(self, tmp_path: Path) -> None:
         """Engine sets needs_manual_review when no category meets threshold."""
@@ -1189,9 +1189,11 @@ class TestHeuristicEngineEdgeCases:
 
         result = engine.evaluate(f)
 
-        # ARCHIVE should be recommended if its score meets the low threshold
-        if result.scores[PARACategory.ARCHIVE].score >= 0.1:
-            assert result.recommended_category == PARACategory.ARCHIVE
+        # File in archive/old folder should score high for ARCHIVE
+        assert result.scores[PARACategory.ARCHIVE].score >= 0.1, (
+            "Test setup should produce ARCHIVE score >= threshold"
+        )
+        assert result.recommended_category == PARACategory.ARCHIVE
 
 
 # ---------------------------------------------------------------------------
