@@ -73,7 +73,7 @@ dependencies = [
     "email-validator~=2.1",
     "python-dotenv~=1.0",
     "click~=8.1",
-    "watchdog~=3.0",  # File system event handler
+    "watchdog~=6.0",  # File system event handler
 
     # System utilities
     "psutil~=5.9",  # System resource monitoring
