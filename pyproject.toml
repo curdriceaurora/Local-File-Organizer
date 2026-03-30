@@ -40,7 +40,7 @@ dependencies = [
     # CLI and UI
     "typer[all]~=0.12",
     "rich~=13.0",
-    "textual~=0.50",
+    "textual~=8.2",
 
     # API and async
     "fastapi~=0.109",
