@@ -151,7 +151,7 @@ class TestRedoCreate:
         assert executor.redo_create(op) is True
         assert target.is_dir()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="/dev/null is writable on Windows")
+    @pytest.mark.skipif(sys.platform == "win32", reason="See #1032 - /dev/null is writable on Windows")
     def test_redo_create_exception(self, env):
         _, _, executor = env
         # Provide a path whose parent can't be created
@@ -359,7 +359,7 @@ class TestRollbackExceptionPaths:
         result = executor.rollback_copy(op)
         assert result is False
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="/dev/null is writable on Windows")
+    @pytest.mark.skipif(sys.platform == "win32", reason="See #1032 - /dev/null is writable on Windows")
     def test_rollback_create_exception(self, env):
         _, _, executor = env
         op = _op(OperationType.CREATE, Path("/dev/null/impossible"))
