@@ -160,7 +160,7 @@ audio = [
     "faster-whisper~=1.0",
     "torch~=2.1",  # GPU acceleration for audio transcription
     "mutagen~=1.47",  # Audio metadata extraction
-    "tinytag~=1.10",  # Lightweight audio metadata fallback
+    "tinytag~=2.2",  # Lightweight audio metadata fallback
     "pydub>=0.25.0",  # 0.x — unstable API, keep >=; Audio manipulation
 ]
 
