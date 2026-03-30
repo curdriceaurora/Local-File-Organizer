@@ -119,7 +119,7 @@ dev = [
     "mypy~=1.8",
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
-    "black~=23.12",
+    "black>=23.12,<27.0",
     "isort~=5.13",
     "pre-commit~=3.6",
     "codespell~=2.2",
