@@ -34,7 +34,7 @@ dependencies = [
 
     # NLP and data science
     "nltk~=3.8",
-    "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
+    "numpy~=2.4",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
     # CLI and UI
