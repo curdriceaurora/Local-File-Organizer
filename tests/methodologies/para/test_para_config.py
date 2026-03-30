@@ -298,3 +298,60 @@ class TestLoadConfig:
         ):
             cfg = load_config(None)
             assert cfg.project_dir == "Found"
+
+    def test_load_config_finds_cwd_default_file(self, tmp_path: Path) -> None:
+        """When config_path is None, checks cwd as fallback."""
+        data = {"area_dir": "CWD_Areas"}
+        config_file = tmp_path / "para_config.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(data, f)
+
+        with patch(
+            "file_organizer.methodologies.para.config._get_para_config_dir",
+            return_value=Path("/nonexistent/dir"),
+        ), patch("file_organizer.methodologies.para.config.Path.cwd", return_value=tmp_path):
+            cfg = load_config(None)
+            assert cfg.area_dir == "CWD_Areas"
+
+    def test_load_config_finds_module_default_file(self, tmp_path: Path) -> None:
+        """When config_path is None, checks module directory as last resort."""
+        data = {"resource_dir": "Module_Resources"}
+        config_file = tmp_path / "default_config.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(data, f)
+
+        # Mock the module's __file__ path to be in tmp_path
+        import file_organizer.methodologies.para.config as config_module
+
+        with patch(
+            "file_organizer.methodologies.para.config._get_para_config_dir",
+            return_value=Path("/nonexistent/dir"),
+        ), patch("file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nowhere")), patch.object(
+            config_module, "__file__", str(tmp_path / "config.py")
+        ):
+            cfg = load_config(None)
+            assert cfg.resource_dir == "Module_Resources"
+
+    def test_load_config_all_paths_missing(self) -> None:
+        """When all default paths are missing, returns DEFAULT_CONFIG."""
+        import file_organizer.methodologies.para.config as config_module
+
+        with patch(
+            "file_organizer.methodologies.para.config._get_para_config_dir",
+            return_value=Path("/nonexistent1"),
+        ), patch(
+            "file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nonexistent2")
+        ), patch.object(config_module, "__file__", "/nonexistent3/config.py"):
+            cfg = load_config(None)
+            # Should return DEFAULT_CONFIG
+            assert cfg.auto_categorize is True
+            assert cfg.project_dir == "Projects"
+
+    def test_get_para_config_dir_lazy_import(self) -> None:
+        """_get_para_config_dir performs lazy import to avoid circular deps."""
+        from file_organizer.methodologies.para.config import _get_para_config_dir
+
+        # This should successfully import and call get_config_dir
+        result = _get_para_config_dir()
+        # Verify it returns a Path object
+        assert isinstance(result, Path)
