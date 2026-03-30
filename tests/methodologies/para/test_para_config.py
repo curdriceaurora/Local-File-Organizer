@@ -12,7 +12,10 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from file_organizer.methodologies.para.categories import PARACategory
+from file_organizer.methodologies.para.categories import (
+    CategorizationResult,
+    PARACategory,
+)
 from file_organizer.methodologies.para.config import (
     AIHeuristicConfig,
     CategoryThresholds,
@@ -193,6 +196,24 @@ class TestPARAConfigCategoryHelpers:
         assert cfg.get_category_directory(PARACategory.AREA) == "A"
         assert cfg.get_category_directory(PARACategory.RESOURCE) == "R"
         assert cfg.get_category_directory(PARACategory.ARCHIVE) == "Ar"
+
+
+class TestCategorizationResultValidation:
+    """Tests for CategorizationResult validation covering categories.py line 115."""
+
+    def test_string_path_converted_to_path_object(self) -> None:
+        """String file_path is automatically converted to Path object."""
+        result = CategorizationResult(
+            file_path="/test/file.txt",  # String, not Path
+            category=PARACategory.PROJECT,
+            confidence=0.85,
+            reasons=["Has deadline"],
+        )
+        # Verify conversion happened (line 115)
+        assert isinstance(result.file_path, Path)
+        assert result.file_path == Path("/test/file.txt")
+        assert result.category == PARACategory.PROJECT
+        assert result.confidence == 0.85
 
 
 class TestAIHeuristicConfig:
