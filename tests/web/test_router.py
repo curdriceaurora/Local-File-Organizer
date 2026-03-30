@@ -63,7 +63,7 @@ class TestHomeRoute:
             client.get("/ui/")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
-        assert "index.html" in str(call_args)
+        assert call_args[0][1] == "index.html"
 
     def test_home_response_body(self, client, mock_setup_completed):
         with patch("file_organizer.web.router.templates") as mock_tpl:
