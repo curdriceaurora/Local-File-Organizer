@@ -185,15 +185,6 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _skip_setup_wizard():
-    """Bypass the setup wizard so the main app view is always shown."""
-    from file_organizer.tui.app import FileOrganizerApp
-
-    with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
-        yield
-
-
 @pytest.mark.asyncio
 async def test_audio_view_mounts() -> None:
     """AudioView should mount and render panels."""

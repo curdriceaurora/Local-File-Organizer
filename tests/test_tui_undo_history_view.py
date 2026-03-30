@@ -170,15 +170,6 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _skip_setup_wizard():
-    """Bypass the setup wizard so the main app view is always shown."""
-    from file_organizer.tui.app import FileOrganizerApp
-
-    with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
-        yield
-
-
 @pytest.mark.asyncio
 async def test_undo_history_view_mounts() -> None:
     """UndoHistoryView should mount and render panels."""

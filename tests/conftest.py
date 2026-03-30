@@ -10,11 +10,12 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.realtime import realtime_manager
+from file_organizer.tui.app import FileOrganizerApp
 
 # Review-regression fixtures include intentionally failing `test_*.py` files used as detector input.
 # Ignore them in normal pytest discovery so they don't execute as real tests in full-suite CI runs.
@@ -64,6 +65,13 @@ skip_below_py312 = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 # Shared test fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _skip_setup_wizard():
+    """Bypass the setup wizard so the main app view is always shown."""
+    with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
+        yield
 
 
 @pytest.fixture(autouse=True)

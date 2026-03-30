@@ -23,6 +23,28 @@ runner = CliRunner()
 _SETUP_PATCH = "file_organizer.cli.organize._check_setup_completed"
 
 
+def _fake_check_setup() -> None:
+    """Mimic ``_check_setup_completed`` when setup is not done."""
+    from rich.console import Console
+    from rich.panel import Panel
+
+    console = Console()
+    console.print()
+    console.print(
+        Panel.fit(
+            "[bold yellow]First-time setup required[/bold yellow]\n\n"
+            "File Organizer needs to be configured before use.\n"
+            "Run the setup wizard to get started:\n\n"
+            "  [bold cyan]file-organizer setup[/bold cyan]\n\n"
+            "This will detect your system capabilities and configure\n"
+            "the optimal AI models for your hardware.",
+            border_style="yellow",
+        )
+    )
+    console.print()
+    raise typer.Exit(code=1)
+
+
 @pytest.fixture(autouse=True)
 def _bypass_setup_check():
     """Bypass the setup-completed gate for all tests in this module."""
@@ -55,34 +77,12 @@ class TestOrganize:
 
     def test_organize_fails_when_setup_not_completed(self, tmp_path: Path) -> None:
         """When setup is not completed, organize should exit with code 1 and show guidance."""
-        from rich.console import Console
-        from rich.panel import Panel
-
         input_dir = tmp_path / "input"
         output_dir = tmp_path / "output"
         input_dir.mkdir()
         output_dir.mkdir()
 
-        # Create a side effect that mimics the real _check_setup_completed behavior
-        def fake_check_setup():
-            console = Console()
-            console.print()
-            console.print(
-                Panel.fit(
-                    "[bold yellow]First-time setup required[/bold yellow]\n\n"
-                    "File Organizer needs to be configured before use.\n"
-                    "Run the setup wizard to get started:\n\n"
-                    "  [bold cyan]file-organizer setup[/bold cyan]\n\n"
-                    "This will detect your system capabilities and configure\n"
-                    "the optimal AI models for your hardware.",
-                    border_style="yellow",
-                )
-            )
-            console.print()
-            raise typer.Exit(code=1)
-
-        # Override the autouse fixture's patch with our own
-        with patch(_SETUP_PATCH, side_effect=fake_check_setup):
+        with patch(_SETUP_PATCH, side_effect=_fake_check_setup):
             result = runner.invoke(app, ["organize", str(input_dir), str(output_dir)])
 
         assert result.exit_code == 1
@@ -360,32 +360,10 @@ class TestPreview:
 
     def test_preview_fails_when_setup_not_completed(self, tmp_path: Path) -> None:
         """When setup is not completed, preview should exit with code 1 and show guidance."""
-        from rich.console import Console
-        from rich.panel import Panel
-
         input_dir = tmp_path / "input"
         input_dir.mkdir()
 
-        # Create a side effect that mimics the real _check_setup_completed behavior
-        def fake_check_setup():
-            console = Console()
-            console.print()
-            console.print(
-                Panel.fit(
-                    "[bold yellow]First-time setup required[/bold yellow]\n\n"
-                    "File Organizer needs to be configured before use.\n"
-                    "Run the setup wizard to get started:\n\n"
-                    "  [bold cyan]file-organizer setup[/bold cyan]\n\n"
-                    "This will detect your system capabilities and configure\n"
-                    "the optimal AI models for your hardware.",
-                    border_style="yellow",
-                )
-            )
-            console.print()
-            raise typer.Exit(code=1)
-
-        # Override the autouse fixture's patch with our own
-        with patch(_SETUP_PATCH, side_effect=fake_check_setup):
+        with patch(_SETUP_PATCH, side_effect=_fake_check_setup):
             result = runner.invoke(app, ["preview", str(input_dir)])
 
         assert result.exit_code == 1

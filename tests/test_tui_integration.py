@@ -18,14 +18,6 @@ from file_organizer.tui.organization_preview import OrganizationPreviewView
 from file_organizer.tui.settings_view import SettingsView
 from file_organizer.tui.undo_history_view import UndoHistoryView
 
-
-@pytest.fixture(autouse=True)
-def _skip_setup_wizard():
-    """Bypass the setup wizard so the main app view is always shown."""
-    with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
-        yield
-
-
 # ---------------------------------------------------------------------------
 # View switching round-trips
 # ---------------------------------------------------------------------------

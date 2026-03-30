@@ -184,12 +184,13 @@ class TestSelectFilesToKeep:
         result = select_files_to_keep(files, "manual")
         assert all(not f.get("keep", False) for f in result)
 
-    def test_returns_list_of_same_length(self) -> None:
+    def test_returns_new_list_of_same_length(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep
 
         files = self._files()
         result = select_files_to_keep(files, "oldest")
         assert len(result) == len(files)
+        assert result is not files
 
 
 # ---------------------------------------------------------------------------
