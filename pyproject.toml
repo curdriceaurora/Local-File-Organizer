@@ -44,7 +44,7 @@ dependencies = [
 
     # API and async
     "fastapi~=0.109",
-    "starlette~=0.35",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
+    "starlette>=0.35,<2.0",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
     "aiofiles~=23.0",  # Required by Starlette StaticFiles for async file serving
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
