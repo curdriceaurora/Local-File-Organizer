@@ -99,6 +99,15 @@ class TestOrganizationPreviewView:
         assert view._output_dir == Path("custom_output")
 
 
+@pytest.fixture(autouse=True)
+def _skip_setup_wizard():
+    """Bypass the setup wizard so the main app view is always shown."""
+    from file_organizer.tui.app import FileOrganizerApp
+
+    with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
+        yield
+
+
 @pytest.mark.asyncio
 async def test_organization_preview_mounts() -> None:
     """OrganizationPreviewView should mount with all child panels."""

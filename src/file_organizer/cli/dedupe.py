@@ -24,14 +24,37 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.cli import dedupe_display, dedupe_removal
+from file_organizer.cli.dedupe_display import format_datetime, format_size  # noqa: F401
 from file_organizer.cli.dedupe_hash import (
     ProgressTracker,
     create_scan_options,
     initialize_hash_detector,
     scan_for_duplicates,
 )
+from file_organizer.cli.dedupe_strategy import (  # noqa: F401
+    get_user_selection,
+    select_files_to_keep,
+)
 
 console = Console()
+
+
+def display_summary(
+    total_groups: int,
+    total_duplicates: int,
+    total_removed: int,
+    space_saved: int,
+    dry_run: bool,
+) -> None:
+    """Backward-compatible wrapper for dedupe_display.display_summary."""
+    dedupe_display.display_summary(
+        console=console,
+        total_groups=total_groups,
+        total_duplicates=total_duplicates,
+        total_removed=total_removed,
+        space_saved=space_saved,
+        dry_run=dry_run,
+    )
 
 
 class DedupeConfig:

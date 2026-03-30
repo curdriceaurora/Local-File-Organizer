@@ -202,6 +202,13 @@ def _isolate_user_env(tmp_path: Path) -> Iterator[None]:
         yield
 
 
+@pytest.fixture(autouse=True)
+def _bypass_setup_wizard() -> Iterator[None]:
+    """Skip the setup wizard check so organize/preview commands work in tests."""
+    with patch("file_organizer.cli.organize._check_setup_completed", return_value=True):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Filesystem fixtures
 # ---------------------------------------------------------------------------

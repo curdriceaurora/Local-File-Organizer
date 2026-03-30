@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
@@ -502,4 +503,5 @@ class TestPreview:
     def test_preview_error(self, mock_cls: MagicMock, tmp_path: Path) -> None:
         result = runner.invoke(app, ["preview", str(tmp_path)])
         assert result.exit_code == 1
+
         assert "Invalid directory" in result.output

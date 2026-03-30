@@ -847,12 +847,12 @@ ValueError: Failed to open video: video.mp4
 3. **Install FFmpeg**: Some codecs require FFmpeg
 4. **Test with OpenCV**:
 
-   ```python
-   import cv2
-   cap = cv2.VideoCapture("video.mp4")
-   print(f"Opened: {cap.isOpened()}")
-   cap.release()
-   ```
+```python
+import cv2
+cap = cv2.VideoCapture("video.mp4")
+print(f"Opened: {cap.isOpened()}")
+cap.release()
+```
 
 #### Too Many/Few Scenes Detected
 
