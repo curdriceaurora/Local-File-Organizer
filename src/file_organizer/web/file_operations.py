@@ -540,7 +540,8 @@ def _save_upload(upload: UploadFile, target_dir: Path, allow_hidden: bool) -> st
         allow_hidden: Whether hidden files are allowed.
 
     Returns:
-        An error message string if the upload failed, or ``None`` on success.
+        An error message string if the upload failed, empty string if skipped
+        (no filename), or ``None`` on success.
     """
     from file_organizer.web.file_validators import (
         validate_file_not_exists,
@@ -548,7 +549,7 @@ def _save_upload(upload: UploadFile, target_dir: Path, allow_hidden: bool) -> st
     )
 
     if not upload.filename:
-        return None
+        return ""  # skipped — no filename, not an error but not saved
 
     try:
         validate_upload_filename(upload.filename, allow_hidden=allow_hidden)

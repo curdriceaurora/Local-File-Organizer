@@ -170,11 +170,11 @@ class TestFileEntry:
 class TestSaveUpload:
     """Tests for the _save_upload helper."""
 
-    def test_no_filename_returns_none(self, tmp_path: Path) -> None:
+    def test_no_filename_returns_empty_string(self, tmp_path: Path) -> None:
         upload = MagicMock()
         upload.filename = ""
         result = _save_upload(upload, tmp_path, allow_hidden=False)
-        assert result is None
+        assert result == ""
 
     def test_oserror_during_write(self, tmp_path: Path) -> None:
         upload = MagicMock()
