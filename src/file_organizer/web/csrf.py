@@ -38,6 +38,10 @@ def validate_csrf_token(*, cookie_token: str | None, submitted_token: str | None
     """
     if not cookie_token or not submitted_token:
         return False
+    # hmac.compare_digest raises TypeError on non-ASCII str; our tokens are
+    # hex strings, so reject anything that isn't ASCII before comparing.
+    if not cookie_token.isascii() or not submitted_token.isascii():
+        return False
     return hmac.compare_digest(cookie_token, submitted_token)
 
 
@@ -62,8 +66,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         self._exempt_prefixes = tuple(exempt_paths)
 
     def _is_exempt(self, path: str) -> bool:
-        """Return True if the path is exempt from CSRF checks."""
-        return any(path.startswith(prefix) for prefix in self._exempt_prefixes)
+        """Return True if path matches an exempt route exactly or by path-segment prefix."""
+        for prefix in self._exempt_prefixes:
+            if prefix.endswith("/"):
+                if path.startswith(prefix):
+                    return True
+            elif path == prefix or path.startswith(f"{prefix}/"):
+                return True
+        return False
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Enforce CSRF on state-changing methods for non-exempt paths."""

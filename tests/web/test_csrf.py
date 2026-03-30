@@ -65,6 +65,9 @@ class TestValidateCSRFToken:
     def test_empty_strings_fail(self) -> None:
         assert validate_csrf_token(cookie_token="", submitted_token="") is False
 
+    def test_non_ascii_token_returns_false(self) -> None:
+        assert validate_csrf_token(cookie_token="café", submitted_token="café") is False
+
     def test_uses_constant_time_comparison(self) -> None:
         """Validate that comparison is timing-safe (uses hmac.compare_digest)."""
         # We can't directly test timing, but we verify the function works
@@ -120,8 +123,9 @@ class TestCSRFMiddleware:
     def test_get_injects_token_into_request_state(self, client: TestClient) -> None:
         response = client.get("/form")
         assert response.status_code == 200
-        # Token should appear in the rendered HTML
-        assert CSRF_FORM_FIELD in response.text
+        token = response.cookies[CSRF_COOKIE_NAME]
+        assert f'name="{CSRF_FORM_FIELD}"' in response.text
+        assert f'value="{token}"' in response.text
 
     def test_post_without_token_returns_403(self, client: TestClient) -> None:
         response = client.post("/submit")
@@ -152,6 +156,29 @@ class TestCSRFMiddleware:
 
         # POST with a different token
         response = client.post("/submit", data={CSRF_FORM_FIELD: "wrong-token"})
+        assert response.status_code == 403
+
+    def test_post_with_valid_multipart_token_succeeds(self, client: TestClient) -> None:
+        get_resp = client.get("/form")
+        token = get_resp.cookies[CSRF_COOKIE_NAME]
+
+        # Multipart POST with CSRF token as a form field
+        response = client.post(
+            "/submit",
+            data={CSRF_FORM_FIELD: token},
+            files={"file": ("test.txt", b"data")},
+        )
+        assert response.status_code == 200
+
+    def test_post_with_wrong_multipart_token_returns_403(self, client: TestClient) -> None:
+        get_resp = client.get("/form")
+        assert CSRF_COOKIE_NAME in get_resp.cookies
+
+        response = client.post(
+            "/submit",
+            data={CSRF_FORM_FIELD: "wrong-token"},
+            files={"file": ("test.txt", b"data")},
+        )
         assert response.status_code == 403
 
     def test_exempt_path_bypasses_csrf(self, client: TestClient) -> None:

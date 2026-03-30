@@ -173,10 +173,11 @@ def test_marketplace_ui_browse_and_install(
     assert page.status_code == 200
     assert "ui-plugin" in page.text
 
+    # Use form-field token (not header) to exercise the csrf_input() path
+    csrf_token = client.cookies.get("_csrf_token", "")
     install = client.post(
         "/ui/marketplace/plugins/ui-plugin/install",
-        data={"q": "", "category": "", "tag_csv": ""},
-        headers=_csrf_headers(client),
+        data={"q": "", "category": "", "tag_csv": "", "csrf_token": csrf_token},
     )
     assert install.status_code == 200
     assert "Installed ui-plugin" in install.text
