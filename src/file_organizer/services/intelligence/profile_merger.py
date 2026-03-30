@@ -428,6 +428,37 @@ class ProfileMerger:
             print(f"Error creating merged profile: {e}")
             return None
 
+    @staticmethod
+    def _find_section_conflicts(
+        profiles: list[Any],
+        section: str,
+        prefix: str,
+    ) -> dict[str, list[Any]]:
+        """Find conflicting values for a given preference section across profiles.
+
+        Args:
+            profiles: Loaded profile objects.
+            section: Preference section key (e.g. ``"global"``).
+            prefix: Dot-prefix for conflict keys (e.g. ``"global"``).
+
+        Returns:
+            Mapping of ``"prefix.key"`` to lists of distinct values.
+        """
+        all_keys: set[str] = set()
+        for profile in profiles:
+            all_keys.update((profile.preferences or {}).get(section, {}).keys())
+
+        conflicts: dict[str, list[Any]] = {}
+        for key in all_keys:
+            values: list[Any] = []
+            for profile in profiles:
+                section_data = (profile.preferences or {}).get(section, {})
+                if key in section_data and section_data[key] not in values:
+                    values.append(section_data[key])
+            if len(values) > 1:
+                conflicts[f"{prefix}.{key}"] = values
+        return conflicts
+
     def get_merge_conflicts(self, profile_list: list[str]) -> dict[str, list[Any]]:
         """Identify conflicts between profiles before merging.
 
@@ -440,50 +471,19 @@ class ProfileMerger:
         conflicts: dict[str, list[Any]] = {}
 
         try:
-            # Load all profiles
-            profiles = []
-            for profile_name in profile_list:
-                profile = self.profile_manager.get_profile(profile_name)
-                if profile:
-                    profiles.append(profile)
+            profiles = [
+                p
+                for name in profile_list
+                if (p := self.profile_manager.get_profile(name)) is not None
+            ]
 
             if len(profiles) < 2:
                 return conflicts
 
-            # Check global preferences
-            all_global_keys: set[str] = set()
-            for profile in profiles:
-                all_global_keys.update((profile.preferences or {}).get("global", {}).keys())
-
-            for key in all_global_keys:
-                values = []
-                for profile in profiles:
-                    if key in (profile.preferences or {}).get("global", {}):
-                        value = (profile.preferences or {})["global"][key]
-                        if value not in values:
-                            values.append(value)
-
-                if len(values) > 1:
-                    conflicts[f"global.{key}"] = values
-
-            # Check directory-specific preferences
-            all_dir_keys: set[str] = set()
-            for profile in profiles:
-                all_dir_keys.update(
-                    (profile.preferences or {}).get("directory_specific", {}).keys()
-                )
-
-            for key in all_dir_keys:
-                values = []
-                for profile in profiles:
-                    if key in (profile.preferences or {}).get("directory_specific", {}):
-                        value = (profile.preferences or {})["directory_specific"][key]
-                        if value not in values:
-                            values.append(value)
-
-                if len(values) > 1:
-                    conflicts[f"directory_specific.{key}"] = values
-
+            conflicts.update(self._find_section_conflicts(profiles, "global", "global"))
+            conflicts.update(
+                self._find_section_conflicts(profiles, "directory_specific", "directory_specific")
+            )
             return conflicts
 
         except Exception as e:
