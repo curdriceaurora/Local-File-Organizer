@@ -1278,7 +1278,7 @@ class TestPlatformSpecificPaths:
         # Simulate Windows platform
         monkeypatch.setattr(os, "name", "nt")
         now = time.time()
-        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
         h = TemporalHeuristic(weight=0.25)
         f = tmp_path / "test.txt"
@@ -1304,7 +1304,7 @@ class TestPlatformSpecificPaths:
         # Simulate Linux platform
         monkeypatch.setattr(os, "name", "posix")
         now = time.time()
-        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
         h = TemporalHeuristic(weight=0.25)
         f = tmp_path / "test.txt"

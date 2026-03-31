@@ -699,10 +699,10 @@ class TestSuggestArchiveErrors:
 
         original_stat = PathClass.stat
 
-        def mock_stat(self: PathClass) -> object:
+        def mock_stat(self: PathClass, *args: object, **kwargs: object) -> object:
             if "problematic" in str(self):
                 raise OSError("Cannot stat file")
-            return original_stat(self)
+            return original_stat(self, *args, **kwargs)
 
         monkeypatch.setattr(PathClass, "stat", mock_stat)
 
