@@ -309,7 +309,9 @@ class TestPipelineTiming:
         assert elapsed < 1.0, f"_collect_files too slow: {elapsed:.3f}s"
 
     @pytest.mark.benchmark
-    @pytest.mark.skipif(not HAS_PYTEST_BENCHMARK, reason="See #1084 - pytest-benchmark optional dependency")
+    @pytest.mark.skipif(
+        not HAS_PYTEST_BENCHMARK, reason="See #1084 - pytest-benchmark optional dependency"
+    )
     def test_benchmark_organize(
         self,
         benchmark: Any,

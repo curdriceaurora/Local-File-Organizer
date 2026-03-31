@@ -31,7 +31,6 @@ from file_organizer.utils.file_readers import (
     read_zip_file,
 )
 from file_organizer.utils.readers._base import _check_file_size
-from file_organizer.utils.readers.ebook import EBOOKLIB_AVAILABLE
 
 pytestmark = [pytest.mark.unit]
 

@@ -49,7 +49,9 @@ class TestGetConfigDir:
         assert isinstance(result, Path)
         assert APP_NAME in str(result)
 
-    @pytest.mark.skipif(sys.platform != "darwin", reason="See #1072 - macOS-specific path validation")
+    @pytest.mark.skipif(
+        sys.platform != "darwin", reason="See #1072 - macOS-specific path validation"
+    )
     def test_macos_path_format(self) -> None:
         """On macOS, config dir should be under ~/Library/Application Support."""
         with mock.patch.dict(os.environ, {}, clear=False):
@@ -60,7 +62,9 @@ class TestGetConfigDir:
         home = Path.home()
         assert str(result).startswith(str(home / "Library" / "Application Support"))
 
-    @pytest.mark.skipif(sys.platform != "linux", reason="See #1072 - Linux-specific path validation")
+    @pytest.mark.skipif(
+        sys.platform != "linux", reason="See #1072 - Linux-specific path validation"
+    )
     def test_linux_path_format(self) -> None:
         """On Linux without XDG override, config dir should be under ~/.config."""
         env = {k: v for k, v in os.environ.items() if k != "XDG_CONFIG_HOME"}
@@ -69,7 +73,9 @@ class TestGetConfigDir:
         home = Path.home()
         assert str(result).startswith(str(home / ".config"))
 
-    @pytest.mark.skipif(sys.platform != "win32", reason="See #1072 - Windows-specific path validation")
+    @pytest.mark.skipif(
+        sys.platform != "win32", reason="See #1072 - Windows-specific path validation"
+    )
     def test_windows_path_format(self) -> None:
         """On Windows, config dir should be under %APPDATA%."""
         result = get_config_dir()

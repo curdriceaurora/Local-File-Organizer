@@ -17,7 +17,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    from PIL import Image
+    from PIL import Image  # noqa: F401
 
     PILLOW_AVAILABLE = True
 except ImportError:
