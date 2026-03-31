@@ -86,7 +86,7 @@ class TestFilesSorting:
 
     @pytest.mark.skipif(
         platform.system() in ("Windows", "Darwin"),
-        reason="Creation time sorting is flaky on Windows/macOS: st_birthtime and st_ctime "
+        reason="See #1043 - Creation time sorting is flaky on Windows/macOS: st_birthtime and st_ctime "
         "don't reliably match st_mtime (used by os.utime). Skip on these platforms.",
     )
     def test_files_sort_by_created(self, tmp_path: Path, web_client_builder) -> None:
