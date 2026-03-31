@@ -43,8 +43,8 @@ jobs:
 
       - name: Install Pyre and project dependencies
         run: |
-          pip install pyre-check
           pip install -e .
+          pip install "click<8.2" pyre-check
 
       - name: Run Pyre
         id: pyre

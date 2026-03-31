@@ -262,6 +262,51 @@ class TestFeedbackCollector:
         events = collector.get_events()
         assert events == []
 
+    def test_load_oserror_handled(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should handle OSError when reading feedback file."""
+        storage = tmp_path / "feedback"
+        storage.mkdir(parents=True)
+        feedback_file = storage / "feedback_events.json"
+        feedback_file.write_text("[]")
+
+        # Patch open to raise OSError
+        original_open = open
+
+        def mock_open(*args, **kwargs):
+            if str(args[0]) == str(feedback_file) and "r" in kwargs.get("mode", "r"):
+                raise OSError("Permission denied")
+            return original_open(*args, **kwargs)
+
+        monkeypatch.setattr("builtins.open", mock_open)
+
+        collector = FeedbackCollector(storage_dir=storage)
+        events = collector.get_events()
+        assert events == []
+
+    def test_save_oserror_handled(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError when saving feedback file."""
+        import json
+
+        storage = tmp_path / "feedback"
+        collector = FeedbackCollector(storage_dir=storage)
+
+        dump_called = False
+
+        def mock_dump(*args, **kwargs):
+            nonlocal dump_called
+            dump_called = True
+            raise OSError("Disk full")
+
+        monkeypatch.setattr(json, "dump", mock_dump)
+        collector.record_acceptance(Path("/test/file.txt"), _make_suggestion())
+
+        assert dump_called is True
+        assert len(collector.get_events()) == 1
+
 
 # =========================================================================
 # PatternLearner tests
@@ -421,5 +466,50 @@ class TestPatternLearner:
         ]
         events = accepted + rejected
         weights = learner.adjust_weights(events)
+        total = weights.temporal + weights.content + weights.structural + weights.ai
+        assert 0.99 <= total <= 1.01
+
+    def test_adjust_weights_directory_dominated_rejections(self) -> None:
+        """Should reduce structural weight when directory-based patterns dominate rejections."""
+        learner = PatternLearner(min_occurrences=2)
+        # Create events where >60% of rejections have parent_directory
+        accepted = [
+            FeedbackEvent(
+                file_path=Path(f"/test/a{i}.txt"),
+                suggested=PARACategory.PROJECT,
+                actual=PARACategory.PROJECT,
+                confidence=0.8,
+                accepted=True,
+            )
+            for i in range(3)
+        ]
+        # 10 rejections with parent_directory (>60% of rejections)
+        rejected_with_dir = [
+            FeedbackEvent(
+                file_path=Path(f"/documents/r{i}.txt"),
+                suggested=PARACategory.PROJECT,
+                actual=PARACategory.AREA,
+                confidence=0.5,
+                accepted=False,
+                parent_directory="documents",
+            )
+            for i in range(10)
+        ]
+        # 2 rejections without parent_directory
+        rejected_no_dir = [
+            FeedbackEvent(
+                file_path=Path(f"/r{i}.txt"),
+                suggested=PARACategory.PROJECT,
+                actual=PARACategory.RESOURCE,
+                confidence=0.5,
+                accepted=False,
+                parent_directory="",
+            )
+            for i in range(2)
+        ]
+        events = accepted + rejected_with_dir + rejected_no_dir
+        weights = learner.adjust_weights(events)
+        # Should reduce structural weight when directory patterns are unreliable
+        assert weights.structural <= 0.30  # Should be reduced
         total = weights.temporal + weights.content + weights.structural + weights.ai
         assert 0.99 <= total <= 1.01

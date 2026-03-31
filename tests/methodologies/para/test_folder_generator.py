@@ -251,6 +251,103 @@ class TestPARAFolderGenerator:
         assert result.success is False
         assert len(result.errors) > 0
 
+    def test_error_handling_folder_creation_generic_error(self, generator, temp_dir):
+        """Test error handling when folder creation fails with generic error."""
+        # Create temp_dir first
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Mock mkdir to fail for one of the main folders
+        original_mkdir = Path.mkdir
+
+        def selective_mkdir(self, *args, **kwargs):
+            if self.name == "Projects":
+                raise OSError("Disk full")
+            return original_mkdir(self, *args, **kwargs)
+
+        with patch("pathlib.Path.mkdir", new=selective_mkdir):
+            result = generator.generate_structure(temp_dir, create_subdirs=False)
+
+        assert result.success is False
+        assert len(result.errors) > 0
+        assert any("Projects" in str(path) for path, _ in result.errors)
+
+    def test_error_handling_root_creation_failure(self, generator, temp_dir):
+        """Test error handling when root directory creation fails."""
+        # Use a path that will fail to create
+        bad_root = temp_dir / "nonexistent"
+
+        with patch(
+            "pathlib.Path.mkdir",
+            side_effect=OSError("Cannot create directory"),
+        ):
+            result = generator.generate_structure(bad_root, create_subdirs=False)
+
+        assert result.success is False
+        assert len(result.errors) == 1
+        assert result.errors[0][0] == bad_root
+
+    def test_existing_subdirs_skipped(self, generator, temp_dir):
+        """Test that existing subdirectories are skipped when create_subdirs=True."""
+        # Create structure with subdirs
+        generator.generate_structure(temp_dir, create_subdirs=True)
+
+        # Create structure again - subdirs should be skipped
+        result = generator.generate_structure(temp_dir, create_subdirs=True)
+
+        assert result.success is True
+        assert len(result.created_folders) == 0
+        assert len(result.skipped_folders) > 4  # Main folders + subdirs
+
+    def test_error_handling_subdir_creation_failure(self, generator, temp_dir):
+        """Test error handling when subdirectory creation fails."""
+        # Create main structure first
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        (temp_dir / "Projects").mkdir()
+        (temp_dir / "Areas").mkdir()
+        (temp_dir / "Resources").mkdir()
+        (temp_dir / "Archive").mkdir()
+
+        # Mock mkdir to fail for subdirectories
+        original_mkdir = Path.mkdir
+
+        def selective_mkdir(self, *args, **kwargs):
+            if self.name == "Active":
+                raise OSError("Disk full")
+            return original_mkdir(self, *args, **kwargs)
+
+        with patch("pathlib.Path.mkdir", new=selective_mkdir):
+            result = generator.generate_structure(temp_dir, create_subdirs=True)
+
+        assert result.success is False
+        assert len(result.errors) > 0
+        assert any("Active" in str(path) for path, _ in result.errors)
+
+    def test_create_category_folder_invalid_category(self, generator, temp_dir):
+        """Test creating folder with invalid category that maps to None."""
+        # Use an invalid category enum value
+        # We need to mock the category mapping to return None
+        with patch.dict(
+            "file_organizer.methodologies.para.folder_generator.PARAFolderGenerator.create_category_folder.__globals__",
+            {},
+            clear=False,
+        ):
+            # Create a mock category that's not in the dict
+            class InvalidCategory:
+                value = "invalid"
+
+            with pytest.raises(ValueError, match="Invalid category"):
+                generator.create_category_folder(InvalidCategory(), root_path=temp_dir)
+
+    def test_get_category_path_invalid_category(self, generator, temp_dir):
+        """Test getting path with invalid category that maps to None."""
+
+        # Use an invalid category enum value
+        class InvalidCategory:
+            value = "invalid"
+
+        with pytest.raises(ValueError, match="Invalid category"):
+            generator.get_category_path(InvalidCategory(), root_path=temp_dir)
+
 
 @pytest.mark.unit
 class TestFolderCreationResult:

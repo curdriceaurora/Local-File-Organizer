@@ -12,7 +12,10 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from file_organizer.methodologies.para.categories import PARACategory
+from file_organizer.methodologies.para.categories import (
+    CategorizationResult,
+    PARACategory,
+)
 from file_organizer.methodologies.para.config import (
     AIHeuristicConfig,
     CategoryThresholds,
@@ -195,6 +198,24 @@ class TestPARAConfigCategoryHelpers:
         assert cfg.get_category_directory(PARACategory.ARCHIVE) == "Ar"
 
 
+class TestCategorizationResultValidation:
+    """Tests for CategorizationResult validation covering categories.py line 115."""
+
+    def test_string_path_converted_to_path_object(self) -> None:
+        """String file_path is automatically converted to Path object."""
+        result = CategorizationResult(
+            file_path="/test/file.txt",  # String, not Path
+            category=PARACategory.PROJECT,
+            confidence=0.85,
+            reasons=["Has deadline"],
+        )
+        # Verify conversion happened (line 115)
+        assert isinstance(result.file_path, Path)
+        assert result.file_path == Path("/test/file.txt")
+        assert result.category == PARACategory.PROJECT
+        assert result.confidence == 0.85
+
+
 class TestAIHeuristicConfig:
     """Tests for AIHeuristicConfig dataclass and YAML round-trip."""
 
@@ -277,3 +298,74 @@ class TestLoadConfig:
         ):
             cfg = load_config(None)
             assert cfg.project_dir == "Found"
+
+    def test_load_config_finds_cwd_default_file(self, tmp_path: Path) -> None:
+        """When config_path is None, checks cwd as fallback."""
+        data = {"area_dir": "CWD_Areas"}
+        config_file = tmp_path / "para_config.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(data, f)
+
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent/dir"),
+            ),
+            patch("file_organizer.methodologies.para.config.Path.cwd", return_value=tmp_path),
+        ):
+            cfg = load_config(None)
+            assert cfg.area_dir == "CWD_Areas"
+
+    def test_load_config_finds_module_default_file(self, tmp_path: Path) -> None:
+        """When config_path is None, checks module directory as last resort."""
+        data = {"resource_dir": "Module_Resources"}
+        config_file = tmp_path / "default_config.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(data, f)
+
+        # Mock the module's __file__ path to be in tmp_path
+        import file_organizer.methodologies.para.config as config_module
+
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent/dir"),
+            ),
+            patch(
+                "file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nowhere")
+            ),
+            patch.object(config_module, "__file__", str(tmp_path / "config.py")),
+        ):
+            cfg = load_config(None)
+            assert cfg.resource_dir == "Module_Resources"
+
+    def test_load_config_all_paths_missing(self) -> None:
+        """When all default paths are missing, returns DEFAULT_CONFIG."""
+        import file_organizer.methodologies.para.config as config_module
+
+        with (
+            patch(
+                "file_organizer.methodologies.para.config._get_para_config_dir",
+                return_value=Path("/nonexistent1"),
+            ),
+            patch(
+                "file_organizer.methodologies.para.config.Path.cwd",
+                return_value=Path("/nonexistent2"),
+            ),
+            patch.object(config_module, "__file__", "/nonexistent3/config.py"),
+        ):
+            cfg = load_config(None)
+            # Should return DEFAULT_CONFIG
+            assert cfg.auto_categorize is True
+            assert cfg.project_dir == "Projects"
+
+    def test_get_para_config_dir_lazy_import(self) -> None:
+        """_get_para_config_dir performs lazy import to avoid circular deps."""
+        from file_organizer.methodologies.para.config import _get_para_config_dir
+
+        # This should successfully import and call get_config_dir
+        result = _get_para_config_dir()
+        # Verify it returns a Path object with expected properties
+        assert isinstance(result, Path)
+        assert result.is_absolute()
+        assert "file-organizer" in str(result)

@@ -490,3 +490,249 @@ class TestSuggestArchive:
         suggestions = mover.suggest_archive(src, inactive_days=180)
         assert len(suggestions) >= 1
         assert any("days" in r for r in suggestions[0].reasoning)
+
+
+# =========================================================================
+# Additional coverage tests
+# =========================================================================
+
+
+@pytest.mark.unit
+class TestMoveFileErrors:
+    """Tests for error handling in move_file."""
+
+    def test_move_file_with_permission_error(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError during file move."""
+        f = tmp_path / "locked.txt"
+        f.write_text("content")
+        target = mover.root_dir / "Projects" / "locked.txt"
+        suggestion = MoveSuggestion(
+            file_path=f,
+            target_category=PARACategory.PROJECT,
+            target_path=target,
+            confidence=0.8,
+        )
+
+        # Mock shutil.move to raise OSError
+        import shutil
+
+        def mock_move(*args: object, **kwargs: object) -> None:
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(shutil, "move", mock_move)
+
+        result = mover.move_file(suggestion, dry_run=False)
+        assert result.success is False
+        assert result.error is not None
+        assert "Permission denied" in result.error
+
+    def test_collision_counter_overflow(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should raise error if collision counter exceeds limit."""
+        f = tmp_path / "file.txt"
+        f.write_text("content")
+        target_dir = mover.root_dir / "Projects"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "file.txt"
+
+        # Create the target file
+        target.write_text("existing")
+
+        suggestion = MoveSuggestion(
+            file_path=f,
+            target_category=PARACategory.PROJECT,
+            target_path=target,
+            confidence=0.8,
+        )
+
+        # Mock Path.exists to always return True to trigger overflow
+        from pathlib import Path as PathClass
+
+        original_exists = PathClass.exists
+
+        def mock_exists(self: PathClass) -> bool:
+            # Only mock for the collision resolution paths
+            if "_" in str(self):
+                return True
+            return original_exists(self)
+
+        monkeypatch.setattr(PathClass, "exists", mock_exists)
+
+        result = mover.move_file(suggestion, dry_run=False)
+        assert result.success is False
+        assert result.error is not None
+        assert "too many existing files" in result.error
+
+
+@pytest.mark.unit
+class TestBulkOrganizeAdvanced:
+    """Advanced tests for bulk_organize method."""
+
+    def test_recursive_scan(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+    ) -> None:
+        """Should scan subdirectories when recursive=True."""
+        src = tmp_path / "source"
+        src.mkdir()
+        subdir = src / "subdir"
+        subdir.mkdir()
+        (src / "file1.txt").write_text("content1")
+        (subdir / "file2.txt").write_text("content2")
+
+        report = mover.bulk_organize(src, dry_run=True, recursive=True)
+        assert report.total_files == 2
+
+    def test_already_organized_files_skipped(
+        self,
+        mover: PARAFileMover,
+        para_root: Path,
+    ) -> None:
+        """Should skip files already in correct PARA location."""
+        projects_dir = para_root / "Projects"
+        projects_dir.mkdir(parents=True)
+        f = projects_dir / "already_there.txt"
+        f.write_text("content")
+
+        report = mover.bulk_organize(projects_dir, dry_run=True)
+        assert report.skipped == 1
+
+    def test_exception_during_file_processing(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle exceptions during file processing."""
+        src = tmp_path / "source"
+        src.mkdir()
+        (src / "problematic.txt").write_text("content")
+
+        # Mock suggest_move to raise an exception
+        def mock_suggest_move(*args: object, **kwargs: object) -> None:
+            raise RuntimeError("Unexpected error")
+
+        monkeypatch.setattr(mover, "suggest_move", mock_suggest_move)
+
+        report = mover.bulk_organize(src, dry_run=True)
+        assert report.errors == 1
+
+    def test_failed_move_counts_as_error(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should count failed moves as errors."""
+        src = tmp_path / "source"
+        src.mkdir()
+        (src / "file.txt").write_text("content")
+
+        # Mock move_file to return a failed result
+        from file_organizer.methodologies.para.ai.file_mover import MoveResult
+
+        def mock_move_file(suggestion: MoveSuggestion, dry_run: bool = True) -> MoveResult:
+            return MoveResult(
+                success=False,
+                source=suggestion.file_path,
+                destination=suggestion.target_path,
+                error="Simulated move failure",
+                dry_run=dry_run,
+            )
+
+        monkeypatch.setattr(mover, "move_file", mock_move_file)
+
+        report = mover.bulk_organize(src, dry_run=False)
+        assert report.errors == 1
+        assert report.moved == 0
+
+
+@pytest.mark.unit
+class TestSuggestArchiveErrors:
+    """Tests for error handling in suggest_archive."""
+
+    def test_directory_scan_error(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError when scanning directory."""
+        src = tmp_path / "source"
+        src.mkdir()
+
+        # Mock rglob to raise OSError
+        from pathlib import Path as PathClass
+
+        def mock_rglob(*args: object, **kwargs: object) -> list[Path]:
+            raise OSError("Cannot access directory")
+
+        monkeypatch.setattr(PathClass, "rglob", mock_rglob)
+
+        suggestions = mover.suggest_archive(src)
+        assert suggestions == []
+
+    def test_file_stat_error(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should skip files that cannot be stat'd."""
+        src = tmp_path / "source"
+        src.mkdir()
+        f = src / "problematic.txt"
+        f.write_text("content")
+
+        # Mock stat to raise OSError
+        from pathlib import Path as PathClass
+
+        original_stat = PathClass.stat
+
+        def mock_stat(self: PathClass, *args: object, **kwargs: object) -> object:
+            if "problematic" in str(self):
+                raise OSError("Cannot stat file")
+            return original_stat(self, *args, **kwargs)
+
+        monkeypatch.setattr(PathClass, "stat", mock_stat)
+
+        suggestions = mover.suggest_archive(src, inactive_days=0)
+        # Should return empty or skip the problematic file
+        assert isinstance(suggestions, list)
+        assert suggestions == []  # File should be skipped due to stat error
+
+
+@pytest.mark.unit
+class TestIsAlreadyOrganized:
+    """Tests for _is_already_organized method."""
+
+    def test_handles_path_resolution_errors(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle errors during path resolution."""
+        f = tmp_path / "file.txt"
+        f.write_text("content")
+
+        # Mock resolve to raise OSError
+        from pathlib import Path as PathClass
+
+        def mock_resolve(self: PathClass) -> Path:
+            raise OSError("Cannot resolve path")
+
+        monkeypatch.setattr(PathClass, "resolve", mock_resolve)
+
+        result = mover._is_already_organized(f, PARACategory.PROJECT)
+        assert result is False

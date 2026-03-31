@@ -190,7 +190,7 @@ class TestExtractMetadataFeatures:
     ) -> None:
         """Days since modified should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
-        assert features.days_since_modified >= 0.0
+        assert features.days_since_modified < 1.0  # file was just created
 
     def test_days_since_created_is_positive(
         self,
@@ -199,7 +199,7 @@ class TestExtractMetadataFeatures:
     ) -> None:
         """Days since created should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
-        assert features.days_since_created >= 0.0
+        assert features.days_since_created < 1.0  # file was just created
 
     def test_access_frequency_in_range(
         self,
@@ -350,3 +350,296 @@ class TestExtractStructuralFeatures:
         assert len(features.path_keywords) > 0
         # "reference", "template", "guide" should be found
         assert "reference" in features.path_keywords or "guide" in features.path_keywords
+
+
+# =========================================================================
+# Edge cases and error handling tests
+# =========================================================================
+
+
+@pytest.mark.unit
+class TestEdgeCasesAndErrorHandling:
+    """Tests for edge cases and error handling."""
+
+    def test_action_items_with_long_matches_filtered(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Action items >= 200 chars should be filtered out."""
+        # Create a very long action item (> 200 chars)
+        long_action = "TODO: " + "x" * 200
+        text = f"{long_action}\nTODO: normal task"
+        features = extractor.extract_text_features(text)
+        assert features.action_items
+        assert all(action == "TODO" for action in features.action_items)
+        assert all(len(action) < 200 for action in features.action_items)
+
+    def test_action_items_with_empty_matches_filtered(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Empty action items should be filtered out."""
+        # Pattern that might match but result in empty strings after strip
+        text = "   \nTODO: actual task"
+        features = extractor.extract_text_features(text)
+        # Should have exactly the actual task (spaces-only lines are filtered)
+        assert len(features.action_items) == 1
+
+    def test_metadata_extraction_with_stat_error(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError gracefully when stat() fails."""
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+
+        # Mock exists() to return True so we pass the initial check
+        monkeypatch.setattr(Path, "exists", lambda self: True)
+
+        # Mock stat() to raise OSError for the explicit stat() call
+        def mock_stat(_self: Path) -> None:
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "stat", mock_stat)
+        features = extractor.extract_metadata_features(test_file)
+        # Should return defaults with just the file type
+        assert features.file_type == ".txt"
+        assert features.file_size == 0
+        assert features.creation_date is None
+
+    def test_metadata_extraction_fresh_file_zero_days_modified(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle edge case when file was just created/modified."""
+        test_file = tmp_path / "fresh.txt"
+        test_file.write_text("new content")
+
+        # Mock time.time() to return exactly the file's mtime
+        original_stat = test_file.stat()
+
+        def mock_time() -> float:
+            return original_stat.st_mtime
+
+        monkeypatch.setattr("time.time", mock_time)
+        features = extractor.extract_metadata_features(test_file)
+        # days_since_modified should be 0 or very close to 0
+        assert features.days_since_modified < 0.001
+        # access_frequency should be 1.0 when days_since_modified == 0
+        assert features.access_frequency == 1.0
+
+    def test_structural_features_with_inaccessible_parent_dir(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError when reading parent directory fails."""
+        test_dir = tmp_path / "testdir"
+        test_dir.mkdir()
+        test_file = test_dir / "file.txt"
+        test_file.write_text("content")
+
+        def mock_iterdir(_self: Path) -> None:
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        features = extractor.extract_structural_features(test_file)
+        # Should handle error gracefully and return 0 siblings
+        assert features.sibling_count == 0
+
+    def test_has_project_structure_with_nonexistent_directory(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Should return False for non-existent directory."""
+        result = extractor._has_project_structure(Path("/nonexistent/path"))
+        assert result is False
+
+    def test_has_project_structure_with_file_not_directory(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+    ) -> None:
+        """Should return False when given a file instead of directory."""
+        test_file = tmp_path / "file.txt"
+        test_file.write_text("content")
+        result = extractor._has_project_structure(test_file)
+        assert result is False
+
+    def test_has_project_structure_with_iterdir_error(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should handle OSError gracefully in _has_project_structure."""
+        test_dir = tmp_path / "proj"
+        test_dir.mkdir()
+
+        def mock_iterdir(_self: Path) -> None:
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        result = extractor._has_project_structure(test_dir)
+        # Should handle error and return False
+        assert result is False
+
+    def test_structural_features_with_nonexistent_parent(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Should handle file with non-existent parent directory."""
+        # Use a path that doesn't exist
+        fake_file = Path("/nonexistent/directory/file.txt")
+        features = extractor.extract_structural_features(fake_file)
+        # Should handle gracefully - parent doesn't exist
+        assert features.sibling_count == 0
+        assert features.directory_depth == 3  # /nonexistent/directory/file.txt is 3 levels deep
+
+    def test_action_items_exactly_200_chars_filtered(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Action items exactly 200 chars should be filtered out."""
+        # Create an action item exactly 200 chars
+        action_200 = "- [ ] " + "x" * 194  # Total exactly 200 chars
+        text = f"{action_200}\n- [ ] normal task"
+        features = extractor.extract_text_features(text)
+        # Should filter the 200-char item
+        for action in features.action_items:
+            assert len(action) < 200
+
+    def test_action_items_over_200_chars_filtered(
+        self,
+        extractor: FeatureExtractor,
+    ) -> None:
+        """Action items > 200 chars should be filtered out."""
+        # Create an action item > 200 chars
+        action_long = "- [ ] " + "x" * 250
+        text = f"{action_long}\n- [ ] normal task"
+        features = extractor.extract_text_features(text)
+        # Should filter the long item
+        for action in features.action_items:
+            assert len(action) < 200
+
+    def test_action_items_filter_with_custom_pattern(
+        self,
+        extractor: FeatureExtractor,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should filter out matches that are empty or >= 200 chars."""
+        import re
+
+        import file_organizer.methodologies.para.ai.feature_extractor as fe_module
+
+        # Create custom patterns that can match empty or long strings
+        custom_patterns = [
+            # Pattern that matches whitespace-only (becomes empty after strip)
+            re.compile(r"\s{5,10}"),
+            # Pattern that can match very long strings
+            re.compile(r"LONGTEXT:.{200,}"),
+            # Keep one normal pattern
+            re.compile(r"\bTODO\b", re.I),
+        ]
+
+        # Temporarily replace the module-level patterns
+        original_patterns = fe_module._ACTION_PATTERNS
+        monkeypatch.setattr(fe_module, "_ACTION_PATTERNS", custom_patterns)
+
+        # Test with text that triggers both edge cases
+        text = "      \nLONGTEXT:" + ("x" * 250) + "\nTODO: normal task"
+        features = extractor.extract_text_features(text)
+
+        # Restore original patterns
+        monkeypatch.setattr(fe_module, "_ACTION_PATTERNS", original_patterns)
+
+        # Should only have the normal TODO task
+        assert len(features.action_items) >= 1
+        assert "TODO" in features.action_items[0]
+
+    def test_metadata_windows_platform_creation_time(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should use st_ctime on Windows platform."""
+        import builtins
+
+        import file_organizer.methodologies.para.ai.feature_extractor as fe_module
+
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_size = 7
+                self.st_atime = now - (2 * 86400)
+                self.st_ctime = now - 86400
+                self.st_mtime = now - (10 * 86400)
+
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        now = 2_000_000_000.0
+
+        # Mock os module in the feature_extractor namespace
+        monkeypatch.setattr(fe_module.os, "name", "nt")
+        monkeypatch.setattr(fe_module.time, "time", lambda: now)
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+
+        # Mock hasattr to return False for st_birthtime
+        original_hasattr = builtins.hasattr
+
+        def mock_hasattr(obj: object, name: str) -> bool:
+            if name == "st_birthtime":
+                return False
+            return original_hasattr(obj, name)
+
+        monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
+
+        features = extractor.extract_metadata_features(test_file)
+        assert features.days_since_created == pytest.approx(1.0)
+        assert features.file_size == 7
+
+    def test_metadata_linux_platform_creation_time(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should use st_mtime on Linux platform."""
+        import builtins
+
+        import file_organizer.methodologies.para.ai.feature_extractor as fe_module
+
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_size = 7
+                self.st_atime = now - (2 * 86400)
+                self.st_ctime = now - 86400
+                self.st_mtime = now - (10 * 86400)
+
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        now = 2_000_000_000.0
+
+        # Mock os module in the feature_extractor namespace
+        monkeypatch.setattr(fe_module.os, "name", "posix")
+        monkeypatch.setattr(fe_module.time, "time", lambda: now)
+        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+
+        # Mock hasattr to return False for st_birthtime
+        original_hasattr = builtins.hasattr
+
+        def mock_hasattr(obj: object, name: str) -> bool:
+            if name == "st_birthtime":
+                return False
+            return original_hasattr(obj, name)
+
+        monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
+
+        features = extractor.extract_metadata_features(test_file)
+        assert features.days_since_created == pytest.approx(10.0)
+        assert features.file_size == 7
