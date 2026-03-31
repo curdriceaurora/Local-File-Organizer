@@ -14,9 +14,8 @@ bypass_attempts
 
 executor_interface
     White-box tests for the ``PluginExecutor`` lifecycle and RPC.
-    Marked ``@pytest.mark.skip(reason="See #338 - Stream A executor not yet delivered")``
-    until Stream A delivers the real implementation.  The full assertion bodies
-    are written here so they are ready to un-skip.
+    Skipped via issue #338 until Stream A delivers the real implementation.
+    The full assertion bodies are written here so they are ready to un-skip.
 
 ipc_protocol
     Unit tests for the IPC dataclasses and encoding/decoding helpers in
@@ -271,10 +270,9 @@ class TestBypassAttempts:
 class TestExecutorInterface:
     """Tests for PluginExecutor lifecycle and RPC.
 
-    All tests in this class are skipped until Stream A delivers a working
-    ``PluginExecutor``.  The test bodies are complete — only remove the
-    ``@pytest.mark.skip(reason="See #338 - Stream A executor not yet delivered")``
-    decorator when the executor is ready.
+    All tests in this class are skipped (see #338) until Stream A delivers a working
+    ``PluginExecutor``.  The test bodies are complete — only remove the skip decorator
+    when the executor is ready.
     """
 
     def test_executor_starts_and_stops(self, tmp_path: Path) -> None:

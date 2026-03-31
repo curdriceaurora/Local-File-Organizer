@@ -8,10 +8,10 @@ This document tracks all skipped tests in the pytest test suite. Every skipped t
 
 As of the audit completed on 2026-03-30:
 
-- **@pytest.mark.skip**: 16 tests (unconditional skips)
-- **@pytest.mark.skipif**: 17 tests (conditional platform skips)
+- **@pytest.mark.skip**: 20 tests (unconditional skips)
+- **@pytest.mark.skipif**: 26 tests (conditional platform skips)
 - **pytest.importorskip**: ~8+ additional skips (optional dependency checks)
-- **Total documented skips**: ~33 tests with issue references
+- **Total documented skips**: ~46 tests with issue references
 
 ### Skip Categories
 
@@ -25,11 +25,11 @@ Tests skipped because features are not yet implemented:
 | [#1071](https://github.com/curdriceaurora/Local-File-Organizer/issues/1071) | 3 | Audio transcription feature (Phase 3) | `tests/services/test_audio_transcription.py` |
 | [#1073](https://github.com/curdriceaurora/Local-File-Organizer/issues/1073) | 6 | Video processing features (Phase 3) | `tests/services/test_video_processing.py`<br>`tests/utils/test_video_metadata.py` |
 | [#1076](https://github.com/curdriceaurora/Local-File-Organizer/issues/1076) | 1 | SSE routes for file browser | `tests/test_web_files_routes.py` |
-| [#1077](https://github.com/curdriceaurora/Local-File-Organizer/issues/1077) | 2 | SuggestionEngine API implementation | `tests/integration/test_image_quality_para_suggestion.py` |
+| [#1077](https://github.com/curdriceaurora/Local-File-Organizer/issues/1077) | 3 | SuggestionEngine API implementation | `tests/integration/test_image_quality_para_suggestion.py` |
 | [#1080](https://github.com/curdriceaurora/Local-File-Organizer/issues/1080) | 1 | SSE streaming for organize route | `tests/test_web_organize_routes.py` |
 | [#338](https://github.com/curdriceaurora/Local-File-Organizer/issues/338) | 3 | Stream A executor not yet delivered | `tests/plugins/test_sandbox_isolation.py` |
 
-**Subtotal: 16 tests** (deferred feature skips)
+**Subtotal: 20 tests** (deferred feature skips)
 
 #### 2. Platform-Specific Limitations
 
@@ -44,10 +44,10 @@ Tests skipped on specific operating systems due to platform limitations:
 | [#1078](https://github.com/curdriceaurora/Local-File-Organizer/issues/1078) | Windows | 1 | `chmod` does not restrict reads on Windows | `tests/plugins/test_base_coverage.py` |
 | [#1081](https://github.com/curdriceaurora/Local-File-Organizer/issues/1081) | Windows | 1 | Directory fsync is a no-op on Windows | `tests/parallel/test_checkpoint.py` |
 | [#1082](https://github.com/curdriceaurora/Local-File-Organizer/issues/1082) | Windows | 1 | Hardlinks require admin privileges on Windows | `tests/integration/test_organize_text_workflow.py` |
-| [#1083](https://github.com/curdriceaurora/Local-File-Organizer/issues/1083) | macOS | 1 | macOS-only Quick Action feature | `tests/integration/test_context_menu_macos.py` |
+| [#1083](https://github.com/curdriceaurora/Local-File-Organizer/issues/1083) | macOS | 12 | macOS-only Quick Action feature | `tests/integration/test_context_menu_macos.py` |
 | [#1085](https://github.com/curdriceaurora/Local-File-Organizer/issues/1085) | Windows, macOS | 1 | Creation time sorting is flaky on Windows/macOS | `tests/test_web_files_routes.py` |
 
-**Subtotal: 15 tests** (platform-specific skips)
+**Subtotal: 26 tests** (platform-specific skips)
 
 #### 3. Optional Dependencies
 
