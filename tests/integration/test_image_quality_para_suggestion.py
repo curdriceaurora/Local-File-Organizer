@@ -466,7 +466,9 @@ class TestSuggestionEngineAPI:
 
     def test_has_suggest_method(self, engine: SuggestionEngine) -> None:
         # Verify the engine has at least one domain-specific suggest method
-        public_methods = [m for m in dir(engine) if not m.startswith("_") and callable(getattr(engine, m))]
+        public_methods = [
+            m for m in dir(engine) if not m.startswith("_") and callable(getattr(engine, m))
+        ]
         suggest_methods = [m for m in public_methods if "suggest" in m.lower()]
         assert len(suggest_methods) >= 1, (
             f"SuggestionEngine must have at least one suggest* method; found public methods: {public_methods}"

@@ -43,7 +43,9 @@ class TestVideoProcessingPlaceholder:
 
         assert result is not None
 
-    @pytest.mark.skip(reason="See #1073 - Requires real video file; fake bytes cause decode failure")
+    @pytest.mark.skip(
+        reason="See #1073 - Requires real video file; fake bytes cause decode failure"
+    )
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
         from file_organizer.services.video.scene_detector import SceneDetectionResult, SceneDetector

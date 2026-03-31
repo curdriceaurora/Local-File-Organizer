@@ -20,7 +20,9 @@ class TestVideoMetadataPlaceholder:
         except ImportError:
             pytest.skip("Video metadata extraction not yet implemented (Phase 3)")
 
-    @pytest.mark.skip(reason="See #1073 - Requires real video file; fake bytes cause decode failure")
+    @pytest.mark.skip(
+        reason="See #1073 - Requires real video file; fake bytes cause decode failure"
+    )
     def test_extract_mp4_metadata(self, tmp_path):
         """Test extracting metadata from MP4 file."""
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
@@ -34,7 +36,9 @@ class TestVideoMetadataPlaceholder:
         assert metadata.duration is not None
         assert metadata.width is not None
 
-    @pytest.mark.skip(reason="See #1073 - Requires real video file; fake bytes cause decode failure")
+    @pytest.mark.skip(
+        reason="See #1073 - Requires real video file; fake bytes cause decode failure"
+    )
     def test_extract_resolution(self, tmp_path):
         """Test extracting video resolution."""
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
@@ -48,7 +52,9 @@ class TestVideoMetadataPlaceholder:
         assert metadata.width is not None
         assert metadata.height is not None
 
-    @pytest.mark.skip(reason="See #1073 - Requires real video file; fake bytes cause decode failure")
+    @pytest.mark.skip(
+        reason="See #1073 - Requires real video file; fake bytes cause decode failure"
+    )
     def test_detect_codec(self, tmp_path):
         """Test detecting video codec."""
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
