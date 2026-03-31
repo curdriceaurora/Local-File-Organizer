@@ -11,7 +11,7 @@ As of the audit completed on 2026-03-30:
 - **@pytest.mark.skip**: 20 tests (unconditional skips)
 - **@pytest.mark.skipif**: 26 tests (conditional platform skips)
 - **pytest.importorskip**: ~8+ additional skips (optional dependency checks)
-- **Total documented skips**: ~46 tests with issue references
+- **Total documented skips**: ~54 tests with issue references
 
 ### Skip Categories
 
@@ -51,15 +51,17 @@ Tests skipped on specific operating systems due to platform limitations:
 
 #### 3. Optional Dependencies
 
-Tests skipped when optional dependencies are not installed. These use `pytest.importorskip()` pattern:
+Tests skipped when optional dependencies are not installed. These use `pytest.importorskip()` pattern.
+
+**Policy exception**: Tests using `pytest.importorskip()` for `rank_bm25` and `sklearn` do not require tracking issues, as these are standard optional dependency checks that skip automatically when the package is not installed.
 
 | Issue | Dependency | Description | Files Affected |
 |-------|------------|-------------|----------------|
 | [#1079](https://github.com/curdriceaurora/Local-File-Organizer/issues/1079) | `ebooklib` | EPUB file processing | `tests/utils/test_file_readers.py`<br>`tests/unit/utils/test_file_readers.py` |
 | [#1079](https://github.com/curdriceaurora/Local-File-Organizer/issues/1079) | `Pillow` | Image processing (EPUB thumbnails) | `tests/utils/test_epub_enhanced.py` |
 | [#1084](https://github.com/curdriceaurora/Local-File-Organizer/issues/1084) | `pytest-benchmark` | Performance benchmarking | `tests/e2e/test_full_pipeline.py` |
-| N/A | `rank_bm25` | BM25 search indexing | Multiple search/copilot test files |
-| N/A | `sklearn` | Machine learning features | Analytics and vector search tests |
+| Exception applies | `rank_bm25` | BM25 search indexing | Multiple search/copilot test files |
+| Exception applies | `sklearn` | Machine learning features | Analytics and vector search tests |
 
 **Subtotal: 8+ tests** (optional dependency skips)
 
@@ -101,8 +103,8 @@ rg '@pytest.mark.skipif' tests/ --type py -c
 rg 'pytest.importorskip' tests/ --type py -c
 
 # Verify all skips have issue references
-rg '@pytest.mark.skip\((?!.*reason=)' tests/  # Should return 0 matches
-rg '@pytest.mark.skip.*reason="See #\d+' tests/  # All skips should match
+rg --pcre2 '@pytest.mark.skip\((?!.*reason=)' tests/  # Should return 0 matches
+rg --pcre2 '@pytest.mark.skip.*reason="See #\d+' tests/  # All skips should match
 
 # List all tracking issues
 rg 'reason="See #(\d+)' tests/ --type py -o -r '$1' | sort | uniq -c | sort -rn
