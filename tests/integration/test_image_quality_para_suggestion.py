@@ -465,9 +465,12 @@ class TestSuggestionEngineAPI:
         return SuggestionEngine()
 
     def test_has_suggest_method(self, engine: SuggestionEngine) -> None:
-        # Verify the engine has suggest-type methods
-        methods = [m for m in dir(engine) if not m.startswith("_") and callable(getattr(engine, m))]
-        assert len(methods) > 0
+        # Verify the engine has at least one domain-specific suggest method
+        public_methods = [m for m in dir(engine) if not m.startswith("_") and callable(getattr(engine, m))]
+        suggest_methods = [m for m in public_methods if "suggest" in m.lower()]
+        assert len(suggest_methods) >= 1, (
+            f"SuggestionEngine must have at least one suggest* method; found public methods: {public_methods}"
+        )
 
     def test_suggest_category_returns_something(
         self, engine: SuggestionEngine, tmp_path: Path
@@ -482,5 +485,8 @@ class TestSuggestionEngineAPI:
             result = engine.suggest(f)
             assert result is not None
         else:
-            # No matching method found — skip silently
-            pytest.skip("No suggest method found on SuggestionEngine")
+            # No matching method found — fail so a SuggestionEngine with no suggest API is caught
+            pytest.fail(
+                "SuggestionEngine has neither suggest_category() nor suggest() — "
+                "at least one must exist for this class to be useful"
+            )

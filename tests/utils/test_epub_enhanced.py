@@ -17,13 +17,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 try:
-    from PIL import Image  # noqa: F401
-
-    PILLOW_AVAILABLE = True
-except ImportError:
-    PILLOW_AVAILABLE = False
-
-try:
     import ebooklib
     from ebooklib import epub
 

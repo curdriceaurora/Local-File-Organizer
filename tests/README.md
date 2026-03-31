@@ -8,10 +8,14 @@ This document tracks all skipped tests in the pytest test suite. Every skipped t
 
 As of the audit completed on 2026-03-30:
 
-- **@pytest.mark.skip**: 20 tests (unconditional skips)
-- **@pytest.mark.skipif**: 26 tests (conditional platform skips)
+- **@pytest.mark.skip**: 15 decorators (17 test methods; one class-level decorator covers 3 tests in `TestExecutorInterface`)
+- **@pytest.mark.skipif**: 18 decorators (30 test methods; one class-level decorator covers 12 tests in `test_context_menu_macos.py`)
 - **pytest.importorskip**: ~8+ additional skips (optional dependency checks)
-- **Total documented skips**: ~54 tests with issue references
+- **Total documented skips**: ~55+ tests with issue references
+
+**Note**: `TestExecutorInterface` in `tests/plugins/test_sandbox_isolation.py` was added as a new
+class-level skip by this PR. The class existed previously and its tests were running; the skip
+decorator was added during this audit to match the documented intent in issue #338.
 
 ### Skip Categories
 
@@ -29,7 +33,7 @@ Tests skipped because features are not yet implemented:
 | [#1080](https://github.com/curdriceaurora/Local-File-Organizer/issues/1080) | 1 | SSE streaming for organize route | `tests/test_web_organize_routes.py` |
 | [#338](https://github.com/curdriceaurora/Local-File-Organizer/issues/338) | 3 | Stream A executor not yet delivered | `tests/plugins/test_sandbox_isolation.py` |
 
-**Subtotal: 20 tests** (deferred feature skips)
+**Subtotal: 20 tests** (deferred feature skips; #1077 uses `@pytest.mark.skipif`, others use `@pytest.mark.skip`)
 
 #### 2. Platform-Specific Limitations
 
@@ -45,9 +49,10 @@ Tests skipped on specific operating systems due to platform limitations:
 | [#1081](https://github.com/curdriceaurora/Local-File-Organizer/issues/1081) | Windows | 1 | Directory fsync is a no-op on Windows | `tests/parallel/test_checkpoint.py` |
 | [#1082](https://github.com/curdriceaurora/Local-File-Organizer/issues/1082) | Windows | 1 | Hardlinks require admin privileges on Windows | `tests/integration/test_organize_text_workflow.py` |
 | [#1083](https://github.com/curdriceaurora/Local-File-Organizer/issues/1083) | macOS | 12 | macOS-only Quick Action feature | `tests/integration/test_context_menu_macos.py` |
+| [#1084](https://github.com/curdriceaurora/Local-File-Organizer/issues/1084) | Any | 1 | pytest-benchmark not installed | `tests/e2e/test_full_pipeline.py` |
 | [#1085](https://github.com/curdriceaurora/Local-File-Organizer/issues/1085) | Windows, macOS | 1 | Creation time sorting is flaky on Windows/macOS | `tests/test_web_files_routes.py` |
 
-**Subtotal: 26 tests** (platform-specific skips)
+**Subtotal: 27 tests** (platform/environment skipif; uses `@pytest.mark.skipif`)
 
 #### 3. Optional Dependencies
 
@@ -59,7 +64,7 @@ Tests skipped when optional dependencies are not installed. These use `pytest.im
 |-------|------------|-------------|----------------|
 | [#1079](https://github.com/curdriceaurora/Local-File-Organizer/issues/1079) | `ebooklib` | EPUB file processing | `tests/utils/test_file_readers.py`<br>`tests/unit/utils/test_file_readers.py` |
 | [#1079](https://github.com/curdriceaurora/Local-File-Organizer/issues/1079) | `Pillow` | Image processing (EPUB thumbnails) | `tests/utils/test_epub_enhanced.py` |
-| [#1084](https://github.com/curdriceaurora/Local-File-Organizer/issues/1084) | `pytest-benchmark` | Performance benchmarking | `tests/e2e/test_full_pipeline.py` |
+| N/A | `openpyxl` | Excel file processing | Multiple spreadsheet test files |
 | Exception applies | `rank_bm25` | BM25 search indexing | Multiple search/copilot test files |
 | Exception applies | `sklearn` | Machine learning features | Analytics and vector search tests |
 
@@ -85,10 +90,17 @@ def test_unix_only_feature():
 
 #### Pattern 3: Optional Dependency Skip
 
+Use `pytest.importorskip()` inside an autouse fixture scoped to the class that needs the dependency:
+
 ```python
-def test_with_optional_dep():
-    pytest.importorskip("ebooklib", reason="See #1079 - Optional EPUB processing dependency")
-    # Test continues if import succeeds
+class TestEpubCoverExtraction:
+    @pytest.fixture(autouse=True)
+    def _require_pillow(self) -> None:
+        pytest.importorskip("PIL.Image")  # See #1079 - Optional image processing dependency
+
+    def test_extract_cover(self, tmp_path):
+        # Test continues if import succeeds, skips if Pillow not installed
+        ...
 ```
 
 ### Verification Commands
@@ -102,9 +114,8 @@ rg '@pytest.mark.skip\(' tests/ --type py -c
 rg '@pytest.mark.skipif' tests/ --type py -c
 rg 'pytest.importorskip' tests/ --type py -c
 
-# Verify all skips have issue references
-rg --pcre2 '@pytest.mark.skip\((?!.*reason=)' tests/  # Should return 0 matches
-rg --pcre2 '@pytest.mark.skip.*reason="See #\d+' tests/  # All skips should match
+# Verify all skips have issue references (grep -v filters out lines with reason=)
+rg '@pytest.mark.skip' tests/ --type py | grep -v 'reason='
 
 # List all tracking issues
 rg 'reason="See #(\d+)' tests/ --type py -o -r '$1' | sort | uniq -c | sort -rn
@@ -122,7 +133,7 @@ rg 'reason="See #(\d+)' tests/ --type py -o -r '$1' | sort | uniq -c | sort -rn
 
 ### Related Documentation
 
-- [GitHub Issue #1027](https://github.com/curdriceaurora/Local-File-Organizer/issues/1027) - Original audit task
+- [GitHub Issue #1028](https://github.com/curdriceaurora/Local-File-Organizer/issues/1028) - Original audit task
 - [pytest skip/xfail documentation](https://docs.pytest.org/en/stable/how-to/skipping.html)
 - [pytest.importorskip API](https://docs.pytest.org/en/stable/reference/reference.html#pytest.importorskip)
 

@@ -43,18 +43,20 @@ class TestVideoProcessingPlaceholder:
 
         assert result is not None
 
-    @pytest.mark.skip(reason="See #1073 - Phase 3 scene detection not yet implemented")
+    @pytest.mark.skip(reason="See #1073 - Requires real video file; fake bytes cause decode failure")
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
-        from file_organizer.services.video.scene_detector import SceneDetector
+        from file_organizer.services.video.scene_detector import SceneDetectionResult, SceneDetector
 
         video_file = tmp_path / "test.mp4"
         video_file.write_bytes(b"fake video")
 
         detector = SceneDetector()
-        scenes = detector.detect_scenes(video_file)
+        result = detector.detect_scenes(video_file)
 
-        assert isinstance(scenes, list) and all(hasattr(s, "start_time") for s in scenes)
+        assert isinstance(result, SceneDetectionResult)
+        assert isinstance(result.scenes, list)
+        assert all(hasattr(s, "start_time") for s in result.scenes)
 
     @pytest.mark.skip(reason="See #1073 - Phase 3 frame extraction not yet implemented")
     def test_frame_extraction(self, tmp_path):
