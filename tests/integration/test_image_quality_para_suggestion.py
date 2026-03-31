@@ -465,13 +465,14 @@ class TestSuggestionEngineAPI:
         return SuggestionEngine()
 
     def test_has_suggest_method(self, engine: SuggestionEngine) -> None:
-        # Verify the engine has at least one domain-specific suggest method
+        # Verify the engine exposes at least one of the expected suggest API methods
+        expected_methods = {"suggest_category", "suggest"}
         public_methods = [
             m for m in dir(engine) if not m.startswith("_") and callable(getattr(engine, m))
         ]
-        suggest_methods = [m for m in public_methods if "suggest" in m.lower()]
-        assert len(suggest_methods) >= 1, (
-            f"SuggestionEngine must have at least one suggest* method; found public methods: {public_methods}"
+        suggest_methods = {m for m in public_methods if "suggest" in m.lower()}
+        assert suggest_methods & expected_methods, (
+            f"SuggestionEngine must have suggest_category or suggest; found public methods: {public_methods}"
         )
 
     def test_suggest_category_returns_something(

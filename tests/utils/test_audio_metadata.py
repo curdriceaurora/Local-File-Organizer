@@ -49,7 +49,8 @@ class TestAudioMetadataPlaceholder:
         extractor = AudioMetadataExtractor()
         metadata = extractor.extract(audio_file)
 
-        assert metadata is not None
+        assert "duration" in metadata
+        assert "format" in metadata
 
     @pytest.mark.skip(reason="See #611 - Needs MP3 fixtures with ID3 tags for testing")
     def test_extract_music_tags(self, tmp_path):
@@ -65,4 +66,4 @@ class TestAudioMetadataPlaceholder:
         metadata = extractor.extract(audio_file)
 
         # Should extract ID3 tags
-        assert "title" in metadata or metadata is not None
+        assert "title" in metadata

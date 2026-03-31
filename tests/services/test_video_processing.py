@@ -69,6 +69,7 @@ class TestVideoProcessingPlaceholder:
         video_file.write_bytes(b"fake avi")
 
         processor = VisionProcessor()
+        # TODO: replace fake_avi with a real fixture when unskipping — fake bytes cause decode failure
         frames = processor.extract_frames(video_file, interval=1.0)
 
-        assert frames == []
+        assert len(frames) >= 1, "extract_frames should return at least one frame per second"
