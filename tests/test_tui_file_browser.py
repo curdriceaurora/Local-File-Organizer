@@ -11,7 +11,14 @@ import pytest
 @pytest.fixture
 def mock_directory_tree():
     """Mock DirectoryTree async methods to prevent coroutine creation in tests."""
-    with patch("file_organizer.tui.file_browser.DirectoryTree.__init__", return_value=None):
+
+    def mock_reload(self) -> None:
+        pass
+
+    with (
+        patch("file_organizer.tui.file_browser.DirectoryTree.__init__", return_value=None),
+        patch("file_organizer.tui.file_browser.DirectoryTree.reload", mock_reload),
+    ):
         yield
 
 
@@ -55,15 +62,12 @@ class TestFileBrowserTree:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
-        tree._extension_filter = set()
-        assert tree is not None
+        assert tree._extension_filter == set()
 
     def test_extension_filter_set(self, tmp_path: Path, mock_directory_tree) -> None:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
-        tree._extension_filter = set()
-        tree.reload = MagicMock()
         tree.set_extension_filter({".py", ".txt"})
         assert tree._extension_filter == {".py", ".txt"}
 
@@ -71,8 +75,6 @@ class TestFileBrowserTree:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
-        tree._extension_filter = set()
-        tree.reload = MagicMock()
         tree.set_extension_filter({"py", "txt"})
         assert tree._extension_filter == {".py", ".txt"}
 
@@ -80,8 +82,6 @@ class TestFileBrowserTree:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
-        tree._extension_filter = set()
-        tree.reload = MagicMock()
         tree.set_extension_filter({".py"})
         tree.set_extension_filter(set())
         assert tree._extension_filter == set()
@@ -90,7 +90,6 @@ class TestFileBrowserTree:
         from file_organizer.tui.file_browser import FileBrowserTree
 
         tree = FileBrowserTree(tmp_path)
-        tree._extension_filter = set()
         paths = [tmp_path / "a.py", tmp_path / "b.txt"]
         result = list(tree.filter_paths(paths))
         assert result == paths

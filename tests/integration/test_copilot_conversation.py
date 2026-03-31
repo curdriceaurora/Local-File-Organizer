@@ -21,7 +21,7 @@ from file_organizer.services.copilot.models import (
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def mock_directory_tree():
     """Mock DirectoryTree to prevent coroutine creation in copilot tests."""
     def mock_init(self, *args, **kwargs):

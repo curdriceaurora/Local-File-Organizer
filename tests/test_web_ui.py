@@ -24,9 +24,10 @@ _PNG_BYTES = base64.b64decode(
 )
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def mock_directory_tree():
     """Mock DirectoryTree to prevent coroutine creation in web UI tests."""
+
     def mock_init(self, *args, **kwargs):
         """Mock DirectoryTree.__init__ to prevent async watch_path coroutine."""
         return None
@@ -35,8 +36,9 @@ def mock_directory_tree():
         """Mock DirectoryTree.reload to prevent async _reload coroutine."""
         return None
 
-    with patch("textual.widgets.DirectoryTree.__init__", mock_init), patch(
-        "textual.widgets.DirectoryTree.reload", mock_reload
+    with (
+        patch("textual.widgets.DirectoryTree.__init__", mock_init),
+        patch("textual.widgets.DirectoryTree.reload", mock_reload),
     ):
         yield
 
