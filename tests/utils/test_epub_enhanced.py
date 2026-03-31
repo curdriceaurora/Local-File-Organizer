@@ -350,7 +350,7 @@ class TestEnhancedEPUBReader:
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_cover(self, mock_read, tmp_path):
         """Test extracting cover image."""
-        # Skip if Pillow not available - See #1036
+        # Skip if Pillow not available - See #1079
         PIL_Image = pytest.importorskip("PIL.Image")
         reader = EnhancedEPUBReader()
 

@@ -27,7 +27,7 @@ pytestmark = [pytest.mark.integration]
 class TestFileReadErrors:
     """File read errors surface in ProcessedFile results, not exceptions."""
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="See #1035 - chmod does not restrict reads on Windows")
+    @pytest.mark.skipif(sys.platform == "win32", reason="See #1078 - chmod does not restrict reads on Windows")
     def test_unreadable_file_returns_error_in_result(
         self,
         stub_text_model_init: None,
@@ -120,7 +120,7 @@ class TestOrganizerErrorHandling:
                 output_path=str(tmp_path / "output"),
             )
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="See #1035 - chmod does not restrict reads on Windows")
+    @pytest.mark.skipif(sys.platform == "win32", reason="See #1078 - chmod does not restrict reads on Windows")
     def test_mixed_good_and_bad_files_in_batch(
         self,
         stub_all_models: None,

@@ -223,7 +223,7 @@ class TestFileReaders:
     @patch("file_organizer.utils.readers.ebook.epub", create=True)
     def test_read_ebook_file(self, mock_epub: MagicMock, tmp_path: Path) -> None:
         """Test reading EPUB."""
-        # Skip if ebooklib not available - See #1036
+        # Skip if ebooklib not available - See #1079
         ebooklib = pytest.importorskip("ebooklib")
         mock_book = MagicMock()
         mock_item = MagicMock()

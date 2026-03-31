@@ -20,7 +20,7 @@ class TestVideoMetadataPlaceholder:
         except ImportError:
             pytest.skip("Video metadata extraction not yet implemented (Phase 3)")
 
-    @pytest.mark.skip(reason="See #1029 - Phase 3 video metadata extraction not yet implemented")
+    @pytest.mark.skip(reason="See #1073 - Phase 3 video metadata extraction not yet implemented")
     def test_extract_mp4_metadata(self, tmp_path):
         """Test extracting metadata from MP4 file."""
         from file_organizer.services.vision_processor import VisionProcessor
@@ -34,7 +34,7 @@ class TestVideoMetadataPlaceholder:
         assert "duration" in metadata
         assert "resolution" in metadata
 
-    @pytest.mark.skip(reason="See #1029 - Phase 3 video metadata extraction not yet implemented")
+    @pytest.mark.skip(reason="See #1073 - Phase 3 video metadata extraction not yet implemented")
     def test_extract_resolution(self, tmp_path):
         """Test extracting video resolution."""
         from file_organizer.services.vision_processor import VisionProcessor
@@ -48,7 +48,7 @@ class TestVideoMetadataPlaceholder:
         assert "width" in metadata
         assert "height" in metadata
 
-    @pytest.mark.skip(reason="See #1029 - Phase 3 video codec detection not yet implemented")
+    @pytest.mark.skip(reason="See #1073 - Phase 3 video codec detection not yet implemented")
     def test_detect_codec(self, tmp_path):
         """Test detecting video codec."""
         from file_organizer.services.vision_processor import VisionProcessor

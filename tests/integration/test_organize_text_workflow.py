@@ -97,7 +97,7 @@ class TestTextWorkflowsIntegration:
         assert (source_dir / "report.txt").exists()
 
     @pytest.mark.skipif(
-        sys.platform == "win32", reason="See #1040 - Hardlinks require admin privileges on Windows"
+        sys.platform == "win32", reason="See #1082 - Hardlinks require admin privileges on Windows"
     )
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")

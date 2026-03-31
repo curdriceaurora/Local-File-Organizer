@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="See #1041 - macOS-only Quick Action feature")
+@pytest.mark.skipif(sys.platform != "darwin", reason="See #1083 - macOS-only Quick Action feature")
 class TestMacOSQuickAction(unittest.TestCase):
     def setUp(self):
         self.macos_dir = Path("desktop/context-menus/macos")

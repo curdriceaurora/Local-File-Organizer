@@ -86,7 +86,7 @@ class TestFilesSorting:
 
     @pytest.mark.skipif(
         platform.system() in ("Windows", "Darwin"),
-        reason="See #1043 - Creation time sorting is flaky on Windows/macOS: st_birthtime and st_ctime "
+        reason="See #1085 - Creation time sorting is flaky on Windows/macOS: st_birthtime and st_ctime "
         "don't reliably match st_mtime (used by os.utime). Skip on these platforms.",
     )
     def test_files_sort_by_created(self, tmp_path: Path, web_client_builder) -> None:
@@ -243,7 +243,7 @@ class TestFilesSSEHandling:
     #     # Endpoint should exist or be explicitly not implemented
     #     assert response.status_code in (200, 404)
 
-    @pytest.mark.skip(reason="See #1033 - SSE routes for file browser not yet implemented")
+    @pytest.mark.skip(reason="See #1076 - SSE routes for file browser not yet implemented")
     def test_files_sse_placeholder(self) -> None:
         """Placeholder test for SSE handling until SSE routes are implemented."""
 

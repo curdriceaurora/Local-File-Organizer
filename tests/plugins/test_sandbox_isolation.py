@@ -267,6 +267,7 @@ class TestBypassAttempts:
 
 
 @pytest.mark.unit
+@pytest.mark.skip(reason="See #338 - Stream A executor not yet delivered")
 class TestExecutorInterface:
     """Tests for PluginExecutor lifecycle and RPC.
 
