@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ci_shard_paths.sh — single source of truth for the 4-shard test-directory split.
 #
-# Usage: source scripts/ci_shard_paths.sh <shard_number>
-#        echo "$PATHS"   # space-separated list of test directories
+# Usage: bash scripts/ci_shard_paths.sh <shard_number>
+# Prints a space-separated list of pytest path arguments to stdout.
 #
 # Both ci.yml (push) and ci-full.yml (daily) import this script so the mapping
 # stays in sync.  When test directories are added or moved, update ONLY this

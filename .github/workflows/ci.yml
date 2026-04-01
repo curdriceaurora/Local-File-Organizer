@@ -29,7 +29,6 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
-  actions: read  # allows benchmark job to download baseline artifacts from prior runs
 
 jobs:
   changes:
@@ -367,15 +366,24 @@ jobs:
           {chr(10).join(rows) if rows else "| (no benchmarks in common) | — | — | — |"}
 
           > Advisory only — does not block merge.
+
+          <!-- benchmark-comment -->
           """
           with open("/tmp/benchmark-comment.md", "w") as f:
               f.write("\n".join(line.lstrip() for line in body.splitlines()))
           PYEOF
           python3 /tmp/compare_benchmarks.py "$BASELINE" "$CURRENT"
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --body-file /tmp/benchmark-comment.md --edit-last 2>/dev/null \
-            || gh pr comment "${{ github.event.pull_request.number }}" \
-               --body-file /tmp/benchmark-comment.md
+          # Use marker-based update so we always edit the benchmark comment
+          # specifically, not whichever automation comment happened to be last.
+          PR_NUM="${{ github.event.pull_request.number }}"
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUM}/comments" \
+            --jq '[.[] | select(.body | contains("<!-- benchmark-comment -->"))][0].id // empty')
+          if [ -n "$COMMENT_ID" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              --field body="$(cat /tmp/benchmark-comment.md)"
+          else
+            gh pr comment "$PR_NUM" --body-file /tmp/benchmark-comment.md
+          fi
       - name: Upload benchmark results (main only)
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
