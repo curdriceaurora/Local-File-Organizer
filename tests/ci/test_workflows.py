@@ -9,8 +9,6 @@ because ``on`` is a boolean literal in YAML 1.1.  The helper
 
 from __future__ import annotations
 
-import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +41,48 @@ def get_triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(triggers, dict):
         return {}
     return triggers
+
+
+def assert_artifact_naming_contract(
+    shard_job: dict[str, Any],
+    gate_job: dict[str, Any],
+    expected_prefix: str,
+    shard_job_name: str,
+) -> None:
+    """Assert that the coverage upload and download artifact names share a prefix.
+
+    Verifies that the shard job uploads with a name starting with *expected_prefix*
+    and that the coverage-gate job downloads with a pattern starting with the same
+    prefix, so a rename in one place cannot silently break aggregation.
+    """
+    upload_step = next(
+        (
+            s
+            for s in shard_job.get("steps", [])
+            if isinstance(s, dict) and "upload-artifact" in str(s.get("uses", ""))
+        ),
+        None,
+    )
+    assert upload_step is not None, f"'{shard_job_name}' must have an upload-artifact step"
+    upload_name: str = upload_step.get("with", {}).get("name", "")
+    assert upload_name.startswith(expected_prefix), (
+        f"Upload artifact name must start with '{expected_prefix}', got '{upload_name}'"
+    )
+    download_step = next(
+        (
+            s
+            for s in gate_job.get("steps", [])
+            if isinstance(s, dict) and "download-artifact" in str(s.get("uses", ""))
+        ),
+        None,
+    )
+    assert download_step is not None, (
+        f"coverage-gate for '{shard_job_name}' must have a download-artifact step"
+    )
+    download_pattern: str = download_step.get("with", {}).get("pattern", "")
+    assert download_pattern.startswith(expected_prefix), (
+        f"Download pattern must start with '{expected_prefix}', got '{download_pattern}'"
+    )
 
 
 def get_effective_env(
@@ -119,78 +159,74 @@ class TestCIWorkflow:
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
     def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
-        """Verify CI test job dynamically selects Python versions by event type.
+        """Verify the split PR/push test structure uses correct Python versions.
 
-        The test matrix uses a GitHub Actions expression to select versions:
-        - Pull requests: 3.11 only (faster feedback)
-        - Full runs (push): 3.11 and 3.12 (comprehensive testing)
+        ci.yml uses two separate jobs:
+        - 'test': PR-only, Python 3.11 only (fast feedback, ~2 400 tests)
+        - 'test-full': push-only, 4 shards x Python 3.11+3.12 (~17 000 tests)
+
+        This replaces the old single 'test' job that used a conditional matrix
+        expression and timed out due to GC pressure with 17 000 tests/2 workers.
         """
         jobs = workflow.get("jobs", {})
-        assert "test" in jobs, "CI workflow should have a 'test' job"
+
+        # --- PR job: test ---
+        assert "test" in jobs, "CI workflow must have a 'test' job for PR runs"
         test_job = jobs["test"]
 
-        # Ensure the test job uses a matrix strategy with Python versions
+        # Must be restricted to pull_request events
+        assert test_job.get("if") == "github.event_name == 'pull_request'", (
+            "'test' job must have if: github.event_name == 'pull_request'"
+        )
+
+        # Must use Python 3.11 only (speed; 3.12 is covered by test-full)
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
-        python_versions_value = matrix.get("python-version", [])
-
-        # Handle both static lists and GitHub Actions expressions
-        if isinstance(python_versions_value, str):
-            # This is a GitHub Actions expression like:
-            # ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
-            assert python_versions_value.startswith("${{"), (
-                "python-version should be a GitHub Actions expression starting with ${{ "
-                f"but got: {python_versions_value}"
-            )
-            # Verify the expression contains pull_request handling
-            assert "pull_request" in python_versions_value, (
-                "Expression should handle pull_request events differently"
-            )
-
-            # Parse the fromJson payloads to validate version arrays
-            fromjson_pattern = r"fromJson\('(\[.*?\])'\)"
-            matches = re.findall(fromjson_pattern, python_versions_value)
-            assert len(matches) == 2, (
-                f"Expected 2 fromJson(...) payloads in expression, found {len(matches)}"
-            )
-
-            # Parse JSON arrays and validate versions
-            arrays = [json.loads(match) for match in matches]
-            assert ["3.11"] in arrays, "Expression must include fromJson('[\"3.11\"]') for PR runs"
-            assert ["3.11", "3.12"] in arrays, (
-                'Expression must include fromJson(\'["3.11", "3.12"]\') for full runs'
-            )
-        else:
-            # If it's a static list (shouldn't be in this workflow)
-            python_versions = (
-                python_versions_value
-                if isinstance(python_versions_value, list)
-                else [python_versions_value]
-            )
-            assert python_versions == ["3.11", "3.12"], (
-                f'CI \'test\' job must use exactly ["3.11", "3.12"], got {python_versions}'
-            )
-
-        # Verify the setup-python step uses the matrix variable
-        steps = test_job.get("steps", [])
-        assert isinstance(steps, list), "CI 'test' job must define a list of steps"
-
-        setup_python_step = None
-        for step in steps:
-            uses = step.get("uses")
-            if isinstance(uses, str) and "actions/setup-python" in uses:
-                setup_python_step = step
-                break
-
-        assert setup_python_step is not None, (
-            "CI 'test' job must include an actions/setup-python step"
+        python_versions = matrix.get("python-version", [])
+        assert python_versions == ["3.11"], (
+            f"'test' (PR) job must use [\"3.11\"] only, got {python_versions}"
         )
 
-        with_section = setup_python_step.get("with", {})
-        python_version = with_section.get("python-version")
-        assert python_version == "${{ matrix.python-version }}", (
-            "CI 'test' job must use matrix.python-version variable"
+        # Must have a timeout to prevent indefinite hangs
+        assert test_job.get("timeout-minutes") is not None, "'test' job must set timeout-minutes"
+
+        # --- push job: test-full ---
+        assert "test-full" in jobs, "CI workflow must have a 'test-full' job for push runs"
+        full_job = jobs["test-full"]
+
+        # Must be restricted to push events
+        assert full_job.get("if") == "github.event_name == 'push'", (
+            "'test-full' job must have if: github.event_name == 'push'"
         )
+
+        # Must run both Python versions
+        full_strategy = full_job.get("strategy", {})
+        full_matrix = full_strategy.get("matrix", {})
+        full_python = full_matrix.get("python-version", [])
+        assert set(full_python) == {"3.11", "3.12"}, (
+            f"'test-full' job must include both 3.11 and 3.12, got {full_python}"
+        )
+
+        # Must use 4 shards (to keep per-worker memory below GC hang threshold)
+        shards = full_matrix.get("shard", [])
+        assert shards == [1, 2, 3, 4], (
+            f"'test-full' job must define shards [1, 2, 3, 4], got {shards}"
+        )
+
+        # Must have a hard timeout
+        assert full_job.get("timeout-minutes") is not None, (
+            "'test-full' job must set timeout-minutes to prevent GC-finaliser hangs"
+        )
+
+        # Must have a coverage-gate job that aggregates shard artifacts
+        assert "coverage-gate" in jobs, "CI workflow must have a 'coverage-gate' job for push runs"
+        assert jobs["coverage-gate"].get("needs") == "test-full", (
+            "'coverage-gate' must depend on 'test-full'"
+        )
+
+        # Artifact naming contract: upload name prefix must match download pattern
+        # so coverage aggregation cannot silently break from a rename in one place.
+        assert_artifact_naming_contract(full_job, jobs["coverage-gate"], "coverage-", "test-full")
 
     def test_ci_uses_pip_caching(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow uses pip caching for performance."""
@@ -328,16 +364,42 @@ class TestCIFullWorkflow:
             "CI Full should support workflow_dispatch for manual triggers"
         )
 
-    def test_ci_full_no_linux_matrix_duplication(self, workflow: dict[str, Any]) -> None:
-        """Verify ci-full.yml does NOT duplicate the Linux matrix from ci.yml.
+    def test_ci_full_has_linux_shards(self, workflow: dict[str, Any]) -> None:
+        """Verify ci-full.yml includes the Linux full-suite sharded job.
 
-        Issue #474: ci.yml owns Linux 3.11/3.12 (push + PR). ci-full.yml covers
-        macOS and Windows only to avoid duplicate daily compute.
+        The daily run validates the full ~17 000-test suite on Linux using the
+        same 4-shard matrix as the push CI in ci.yml.  This replaces the old
+        design where ci.yml owned all Linux testing — that design never
+        completed because 17 000 tests/2 workers triggered a GC-finaliser hang.
         """
         jobs = workflow.get("jobs", {})
-        assert "test-matrix" not in jobs, (
-            "CI Full must NOT have a 'test-matrix' job — Linux matrix belongs to ci.yml. "
-            "See Issue #474."
+        assert "test-linux-full" in jobs, (
+            "CI Full must have a 'test-linux-full' job for the daily Linux full-suite run"
+        )
+        job = jobs["test-linux-full"]
+        strategy = job.get("strategy", {})
+        matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert set(python_versions) == {"3.11", "3.12"}, (
+            f"'test-linux-full' must include both 3.11 and 3.12, got {python_versions}"
+        )
+        shards = matrix.get("shard", [])
+        assert shards == [1, 2, 3, 4], (
+            f"'test-linux-full' shards must be [1, 2, 3, 4], got {shards}"
+        )
+        assert job.get("timeout-minutes") is not None, (
+            "'test-linux-full' job must set timeout-minutes"
+        )
+
+        # Must have a coverage-gate job for the daily gate
+        assert "coverage-gate" in jobs, "CI Full must have a 'coverage-gate' job"
+        assert jobs["coverage-gate"].get("needs") == "test-linux-full", (
+            "'coverage-gate' must depend on 'test-linux-full'"
+        )
+
+        # Artifact naming contract: upload name prefix must match download pattern.
+        assert_artifact_naming_contract(
+            job, jobs["coverage-gate"], "daily-coverage-", "test-linux-full"
         )
 
     def test_ci_full_platform_jobs_do_not_collect_coverage(self, workflow: dict[str, Any]) -> None:

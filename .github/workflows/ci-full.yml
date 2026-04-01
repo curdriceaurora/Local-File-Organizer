@@ -13,12 +13,83 @@ permissions:
   contents: read
 
 jobs:
-  # Linux Python 3.11/3.12 matrix is owned by ci.yml (runs on push + PR).
-  # ci-full.yml covers the extended platform matrix: macOS and Windows.
+  # Linux full-suite (4 shards, Python 3.11 + 3.12) — same shard split as ci.yml push jobs.
+  # macOS and Windows run the portable ci/smoke subset only.
+
+  test-linux-full:
+    name: "Test Linux (shard ${{ matrix.shard }}, py${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    # 20-minute hard cap prevents the GC-finaliser hang that occurs when all
+    # 17 000+ tests share 2 xdist workers on a single job.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev,search]"
+          pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run test shard
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Shard → directory mapping lives in scripts/ci_shard_paths.sh so both
+          # ci.yml and ci-full.yml stay in sync from a single source of truth.
+          PATHS=$(bash scripts/ci_shard_paths.sh "${{ matrix.shard }}")
+          pytest $PATHS --strict-markers -m "not benchmark and not e2e" \
+            --cov=file_organizer --cov-report= \
+            --timeout=30 -n=auto --override-ini="addopts="
+          mv .coverage .coverage.shard-${{ matrix.shard }}
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-coverage-${{ matrix.python-version }}-${{ matrix.shard }}
+          path: .coverage.shard-${{ matrix.shard }}
+          retention-days: 1
+
+  coverage-gate:
+    name: "Coverage gate (py3.11)"
+    needs: test-linux-full
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Download coverage data (py3.11 shards)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: daily-coverage-3.11-*
+          merge-multiple: true
+      - name: Combine and enforce gate
+        # Intentionally no `coverage xml` / Codecov upload here — the daily run
+        # enforces the gate only.  Codecov upload lives in ci.yml (push to main).
+        run: |
+          coverage combine .coverage.shard-*
+          coverage report --fail-under=93
 
   test-macos:
     name: Test macOS (Python 3.12)
     runs-on: macos-latest
+    timeout-minutes: 20
     env:
       PYTHONUTF8: "1"
     steps:
@@ -31,16 +102,22 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
-        # Full repo tests include Linux- and POSIX-assumption suites.
-        # CI Full's cross-platform contract is to validate the portable CI/smoke subset on macOS/Windows.
+        # CI Full's cross-platform contract: validate the portable ci/smoke subset on macOS.
         run: pytest tests/ --strict-markers --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"
 
   test-windows:
     name: Test Windows (Python 3.12)
     runs-on: windows-latest
+    timeout-minutes: 20
     env:
       PYTHONUTF8: "1"
     steps:
@@ -53,13 +130,17 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
-        # Full repo tests include Linux- and POSIX-assumption suites.
-        # CI Full's cross-platform contract is to validate the portable CI/smoke subset on macOS/Windows.
-        # -n=auto is intentionally omitted on Windows: pytest-xdist worker shutdown on Windows
-        # propagates CTRL_C_EVENT as KeyboardInterrupt in threading.Event.wait(), causing exit
-        # code 1 even when all tests pass. The ci/smoke subset is small enough (~61 tests) that
-        # parallelism provides no benefit.
-        run: pytest tests/ --timeout=30 --override-ini="addopts=" -m "ci or smoke"
+        # CI Full's cross-platform contract: validate the portable ci/smoke subset on Windows.
+        # -n=auto intentionally omitted: xdist worker shutdown on Windows propagates
+        # CTRL_C_EVENT as KeyboardInterrupt, causing exit code 1 when all tests pass.
+        # The ci/smoke subset (~61 tests) is small enough that parallelism adds no benefit.
+        run: pytest tests/ --strict-markers --timeout=30 --override-ini="addopts=" -m "ci or smoke"

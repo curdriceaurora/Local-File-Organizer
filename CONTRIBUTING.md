@@ -220,20 +220,21 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 | Workflow | File | Triggers | What it runs |
 |----------|------|----------|-------------|
-| **CI** | `.github/workflows/ci.yml` | push to `main`, PRs | Lint + non-benchmark tests (Linux 3.11/3.12), benchmark-only lane (no xdist), docstring coverage, Rust desktop checks for desktop-related changes |
-| **CI Full Matrix** | `.github/workflows/ci-full.yml` | daily (06:00 UTC), manual | Extended platform: macOS + Windows (Python 3.12) |
+| **CI** | `.github/workflows/ci.yml` | push to `main`, PRs | Lint; PR suite (Python 3.11, ci marker); push suite (4 shards × Python 3.11+3.12, `not benchmark and not e2e`); coverage-gate job; benchmark-only lane; Rust desktop checks |
+| **CI Full Matrix** | `.github/workflows/ci-full.yml` | daily (06:00 UTC), manual | Linux full-suite (4 shards × Python 3.11+3.12) + coverage gate; macOS + Windows cross-platform (Python 3.12, ci/smoke markers) |
 | **Security** | `.github/workflows/security.yml` | weekly (Monday), PRs | pip-audit + bandit + CodeQL |
 
 **Rule**: each check lives in exactly one workflow.
 
-- `ci.yml` is the *fast-path gate*: runs on every push and PR, covers the primary
-  Linux matrix. Coverage, lint, and docstring thresholds live here.
-- `ci.yml` test split:
-  - non-benchmark lane uses xdist (`-n=auto`) and excludes benchmark tests
+- `ci.yml` is the *fast-path gate*: runs on PRs and pushes to `main`.
+  - **PR test lane**: single Python 3.11 job, `ci` marker only (~2 400 tests), diff-coverage gate
+  - **Push to main**: 4 parallel shards × Python 3.11+3.12, each ~4 000 tests with
+    `timeout-minutes: 20`; a separate `coverage-gate` job merges `.coverage` artifacts
+    and enforces the 93% floor. Sharding prevents the GC-finaliser hang that occurred
+    when all 17 000+ tests shared 2 xdist workers in a single job.
   - benchmark-only lane runs without xdist (`--benchmark-only`)
-  - on PRs, benchmark lane runs when benchmark surfaces change; on `main`, it runs as a dedicated lane
-- `ci-full.yml` is the *breadth gate*: runs daily to catch platform-specific regressions
-  on macOS and Windows. It does **not** duplicate the Linux matrix.
+- `ci-full.yml` is the *breadth gate*: runs daily and includes the same 4-shard Linux
+  full-suite run plus macOS and Windows cross-platform validation.
 - `security.yml` owns all security tooling.
 
 `scripts/test-local-matrix.sh` mirrors the Python matrix locally on the host OS.

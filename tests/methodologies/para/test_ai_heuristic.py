@@ -1387,7 +1387,7 @@ class TestPlatformSpecificBranches:
 
         # Monkeypatch both os.name and Path.stat
         monkeypatch.setattr(os, "name", "nt")
-        monkeypatch.setattr(Path, "stat", lambda self, *args, **kwargs: MockStat())
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat())
 
         h = TemporalHeuristic(weight=0.25)
         result = h.evaluate(f)
@@ -1418,7 +1418,7 @@ class TestPlatformSpecificBranches:
 
         # Monkeypatch both os.name and Path.stat
         monkeypatch.setattr(os, "name", "posix")
-        monkeypatch.setattr(Path, "stat", lambda self, *args, **kwargs: MockStat())
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat())
 
         h = TemporalHeuristic(weight=0.25)
         result = h.evaluate(f)
@@ -1455,7 +1455,7 @@ class TestPlatformSpecificBranches:
             st_birthtime = birthtime_120_days_ago
             st_mode = real_mode  # required by Path.is_dir() via pathlib internals
 
-        monkeypatch.setattr(Path, "stat", lambda self, *args, **kwargs: MockStat())
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat())
 
         h = TemporalHeuristic(weight=0.25)
         result = h.evaluate(f)
