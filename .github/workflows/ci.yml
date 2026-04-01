@@ -182,7 +182,7 @@ jobs:
       - name: Run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+        run: pytest tests/ --strict-markers -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
       - name: Diff coverage gate
         # Checks that lines added/changed in this PR are ≥80% covered.
         # Uses the ci-suite coverage.xml generated above — fast, no full-suite re-run.
@@ -227,21 +227,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Shards are split by directory to keep per-worker memory below the
-          # threshold that triggers Python GC finaliser hangs.
-          #
-          # Approximate test-function counts per shard (grep "def test_"):
-          #   shard 1 — integration/          ~4 400
-          #   shard 2 — services/ models/ events/ optimization/  ~4 200
-          #   shard 3 — api/ cli/ methodologies/ web/ ci/ unit/  ~4 100
-          #   shard 4 — everything else + root test_*.py          ~4 000
-          case "${{ matrix.shard }}" in
-            1) PATHS="tests/integration" ;;
-            2) PATHS="tests/services tests/models tests/events tests/optimization" ;;
-            3) PATHS="tests/api tests/cli tests/methodologies tests/web tests/ci tests/unit" ;;
-            4) PATHS="tests/plugins tests/tui tests/parallel tests/pipeline tests/utils tests/undo tests/history tests/daemon tests/deploy tests/watcher tests/updater tests/core tests/config tests/client tests/docs tests/desktop tests/integrations tests/test_*.py" ;;
-          esac
-          pytest $PATHS -m "not benchmark and not e2e" \
+          # Shard → directory mapping lives in scripts/ci_shard_paths.sh so both
+          # ci.yml and ci-full.yml stay in sync from a single source of truth.
+          PATHS=$(bash scripts/ci_shard_paths.sh "${{ matrix.shard }}")
+          pytest $PATHS --strict-markers -m "not benchmark and not e2e" \
             --cov=file_organizer --cov-report= \
             --timeout=30 -n=auto --override-ini="addopts="
           # Rename .coverage so artifacts from all shards have distinct names
@@ -290,6 +279,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      contents: read        # required by actions/checkout
       pull-requests: write  # post advisory comparison comment on PRs
       actions: read         # download benchmark-baseline artifact from prior main runs
     steps:

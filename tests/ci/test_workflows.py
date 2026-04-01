@@ -176,6 +176,12 @@ class TestCIWorkflow:
             "'test-full' job must set timeout-minutes to prevent GC-finaliser hangs"
         )
 
+        # Must have a coverage-gate job that aggregates shard artifacts
+        assert "coverage-gate" in jobs, "CI workflow must have a 'coverage-gate' job for push runs"
+        assert jobs["coverage-gate"].get("needs") == "test-full", (
+            "'coverage-gate' must depend on 'test-full'"
+        )
+
     def test_ci_uses_pip_caching(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow uses pip caching for performance."""
         workflow_text = yaml.dump(workflow)
@@ -327,12 +333,22 @@ class TestCIFullWorkflow:
         job = jobs["test-linux-full"]
         strategy = job.get("strategy", {})
         matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert set(python_versions) == {"3.11", "3.12"}, (
+            f"'test-linux-full' must include both 3.11 and 3.12, got {python_versions}"
+        )
         shards = matrix.get("shard", [])
         assert shards == [1, 2, 3, 4], (
             f"'test-linux-full' shards must be [1, 2, 3, 4], got {shards}"
         )
         assert job.get("timeout-minutes") is not None, (
             "'test-linux-full' job must set timeout-minutes"
+        )
+
+        # Must have a coverage-gate job for the daily gate
+        assert "coverage-gate" in jobs, "CI Full must have a 'coverage-gate' job"
+        assert jobs["coverage-gate"].get("needs") == "test-linux-full", (
+            "'coverage-gate' must depend on 'test-linux-full'"
         )
 
     def test_ci_full_platform_jobs_do_not_collect_coverage(self, workflow: dict[str, Any]) -> None:

@@ -49,13 +49,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          case "${{ matrix.shard }}" in
-            1) PATHS="tests/integration" ;;
-            2) PATHS="tests/services tests/models tests/events tests/optimization" ;;
-            3) PATHS="tests/api tests/cli tests/methodologies tests/web tests/ci tests/unit" ;;
-            4) PATHS="tests/plugins tests/tui tests/parallel tests/pipeline tests/utils tests/undo tests/history tests/daemon tests/deploy tests/watcher tests/updater tests/core tests/config tests/client tests/docs tests/desktop tests/integrations tests/test_*.py" ;;
-          esac
-          pytest $PATHS -m "not benchmark and not e2e" \
+          # Shard → directory mapping lives in scripts/ci_shard_paths.sh so both
+          # ci.yml and ci-full.yml stay in sync from a single source of truth.
+          PATHS=$(bash scripts/ci_shard_paths.sh "${{ matrix.shard }}")
+          pytest $PATHS --strict-markers -m "not benchmark and not e2e" \
             --cov=file_organizer --cov-report= \
             --timeout=30 -n=auto --override-ini="addopts="
           mv .coverage .coverage.shard-${{ matrix.shard }}
@@ -146,4 +143,4 @@ jobs:
         # -n=auto intentionally omitted: xdist worker shutdown on Windows propagates
         # CTRL_C_EVENT as KeyboardInterrupt, causing exit code 1 when all tests pass.
         # The ci/smoke subset (~61 tests) is small enough that parallelism adds no benefit.
-        run: pytest tests/ --timeout=30 --override-ini="addopts=" -m "ci or smoke"
+        run: pytest tests/ --strict-markers --timeout=30 --override-ini="addopts=" -m "ci or smoke"

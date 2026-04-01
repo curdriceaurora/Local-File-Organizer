@@ -226,8 +226,8 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 **Rule**: each check lives in exactly one workflow.
 
-- `ci.yml` is the *fast-path gate*: runs on every push and PR.
-  - **PRs**: single job, Python 3.11, `ci` marker only (~2 400 tests), diff-coverage gate
+- `ci.yml` is the *fast-path gate*: runs on PRs and pushes to `main`.
+  - **PR test lane**: single Python 3.11 job, `ci` marker only (~2 400 tests), diff-coverage gate
   - **Push to main**: 4 parallel shards × Python 3.11+3.12, each ~4 000 tests with
     `timeout-minutes: 20`; a separate `coverage-gate` job merges `.coverage` artifacts
     and enforces the 93% floor. Sharding prevents the GC-finaliser hang that occurred
