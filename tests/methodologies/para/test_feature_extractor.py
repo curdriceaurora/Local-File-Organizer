@@ -588,7 +588,7 @@ class TestEdgeCasesAndErrorHandling:
         # Mock os module in the feature_extractor namespace
         monkeypatch.setattr(fe_module.os, "name", "nt")
         monkeypatch.setattr(fe_module.time, "time", lambda: now)
-        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
         # Mock hasattr to return False for st_birthtime
         original_hasattr = builtins.hasattr
@@ -630,7 +630,7 @@ class TestEdgeCasesAndErrorHandling:
         # Mock os module in the feature_extractor namespace
         monkeypatch.setattr(fe_module.os, "name", "posix")
         monkeypatch.setattr(fe_module.time, "time", lambda: now)
-        monkeypatch.setattr(Path, "stat", lambda _self: MockStat(now=now))
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
         # Mock hasattr to return False for st_birthtime
         original_hasattr = builtins.hasattr
