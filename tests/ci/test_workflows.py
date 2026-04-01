@@ -43,6 +43,48 @@ def get_triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     return triggers
 
 
+def assert_artifact_naming_contract(
+    shard_job: dict[str, Any],
+    gate_job: dict[str, Any],
+    expected_prefix: str,
+    shard_job_name: str,
+) -> None:
+    """Assert that the coverage upload and download artifact names share a prefix.
+
+    Verifies that the shard job uploads with a name starting with *expected_prefix*
+    and that the coverage-gate job downloads with a pattern starting with the same
+    prefix, so a rename in one place cannot silently break aggregation.
+    """
+    upload_step = next(
+        (
+            s
+            for s in shard_job.get("steps", [])
+            if isinstance(s, dict) and "upload-artifact" in str(s.get("uses", ""))
+        ),
+        None,
+    )
+    assert upload_step is not None, f"'{shard_job_name}' must have an upload-artifact step"
+    upload_name: str = upload_step.get("with", {}).get("name", "")
+    assert upload_name.startswith(expected_prefix), (
+        f"Upload artifact name must start with '{expected_prefix}', got '{upload_name}'"
+    )
+    download_step = next(
+        (
+            s
+            for s in gate_job.get("steps", [])
+            if isinstance(s, dict) and "download-artifact" in str(s.get("uses", ""))
+        ),
+        None,
+    )
+    assert download_step is not None, (
+        f"coverage-gate for '{shard_job_name}' must have a download-artifact step"
+    )
+    download_pattern: str = download_step.get("with", {}).get("pattern", "")
+    assert download_pattern.startswith(expected_prefix), (
+        f"Download pattern must start with '{expected_prefix}', got '{download_pattern}'"
+    )
+
+
 def get_effective_env(
     workflow: dict[str, Any], job: dict[str, Any], step: dict[str, Any]
 ) -> dict[str, Any]:
@@ -121,7 +163,7 @@ class TestCIWorkflow:
 
         ci.yml uses two separate jobs:
         - 'test': PR-only, Python 3.11 only (fast feedback, ~2 400 tests)
-        - 'test-full': push-only, 4 shards × Python 3.11+3.12 (~17 000 tests)
+        - 'test-full': push-only, 4 shards x Python 3.11+3.12 (~17 000 tests)
 
         This replaces the old single 'test' job that used a conditional matrix
         expression and timed out due to GC pressure with 17 000 tests/2 workers.
@@ -184,32 +226,7 @@ class TestCIWorkflow:
 
         # Artifact naming contract: upload name prefix must match download pattern
         # so coverage aggregation cannot silently break from a rename in one place.
-        upload_step = next(
-            (
-                s
-                for s in full_job.get("steps", [])
-                if isinstance(s, dict) and "upload-artifact" in str(s.get("uses", ""))
-            ),
-            None,
-        )
-        assert upload_step is not None, "'test-full' must have an upload-artifact step"
-        upload_name: str = upload_step.get("with", {}).get("name", "")
-        assert upload_name.startswith("coverage-"), (
-            f"Upload artifact name must start with 'coverage-', got '{upload_name}'"
-        )
-        download_step = next(
-            (
-                s
-                for s in jobs["coverage-gate"].get("steps", [])
-                if isinstance(s, dict) and "download-artifact" in str(s.get("uses", ""))
-            ),
-            None,
-        )
-        assert download_step is not None, "'coverage-gate' must have a download-artifact step"
-        download_pattern: str = download_step.get("with", {}).get("pattern", "")
-        assert download_pattern.startswith("coverage-"), (
-            f"Download pattern must start with 'coverage-', got '{download_pattern}'"
-        )
+        assert_artifact_naming_contract(full_job, jobs["coverage-gate"], "coverage-", "test-full")
 
     def test_ci_uses_pip_caching(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow uses pip caching for performance."""
@@ -381,33 +398,8 @@ class TestCIFullWorkflow:
         )
 
         # Artifact naming contract: upload name prefix must match download pattern.
-        upload_step = next(
-            (
-                s
-                for s in job.get("steps", [])
-                if isinstance(s, dict) and "upload-artifact" in str(s.get("uses", ""))
-            ),
-            None,
-        )
-        assert upload_step is not None, "'test-linux-full' must have an upload-artifact step"
-        upload_name: str = upload_step.get("with", {}).get("name", "")
-        assert upload_name.startswith("daily-coverage-"), (
-            f"Upload artifact name must start with 'daily-coverage-', got '{upload_name}'"
-        )
-        download_step = next(
-            (
-                s
-                for s in jobs["coverage-gate"].get("steps", [])
-                if isinstance(s, dict) and "download-artifact" in str(s.get("uses", ""))
-            ),
-            None,
-        )
-        assert download_step is not None, (
-            "'coverage-gate' (ci-full) must have a download-artifact step"
-        )
-        download_pattern: str = download_step.get("with", {}).get("pattern", "")
-        assert download_pattern.startswith("daily-coverage-"), (
-            f"Download pattern must start with 'daily-coverage-', got '{download_pattern}'"
+        assert_artifact_naming_contract(
+            job, jobs["coverage-gate"], "daily-coverage-", "test-linux-full"
         )
 
     def test_ci_full_platform_jobs_do_not_collect_coverage(self, workflow: dict[str, Any]) -> None:
