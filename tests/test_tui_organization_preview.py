@@ -16,7 +16,7 @@ from file_organizer.tui.organization_preview import (
 
 def _get_content(widget: object) -> str:
     """Extract the text content from a Static widget."""
-    # Textual stores update() content as name-mangled __content
+    # Textual stores update() content in the _content attribute
     return str(getattr(widget, "_content", ""))
 
 
