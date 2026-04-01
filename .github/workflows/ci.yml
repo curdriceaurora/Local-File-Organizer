@@ -29,6 +29,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
+  actions: read  # allows benchmark job to download baseline artifacts from prior runs
 
 jobs:
   changes:
@@ -130,12 +131,14 @@ jobs:
           echo "✅ All documentation links are valid"
 
   test:
-    name: Test non-benchmark suite
+    name: "Test PR suite (py${{ matrix.python-version }})"
     needs: changes
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
-        python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -158,46 +161,137 @@ jobs:
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
       - name: Verify test dependencies
         run: |
-          # Verify pytest-asyncio is properly installed and can be imported
-          python -c "import pytest_asyncio; print(f'pytest-asyncio {pytest_asyncio.__version__} loaded successfully')"
-          python -c "import faker; print(f'faker loaded successfully')"
-          # Verify pytest can collect tests without errors (validates plugin registration)
-          pytest --collect-only --quiet --ignore=tests/e2e | head -20
+          # Fast plugin registration check — replaces the former pytest --collect-only
+          # scan which took 5-6 minutes on CI to import all test files.
+          python -c "
+          import importlib.metadata, pytest_asyncio, faker
+          plugins = {ep.name for ep in importlib.metadata.entry_points(group='pytest11')}
+          assert 'asyncio' in plugins, f'pytest-asyncio not registered as pytest plugin; found: {plugins}'
+          print(f'pytest-asyncio {pytest_asyncio.__version__} registered as plugin')
+          print(f'faker {importlib.metadata.version(\"faker\")} importable')
+          "
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
         # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
-          else
-            pytest tests/ -m "not benchmark and not e2e" --cov=file_organizer --cov-fail-under=93 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
-          fi
-      - name: Diff coverage gate (PR only)
+        run: pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+      - name: Diff coverage gate
         # Checks that lines added/changed in this PR are ≥80% covered.
         # Uses the ci-suite coverage.xml generated above — fast, no full-suite re-run.
         # Ratchet: bump --fail-under as coverage improves. Target: 90% per issue #855.
-        if: github.event_name == 'pull_request' && matrix.python-version == '3.11'
         run: |
           pip install diff-cover --quiet
           diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
+
+  test-full:
+    name: "Test (shard ${{ matrix.shard }}, py${{ matrix.python-version }})"
+    needs: changes
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Each shard runs ~4 000 tests with -n=auto (2 workers on ubuntu-latest).
+    # 20-minute hard cap prevents the GC-finaliser hang that caused indefinite hangs
+    # when all 17 000+ tests ran in a single job with only 2 workers.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev,search]"
+          pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run test shard
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Shards are split by directory to keep per-worker memory below the
+          # threshold that triggers Python GC finaliser hangs.
+          #
+          # Approximate test-function counts per shard (grep "def test_"):
+          #   shard 1 — integration/          ~4 400
+          #   shard 2 — services/ models/ events/ optimization/  ~4 200
+          #   shard 3 — api/ cli/ methodologies/ web/ ci/ unit/  ~4 100
+          #   shard 4 — everything else + root test_*.py          ~4 000
+          case "${{ matrix.shard }}" in
+            1) PATHS="tests/integration" ;;
+            2) PATHS="tests/services tests/models tests/events tests/optimization" ;;
+            3) PATHS="tests/api tests/cli tests/methodologies tests/web tests/ci tests/unit" ;;
+            4) PATHS="tests/plugins tests/tui tests/parallel tests/pipeline tests/utils tests/undo tests/history tests/daemon tests/deploy tests/watcher tests/updater tests/core tests/config tests/client tests/docs tests/desktop tests/integrations tests/test_*.py" ;;
+          esac
+          pytest $PATHS -m "not benchmark and not e2e" \
+            --cov=file_organizer --cov-report= \
+            --timeout=30 -n=auto --override-ini="addopts="
+          # Rename .coverage so artifacts from all shards have distinct names
+          mv .coverage .coverage.shard-${{ matrix.shard }}
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}-${{ matrix.shard }}
+          path: .coverage.shard-${{ matrix.shard }}
+          retention-days: 1
+
+  coverage-gate:
+    name: "Coverage gate (py3.11)"
+    needs: test-full
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Download coverage data (py3.11 shards)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-3.11-*
+          merge-multiple: true
+      - name: Combine and enforce gate
+        run: |
+          coverage combine .coverage.shard-*
+          coverage report --fail-under=93
+          coverage xml
       - name: Check docstring coverage
-        if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
         run: interrogate -v src/ --fail-under 95
-      - name: Upload coverage
-        if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
+      - name: Upload to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2
         with:
           file: coverage.xml
           fail_ci_if_error: false
 
   test-benchmark:
-    name: Test benchmark-only suite (no xdist)
+    name: Benchmark suite
     needs: changes
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.benchmark == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pull-requests: write  # post advisory comparison comment on PRs
+      actions: read         # download benchmark-baseline artifact from prior main runs
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -206,10 +300,99 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev]"
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Download benchmark baseline (PR only)
+        # Finds the latest successful main CI run that stored a benchmark-baseline
+        # artifact and downloads it for comparison.  Skipped silently if none exists.
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=10" \
+            --jq '[.workflow_runs[] | select(.conclusion=="success")][0].id' 2>/dev/null || echo "")
+          if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+            gh run download "$RUN_ID" --name benchmark-baseline --dir benchmark-baseline/ 2>/dev/null \
+              && echo "Baseline downloaded from main run $RUN_ID" \
+              || echo "No benchmark-baseline artifact in run $RUN_ID — first-time run"
+          else
+            echo "No successful main run found — skipping baseline comparison"
+          fi
       - name: Run benchmark suite
-        run: pytest tests/ -m benchmark --benchmark-only --strict-markers --timeout=30 --override-ini="addopts="
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            OUT="benchmark-results-pr.json"
+          else
+            OUT="benchmark-results.json"
+          fi
+          pytest tests/ -m benchmark --benchmark-only --strict-markers --timeout=30 \
+            --benchmark-json="$OUT" --override-ini="addopts="
+      - name: Compare against baseline (PR only, advisory)
+        # Posts a markdown comment on the PR showing mean-time changes per benchmark.
+        # Advisory only — does not block merge.  Threshold: 🔴 >10%, 🟡 >5%, 🟢 ≤5%.
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASELINE="benchmark-baseline/benchmark-results.json"
+          CURRENT="benchmark-results-pr.json"
+          if [ ! -f "$BASELINE" ] || [ ! -f "$CURRENT" ]; then
+            echo "Skipping comparison — baseline or current results not available"
+            exit 0
+          fi
+          cat > /tmp/compare_benchmarks.py << 'PYEOF'
+          import json, sys, importlib.metadata
+          try:
+              with open(sys.argv[1]) as f:
+                  baseline = {b["name"]: b["stats"]["mean"] for b in json.load(f)["benchmarks"]}
+              with open(sys.argv[2]) as f:
+                  current = {b["name"]: b["stats"]["mean"] for b in json.load(f)["benchmarks"]}
+          except (KeyError, json.JSONDecodeError) as e:
+              print(f"Skipping comparison — could not parse benchmark results: {e}")
+              sys.exit(0)
+          rows, regressions = [], []
+          for name in sorted(set(baseline) & set(current)):
+              base, cur = baseline[name], current[name]
+              pct = (cur - base) / base * 100
+              icon = "🔴" if pct > 10 else ("🟡" if pct > 5 else "🟢")
+              rows.append(f"| `{name}` | {base*1000:.2f} ms | {cur*1000:.2f} ms | {pct:+.1f}% {icon} |")
+              if pct > 10:
+                  regressions.append(name)
+          summary = "✅ No significant regressions" if not regressions \
+              else f"⚠️ {len(regressions)} benchmark(s) regressed >10%: {', '.join(f'`{n}`' for n in regressions)}"
+          body = f"""### Benchmark Comparison (advisory)
+          {summary}
+
+          | Benchmark | Baseline | PR | Change |
+          |-----------|----------|-----|--------|
+          {chr(10).join(rows) if rows else "| (no benchmarks in common) | — | — | — |"}
+
+          > Advisory only — does not block merge.
+          """
+          with open("/tmp/benchmark-comment.md", "w") as f:
+              f.write("\n".join(line.lstrip() for line in body.splitlines()))
+          PYEOF
+          python3 /tmp/compare_benchmarks.py "$BASELINE" "$CURRENT"
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file /tmp/benchmark-comment.md --edit-last 2>/dev/null \
+            || gh pr comment "${{ github.event.pull_request.number }}" \
+               --body-file /tmp/benchmark-comment.md
+      - name: Upload benchmark results (main only)
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline
+          path: benchmark-results.json
+          retention-days: 30
 
   test-integration:
     name: Integration coverage gate
@@ -224,6 +407,12 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev,search]"
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: "Integration coverage gate (floor: 60% combined line+branch)"

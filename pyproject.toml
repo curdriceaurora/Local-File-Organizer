@@ -240,6 +240,7 @@ line-length = 100
 target-version = "py311"
 exclude = [
     ".claude/",
+    ".venv*/",
     "technical-debt/",
     "fix_coderabbit_issues.py",
     "test_preference_tracker.py",
