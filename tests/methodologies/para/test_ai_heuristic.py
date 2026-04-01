@@ -1392,8 +1392,8 @@ class TestPlatformSpecificBranches:
         h = TemporalHeuristic(weight=0.25)
         result = h.evaluate(f)
 
-        # The Windows branch should execute
-        assert result is not None
+        # Windows branch used st_ctime as creation proxy; file just created → recently_modified
+        assert "recently_modified" in result.scores[PARACategory.PROJECT].signals
 
     def test_linux_platform_stat_mtime_fallback(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1423,8 +1423,8 @@ class TestPlatformSpecificBranches:
         h = TemporalHeuristic(weight=0.25)
         result = h.evaluate(f)
 
-        # The Linux/else branch should execute
-        assert result is not None
+        # Linux branch used st_mtime as creation proxy; file just created → recently_modified
+        assert "recently_modified" in result.scores[PARACategory.PROJECT].signals
 
     def test_resource_stable_reference_signal(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
