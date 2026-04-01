@@ -28,7 +28,7 @@ case "$SHARD" in
     2) PATHS="tests/services tests/models tests/events tests/optimization" ;;
     3) PATHS="tests/api tests/web" ;;
     4) PATHS="tests/cli tests/methodologies tests/ci tests/unit tests/plugins tests/tui tests/parallel tests/pipeline" ;;
-    5) PATHS="tests/utils tests/undo tests/history tests/daemon tests/deploy tests/watcher tests/updater tests/core tests/config tests/client tests/docs tests/desktop tests/integrations tests/test_*.py" ;;
+    5) PATHS="tests/utils tests/undo tests/history tests/daemon tests/deploy tests/watcher tests/updater tests/core tests/config tests/client tests/docs tests/desktop tests/integrations tests/interfaces tests/test_*.py" ;;
     *)
         echo "Unknown shard: $SHARD (valid: 1-5)" >&2
         exit 1

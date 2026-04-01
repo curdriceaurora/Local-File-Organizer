@@ -18,6 +18,7 @@ from file_organizer.tui.audio_view import (
 
 def _get_content(panel: object) -> str:
     """Get the text content of a Static widget."""
+    # Textual stores update() content in the _content attribute
     return str(getattr(panel, "_content", ""))
 
 
