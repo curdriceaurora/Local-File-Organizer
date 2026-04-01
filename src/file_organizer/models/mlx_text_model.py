@@ -164,7 +164,7 @@ class MLXTextModel(BaseModel):
         """
         if mlx_generate is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
             raise RuntimeError("mlx_generate is None — mlx-lm is required; should not be reachable")
-        call_variants = (
+        call_variants: tuple[dict[str, Any], ...] = (
             {"max_tokens": max_tokens, "temp": temperature, "top_p": top_p, "top_k": top_k},
             {"max_tokens": max_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k},
             {"max_tokens": max_tokens, "temp": temperature},
