@@ -1274,6 +1274,7 @@ class TestPlatformSpecificPaths:
                 self.st_mtime = now - (120 * 86400)
                 self.st_atime = now - (120 * 86400)
                 self.st_ctime = now - 86400
+                self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         # Simulate Windows platform
         monkeypatch.setattr(os, "name", "nt")
@@ -1300,6 +1301,7 @@ class TestPlatformSpecificPaths:
                 self.st_mtime = now - (120 * 86400)
                 self.st_atime = now - (120 * 86400)
                 self.st_ctime = now - 86400
+                self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         # Simulate Linux platform
         monkeypatch.setattr(os, "name", "posix")
@@ -1380,6 +1382,7 @@ class TestPlatformSpecificBranches:
             st_mtime = real_stat.st_mtime
             st_atime = real_stat.st_atime
             st_ctime = real_stat.st_ctime
+            st_mode = real_stat.st_mode  # required by Path.is_dir() via pathlib internals
             # Explicitly no st_birthtime attribute
 
         # Monkeypatch both os.name and Path.stat
@@ -1410,6 +1413,7 @@ class TestPlatformSpecificBranches:
             st_mtime = real_stat.st_mtime
             st_atime = real_stat.st_atime
             st_ctime = real_stat.st_ctime
+            st_mode = real_stat.st_mode  # required by Path.is_dir() via pathlib internals
             # Explicitly no st_birthtime attribute
 
         # Monkeypatch both os.name and Path.stat
@@ -1432,6 +1436,7 @@ class TestPlatformSpecificBranches:
 
         f = tmp_path / "reference.pdf"
         f.write_text("reference")
+        real_mode = f.stat().st_mode  # capture before monkeypatching
 
         # Create a mock stat where:
         # - File was created 120 days ago (birthtime)
@@ -1448,6 +1453,7 @@ class TestPlatformSpecificBranches:
             st_atime = atime_100_days_ago
             st_ctime = birthtime_120_days_ago
             st_birthtime = birthtime_120_days_ago
+            st_mode = real_mode  # required by Path.is_dir() via pathlib internals
 
         monkeypatch.setattr(Path, "stat", lambda self: MockStat())
 
