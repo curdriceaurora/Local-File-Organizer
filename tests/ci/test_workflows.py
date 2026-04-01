@@ -163,7 +163,7 @@ class TestCIWorkflow:
 
         ci.yml uses two separate jobs:
         - 'test': PR-only, Python 3.11 only (fast feedback, ~2 400 tests)
-        - 'test-full': push-only, 4 shards x Python 3.11+3.12 (~17 000 tests)
+        - 'test-full': push-only, 5 shards x Python 3.11+3.12 (~17 000 tests)
 
         This replaces the old single 'test' job that used a conditional matrix
         expression and timed out due to GC pressure with 17 000 tests/2 workers.
@@ -207,10 +207,10 @@ class TestCIWorkflow:
             f"'test-full' job must include both 3.11 and 3.12, got {full_python}"
         )
 
-        # Must use 4 shards (to keep per-worker memory below GC hang threshold)
+        # Must use 5 shards (shard 3 is lighter to keep async-heavy api/web tests below GC hang threshold)
         shards = full_matrix.get("shard", [])
-        assert shards == [1, 2, 3, 4], (
-            f"'test-full' job must define shards [1, 2, 3, 4], got {shards}"
+        assert shards == [1, 2, 3, 4, 5], (
+            f"'test-full' job must define shards [1, 2, 3, 4, 5], got {shards}"
         )
 
         # Must have a hard timeout
@@ -368,7 +368,7 @@ class TestCIFullWorkflow:
         """Verify ci-full.yml includes the Linux full-suite sharded job.
 
         The daily run validates the full ~17 000-test suite on Linux using the
-        same 4-shard matrix as the push CI in ci.yml.  This replaces the old
+        same 5-shard matrix as the push CI in ci.yml.  This replaces the old
         design where ci.yml owned all Linux testing — that design never
         completed because 17 000 tests/2 workers triggered a GC-finaliser hang.
         """
@@ -384,8 +384,8 @@ class TestCIFullWorkflow:
             f"'test-linux-full' must include both 3.11 and 3.12, got {python_versions}"
         )
         shards = matrix.get("shard", [])
-        assert shards == [1, 2, 3, 4], (
-            f"'test-linux-full' shards must be [1, 2, 3, 4], got {shards}"
+        assert shards == [1, 2, 3, 4, 5], (
+            f"'test-linux-full' shards must be [1, 2, 3, 4, 5], got {shards}"
         )
         assert job.get("timeout-minutes") is not None, (
             "'test-linux-full' job must set timeout-minutes"

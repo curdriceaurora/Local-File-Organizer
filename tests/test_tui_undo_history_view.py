@@ -20,7 +20,7 @@ from file_organizer.tui.undo_history_view import (
 
 def _get_content(panel: object) -> str:
     """Get the text content of a Static widget."""
-    return str(getattr(panel, "_Static__content", ""))
+    return str(getattr(panel, "_content", ""))
 
 
 # ---------------------------------------------------------------------------

@@ -28,6 +28,12 @@ def _build_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient
     return TestClient(app)
 
 
+def _get_csrf_token(client: TestClient) -> str:
+    """Seed the CSRF cookie via a GET request and return the token value."""
+    client.get("/ui/marketplace")
+    return client.cookies.get("_csrf_token", "")
+
+
 @pytest.mark.unit
 class TestMarketplacePage:
     """Tests for the main marketplace page."""
@@ -156,6 +162,7 @@ class TestMarketplaceHtmxEndpoints:
     ) -> None:
         """Should support plugin installation via HTMX POST request."""
         client = _build_client(tmp_path, monkeypatch)
+        csrf_token = _get_csrf_token(client)
         # Test the install endpoint with a valid plugin name
         response = client.post(
             "/ui/marketplace/plugins/test-plugin/install",
@@ -163,6 +170,7 @@ class TestMarketplaceHtmxEndpoints:
                 "q": "",
                 "category": "",
                 "tag_csv": "",
+                "csrf_token": csrf_token,
             },
         )
         # Route always returns 200 (renders marketplace page with message)
@@ -180,6 +188,7 @@ class TestMarketplaceInstallFlow:
     ) -> None:
         """Should validate plugin before installation."""
         client = _build_client(tmp_path, monkeypatch)
+        csrf_token = _get_csrf_token(client)
         # Test that install endpoint rejects invalid plugin names or missing plugins
         response = client.post(
             "/ui/marketplace/plugins/nonexistent-plugin/install",
@@ -187,6 +196,7 @@ class TestMarketplaceInstallFlow:
                 "q": "",
                 "category": "",
                 "tag_csv": "",
+                "csrf_token": csrf_token,
             },
         )
         # Route always returns 200 (renders marketplace page with message)
@@ -199,6 +209,7 @@ class TestMarketplaceInstallFlow:
     ) -> None:
         """Should handle installation workflow."""
         client = _build_client(tmp_path, monkeypatch)
+        csrf_token = _get_csrf_token(client)
         # Test the full install workflow by calling the install endpoint
         response = client.post(
             "/ui/marketplace/plugins/sample-plugin/install",
@@ -206,6 +217,7 @@ class TestMarketplaceInstallFlow:
                 "q": "sample",
                 "category": "",
                 "tag_csv": "",
+                "csrf_token": csrf_token,
             },
         )
         # Route always returns 200 (renders marketplace page with message)
