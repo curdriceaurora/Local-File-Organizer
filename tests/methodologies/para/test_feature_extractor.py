@@ -579,6 +579,7 @@ class TestEdgeCasesAndErrorHandling:
                 self.st_atime = now - (2 * 86400)
                 self.st_ctime = now - 86400
                 self.st_mtime = now - (10 * 86400)
+                self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -620,6 +621,7 @@ class TestEdgeCasesAndErrorHandling:
                 self.st_atime = now - (2 * 86400)
                 self.st_ctime = now - 86400
                 self.st_mtime = now - (10 * 86400)
+                self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
