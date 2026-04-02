@@ -30,8 +30,8 @@ def _get_csrf_token(client: TestClient) -> str:
     so the CSRF middleware reads it from headers only, leaving the body stream
     intact for FastAPI's ``Form(...)`` dependency injection.
 
-    Raises ``AssertionError`` if the cookie was not set, failing the test with
-    a clear message rather than a confusing 403 downstream.
+    Asserts that the cookie was set, failing the test with a clear message
+    rather than a confusing 403 downstream.
     """
     client.get("/ui/organize")
     token = client.cookies.get("_csrf_token", "")
@@ -188,6 +188,7 @@ class TestScanOptions:
             headers=csrf_headers,
         )
         assert response.status_code == 200
+        assert "plan" in response.text.lower()
 
     def test_scan_with_recursive_option(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Scan should handle recursive directory traversal."""
@@ -209,6 +210,7 @@ class TestScanOptions:
             headers=csrf_headers,
         )
         assert response.status_code == 200
+        assert "plan" in response.text.lower()
 
     def test_scan_with_hidden_files(self, tmp_path: Path) -> None:
         """Scan should reject hidden file inclusion."""
@@ -229,6 +231,23 @@ class TestScanOptions:
         )
         assert response.status_code == 200
         assert "not supported" in response.text.lower()
+
+    def test_organize_scan_post_without_csrf_returns_403(self, tmp_path: Path) -> None:
+        """POST to scan without CSRF token should be rejected with 403."""
+        (tmp_path / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+            },
+            # No x-csrf-token header — middleware must reject
+        )
+        assert response.status_code == 403
 
 
 @pytest.mark.unit
@@ -276,6 +295,7 @@ class TestOrganizeHtmxEndpoints:
             headers=csrf_headers,
         )
         assert response.status_code == 200
+        assert "plan" in response.text.lower()
 
     def test_organize_scan_validation(self, tmp_path: Path) -> None:
         """Should validate scan parameters and return errors when needed."""

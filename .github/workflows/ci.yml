@@ -231,9 +231,9 @@ jobs:
           # ci.yml and ci-full.yml stay in sync from a single source of truth.
           PATHS=$(bash scripts/ci_shard_paths.sh "${{ matrix.shard }}")
           # Shard 3 (tests/api tests/web) runs single-worker to prevent the
-          # GC-finaliser hang caused by ~170 TestClient objects accumulated
-          # across workers — their async shutdown code deadlocks when the
-          # xdist worker process exits without a running event loop.
+          # GC-finaliser hang from many TestClient objects accumulated per
+          # worker — their async shutdown code is believed to deadlock when
+          # the xdist worker process exits without a running event loop.
           WORKERS=$([[ "${{ matrix.shard }}" == "3" ]] && echo "1" || echo "auto")
           pytest $PATHS --strict-markers -m "not benchmark and not e2e" \
             --cov=file_organizer --cov-report= \
