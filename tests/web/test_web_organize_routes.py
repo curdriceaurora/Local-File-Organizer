@@ -35,7 +35,9 @@ def _get_csrf_token(client: TestClient) -> str:
     """
     client.get("/ui/organize")
     token = client.cookies.get("_csrf_token", "")
-    assert token, "CSRF cookie '_csrf_token' was not set by GET /ui/organize — check middleware registration"
+    assert token, (
+        "CSRF cookie '_csrf_token' was not set by GET /ui/organize — check middleware registration"
+    )
     return token
 
 
