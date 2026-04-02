@@ -230,9 +230,14 @@ jobs:
           # Shard → directory mapping lives in scripts/ci_shard_paths.sh so both
           # ci.yml and ci-full.yml stay in sync from a single source of truth.
           PATHS=$(bash scripts/ci_shard_paths.sh "${{ matrix.shard }}")
+          # Shard 3 (tests/api tests/web) runs single-worker to prevent the
+          # GC-finaliser hang caused by ~170 TestClient objects accumulated
+          # across workers — their async shutdown code deadlocks when the
+          # xdist worker process exits without a running event loop.
+          WORKERS=$([[ "${{ matrix.shard }}" == "3" ]] && echo "1" || echo "auto")
           pytest $PATHS --strict-markers -m "not benchmark and not e2e" \
             --cov=file_organizer --cov-report= \
-            --timeout=30 -n=auto --override-ini="addopts="
+            --timeout=30 -n=$WORKERS --override-ini="addopts="
           # Rename .coverage so artifacts from all shards have distinct names
           mv .coverage .coverage.shard-${{ matrix.shard }}
       - name: Upload coverage data
