@@ -213,6 +213,44 @@ class TestMarketplaceHtmxEndpoints:
         )
         assert response.status_code == 403
 
+    def test_marketplace_uninstall_post_without_csrf_returns_403(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """POST to uninstall without a CSRF token must be rejected with 403.
+
+        Verifies that CSRFMiddleware covers the uninstall route and it has not
+        been accidentally added to exempt_paths.
+        """
+        client = _build_client(tmp_path, monkeypatch)
+        seed_response = client.get("/ui/marketplace")
+        assert "_csrf_token" in seed_response.cookies, (
+            "Seed GET did not set CSRF cookie — middleware may not be registered"
+        )
+        response = client.post(
+            "/ui/marketplace/plugins/test-plugin/uninstall",
+            data={"q": "", "category": "", "tag_csv": ""},
+        )
+        assert response.status_code == 403
+
+    def test_marketplace_update_post_without_csrf_returns_403(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """POST to update without a CSRF token must be rejected with 403.
+
+        Verifies that CSRFMiddleware covers the update route and it has not
+        been accidentally added to exempt_paths.
+        """
+        client = _build_client(tmp_path, monkeypatch)
+        seed_response = client.get("/ui/marketplace")
+        assert "_csrf_token" in seed_response.cookies, (
+            "Seed GET did not set CSRF cookie — middleware may not be registered"
+        )
+        response = client.post(
+            "/ui/marketplace/plugins/test-plugin/update",
+            data={"q": "", "category": "", "tag_csv": ""},
+        )
+        assert response.status_code == 403
+
 
 @pytest.mark.unit
 class TestMarketplaceInstallFlow:

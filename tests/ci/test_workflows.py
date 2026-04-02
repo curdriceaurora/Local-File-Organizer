@@ -649,3 +649,51 @@ class TestDependabotConfig:
         """Verify Dependabot monitors Docker base images."""
         ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
         assert "docker" in ecosystems, "Dependabot should monitor Docker base images"
+
+
+@pytest.mark.unit
+class TestShardCoverage:
+    """Verify that all test directories are assigned to a CI shard.
+
+    Prevents silent test exclusion — the exact failure mode that caused
+    tests/interfaces and tests/e2e to be skipped in all CI runs before
+    this guard was added.
+    """
+
+    # Directories intentionally excluded from shards (no test files or
+    # not standalone pytest-collectible directories).
+    _EXCLUDED: frozenset[str] = frozenset(
+        {
+            "auth",  # no test_*.py files yet; add to a shard when populated
+            "fixtures",  # test fixture data, not a collectible test directory
+            "__pycache__",
+        }
+    )
+
+    @pytest.fixture
+    def shard_script(self) -> str:
+        path = Path("scripts/ci_shard_paths.sh")
+        assert path.exists(), "scripts/ci_shard_paths.sh must exist"
+        return path.read_text()
+
+    def test_all_test_directories_assigned_to_shard(self, shard_script: str) -> None:
+        """Every subdirectory of tests/ must appear in ci_shard_paths.sh.
+
+        If a test directory is missing from the shard script it will be silently
+        skipped in all CI runs (both push and daily full matrix), because both
+        ci.yml and ci-full.yml source this script as the single mapping.
+        """
+        tests_root = Path("tests")
+        unassigned = []
+        for p in sorted(tests_root.iterdir()):
+            if not p.is_dir():
+                continue
+            if p.name in self._EXCLUDED:
+                continue
+            if p.name not in shard_script:
+                unassigned.append(p.name)
+        assert not unassigned, (
+            f"The following test directories are not assigned to any shard in "
+            f"scripts/ci_shard_paths.sh: {unassigned}. "
+            f"Add them to an appropriate shard or to _EXCLUDED if intentional."
+        )
