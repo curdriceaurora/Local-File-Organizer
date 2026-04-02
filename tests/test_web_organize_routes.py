@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from .conftest import get_csrf_headers
+
 
 @pytest.fixture
 def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
@@ -87,6 +89,7 @@ class TestOrganizeScan:
         output_dir.mkdir()
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -94,6 +97,7 @@ class TestOrganizeScan:
                 "output_dir": str(output_dir),
                 "methodology": methodology,
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
@@ -117,12 +121,14 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
 
@@ -137,6 +143,7 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -144,6 +151,7 @@ class TestScanOptions:
                 "output_dir": str(output_dir),
                 "recursive": "1",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
 
@@ -154,6 +162,7 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -161,6 +170,7 @@ class TestScanOptions:
                 "output_dir": str(output_dir),
                 "include_hidden": "1",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         assert "not supported" in response.text.lower()
@@ -203,13 +213,14 @@ class TestOrganizeHtmxEndpoints:
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         # Send scan request with HTMX header to indicate it's a partial update
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
             },
-            headers={"HX-Request": "true"},
+            headers={"HX-Request": "true", **csrf_headers},
         )
         assert response.status_code == 200
         # HTMX requests should return HTML fragment with plan/result content
@@ -219,11 +230,13 @@ class TestOrganizeHtmxEndpoints:
         """Should validate scan parameters and return errors when needed."""
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         # Missing required input_dir should error
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "output_dir": str(tmp_path / "out"),
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         assert "Input directory is required" in response.text
@@ -236,12 +249,14 @@ class TestOrganizeInputValidation:
     def test_organize_empty_input_directory(self, tmp_path: Path, web_client_builder) -> None:
         """Should validate that input directory is not empty/whitespace."""
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": "   ",  # Whitespace only
                 "output_dir": str(tmp_path / "out"),
             },
+            headers=csrf_headers,
         )
         # Should reject empty/whitespace input
         assert response.status_code in (200, 400)
@@ -259,12 +274,14 @@ class TestOrganizeInputValidation:
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         # Use path with redundant slashes and dots
         normalized_path = str(tmp_path) + "//"
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": normalized_path,
                 "output_dir": str(output_dir),
             },
+            headers=csrf_headers,
         )
         # Should handle path normalization gracefully
         assert response.status_code in (200, 400)
@@ -274,6 +291,7 @@ class TestOrganizeInputValidation:
         (tmp_path / "file.txt").write_text("test")
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -282,6 +300,7 @@ class TestOrganizeInputValidation:
                 "sort_by": "name",
                 "filter": "pdf",
             },
+            headers=csrf_headers,
         )
         # Should accept valid sort/filter combinations
         assert response.status_code in (200, 400)
@@ -316,12 +335,14 @@ class TestOrganizeProgressStreaming:
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         # Post scan request
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         # Verify response includes progress indication
@@ -343,6 +364,7 @@ class TestOrganizeErrorHandling:
         (tmp_path / "file.txt").write_text("test")
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -350,6 +372,7 @@ class TestOrganizeErrorHandling:
                 "output_dir": str(tmp_path / "out"),
                 "methodology": "invalid_methodology",
             },
+            headers=csrf_headers,
         )
         # Should process with default methodology and return 200 with result
         assert response.status_code == 200
@@ -359,12 +382,14 @@ class TestOrganizeErrorHandling:
         nonexistent = tmp_path / "does_not_exist"
 
         client = web_client_builder(allowed_paths=[str(tmp_path), str(nonexistent)])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(nonexistent),
                 "output_dir": str(tmp_path / "out"),
             },
+            headers=csrf_headers,
         )
         # Should reject non-existent directory with error message
         assert response.status_code == 200  # Returns 200 with error in HTML
@@ -375,12 +400,14 @@ class TestOrganizeErrorHandling:
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         # Use an output directory outside allowed paths (permission error scenario)
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": "/root/not_allowed",
             },
+            headers=csrf_headers,
         )
         # Should handle permission error gracefully, returning 200 with error message or 403
         assert response.status_code in (200, 403)

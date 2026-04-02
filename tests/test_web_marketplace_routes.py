@@ -8,6 +8,7 @@ import pytest
 
 from file_organizer.plugins.marketplace.errors import MarketplaceError
 
+from .conftest import get_csrf_headers
 from .test_helpers import assert_html_contains, assert_html_contains_any, assert_html_tag_present
 
 
@@ -121,6 +122,7 @@ class TestMarketplaceHtmxEndpoints:
     ) -> None:
         """Should support plugin installation via HTMX POST request."""
         client = web_client_builder(allowed_paths=[])
+        csrf_headers = get_csrf_headers(client)
         # Mock the MarketplaceService.install method
         with patch(
             "file_organizer.web.marketplace_routes.MarketplaceService"
@@ -135,6 +137,7 @@ class TestMarketplaceHtmxEndpoints:
                     "category": "",
                     "tag_csv": "",
                 },
+                headers=csrf_headers,
             )
             # Route always returns 200 (renders marketplace page with message)
             assert response.status_code == 200
@@ -154,6 +157,7 @@ class TestMarketplaceInstallFlow:
     ) -> None:
         """Should validate plugin before installation and handle errors."""
         client = web_client_builder(allowed_paths=[])
+        csrf_headers = get_csrf_headers(client)
         # Mock the MarketplaceService to simulate error for nonexistent plugin
         with patch(
             "file_organizer.web.marketplace_routes.MarketplaceService"
@@ -170,6 +174,7 @@ class TestMarketplaceInstallFlow:
                     "category": "",
                     "tag_csv": "",
                 },
+                headers=csrf_headers,
             )
             # Route returns 200 (renders marketplace page with error message)
             assert response.status_code == 200
@@ -184,6 +189,7 @@ class TestMarketplaceInstallFlow:
     ) -> None:
         """Should handle installation workflow."""
         client = web_client_builder(allowed_paths=[])
+        csrf_headers = get_csrf_headers(client)
         # Mock the MarketplaceService to track install progress
         with patch(
             "file_organizer.web.marketplace_routes.MarketplaceService"
@@ -198,6 +204,7 @@ class TestMarketplaceInstallFlow:
                     "category": "",
                     "tag_csv": "",
                 },
+                headers=csrf_headers,
             )
             # Route always returns 200 (renders marketplace page with message)
             assert response.status_code == 200
@@ -288,6 +295,7 @@ class TestMarketplaceErrorHandling:
     def test_marketplace_install_nonexistent_plugin(self, web_client_builder) -> None:
         """Should handle installation of non-existent plugins."""
         client = web_client_builder(allowed_paths=[])
+        csrf_headers = get_csrf_headers(client)
         response = client.post(
             "/ui/marketplace/plugins/nonexistent-plugin/install",
             data={
@@ -295,6 +303,7 @@ class TestMarketplaceErrorHandling:
                 "category": "",
                 "tag_csv": "",
             },
+            headers=csrf_headers,
         )
         # Should return 200 but indicate plugin not found
         assert response.status_code == 200
@@ -307,5 +316,8 @@ class TestMarketplaceErrorHandling:
         response = client.get("/ui/marketplace?q=test<script>alert('xss')</script>")
         # Should safely escape special characters
         assert response.status_code == 200
-        # Response should not contain unescaped script tags
-        assert "<script>" not in response.text
+        # The user-supplied <script> payload must be HTML-escaped; the literal
+        # query string value should not appear unescaped in the response body.
+        # (The CSRF middleware legitimately injects its own <script> tag, so we
+        # cannot assert <script> is globally absent — only the injected payload.)
+        assert "alert('xss')" not in response.text
