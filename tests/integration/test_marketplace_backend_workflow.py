@@ -111,7 +111,9 @@ def marketplace_service(tmp_path: Path) -> MarketplaceService:
 
 
 @pytest.fixture()
-def marketplace_client(monkeypatch: pytest.MonkeyPatch, marketplace_service: MarketplaceService) -> TestClient:
+def marketplace_client(
+    monkeypatch: pytest.MonkeyPatch, marketplace_service: MarketplaceService
+) -> TestClient:
     app = FastAPI()
     setup_exception_handlers(app)
     app.dependency_overrides[get_current_active_user] = lambda: type(
@@ -259,7 +261,9 @@ def test_marketplace_routes_map_not_found_and_checksum_errors(
     assert install_resp.json()["error"] == "checksum_failed"
 
 
-def test_review_manager_roundtrip_and_helpful_counts(marketplace_service: MarketplaceService) -> None:
+def test_review_manager_roundtrip_and_helpful_counts(
+    marketplace_service: MarketplaceService,
+) -> None:
     review = PluginReview(
         plugin_name="beta-plugin",
         user_id="alice",

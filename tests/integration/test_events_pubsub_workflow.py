@@ -129,4 +129,3 @@ def test_service_bus_request_response_and_broadcast_smoke() -> None:
     published_topics = [topic for topic, _ in stream_manager.published]
     assert "pubsub:service:request:echo:ping" in published_topics
     assert "pubsub:service:response:echo:ping" in published_topics
-

@@ -23,6 +23,7 @@ __pycache__/
 env/
 venv/
 .venv/
+.venv-*/
 
 # Ignore log files and temporary files
 *.log
@@ -60,6 +61,7 @@ site/
 .mypy_cache/
 .ruff_cache/
 .dmypy.json
+.pyre/
 
 # Test and sample files
 sample_files/
@@ -69,6 +71,7 @@ output/
 
 # Test coverage
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
