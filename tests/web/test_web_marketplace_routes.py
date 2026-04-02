@@ -37,9 +37,9 @@ def _get_csrf_token(client: TestClient) -> str:
     must still be submitted in the ``csrf_token`` form field on state-changing
     requests.
 
-    Returns an empty string if the middleware did not set the cookie (e.g.
-    the route is not mounted or middleware is misconfigured), which will cause
-    subsequent POSTs to receive a 403 CSRF rejection rather than a 200.
+    Raises ``AssertionError`` if the middleware did not set the cookie (e.g.
+    the route is not mounted or middleware is misconfigured), failing the test
+    with a clear message rather than a confusing 403.
     """
     client.get("/ui/marketplace")
     token = client.cookies.get("_csrf_token", "")
@@ -203,7 +203,10 @@ class TestMarketplaceHtmxEndpoints:
         client = _build_client(tmp_path, monkeypatch)
         # Seed the cookie so middleware has a token to compare against,
         # but deliberately omit the form field token.
-        client.get("/ui/marketplace")
+        seed_response = client.get("/ui/marketplace")
+        assert "_csrf_token" in seed_response.cookies, (
+            "Seed GET did not set CSRF cookie — middleware may not be registered"
+        )
         response = client.post(
             "/ui/marketplace/plugins/test-plugin/install",
             data={"q": "", "category": "", "tag_csv": ""},
