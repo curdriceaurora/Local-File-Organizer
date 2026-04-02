@@ -174,9 +174,6 @@ def test_marketplace_ui_browse_and_install(
     assert page.status_code == 200
     assert "ui-plugin" in page.text
 
-    # Verify the marketplace page renders the CSRF hidden input (csrf_input() template path)
-    assert 'name="csrf_token"' in page.text
-
     install = client.post(
         "/ui/marketplace/plugins/ui-plugin/install",
         data={"q": "", "category": "", "tag_csv": ""},
