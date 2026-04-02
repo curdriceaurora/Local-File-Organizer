@@ -23,6 +23,22 @@ def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> Tes
     return TestClient(app)
 
 
+def _get_csrf_token(client: TestClient) -> str:
+    """Seed the CSRF cookie via a GET request and return the token value.
+
+    Use the returned token via the ``x-csrf-token`` header (not a form field)
+    so the CSRF middleware reads it from headers only, leaving the body stream
+    intact for FastAPI's ``Form(...)`` dependency injection.
+
+    Raises ``AssertionError`` if the cookie was not set, failing the test with
+    a clear message rather than a confusing 403 downstream.
+    """
+    client.get("/ui/organize")
+    token = client.cookies.get("_csrf_token", "")
+    assert token, "CSRF cookie '_csrf_token' was not set by GET /ui/organize — check middleware registration"
+    return token
+
+
 @pytest.fixture
 def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock FileOrganizer.organize() to avoid AI model initialization in tests.
@@ -91,6 +107,7 @@ class TestOrganizeScan:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -98,6 +115,7 @@ class TestOrganizeScan:
                 "output_dir": str(output_dir),
                 "methodology": "content_based",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
@@ -110,6 +128,7 @@ class TestOrganizeScan:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -117,6 +136,7 @@ class TestOrganizeScan:
                 "output_dir": str(output_dir),
                 "methodology": "para",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
@@ -131,6 +151,7 @@ class TestOrganizeScan:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -138,6 +159,7 @@ class TestOrganizeScan:
                 "output_dir": str(output_dir),
                 "methodology": "johnny_decimal",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
@@ -156,12 +178,14 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
 
@@ -174,6 +198,7 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -181,6 +206,7 @@ class TestScanOptions:
                 "output_dir": str(output_dir),
                 "recursive": "1",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
 
@@ -191,6 +217,7 @@ class TestScanOptions:
         output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
@@ -198,6 +225,7 @@ class TestScanOptions:
                 "output_dir": str(output_dir),
                 "include_hidden": "1",
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         assert "not supported" in response.text.lower()
@@ -238,13 +266,14 @@ class TestOrganizeHtmxEndpoints:
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         # Send scan request with HTMX header to indicate it's a partial update
+        csrf_headers = {"HX-Request": "true", "x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
             },
-            headers={"HX-Request": "true"},
+            headers=csrf_headers,
         )
         assert response.status_code == 200
 
@@ -252,11 +281,13 @@ class TestOrganizeHtmxEndpoints:
         """Should validate scan parameters and return errors when needed."""
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         # Missing required input_dir should error
+        csrf_headers = {"x-csrf-token": _get_csrf_token(client)}
         response = client.post(
             "/ui/organize/scan",
             data={
                 "output_dir": str(tmp_path / "out"),
             },
+            headers=csrf_headers,
         )
         assert response.status_code == 200
         assert "Input directory is required" in response.text
