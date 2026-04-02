@@ -30,8 +30,9 @@ def _get_csrf_token(client: TestClient) -> str:
     so the CSRF middleware reads it from headers only, leaving the body stream
     intact for FastAPI's ``Form(...)`` dependency injection.
 
-    Asserts that the cookie was set, failing the test with a clear message
-    rather than a confusing 403 downstream.
+    Raises ``AssertionError`` if the ``_csrf_token`` cookie is absent or empty
+    after seeding, failing the test with a clear message rather than a
+    confusing 403 downstream.
     """
     client.get("/ui/organize")
     token = client.cookies.get("_csrf_token", "")

@@ -131,6 +131,7 @@ class TestScanOptions:
             headers=csrf_headers,
         )
         assert response.status_code == 200
+        assert "plan" in response.text.lower()
 
     def test_scan_with_recursive_option(
         self, tmp_path: Path, web_client_builder, mock_file_organizer: Any
@@ -154,6 +155,7 @@ class TestScanOptions:
             headers=csrf_headers,
         )
         assert response.status_code == 200
+        assert "plan" in response.text.lower()
 
     def test_scan_with_hidden_files(self, tmp_path: Path, web_client_builder) -> None:
         """Scan should reject hidden file inclusion."""
