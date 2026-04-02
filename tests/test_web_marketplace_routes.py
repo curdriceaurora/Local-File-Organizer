@@ -316,8 +316,8 @@ class TestMarketplaceErrorHandling:
         response = client.get("/ui/marketplace?q=test<script>alert('xss')</script>")
         # Should safely escape special characters
         assert response.status_code == 200
-        # The user-supplied <script> payload must be HTML-escaped; the literal
-        # query string value should not appear unescaped in the response body.
-        # (The base template includes <script> tags for htmx and CSRF token
-        # injection, so <script> is always present in full-page responses.)
-        assert "alert('xss')" not in response.text
+        # The user-supplied payload must be HTML-escaped; the unescaped sequence
+        # "<script>alert('xss')</script>" must not appear in the response body.
+        # Jinja2 escapes < and > but leaves single quotes verbatim, so checking
+        # for "alert('xss')" alone would false-positive on properly escaped output.
+        assert "<script>alert('xss')</script>" not in response.text
