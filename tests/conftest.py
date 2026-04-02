@@ -10,10 +10,13 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 from file_organizer.api.realtime import realtime_manager
 from file_organizer.tui.app import FileOrganizerApp
@@ -413,7 +416,7 @@ def web_client_builder(tmp_path: Path):
     return _build
 
 
-def get_csrf_token(client: "TestClient", seed_url: str = "/ui/") -> str:
+def get_csrf_token(client: TestClient, seed_url: str = "/ui/") -> str:
     """Seed the CSRF cookie via a GET request and return the token value.
 
     The CSRF middleware sets the ``_csrf_token`` cookie on every GET response.
@@ -435,7 +438,7 @@ def get_csrf_token(client: "TestClient", seed_url: str = "/ui/") -> str:
     return token
 
 
-def get_csrf_headers(client: "TestClient", seed_url: str = "/ui/") -> dict[str, str]:
+def get_csrf_headers(client: TestClient, seed_url: str = "/ui/") -> dict[str, str]:
     """Seed the CSRF cookie and return a headers dict with the token.
 
     Use this instead of adding ``csrf_token`` to form data when the POST
