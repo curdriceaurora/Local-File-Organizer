@@ -413,7 +413,7 @@ def web_client_builder(tmp_path: Path):
     return _build
 
 
-def get_csrf_token(client: Any, seed_url: str = "/ui/marketplace") -> str:
+def get_csrf_token(client: Any, seed_url: str = "/ui/") -> str:
     """Seed the CSRF cookie via a GET request and return the token value.
 
     The CSRF middleware sets the ``_csrf_token`` cookie on every GET response.
@@ -435,7 +435,7 @@ def get_csrf_token(client: Any, seed_url: str = "/ui/marketplace") -> str:
     return token
 
 
-def get_csrf_headers(client: Any, seed_url: str = "/ui/marketplace") -> dict[str, str]:
+def get_csrf_headers(client: Any, seed_url: str = "/ui/") -> dict[str, str]:
     """Seed the CSRF cookie and return a headers dict with the token.
 
     Use this instead of adding ``csrf_token`` to form data when the POST
