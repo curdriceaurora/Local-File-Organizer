@@ -195,8 +195,8 @@ jobs:
     needs: changes
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    # Shards run ~1 500-4 500 tests each with -n=auto (2 workers on ubuntu-latest).
-    # Shard 3 is intentionally lighter; see scripts/ci_shard_paths.sh for the rationale.
+    # Shards run ~3 000-4 500 tests each with -n=auto (2 workers on ubuntu-latest);
+    # Shard 3 is intentionally lighter (~1 600 tests); see scripts/ci_shard_paths.sh.
     # 20-minute hard cap prevents the GC-finaliser hang that caused indefinite hangs
     # when all 17 000+ tests ran in a single job with only 2 workers.
     timeout-minutes: 20
