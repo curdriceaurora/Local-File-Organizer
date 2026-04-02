@@ -318,6 +318,6 @@ class TestMarketplaceErrorHandling:
         assert response.status_code == 200
         # The user-supplied <script> payload must be HTML-escaped; the literal
         # query string value should not appear unescaped in the response body.
-        # (The CSRF middleware legitimately injects its own <script> tag, so we
-        # cannot assert <script> is globally absent — only the injected payload.)
+        # (The base template includes <script> tags for htmx and CSRF token
+        # injection, so <script> is always present in full-page responses.)
         assert "alert('xss')" not in response.text

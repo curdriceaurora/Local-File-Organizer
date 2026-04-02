@@ -212,8 +212,8 @@ class TestOrganizeHtmxEndpoints:
         output_dir.mkdir()
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
-        # Send scan request with HTMX header to indicate it's a partial update
         csrf_headers = get_csrf_headers(client)
+        # Send scan request with HTMX header to indicate it's a partial update
         response = client.post(
             "/ui/organize/scan",
             data={
