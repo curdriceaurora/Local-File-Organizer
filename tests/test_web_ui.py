@@ -41,6 +41,7 @@ def _build_client(tmp_path: Path, allowed_root: Path | None = None) -> TestClien
 def _csrf_headers(client: TestClient) -> dict[str, str]:
     """Return headers dict with CSRF token for POST requests."""
     token = getattr(client, "_csrf_token", "")
+    assert token, "CSRF cookie '_csrf_token' was not seeded by _build_client — check middleware"
     return {"x-csrf-token": token}
 
 
@@ -173,11 +174,13 @@ def test_marketplace_ui_browse_and_install(
     assert page.status_code == 200
     assert "ui-plugin" in page.text
 
-    # Use form-field token (not header) to exercise the csrf_input() path
-    csrf_token = client.cookies.get("_csrf_token", "")
+    # Verify the marketplace page renders the CSRF hidden input (csrf_input() template path)
+    assert 'name="csrf_token"' in page.text
+
     install = client.post(
         "/ui/marketplace/plugins/ui-plugin/install",
-        data={"q": "", "category": "", "tag_csv": "", "csrf_token": csrf_token},
+        data={"q": "", "category": "", "tag_csv": ""},
+        headers=_csrf_headers(client),
     )
     assert install.status_code == 200
     assert "Installed ui-plugin" in install.text

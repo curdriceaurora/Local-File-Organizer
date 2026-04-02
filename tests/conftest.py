@@ -422,8 +422,7 @@ def get_csrf_token(client: Any, seed_url: str = "/ui/marketplace") -> str:
 
     Prefer :func:`get_csrf_headers` for POST requests that use FastAPI
     ``Form(...)`` parameters — passing the token via ``x-csrf-token`` header
-    avoids the Starlette ``BaseHTTPMiddleware`` body-consumption issue that
-    makes ``Form()`` parameters empty when the middleware reads the form body.
+    avoids the body-consumption issue described in :func:`get_csrf_headers`.
 
     Raises ``AssertionError`` if the cookie was not set, failing the test with
     a clear message rather than a confusing 403 downstream.
@@ -440,10 +439,13 @@ def get_csrf_headers(client: Any, seed_url: str = "/ui/marketplace") -> dict[str
     """Seed the CSRF cookie and return a headers dict with the token.
 
     Use this instead of adding ``csrf_token`` to form data when the POST
-    handler uses FastAPI ``Form(...)`` parameters.  Reading the body in
-    ``BaseHTTPMiddleware`` (to extract the form field) consumes the request
-    stream; the route handler then sees empty ``Form`` values.  Sending the
-    token via the ``x-csrf-token`` header sidesteps that issue.
+    handler uses FastAPI ``Form(...)`` parameters.  When the CSRF middleware
+    calls ``request.form()`` to locate the form-field token, it internally
+    calls ``request.stream()``, which marks the body as consumed in
+    Starlette's ``BaseHTTPMiddleware`` caching layer; the route handler then
+    receives an empty body and all ``Form`` parameters are empty strings.
+    Sending the token via ``x-csrf-token`` is read from headers only, leaving
+    the body stream intact for FastAPI's ``Form(...)`` dependency injection.
     """
     token = get_csrf_token(client, seed_url=seed_url)
     return {"x-csrf-token": token}
