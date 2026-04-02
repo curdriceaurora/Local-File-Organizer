@@ -24,7 +24,7 @@ if [[ -z "$SHARD" ]]; then
 fi
 
 case "$SHARD" in
-    1) PATHS="tests/integration" ;;
+    1) PATHS="tests/integration tests/e2e" ;;
     2) PATHS="tests/services tests/models tests/events tests/optimization" ;;
     3) PATHS="tests/api tests/web" ;;
     4) PATHS="tests/cli tests/methodologies tests/ci tests/unit tests/plugins tests/tui tests/parallel tests/pipeline" ;;
