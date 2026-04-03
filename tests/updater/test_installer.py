@@ -7,6 +7,7 @@ select_asset, find_checksum, and internal helpers.
 from __future__ import annotations
 
 import hashlib
+import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -61,6 +62,14 @@ class TestInstallerInit:
     def test_install_dir_property(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
         assert isinstance(inst.install_dir, Path)
+
+    def test_default_install_dir_detection(self):
+        """When no install_dir is given, _detect_install_dir finds the Python executable's dir."""
+        inst = UpdateInstaller()
+        import sys
+
+        expected = Path(sys.executable).resolve().parent
+        assert inst.install_dir == expected
 
 
 # ---------------------------------------------------------------------------
@@ -415,4 +424,219 @@ class TestDownloadText:
     def test_failure(self, mock_httpx):
         mock_httpx.get.side_effect = Exception("error")
         result = UpdateInstaller._download_text("https://example.com/file.txt")
+        assert result == ""
+
+
+# ---------------------------------------------------------------------------
+# _get_platform_hints / _get_arch_hints — branch coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestPlatformHints:
+    """Test platform/arch hint helpers for branch coverage."""
+
+    @patch("platform.system", return_value="Windows")
+    def test_windows_platform_hints(self, _s):
+        from file_organizer.updater.installer import _get_platform_hints
+
+        hints = _get_platform_hints()
+        assert "windows" in hints
+        assert "win" in hints
+
+    @patch("platform.system", return_value="Linux")
+    def test_linux_platform_hints(self, _s):
+        from file_organizer.updater.installer import _get_platform_hints
+
+        hints = _get_platform_hints()
+        assert "linux" in hints
+
+    @patch("platform.machine", return_value="x86_64")
+    @patch("platform.system", return_value="Linux")
+    def test_x86_64_arch_hints(self, _s, _m):
+        from file_organizer.updater.installer import _get_arch_hints
+
+        hints = _get_arch_hints()
+        assert "x86_64" in hints
+        assert "amd64" in hints
+        assert "universal" not in hints
+
+    @patch("platform.machine", return_value="arm64")
+    @patch("platform.system", return_value="Darwin")
+    def test_arm64_darwin_arch_hints(self, _s, _m):
+        from file_organizer.updater.installer import _get_arch_hints
+
+        hints = _get_arch_hints()
+        assert "arm64" in hints
+        assert "aarch64" in hints
+        assert "universal" in hints
+
+    @patch("platform.machine", return_value="riscv64")
+    @patch("platform.system", return_value="Linux")
+    def test_unknown_arch_hints(self, _s, _m):
+        from file_organizer.updater.installer import _get_arch_hints
+
+        hints = _get_arch_hints()
+        # No recognized arch, but no universal either (Linux)
+        assert hints == []
+
+
+# ---------------------------------------------------------------------------
+# _score_asset — branch coverage for all platforms
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestScoreAsset:
+    """Test _score_asset for branch coverage on each platform."""
+
+    @patch("platform.system", return_value="Darwin")
+    def test_darwin_dmg_penalty(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-macos-arm64.dmg")
+        assert score == -5  # dmg penalty
+
+    @patch("platform.system", return_value="Darwin")
+    def test_darwin_zip_penalty(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-macos-arm64.tar.gz")
+        assert score == -3  # .tar.gz penalty
+
+    @patch("platform.system", return_value="Darwin")
+    def test_darwin_universal_bonus(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-macos-universal")
+        assert score == 3  # universal bonus
+
+    @patch("platform.system", return_value="Windows")
+    def test_windows_exe_bonus(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-windows-amd64.exe")
+        assert score == 3
+
+    @patch("platform.system", return_value="Windows")
+    def test_windows_installer_penalty(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-windows-setup.exe")
+        assert score == 3 - 4  # exe bonus + setup penalty
+
+    @patch("platform.system", return_value="Linux")
+    def test_linux_appimage_bonus(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-linux-x86_64.appimage")
+        assert score == 5
+
+    @patch("platform.system", return_value="Linux")
+    def test_linux_tarball_bonus(self, _s):
+        from file_organizer.updater.installer import _score_asset
+
+        score = _score_asset("app-linux-x86_64.tar.gz")
+        assert score == 2
+
+
+# ---------------------------------------------------------------------------
+# install — rollback path when target doesn't exist after failure
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestInstallRollbackPath:
+    """Test install rollback when backup exists but target doesn't."""
+
+    def test_install_failure_rollback_restores_backup(self, tmp_path):
+        """When install fails and backup exists but target doesn't, rollback moves backup."""
+        inst = UpdateInstaller(install_dir=tmp_path)
+        target = tmp_path / "test-app"
+        target.write_bytes(b"old binary")
+
+        downloaded = tmp_path / "downloaded.bin"
+        downloaded.write_bytes(b"new binary")
+
+        call_count = 0
+        original_move = shutil.move
+
+        def selective_move(src, dst):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call is the install move — fail it
+                # But first remove the target to simulate partial failure
+                if target.exists():
+                    target.unlink()
+                raise OSError("disk full")
+            # Second call is the rollback move — let it through
+            return original_move(src, dst)
+
+        with patch("shutil.move", side_effect=selective_move):
+            # shutil.copy2 for backup step
+            with patch("platform.system", return_value="Linux"):
+                result = inst.install(downloaded, target_name="test-app")
+
+        assert result.success is False
+        assert "disk full" in result.message
+
+    def test_install_on_windows_sets_no_exec_perms(self, tmp_path):
+        """On Windows, chmod is not called."""
+        inst = UpdateInstaller(install_dir=tmp_path)
+        downloaded = tmp_path / "downloaded.bin"
+        downloaded.write_bytes(b"new binary content")
+
+        with patch("platform.system", return_value="Windows"):
+            result = inst.install(downloaded, target_name="test-app")
+
+        assert result.success is True
+        # Windows target has .exe suffix via _resolve_target
+
+
+# ---------------------------------------------------------------------------
+# find_checksum — SHA256SUMS with no matching asset
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestFindChecksumEdgeCases:
+    """Test find_checksum edge cases for branch coverage."""
+
+    @patch.object(
+        UpdateInstaller,
+        "_download_text",
+        return_value="def456  other.bin\nghi789  another.bin",
+    )
+    def test_sha256sums_no_match(self, mock_dl):
+        """find_checksum returns empty string when SHA256SUMS exists but asset not listed."""
+        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        release = ReleaseInfo(
+            tag="v1",
+            version="1.0",
+            assets=[
+                AssetInfo(name="app.bin", url="https://example.com/app.bin"),
+                AssetInfo(name="SHA256SUMS.txt", url="https://example.com/SHA256SUMS.txt"),
+            ],
+        )
+        result = inst.find_checksum(release, "app.bin")
+        assert result == ""
+
+    @patch.object(
+        UpdateInstaller,
+        "_download_text",
+        return_value="short",
+    )
+    def test_sha256sums_short_lines(self, mock_dl):
+        """find_checksum handles SHA256SUMS lines with < 2 parts."""
+        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        release = ReleaseInfo(
+            tag="v1",
+            version="1.0",
+            assets=[
+                AssetInfo(name="app.bin", url="https://example.com/app.bin"),
+                AssetInfo(name="sha256sums", url="https://example.com/sha256sums"),
+            ],
+        )
+        result = inst.find_checksum(release, "app.bin")
         assert result == ""

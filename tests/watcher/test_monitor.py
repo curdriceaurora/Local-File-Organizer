@@ -446,6 +446,80 @@ class TestFileMonitorCallbacks:
         assert len(received_events) >= 1
 
 
+class TestFileMonitorOnMovedCallback:
+    """Tests for on_moved callback registration."""
+
+    def test_on_moved_callback_registers(self, monitor: FileMonitor, watch_dir: Path) -> None:
+        """Test that on_moved callback is registered with the handler."""
+        received_events: list = []
+
+        def _cb(e: object) -> None:
+            received_events.append(e)
+
+        monitor.on_moved(_cb)
+        # Verify the callback was registered (handler stores per-type lists)
+        assert _cb in monitor.handler._on_moved_callbacks
+
+
+class TestFileMonitorRemoveDirectoryEdgeCases:
+    """Tests for remove_directory edge cases."""
+
+    def test_remove_directory_path_not_in_config(
+        self, monitor: FileMonitor, watch_dir: Path
+    ) -> None:
+        """Removing a watched dir when path was not in config.watch_directories.
+
+        Covers the except ValueError: pass branch at lines 187-188.
+        """
+        monitor.start()
+        # Manually clear config dirs so path won't be found in list
+        monitor.config.watch_directories.clear()
+        # Should succeed (the ValueError from list.remove is caught)
+        monitor.remove_directory(watch_dir)
+        assert len(monitor.watched_directories) == 0
+
+    def test_remove_directory_when_not_running(self, tmp_path: Path) -> None:
+        """Removing a directory when monitor is not running.
+
+        Covers the branch at 176->182 where _running is False.
+        """
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watch_dir],
+            recursive=True,
+            debounce_seconds=0.0,
+        )
+        mon = FileMonitor(config)
+        # Manually add to _watches to simulate state
+        path_key = str(watch_dir.resolve())
+        mon._watches[path_key] = None  # type: ignore[assignment]
+        mon.remove_directory(watch_dir)
+        assert path_key not in mon._watches
+
+
+class TestFileMonitorAddDirectoryEdgeCases:
+    """Tests for add_directory edge cases."""
+
+    def test_add_directory_before_start_already_in_config(self, tmp_path: Path) -> None:
+        """Adding a directory before start when path is already in config.
+
+        Covers the branch at 155->158 where path is already in watch_directories.
+        """
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watch_dir],
+            recursive=True,
+            debounce_seconds=0.0,
+        )
+        mon = FileMonitor(config)
+        before = [d.resolve() for d in mon.config.watch_directories]
+        mon.add_directory(watch_dir)
+        after = [d.resolve() for d in mon.config.watch_directories]
+        assert after == before
+
+
 class TestFileMonitorObserverFallback:
     """Tests for FSEvents fallback to PollingObserver."""
 

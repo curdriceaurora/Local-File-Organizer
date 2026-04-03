@@ -384,3 +384,14 @@ class TestUpdateStateStoreAtomicWrite:
                 store.save(state)
         # Verify no temp file left behind
         assert not state_file.with_suffix(".tmp").exists()
+
+    def test_save_cleanup_when_replace_fails_and_temp_exists(self, tmp_path):
+        """Verify temp file is cleaned up when os.replace fails but temp was written."""
+        state_file = tmp_path / "state.json"
+        store = UpdateStateStore(state_path=state_file)
+        state = UpdateState(last_checked="2024-01-15T14:30:45Z", last_version="2.0.0")
+        with patch("os.replace", side_effect=OSError("replace failed")):
+            with pytest.raises(OSError, match="replace failed"):
+                store.save(state)
+        # Temp file should be cleaned up by the except handler (line 91)
+        assert not state_file.with_suffix(".tmp").exists()
