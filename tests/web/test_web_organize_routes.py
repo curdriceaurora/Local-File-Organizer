@@ -296,3 +296,21 @@ class TestOrganizeHtmxEndpoints:
         )
         assert response.status_code == 200
         assert "Input directory is required" in response.text
+
+
+@pytest.mark.unit
+class TestOrganizeRoutes:
+    """Tests for organize route security and validation."""
+
+    def test_organize_scan_post_with_wrong_csrf_token_returns_403(self, tmp_path: Path) -> None:
+        """POST with a seeded cookie but mismatched header token should be rejected."""
+        (tmp_path / "file.txt").write_text("test")
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        # Seed the cookie so the client has a real _csrf_token value
+        client.get("/ui/organize")
+        response = client.post(
+            "/ui/organize/scan",
+            data={"input_dir": str(tmp_path), "output_dir": str(tmp_path / "out")},
+            headers={"x-csrf-token": "deliberately-wrong-value"},
+        )
+        assert response.status_code == 403
