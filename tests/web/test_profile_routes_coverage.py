@@ -84,6 +84,38 @@ class TestProfileHelpers:
         path = _avatar_path("user-123")
         assert "user-123" in str(path)
 
+    def test_avatar_path_rejects_traversal(self) -> None:
+        """_avatar_path must reject path-traversal sequences (CodeQL #48/#49)."""
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with pytest.raises(ValueError, match="Invalid user_id"):
+            _avatar_path("../../etc/passwd")
+
+    def test_avatar_path_rejects_slash(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with pytest.raises(ValueError, match="Invalid user_id"):
+            _avatar_path("foo/bar")
+
+    def test_avatar_path_rejects_backslash(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with pytest.raises(ValueError, match="Invalid user_id"):
+            _avatar_path("foo\\bar")
+
+    def test_avatar_path_rejects_null_byte(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with pytest.raises(ValueError, match="Invalid user_id"):
+            _avatar_path("user\x00evil")
+
+    def test_avatar_path_accepts_valid_ids(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        for valid_id in ["user-123", "abc_def", "User.Name", "12345"]:
+            path = _avatar_path(valid_id)
+            assert path.name == f"{valid_id}.png"
+
     def test_cleanup_expired_reset_tokens(self) -> None:
         from file_organizer.web.profile_routes import (
             _PASSWORD_RESET_TOKENS,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -217,9 +218,23 @@ def _workspace_context(db: Session, user_id: str) -> tuple[list[Workspace], str]
     return workspaces, active
 
 
+# Strict pattern for user IDs — alphanumeric, hyphens, underscores, dots only.
+_SAFE_USER_ID = re.compile(r"^[\w.\-]+$")
+
+
 def _avatar_path(user_id: str) -> Path:
-    """Return the filesystem path where the user's avatar is stored."""
-    return _AVATAR_DIR / f"{user_id}.png"
+    """Return the filesystem path where the user's avatar is stored.
+
+    Raises:
+        ValueError: If user_id contains path-traversal characters or is empty.
+    """
+    if not user_id or not _SAFE_USER_ID.match(user_id):
+        raise ValueError(f"Invalid user_id: {user_id!r}")
+    result = _AVATAR_DIR / f"{user_id}.png"
+    # Belt-and-suspenders: verify resolved path is under avatar dir
+    if not str(result.resolve()).startswith(str(_AVATAR_DIR.resolve())):
+        raise ValueError(f"Invalid user_id: {user_id!r}")
+    return result
 
 
 def _cleanup_expired_reset_tokens() -> None:
@@ -558,7 +573,10 @@ def reset_password_submit(
 @profile_router.get("/profile/avatar/{user_id}")
 def profile_avatar(user_id: str) -> Response:
     """Serve the avatar image for *user_id*, or a placeholder PNG."""
-    path = _avatar_path(user_id)
+    try:
+        path = _avatar_path(user_id)
+    except ValueError:
+        return HTMLResponse(status_code=400, content="Invalid user ID")
     if not path.exists():
         return HTMLResponse(status_code=404, content="Avatar not found")
     return FileResponse(path, media_type="image/png")

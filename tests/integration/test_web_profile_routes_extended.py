@@ -277,6 +277,11 @@ class TestProfileAvatar:
         r = profile_client.get("/ui/profile/avatar/nonexistent-user-xyz")
         assert r.status_code == 404
 
+    def test_avatar_path_traversal_returns_400(self, profile_client: TestClient) -> None:
+        """Path traversal in user_id must be rejected (CodeQL py/path-injection)."""
+        r = profile_client.get("/ui/profile/avatar/../../etc/passwd")
+        assert r.status_code in (400, 404, 422)  # framework may normalize the path
+
     def test_avatar_found_returns_200(self, profile_client: TestClient, tmp_path: Path) -> None:
         avatar_file = tmp_path / "test-avatar-user.png"
         avatar_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)

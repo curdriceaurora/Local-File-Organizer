@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from html import escape
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Query, Request
@@ -12,6 +12,8 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.plugins.marketplace import MarketplaceError, MarketplaceService
 from file_organizer.web._helpers import base_context, templates
+
+logger = logging.getLogger(__name__)
 
 marketplace_router = APIRouter(tags=["web"])
 
@@ -280,5 +282,8 @@ def plugin_details(
         )
         return templates.TemplateResponse(request, "marketplace/plugin_details.html", context)
     except MarketplaceError as exc:
-        error_msg = escape(str(exc))
-        return HTMLResponse(f"<p>Error loading plugin details: {error_msg}</p>", status_code=500)
+        logger.warning("Failed to load plugin details: %s", exc)
+        return HTMLResponse(
+            "<p>Error loading plugin details. Please try again later.</p>",
+            status_code=500,
+        )
