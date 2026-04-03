@@ -315,7 +315,7 @@ def _get_model_configs_from_profile(
             vision_cfg.name,
         )
         return text_cfg, vision_cfg
-    except Exception:
+    except Exception:  # Intentional catch-all: config loading involves YAML parsing, imports, etc.
         logger.opt(exception=True).debug("Could not load config profile '{}', skipping", profile)
         return None
 

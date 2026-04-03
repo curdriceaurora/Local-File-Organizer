@@ -99,7 +99,7 @@ class LlamaCppTextModel(BaseModel):
                 n_gpu_layers=n_gpu_layers,
                 verbose=False,
             )
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError) as e:
             raise RuntimeError(
                 f"Could not load GGUF model from '{self.config.model_path}': {e}"
             ) from e
@@ -176,7 +176,7 @@ class LlamaCppTextModel(BaseModel):
             return text
         except TokenExhaustionError:
             raise
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError) as e:
             logger.error("Failed to generate text via llama.cpp: {}", type(e).__name__)
             raise
 
@@ -193,7 +193,7 @@ class LlamaCppTextModel(BaseModel):
             if self.client is not None:
                 try:
                     self.client.close()
-                except Exception:
+                except (RuntimeError, OSError):
                     logger.opt(exception=True).debug(
                         "Ignoring exception during llama.cpp client close"
                     )

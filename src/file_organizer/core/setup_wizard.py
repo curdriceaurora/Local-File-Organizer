@@ -362,7 +362,7 @@ class SetupWizard:
 
             logger.info("Setup wizard completed successfully")
 
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, ImportError) as e:
             result.success = False
             result.errors.append(f"Setup wizard error: {e!s}")
             self.status = SetupStatus.FAILED

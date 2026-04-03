@@ -89,7 +89,7 @@ class MLXTextModel(BaseModel):
                 raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
             try:
                 loaded = mlx_load(self.config.model_path)
-            except Exception as exc:
+            except (RuntimeError, OSError, ValueError, ImportError) as exc:
                 raise RuntimeError(
                     f"Could not load MLX model from '{self.config.model_path}': {exc}"
                 ) from exc
@@ -143,7 +143,7 @@ class MLXTextModel(BaseModel):
             text = response.strip() if isinstance(response, str) else str(response).strip()
             logger.debug("Generated {} characters via MLX", len(text))
             return text
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError, TypeError) as exc:
             logger.error("Failed to generate text via MLX: {}", type(exc).__name__)
             raise
 

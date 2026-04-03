@@ -56,7 +56,7 @@ def read_text_file(file_path: str | Path, max_chars: int = 5000) -> str:
             text = f.read(max_chars)
         logger.debug(f"Read {len(text)} characters from {file_path.name}")
         return text
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         raise FileReadError(f"Failed to read text file {file_path}: {e}") from e
 
 
@@ -84,7 +84,7 @@ def read_docx_file(file_path: str | Path) -> str:
         text = "\n".join(paragraphs)
         logger.debug(f"Extracted {len(text)} characters from {file_path.name}")
         return text
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: python-docx raises library-specific errors
         raise FileReadError(f"Failed to read DOCX file {file_path}: {e}") from e
 
 
@@ -120,7 +120,7 @@ def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
 
         logger.debug(f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}")
         return text
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: PyMuPDF raises library-specific errors
         raise FileReadError(f"Failed to read PDF file {file_path}: {e}") from e
 
 
@@ -183,7 +183,7 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
 
     except ImportError:
         raise
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: openpyxl/csv raise library-specific errors
         raise FileReadError(f"Failed to read spreadsheet file {file_path}: {e}") from e
 
 
@@ -223,5 +223,5 @@ def read_presentation_file(file_path: str | Path) -> str:
             f"Extracted {len(text)} characters from {len(slides_text)} slides of {file_path.name}"
         )
         return text
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: python-pptx raises library-specific errors
         raise FileReadError(f"Failed to read presentation file {file_path}: {e}") from e

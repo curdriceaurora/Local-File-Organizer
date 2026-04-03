@@ -206,7 +206,7 @@ class ClaudeVisionModel(BaseModel):
             return content
         except (TokenExhaustionError, ValueError):
             raise
-        except Exception as e:
+        except (RuntimeError, ConnectionError, OSError) as e:
             if ANTHROPIC_AVAILABLE:
                 import anthropic
 
@@ -253,7 +253,7 @@ class ClaudeVisionModel(BaseModel):
             if self.client is not None:
                 try:
                     self.client.close()
-                except Exception:
+                except (RuntimeError, OSError):
                     logger.opt(exception=True).debug(
                         "Ignoring exception during Claude client close"
                     )

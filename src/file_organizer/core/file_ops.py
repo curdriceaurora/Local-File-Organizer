@@ -157,7 +157,7 @@ def organize_files(
 
             organized.setdefault(result.folder_name, []).append(new_filename)
 
-        except Exception as e:
+        except OSError as e:
             logger.opt(exception=e).error("Failed to organize {}", result.file_path)
 
     return organized

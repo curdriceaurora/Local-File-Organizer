@@ -85,9 +85,9 @@ def ensure_nltk_data() -> None:  # noqa: C901
 
                     wordnet.synsets("test")
                 logger.debug(f"NLTK dataset {dataset} downloaded and verified successfully")
-            except Exception as e:
+            except Exception as e:  # Intentional catch-all: NLTK download can raise various errors
                 logger.warning(f"Failed to download NLTK {dataset}: {e}")
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: NLTK can raise various errors on data load
             # Dataset exists but failed to load
             logger.debug(f"NLTK dataset check failed for {dataset}: {e}")
 
@@ -290,7 +290,7 @@ def clean_text(
         try:
             lemmatizer = WordNetLemmatizer()
             words = [lemmatizer.lemmatize(word) for word in words]
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: NLTK lemmatizer raises library-specific errors
             logger.debug(f"Lemmatization failed: {e}")
 
     # Remove unwanted words and duplicates
@@ -386,7 +386,7 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
         # Return top N
         return [word for word, _ in freq_dist.most_common(top_n)]
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: NLTK tokenize/FreqDist raises library-specific errors
         logger.debug(f"Keyword extraction failed: {e}")
         return []
 

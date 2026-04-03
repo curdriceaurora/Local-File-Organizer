@@ -135,7 +135,7 @@ class FileRouter:
                         processor_type.value,
                     )
                     return processor_type
-            except Exception:
+            except Exception:  # Intentional catch-all: predicate is user-provided
                 logger.exception("Error in custom routing rule for %s", file_path.name)
                 continue
 
