@@ -341,6 +341,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources",
     "ignore::DeprecationWarning:google",
     "ignore::DeprecationWarning:importlib",
+    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
 ]
 # pytest-benchmark settings (pass via CLI: --benchmark-min-rounds=3 --benchmark-max-time=30.0)
 # benchmark_ prefix keys are NOT supported as ini_options in pytest-benchmark 5.x
