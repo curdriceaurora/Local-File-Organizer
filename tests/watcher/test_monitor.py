@@ -514,12 +514,10 @@ class TestFileMonitorAddDirectoryEdgeCases:
             debounce_seconds=0.0,
         )
         mon = FileMonitor(config)
-        # We need a new dir that resolves to a different path
-        new_dir = tmp_path / "new_dir"
-        new_dir.mkdir()
-        mon.add_directory(new_dir)
-        # new_dir should be appended
-        assert new_dir.resolve() in [d.resolve() for d in mon.config.watch_directories]
+        before = [d.resolve() for d in mon.config.watch_directories]
+        mon.add_directory(watch_dir)
+        after = [d.resolve() for d in mon.config.watch_directories]
+        assert after == before
 
 
 class TestFileMonitorObserverFallback:

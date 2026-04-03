@@ -373,10 +373,11 @@ class TestDetectVersion:
 
     def test_detect_version_success(self):
         """_detect_version returns the real __version__ string when import succeeds."""
+        from file_organizer.version import __version__
+
         result = UpdateChecker._detect_version()
-        # Should return a non-empty version string (not the fallback "0.0.0")
-        assert isinstance(result, str)
-        assert result != ""
+        assert result == __version__
+        assert result != "0.0.0"
 
 
 # ---------------------------------------------------------------------------
@@ -388,12 +389,14 @@ class TestDetectVersion:
 class TestUpdateCheckerCheckFetchReturnsNone:
     """Test check() when _fetch_latest_release returns None (not via exception)."""
 
+    @patch("file_organizer.updater.checker.logger")
     @patch("file_organizer.updater.checker.httpx")
-    def test_check_returns_none_when_fetch_returns_none(self, mock_httpx):
+    def test_check_returns_none_when_fetch_returns_none(self, mock_httpx, mock_logger):
         """check() returns None when _fetch_latest_release returns None (e.g., 404)."""
         mock_client = MagicMock()
         mock_resp = MagicMock()
         mock_resp.status_code = 404
+        mock_resp.raise_for_status = MagicMock()
         mock_client.get.return_value = mock_resp
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -402,3 +405,6 @@ class TestUpdateCheckerCheckFetchReturnsNone:
         checker = UpdateChecker(current_version="1.0.0", include_prereleases=False)
         result = checker.check()
         assert result is None
+        mock_client.get.assert_called_once()
+        mock_resp.raise_for_status.assert_not_called()
+        mock_logger.warning.assert_not_called()
