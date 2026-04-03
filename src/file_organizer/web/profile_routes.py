@@ -218,8 +218,8 @@ def _workspace_context(db: Session, user_id: str) -> tuple[list[Workspace], str]
     return workspaces, active
 
 
-# Strict pattern for user IDs — alphanumeric, hyphens, underscores, dots only.
-_SAFE_USER_ID = re.compile(r"^[\w.\-]+$")
+# Strict pattern for user IDs — ASCII alphanumeric, hyphens, underscores, dots only.
+_SAFE_USER_ID = re.compile(r"^[\w.\-]+$", re.ASCII)
 
 
 def _avatar_path(user_id: str) -> Path:
@@ -232,7 +232,7 @@ def _avatar_path(user_id: str) -> Path:
         raise ValueError(f"Invalid user_id: {user_id!r}")
     result = _AVATAR_DIR / f"{user_id}.png"
     # Belt-and-suspenders: verify resolved path is under avatar dir
-    if not str(result.resolve()).startswith(str(_AVATAR_DIR.resolve())):
+    if not result.resolve().is_relative_to(_AVATAR_DIR.resolve()):
         raise ValueError(f"Invalid user_id: {user_id!r}")
     return result
 
@@ -597,8 +597,12 @@ async def profile_avatar_upload(
     if len(raw) > 5 * 1024 * 1024:
         return HTMLResponse('<p class="error-text">Avatar file exceeds 5MB limit.</p>')
 
+    try:
+        dest = _avatar_path(str(user.id))
+    except ValueError:
+        return HTMLResponse('<p class="error-text">Invalid user ID.</p>', status_code=400)
     _AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    _avatar_path(str(user.id)).write_bytes(raw)
+    dest.write_bytes(raw)
     return HTMLResponse('<p class="success-text">Avatar updated.</p>')
 
 
