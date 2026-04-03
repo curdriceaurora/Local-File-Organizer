@@ -79,8 +79,9 @@ class MoveFileRequest(BaseModel):
     allow_directory_overwrite: bool = False
     dry_run: bool = False
 
-    @field_validator("source", "destination")
-    def validate_paths(value: str) -> str:
+    @field_validator("source", "destination")  # pyre-ignore[56]
+    @classmethod
+    def validate_paths(cls, value: str) -> str:
         """Validate and return source or destination path."""
         return _validate_path(value)
 
@@ -101,8 +102,9 @@ class DeleteFileRequest(BaseModel):
     permanent: bool = False
     dry_run: bool = False
 
-    @field_validator("path")
-    def validate_path(value: str) -> str:
+    @field_validator("path")  # pyre-ignore[56]
+    @classmethod
+    def validate_path(cls, value: str) -> str:
         """Validate and return the file path."""
         return _validate_path(value)
 
@@ -123,8 +125,9 @@ class ScanRequest(BaseModel):
     recursive: bool = True
     include_hidden: bool = False
 
-    @field_validator("input_dir")
-    def validate_input_dir(value: str) -> str:
+    @field_validator("input_dir")  # pyre-ignore[56]
+    @classmethod
+    def validate_input_dir(cls, value: str) -> str:
         """Validate and return the input directory path."""
         return _validate_path(value)
 
@@ -147,8 +150,9 @@ class OrganizeRequest(BaseModel):
     use_hardlinks: bool = True
     run_in_background: bool = True
 
-    @field_validator("input_dir", "output_dir")
-    def validate_paths(value: str) -> str:
+    @field_validator("input_dir", "output_dir")  # pyre-ignore[56]
+    @classmethod
+    def validate_paths(cls, value: str) -> str:
         """Validate and return input or output directory paths."""
         return _validate_path(value)
 
@@ -204,8 +208,9 @@ class DedupeScanRequest(BaseModel):
     include_patterns: list[str] | None = None
     exclude_patterns: list[str] | None = None
 
-    @field_validator("path")
-    def validate_path(value: str) -> str:
+    @field_validator("path")  # pyre-ignore[56]
+    @classmethod
+    def validate_path(cls, value: str) -> str:
         """Validate and return the scan path."""
         return _validate_path(value)
 
@@ -265,8 +270,9 @@ class DedupeExecuteRequest(BaseModel):
     dry_run: bool = True
     trash: bool = True
 
-    @field_validator("path")
-    def validate_path(value: str) -> str:
+    @field_validator("path")  # pyre-ignore[56]
+    @classmethod
+    def validate_path(cls, value: str) -> str:
         """Validate and return the path for deduplication."""
         return _validate_path(value)
 
@@ -308,8 +314,9 @@ class UserCreateRequest(BaseModel):
     password: str
     full_name: str | None = None
 
-    @field_validator("username")
-    def validate_username(value: str) -> str:
+    @field_validator("username")  # pyre-ignore[56]
+    @classmethod
+    def validate_username(cls, value: str) -> str:
         """Validate and return the username."""
         value = _validate_text(value, "Username", 32)
         if not _USERNAME_PATTERN.match(value):
@@ -318,8 +325,9 @@ class UserCreateRequest(BaseModel):
             )
         return value
 
-    @field_validator("full_name")
-    def validate_full_name(value: str | None) -> str | None:
+    @field_validator("full_name")  # pyre-ignore[56]
+    @classmethod
+    def validate_full_name(cls, value: str | None) -> str | None:
         """Validate and return the full name."""
         if value is None:
             return value

@@ -15,13 +15,15 @@ from file_organizer.api.dependencies import (
     get_settings,
 )
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.marketplace import router
+from file_organizer.api.routers.marketplace import MarketplaceReviewRequest, router
 from file_organizer.plugins.marketplace import (
     InstalledPlugin,
     MarketplaceError,
     PluginPackage,
     PluginReview,
 )
+
+pytestmark = pytest.mark.ci
 
 
 def _build_app(
@@ -508,6 +510,38 @@ class TestAddReview:
         resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 422
 
+    def test_add_review_whitespace_only_title(self) -> None:
+        """Test adding review rejects titles that become empty after stripping."""
+        mock_service = MagicMock()
+        _, client = _build_app(mock_service)
+
+        payload = {
+            "rating": 5,
+            "title": "   ",
+            "content": "Good plugin.",
+        }
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
+        assert resp.status_code == 422
+
+    def test_add_review_whitespace_content_is_normalized(self) -> None:
+        """Test adding review strips leading and trailing whitespace from content fields."""
+        mock_service = MagicMock()
+        mock_service.add_review.return_value = None
+        mock_service.get_reviews.return_value = [_sample_review()]
+        _, client = _build_app(mock_service)
+
+        payload = {
+            "rating": 5,
+            "title": "  Great plugin!  ",
+            "content": "  This plugin is awesome.  ",
+        }
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
+
+        assert resp.status_code == 200
+        review = mock_service.add_review.call_args.args[0]
+        assert review.title == "Great plugin!"
+        assert review.content == "This plugin is awesome."
+
     def test_add_review_plugin_not_found(self) -> None:
         """Test adding review for nonexistent plugin."""
         mock_service = MagicMock()
@@ -569,3 +603,19 @@ class TestAddReview:
         }
         resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 200
+
+
+@pytest.mark.unit
+class TestMarketplaceReviewSchema:
+    """Tests for MarketplaceReviewRequest schema metadata."""
+
+    def test_schema_preserves_rating_and_text_constraints(self) -> None:
+        schema = MarketplaceReviewRequest.model_json_schema()
+        properties = schema["properties"]
+
+        assert properties["rating"]["minimum"] == 1
+        assert properties["rating"]["maximum"] == 5
+        assert properties["title"]["minLength"] == 1
+        assert properties["title"]["maxLength"] == 120
+        assert properties["content"]["minLength"] == 1
+        assert properties["content"]["maxLength"] == 2000

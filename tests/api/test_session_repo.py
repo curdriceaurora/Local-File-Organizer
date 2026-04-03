@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from file_organizer.api.db_models import UserSession
 from file_organizer.api.repositories.session_repo import SessionRepository
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestSessionRepositoryCreate:
@@ -92,6 +92,14 @@ class TestSessionRepositoryGetActiveByTokenHash:
             mock_dt.now.assert_not_called()
         session.query.return_value.filter.assert_called()
 
+    def test_get_builds_active_filters(self):
+        session = self._make_session(result=None)
+
+        SessionRepository.get_active_by_token_hash(session, "hash-abc")
+
+        args = session.query.return_value.filter.call_args.args
+        assert len(args) == 3
+
 
 class TestSessionRepositoryListActiveForUser:
     """Tests for SessionRepository.list_active_for_user."""
@@ -121,6 +129,19 @@ class TestSessionRepositoryListActiveForUser:
             result = SessionRepository.list_active_for_user(session, "user-1", now=custom_now)
             mock_dt.now.assert_not_called()
         assert result == []
+
+    def test_list_builds_active_filters(self):
+        session = MagicMock(spec=Session)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.order_by.return_value = query
+        query.all.return_value = []
+
+        SessionRepository.list_active_for_user(session, "user-1")
+
+        args = session.query.return_value.filter.call_args.args
+        assert len(args) == 3
 
 
 class TestSessionRepositoryRevoke:
@@ -182,3 +203,15 @@ class TestSessionRepositoryPruneExpired:
             result = SessionRepository.prune_expired(session, now=custom_now)
             mock_dt.now.assert_not_called()
         assert result == 1
+
+    def test_prune_uses_combined_expired_or_revoked_filter(self):
+        session = MagicMock(spec=Session)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.delete.return_value = 1
+
+        SessionRepository.prune_expired(session)
+
+        args = session.query.return_value.filter.call_args.args
+        assert len(args) == 1

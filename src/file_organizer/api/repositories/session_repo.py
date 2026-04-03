@@ -15,6 +15,24 @@ class SessionRepository:
     """CRUD and lifecycle operations for persistent user sessions."""
 
     @staticmethod
+    def _active_filters(
+        *,
+        now: datetime,
+        user_id: str | None = None,
+        token_hash: str | None = None,
+    ) -> tuple[ColumnElement[bool], ...]:
+        """Build the standard active-session predicate set."""
+        filters: list[ColumnElement[bool]] = [
+            cast(ColumnElement[bool], UserSession.revoked_at.is_(None)),
+            cast(ColumnElement[bool], UserSession.expires_at > now),
+        ]
+        if token_hash is not None:
+            filters.append(cast(ColumnElement[bool], UserSession.token_hash == token_hash))
+        if user_id is not None:
+            filters.append(cast(ColumnElement[bool], UserSession.user_id == user_id))
+        return tuple(filters)
+
+    @staticmethod
     def create(
         session: Session,
         *,
@@ -50,11 +68,7 @@ class SessionRepository:
     ) -> UserSession | None:
         """Return an active (unrevoked, unexpired) session by token hash."""
         current = now or datetime.now(UTC)
-        filters: tuple[ColumnElement[bool], ...] = (
-            cast(ColumnElement[bool], UserSession.token_hash == token_hash),
-            cast(ColumnElement[bool], UserSession.revoked_at.is_(None)),
-            cast(ColumnElement[bool], UserSession.expires_at > current),
-        )
+        filters = SessionRepository._active_filters(now=current, token_hash=token_hash)
         return session.query(UserSession).filter(*filters).first()
 
     @staticmethod
@@ -66,11 +80,7 @@ class SessionRepository:
     ) -> list[UserSession]:
         """List active sessions for a user."""
         current = now or datetime.now(UTC)
-        filters: tuple[ColumnElement[bool], ...] = (
-            cast(ColumnElement[bool], UserSession.user_id == user_id),
-            cast(ColumnElement[bool], UserSession.revoked_at.is_(None)),
-            cast(ColumnElement[bool], UserSession.expires_at > current),
-        )
+        filters = SessionRepository._active_filters(now=current, user_id=user_id)
         return (
             session.query(UserSession)
             .filter(*filters)

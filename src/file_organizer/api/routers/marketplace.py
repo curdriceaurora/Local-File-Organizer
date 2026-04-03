@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
+from typing import Annotated, NoReturn
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, StringConstraints
 
 from file_organizer.api.dependencies import UserLike, get_current_active_user
 from file_organizer.api.exceptions import ApiError
@@ -69,30 +69,12 @@ class MarketplaceUpdateResponse(BaseModel):
 class MarketplaceReviewRequest(BaseModel):
     """Request body for submitting a plugin review."""
 
-    rating: int
-    title: str
-    content: str
-
-    @field_validator("rating")
-    def validate_rating(value: int) -> int:
-        """Keep review ratings in the expected 1-5 range."""
-        if 1 <= value <= 5:
-            return value
-        raise ValueError("Rating must be between 1 and 5")
-
-    @field_validator("title")
-    def validate_title(value: str) -> str:
-        """Require a non-empty title with the current API length limit."""
-        if 1 <= len(value) <= 120:
-            return value
-        raise ValueError("Title must be between 1 and 120 characters")
-
-    @field_validator("content")
-    def validate_content(value: str) -> str:
-        """Require non-empty review content within the API length limit."""
-        if 1 <= len(value) <= 2000:
-            return value
-        raise ValueError("Content must be between 1 and 2000 characters")
+    rating: Annotated[int, Field(ge=1, le=5)]
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    content: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=2000),
+    ]
 
 
 class MarketplaceReviewResponse(BaseModel):
@@ -194,13 +176,11 @@ def list_plugins(
 @router.get("/marketplace/plugins/{name}", response_model=MarketplacePluginResponse)
 def get_plugin(name: str) -> MarketplacePluginResponse:
     """Retrieve details for a single marketplace plugin by name."""
-    package: PluginPackage | None = None
     try:
         package = _service().get_plugin(name)
+        return _package_to_response(package)
     except MarketplaceError as exc:
         _raise_marketplace_error(exc)
-    assert package is not None
-    return _package_to_response(package)
 
 
 @router.get("/marketplace/installed", response_model=list[MarketplaceInstalledResponse])
@@ -229,13 +209,11 @@ def install_plugin(
     version: str | None = Query(None),
 ) -> MarketplaceInstalledResponse:
     """Install a marketplace plugin by name and optional version."""
-    installed: InstalledPlugin | None = None
     try:
         installed = _service().install(name, version=version)
+        return _installed_to_response(installed)
     except MarketplaceError as exc:
         _raise_marketplace_error(exc)
-    assert installed is not None
-    return _installed_to_response(installed)
 
 
 @router.delete("/marketplace/plugins/{name}")
@@ -286,15 +264,15 @@ def add_review(
     if not isinstance(raw_user, str) or not raw_user:
         raw_user = getattr(user, "username", "anonymous")
     user_id_str: str = str(raw_user) if raw_user is not None else "anonymous"
-    review = PluginReview(
-        plugin_name=name,
-        user_id=user_id_str,
-        rating=request.rating,
-        title=request.title,
-        content=request.content,
-    )
     latest: list[PluginReview] = []
     try:
+        review = PluginReview(
+            plugin_name=name,
+            user_id=user_id_str,
+            rating=request.rating,
+            title=request.title,
+            content=request.content,
+        )
         service = _service()
         service.add_review(review)
         latest = service.get_reviews(name, limit=1)

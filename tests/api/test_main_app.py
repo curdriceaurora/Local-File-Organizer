@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestAppFactory:

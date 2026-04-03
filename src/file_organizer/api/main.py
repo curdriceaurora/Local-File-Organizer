@@ -7,9 +7,9 @@ import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
+from fastapi.routing import APIRouter
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
@@ -40,15 +40,14 @@ from file_organizer.plugins.api.endpoints import router as plugin_api_router
 from file_organizer.web import STATIC_DIR
 from file_organizer.web import router as web_router
 
-if TYPE_CHECKING:
-    from fastapi.routing import APIRouter
-
 try:
     from file_organizer.api.routers.daemon import router as daemon_router
-except ModuleNotFoundError as exc:
-    if "daemon" not in (exc.name or ""):
+except (
+    ModuleNotFoundError
+) as exc:  # pragma: no cover - optional daemon extra is not installed in tests
+    if "daemon" not in (exc.name or ""):  # pragma: no cover
         raise
-    daemon_router: APIRouter | None = None
+    daemon_router: APIRouter | None = None  # pragma: no cover
 
 _LOGGING_CONFIGURED = False
 _app: FastAPI | None = None

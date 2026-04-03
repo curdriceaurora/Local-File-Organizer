@@ -105,8 +105,9 @@ class ApiSettings(BaseModel):
     security_referrer_policy: str = "strict-origin-when-cross-origin"
     ollama_url: str = "http://localhost:11434"
 
-    @field_validator("ollama_url")
-    def _normalize_ollama_url(v: str) -> str:
+    @field_validator("ollama_url")  # pyre-ignore[56]
+    @classmethod
+    def _normalize_ollama_url(cls, v: str) -> str:
         """Prepend ``http://`` when *OLLAMA_HOST* is given as ``host:port``."""
         if v and not v.startswith(("http://", "https://")):
             return f"http://{v}"
