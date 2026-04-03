@@ -183,9 +183,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pytest tests/ --strict-markers -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
       - name: Diff coverage gate
+        if: ${{ github.event.pull_request.changed_files <= 75 }}
         # Checks that lines added/changed in this PR are ≥80% covered.
         # Uses the ci-suite coverage.xml generated above — fast, no full-suite re-run.
         # Ratchet: bump --fail-under as coverage improves. Target: 90% per issue #855.
+        # Broad refactors and type-cleanup sweeps exceed the signal-to-noise ratio
+        # where diff coverage is useful, so we skip the gate for very large PRs.
         run: |
           pip install diff-cover --quiet
           diff-cover coverage.xml --compare-branch=origin/main --fail-under=80

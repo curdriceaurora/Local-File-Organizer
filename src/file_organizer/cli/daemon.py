@@ -25,7 +25,7 @@ daemon_app = typer.Typer(
     name="daemon",
     help="Background daemon control and file processing pipeline.",
     no_args_is_help=True,
-    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-ignore[6]
+    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-fixme[6]: Typer's stub rejects this Literal.
 )
 
 _DEFAULT_PID_DIR = get_state_dir()

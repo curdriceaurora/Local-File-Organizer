@@ -51,7 +51,7 @@ app = typer.Typer(
     name="file-organizer",
     help="AI-powered local file management with privacy-first architecture.",
     no_args_is_help=True,
-    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-ignore[6]
+    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-fixme[6]: Typer's stub rejects this Literal.
 )
 
 # ---------------------------------------------------------------------------
