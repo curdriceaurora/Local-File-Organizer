@@ -42,26 +42,42 @@ class TestMaybeCheckForUpdates:
 
     def test_returns_none_if_user_disabled_checks(self):
         """Returns None if check_on_startup is False in config."""
-        with patch("file_organizer.updater.background.ConfigManager") as mock_cfg_mgr:
-            mock_cfg = MagicMock()
-            mock_cfg.updates.check_on_startup = False
-            mock_cfg_mgr.return_value.load.return_value = mock_cfg
-            result = maybe_check_for_updates()
-            assert result is None
+        env_patch = patch.dict(os.environ, {}, clear=False)
+        env_patch.start()
+        try:
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                del os.environ["PYTEST_CURRENT_TEST"]
+            with patch("file_organizer.updater.background.ConfigManager") as mock_cfg_mgr:
+                mock_cfg = MagicMock()
+                mock_cfg.updates.check_on_startup = False
+                mock_cfg_mgr.return_value.load.return_value = mock_cfg
+                result = maybe_check_for_updates()
+                assert result is None
+        finally:
+            env_patch.stop()
 
     def test_returns_none_if_not_due(self):
         """Returns None if throttle interval hasn't elapsed."""
         state = UpdateState(last_checked=datetime.now(UTC).isoformat())
         store = MagicMock(spec=UpdateStateStore)
         store.load.return_value = state
-        with patch("file_organizer.updater.background.ConfigManager") as mock_cfg_mgr:
-            mock_cfg = MagicMock()
-            mock_cfg.updates.check_on_startup = True
-            mock_cfg.updates.interval_hours = 24
-            mock_cfg_mgr.return_value.load.return_value = mock_cfg
-            with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
-                result = maybe_check_for_updates()
-                assert result is None
+        env_patch = patch.dict(os.environ, {}, clear=False)
+        env_patch.start()
+        try:
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                del os.environ["PYTEST_CURRENT_TEST"]
+            with patch("file_organizer.updater.background.ConfigManager") as mock_cfg_mgr:
+                mock_cfg = MagicMock()
+                mock_cfg.updates.check_on_startup = True
+                mock_cfg.updates.interval_hours = 24
+                mock_cfg_mgr.return_value.load.return_value = mock_cfg
+                with patch(
+                    "file_organizer.updater.background.UpdateStateStore", return_value=store
+                ):
+                    result = maybe_check_for_updates()
+                    assert result is None
+        finally:
+            env_patch.stop()
 
     def test_checks_and_returns_status_when_due(self):
         """Returns UpdateStatus when check is due and no update available."""

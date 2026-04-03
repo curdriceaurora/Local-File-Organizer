@@ -332,3 +332,178 @@ class TestCoordinatedUpdateDryRun:
             result = coordinated_update(dry_run=True)
 
         assert "dry run" in result.message.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests for coordinated_update — no compatible asset
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatedUpdateNoAsset:
+    """Tests for coordinated_update when no compatible asset is found."""
+
+    def test_no_asset_returns_failure(
+        self, mock_checker_with_update, fake_release: ReleaseInfo
+    ) -> None:
+        """Returns failure when select_asset returns None."""
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = None
+
+            result = coordinated_update()
+
+        assert result.success is False
+        assert "no compatible" in result.message.lower()
+        assert "update-failed" in result.events
+
+    def test_no_asset_emits_update_failed_event(
+        self, mock_checker_with_update, fake_release: ReleaseInfo
+    ) -> None:
+        """Emits update-failed event when no compatible asset found."""
+        received: list[str] = []
+
+        def capture(event: str, _payload: object) -> None:
+            received.append(event)
+
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = None
+
+            coordinated_update(event_callback=capture)
+
+        assert "update-failed" in received
+
+
+# ---------------------------------------------------------------------------
+# Tests for coordinated_update — download failure
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatedUpdateDownloadFailure:
+    """Tests for coordinated_update when download fails."""
+
+    def test_download_failure_returns_failure(
+        self, mock_checker_with_update, fake_release: ReleaseInfo
+    ) -> None:
+        """Returns failure when download_asset returns None."""
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = fake_release.assets[0]
+            inst.find_checksum.return_value = ""
+            inst.download_asset.return_value = None
+
+            result = coordinated_update()
+
+        assert result.success is False
+        assert (
+            "download failed" in result.message.lower()
+            or "verification failed" in result.message.lower()
+        )
+        assert "update-failed" in result.events
+
+    def test_download_failure_emits_events(
+        self, mock_checker_with_update, fake_release: ReleaseInfo
+    ) -> None:
+        """Emits update-available then update-failed on download failure."""
+        received: list[str] = []
+
+        def capture(event: str, _payload: object) -> None:
+            received.append(event)
+
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = fake_release.assets[0]
+            inst.find_checksum.return_value = ""
+            inst.download_asset.return_value = None
+
+            coordinated_update(event_callback=capture)
+
+        assert "update-available" in received
+        assert "update-downloading" in received
+        assert "update-failed" in received
+
+
+# ---------------------------------------------------------------------------
+# Tests for coordinated_update — checksum found path
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatedUpdateWithChecksum:
+    """Tests for coordinated_update when checksum is found."""
+
+    def test_checksum_found_logs_prefix(
+        self, mock_checker_with_update, fake_release: ReleaseInfo, tmp_path: Path
+    ) -> None:
+        """When find_checksum returns a hash, it is passed to download_asset."""
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = fake_release.assets[0]
+            inst.find_checksum.return_value = "abc123def456" * 4
+            downloaded = tmp_path / "sidecar.bin"
+            downloaded.write_bytes(b"fake binary")
+            inst.download_asset.return_value = downloaded
+            inst.install.return_value = InstallResult(success=True, message="Installed.")
+
+            result = coordinated_update()
+
+        assert result.success is True
+        inst.download_asset.assert_called_once_with(
+            fake_release.assets[0],
+            expected_sha256="abc123def456" * 4,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests for coordinated_update — rollback failure
+# ---------------------------------------------------------------------------
+
+
+class TestCoordinatedUpdateRollbackFailure:
+    """Tests when sidecar install fails AND shell rollback also fails."""
+
+    def test_rollback_failure_message(
+        self, mock_checker_with_update, fake_release: ReleaseInfo, tmp_path: Path
+    ) -> None:
+        """Message says rollback also failed when rollback returns False."""
+        with (
+            patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller,
+            patch("file_organizer.updater.sidecar_updater.UpdateManager") as MockManager,
+        ):
+            inst = MockInstaller.return_value
+            inst.select_asset.return_value = fake_release.assets[0]
+            inst.find_checksum.return_value = ""
+            downloaded = tmp_path / "sidecar.bin"
+            downloaded.write_bytes(b"corrupt binary")
+            inst.download_asset.return_value = downloaded
+            inst.install.return_value = InstallResult(
+                success=False,
+                message="SHA256 mismatch.",
+            )
+
+            mgr = MockManager.return_value
+            mgr.rollback.return_value = False
+
+            result = coordinated_update()
+
+        assert result.success is False
+        assert result.rolled_back is False
+        assert "rollback also failed" in result.message.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests for verify_sha256 — OSError during read
+# ---------------------------------------------------------------------------
+
+
+class TestVerifySha256OsError:
+    """Test verify_sha256 when file read raises OSError."""
+
+    def test_os_error_returns_false(self, tmp_path: Path) -> None:
+        """verify_sha256 returns False when file read fails with OSError."""
+        f = tmp_path / "file.bin"
+        f.write_bytes(b"data")
+
+        with patch.object(Path, "open", side_effect=OSError("permission denied")):
+            result = verify_sha256(f, "abc123")
+
+        assert result is False
