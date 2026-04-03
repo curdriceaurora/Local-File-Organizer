@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 from file_organizer.core.organizer import OrganizationResult
-from tests.conftest import get_csrf_headers
+from tests.conftest import get_csrf_headers, get_csrf_token
 
 
 def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> TestClient:
@@ -306,11 +306,10 @@ class TestOrganizeRoutes:
         """POST with a seeded cookie but mismatched header token should be rejected."""
         (tmp_path / "file.txt").write_text("test")
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        # Seed the cookie so the client has a real _csrf_token value
-        client.get("/ui/organize")
+        token = get_csrf_token(client, seed_url="/ui/organize")
         response = client.post(
             "/ui/organize/scan",
             data={"input_dir": str(tmp_path), "output_dir": str(tmp_path / "out")},
-            headers={"x-csrf-token": "deliberately-wrong-value"},
+            headers={"x-csrf-token": f"{token}-tampered"},
         )
         assert response.status_code == 403
