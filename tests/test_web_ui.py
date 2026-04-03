@@ -17,6 +17,7 @@ from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 from file_organizer.core.organizer import OrganizationResult
 from file_organizer.plugins.marketplace import compute_sha256
+from tests.conftest import get_csrf_headers
 
 _PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAn8B9p4n9QAAAABJRU5ErkJggg=="
@@ -32,17 +33,7 @@ def _build_client(tmp_path: Path, allowed_root: Path | None = None) -> TestClien
     )
     app = create_app(settings)
     client = TestClient(app)
-    # Pre-seed the CSRF cookie so POST requests can include the token.
-    resp = client.get("/ui/")
-    client._csrf_token = resp.cookies.get("_csrf_token", "")  # type: ignore[attr-defined]
     return client
-
-
-def _csrf_headers(client: TestClient) -> dict[str, str]:
-    """Return headers dict with CSRF token for POST requests."""
-    token = getattr(client, "_csrf_token", "")
-    assert token, "CSRF cookie '_csrf_token' was not seeded by _build_client — check middleware"
-    return {"x-csrf-token": token}
 
 
 def _write_marketplace_repo(repo_dir: Path) -> None:
@@ -177,7 +168,7 @@ def test_marketplace_ui_browse_and_install(
     install = client.post(
         "/ui/marketplace/plugins/ui-plugin/install",
         data={"q": "", "category": "", "tag_csv": ""},
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert install.status_code == 200
     assert "Installed ui-plugin" in install.text
@@ -227,7 +218,7 @@ def test_file_browser_endpoints(tmp_path: Path) -> None:
         "/ui/files/upload",
         data={"path": str(root)},
         files={"files": ("upload.txt", b"data")},
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert upload.status_code == 200
     assert (root / "upload.txt").exists()
@@ -242,7 +233,7 @@ def test_upload_rejects_hidden_files(tmp_path: Path) -> None:
         "/ui/files/upload",
         data={"path": str(root)},
         files={"files": (".secret", b"data")},
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert response.status_code == 200
     assert "hidden files are not allowed" in response.text.lower()
@@ -276,7 +267,7 @@ def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
             "skip_existing": "1",
             "use_hardlinks": "1",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert scan.status_code == 200
     assert "Plan summary" in scan.text
@@ -290,7 +281,7 @@ def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
             "dry_run": "0",
             "schedule_delay_minutes": "0",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert execute.status_code == 200
     job_id = _extract_attr(execute.text, "data-job-id")
@@ -342,7 +333,7 @@ def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) 
             "output_dir": str(root / "organized"),
             "methodology": "content_based",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert scan.status_code == 200
     assert "outside allowed roots" in scan.text.lower()
@@ -365,7 +356,7 @@ def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> No
             "methodology": "content_based",
             "include_hidden": "1",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert scan.status_code == 200
     assert "not supported" in scan.text.lower()
@@ -388,7 +379,7 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
             "output_dir": str(root / "organized"),
             "methodology": "johnny_decimal",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert scan.status_code == 200
     plan_id = _extract_input_value(scan.text, "plan_id")
@@ -400,14 +391,16 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
             "dry_run": "0",
             "schedule_delay_minutes": "1",
         },
-        headers=_csrf_headers(client),
+        headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert execute.status_code == 200
     assert "scheduled to start" in execute.text.lower()
     assert "Cancel scheduled job" in execute.text
     job_id = _extract_attr(execute.text, "data-job-id")
 
-    cancel = client.post(f"/ui/organize/jobs/{job_id}/cancel", headers=_csrf_headers(client))
+    cancel = client.post(
+        f"/ui/organize/jobs/{job_id}/cancel", headers=get_csrf_headers(client, seed_url="/ui/")
+    )
     assert cancel.status_code == 200
     assert "cancelled" in cancel.text.lower()
 
