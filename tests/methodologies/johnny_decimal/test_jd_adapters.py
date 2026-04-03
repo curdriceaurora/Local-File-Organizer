@@ -22,6 +22,10 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     JohnnyDecimalNumber,
     NumberLevel,
 )
+from file_organizer.methodologies.johnny_decimal.config import (
+    JohnnyDecimalConfig,
+    create_para_compatible_config,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -219,3 +223,50 @@ class TestCreateDefaultRegistry:
         jd_config.compatibility.para_integration.enabled = False
         registry = create_default_registry(jd_config)
         assert len(registry._adapters) == 1  # FS only
+
+
+class TestAdaptersCoverage:
+    """Cover all missing branches in adapters.py."""
+
+    @pytest.fixture
+    def config(self) -> JohnnyDecimalConfig:
+        return create_para_compatible_config()
+
+    # Branch 275->279: _suggest_area_from_name digit outside 10-99
+    def test_suggest_area_digit_out_of_range(self, config: JohnnyDecimalConfig) -> None:
+        adapter = FileSystemAdapter(config)
+        area = adapter._suggest_area_from_name("5 LowNum")
+        assert 10 <= area <= 99  # falls through to hash-based
+
+    # Branch 288->294: _suggest_category_from_name with non-digit second part
+    def test_suggest_category_non_digit_after_dot(self, config: JohnnyDecimalConfig) -> None:
+        adapter = FileSystemAdapter(config)
+        cat = adapter._suggest_category_from_name("10.abc NotDigit")
+        assert 1 <= cat <= 99  # falls through to hash-based
+
+    # Branch 290->294: _suggest_category_from_name digit out of range
+    def test_suggest_category_digit_out_of_range(self, config: JohnnyDecimalConfig) -> None:
+        adapter = FileSystemAdapter(config)
+        cat = adapter._suggest_category_from_name("10.0 Zero")
+        assert 1 <= cat <= 99  # 0 is outside 1-99, falls through to hash
+
+    # Branch 331->330: get_adapter where adapter.can_adapt returns False
+    def test_get_adapter_can_adapt_false(self, config: JohnnyDecimalConfig) -> None:
+        registry = AdapterRegistry()
+        registry.register(PARAAdapter(config))
+        # Item with non-PARA category => PARAAdapter.can_adapt returns False
+        item = OrganizationItem(
+            name="test",
+            path=Path("test"),
+            category="unknown",
+            metadata={},
+        )
+        assert registry.get_adapter(item) is None
+
+    # Branch 366->363: adapt_from_jd with unknown methodology
+    def test_adapt_from_jd_unknown_methodology(self, config: JohnnyDecimalConfig) -> None:
+        registry = AdapterRegistry()
+        registry.register(PARAAdapter(config))
+        num = JohnnyDecimalNumber(area=10, category=1)
+        result = registry.adapt_from_jd(num, "test", methodology="unknown")
+        assert result is None

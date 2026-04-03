@@ -14,11 +14,15 @@ from unittest.mock import patch
 import pytest
 
 from file_organizer.methodologies.johnny_decimal.categories import (
+    AreaDefinition,
+    CategoryDefinition,
     JohnnyDecimalNumber,
+    NumberingScheme,
     get_default_scheme,
 )
 from file_organizer.methodologies.johnny_decimal.numbering import JohnnyDecimalGenerator
 from file_organizer.methodologies.johnny_decimal.scanner import FolderInfo
+from file_organizer.methodologies.johnny_decimal.system import JohnnyDecimalSystem
 from file_organizer.methodologies.johnny_decimal.transformer import (
     FolderTransformer,
     TransformationPlan,
@@ -268,3 +272,88 @@ class TestGeneratePreview:
         assert "Conflicts" in preview
         assert "warn1" in preview
         assert "conflict1" in preview
+
+
+class TestTransformerCoverage:
+    """Cover all missing lines in transformer.py."""
+
+    @pytest.fixture
+    def transformer(self) -> FolderTransformer:
+        scheme = JohnnyDecimalSystem().scheme
+        gen = JohnnyDecimalGenerator(scheme)
+        return FolderTransformer(scheme, gen)
+
+    # Lines 274->283: _suggest_area_number with matching scheme area name
+    def test_suggest_area_matches_scheme(self, transformer: FolderTransformer) -> None:
+        # Add an area definition with a name
+        area_def = AreaDefinition(
+            area_range_start=10,
+            area_range_end=19,
+            name="Finance",
+            description="Financial docs",
+        )
+        transformer.scheme.add_area(area_def)
+
+        folder = FolderInfo(
+            path=Path("finance"),
+            name="finance",
+            depth=0,
+            file_count=0,
+            total_size=0,
+        )
+        area = transformer._suggest_area_number(folder, index=0)
+        assert area == 10
+
+    # Lines 303-308: _suggest_category_number with matching scheme category
+    def test_suggest_category_matches_scheme(self, transformer: FolderTransformer) -> None:
+        cat_def = CategoryDefinition(
+            area=10,
+            category=5,
+            name="Budget",
+            description="",
+        )
+        transformer.scheme.add_category(cat_def)
+        folder = FolderInfo(
+            path=Path("budget"),
+            name="budget",
+            depth=1,
+            file_count=0,
+            total_size=0,
+        )
+        cat = transformer._suggest_category_number(folder, area=10, index=0)
+        assert cat == 5
+
+    # Branch 274->283: _suggest_area_number — empty scheme (no areas)
+    def test_suggest_area_empty_scheme(self) -> None:
+        empty_scheme = NumberingScheme(name="empty", description="")
+        gen = JohnnyDecimalGenerator(empty_scheme)
+        t = FolderTransformer(empty_scheme, gen)
+        folder = FolderInfo(
+            path=Path("anything"),
+            name="anything",
+            depth=0,
+            file_count=0,
+            total_size=0,
+        )
+        area = t._suggest_area_number(folder, index=3)
+        assert area == 13  # 10 + 3
+
+    # Branch 303->312, 304->303: _suggest_category_number — no match
+    def test_suggest_category_no_match(self, transformer: FolderTransformer) -> None:
+        # Add a category that doesn't match
+        cat_def = CategoryDefinition(
+            area=10,
+            category=5,
+            name="Budget",
+            description="",
+        )
+        transformer.scheme.add_category(cat_def)
+        folder = FolderInfo(
+            path=Path("zzz_unknown"),
+            name="zzz_unknown",
+            depth=1,
+            file_count=0,
+            total_size=0,
+        )
+        cat = transformer._suggest_category_number(folder, area=10, index=2)
+        assert cat == 3  # index + 1

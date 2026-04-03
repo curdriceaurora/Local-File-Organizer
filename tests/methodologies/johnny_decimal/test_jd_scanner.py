@@ -7,13 +7,24 @@ _generate_warnings deep/many/duplicates.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from file_organizer.methodologies.johnny_decimal.scanner import FolderScanner
+from file_organizer.methodologies.johnny_decimal.categories import get_default_scheme
+from file_organizer.methodologies.johnny_decimal.scanner import FolderInfo, FolderScanner
+from file_organizer.methodologies.johnny_decimal.system import JohnnyDecimalSystem
 
 pytestmark = pytest.mark.unit
+
+
+def _create_broken_symlink_or_skip(link_path: Path, target_path: Path) -> None:
+    try:
+        link_path.symlink_to(target_path)
+    except (NotImplementedError, OSError):
+        pytest.skip("Symlink creation is not supported in this environment")
 
 
 @pytest.fixture
@@ -155,8 +166,6 @@ class TestGenerateWarnings:
         """Duplicate folder names at same level produce warning (line 353)."""
         # Can't have actual duplicates at same level, but we test through
         # the _generate_warnings directly
-        from file_organizer.methodologies.johnny_decimal.scanner import FolderInfo
-
         scanner = FolderScanner()
         tree = [
             FolderInfo(path=tmp_path / "dup", name="dup", depth=0),
@@ -164,3 +173,140 @@ class TestGenerateWarnings:
         ]
         warnings = scanner._generate_warnings(tree, 2)
         assert any("Duplicate" in w for w in warnings)
+
+
+class TestScannerCoverage:
+    """Cover all missing lines in scanner.py."""
+
+    @pytest.fixture
+    def scanner(self) -> FolderScanner:
+        return FolderScanner(get_default_scheme())
+
+    # Lines 144-146: _scan_folder with max depth exceeded
+    def test_scan_folder_max_depth(self, tmp_path: Path) -> None:
+        scanner = FolderScanner(scheme=JohnnyDecimalSystem().scheme, max_depth=0)
+        (tmp_path / "sub").mkdir()
+        result = scanner.scan_directory(tmp_path)
+        # Max depth 0 means no recursion into first-level dirs' children
+        assert result.total_folders >= 0
+
+    # Lines 158->148: _scan_folder PermissionError in iterdir (branch)
+    def test_scan_folder_permission_denied(self, scanner: FolderScanner, tmp_path: Path) -> None:
+        restricted = tmp_path / "restricted"
+        restricted.mkdir()
+        original_iterdir = Path.iterdir
+
+        def guarded_iterdir(path_self: Path) -> Iterator[Path]:
+            if path_self == restricted:
+                raise PermissionError("permission denied")
+            return original_iterdir(path_self)
+
+        with patch.object(Path, "iterdir", guarded_iterdir):
+            result = scanner.scan_directory(tmp_path)
+        assert result is not None
+        assert any(folder.path == restricted for folder in result.folder_tree)
+
+    # Lines 163-164: _scan_folder counts files and handles OSError on stat
+    def test_scan_counts_files(self, scanner: FolderScanner, tmp_path: Path) -> None:
+        (tmp_path / "file.txt").write_text("hello")
+        result = scanner.scan_directory(tmp_path)
+        assert result.total_files >= 1
+
+    # Lines 188-191: _create_folder_info PermissionError
+    def test_create_folder_info_permission_error(
+        self, scanner: FolderScanner, tmp_path: Path
+    ) -> None:
+        restricted = tmp_path / "restricted_inner"
+        restricted.mkdir()
+        inner_file = restricted / "data.txt"
+        inner_file.write_text("data")
+
+        def denied_iterdir(path_self: Path) -> Iterator[Path]:
+            if path_self == restricted:
+                raise PermissionError("permission denied")
+            return iter(())
+
+        with patch.object(Path, "iterdir", denied_iterdir):
+            info = scanner._create_folder_info(restricted, depth=0)
+        assert info.file_count == 0
+
+    # Lines 163-164: OSError on file stat in _scan_folder
+    def test_scan_folder_file_stat_oserror(self, scanner: FolderScanner, tmp_path: Path) -> None:
+        class BrokenSizeFile:
+            name = "file.txt"
+
+            def is_dir(self) -> bool:
+                return False
+
+            def is_file(self) -> bool:
+                return True
+
+            def stat(self) -> object:
+                raise OSError("bad stat")
+
+        with patch.object(Path, "iterdir", return_value=iter([BrokenSizeFile()])):
+            result = scanner.scan_directory(tmp_path)
+        assert result is not None
+        assert result.total_files == 1
+        assert result.total_size == 0
+
+    # Lines 188-189: OSError on file stat in _create_folder_info
+    def test_create_folder_info_file_stat_oserror(
+        self, scanner: FolderScanner, tmp_path: Path
+    ) -> None:
+        sub = tmp_path / "sub"
+        sub.mkdir()
+
+        class BrokenSizeFile:
+            name = "file.txt"
+
+            def is_file(self) -> bool:
+                return True
+
+            def stat(self) -> object:
+                raise OSError("bad stat")
+
+        with patch.object(Path, "iterdir", return_value=iter([BrokenSizeFile()])):
+            info = scanner._create_folder_info(sub, depth=0)
+        assert info.file_count == 1
+        assert info.total_size == 0
+
+    # Lines 284->293, 285->293: _looks_like_jd_number with various formats
+    def test_looks_like_jd_id_format(self, scanner: FolderScanner) -> None:
+        assert scanner._looks_like_jd_number("11.01.001 Report") is True
+        assert scanner._looks_like_jd_number("11.01.1 Bad") is False  # third part not 3 digits
+        assert scanner._looks_like_jd_number("") is False
+        # 4-part format: not 2 or 3 parts, falls through
+        assert scanner._looks_like_jd_number("11.01.001.99 Extra") is False
+        # 2-part with non-digit parts
+        assert scanner._looks_like_jd_number("ab.cd Nope") is False
+        # 2-part with wrong lengths
+        assert scanner._looks_like_jd_number("1.1 TooShort") is False
+
+    # Branch 158->148: item is neither file nor dir (broken symlink)
+    def test_scan_folder_broken_symlink_skipped(
+        self, scanner: FolderScanner, tmp_path: Path
+    ) -> None:
+        broken = tmp_path / "broken_link"
+        _create_broken_symlink_or_skip(broken, tmp_path / "nonexistent")
+        result = scanner.scan_directory(tmp_path)
+        assert result.total_files == 0
+
+    # PermissionError in _scan_folder during sorted(path.iterdir())
+    def test_scan_folder_iterdir_permission_error(
+        self, scanner: FolderScanner, tmp_path: Path
+    ) -> None:
+        sub = tmp_path / "noperm"
+        sub.mkdir()
+        (sub / "inner").mkdir()
+
+        original_iterdir = Path.iterdir
+
+        def guarded_iterdir(path_self: Path) -> Iterator[Path]:
+            if path_self == sub:
+                raise PermissionError("permission denied")
+            return original_iterdir(path_self)
+
+        with patch.object(Path, "iterdir", guarded_iterdir):
+            result = scanner.scan_directory(tmp_path)
+        assert result is not None

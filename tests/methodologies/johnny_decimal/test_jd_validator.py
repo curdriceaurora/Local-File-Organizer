@@ -17,6 +17,7 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     get_default_scheme,
 )
 from file_organizer.methodologies.johnny_decimal.numbering import JohnnyDecimalGenerator
+from file_organizer.methodologies.johnny_decimal.system import JohnnyDecimalSystem
 from file_organizer.methodologies.johnny_decimal.transformer import (
     TransformationPlan,
     TransformationRule,
@@ -297,3 +298,107 @@ class TestGenerateReport:
         assert "err1" in report
         assert "warn1" in report
         assert "info1" in report
+
+
+class TestValidatorCoverage:
+    """Cover all missing lines in validator.py."""
+
+    @pytest.fixture
+    def validator(self) -> MigrationValidator:
+        scheme = JohnnyDecimalSystem().scheme
+        gen = JohnnyDecimalGenerator(scheme)
+        return MigrationValidator(gen)
+
+    # Line 138: number conflicts with existing assignment
+    def test_validate_plan_existing_conflict(
+        self, validator: MigrationValidator, tmp_path: Path
+    ) -> None:
+        # Register a number first
+        num = JohnnyDecimalNumber(area=10, category=1)
+        validator.generator.register_existing_number(num, Path("existing.txt"))
+
+        rule = TransformationRule(
+            source_path=tmp_path / "test",
+            target_name="10.01 Test",
+            jd_number=JohnnyDecimalNumber(area=10, category=1),
+            action="rename",
+            confidence=0.9,
+        )
+        plan = TransformationPlan(
+            root_path=tmp_path,
+            rules=[rule],
+            estimated_changes=1,
+        )
+        result = validator.validate_plan(plan)
+        assert not result.is_valid
+        error_msgs = [e.message for e in result.errors]
+        assert any("already in use" in m for m in error_msgs)
+
+    # Branch 331->329: generate_report with no errors (skip errors section)
+    def test_generate_report_no_errors(self, validator: MigrationValidator) -> None:
+        result = ValidationResult(is_valid=True)
+        result.add_issue(
+            ValidationIssue(
+                severity="warning",
+                rule_index=0,
+                message="Just a warning",
+                suggestion="Fix it",
+            )
+        )
+        report = validator.generate_report(result)
+        assert "Warnings" in report
+        assert "Errors (Must Fix)" not in report
+
+    # Branch 339->337: generate_report with no warnings (skip warnings section)
+    def test_generate_report_no_warnings(self, validator: MigrationValidator) -> None:
+        result = ValidationResult(is_valid=False)
+        result.add_issue(
+            ValidationIssue(
+                severity="error",
+                rule_index=0,
+                message="An error",
+                suggestion="Fix it",
+            )
+        )
+        report = validator.generate_report(result)
+        assert "Errors" in report
+        assert "Warnings (Should Review)" not in report
+
+    # Also test info section present
+    def test_generate_report_with_info(self, validator: MigrationValidator) -> None:
+        result = ValidationResult(is_valid=True)
+        result.add_issue(
+            ValidationIssue(
+                severity="info",
+                rule_index=0,
+                message="Info note",
+                suggestion=None,
+            )
+        )
+        report = validator.generate_report(result)
+        assert "Info" in report
+
+    # Branches 331->329, 339->337: error/warning without suggestion
+    def test_generate_report_error_no_suggestion(self, validator: MigrationValidator) -> None:
+        result = ValidationResult(is_valid=False)
+        result.add_issue(
+            ValidationIssue(
+                severity="error",
+                rule_index=0,
+                message="Error without tip",
+                suggestion=None,
+            )
+        )
+        result.add_issue(
+            ValidationIssue(
+                severity="warning",
+                rule_index=1,
+                message="Warning without tip",
+                suggestion=None,
+            )
+        )
+        report = validator.generate_report(result)
+        assert "Error without tip" in report
+        assert "Warning without tip" in report
+        # No suggestion line should appear
+        assert "\u0020\u0020\U0001f4a1" not in report  # no lightbulb suggestion line

@@ -6,6 +6,7 @@ skipped paths, generate_report branches.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -19,10 +20,12 @@ from file_organizer.methodologies.johnny_decimal.migrator import (
     MigrationResult,
     RollbackInfo,
 )
+from file_organizer.methodologies.johnny_decimal.scanner import ScanResult
 from file_organizer.methodologies.johnny_decimal.transformer import (
     TransformationPlan,
     TransformationRule,
 )
+from file_organizer.methodologies.johnny_decimal.validator import ValidationResult
 
 pytestmark = pytest.mark.unit
 
@@ -211,3 +214,123 @@ class TestGenerateReport:
         report = migrator.generate_report(result)
         assert "Skipped" in report
         assert "... and 5 more" in report
+
+
+class TestMigratorCoverage:
+    """Cover all missing lines in migrator.py."""
+
+    @pytest.fixture
+    def migrator(self) -> JohnnyDecimalMigrator:
+        return JohnnyDecimalMigrator()
+
+    # Lines 261-262: rollback with specific migration_id not found
+    def test_rollback_id_not_found(self, migrator: JohnnyDecimalMigrator) -> None:
+        # Add a dummy rollback entry
+        info = RollbackInfo(
+            migration_id="abc",
+            timestamp=datetime.now(UTC),
+            original_structure={},
+            backup_path=None,
+        )
+        migrator._rollback_history.append(info)
+        with pytest.raises(ValueError, match="not found"):
+            migrator.rollback(migration_id="nonexistent")
+
+    # Branch 263->268: rollback without migration_id (uses latest)
+    def test_rollback_latest(self, migrator: JohnnyDecimalMigrator, tmp_path: Path) -> None:
+        # Create a file to rollback
+        target = tmp_path / "10 Finance"
+        original = tmp_path / "Finance"
+        target.mkdir()
+        info = RollbackInfo(
+            migration_id="latest",
+            timestamp=datetime.now(UTC),
+            original_structure={str(original): (str(target), "Finance")},
+            backup_path=None,
+        )
+        migrator._rollback_history.append(info)
+        result = migrator.rollback()
+        assert result is True
+
+    # Branch 279->272: rollback where current_path doesn't exist
+    def test_rollback_missing_path(self, migrator: JohnnyDecimalMigrator) -> None:
+        info = RollbackInfo(
+            migration_id="missing",
+            timestamp=datetime.now(UTC),
+            original_structure={
+                "/original": ("/nonexistent/target", "original_name"),
+            },
+            backup_path=None,
+        )
+        migrator._rollback_history.append(info)
+        result = migrator.rollback(migration_id="missing")
+        assert result is True
+
+    # Branch 359->365: generate_preview with no patterns
+    def test_generate_preview_no_patterns(self, migrator: JohnnyDecimalMigrator) -> None:
+        plan = TransformationPlan(
+            root_path=Path("/tmp"),
+            rules=[],
+            estimated_changes=0,
+        )
+        scan = ScanResult(
+            root_path=Path("/tmp"),
+            folder_tree=[],
+            total_folders=0,
+            total_files=0,
+            total_size=0,
+            max_depth=0,
+            detected_patterns=[],
+        )
+        preview = migrator.generate_preview(plan, scan)
+        assert "Migration Preview" in preview
+
+    # Branch 375->387: generate_preview with validation
+    def test_generate_preview_with_validation(self, migrator: JohnnyDecimalMigrator) -> None:
+        plan = TransformationPlan(
+            root_path=Path("/tmp"),
+            rules=[],
+            estimated_changes=0,
+        )
+        scan = ScanResult(
+            root_path=Path("/tmp"),
+            folder_tree=[],
+            total_folders=0,
+            total_files=0,
+            total_size=0,
+            max_depth=0,
+            detected_patterns=["PARA methodology detected"],
+        )
+        validation = ValidationResult(is_valid=True)
+        preview = migrator.generate_preview(plan, scan, validation=validation)
+        assert "Validation" in preview
+        assert "VALID" in preview
+
+    # Branch 439->441: generate_report with skipped > 10
+    def test_generate_report_many_skipped(self, migrator: JohnnyDecimalMigrator) -> None:
+        result = MigrationResult(
+            success=False,
+            transformed_count=0,
+            failed_count=1,
+            skipped_count=15,
+            duration_seconds=1.0,
+            failed_paths=[(Path("/tmp/bad"), "error")],
+            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(15)],
+        )
+        report = migrator.generate_report(result)
+        assert "and 5 more" in report
+        assert "Failures" in report
+
+    # Branch 439->441 False: generate_report with skipped <= 10
+    def test_generate_report_few_skipped(self, migrator: JohnnyDecimalMigrator) -> None:
+        result = MigrationResult(
+            success=True,
+            transformed_count=5,
+            failed_count=0,
+            skipped_count=3,
+            duration_seconds=0.5,
+            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(3)],
+        )
+        report = migrator.generate_report(result)
+        assert "Skipped (3 folders)" in report
+        assert "and" not in report.split("Skipped")[1]  # no "and N more"

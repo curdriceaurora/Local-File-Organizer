@@ -20,6 +20,8 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     get_default_scheme,
 )
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.unit
 class TestJohnnyDecimalNumber:
@@ -508,3 +510,59 @@ class TestDefaultScheme:
         marketing_area = scheme.get_area(20)
         assert marketing_area is not None
         assert "Marketing" in marketing_area.name
+
+
+class TestCategoriesCoverage:
+    """Cover all missing lines in categories.py."""
+
+    # Line 37: NumberLevel.__str__
+    def test_number_level_str(self) -> None:
+        assert str(NumberLevel.AREA) == "Area"
+        assert str(NumberLevel.CATEGORY) == "Category"
+        assert str(NumberLevel.ID) == "Id"
+
+    # Line 116: JohnnyDecimalNumber.__str__ with name
+    def test_jd_number_str_with_name(self) -> None:
+        num = JohnnyDecimalNumber(area=10, name="Finance")
+        assert str(num) == "10 Finance"
+
+    # Line 117: JohnnyDecimalNumber.__str__ without name
+    def test_jd_number_str_without_name(self) -> None:
+        num = JohnnyDecimalNumber(area=10)
+        assert str(num) == "10"
+
+    # Line 126: __eq__ with non-JohnnyDecimalNumber
+    def test_jd_number_eq_not_implemented(self) -> None:
+        num = JohnnyDecimalNumber(area=10)
+        result = num.__eq__("not a jd number")
+        assert result is NotImplemented
+
+    # Line 195: AreaDefinition.__post_init__ area_end > 99
+    def test_area_def_end_out_of_range(self) -> None:
+        with pytest.raises(ValueError, match="Area end must be 0-99"):
+            AreaDefinition(
+                area_range_start=10,
+                area_range_end=100,
+                name="Bad",
+                description="",
+            )
+
+    # Line 233: CategoryDefinition.__post_init__ — category out of range
+    def test_category_def_category_out_of_range(self) -> None:
+        with pytest.raises(ValueError, match="Category must be 0-99"):
+            CategoryDefinition(area=10, category=100, name="Bad", description="")
+
+    # Line 234-235: CategoryDefinition.__post_init__ — empty name
+    def test_category_def_empty_name(self) -> None:
+        with pytest.raises(ValueError, match="name cannot be empty"):
+            CategoryDefinition(area=10, category=1, name="", description="")
+
+    # Line 282: NumberingResult.__post_init__ — file_path as string
+    def test_numbering_result_string_path(self) -> None:
+        result = NumberingResult(
+            file_path="/tmp/test.txt",  # type: ignore[arg-type]
+            number=JohnnyDecimalNumber(area=10),
+            confidence=0.5,
+            reasons=["test"],
+        )
+        assert isinstance(result.file_path, Path)

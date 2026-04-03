@@ -21,6 +21,10 @@ from file_organizer.methodologies.johnny_decimal import (
     PARAJohnnyDecimalBridge,
     create_para_compatible_config,
 )
+from file_organizer.methodologies.johnny_decimal.config import (
+    JohnnyDecimalConfig,
+    create_default_config,
+)
 
 
 @pytest.fixture
@@ -503,3 +507,91 @@ class TestEdgeCases:
 
         # Should handle existing folders
         assert all(path.exists() for path in paths.values())
+
+
+class TestCompatibilityCoverage:
+    """Cover all missing lines in compatibility.py."""
+
+    @pytest.fixture
+    def config(self) -> JohnnyDecimalConfig:
+        return create_para_compatible_config()
+
+    @pytest.fixture
+    def config_para_disabled(self) -> JohnnyDecimalConfig:
+        cfg = create_default_config()
+        cfg.compatibility.para_integration.enabled = False
+        return cfg
+
+    # Lines 197-198: detect_para_structure with non-existent path
+    def test_detect_para_nonexistent(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        analyzer = CompatibilityAnalyzer(config)
+        result = analyzer.detect_para_structure(tmp_path / "missing_para")
+        assert all(v is None for v in result.values())
+
+    # Line 203: detect_para_structure skips non-directory items
+    def test_detect_para_skips_files(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        (tmp_path / "projects.txt").write_text("not a dir")
+        analyzer = CompatibilityAnalyzer(config)
+        result = analyzer.detect_para_structure(tmp_path)
+        assert result[PARACategory.PROJECTS] is None
+
+    # Line 226: is_mixed_structure on non-existent path
+    def test_is_mixed_nonexistent(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        analyzer = CompatibilityAnalyzer(config)
+        assert analyzer.is_mixed_structure(tmp_path / "missing_mix") is False
+
+    # Line 243: _looks_like_jd with empty name
+    def test_looks_like_jd_empty(self, config: JohnnyDecimalConfig) -> None:
+        analyzer = CompatibilityAnalyzer(config)
+        assert analyzer._looks_like_jd("") is False
+
+    # Lines 250-252: _looks_like_jd with dotted format (2 nums)
+    def test_looks_like_jd_category_format(self, config: JohnnyDecimalConfig) -> None:
+        analyzer = CompatibilityAnalyzer(config)
+        assert analyzer._looks_like_jd("11.01 Budget") is True
+        assert analyzer._looks_like_jd("11.01.001 Item") is True
+        assert analyzer._looks_like_jd("abc.def Not JD") is False
+
+    # Line 182->exit: CompatibilityAnalyzer with PARA disabled
+    def test_analyzer_para_disabled(self, config_para_disabled: JohnnyDecimalConfig) -> None:
+        analyzer = CompatibilityAnalyzer(config_para_disabled)
+        assert analyzer.bridge is None
+
+    # Lines 288: suggest_migration_strategy PARA detected but not enabled
+    def test_suggest_migration_para_not_enabled(
+        self, config_para_disabled: JohnnyDecimalConfig, tmp_path: Path
+    ) -> None:
+        (tmp_path / "projects").mkdir()
+        analyzer = CompatibilityAnalyzer(config_para_disabled)
+        strategy = analyzer.suggest_migration_strategy(tmp_path)
+        assert any("Enable PARA" in r for r in strategy["recommendations"])
+
+    # Lines 270->290, 291, 296: mixed structure and clean structure recommendations
+    def test_suggest_migration_mixed(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        (tmp_path / "projects").mkdir()
+        (tmp_path / "10 Finance").mkdir()
+        analyzer = CompatibilityAnalyzer(config)
+        strategy = analyzer.suggest_migration_strategy(tmp_path)
+        assert strategy["is_mixed_structure"] is True
+        assert any("Mixed structure" in r for r in strategy["recommendations"])
+
+    def test_suggest_migration_clean(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        (tmp_path / "documents").mkdir()
+        analyzer = CompatibilityAnalyzer(config)
+        strategy = analyzer.suggest_migration_strategy(tmp_path)
+        assert any("Clean structure" in r for r in strategy["recommendations"])
+
+    # HybridOrganizer.get_item_path for ID-level number
+    def test_get_item_path_id_level(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        organizer = HybridOrganizer(config)
+        jd_num = JohnnyDecimalNumber(area=10, category=1, item_id=5)
+        path = organizer.get_item_path(tmp_path, PARACategory.PROJECTS, jd_num, "Budget")
+        assert "10.01.005 Budget" in str(path)
+
+    # Branch 422->425: get_item_path without item_name (empty string)
+    def test_get_item_path_no_name(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
+        organizer = HybridOrganizer(config)
+        jd_num = JohnnyDecimalNumber(area=10, category=1)
+        path = organizer.get_item_path(tmp_path, PARACategory.PROJECTS, jd_num)
+        # No item_name appended
+        assert path.name == "10.01"
