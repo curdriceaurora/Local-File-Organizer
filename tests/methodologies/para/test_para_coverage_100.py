@@ -239,14 +239,16 @@ class TestFeedbackWeightAdjustment:
         """When 0.5 <= acceptance_rate <= 0.8, neither low nor high branch is taken
         (partial 441->447)."""
         learner = PatternLearner(min_occurrences=2)
-        events = self._make_events(10, 0.7)  # 70% acceptance
+        events = self._make_events(10, 0.7, with_directory=False)  # 70% acceptance
 
         weights = learner.adjust_weights(events)
 
         # Should get default weights (normalized) since mid-range
         assert isinstance(weights, HeuristicWeights)
-        total = weights.temporal + weights.content + weights.structural + weights.ai
-        assert total == pytest.approx(1.0, abs=0.02)
+        assert weights.temporal == pytest.approx(0.25, abs=0.01)
+        assert weights.content == pytest.approx(0.35, abs=0.01)
+        assert weights.structural == pytest.approx(0.30, abs=0.01)
+        assert weights.ai == pytest.approx(0.10, abs=0.01)
 
     def test_low_dir_rejection_ratio_no_structural_penalty(self) -> None:
         """When dir_rejections <= 60% of rejections, structural is not penalized
@@ -263,8 +265,10 @@ class TestFeedbackWeightAdjustment:
         weights = learner.adjust_weights(events)
 
         assert isinstance(weights, HeuristicWeights)
-        total = weights.temporal + weights.content + weights.structural + weights.ai
-        assert total == pytest.approx(1.0, abs=0.02)
+        assert weights.temporal == pytest.approx(0.25, abs=0.01)
+        assert weights.content == pytest.approx(0.30, abs=0.01)
+        assert weights.structural == pytest.approx(0.35, abs=0.01)
+        assert weights.ai == pytest.approx(0.10, abs=0.01)
 
 
 # =========================================================================
