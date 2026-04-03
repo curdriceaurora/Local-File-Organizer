@@ -7,6 +7,7 @@ import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +21,6 @@ from file_organizer.api.routers import (
     analyze_router,
     auth_router,
     config_router,
-    daemon_router,
     dedupe_router,
     files_router,
     health_router,
@@ -39,6 +39,16 @@ from file_organizer.api.routers.integrations import (
 from file_organizer.plugins.api.endpoints import router as plugin_api_router
 from file_organizer.web import STATIC_DIR
 from file_organizer.web import router as web_router
+
+if TYPE_CHECKING:
+    from fastapi.routing import APIRouter
+
+try:
+    from file_organizer.api.routers.daemon import router as daemon_router
+except ModuleNotFoundError as exc:
+    if "daemon" not in (exc.name or ""):
+        raise
+    daemon_router: APIRouter | None = None
 
 _LOGGING_CONFIGURED = False
 _app: FastAPI | None = None
@@ -71,24 +81,24 @@ def configure_logging(settings: ApiSettings) -> None:
 
 def create_app(settings: ApiSettings | None = None) -> FastAPI:
     """Create the FastAPI application."""
-    settings = settings or load_settings()
-    configure_logging(settings)
+    resolved_settings = settings or load_settings()
+    configure_logging(resolved_settings)
 
-    docs_url = "/docs" if settings.enable_docs else None
-    redoc_url = "/redoc" if settings.enable_docs else None
+    docs_url = "/docs" if resolved_settings.enable_docs else None
+    redoc_url = "/redoc" if resolved_settings.enable_docs else None
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         from file_organizer.api.routers.health import reset_startup_time
 
         reset_startup_time()
-        logger.info("Starting API in {} mode", settings.environment)
+        logger.info("Starting API in {} mode", resolved_settings.environment)
         yield
         logger.info("Shutting down API")
 
     app = FastAPI(
-        title=settings.app_name,
-        version=settings.version,
+        title=resolved_settings.app_name,
+        version=resolved_settings.version,
         description="REST API for AI-powered file organization",
         docs_url=docs_url,
         redoc_url=redoc_url,
@@ -100,11 +110,11 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     else:
         logger.warning("Static assets directory not found at {}", STATIC_DIR)
 
-    setup_middleware(app, settings)
+    setup_middleware(app, resolved_settings)
     setup_exception_handlers(app)
-    app.dependency_overrides[get_settings] = lambda: settings
-    app.state.integration_manager = build_integration_manager(settings)
-    app.state.browser_extension_manager = build_browser_extension_manager(settings)
+    app.dependency_overrides[get_settings] = lambda: resolved_settings
+    app.state.integration_manager = build_integration_manager(resolved_settings)
+    app.state.browser_extension_manager = build_browser_extension_manager(resolved_settings)
 
     app.include_router(web_router, prefix="/ui")
     app.include_router(health_router, prefix="/api/v1")
@@ -127,8 +137,8 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     @app.get("/")
     def root() -> dict[str, str]:
         return {
-            "name": settings.app_name,
-            "version": settings.version,
+            "name": resolved_settings.app_name,
+            "version": resolved_settings.version,
         }
 
     return app

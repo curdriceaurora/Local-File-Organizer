@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -153,17 +154,19 @@ def setup_middleware(app: FastAPI, settings: ApiSettings) -> None:
     """Configure middleware on the FastAPI app."""
     from file_organizer.web.csrf import CSRFMiddleware
 
-    app.add_middleware(
+    add_middleware = cast(Any, app.add_middleware)
+
+    add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=settings.cors_allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
-    app.add_middleware(
+    add_middleware(
         RateLimitMiddleware,
         settings=settings,
         limiter=build_rate_limiter(settings.auth_redis_url),
     )
-    app.add_middleware(SecurityHeadersMiddleware, settings=settings)
-    app.add_middleware(CSRFMiddleware, exempt_paths=["/api/", "/docs", "/openapi.json"])
+    add_middleware(SecurityHeadersMiddleware, settings=settings)
+    add_middleware(CSRFMiddleware, exempt_paths=["/api/", "/docs", "/openapi.json"])

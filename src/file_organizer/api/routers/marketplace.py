@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import NoReturn
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_validator
 
 from file_organizer.api.dependencies import UserLike, get_current_active_user
 from file_organizer.api.exceptions import ApiError
@@ -69,9 +69,30 @@ class MarketplaceUpdateResponse(BaseModel):
 class MarketplaceReviewRequest(BaseModel):
     """Request body for submitting a plugin review."""
 
-    rating: int = Field(..., ge=1, le=5)
-    title: str = Field(..., min_length=1, max_length=120)
-    content: str = Field(..., min_length=1, max_length=2000)
+    rating: int
+    title: str
+    content: str
+
+    @field_validator("rating")
+    def validate_rating(value: int) -> int:
+        """Keep review ratings in the expected 1-5 range."""
+        if 1 <= value <= 5:
+            return value
+        raise ValueError("Rating must be between 1 and 5")
+
+    @field_validator("title")
+    def validate_title(value: str) -> str:
+        """Require a non-empty title with the current API length limit."""
+        if 1 <= len(value) <= 120:
+            return value
+        raise ValueError("Title must be between 1 and 120 characters")
+
+    @field_validator("content")
+    def validate_content(value: str) -> str:
+        """Require non-empty review content within the API length limit."""
+        if 1 <= len(value) <= 2000:
+            return value
+        raise ValueError("Content must be between 1 and 2000 characters")
 
 
 class MarketplaceReviewResponse(BaseModel):
@@ -150,6 +171,8 @@ def list_plugins(
     category: str | None = Query(None, max_length=60),
 ) -> MarketplacePluginListResponse:
     """List plugins from the marketplace with optional filters."""
+    items: list[PluginPackage] = []
+    total = 0
     try:
         items, total = _service().list_plugins(
             page=page,
@@ -171,16 +194,19 @@ def list_plugins(
 @router.get("/marketplace/plugins/{name}", response_model=MarketplacePluginResponse)
 def get_plugin(name: str) -> MarketplacePluginResponse:
     """Retrieve details for a single marketplace plugin by name."""
+    package: PluginPackage | None = None
     try:
         package = _service().get_plugin(name)
     except MarketplaceError as exc:
         _raise_marketplace_error(exc)
+    assert package is not None
     return _package_to_response(package)
 
 
 @router.get("/marketplace/installed", response_model=list[MarketplaceInstalledResponse])
 def list_installed_plugins() -> list[MarketplaceInstalledResponse]:
     """List all currently installed plugins."""
+    items: list[InstalledPlugin] = []
     try:
         items = _service().list_installed()
     except MarketplaceError as exc:
@@ -203,10 +229,12 @@ def install_plugin(
     version: str | None = Query(None),
 ) -> MarketplaceInstalledResponse:
     """Install a marketplace plugin by name and optional version."""
+    installed: InstalledPlugin | None = None
     try:
         installed = _service().install(name, version=version)
     except MarketplaceError as exc:
         _raise_marketplace_error(exc)
+    assert installed is not None
     return _installed_to_response(installed)
 
 
@@ -223,6 +251,7 @@ def uninstall_plugin(name: str) -> dict[str, bool]:
 @router.post("/marketplace/plugins/{name}/update", response_model=MarketplaceUpdateResponse)
 def update_plugin(name: str) -> MarketplaceUpdateResponse:
     """Update an installed plugin to the latest version."""
+    updated: InstalledPlugin | None = None
     try:
         updated = _service().update(name)
     except MarketplaceError as exc:
@@ -238,6 +267,7 @@ def list_reviews(
     limit: int = Query(10, ge=1, le=100),
 ) -> list[MarketplaceReviewResponse]:
     """List reviews for a marketplace plugin."""
+    reviews: list[PluginReview] = []
     try:
         reviews = _service().get_reviews(name, limit=limit)
     except MarketplaceError as exc:
@@ -263,6 +293,7 @@ def add_review(
         title=request.title,
         content=request.content,
     )
+    latest: list[PluginReview] = []
     try:
         service = _service()
         service.add_review(review)

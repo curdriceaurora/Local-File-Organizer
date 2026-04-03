@@ -80,8 +80,7 @@ class MoveFileRequest(BaseModel):
     dry_run: bool = False
 
     @field_validator("source", "destination")
-    @classmethod
-    def validate_paths(cls, value: str) -> str:
+    def validate_paths(value: str) -> str:
         """Validate and return source or destination path."""
         return _validate_path(value)
 
@@ -103,8 +102,7 @@ class DeleteFileRequest(BaseModel):
     dry_run: bool = False
 
     @field_validator("path")
-    @classmethod
-    def validate_path(cls, value: str) -> str:
+    def validate_path(value: str) -> str:
         """Validate and return the file path."""
         return _validate_path(value)
 
@@ -126,8 +124,7 @@ class ScanRequest(BaseModel):
     include_hidden: bool = False
 
     @field_validator("input_dir")
-    @classmethod
-    def validate_input_dir(cls, value: str) -> str:
+    def validate_input_dir(value: str) -> str:
         """Validate and return the input directory path."""
         return _validate_path(value)
 
@@ -151,8 +148,7 @@ class OrganizeRequest(BaseModel):
     run_in_background: bool = True
 
     @field_validator("input_dir", "output_dir")
-    @classmethod
-    def validate_paths(cls, value: str) -> str:
+    def validate_paths(value: str) -> str:
         """Validate and return input or output directory paths."""
         return _validate_path(value)
 
@@ -209,8 +205,7 @@ class DedupeScanRequest(BaseModel):
     exclude_patterns: list[str] | None = None
 
     @field_validator("path")
-    @classmethod
-    def validate_path(cls, value: str) -> str:
+    def validate_path(value: str) -> str:
         """Validate and return the scan path."""
         return _validate_path(value)
 
@@ -271,8 +266,7 @@ class DedupeExecuteRequest(BaseModel):
     trash: bool = True
 
     @field_validator("path")
-    @classmethod
-    def validate_path(cls, value: str) -> str:
+    def validate_path(value: str) -> str:
         """Validate and return the path for deduplication."""
         return _validate_path(value)
 
@@ -315,8 +309,7 @@ class UserCreateRequest(BaseModel):
     full_name: str | None = None
 
     @field_validator("username")
-    @classmethod
-    def validate_username(cls, value: str) -> str:
+    def validate_username(value: str) -> str:
         """Validate and return the username."""
         value = _validate_text(value, "Username", 32)
         if not _USERNAME_PATTERN.match(value):
@@ -326,8 +319,7 @@ class UserCreateRequest(BaseModel):
         return value
 
     @field_validator("full_name")
-    @classmethod
-    def validate_full_name(cls, value: str | None) -> str | None:
+    def validate_full_name(value: str | None) -> str | None:
         """Validate and return the full name."""
         if value is None:
             return value

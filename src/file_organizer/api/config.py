@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from loguru import logger
-from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt, SecretStr, field_validator
 
 from file_organizer.api.api_keys import hash_api_key
 from file_organizer.version import __version__
@@ -44,19 +45,19 @@ class ApiSettings(BaseModel):
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
     enable_docs: bool = True
     allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
-    websocket_ping_interval: int = Field(default=30, gt=0)
+    websocket_ping_interval: PositiveInt = 30
     websocket_token: str | None = None
     auth_enabled: bool = True
     auth_db_path: str = Field(default_factory=_default_auth_db_path)
     auth_jwt_secret: SecretStr = SecretStr("change-me")
     auth_jwt_algorithm: str = "HS256"
-    auth_access_token_minutes: int = Field(default=30, gt=0)
-    auth_refresh_token_days: int = Field(default=7, gt=0)
+    auth_access_token_minutes: PositiveInt = 30
+    auth_refresh_token_days: PositiveInt = 7
     auth_redis_url: str | None = None
     auth_login_rate_limit_enabled: bool = True
-    auth_login_max_attempts: int = Field(default=5, gt=0)
-    auth_login_window_seconds: int = Field(default=900, gt=0)
-    auth_password_min_length: int = Field(default=12, gt=0)
+    auth_login_max_attempts: PositiveInt = 5
+    auth_login_window_seconds: PositiveInt = 900
+    auth_password_min_length: PositiveInt = 12
     auth_password_require_number: bool = True
     auth_password_require_letter: bool = True
     auth_password_require_special: bool = True
@@ -64,20 +65,20 @@ class ApiSettings(BaseModel):
     auth_bootstrap_admin: bool = False
     auth_bootstrap_admin_local_only: bool = True
     database_url: str | None = None
-    database_pool_size: int = Field(default=10, gt=0)
-    database_max_overflow: int = Field(default=20, ge=0)
+    database_pool_size: PositiveInt = 10
+    database_max_overflow: NonNegativeInt = 20
     database_pool_pre_ping: bool = True
-    database_pool_recycle_seconds: int = Field(default=1800, gt=0)
+    database_pool_recycle_seconds: PositiveInt = 1800
     database_echo: bool = False
     cache_redis_url: str | None = None
-    cache_default_ttl_seconds: int = Field(default=900, gt=0)
+    cache_default_ttl_seconds: PositiveInt = 900
     api_key_enabled: bool = True
     api_key_admin: bool = False
     api_key_header: str = "X-API-Key"
     api_key_hashes: list[str] = Field(default_factory=list)
     rate_limit_enabled: bool = True
-    rate_limit_default_requests: int = Field(default=1000, gt=0)
-    rate_limit_default_window_seconds: int = Field(default=60, gt=0)
+    rate_limit_default_requests: PositiveInt = 1000
+    rate_limit_default_window_seconds: PositiveInt = 60
     rate_limit_trust_proxy_headers: bool = False
     rate_limit_exempt_paths: list[str] = Field(
         default_factory=lambda: ["/", "/api/v1/health", "/docs", "/openapi.json", "/redoc"]
@@ -99,14 +100,13 @@ class ApiSettings(BaseModel):
         "font-src 'self' data:; "
         "connect-src 'self' ws: wss:;"
     )
-    security_hsts_seconds: int = Field(default=31536000, ge=0)
+    security_hsts_seconds: NonNegativeInt = 31536000
     security_hsts_subdomains: bool = True
     security_referrer_policy: str = "strict-origin-when-cross-origin"
     ollama_url: str = "http://localhost:11434"
 
     @field_validator("ollama_url")
-    @classmethod
-    def _normalize_ollama_url(cls, v: str) -> str:
+    def _normalize_ollama_url(v: str) -> str:
         """Prepend ``http://`` when *OLLAMA_HOST* is given as ``host:port``."""
         if v and not v.startswith(("http://", "https://")):
             return f"http://{v}"
@@ -154,7 +154,7 @@ def _parse_bool(value: str | None, name: str) -> bool | None:
     raise ValueError(f"Invalid {name} value: {value}")
 
 
-def _load_bool(env: dict[str, str], env_name: str, data: dict[str, Any], key: str) -> None:
+def _load_bool(env: Mapping[str, str], env_name: str, data: dict[str, Any], key: str) -> None:
     """Load a boolean setting when the environment value parses cleanly."""
     if env_name not in env:
         return
@@ -185,7 +185,7 @@ def _parse_int(value: str, name: str) -> int | None:
         return None
 
 
-def _load_file_config(env: dict[str, str]) -> dict[str, Any]:
+def _load_file_config(env: Mapping[str, str]) -> dict[str, Any]:
     """Load configuration from YAML file if path is specified."""
     config_path = env.get("FO_API_CONFIG_PATH")
     if not config_path:
@@ -201,7 +201,7 @@ def _load_file_config(env: dict[str, str]) -> dict[str, Any]:
     return payload.get("api", payload)
 
 
-def _load_basic_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_basic_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load basic application settings from environment."""
     if "FO_API_APP_NAME" in env:
         data["app_name"] = env["FO_API_APP_NAME"]
@@ -222,7 +222,7 @@ def _load_basic_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
 
 
-def _load_cors_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_cors_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load CORS configuration from environment."""
     if "FO_API_CORS_ORIGINS" in env:
         data["cors_origins"] = _parse_list(env["FO_API_CORS_ORIGINS"])
@@ -233,7 +233,7 @@ def _load_cors_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     _load_bool(env, "FO_API_CORS_ALLOW_CREDENTIALS", data, "cors_allow_credentials")
 
 
-def _load_websocket_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_websocket_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load WebSocket configuration from environment."""
     if "FO_API_WS_PING_INTERVAL" in env:
         interval = _parse_int(env["FO_API_WS_PING_INTERVAL"], "FO_API_WS_PING_INTERVAL")
@@ -248,7 +248,7 @@ def _load_websocket_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["websocket_token"] = env["FO_API_WEBSOCKET_TOKEN"]
 
 
-def _load_auth_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_auth_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load authentication configuration from environment."""
     _load_bool(env, "FO_API_AUTH_ENABLED", data, "auth_enabled")
     if "FO_API_AUTH_DB_PATH" in env:
@@ -273,7 +273,7 @@ def _load_auth_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     _load_bool(env, "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY", data, "auth_bootstrap_admin_local_only")
 
 
-def _load_auth_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_auth_rate_limit_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load authentication rate limiting configuration from environment."""
     _load_bool(env, "FO_API_AUTH_LOGIN_RATE_LIMIT", data, "auth_login_rate_limit_enabled")
     if "FO_API_AUTH_LOGIN_MAX_ATTEMPTS" in env:
@@ -290,7 +290,7 @@ def _load_auth_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) ->
             data["auth_login_window_seconds"] = window
 
 
-def _load_password_policy_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_password_policy_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load password policy configuration from environment."""
     if "FO_API_AUTH_PASSWORD_MIN_LENGTH" in env:
         min_len = _parse_int(
@@ -309,7 +309,7 @@ def _load_password_policy_settings(env: dict[str, str], data: dict[str, Any]) ->
     )
 
 
-def _load_database_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_database_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load database configuration from environment."""
     if "FO_API_DATABASE_URL" in env:
         data["database_url"] = env["FO_API_DATABASE_URL"]
@@ -331,7 +331,7 @@ def _load_database_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     _load_bool(env, "FO_API_DB_ECHO", data, "database_echo")
 
 
-def _load_cache_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_cache_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load cache configuration from environment."""
     if "FO_API_CACHE_REDIS_URL" in env:
         data["cache_redis_url"] = env["FO_API_CACHE_REDIS_URL"]
@@ -343,7 +343,7 @@ def _load_cache_settings(env: dict[str, str], data: dict[str, Any]) -> None:
             data["cache_default_ttl_seconds"] = ttl
 
 
-def _load_api_key_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_api_key_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load API key configuration from environment."""
     _load_bool(env, "FO_API_API_KEY_ENABLED", data, "api_key_enabled")
     _load_bool(env, "FO_API_API_KEY_ADMIN", data, "api_key_admin")
@@ -356,7 +356,7 @@ def _load_api_key_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["api_key_hashes"] = _parse_list(env["FO_API_API_KEY_HASHES"])
 
 
-def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_rate_limit_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load rate limiting configuration from environment."""
     _load_bool(env, "FO_API_RATE_LIMIT_ENABLED", data, "rate_limit_enabled")
     if "FO_API_RATE_LIMIT_DEFAULT_REQUESTS" in env:
@@ -389,7 +389,7 @@ def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None
             logger.warning("Invalid FO_API_RATE_LIMIT_RULES JSON value")
 
 
-def _load_security_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_security_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load security headers configuration from environment."""
     _load_bool(env, "FO_API_SECURITY_HEADERS_ENABLED", data, "security_headers_enabled")
     if "FO_API_SECURITY_CSP" in env:
@@ -403,7 +403,7 @@ def _load_security_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
 
 
-def _load_ollama_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+def _load_ollama_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
     """Load Ollama configuration from environment."""
     if "FO_OLLAMA_URL" in env:
         data["ollama_url"] = env["FO_OLLAMA_URL"]
