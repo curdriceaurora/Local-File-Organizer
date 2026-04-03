@@ -6,7 +6,7 @@ Provides the unified entry point with all commands and sub-apps.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Protocol, cast
+from typing import Any, Protocol, cast
 
 import typer
 from rich.console import Console
@@ -30,7 +30,6 @@ from file_organizer.cli.update import update_app
 from file_organizer.cli.utilities import analyze, search
 
 console = Console()
-RICH_MARKUP_MODE: Literal["rich"] = "rich"
 
 
 class _CliGlobals(Protocol):
@@ -51,7 +50,7 @@ app = typer.Typer(
     name="file-organizer",
     help="AI-powered local file management with privacy-first architecture.",
     no_args_is_help=True,
-    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-fixme[6]: Typer's stub rejects this Literal.
+    rich_markup_mode=cast(Any, "rich"),
 )
 
 # ---------------------------------------------------------------------------

@@ -44,9 +44,9 @@ class WriterStage:
             return context
 
         try:
-            context.destination.parent.mkdir(parents=True, exist_ok=True)
             destination = context.destination
             assert destination is not None
+            destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(context.file_path, destination)
             logger.info("Copied %s -> %s", context.file_path, context.destination)
         except Exception as exc:

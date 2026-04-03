@@ -17,13 +17,15 @@ from loguru import logger
 
 try:
     from redis import Redis
-    from redis.exceptions import RedisError
+    from redis.exceptions import RedisError as _RedisError
 except (
     ImportError,
     ModuleNotFoundError,
 ):  # pragma: no cover - optional dependency runtime fallback
     Redis = None
-    RedisError = Exception
+    _RedisError = Exception
+
+RedisError: type[Exception] = _RedisError
 
 
 class CacheBackend(Protocol):
@@ -158,7 +160,7 @@ def build_cache_backend(redis_url: str | None) -> CacheBackend:
         backend = RedisCache(redis_url)
         backend.set("__fo_cache_health__", json.dumps({"ok": True}), ttl_seconds=5)
         return backend
-    except Exception as exc:
+    except (RedisError, RuntimeError, ValueError, OSError) as exc:
         logger.warning(
             "Falling back to in-memory cache (redis unavailable: {}): {}",
             type(exc).__name__,

@@ -10,7 +10,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Any, cast
 
 import typer
 from rich.console import Console
@@ -19,13 +19,12 @@ from rich.table import Table  # pyre-ignore[21]
 from file_organizer.config.path_manager import get_state_dir
 
 console = Console()
-RICH_MARKUP_MODE: Literal["rich"] = "rich"
 
 daemon_app = typer.Typer(
     name="daemon",
     help="Background daemon control and file processing pipeline.",
     no_args_is_help=True,
-    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-fixme[6]: Typer's stub rejects this Literal.
+    rich_markup_mode=cast(Any, "rich"),
 )
 
 _DEFAULT_PID_DIR = get_state_dir()

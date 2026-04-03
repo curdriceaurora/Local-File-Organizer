@@ -193,8 +193,7 @@ class HealthChecker:
 
         # From bus
         bus = self._bus
-        if bus is None:
-            return {}
+        assert bus is not None
         names.update(bus.list_services())
 
         # From discovery

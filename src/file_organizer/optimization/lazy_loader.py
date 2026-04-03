@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
+from typing import cast
 
 from file_organizer.models.base import BaseModel, ModelConfig
 
@@ -124,8 +125,7 @@ class LazyModelLoader:
         with self._lock:
             if self._model is not None:
                 logger.info("Unloading model '%s'", self._config.name)
-                model = self._model
-                assert model is not None
+                model = cast(BaseModel, self._model)
                 try:
                     model.cleanup()
                 except Exception:
