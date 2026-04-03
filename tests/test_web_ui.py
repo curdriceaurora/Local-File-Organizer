@@ -14,10 +14,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
-from tests.conftest import get_csrf_headers
 from file_organizer.api.test_utils import build_test_settings
 from file_organizer.core.organizer import OrganizationResult
 from file_organizer.plugins.marketplace import compute_sha256
+from tests.conftest import get_csrf_headers
 
 _PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAn8B9p4n9QAAAABJRU5ErkJggg=="
@@ -398,7 +398,9 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
     assert "Cancel scheduled job" in execute.text
     job_id = _extract_attr(execute.text, "data-job-id")
 
-    cancel = client.post(f"/ui/organize/jobs/{job_id}/cancel", headers=get_csrf_headers(client, seed_url="/ui/"))
+    cancel = client.post(
+        f"/ui/organize/jobs/{job_id}/cancel", headers=get_csrf_headers(client, seed_url="/ui/")
+    )
     assert cancel.status_code == 200
     assert "cancelled" in cancel.text.lower()
 
