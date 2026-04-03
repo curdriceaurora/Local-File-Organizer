@@ -115,7 +115,7 @@ class ProcessorPool:
             self._processors[processor_type] = processor
             logger.info("Initialized processor for %s", processor_type.value)
             return processor
-        except Exception:
+        except Exception:  # Intentional catch-all: factory is user-provided
             logger.exception("Failed to create processor for %s", processor_type.value)
             return None
 
@@ -152,7 +152,7 @@ class ProcessorPool:
             try:
                 processor.cleanup()
                 logger.info("Cleaned up processor for %s", processor_type.value)
-            except Exception:
+            except (RuntimeError, OSError):
                 logger.exception("Error cleaning up processor for %s", processor_type.value)
 
         self._processors.clear()

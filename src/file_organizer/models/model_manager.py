@@ -74,7 +74,7 @@ class ModelManager:
         except FileNotFoundError:
             logger.warning("Ollama CLI not found. Install from https://ollama.ai")
             return set()
-        except Exception:
+        except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
             logger.debug("Failed to query Ollama", exc_info=True)
             return self._parse_ollama_list_text()
 
@@ -93,7 +93,7 @@ class ModelManager:
                 if parts:
                     names.add(parts[0])
             return names
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
             return set()
 
     # ------------------------------------------------------------------
@@ -226,7 +226,7 @@ class ModelManager:
                     new_model = model_factory()
                     if hasattr(new_model, "initialize"):
                         new_model.initialize()
-                except Exception:
+                except Exception:  # Intentional catch-all: model_factory is user-provided
                     logger.exception(
                         "Failed to pre-warm new model %s for %s",
                         new_model_id,
@@ -236,7 +236,7 @@ class ModelManager:
                     if new_model is not None and hasattr(new_model, "cleanup"):
                         try:
                             new_model.cleanup()
-                        except Exception:
+                        except (RuntimeError, OSError, AttributeError):
                             logger.debug("Cleanup of partial model failed", exc_info=True)
                     return False
 
@@ -253,7 +253,7 @@ class ModelManager:
             if old_model is not None and hasattr(old_model, "safe_cleanup"):
                 try:
                     old_model.safe_cleanup()
-                except Exception:
+                except (RuntimeError, OSError, AttributeError):
                     logger.exception("Drain failed for old %s model (swap committed)", model_type)
 
             return True
@@ -303,7 +303,7 @@ class ModelManager:
                 "max_size": stats.max_size,
                 "memory_usage_bytes": stats.memory_usage_bytes,
             }
-        except Exception:
+        except (ImportError, RuntimeError, AttributeError):
             return {}
 
     # ------------------------------------------------------------------

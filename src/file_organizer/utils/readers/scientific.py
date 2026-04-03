@@ -93,7 +93,7 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
             logger.debug(f"Extracted metadata from HDF5 file {file_path.name}")
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: h5py raises library-specific errors
         raise FileReadError(f"Failed to read HDF5 file {file_path}: {e}") from e
 
 
@@ -154,7 +154,7 @@ def read_netcdf_file(file_path: str | Path) -> str:
             logger.debug(f"Extracted metadata from NetCDF file {file_path.name}")
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: netCDF4 raises library-specific errors
         raise FileReadError(f"Failed to read NetCDF file {file_path}: {e}") from e
 
 
@@ -205,5 +205,5 @@ def read_mat_file(file_path: str | Path) -> str:
         logger.debug(f"Extracted metadata from MAT file {file_path.name}")
         return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: scipy.io raises library-specific errors
         raise FileReadError(f"Failed to read MAT file {file_path}: {e}") from e

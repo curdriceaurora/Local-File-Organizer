@@ -49,7 +49,7 @@ class WriterStage:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(context.file_path, destination)
             logger.info("Copied %s -> %s", context.file_path, context.destination)
-        except Exception as exc:
+        except OSError as exc:
             logger.exception("Writer failed for %s", context.file_path)
             context.error = str(exc)
 

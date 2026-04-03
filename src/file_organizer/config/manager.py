@@ -77,7 +77,7 @@ class ConfigManager:
 
         try:
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, yaml.YAMLError, UnicodeDecodeError):
             logger.warning("Failed to parse %s, using defaults", config_path, exc_info=True)
             return AppConfig(profile_name=profile)
 
@@ -113,7 +113,7 @@ class ConfigManager:
         if config_path.exists():
             try:
                 existing = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-            except Exception:
+            except (OSError, yaml.YAMLError, UnicodeDecodeError):
                 existing = {}
 
         if not isinstance(existing, dict):
@@ -140,7 +140,7 @@ class ConfigManager:
 
         try:
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, yaml.YAMLError, UnicodeDecodeError):
             return []
 
         if not isinstance(raw, dict):
@@ -167,7 +167,7 @@ class ConfigManager:
 
         try:
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        except Exception:
+        except (OSError, yaml.YAMLError, UnicodeDecodeError):
             return False
 
         profiles = raw.get("profiles", {})

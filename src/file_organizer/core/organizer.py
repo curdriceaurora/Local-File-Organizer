@@ -351,7 +351,7 @@ class FileOrganizer:
                         undo_manager=self._undo_manager,
                         transaction_id=self._last_transaction_id,
                     )
-                except Exception:
+                except (OSError, RuntimeError):
                     logger.exception(
                         "Error while organizing files; leaving transaction {} uncommitted",
                         self._last_transaction_id,

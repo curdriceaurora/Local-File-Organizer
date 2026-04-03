@@ -84,7 +84,7 @@ def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
             )
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: zipfile raises library-specific errors
         raise FileReadError(f"Failed to read ZIP file {file_path}: {e}") from e
 
 
@@ -152,7 +152,7 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
             )
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: py7zr raises library-specific errors
         raise FileReadError(f"Failed to read 7Z file {file_path}: {e}") from e
 
 
@@ -215,7 +215,7 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
             )
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: tarfile raises library-specific errors
         raise FileReadError(f"Failed to read TAR file {file_path}: {e}") from e
 
 
@@ -282,5 +282,5 @@ def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
             )
             return text
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: rarfile raises library-specific errors
         raise FileReadError(f"Failed to read RAR file {file_path}: {e}") from e

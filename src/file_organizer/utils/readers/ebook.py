@@ -68,5 +68,5 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
 
         logger.debug(f"Extracted {len(text)} characters from ebook {file_path.name}")
         return text
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
         raise FileReadError(f"Failed to read ebook file {file_path}: {e}") from e

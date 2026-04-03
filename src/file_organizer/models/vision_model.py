@@ -83,7 +83,7 @@ class VisionModel(BaseModel):
             super().initialize()
             logger.info("Vision model {} initialized successfully", self.config.name)
 
-        except Exception as e:
+        except (RuntimeError, ImportError, OSError, ConnectionError) as e:
             logger.error("Failed to initialize vision model: {}", e)
             raise
 
@@ -201,7 +201,7 @@ class VisionModel(BaseModel):
 
         except (TokenExhaustionError, ValueError):
             raise
-        except Exception as e:
+        except (RuntimeError, ConnectionError, OSError) as e:
             logger.error("Failed to analyze image: {}", e)
             raise
 
@@ -307,7 +307,7 @@ class VisionModel(BaseModel):
                 "type": "vision-language",
                 "status": "connected",
             }
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: ollama client raises library-specific errors
             logger.error("Failed to get model info: {}", e)
             return {
                 "name": self.config.name,

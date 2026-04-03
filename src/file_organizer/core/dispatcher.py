@@ -205,7 +205,7 @@ def process_audio_files(
             )
             logger.debug("Audio processed: {} → {}/{}", audio_path.name, folder_name, filename_stem)
 
-        except Exception as exc:
+        except (OSError, ValueError, KeyError, RuntimeError) as exc:
             logger.warning("Audio metadata extraction failed for {}: {}", audio_path.name, exc)
             processed.append(
                 ProcessedFile(
@@ -271,7 +271,7 @@ def process_video_files(
                     error=str(exc),
                 )
             )
-        except Exception as exc:
+        except (OSError, ValueError, KeyError, RuntimeError) as exc:
             logger.warning("Video metadata extraction failed for {}: {}", video_path.name, exc)
             processed.append(
                 ProcessedFile(

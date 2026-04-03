@@ -57,7 +57,7 @@ def create_openai_client(config: ModelConfig, model_type_label: str) -> Any:
         client = OpenAI(**client_kwargs)
         logger.info("OpenAI {} model {} initialized", model_type_label, config.name)
         return client
-    except Exception as e:
+    except (TypeError, ValueError, RuntimeError, OSError) as e:
         # Log only the exception type — the message may contain partial api_key fragments.
         logger.error(
             "Failed to initialize OpenAI {} model {}: {}",

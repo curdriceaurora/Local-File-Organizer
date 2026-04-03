@@ -136,7 +136,7 @@ class OpenAITextModel(BaseModel):
             return content.strip()
         except TokenExhaustionError:
             raise
-        except Exception as e:
+        except (RuntimeError, ConnectionError, OSError, ValueError) as e:
             logger.error("Failed to generate text via OpenAI API: {}", type(e).__name__)
             raise
 
@@ -151,7 +151,7 @@ class OpenAITextModel(BaseModel):
             if self.client is not None:
                 try:
                     self.client.close()
-                except Exception:
+                except (RuntimeError, OSError):
                     logger.opt(exception=True).debug(
                         "Ignoring exception during OpenAI client close"
                     )

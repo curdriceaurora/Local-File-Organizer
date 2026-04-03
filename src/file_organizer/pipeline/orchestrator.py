@@ -455,7 +455,7 @@ class PipelineOrchestrator:
                 break
             try:
                 returned = stage.process(context)
-            except Exception as exc:
+            except Exception as exc:  # Intentional catch-all: stages are user-provided
                 logger.exception("Stage %s raised for %s", stage.name, context.file_path)
                 context.error = str(exc)
                 break
@@ -520,7 +520,7 @@ class PipelineOrchestrator:
         requested = max(pool.buffer_size, file_size)
         try:
             return pool.acquire(size=requested)
-        except Exception:
+        except (MemoryError, RuntimeError, ValueError):
             logger.warning("Failed to acquire buffer for %s", file_path, exc_info=True)
             return None
 
@@ -531,7 +531,7 @@ class PipelineOrchestrator:
         pool = self.buffer_pool
         try:
             pool.release(buffer)
-        except Exception:
+        except (ValueError, RuntimeError):
             logger.warning("Failed to release buffer for %s", file_path, exc_info=True)
 
     def _process_file_staged(
@@ -610,7 +610,7 @@ class PipelineOrchestrator:
                 if buffer is not None:
                     io_ctx.extra[_BUFFER_KEY] = buffer
                 return io_ctx, buffer
-            except Exception:
+            except Exception:  # Intentional catch-all: ensures buffer cleanup on any stage error
                 self._release_buffer(file_path, buffer)
                 raise
 
@@ -637,7 +637,7 @@ class PipelineOrchestrator:
                     future, start_time = futures.pop(i)
                     try:
                         ctx, buffer = future.result()
-                    except Exception as exc:
+                    except Exception as exc:  # Intentional catch-all: future can raise any stage error
                         logger.warning(
                             "Prefetch future failed for %s: %s",
                             files[i],
@@ -763,7 +763,7 @@ class PipelineOrchestrator:
             self._notify(file_path, True)
             return processing_result
 
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: processor.process_file is user-provided
             duration_ms = (time.monotonic() - start_time) * 1000
             with self._stats_lock:
                 self.stats.total_processed += 1
@@ -787,7 +787,7 @@ class PipelineOrchestrator:
         if self.config.notification_callback is not None:
             try:
                 self.config.notification_callback(file_path, success)
-            except Exception:
+            except Exception:  # Intentional catch-all: callback is user-provided
                 logger.exception("Notification callback failed for %s", file_path)
 
     def _process_with_processor(
@@ -867,10 +867,10 @@ class PipelineOrchestrator:
                     try:
                         # Submit to executor to avoid blocking the watch loop
                         self._executor.submit(self.process_file, event.path)
-                    except Exception:
+                    except (RuntimeError, OSError):
                         logger.exception("Error processing %s", event.path)
 
-            except Exception:
+            except (RuntimeError, OSError):
                 logger.exception("Error in watch loop")
 
             # Small sleep to avoid busy-waiting

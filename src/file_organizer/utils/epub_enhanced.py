@@ -201,7 +201,7 @@ class EnhancedEPUBReader:
         try:
             book = epub.read_epub(file_path)
             logger.debug(f"Successfully opened EPUB: {file_path.name}")
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
             raise EPUBProcessingError(f"Failed to read EPUB file {file_path}: {e}") from e
 
         # Extract metadata
@@ -368,7 +368,7 @@ class EnhancedEPUBReader:
 
                 chapter_num += 1
 
-            except Exception as e:
+            except Exception as e:  # Intentional catch-all: BS4/ebooklib chapter parsing errors
                 logger.warning(f"Failed to parse chapter {chapter_num}: {e}")
                 continue
 
@@ -553,7 +553,7 @@ class EnhancedEPUBReader:
                         return True
 
             return False
-        except Exception:
+        except (KeyError, AttributeError, TypeError):
             return False
 
     def _extract_cover(
@@ -622,7 +622,7 @@ class EnhancedEPUBReader:
             logger.info(f"Extracted cover to: {output_path}")
             return output_path
 
-        except Exception as e:
+        except Exception as e:  # Intentional catch-all: ebooklib/Pillow cover extraction errors
             logger.warning(f"Failed to extract cover: {e}")
             return None
 
@@ -647,7 +647,7 @@ class EnhancedEPUBReader:
                     return "3.0"  # EPUB 3 uses nav documents
 
             return "2.0"  # Default to EPUB 2
-        except Exception:
+        except Exception:  # Intentional catch-all: ebooklib raises library-specific errors
             return None
 
 
@@ -695,5 +695,5 @@ def get_epub_metadata(file_path: str | Path) -> EPUBMetadata:
         book = epub.read_epub(file_path)
         reader = EnhancedEPUBReader()
         return reader._extract_metadata(book)
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
         raise EPUBProcessingError(f"Failed to read EPUB metadata: {e}") from e

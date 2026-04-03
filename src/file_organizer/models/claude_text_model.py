@@ -132,7 +132,7 @@ class ClaudeTextModel(BaseModel):
             return content
         except TokenExhaustionError:
             raise
-        except Exception as e:
+        except (RuntimeError, ConnectionError, OSError, ValueError) as e:
             logger.error("Failed to generate text via Claude API: {}", type(e).__name__)
             raise
 
@@ -148,7 +148,7 @@ class ClaudeTextModel(BaseModel):
             if self.client is not None:
                 try:
                     self.client.close()
-                except Exception:
+                except (RuntimeError, OSError):
                     logger.opt(exception=True).debug(
                         "Ignoring exception during Claude client close"
                     )

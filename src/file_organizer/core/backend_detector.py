@@ -85,7 +85,7 @@ def detect_ollama() -> OllamaStatus:
     except FileNotFoundError:
         logger.debug("Ollama CLI not found in PATH")
         return OllamaStatus(installed=False, running=False)
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         logger.debug("Failed to check Ollama CLI: {}", e)
         return OllamaStatus(installed=False, running=False)
 
@@ -109,7 +109,7 @@ def detect_ollama() -> OllamaStatus:
             models_count=models_count,
         )
 
-    except Exception as e:
+    except (ConnectionError, RuntimeError, OSError) as e:
         logger.debug("Ollama service not responding: {}", e)
         return OllamaStatus(
             installed=True,
@@ -163,7 +163,7 @@ def list_installed_models() -> list[InstalledModel]:
         logger.debug("Found {} installed models via Ollama client", len(models))
         return models
 
-    except Exception as e:
+    except (ConnectionError, RuntimeError, OSError) as e:
         logger.debug("Failed to list models via Ollama client: {}", e)
 
     # Fallback to CLI
@@ -207,7 +207,7 @@ def list_installed_models() -> list[InstalledModel]:
     except FileNotFoundError:
         logger.debug("Ollama CLI not found")
         return []
-    except Exception as e:
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError) as e:
         logger.debug("Failed to list models via CLI: {}", e)
         return _parse_ollama_list_text()
 
@@ -235,6 +235,6 @@ def _parse_ollama_list_text() -> list[InstalledModel]:
         logger.debug("Parsed {} models from text output", len(models))
         return models
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         logger.debug("Failed to parse text output: {}", e)
         return []

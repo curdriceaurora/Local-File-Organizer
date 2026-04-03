@@ -42,11 +42,11 @@ def init_text_processor(
         processor.initialize()
         console.print("[green]✓[/green] Text model ready")
         return processor
-    except Exception as e:
+    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError) as e:
         if processor is not None:
             try:
                 processor.cleanup()
-            except Exception as cleanup_err:
+            except (RuntimeError, OSError) as cleanup_err:
                 logger.opt(exception=cleanup_err).warning(
                     "Text processor cleanup failed after init error"
                 )
@@ -85,11 +85,11 @@ def init_vision_processor(
         processor.initialize()
         console.print("[green]✓[/green] Vision model ready")
         return processor
-    except Exception as e:
+    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError) as e:
         if processor is not None:
             try:
                 processor.cleanup()
-            except Exception as cleanup_err:
+            except (RuntimeError, OSError) as cleanup_err:
                 logger.opt(exception=cleanup_err).warning(
                     "Vision processor cleanup failed after init error"
                 )

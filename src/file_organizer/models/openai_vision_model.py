@@ -185,7 +185,7 @@ class OpenAIVisionModel(BaseModel):
             return content.strip()
         except (TokenExhaustionError, ValueError):
             raise
-        except Exception as e:
+        except (RuntimeError, ConnectionError, OSError) as e:
             logger.error("Failed to analyse image via OpenAI API: {}", type(e).__name__)
             raise
 
@@ -222,7 +222,7 @@ class OpenAIVisionModel(BaseModel):
             if self.client is not None:
                 try:
                     self.client.close()
-                except Exception:
+                except (RuntimeError, OSError):
                     logger.opt(exception=True).debug(
                         "Ignoring exception during OpenAI client close"
                     )

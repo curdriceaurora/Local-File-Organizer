@@ -42,7 +42,7 @@ def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
             title = doc.header.get("$TITLE", "Untitled")
             if title:
                 metadata_parts.append(f"Title: {title}")
-        except Exception:
+        except Exception:  # Intentional catch-all: ezdxf header raises library-specific errors
             logger.opt(exception=True).debug(
                 "Failed to read DXF $TITLE header for {}", file_path.name
             )
@@ -52,7 +52,7 @@ def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
             if not author:
                 author = doc.header.get("$LASTSAVEDBY", "Unknown")
             metadata_parts.append(f"Author: {author}")
-        except Exception:
+        except Exception:  # Intentional catch-all: ezdxf header raises library-specific errors
             logger.opt(exception=True).debug(
                 "Failed to read DXF author metadata for {}", file_path.name
             )
@@ -124,7 +124,7 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
     try:
         doc = ezdxf.readfile(file_path)
         return _process_dxf_doc(doc, file_path, max_layers)
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: ezdxf raises library-specific errors
         raise FileReadError(f"Failed to read DXF file {file_path}: {e}") from e
 
 
@@ -156,7 +156,7 @@ def read_dwg_file(file_path: str | Path) -> str:
         doc = ezdxf.readfile(file_path)
         return _process_dxf_doc(doc, file_path)
 
-    except Exception as e:
+    except Exception as e:  # Intentional catch-all: ezdxf raises library-specific errors
         # If ezdxf can't read it, provide basic file info
         logger.warning(f"Could not parse DWG file with ezdxf: {e}")
 
@@ -243,7 +243,7 @@ def read_step_file(file_path: str | Path, max_lines: int = 100) -> str:
         logger.debug(f"Extracted {len(text)} characters from STEP file {file_path.name}")
         return text
 
-    except Exception as e:
+    except (OSError, UnicodeDecodeError, ValueError) as e:
         raise FileReadError(f"Failed to read STEP file {file_path}: {e}") from e
 
 
@@ -323,7 +323,7 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
         logger.debug(f"Extracted {len(text)} characters from IGES file {file_path.name}")
         return text
 
-    except Exception as e:
+    except (OSError, UnicodeDecodeError, ValueError) as e:
         raise FileReadError(f"Failed to read IGES file {file_path}: {e}") from e
 
 

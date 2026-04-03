@@ -65,7 +65,7 @@ def create_claude_client(config: ModelConfig, model_type_label: str) -> Any:
         client = Anthropic(**client_kwargs)
         logger.info("Claude {} model {} initialized", model_type_label, config.name)
         return client
-    except Exception as e:
+    except (TypeError, ValueError, RuntimeError, OSError) as e:
         # Log only the exception type — the message may contain partial api_key fragments.
         logger.error(
             "Failed to initialize Claude {} model {}: {}",
