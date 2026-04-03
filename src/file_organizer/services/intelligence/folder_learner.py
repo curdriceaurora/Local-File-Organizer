@@ -37,14 +37,18 @@ class FolderPreferenceLearner:
 
             storage_path = get_data_dir() / "folder_prefs.json"
 
-        self.storage_path = storage_path
+        self.storage_path: Path = storage_path
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Structure: {file_type: {folder: count}}
-        self.type_folder_map: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self.type_folder_map: defaultdict[str, defaultdict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
 
         # Structure: {pattern: {folder: count}}
-        self.pattern_folder_map: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self.pattern_folder_map: defaultdict[str, defaultdict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
 
         # Structure: {folder: {metadata}}
         self.folder_metadata: dict[str, dict[str, Any]] = {}
@@ -285,6 +289,7 @@ class FolderPreferenceLearner:
 
     def _save_preferences(self) -> None:
         """Save preferences to disk."""
+        storage_path = self.storage_path
         data = {
             "type_folder_map": {k: dict(v) for k, v in self.type_folder_map.items()},
             "pattern_folder_map": {k: dict(v) for k, v in self.pattern_folder_map.items()},
@@ -295,16 +300,17 @@ class FolderPreferenceLearner:
             "total_choices": self.total_choices,
         }
 
-        with open(self.storage_path, "w") as f:
+        with open(storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
     def _load_preferences(self) -> None:
         """Load preferences from disk."""
-        if not self.storage_path.exists():
+        storage_path = self.storage_path
+        if not storage_path.exists():
             return
 
         try:
-            with open(self.storage_path) as f:
+            with open(storage_path) as f:
                 data = json.load(f)
 
             # Load type_folder_map

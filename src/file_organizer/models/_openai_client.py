@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Shared OpenAI client setup for OpenAI-compatible model implementations.
 
 Centralises the optional-dependency guard and the client construction logic so

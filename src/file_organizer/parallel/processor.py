@@ -19,7 +19,7 @@ from concurrent.futures import (
     wait,
 )
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.executor import create_executor
@@ -222,7 +222,7 @@ class ParallelProcessor:
         else:
             assert executor is not None
             exec_instance = executor
-        return exec_instance, owns_executor
+        return cast(ProcessPoolExecutor | ThreadPoolExecutor, exec_instance), bool(owns_executor)
 
     @staticmethod
     def _is_non_retryable_failure(result: FileResult) -> bool:

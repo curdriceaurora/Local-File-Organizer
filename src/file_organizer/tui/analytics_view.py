@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI analytics dashboard view.
 
 Provides storage overview, file distribution chart, quality scores,

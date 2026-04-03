@@ -35,10 +35,11 @@ def update_check(
     console.print(f"[bold]Current version:[/bold] {status.current_version}")
 
     if status.available and status.release is not None:
+        release = status.release
         console.print(f"[green]Update available:[/green] {status.latest_version}")
-        console.print(f"  Release: {status.release.html_url}")
-        if status.release.body:
-            console.print(f"\n[dim]{status.release.body[:300]}[/dim]")
+        console.print(f"  Release: {release.html_url}")
+        if release.body:
+            console.print(f"\n[dim]{release.body[:300]}[/dim]")
         console.print("\nRun [bold]file-organizer update install[/bold] to update.")
     else:
         console.print("[green]Already up to date.[/green]")
@@ -74,12 +75,13 @@ def update_install(
         console.print("[red]Update check failed.[/red]")
         raise typer.Exit(code=1)
 
-    if status.install_result.success:
-        console.print(f"[green]{status.install_result.message}[/green]")
-        if status.install_result.sha256:
-            console.print(f"  SHA256: {status.install_result.sha256[:16]}...")
+    install_result = status.install_result
+    if install_result.success:
+        console.print(f"[green]{install_result.message}[/green]")
+        if install_result.sha256:
+            console.print(f"  SHA256: {install_result.sha256[:16]}...")
     else:
-        console.print(f"[red]{status.install_result.message}[/red]")
+        console.print(f"[red]{install_result.message}[/red]")
         raise typer.Exit(code=1)
 
 

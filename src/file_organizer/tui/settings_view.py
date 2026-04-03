@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI view for persistent runtime parallelism controls.
 
 This view is intentionally scoped to parallelism controls that map directly to

@@ -15,7 +15,9 @@ _COMMAND_NAME_ATTR = "__fo_command_name__"
 _COMMAND_DESCRIPTION_ATTR = "__fo_command_description__"
 
 
-def hook(event: HookEvent | str, *, priority: int = 10) -> Callable[[F], F]:
+def hook(
+    event: HookEvent | str, *, priority: int = 10
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Mark a function as a plugin hook callback."""
     if priority < 0:
         raise ValueError("Hook priority must be >= 0")
@@ -23,7 +25,7 @@ def hook(event: HookEvent | str, *, priority: int = 10) -> Callable[[F], F]:
     if not event_name:
         raise ValueError("Hook event must not be empty")
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         setattr(func, _HOOK_EVENT_ATTR, event_name)
         setattr(func, _HOOK_PRIORITY_ATTR, priority)
         return func
@@ -31,13 +33,15 @@ def hook(event: HookEvent | str, *, priority: int = 10) -> Callable[[F], F]:
     return decorator
 
 
-def command(name: str, *, description: str = "") -> Callable[[F], F]:
+def command(
+    name: str, *, description: str = ""
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Mark a function as an invokable plugin command."""
     command_name = name.strip()
     if not command_name:
         raise ValueError("Command name must not be empty")
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         setattr(func, _COMMAND_NAME_ATTR, command_name)
         setattr(func, _COMMAND_DESCRIPTION_ATTR, description.strip())
         return func

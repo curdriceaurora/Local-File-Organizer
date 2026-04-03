@@ -194,6 +194,7 @@ def coordinated_update(
     # Step 2: Prepare installer.
     installer = UpdateInstaller(install_dir=install_dir)
     release = status.release
+    assert release is not None
 
     asset = installer.select_asset(release)
     if asset is None:

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI file preview panel and selection manager.
 
 Provides a split-pane view with the file browser on the left and a

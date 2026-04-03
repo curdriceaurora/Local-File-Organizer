@@ -374,8 +374,9 @@ class JohnnyDecimalGenerator:
 
         # Check if category is defined (if present)
         if number.category is not None:
-            cat_def = self.scheme.get_category(number.area, number.category)
-            if cat_def is None and number.category >= 10:
+            category = number.category
+            cat_def = self.scheme.get_category(number.area, category)
+            if cat_def is None and category >= 10:
                 # Allow undefined categories in valid ranges
                 pass
 

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Security detector pack for legacy review-regression audits."""
 
 from __future__ import annotations

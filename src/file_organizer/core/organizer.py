@@ -358,7 +358,10 @@ class FileOrganizer:
                     )
                     raise
                 else:
-                    self._undo_manager.history.commit_transaction(self._last_transaction_id)
+                    undo_manager = self._undo_manager
+                    assert undo_manager is not None
+                    history = undo_manager.history
+                    history.commit_transaction(self._last_transaction_id)
                     result.organized_structure = organized
             else:
                 self.console.print(

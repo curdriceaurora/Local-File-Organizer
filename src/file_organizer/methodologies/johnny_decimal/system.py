@@ -492,15 +492,20 @@ class JohnnyDecimalSystem:
                 num = JohnnyDecimalNumber(area=area)
                 self.scheme.reserve_number(num)
         elif start.level == NumberLevel.CATEGORY:
-            assert start.category is not None and end.category is not None
-            for cat in range(start.category, end.category + 1):
+            start_category = start.category
+            end_category = end.category
+            assert start_category is not None and end_category is not None
+            for cat in range(start_category, end_category + 1):
                 num = JohnnyDecimalNumber(area=start.area, category=cat)
                 self.scheme.reserve_number(num)
         else:  # ID level
-            assert start.item_id is not None and end.item_id is not None
-            assert start.category is not None
-            for item in range(start.item_id, end.item_id + 1):
-                num = JohnnyDecimalNumber(area=start.area, category=start.category, item_id=item)
+            start_item = start.item_id
+            end_item = end.item_id
+            category = start.category
+            assert start_item is not None and end_item is not None
+            assert category is not None
+            for item in range(start_item, end_item + 1):
+                num = JohnnyDecimalNumber(area=start.area, category=category, item_id=item)
                 self.scheme.reserve_number(num)
 
         logger.info(f"Reserved range {start.formatted_number} to {end.formatted_number}")

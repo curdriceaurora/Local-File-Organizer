@@ -102,9 +102,11 @@ class VectorIndex:
             logger.warning("VectorIndex: failed to embed query: {}", exc)
             return []
 
+        matrix = self._matrix
+        assert matrix is not None
         return self._analyzer.find_similar_to_query(
             query_embedding=query_vec,
-            document_embeddings=self._matrix,
+            document_embeddings=matrix,
             paths=self._paths,
             top_k=top_k,
             min_similarity=self._analyzer.threshold,

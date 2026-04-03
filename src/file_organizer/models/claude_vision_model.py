@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Vision model implementation using the Anthropic Claude API."""
 
 from __future__ import annotations

@@ -167,7 +167,7 @@ class NamingAnalyzer:
         has_date_count = sum(1 for s in structures if s.has_date)
         has_version_count = sum(1 for s in structures if s.has_version)
 
-        pattern = {
+        pattern: dict[str, Any] = {
             "sample_size": len(filenames),
             "common_delimiters": list(common_delimiters),
             "common_tokens": list(common_tokens),
@@ -183,7 +183,7 @@ class NamingAnalyzer:
         most_common_hash, count = hash_counts.most_common(1)[0]
 
         pattern["consistency"] = count / len(filenames)
-        pattern["dominant_structure"] = most_common_hash
+        pattern["dominant_structure"] = str(most_common_hash)
 
         return pattern
 

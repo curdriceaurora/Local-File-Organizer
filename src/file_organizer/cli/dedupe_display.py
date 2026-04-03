@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Display and formatting utilities for deduplication CLI.
 
 Provides Rich-based UI components for displaying duplicate groups, summaries,

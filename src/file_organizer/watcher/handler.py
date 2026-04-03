@@ -93,8 +93,8 @@ class FileEventHandler(FileSystemEventHandler):
             event: The watchdog move event.
         """
         dest_path: Path | None = None
-        if hasattr(event, "dest_path") and event.dest_path is not None:
-            raw_dest = event.dest_path
+        raw_dest = getattr(event, "dest_path", None)
+        if raw_dest is not None:
             dest_path = Path(os.fsdecode(raw_dest))
         self._handle_event(event, EventType.MOVED, dest_path=dest_path)
 

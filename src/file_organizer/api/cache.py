@@ -158,7 +158,7 @@ def build_cache_backend(redis_url: str | None) -> CacheBackend:
         backend = RedisCache(redis_url)
         backend.set("__fo_cache_health__", json.dumps({"ok": True}), ttl_seconds=5)
         return backend
-    except (RedisError, RuntimeError, ValueError, OSError) as exc:
+    except Exception as exc:
         logger.warning(
             "Falling back to in-memory cache (redis unavailable: {}): {}",
             type(exc).__name__,

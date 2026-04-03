@@ -6,6 +6,7 @@ Provides the unified entry point with all commands and sub-apps.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal, Protocol, cast
 
 import typer
 from rich.console import Console
@@ -29,6 +30,18 @@ from file_organizer.cli.update import update_app
 from file_organizer.cli.utilities import analyze, search
 
 console = Console()
+RICH_MARKUP_MODE: Literal["rich"] = "rich"
+
+
+class _CliGlobals(Protocol):
+    verbose: bool
+    dry_run: bool
+    json_output: bool
+    yes: bool
+    no_interactive: bool
+
+
+CLI_GLOBALS = cast(_CliGlobals, _g)
 
 # ---------------------------------------------------------------------------
 # Main app
@@ -38,7 +51,7 @@ app = typer.Typer(
     name="file-organizer",
     help="AI-powered local file management with privacy-first architecture.",
     no_args_is_help=True,
-    rich_markup_mode="rich",
+    rich_markup_mode=RICH_MARKUP_MODE,  # pyre-ignore[6]
 )
 
 # ---------------------------------------------------------------------------
@@ -57,11 +70,11 @@ def main_callback(
     ),
 ) -> None:
     """Global options applied to all commands."""
-    _g.verbose = verbose
-    _g.dry_run = dry_run
-    _g.json_output = json_output
-    _g.yes = yes
-    _g.no_interactive = no_interactive
+    CLI_GLOBALS.verbose = verbose
+    CLI_GLOBALS.dry_run = dry_run
+    CLI_GLOBALS.json_output = json_output
+    CLI_GLOBALS.yes = yes
+    CLI_GLOBALS.no_interactive = no_interactive
 
     from file_organizer.cli.interactive import set_flags
 

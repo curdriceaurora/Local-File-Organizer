@@ -95,7 +95,8 @@ def seed_csrf_token(client: TestClient) -> str:
     the ``csrf_token`` form field) on state-changing requests.
     """
     resp = client.get("/ui/")
-    return resp.cookies.get("_csrf_token", "")
+    token = resp.cookies.get("_csrf_token")
+    return token or ""
 
 
 def csrf_headers(client: TestClient) -> dict[str, str]:
@@ -104,5 +105,5 @@ def csrf_headers(client: TestClient) -> dict[str, str]:
     Assumes :func:`seed_csrf_token` was called first (or a prior GET to /ui/
     populated the cookie jar).
     """
-    token = client.cookies.get("_csrf_token", "")
+    token = client.cookies.get("_csrf_token") or ""
     return {"x-csrf-token": token}

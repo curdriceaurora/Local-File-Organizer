@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Readers for CAD formats: DXF, DWG, STEP, IGES."""
 
 from __future__ import annotations

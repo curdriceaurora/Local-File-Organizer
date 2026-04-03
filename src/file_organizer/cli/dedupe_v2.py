@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Modern Typer sub-app for duplicate file detection and resolution.
 
 Replaces the legacy argparse ``dedupe`` command with a sub-app

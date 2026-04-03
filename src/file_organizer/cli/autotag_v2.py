@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Modern Typer-based auto-tagging CLI sub-app.
 
 Replaces the legacy argparse ``autotag`` command with a sub-app

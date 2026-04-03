@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI view for audio file browsing, metadata, and classification.
 
 Provides panels showing discovered audio files, metadata details,

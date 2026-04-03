@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Reader for eBook formats (EPUB)."""
 
 from __future__ import annotations

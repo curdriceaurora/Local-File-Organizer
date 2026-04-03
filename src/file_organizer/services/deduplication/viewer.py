@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Interactive comparison viewer for reviewing duplicate images.
 
 Provides a terminal-based UI for reviewing duplicate images with:

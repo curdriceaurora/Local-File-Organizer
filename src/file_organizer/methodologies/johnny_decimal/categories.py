@@ -61,15 +61,17 @@ class JohnnyDecimalNumber:
 
         # Validate category if present (00-99)
         if self.category is not None:
-            if not 0 <= self.category <= 99:
-                raise ValueError(f"Category must be between 0 and 99, got {self.category}")
+            category = self.category
+            if not 0 <= category <= 99:
+                raise ValueError(f"Category must be between 0 and 99, got {category}")
 
         # Validate item_id if present (000-999)
         if self.item_id is not None:
+            item_id = self.item_id
             if self.category is None:
                 raise ValueError("Cannot have item_id without category")
-            if not 0 <= self.item_id <= 999:
-                raise ValueError(f"Item ID must be between 0 and 999, got {self.item_id}")
+            if not 0 <= item_id <= 999:
+                raise ValueError(f"Item ID must be between 0 and 999, got {item_id}")
 
     @property
     def level(self) -> NumberLevel:

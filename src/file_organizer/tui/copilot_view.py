@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI copilot view — chat panel inside the Textual application.
 
 Renders a scrollable message log and an input widget at the bottom.

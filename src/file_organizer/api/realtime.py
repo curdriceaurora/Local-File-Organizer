@@ -86,6 +86,7 @@ class ConnectionManager:
                         running_loop = None
 
                     if running_loop is not loop:
+                        assert loop is not None
                         future = asyncio.run_coroutine_threadsafe(
                             self._await_task(task),
                             loop,
@@ -93,10 +94,11 @@ class ConnectionManager:
                         future.result(timeout=2)
                 except Exception:
                     logger.exception("Failed to await websocket queue task shutdown")
-        if self._queue is not None:
-            while not self._queue.empty():
+        queue = self._queue
+        if queue is not None:
+            while not queue.empty():
                 try:
-                    self._queue.get_nowait()
+                    queue.get_nowait()
                 except asyncio.QueueEmpty:
                     break
         self._connections.clear()
@@ -159,9 +161,10 @@ class ConnectionManager:
         """Enqueue an event from a synchronous context using run_coroutine_threadsafe."""
         if self._loop is None or self._queue is None:
             return False
+        loop = self._loop
         coro = self._queue.put(BroadcastEvent(channel=channel, payload=payload))
         try:
-            asyncio.run_coroutine_threadsafe(coro, self._loop)
+            asyncio.run_coroutine_threadsafe(coro, loop)
             return True
         except RuntimeError as exc:
             coro.close()

@@ -76,11 +76,13 @@ def update_config(
         config.default_methodology = request.default_methodology
 
     if request.models is not None:
-        for field, value in request.models.model_dump(exclude_none=True).items():
+        models = request.models
+        for field, value in models.model_dump(exclude_none=True).items():
             setattr(config.models, field, value)
 
     if request.updates is not None:
-        for field, value in request.updates.model_dump(exclude_none=True).items():
+        updates = request.updates
+        for field, value in updates.model_dump(exclude_none=True).items():
             setattr(config.updates, field, value)
 
     excluded_fields = {"profile", "default_methodology", "models", "updates"}

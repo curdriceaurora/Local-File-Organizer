@@ -147,7 +147,7 @@ class TemporalHeuristic(Heuristic):
         if hasattr(stat, "st_birthtime"):  # macOS
             ref_time = stat.st_birthtime
         elif os.name == "nt":  # Windows
-            ref_time = stat.st_ctime
+            ref_time = getattr(stat, "st_ctime", stat.st_mtime)
         else:  # Linux — use mtime as best proxy for "last active"
             ref_time = stat.st_mtime
         days_since_created = (now - ref_time) / 86400

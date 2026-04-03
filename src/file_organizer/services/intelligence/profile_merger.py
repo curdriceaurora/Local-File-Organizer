@@ -368,29 +368,35 @@ class ProfileMerger:
             source = data["profile"]
 
             # Check if it's in global preferences
-            if key in (source.preferences or {}).get("global", {}):
-                if merged_profile.preferences is not None:
-                    merged_profile.preferences["global"][key] = (source.preferences or {})[
-                        "global"
-                    ][key]
-                if merged_profile.confidence_data is not None:
-                    merged_profile.confidence_data[key] = data["confidence"]
+            source_preferences = source.preferences or {}
+            global_preferences = source_preferences.get("global", {})
+            if key in global_preferences:
+                preferences = merged_profile.preferences
+                if preferences is not None:
+                    preferences["global"][key] = global_preferences[key]
+                confidence_data = merged_profile.confidence_data
+                if confidence_data is not None:
+                    confidence_data[key] = data["confidence"]
 
             # Check if it's in directory-specific preferences
-            elif key in (source.preferences or {}).get("directory_specific", {}):
-                if merged_profile.preferences is not None:
-                    merged_profile.preferences["directory_specific"][key] = (
-                        source.preferences or {}
-                    )["directory_specific"][key]
-                if merged_profile.confidence_data is not None:
-                    merged_profile.confidence_data[key] = data["confidence"]
+            elif key in source_preferences.get("directory_specific", {}):
+                directory_preferences = source_preferences.get("directory_specific", {})
+                preferences = merged_profile.preferences
+                if preferences is not None:
+                    preferences["directory_specific"][key] = directory_preferences[key]
+                confidence_data = merged_profile.confidence_data
+                if confidence_data is not None:
+                    confidence_data[key] = data["confidence"]
 
             # Check if it's a learned pattern
             elif key in (source.learned_patterns or {}):
-                if merged_profile.learned_patterns is not None:
-                    merged_profile.learned_patterns[key] = (source.learned_patterns or {})[key]
-                if merged_profile.confidence_data is not None:
-                    merged_profile.confidence_data[key] = data["confidence"]
+                learned_patterns = source.learned_patterns or {}
+                merged_learned_patterns = merged_profile.learned_patterns
+                if merged_learned_patterns is not None:
+                    merged_learned_patterns[key] = learned_patterns[key]
+                confidence_data = merged_profile.confidence_data
+                if confidence_data is not None:
+                    confidence_data[key] = data["confidence"]
 
     def create_merged_profile(self, name: str, merged_data: dict[str, Any]) -> Profile | None:
         """Create a new profile from merged data.

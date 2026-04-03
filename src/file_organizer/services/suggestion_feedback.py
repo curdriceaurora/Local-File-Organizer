@@ -282,7 +282,9 @@ class SuggestionFeedback:
             # Track move history
             if entry.suggestion_type == SuggestionType.MOVE and entry.target_path:
                 file_type = Path(entry.file_path).suffix.lower()
-                target_dir = str(Path(entry.target_path).parent)
+                target_path = entry.target_path
+                assert target_path is not None
+                target_dir = str(Path(target_path).parent)
                 history["move_history"][file_type][target_dir] += 1
                 history["preferred_locations"][target_dir] += 1
 

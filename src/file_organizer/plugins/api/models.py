@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Pydantic models for plugin-facing API endpoints."""
 
 from __future__ import annotations

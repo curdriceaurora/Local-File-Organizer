@@ -189,13 +189,14 @@ class CategoryFolderMapper:
         """
         if self.rule_engine is None:
             return None
+        rule_engine = self.rule_engine
 
         # Create evaluation context
         context = EvaluationContext(file_path=file_path)
 
         # Evaluate rules
         try:
-            result = self.rule_engine.evaluate_file(context)
+            result = rule_engine.evaluate_file(context)
             return result
         except Exception as e:
             logger.warning(f"Rule evaluation failed for {file_path}: {e}")

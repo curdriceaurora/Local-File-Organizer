@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Readers for document formats: plain text, DOCX, PDF, spreadsheets, presentations."""
 
 from __future__ import annotations

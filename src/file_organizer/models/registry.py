@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from typing import cast
 
 
 @dataclass
@@ -41,7 +42,7 @@ def get_text_models() -> list[ModelInfo]:
     """
     from file_organizer.models.text_registry import TEXT_MODELS
 
-    return copy.deepcopy(list(TEXT_MODELS))
+    return cast(list[ModelInfo], copy.deepcopy(list(TEXT_MODELS)))
 
 
 def get_vision_models() -> list[ModelInfo]:
@@ -51,7 +52,7 @@ def get_vision_models() -> list[ModelInfo]:
     """
     from file_organizer.models.vision_registry import VISION_MODELS
 
-    return copy.deepcopy(list(VISION_MODELS))
+    return cast(list[ModelInfo], copy.deepcopy(list(VISION_MODELS)))
 
 
 def get_audio_models() -> list[ModelInfo]:
@@ -61,7 +62,7 @@ def get_audio_models() -> list[ModelInfo]:
     """
     from file_organizer.models.audio_registry import AUDIO_MODELS
 
-    return copy.deepcopy(list(AUDIO_MODELS))
+    return cast(list[ModelInfo], copy.deepcopy(list(AUDIO_MODELS)))
 
 
 def get_all_models() -> list[ModelInfo]:

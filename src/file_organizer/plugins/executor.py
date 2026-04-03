@@ -108,9 +108,10 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
         sys.stderr.write(f"Cannot create module spec for plugin: {plugin_path}\n")
         sys.exit(1)
 
+    loader = spec.loader
     module = types.ModuleType(path.stem)
     try:
-        spec.loader.exec_module(module)
+        loader.exec_module(module)
     except Exception as exc:
         sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
         sys.exit(1)
@@ -268,21 +269,22 @@ class PluginExecutor:
         This method is idempotent; calling it on an already-stopped executor
         is a no-op.
         """
-        if self._proc is None:
+        proc = self._proc
+        if proc is None:
             return
         try:
-            for pipe in (self._proc.stdin, self._proc.stdout, self._proc.stderr):
+            for pipe in (proc.stdin, proc.stdout, proc.stderr):
                 if pipe:
                     try:
                         pipe.close()
                     except Exception:
                         logger.debug("Failed to close plugin worker pipe cleanly", exc_info=True)
-            self._proc.terminate()
+            proc.terminate()
             try:
-                self._proc.wait(timeout=5)
+                proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                self._proc.kill()
-                self._proc.wait()
+                proc.kill()
+                proc.wait()
         finally:
             self._proc = None
 
@@ -326,15 +328,17 @@ class PluginExecutor:
         Raises:
             PluginError: If timeout occurs or stdout is not available.
         """
-        if self._proc is None or self._proc.stdout is None:
+        proc = self._proc
+        if proc is None or proc.stdout is None:
             raise PluginError("Worker process is not running.")
+
+        stdout = proc.stdout
 
         if sys.platform == "win32":
             # select() doesn't work with pipes on Windows; use a daemon
             # thread to perform the blocking read and a queue to enforce
             # the timeout.
             result_queue: queue.Queue[bytes | Exception] = queue.Queue()
-            stdout = self._proc.stdout
 
             def _reader() -> None:
                 try:
@@ -357,12 +361,12 @@ class PluginExecutor:
             return value
         else:
             # On Unix, use select.select() for proper timeout handling
-            ready, _, _ = select.select([self._proc.stdout], [], [], timeout)
+            ready, _, _ = select.select([stdout], [], [], timeout)
             if not ready:
                 raise PluginError(
                     f"Worker process did not respond within {timeout}s (possible hang or timeout)."
                 )
-            return self._proc.stdout.readline()
+            return stdout.readline()
 
     def call(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """Invoke a method on the sandboxed plugin instance.
@@ -384,18 +388,22 @@ class PluginExecutor:
             PluginError: If the worker reports an error or the child process
                 dies unexpectedly.
         """
-        if self._proc is None:
+        proc = self._proc
+        if proc is None:
             raise RuntimeError(
                 f"PluginExecutor for '{self._plugin_name}' is not started. "
                 "Call start() or use it as a context manager."
             )
-        if self._proc.stdin is None or self._proc.stdout is None:
+        stdin = proc.stdin
+        stdout = proc.stdout
+        stderr = proc.stderr
+        if stdin is None or stdout is None:
             raise PluginError(f"Worker pipes for '{self._plugin_name}' are unexpectedly closed.")
 
         call_msg = PluginCall(method=method, args=list(args), kwargs=kwargs)
         try:
-            self._proc.stdin.write(encode_call(call_msg))
-            self._proc.stdin.flush()
+            stdin.write(encode_call(call_msg))
+            stdin.flush()
         except BrokenPipeError as exc:
             raise PluginError(
                 f"Worker for '{self._plugin_name}' died before receiving call '{method}'."
@@ -404,8 +412,8 @@ class PluginExecutor:
         raw = self._readline_with_timeout(timeout=10.0)
         if not raw:
             stderr_output = ""
-            if self._proc.stderr:
-                stderr_output = self._proc.stderr.read().decode(errors="replace")
+            if stderr is not None:
+                stderr_output = stderr.read().decode(errors="replace")
             raise PluginError(
                 f"Worker for '{self._plugin_name}' closed stdout unexpectedly "
                 f"(method='{method}'). Stderr: {stderr_output!r}"

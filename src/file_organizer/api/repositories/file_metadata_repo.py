@@ -61,17 +61,16 @@ class FileMetadataRepository:
             .first()
         )
         if row is None:
-            row = FileMetadata(
-                workspace_id=workspace_id,
-                path=path,
-                relative_path=relative_path,
-                name=name,
-                size_bytes=size_bytes,
-                mime_type=mime_type,
-                checksum_sha256=checksum_sha256,
-                last_modified=last_modified,
-                extra_json=extra_json,
-            )
+            row = FileMetadata()
+            row.workspace_id = workspace_id
+            row.path = path
+            row.relative_path = relative_path
+            row.name = name
+            row.size_bytes = size_bytes
+            row.mime_type = mime_type
+            row.checksum_sha256 = checksum_sha256
+            row.last_modified = last_modified
+            row.extra_json = extra_json
             session.add(row)
         else:
             row.path = path

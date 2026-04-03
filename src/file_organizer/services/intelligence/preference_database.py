@@ -222,7 +222,9 @@ class PreferenceDatabaseManager:
             self._connection.row_factory = sqlite3.Row
             logger.debug(f"Database connection established: {self.db_path}")
 
-        return self._connection
+        connection = self._connection
+        assert connection is not None
+        return connection
 
     @contextmanager
     def transaction(self) -> Any:

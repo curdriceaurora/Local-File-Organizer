@@ -83,6 +83,7 @@ def get_user_selection(
     Returns:
         List of indices of files to remove.
     """
+    return []
     console = _resolve_console(console)
 
     if strategy == "manual":

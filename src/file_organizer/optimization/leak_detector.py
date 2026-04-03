@@ -138,7 +138,9 @@ class LeakDetector:
             if type_name in self._ignore_types:
                 continue
 
-            baseline_snap = self._baseline.get(type_name)
+            baseline = self._baseline
+            assert baseline is not None
+            baseline_snap = baseline.get(type_name)
             if baseline_snap is None:
                 # New type that appeared after baseline
                 count_delta = current_snap.count

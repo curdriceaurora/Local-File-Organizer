@@ -29,7 +29,7 @@ class IntegrationFileSendRequest(BaseModel):
     path: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("path")
+    @field_validator("path")  # pyre-ignore[56]
     @classmethod
     def validate_path(cls, value: str) -> str:
         """Validate and return the file path."""
@@ -65,7 +65,7 @@ class BrowserTokenIssueRequest(BaseModel):
 
     extension_id: str
 
-    @field_validator("extension_id")
+    @field_validator("extension_id")  # pyre-ignore[56]
     @classmethod
     def validate_extension_id(cls, value: str) -> str:
         """Validate and return the extension ID."""
@@ -84,7 +84,7 @@ class BrowserTokenVerifyRequest(BaseModel):
 
     token: str
 
-    @field_validator("token")
+    @field_validator("token")  # pyre-ignore[56]
     @classmethod
     def validate_token(cls, value: str) -> str:
         """Validate and return the token."""

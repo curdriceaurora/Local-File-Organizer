@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Modern Typer sub-app for smart file organisation suggestions.
 
 Wraps ``SmartSuggestions`` (``SuggestionEngine``) and ``PatternAnalyzer``

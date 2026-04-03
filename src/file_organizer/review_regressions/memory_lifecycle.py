@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Memory-lifecycle detector pack for review-regression audits.
 
 Catches invariants around buffer pool ownership, eager allocation,

@@ -93,13 +93,15 @@ class FileMonitor:
                 self._observer_type = "polling"
                 logger.info("Using polling observer for file system monitoring")
 
-            self._observer.daemon = True
+            observer = self._observer
+            assert observer is not None
+            observer.daemon = True
 
             # Schedule all configured directories
             for directory in self.config.watch_directories:
                 self._schedule_directory(directory, self.config.recursive)
 
-            self._observer.start()
+                observer.start()
             self._running = True
             logger.info(
                 "FileMonitor started (%s observer), watching %d directories",
@@ -117,8 +119,9 @@ class FileMonitor:
             if not self._running or self._observer is None:
                 return
 
-            self._observer.stop()
-            self._observer.join(timeout=5.0)
+            observer = self._observer
+            observer.stop()
+            observer.join(timeout=5.0)
             self._observer = None
             self._watches.clear()
             self._running = False
@@ -172,7 +175,9 @@ class FileMonitor:
 
             if self._running and self._observer is not None:
                 watch = self._watches[path_key]
-                self._observer.unschedule(watch)
+                observer = self._observer
+                assert observer is not None
+                observer.unschedule(watch)
 
             del self._watches[path_key]
 

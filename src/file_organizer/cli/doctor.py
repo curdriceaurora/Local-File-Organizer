@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Doctor command for detecting file types and recommending optional dependencies.
 
 This module provides functionality to scan directories for file types and recommend

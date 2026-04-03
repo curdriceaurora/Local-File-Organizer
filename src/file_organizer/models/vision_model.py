@@ -67,16 +67,17 @@ class VisionModel(BaseModel):
 
         try:
             # Initialize Ollama client
-            self.client = ollama.Client()
+            client = ollama.Client()
+            self.client = client
 
             # Check if model exists locally, pull if not
             try:
-                self.client.show(self.config.name)
+                client.show(self.config.name)
                 logger.debug("Model {} found locally", self.config.name)
             except ollama.ResponseError:
                 logger.info("Model {} not found locally, pulling...", self.config.name)
                 logger.warning("Downloading large vision model, this may take several minutes...")
-                self.client.pull(self.config.name)
+                client.pull(self.config.name)
                 logger.info("Model {} pulled successfully", self.config.name)
 
             super().initialize()
@@ -124,6 +125,7 @@ class VisionModel(BaseModel):
         """Internal generate logic, called while generation guard is held."""
         if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
+        client = self.client
 
         if (image_path is None and image_data is None) or (
             image_path is not None and image_data is not None
@@ -139,7 +141,8 @@ class VisionModel(BaseModel):
         else:
             # For bytes data, we'll need to save temporarily or use base64
             # Ollama expects file paths or URLs
-            images = [image_data]  # type: ignore
+            assert image_data is not None
+            images: list[bytes | str] = [image_data]
 
         # Merge config with kwargs
         options = {
@@ -153,7 +156,7 @@ class VisionModel(BaseModel):
 
         try:
             logger.debug("Analyzing image with model {}", self.config.name)
-            response = self.client.generate(
+            response = client.generate(
                 model=self.config.name,
                 prompt=prompt,
                 images=images,
@@ -169,7 +172,7 @@ class VisionModel(BaseModel):
                 retry_num_predict = compute_retry_num_predict(options["num_predict"])
                 retry_options = {**options, "num_predict": retry_num_predict}
 
-                response = self.client.generate(
+                response = client.generate(
                     model=self.config.name,
                     prompt=prompt,
                     images=images,

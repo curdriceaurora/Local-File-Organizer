@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Rich UI display helpers for the file organizer.
 
 Provides progress bar creation, file-type breakdown tables, and

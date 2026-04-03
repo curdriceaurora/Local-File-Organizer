@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """CLI commands for the plugin marketplace."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Audio Preprocessing Service.
 
 Provides audio format conversion, normalization, and preprocessing

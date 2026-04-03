@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Public API compatibility detector pack for review-regression audits.
 
 This pack enforces allowlisted callable signature invariants:

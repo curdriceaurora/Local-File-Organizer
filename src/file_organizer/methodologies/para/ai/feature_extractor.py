@@ -321,7 +321,7 @@ class FeatureExtractor:
         if hasattr(stat, "st_birthtime"):  # macOS
             creation_ref = stat.st_birthtime
         elif os.name == "nt":  # Windows
-            creation_ref = stat.st_ctime
+            creation_ref = getattr(stat, "st_ctime", stat.st_mtime)
         else:  # Linux — use mtime as best available proxy
             creation_ref = stat.st_mtime
 

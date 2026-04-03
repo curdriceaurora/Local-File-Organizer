@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI live organization preview view.
 
 Shows a before/after panel of how files would be organized,

@@ -113,7 +113,7 @@ class TagLearningEngine:
 
             storage_path = get_data_dir() / "tag_learning.json"
 
-        self.storage_path = storage_path
+        self.storage_path: Path = storage_path
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Learning data structures
@@ -416,7 +416,8 @@ class TagLearningEngine:
         # Recency bonus
         recency_score = 0
         if usage.last_used:
-            days_ago = (datetime.now(UTC) - usage.last_used).days
+            last_used = usage.last_used
+            days_ago = (datetime.now(UTC) - last_used).days
             if days_ago <= 7:
                 recency_score = 20
             elif days_ago <= 30:
@@ -447,22 +448,24 @@ class TagLearningEngine:
                 "last_updated": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             }
 
-            with open(self.storage_path, "w") as f:
+            storage_path = self.storage_path
+            with open(storage_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-            logger.debug(f"Saved learning data to {self.storage_path}")
+            logger.debug(f"Saved learning data to {storage_path}")
 
         except Exception as e:
             logger.error(f"Error saving learning data: {e}")
 
     def _load_data(self) -> None:
         """Load learning data from disk."""
-        if not self.storage_path.exists():
+        storage_path = self.storage_path
+        if not storage_path.exists():
             logger.info("No existing learning data found")
             return
 
         try:
-            with open(self.storage_path) as f:
+            with open(storage_path) as f:
                 data = json.load(f)
 
             # Load tag usage

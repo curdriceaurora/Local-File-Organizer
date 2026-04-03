@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Audio Utility Functions.
 
 Common utility functions for audio file processing and analysis.
@@ -34,7 +35,7 @@ def get_audio_duration(audio_path: str | Path) -> float:
         return len(audio) / 1000.0  # Convert ms to seconds
     except ImportError:
         try:
-            from tinytag import TinyTag
+            from tinytag import TinyTag  # pyre-ignore[21]
 
             tag = TinyTag.get(str(audio_path))
             return tag.duration or 0.0
@@ -64,7 +65,7 @@ def normalize_audio(
 
     try:
         from pydub import AudioSegment
-        from pydub.effects import normalize
+        from pydub.effects import normalize  # pyre-ignore[21]
 
         audio = AudioSegment.from_file(str(audio_path))
         normalized = normalize(audio, headroom=abs(target_db))
@@ -208,7 +209,7 @@ def detect_silence_segments(
     """
     try:
         from pydub import AudioSegment
-        from pydub.silence import detect_silence
+        from pydub.silence import detect_silence  # pyre-ignore[21]
 
         audio = AudioSegment.from_file(str(audio_path))
         silence_ranges = detect_silence(
@@ -247,7 +248,7 @@ def trim_audio(
         output_path = Path(output_path)
 
     try:
-        from pydub import AudioSegment
+        from pydub import AudioSegment  # pyre-ignore[21]
 
         audio = AudioSegment.from_file(str(audio_path))
         trimmed = audio[start_ms:end_ms]

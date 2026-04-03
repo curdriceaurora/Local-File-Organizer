@@ -73,7 +73,10 @@ class SettingsRepository:
             row.value = value
             row.updated_at = datetime.now(UTC)
         else:
-            row = SettingsStore(key=key, value=value, user_id=user_id)
+            row = SettingsStore()
+            row.key = key
+            row.value = value
+            row.user_id = user_id
             session.add(row)
         session.flush()
         return row

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from loguru import logger
 from redis import Redis
@@ -24,6 +24,7 @@ class RateLimiter(Protocol):
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
         """Check rate limit for a key and return the remaining quota."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -97,7 +98,9 @@ class RedisRateLimiter:
         local ttl = redis.call("TTL", KEYS[1])
         return {current, ttl}
         """
-        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)
+        redis_client = cast(Any, self._redis)
+        result = redis_client.eval(script, 1, redis_key, window_seconds)
+        count, ttl = result
         if ttl is None or int(ttl) < 0:
             ttl = window_seconds
         reset_at = now + int(ttl)

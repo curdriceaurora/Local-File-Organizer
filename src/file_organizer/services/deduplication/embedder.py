@@ -224,7 +224,9 @@ class DocumentEmbedder:
         top_indices = np.argsort(embedding)[-top_n:][::-1]
 
         # Get terms and weights
-        top_terms = [(feature_names[i], embedding[i]) for i in top_indices if embedding[i] > 0]
+        top_terms = [
+            (feature_names[i], float(embedding[i])) for i in top_indices if embedding[i] > 0
+        ]
 
         return top_terms
 

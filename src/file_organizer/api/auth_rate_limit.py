@@ -15,12 +15,15 @@ class LoginRateLimiter(Protocol):
 
     def is_blocked(self, key: str) -> tuple[bool, int]:
         """Return (blocked, retry_after_seconds)."""
+        raise NotImplementedError
 
     def record_failure(self, key: str) -> tuple[bool, int]:
         """Record a failed attempt and return (blocked, retry_after_seconds)."""
+        raise NotImplementedError
 
     def reset(self, key: str) -> None:
         """Clear rate limit state for a key."""
+        raise NotImplementedError
 
 
 @dataclass

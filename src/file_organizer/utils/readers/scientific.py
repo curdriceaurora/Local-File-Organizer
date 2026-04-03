@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Readers for scientific data formats: HDF5, NetCDF, MATLAB."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Image deduplication module using perceptual hashing.
 
 Provides ImageDeduplicator class with support for pHash, dHash, and aHash

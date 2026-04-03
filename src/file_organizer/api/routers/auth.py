@@ -42,6 +42,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _LOCALHOSTS = {"127.0.0.1", "::1", "localhost"}
 
 
+def _to_user_response(user: User) -> UserResponse:
+    return UserResponse.model_validate(user)
+
+
 def _rate_limit_key(request: Request, username: str) -> str:
     client_host = request.client.host if request.client else "unknown"
     user_key = username.strip().lower() if username else "unknown"
@@ -88,7 +92,7 @@ def register_user(
     if is_first_user and settings.auth_bootstrap_admin:
         if not settings.auth_bootstrap_admin_local_only or _is_local_request(http_request):
             is_admin = True
-    user = User(
+    user = User(  # pyre-ignore[28]
         username=request.username,
         email=request.email,
         hashed_password=hash_password(request.password),
@@ -98,7 +102,7 @@ def register_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return _to_user_response(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -242,4 +246,4 @@ def logout(
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_active_user)) -> UserResponse:
     """Return the currently authenticated user."""
-    return current_user
+    return _to_user_response(current_user)

@@ -160,19 +160,23 @@ def _sort_files(
     if sort_by == "name":
         files.sort(key=lambda p: p.name.lower(), reverse=reverse)
     elif sort_by == "size":
-        files.sort(
-            key=lambda p: s.st_size if (s := file_stats.get(p)) else 0,
-            reverse=reverse,
-        )
+        files.sort(key=lambda p: _file_size_sort_key(file_stats.get(p)), reverse=reverse)
     elif sort_by == "created":
         files.sort(key=lambda p: _creation_sort_key(file_stats.get(p)), reverse=reverse)
     elif sort_by == "type":
         files.sort(key=lambda p: _normalized_extension(p), reverse=reverse)
     else:
-        files.sort(
-            key=lambda p: s.st_mtime if (s := file_stats.get(p)) else 0,
-            reverse=reverse,
-        )
+        files.sort(key=lambda p: _modified_sort_key(file_stats.get(p)), reverse=reverse)
+
+
+def _file_size_sort_key(stat: os.stat_result | None) -> int:
+    """Return file size for sorting, defaulting missing stats to 0."""
+    return stat.st_size if stat is not None else 0
+
+
+def _modified_sort_key(stat: os.stat_result | None) -> float:
+    """Return modified timestamp for sorting, defaulting missing stats to 0."""
+    return stat.st_mtime if stat is not None else 0.0
 
 
 def _creation_sort_key(s: os.stat_result | None) -> float:
@@ -182,7 +186,7 @@ def _creation_sort_key(s: os.stat_result | None) -> float:
     if hasattr(s, "st_birthtime"):
         return s.st_birthtime
     if os.name == "nt":
-        return s.st_ctime
+        return getattr(s, "st_ctime", s.st_mtime)
     return s.st_mtime
 
 
@@ -556,9 +560,11 @@ def _save_upload(upload: UploadFile, target_dir: Path, allow_hidden: bool) -> st
     except ApiError as exc:
         return exc.message
 
-    safe_name = sanitize_upload_name(upload.filename)
+    filename = upload.filename
+    assert filename is not None
+    safe_name = sanitize_upload_name(filename)
     if safe_name is None:
-        return f"Rejected {upload.filename}: invalid filename."
+        return f"Rejected {filename}: invalid filename."
 
     destination = target_dir / safe_name
     try:

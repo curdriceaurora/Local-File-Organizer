@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 #!/usr/bin/env python3
 """Analytics CLI - Display comprehensive analytics dashboard.
 

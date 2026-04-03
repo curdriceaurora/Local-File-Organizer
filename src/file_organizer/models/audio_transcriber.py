@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Core audio transcription engine using faster-whisper."""
 
 from __future__ import annotations

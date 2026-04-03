@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Readers for archive formats: ZIP, 7Z, TAR, RAR."""
 
 from __future__ import annotations

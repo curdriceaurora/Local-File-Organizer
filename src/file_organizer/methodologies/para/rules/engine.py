@@ -125,8 +125,9 @@ class RuleAction:
                 )
             if self.confidence is None:
                 raise ValueError(f"Action type {self.type} requires a confidence score")
-            if not 0.0 <= self.confidence <= 1.0:
-                raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
+            confidence = self.confidence
+            if not 0.0 <= confidence <= 1.0:
+                raise ValueError(f"Confidence must be between 0.0 and 1.0, got {confidence}")
 
 
 @dataclass

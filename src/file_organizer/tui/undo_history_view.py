@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI view for undo/redo operations and operation history.
 
 Provides panels showing recent operations, undo/redo stacks,

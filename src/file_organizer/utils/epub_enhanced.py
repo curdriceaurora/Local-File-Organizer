@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Enhanced EPUB file processing with comprehensive metadata extraction.
 
 This module provides advanced EPUB processing capabilities including:

@@ -120,7 +120,7 @@ def list_files(
             if hasattr(s, "st_birthtime"):
                 return s.st_birthtime
             if os.name == "nt":
-                return s.st_ctime
+                return getattr(s, "st_ctime", s.st_mtime)
             return s.st_mtime
 
         files.sort(key=_creation_key, reverse=reverse)

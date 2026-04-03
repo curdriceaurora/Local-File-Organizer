@@ -488,7 +488,7 @@ class NamingPatternExtractor:
             pattern.elements.append(
                 PatternElement(
                     element_type="suffix",
-                    value=pattern.suffix,
+                    value=pattern.suffix or "",
                     position=position,
                     is_variable=False,
                 )

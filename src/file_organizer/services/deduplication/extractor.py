@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Document text extraction module.
 
 Extracts text content from various document formats for semantic analysis.

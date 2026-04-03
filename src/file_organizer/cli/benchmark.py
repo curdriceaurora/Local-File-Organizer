@@ -20,7 +20,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import typer
 
@@ -425,7 +425,7 @@ def _run_text_suite(files: list[Path]) -> _SuiteIterationOutcome:
         typer.echo("Warning: no text files found for text suite; skipping benchmark.", err=True)
         return _SuiteIterationOutcome(processed_count=0)
 
-    from file_organizer.models.base import ModelType
+    from file_organizer.models.base import BaseModel, ModelType
     from file_organizer.services import TextProcessor
 
     model = _BenchmarkModelStub(
@@ -437,7 +437,7 @@ def _run_text_suite(files: list[Path]) -> _SuiteIterationOutcome:
         },
         default_response="Synthetic benchmark response",
     )
-    processor = TextProcessor(text_model=model)
+    processor = TextProcessor(text_model=cast(BaseModel, model))
     try:
         for file_path in candidates:
             processor.process_file(file_path)
@@ -453,7 +453,7 @@ def _run_vision_suite(files: list[Path]) -> _SuiteIterationOutcome:
         typer.echo("Warning: no vision files found for vision suite; skipping benchmark.", err=True)
         return _SuiteIterationOutcome(processed_count=0)
 
-    from file_organizer.models.base import ModelType
+    from file_organizer.models.base import BaseModel, ModelType
     from file_organizer.services import VisionProcessor
 
     model = _BenchmarkModelStub(
@@ -465,7 +465,7 @@ def _run_vision_suite(files: list[Path]) -> _SuiteIterationOutcome:
         },
         default_response="Synthetic benchmark image description.",
     )
-    processor = VisionProcessor(vision_model=model)
+    processor = VisionProcessor(vision_model=cast(BaseModel, model))
     try:
         for file_path in candidates:
             processor.process_file(file_path, perform_ocr=False)
@@ -842,9 +842,9 @@ def _print_table(
     console: Any, suite: str, warmup: int, stats: BenchmarkStats, file_count: int
 ) -> None:
     """Print benchmark results as a Rich table."""
-    from rich.table import Table
+    from rich.table import Table as RichTable  # pyre-ignore[21]
 
-    table = Table(title=f"Benchmark Results (suite={suite})")
+    table = RichTable(title=f"Benchmark Results (suite={suite})")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")
 

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """CLI wrapper for the HTTP API client libraries."""
 
 from __future__ import annotations

@@ -6,6 +6,7 @@ import json
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -70,7 +71,7 @@ def _ensure_api_key_table(db_path: str) -> None:
     from file_organizer.api.auth_db import get_engine
 
     engine = get_engine(db_path)
-    UserApiKey.__table__.create(engine, checkfirst=True)
+    cast(Any, UserApiKey).__table__.create(engine, checkfirst=True)
 
 
 def _get_db(settings: ApiSettings) -> Session:
@@ -383,12 +384,11 @@ def register_submit(
             )
             return templates.TemplateResponse(request, "profile/register.html", context)
 
-        user = User(
-            username=username,
-            email=email,
-            hashed_password=hash_password(password),
-            full_name=full_name or None,
-        )
+        user = User()
+        user.username = username
+        user.email = email
+        user.hashed_password = hash_password(password)
+        user.full_name = full_name or None
         db.add(user)
         db.commit()
         return RedirectResponse(url="/ui/profile/login", status_code=303)
@@ -1179,13 +1179,12 @@ def api_key_generate(
         raw_key = f"{_API_KEY_PREFIX}_{key_id}_{raw_token}"
         hashed = hash_api_key(raw_key)
 
-        api_key = UserApiKey(
-            id=key_id,
-            user_id=user.id,
-            label=label.strip() or "default",
-            key_prefix=f"{_API_KEY_PREFIX}_{key_id}_",
-            key_hash=hashed,
-        )
+        api_key = UserApiKey()
+        api_key.id = key_id
+        api_key.user_id = user.id
+        api_key.label = label.strip() or "default"
+        api_key.key_prefix = f"{_API_KEY_PREFIX}_{key_id}_"
+        api_key.key_hash = hashed
         db.add(api_key)
 
         state = _load_profile_state(db, str(user.id))

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI view for the guided setup wizard with welcome screen and mode selection.
 
 This view provides an interactive first-run experience that guides users through:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json as json_mod
+import os
 import time
 import warnings
 from pathlib import Path
@@ -208,7 +209,7 @@ def _output_search_results(
         typer.echo(json_mod.dumps(records, indent=2))
     else:
         label = f" [{search_type}]" if search_type else ""
-        rendered_results: list[tuple[Path, float | None, object]] = []
+        rendered_results: list[tuple[Path, float | None, os.stat_result]] = []
         for path, score in results:
             try:
                 stat = path.stat()

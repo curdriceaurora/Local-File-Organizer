@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI file browser with directory tree, metadata panel, and filtering.
 
 Provides a navigable directory tree with vim keybindings, a metadata

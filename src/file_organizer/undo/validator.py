@@ -34,7 +34,7 @@ class OperationValidator:
             from file_organizer.config.path_manager import get_data_dir
 
             trash_dir = get_data_dir() / "trash"
-        self.trash_dir = trash_dir
+        self.trash_dir: Path = trash_dir
         self.trash_dir.mkdir(parents=True, exist_ok=True)
 
     def validate_undo(self, operation: Operation) -> ValidationResult:
@@ -151,15 +151,14 @@ class OperationValidator:
             )
         else:
             # Check file integrity
-            if operation.file_hash and not self.check_file_integrity(
-                operation.destination_path, operation.file_hash
-            ):
+            file_hash = operation.file_hash
+            if file_hash and not self.check_file_integrity(operation.destination_path, file_hash):
                 conflicts.append(
                     Conflict(
                         conflict_type=ConflictType.HASH_MISMATCH,
                         path=str(operation.destination_path),
                         description="File has been modified since operation",
-                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        expected=f"Hash: {file_hash[:16]}...",
                         actual="Different hash",
                     )
                 )
@@ -209,15 +208,14 @@ class OperationValidator:
             )
         else:
             # Check file integrity
-            if operation.file_hash and not self.check_file_integrity(
-                operation.destination_path, operation.file_hash
-            ):
+            file_hash = operation.file_hash
+            if file_hash and not self.check_file_integrity(operation.destination_path, file_hash):
                 conflicts.append(
                     Conflict(
                         conflict_type=ConflictType.HASH_MISMATCH,
                         path=str(operation.destination_path),
                         description="File has been modified since operation",
-                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        expected=f"Hash: {file_hash[:16]}...",
                         actual="Different hash",
                     )
                 )
@@ -254,15 +252,14 @@ class OperationValidator:
             )
         else:
             # Check file integrity
-            if operation.file_hash and not self.check_file_integrity(
-                trash_path, operation.file_hash
-            ):
+            file_hash = operation.file_hash
+            if file_hash and not self.check_file_integrity(trash_path, file_hash):
                 conflicts.append(
                     Conflict(
                         conflict_type=ConflictType.HASH_MISMATCH,
                         path=str(trash_path),
                         description="File in trash has been modified",
-                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        expected=f"Hash: {file_hash[:16]}...",
                         actual="Different hash",
                     )
                 )
@@ -312,15 +309,14 @@ class OperationValidator:
             )
         else:
             # Verify it's the same file (hash check)
-            if operation.file_hash and not self.check_file_integrity(
-                operation.destination_path, operation.file_hash
-            ):
+            file_hash = operation.file_hash
+            if file_hash and not self.check_file_integrity(operation.destination_path, file_hash):
                 conflicts.append(
                     Conflict(
                         conflict_type=ConflictType.HASH_MISMATCH,
                         path=str(operation.destination_path),
                         description="Copy has been modified, may not be safe to delete",
-                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        expected=f"Hash: {file_hash[:16]}...",
                         actual="Different hash",
                     )
                 )

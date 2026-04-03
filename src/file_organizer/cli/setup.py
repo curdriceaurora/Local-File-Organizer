@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 from rich.panel import Panel
-from rich.table import Table
+from rich.table import Table  # pyre-ignore[21]
 
 from file_organizer.cli.interactive import confirm_action, console, prompt_choice
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode
@@ -89,7 +89,7 @@ def setup_run(  # noqa: C901
             model_table.add_column("Size", justify="right")
 
             for model in capabilities.installed_models[:5]:  # Show first 5
-                model_table.add_row(model.name, model.size or "N/A")
+                model_table.add_row(model.name, str(model.size or "N/A"))
 
             console.print(model_table)
     elif capabilities.ollama_status.installed:

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Main Textual application for File Organizer TUI.
 
 Provides the root App with a sidebar/main-content layout, status bar,

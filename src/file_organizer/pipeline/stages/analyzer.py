@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
 from file_organizer.interfaces.pipeline import StageContext
 from file_organizer.pipeline.processor_pool import (
@@ -54,12 +55,14 @@ class AnalyzerStage:
             logger.debug("Analyzer stage skipped (no router/pool configured)")
             return context
 
-        processor_type = self._router.route(context.file_path)
+        router = self._router
+        pool = self._pool
+        processor_type = router.route(context.file_path)
         if processor_type == ProcessorType.UNKNOWN:
             context.error = "No processor available for this file type"
             return context
 
-        processor = self._pool.get_processor(processor_type)
+        processor = pool.get_processor(processor_type)
         if processor is None:
             context.error = f"Failed to initialize {processor_type.value} processor"
             return context
@@ -80,4 +83,4 @@ class AnalyzerStage:
     def _run_processor(file_path: Path, processor: BaseProcessor) -> dict[str, str]:
         """Invoke the processor and normalise output to a dict."""
         raw = processor.process_file(file_path)
-        return normalize_processor_result(file_path, raw)
+        return cast(dict[str, str], normalize_processor_result(file_path, raw))

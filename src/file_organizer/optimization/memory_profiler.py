@@ -136,7 +136,7 @@ class MemoryProfiler:
                 allocated=allocated,
                 freed=freed,
                 duration_ms=duration_ms,
-                func_name=func.__name__,
+                func_name=getattr(func, "__name__", repr(func)),
             )
             return result
 

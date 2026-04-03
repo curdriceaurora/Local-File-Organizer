@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from typing import Any
 
 try:
@@ -39,7 +39,7 @@ class _GuardedIterator:
 
     __slots__ = ("_inner", "_on_close", "_closed")
 
-    def __init__(self, inner: Iterator[str], on_close: Callable[[], None]) -> None:
+    def __init__(self, inner: Generator[str, None, None], on_close: Callable[[], None]) -> None:
         self._inner = inner
         self._on_close = on_close
         self._closed = False
@@ -108,15 +108,16 @@ class TextModel(BaseModel):
 
         try:
             # Initialize Ollama client
-            self.client = ollama.Client()
+            client = ollama.Client()
+            self.client = client
 
             # Check if model exists locally, pull if not
             try:
-                self.client.show(self.config.name)
+                client.show(self.config.name)
                 logger.debug("Model {} found locally", self.config.name)
             except ollama.ResponseError:
                 logger.info("Model {} not found locally, pulling...", self.config.name)
-                self.client.pull(self.config.name)
+                client.pull(self.config.name)
                 logger.info("Model {} pulled successfully", self.config.name)
 
             super().initialize()
@@ -152,6 +153,7 @@ class TextModel(BaseModel):
         """Internal generate logic, called while generation guard is held."""
         if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
+        client = self.client
 
         # Merge config with kwargs
         options = {
@@ -167,7 +169,7 @@ class TextModel(BaseModel):
 
         try:
             logger.debug("Generating text with model {}", self.config.name)
-            response = self.client.generate(
+            response = client.generate(
                 model=self.config.name,
                 prompt=prompt,
                 options=options,
@@ -182,7 +184,7 @@ class TextModel(BaseModel):
                 retry_num_predict = compute_retry_num_predict(options["num_predict"])
                 options["num_predict"] = retry_num_predict
 
-                response = self.client.generate(
+                response = client.generate(
                     model=self.config.name,
                     prompt=prompt,
                     options=options,
@@ -238,10 +240,11 @@ class TextModel(BaseModel):
             self._exit_generate,
         )
 
-    def _do_generate_streaming(self, prompt: str, **kwargs: Any) -> Iterator[str]:
+    def _do_generate_streaming(self, prompt: str, **kwargs: Any) -> Generator[str, None, None]:
         """Internal streaming logic, called while generation guard is held."""
         if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
+        client = self.client
 
         options = {
             "temperature": kwargs.get("temperature", self.config.temperature),
@@ -253,7 +256,7 @@ class TextModel(BaseModel):
             options.update(self.config.extra_params)
 
         try:
-            stream = self.client.generate(
+            stream = client.generate(
                 model=self.config.name,
                 prompt=prompt,
                 options=options,

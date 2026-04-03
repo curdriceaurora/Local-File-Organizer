@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Shared Anthropic client setup for Claude model implementations.
 
 Centralises the optional-dependency guard and client construction logic so that

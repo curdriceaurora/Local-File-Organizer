@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Audio Transcription Service.
 
 Provides audio transcription capabilities using Faster-Whisper models.

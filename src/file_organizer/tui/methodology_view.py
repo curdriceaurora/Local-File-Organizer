@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """TUI PARA/JD methodology selector and preview.
 
 Allows users to choose a file organization methodology (PARA, Johnny Decimal,

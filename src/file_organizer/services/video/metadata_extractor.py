@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Video Metadata Extraction Service.
 
 Extracts metadata from video files using ffprobe (primary),

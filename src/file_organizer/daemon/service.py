@@ -196,7 +196,8 @@ class DaemonService:
         """Return seconds since the daemon started, or 0 if not running."""
         if self._started_at is None or not self._running:
             return 0.0
-        return time.monotonic() - self._started_at
+        started_at = self._started_at
+        return time.monotonic() - started_at
 
     @property
     def files_processed(self) -> int:
@@ -268,16 +269,17 @@ class DaemonService:
         where no signals are installed.
         """
         while not self._stop_event.is_set():
-            if self._sig_wakeup_r is not None:
+            sig_wakeup_r = self._sig_wakeup_r
+            if sig_wakeup_r is not None:
                 ready, _, _ = select.select(
-                    [self._sig_wakeup_r],
+                    [sig_wakeup_r],
                     [],
                     [],
                     self.config.poll_interval,
                 )
                 if ready:
                     try:
-                        os.read(self._sig_wakeup_r, 1024)
+                        os.read(sig_wakeup_r, 1024)
                     except OSError:
                         pass
                     logger.info("Received signal, initiating graceful shutdown")
@@ -332,8 +334,11 @@ class DaemonService:
             # (Windows select() doesn't support pipes, falls back to Event.wait)
             if os.name != "nt":
                 self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
-                os.set_blocking(self._sig_wakeup_r, False)
-                os.set_blocking(self._sig_wakeup_w, False)
+                sig_wakeup_r = self._sig_wakeup_r
+                sig_wakeup_w = self._sig_wakeup_w
+                assert sig_wakeup_r is not None and sig_wakeup_w is not None
+                os.set_blocking(sig_wakeup_r, False)
+                os.set_blocking(sig_wakeup_w, False)
             self._original_sigterm = signal.getsignal(signal.SIGTERM)  # type: ignore[assignment]
             self._original_sigint = signal.getsignal(signal.SIGINT)  # type: ignore[assignment]
             signal.signal(signal.SIGTERM, self._handle_signal)

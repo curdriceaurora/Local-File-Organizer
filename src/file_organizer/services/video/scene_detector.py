@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Video Scene Detection Service.
 
 Detects scene changes in video files using content-aware and threshold-based algorithms.

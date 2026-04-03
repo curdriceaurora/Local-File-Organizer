@@ -43,15 +43,14 @@ class JobRepository:
         Returns:
             The newly created :class:`OrganizationJob` instance.
         """
-        job = OrganizationJob(
-            input_dir=input_dir,
-            output_dir=output_dir,
-            workspace_id=workspace_id,
-            owner_id=owner_id,
-            job_type=job_type,
-            methodology=methodology,
-            dry_run=dry_run,
-        )
+        job = OrganizationJob()
+        job.input_dir = input_dir
+        job.output_dir = output_dir
+        job.workspace_id = workspace_id
+        job.owner_id = owner_id
+        job.job_type = job_type
+        job.methodology = methodology
+        job.dry_run = dry_run
         session.add(job)
         session.flush()
         return job

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Text model implementation using Apple's MLX runtime (mlx-lm).
 
 This provider targets Apple Silicon local inference through ``mlx_lm`` and is

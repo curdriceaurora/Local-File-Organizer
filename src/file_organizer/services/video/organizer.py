@@ -136,17 +136,18 @@ class VideoOrganizer:
         if res != "unknown":
             parts.append(res)
 
-        if metadata.duration is not None:
-            if metadata.duration >= 3600:
-                hours = int(metadata.duration // 3600)
-                mins = int((metadata.duration % 3600) // 60)
+        duration = metadata.duration
+        if duration is not None:
+            if duration >= 3600:
+                hours = int(duration // 3600)
+                mins = int((duration % 3600) // 60)
                 parts.append(f"{hours}h{mins}m")
-            elif metadata.duration >= 60:
-                mins = int(metadata.duration // 60)
-                secs = int(metadata.duration % 60)
+            elif duration >= 60:
+                mins = int(duration // 60)
+                secs = int(duration % 60)
                 parts.append(f"{mins}m{secs}s")
             else:
-                parts.append(f"{int(metadata.duration)}s")
+                parts.append(f"{int(duration)}s")
 
         if metadata.codec:
             parts.append(metadata.codec)

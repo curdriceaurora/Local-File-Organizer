@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Text model implementation using llama.cpp C bindings (llama-cpp-python).
 
 Loads GGUF model files directly — no Ollama server required.

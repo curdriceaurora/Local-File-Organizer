@@ -36,12 +36,11 @@ class WorkspaceRepository:
         Returns:
             The newly created :class:`Workspace` instance.
         """
-        workspace = Workspace(
-            name=name,
-            owner_id=owner_id,
-            root_path=root_path,
-            description=description,
-        )
+        workspace = Workspace()
+        workspace.name = name
+        workspace.owner_id = owner_id
+        workspace.root_path = root_path
+        workspace.description = description
         session.add(workspace)
         session.flush()
         return workspace

@@ -128,7 +128,8 @@ class RateThrottler:
         """
         with self._lock:
             if self._first_allowed_time is not None and self._allowed > 0:
-                elapsed = time.monotonic() - self._first_allowed_time
+                first_allowed_time = self._first_allowed_time
+                elapsed = time.monotonic() - first_allowed_time
                 if elapsed > 0:
                     current_rate = self._allowed / elapsed
                 else:

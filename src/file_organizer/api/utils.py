@@ -79,7 +79,7 @@ def file_info_from_path(path: Path) -> FileInfo:
     if hasattr(stat, "st_birthtime"):
         creation_ref = stat.st_birthtime
     elif os.name == "nt":
-        creation_ref = stat.st_ctime
+        creation_ref = getattr(stat, "st_ctime", stat.st_mtime)
     else:
         creation_ref = stat.st_mtime
     return FileInfo(

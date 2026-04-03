@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import cast
 
 from file_organizer._compat import StrEnum
 
@@ -290,7 +291,10 @@ class AudioClassifier:
         Returns:
             ClassificationResult with type, confidence, reasoning, and alternatives.
         """
-        scores: dict[AudioType, float] = dict.fromkeys(AudioType, 0.0)
+        scores: dict[AudioType, float] = cast(
+            dict[AudioType, float],
+            dict.fromkeys(AudioType, 0.0),
+        )
         reasons: dict[AudioType, list[str]] = {t: [] for t in AudioType}
 
         # ------------------------------------------------------------------

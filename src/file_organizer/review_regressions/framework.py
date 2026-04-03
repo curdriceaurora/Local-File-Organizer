@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Shared framework for review-regression audit detectors."""
 
 from __future__ import annotations

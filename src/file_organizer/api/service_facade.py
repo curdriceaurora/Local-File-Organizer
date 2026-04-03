@@ -44,7 +44,7 @@ class ServiceFacade:
         """
         if settings is None:
             settings = ApiSettings()
-        self._settings = settings
+        self._settings: ApiSettings = settings
         self._daemon_service: Any = None
 
     # ------------------------------------------------------------------
@@ -122,10 +122,11 @@ class ServiceFacade:
             A dictionary with current service status information.
         """
         ollama_ok = await self._check_ollama()
+        settings = self._settings
         return {
-            "environment": self._settings.environment,
+            "environment": settings.environment,
             "version": __version__,
-            "auth_enabled": self._settings.auth_enabled,
+            "auth_enabled": settings.auth_enabled,
             "ollama": ollama_ok,
         }
 
@@ -551,7 +552,8 @@ class ServiceFacade:
         Returns:
             ``True`` when Ollama is reachable, ``False`` otherwise.
         """
-        url = self._settings.ollama_url
+        settings = self._settings
+        url = settings.ollama_url
 
         def _blocking_check() -> bool:
             try:

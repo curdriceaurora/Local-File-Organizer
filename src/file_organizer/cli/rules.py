@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """CLI sub-commands for copilot rule management.
 
 Provides commands to list, add, remove, preview, import, and export

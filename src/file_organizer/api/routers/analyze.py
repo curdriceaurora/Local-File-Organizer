@@ -28,7 +28,9 @@ def get_text_model() -> TextModel:
         config = TextModel.get_default_config()
         _text_model = TextModel(config)
         _text_model.initialize()
-    return _text_model
+    model = _text_model
+    assert model is not None
+    return model
 
 
 router = APIRouter(tags=["analyze"])

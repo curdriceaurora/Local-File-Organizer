@@ -203,24 +203,26 @@ class MigrationValidator:
 
             # Check category range if present (01-99)
             if jd_num.category is not None:
-                if not (1 <= jd_num.category <= 99):
+                category = jd_num.category
+                if not (1 <= category <= 99):
                     result.add_issue(
                         ValidationIssue(
                             severity="error",
                             rule_index=idx,
-                            message=f"Category number out of range: {jd_num.category} (must be 01-99)",
+                            message=f"Category number out of range: {category} (must be 01-99)",
                             suggestion="Use category numbers between 01 and 99",
                         )
                     )
 
             # Check ID range if present (001-999)
             if jd_num.item_id is not None:
-                if not (1 <= jd_num.item_id <= 999):
+                item_id = jd_num.item_id
+                if not (1 <= item_id <= 999):
                     result.add_issue(
                         ValidationIssue(
                             severity="error",
                             rule_index=idx,
-                            message=f"ID number out of range: {jd_num.item_id} (must be 001-999)",
+                            message=f"ID number out of range: {item_id} (must be 001-999)",
                             suggestion="Use ID numbers between 001 and 999",
                         )
                     )

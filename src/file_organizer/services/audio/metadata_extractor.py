@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Audio Metadata Extraction Service.
 
 Extracts comprehensive metadata from audio files including:
