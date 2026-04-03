@@ -101,7 +101,7 @@ class FileMonitor:
             for directory in self.config.watch_directories:
                 self._schedule_directory(directory, self.config.recursive)
 
-                observer.start()
+            observer.start()
             self._running = True
             logger.info(
                 "FileMonitor started (%s observer), watching %d directories",

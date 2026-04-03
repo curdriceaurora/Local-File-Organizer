@@ -133,6 +133,7 @@ class VisionModel(BaseModel):
             raise ValueError("Provide exactly one of image_path or image_data")
 
         # Prepare image input
+        images: list[str | bytes]
         if image_path is not None:
             image_path = Path(image_path)
             if not image_path.exists():
@@ -142,7 +143,7 @@ class VisionModel(BaseModel):
             # For bytes data, we'll need to save temporarily or use base64
             # Ollama expects file paths or URLs
             assert image_data is not None
-            images: list[bytes | str] = [image_data]
+            images = [image_data]
 
         # Merge config with kwargs
         options = {

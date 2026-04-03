@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from ..categories import PARACategory
 from ..config import PARAConfig
@@ -515,10 +515,7 @@ class PARASuggestionEngine:
         Returns:
             Dictionary mapping each PARACategory to a feature-based score.
         """
-        scores: dict[PARACategory, float] = cast(
-            dict[PARACategory, float],
-            dict.fromkeys(PARACategory, 0.0),
-        )
+        scores: dict[PARACategory, float] = {category: 0.0 for category in PARACategory}  # noqa: C420
 
         if text_features:
             _score_text_features(text_features, scores)
