@@ -20,6 +20,16 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+try:
+    from openai import APIError as OpenAIAPIError
+except ImportError:  # pragma: no cover - optional dependency
+
+    class OpenAIAPIError(Exception):
+        """Fallback type when openai is not installed."""
+
+        pass
+
+
 # Module-level aliases preserved for backward compatibility — external code that
 # imported the private helpers directly from this module will still work.
 _image_to_data_url = image_to_data_url
@@ -185,7 +195,7 @@ class OpenAIVisionModel(BaseModel):
             return content.strip()
         except (TokenExhaustionError, ValueError):
             raise
-        except (RuntimeError, ConnectionError, OSError) as e:
+        except (RuntimeError, ConnectionError, OSError, OpenAIAPIError) as e:
             logger.error("Failed to analyse image via OpenAI API: {}", type(e).__name__)
             raise
 

@@ -42,7 +42,8 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing._nltk_ready", False)
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch(
-        "file_organizer.utils.text_processing.nltk.download", side_effect=RuntimeError("Network error")
+        "file_organizer.utils.text_processing.nltk.download",
+        side_effect=RuntimeError("Network error"),
     )
     def test_ensure_nltk_data_download_error(self, mock_download):
         from file_organizer.utils.text_processing import stopwords

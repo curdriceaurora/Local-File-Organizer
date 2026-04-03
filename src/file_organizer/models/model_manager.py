@@ -237,7 +237,7 @@ class ModelManager:
                     if new_model is not None and hasattr(new_model, "cleanup"):
                         try:
                             new_model.cleanup()
-                        except (RuntimeError, OSError, AttributeError, TypeError, ValueError):
+                        except Exception:
                             logger.debug("Cleanup of partial model failed", exc_info=True)
                     return False
 
@@ -254,7 +254,7 @@ class ModelManager:
             if old_model is not None and hasattr(old_model, "safe_cleanup"):
                 try:
                     old_model.safe_cleanup()
-                except (RuntimeError, OSError, AttributeError, TypeError, ValueError):
+                except Exception:
                     logger.exception("Drain failed for old %s model (swap committed)", model_type)
 
             return True
@@ -304,7 +304,8 @@ class ModelManager:
                 "max_size": stats.max_size,
                 "memory_usage_bytes": stats.memory_usage_bytes,
             }
-        except (ImportError, RuntimeError, AttributeError):
+        except (ImportError, RuntimeError, AttributeError) as e:
+            logger.debug("Model cache info unavailable: %s", e, exc_info=True)
             return {}
 
     # ------------------------------------------------------------------

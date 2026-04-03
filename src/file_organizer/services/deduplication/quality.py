@@ -93,10 +93,12 @@ class ImageQualityAnalyzer:
 
         # Try to import PIL
         self.Image: Any = None
+        self._decompression_bomb_error: type[BaseException] | None = None
         try:
             from PIL import Image
 
             self.Image = Image
+            self._decompression_bomb_error = getattr(Image, "DecompressionBombError", None)
             self._pil_available = True
         except ImportError:
             logger.warning("PIL not available, quality analysis will be limited")
@@ -132,6 +134,9 @@ class ImageQualityAnalyzer:
         if not self._pil_available:
             return None
 
+        handled_exceptions = (OSError, ValueError) + (
+            (self._decompression_bomb_error,) if self._decompression_bomb_error is not None else ()
+        )
         try:
             with self.Image.open(path) as img:
                 width, height = img.size
@@ -179,7 +184,7 @@ class ImageQualityAnalyzer:
                     color_depth=color_depth,
                     modification_time=modification_time,
                 )
-        except (OSError, ValueError) as e:
+        except handled_exceptions as e:
             logger.warning(f"Failed to extract metrics from {path}: {e}")
             return None
 

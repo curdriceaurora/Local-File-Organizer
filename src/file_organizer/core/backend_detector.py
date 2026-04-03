@@ -19,6 +19,13 @@ except ImportError:
 
 from loguru import logger
 
+OLLAMA_CLIENT_EXCEPTIONS = (ConnectionError, RuntimeError, OSError)
+if OLLAMA_AVAILABLE:
+    for _error_name in ("ConnectionError", "ResponseError"):
+        _error = getattr(ollama, _error_name, None)
+        if isinstance(_error, type) and issubclass(_error, BaseException):
+            OLLAMA_CLIENT_EXCEPTIONS += (_error,)
+
 
 @dataclass
 class OllamaStatus:
@@ -109,7 +116,7 @@ def detect_ollama() -> OllamaStatus:
             models_count=models_count,
         )
 
-    except (ConnectionError, RuntimeError, OSError) as e:
+    except OLLAMA_CLIENT_EXCEPTIONS as e:
         logger.debug("Ollama service not responding: {}", e)
         return OllamaStatus(
             installed=True,
@@ -163,7 +170,7 @@ def list_installed_models() -> list[InstalledModel]:
         logger.debug("Found {} installed models via Ollama client", len(models))
         return models
 
-    except (ConnectionError, RuntimeError, OSError) as e:
+    except OLLAMA_CLIENT_EXCEPTIONS as e:
         logger.debug("Failed to list models via Ollama client: {}", e)
 
     # Fallback to CLI

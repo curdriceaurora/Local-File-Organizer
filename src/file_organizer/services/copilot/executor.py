@@ -74,7 +74,9 @@ class CommandExecutor:
 
         try:
             return handler(intent)
-        except Exception as exc:  # Intentional catch-all: plugin-style dispatch to arbitrary handlers
+        except (
+            Exception
+        ) as exc:  # Intentional catch-all: plugin-style dispatch to arbitrary handlers
             logger.error("Executor error for {}: {}", intent.intent_type.value, exc)
             return ExecutionResult(
                 success=False,
@@ -288,7 +290,7 @@ class CommandExecutor:
                 results = retriever.retrieve(query, top_k=20)
                 # Scope results to search_root only
                 matches = [str(p) for p, _ in results if Path(p).is_relative_to(search_root)]
-            except (RuntimeError, ValueError, OSError) as exc:
+            except (RuntimeError, ValueError, OSError, TypeError, AttributeError) as exc:
                 logger.warning("Retriever failed in _handle_find, falling back: {}", exc)
                 matches = []
             if matches:

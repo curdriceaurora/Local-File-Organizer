@@ -27,6 +27,13 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+OLLAMA_MODEL_INIT_EXCEPTIONS = (RuntimeError, ImportError, OSError, ConnectionError)
+if OLLAMA_AVAILABLE:
+    for _error_name in ("ConnectionError", "ResponseError"):
+        _error = getattr(ollama, _error_name, None)
+        if isinstance(_error, type) and issubclass(_error, BaseException):
+            OLLAMA_MODEL_INIT_EXCEPTIONS += (_error,)
+
 
 class VisionModel(BaseModel):
     """Vision-Language model using Ollama for multimodal tasks.
@@ -83,7 +90,7 @@ class VisionModel(BaseModel):
             super().initialize()
             logger.info("Vision model {} initialized successfully", self.config.name)
 
-        except (RuntimeError, ImportError, OSError, ConnectionError) as e:
+        except OLLAMA_MODEL_INIT_EXCEPTIONS as e:
             logger.error("Failed to initialize vision model: {}", e)
             raise
 
@@ -307,7 +314,9 @@ class VisionModel(BaseModel):
                 "type": "vision-language",
                 "status": "connected",
             }
-        except Exception as e:  # Intentional catch-all: ollama client raises library-specific errors
+        except (
+            Exception
+        ) as e:  # Intentional catch-all: ollama client raises library-specific errors
             logger.error("Failed to get model info: {}", e)
             return {
                 "name": self.config.name,

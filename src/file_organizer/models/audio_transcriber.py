@@ -317,7 +317,9 @@ class AudioTranscriber:
                 language=language, language_name=language_name, confidence=confidence
             )
 
-        except Exception as e:  # Intentional catch-all: whisper transcribe raises library-specific errors
+        except (
+            Exception
+        ) as e:  # Intentional catch-all: whisper transcribe raises library-specific errors
             logger.error(f"Language detection failed: {e}")
             raise RuntimeError(f"Language detection failed: {e}") from e
 
@@ -429,7 +431,9 @@ class AudioTranscriber:
                 device=self.device,
             )
 
-        except Exception as e:  # Intentional catch-all: whisper transcribe raises library-specific errors
+        except (
+            Exception
+        ) as e:  # Intentional catch-all: whisper transcribe raises library-specific errors
             logger.error(f"Transcription failed: {e}")
             raise RuntimeError(f"Transcription failed: {e}") from e
 

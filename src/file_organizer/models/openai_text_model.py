@@ -17,6 +17,15 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+try:
+    from openai import APIError as OpenAIAPIError
+except ImportError:  # pragma: no cover - optional dependency
+
+    class OpenAIAPIError(Exception):
+        """Fallback type when openai is not installed."""
+
+        pass
+
 
 class OpenAITextModel(BaseModel):
     """Text generation model using an OpenAI-compatible API.
@@ -136,7 +145,7 @@ class OpenAITextModel(BaseModel):
             return content.strip()
         except TokenExhaustionError:
             raise
-        except (RuntimeError, ConnectionError, OSError, ValueError) as e:
+        except (RuntimeError, ConnectionError, OSError, ValueError, OpenAIAPIError) as e:
             logger.error("Failed to generate text via OpenAI API: {}", type(e).__name__)
             raise
 

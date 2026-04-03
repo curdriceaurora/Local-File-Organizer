@@ -156,9 +156,7 @@ def organize_files(
                         transaction_id=transaction_id,
                     )
                 except (OSError, ValueError, RuntimeError) as undo_err:
-                    logger.warning(
-                        "Undo log failed for {}: {}", result.file_path, undo_err
-                    )
+                    logger.warning("Undo log failed for {}: {}", result.file_path, undo_err)
 
             organized.setdefault(result.folder_name, []).append(new_filename)
 

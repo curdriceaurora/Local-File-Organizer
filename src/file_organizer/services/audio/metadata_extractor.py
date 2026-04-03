@@ -358,7 +358,7 @@ class AudioMetadataExtractor:
             try:
                 metadata = self.extract(audio_path)
                 results.append(metadata)
-            except (OSError, ValueError, ImportError, KeyError) as e:
+            except (OSError, ValueError, ImportError, KeyError, AttributeError) as e:
                 logger.error(f"Failed to extract metadata from {audio_path}: {e}")
                 # Continue with other files
 

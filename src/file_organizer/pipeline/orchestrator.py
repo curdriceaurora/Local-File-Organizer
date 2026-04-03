@@ -637,7 +637,9 @@ class PipelineOrchestrator:
                     future, start_time = futures.pop(i)
                     try:
                         ctx, buffer = future.result()
-                    except Exception as exc:  # Intentional catch-all: future can raise any stage error
+                    except (
+                        Exception
+                    ) as exc:  # Intentional catch-all: future can raise any stage error
                         logger.warning(
                             "Prefetch future failed for %s: %s",
                             files[i],

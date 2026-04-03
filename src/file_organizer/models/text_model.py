@@ -27,6 +27,13 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+OLLAMA_MODEL_INIT_EXCEPTIONS = (RuntimeError, ImportError, OSError, ConnectionError)
+if OLLAMA_AVAILABLE:
+    for _error_name in ("ConnectionError", "ResponseError"):
+        _error = getattr(ollama, _error_name, None)
+        if isinstance(_error, type) and issubclass(_error, BaseException):
+            OLLAMA_MODEL_INIT_EXCEPTIONS += (_error,)
+
 
 class _GuardedIterator:
     """Wraps a generator to guarantee a cleanup callback fires on close.
@@ -123,7 +130,7 @@ class TextModel(BaseModel):
             super().initialize()
             logger.info("Text model {} initialized successfully", self.config.name)
 
-        except (RuntimeError, ImportError, OSError, ConnectionError) as e:
+        except OLLAMA_MODEL_INIT_EXCEPTIONS as e:
             logger.error("Failed to initialize text model: {}", e)
             raise
 
@@ -344,7 +351,9 @@ class TextModel(BaseModel):
                 "quantization": self.config.quantization,
                 "status": "connected",
             }
-        except Exception as e:  # Intentional catch-all: ollama client raises library-specific errors
+        except (
+            Exception
+        ) as e:  # Intentional catch-all: ollama client raises library-specific errors
             logger.error("Failed to get model info: {}", e)
             return {
                 "name": self.config.name,

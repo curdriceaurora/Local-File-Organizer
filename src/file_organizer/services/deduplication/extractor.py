@@ -124,6 +124,11 @@ class DocumentExtractor:
         try:
             import pypdf
 
+            try:
+                from pypdf.errors import PyPdfError
+            except (ImportError, AttributeError):
+                PyPdfError = Exception
+
             text_parts = []
 
             with open(file_path, "rb") as f:
@@ -144,7 +149,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
-        except (OSError, ValueError) as e:
+        except (PyPdfError, OSError, ValueError, KeyError, IndexError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 

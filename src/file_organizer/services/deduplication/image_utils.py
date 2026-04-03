@@ -10,7 +10,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
+from PIL.Image import DecompressionBombError
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,10 @@ def get_image_metadata(image_path: Path) -> ImageMetadata | None:
     except OSError as e:
         logger.warning(f"Could not read image {image_path}: {e}")
         return None
-    except (ValueError, RuntimeError) as e:
+    except DecompressionBombError as e:
+        logger.error(f"Decompression bomb detected for {image_path}: {e}")
+        return None
+    except (ValueError, TypeError, RuntimeError, UnidentifiedImageError) as e:
         logger.error(f"Error getting metadata for {image_path}: {e}")
         return None
 
@@ -202,7 +206,9 @@ def validate_image_file(image_path: Path) -> tuple[bool, str | None]:
 
     except OSError as e:
         return False, f"Cannot read image: {e}"
-    except (ValueError, RuntimeError) as e:
+    except DecompressionBombError as e:
+        return False, f"Oversized image blocked: {e}"
+    except (ValueError, TypeError, RuntimeError, UnidentifiedImageError) as e:
         return False, f"Corrupt or invalid image: {e}"
 
 

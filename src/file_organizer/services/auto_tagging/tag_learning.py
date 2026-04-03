@@ -491,5 +491,5 @@ class TagLearningEngine:
 
             logger.info(f"Loaded learning data: {len(self.tag_usage)} tags tracked")
 
-        except (OSError, json.JSONDecodeError, KeyError, TypeError) as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             logger.error(f"Error loading learning data: {e}")

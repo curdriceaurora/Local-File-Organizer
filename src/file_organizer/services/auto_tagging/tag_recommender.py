@@ -343,7 +343,7 @@ class TagRecommender:
 
             return suggestions
 
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError, AttributeError) as e:
             logger.debug(f"Error getting behavior suggestions: {e}")
             return []
 
