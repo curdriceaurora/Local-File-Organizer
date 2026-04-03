@@ -16,6 +16,7 @@ from file_organizer.web.marketplace_routes import (
     _service,
     install_plugin,
     marketplace_home,
+    plugin_details,
     uninstall_plugin,
     update_plugin,
 )
@@ -290,3 +291,18 @@ class TestUpdatePlugin:
             category="",
             tag_csv="",
         )
+
+
+class TestPluginDetailsError:
+    """Verify plugin_details returns generic error, not exception message."""
+
+    def test_marketplace_error_returns_generic_500(self, mock_deps: dict) -> None:
+        from file_organizer.plugins.marketplace import MarketplaceError
+
+        secret_msg = "internal db connection string leaked"
+        mock_deps["service"].get_plugin.side_effect = MarketplaceError(secret_msg)
+        resp = plugin_details(mock_deps["request"], "bad-plugin", mock_deps["settings"])
+        assert resp.status_code == 500
+        body = resp.body.decode()
+        assert secret_msg not in body  # no information leakage
+        assert "try again later" in body  # generic message present

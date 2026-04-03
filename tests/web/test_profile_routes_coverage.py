@@ -84,6 +84,12 @@ class TestProfileHelpers:
         path = _avatar_path("user-123")
         assert "user-123" in str(path)
 
+    def test_avatar_path_rejects_empty_string(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with pytest.raises(ValueError, match="Invalid user_id"):
+            _avatar_path("")
+
     def test_avatar_path_rejects_traversal(self) -> None:
         """_avatar_path must reject path-traversal sequences (CodeQL #48/#49)."""
         from file_organizer.web.profile_routes import _avatar_path
