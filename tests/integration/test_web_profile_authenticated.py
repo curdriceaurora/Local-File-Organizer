@@ -42,6 +42,13 @@ def _html_response() -> HTMLResponse:
     return HTMLResponse("<html><body>stub</body></html>")
 
 
+def _assert_authenticated_template_response(response: HTMLResponse, templates_mock: object) -> None:
+    """Ensure the authenticated route path rendered a template response."""
+    assert response.status_code == 200
+    assert b"Not authenticated" not in response.content
+    assert templates_mock.TemplateResponse.called
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -316,21 +323,19 @@ class TestProtectedRoutesWithoutAuth:
 
 class TestProfileEditAuthenticated:
     def test_profile_edit_get_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/edit")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/edit")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_profile_edit_post_success(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/edit",
                 data={"full_name": "Updated Name", "email": "authuser@example.com"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         call_args = str(tpl.TemplateResponse.call_args)
         assert "_edit" in call_args
 
@@ -346,7 +351,7 @@ class TestProfileEditAuthenticated:
                 "/ui/profile/edit",
                 data={"full_name": "X", "email": "edituser2@example.com"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         call_args = str(tpl.TemplateResponse.call_args_list)
         assert "_edit" in call_args
 
@@ -358,35 +363,32 @@ class TestProfileEditAuthenticated:
 
 class TestWorkspacesAuthenticated:
     def test_workspaces_get_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/workspaces")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/workspaces")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_workspace_create_returns_200(
         self, logged_in_client: TestClient, tmp_path: Path
     ) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/workspaces/create",
                 data={"name": "My WS", "root_path": str(tmp_path), "description": ""},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
     def test_workspace_switch_unknown_id_still_returns_200(
         self, logged_in_client: TestClient
     ) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/workspaces/switch",
                 data={"workspace_id": "nonexistent-id"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
 
 # ---------------------------------------------------------------------------
@@ -396,33 +398,30 @@ class TestWorkspacesAuthenticated:
 
 class TestTeamAuthenticated:
     def test_team_partial_get_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/team")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/team")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_team_invite_valid_role(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/team/invite",
                 data={"email": "colleague@example.com", "role": "editor"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
     def test_team_invite_invalid_role_falls_back_to_viewer(
         self, logged_in_client: TestClient
     ) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/team/invite",
                 data={"email": "new@example.com", "role": "superadmin"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         ctx = tpl.TemplateResponse.call_args[0][2]
         member = next(
             (m for m in ctx.get("team_members", []) if m.get("email") == "new@example.com"),
@@ -432,14 +431,13 @@ class TestTeamAuthenticated:
         assert member["role"] == "viewer"
 
     def test_team_update_role(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/team/role",
                 data={"member_id": "nonexistent-member", "role": "admin"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
 
 # ---------------------------------------------------------------------------
@@ -449,35 +447,32 @@ class TestTeamAuthenticated:
 
 class TestSharedFoldersAuthenticated:
     def test_shared_partial_get_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/shared")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/shared")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_shared_add_valid_permission(
         self, logged_in_client: TestClient, tmp_path: Path
     ) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/shared/add",
                 data={"folder_path": str(tmp_path), "permission": "edit"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
     def test_shared_add_invalid_permission_falls_back_to_view(
         self, logged_in_client: TestClient, tmp_path: Path
     ) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/shared/add",
                 data={"folder_path": str(tmp_path), "permission": "superpower"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         ctx = tpl.TemplateResponse.call_args[0][2]
         shared = ctx.get("shared_folders", [])
         added = next((f for f in shared if str(tmp_path) in f.get("path", "")), None)
@@ -485,14 +480,13 @@ class TestSharedFoldersAuthenticated:
         assert added["permission"] == "view"
 
     def test_shared_remove_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/shared/remove",
                 data={"folder_id": "nonexistent-folder-id"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
 
 # ---------------------------------------------------------------------------
@@ -502,28 +496,25 @@ class TestSharedFoldersAuthenticated:
 
 class TestActivityAndNotifications:
     def test_activity_partial_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/activity")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/activity")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_notifications_partial_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/notifications")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/notifications")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_notification_mark_read_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/notifications/mark-read",
                 data={"notification_id": "nonexistent-id"},
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
 
 # ---------------------------------------------------------------------------
@@ -533,17 +524,15 @@ class TestActivityAndNotifications:
 
 class TestAccountSettingsAuthenticated:
     def test_account_settings_get_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.get("/ui/profile/account-settings")
-        assert r.status_code == 200
+            r = logged_in_client.get("/ui/profile/account-settings")
+        _assert_authenticated_template_response(r, tpl)
 
     def test_change_password_wrong_current_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/account-settings/password",
                 data={
                     "current_password": "WrongPassword!",
@@ -551,15 +540,14 @@ class TestAccountSettingsAuthenticated:
                     "confirm_password": "NewP@ssword1!",
                 },
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         call_args = str(tpl.TemplateResponse.call_args)
         assert "_account_settings" in call_args
 
     def test_change_password_mismatch_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/account-settings/password",
                 data={
                     "current_password": "T3stP@ssword1!",
@@ -567,13 +555,12 @@ class TestAccountSettingsAuthenticated:
                     "confirm_password": "DifferentP@ssword1!",
                 },
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
     def test_change_password_weak_new_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/account-settings/password",
                 data={
                     "current_password": "T3stP@ssword1!",
@@ -581,13 +568,12 @@ class TestAccountSettingsAuthenticated:
                     "confirm_password": "abc",
                 },
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
 
     def test_change_password_success_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
+            r = logged_in_client.post(
                 "/ui/profile/account-settings/password",
                 data={
                     "current_password": "T3stP@ssword1!",
@@ -595,26 +581,18 @@ class TestAccountSettingsAuthenticated:
                     "confirm_password": "NewP@ssword1!",
                 },
             )
-        assert r.status_code == 200
+        _assert_authenticated_template_response(r, tpl)
         call_args = str(tpl.TemplateResponse.call_args)
         assert "_account_settings" in call_args
 
     def test_toggle_2fa_on_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
-                "/ui/profile/account-settings/2fa",
-                data={"enabled": "1"},
-            )
-        assert r.status_code == 200
+            r = logged_in_client.post("/ui/profile/account-settings/2fa", data={"enabled": "1"})
+        _assert_authenticated_template_response(r, tpl)
 
     def test_toggle_2fa_off_returns_200(self, logged_in_client: TestClient) -> None:
-        client = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
             tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
-            r = client.post(
-                "/ui/profile/account-settings/2fa",
-                data={},
-            )
-        assert r.status_code == 200
+            r = logged_in_client.post("/ui/profile/account-settings/2fa", data={})
+        _assert_authenticated_template_response(r, tpl)
