@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -121,6 +122,16 @@ class TestProfileHelpers:
         for valid_id in ["user-123", "abc_def", "User.Name", "12345"]:
             path = _avatar_path(valid_id)
             assert path.name == f"{valid_id}.png"
+
+    def test_avatar_path_rejects_resolved_escape(self) -> None:
+        from file_organizer.web.profile_routes import _avatar_path
+
+        with patch(
+            "pathlib.Path.resolve",
+            side_effect=[Path("/tmp/outside.png"), Path("/tmp/avatars")],
+        ):
+            with pytest.raises(ValueError, match="Invalid user_id"):
+                _avatar_path("user-123")
 
     def test_cleanup_expired_reset_tokens(self) -> None:
         from file_organizer.web.profile_routes import (
@@ -735,6 +746,26 @@ class TestApiKeys:
 class TestAvatarUpload:
     """Covers profile_avatar_upload route."""
 
+    def test_avatar_route_invalid_user_id(self) -> None:
+        from file_organizer.web.profile_routes import profile_avatar
+
+        result = profile_avatar("bad user")
+
+        assert result.status_code == 400
+        assert "Invalid user ID" in result.body.decode()
+
+    def test_avatar_route_not_found(self, tmp_path) -> None:
+        from file_organizer.web.profile_routes import profile_avatar
+
+        with patch(
+            "file_organizer.web.profile_routes._avatar_path",
+            return_value=tmp_path / "missing.png",
+        ):
+            result = profile_avatar("u1")
+
+        assert result.status_code == 404
+        assert "Avatar not found" in result.body.decode()
+
     def test_avatar_too_large(self) -> None:
         from file_organizer.web.profile_routes import profile_avatar_upload
 
@@ -772,6 +803,23 @@ class TestAvatarUpload:
             )
         assert "Avatar updated" in result.body.decode()
         assert (tmp_path / "u1.png").read_bytes() == b"png-data"
+
+    def test_avatar_invalid_user_id(self) -> None:
+        from file_organizer.web.profile_routes import profile_avatar_upload
+
+        user = MagicMock()
+        user.id = "bad user"
+        avatar = MagicMock()
+        avatar.read = AsyncMock(return_value=b"png-data")
+
+        stack, _ = _patch_route_deps(user_mock=user)
+        with stack:
+            result = asyncio.get_event_loop().run_until_complete(
+                profile_avatar_upload(MagicMock(), avatar=avatar, settings=MagicMock())
+            )
+
+        assert result.status_code == 400
+        assert "Invalid user ID" in result.body.decode()
 
 
 # ---------------------------------------------------------------------------

@@ -296,6 +296,22 @@ class TestUpdatePlugin:
 class TestPluginDetailsError:
     """Verify plugin_details returns generic error, not exception message."""
 
+    def test_plugin_details_success(self, mock_deps: dict) -> None:
+        plugin = SimpleNamespace(name="good-plugin")
+        mock_deps["service"].get_plugin.return_value = plugin
+
+        result = plugin_details(mock_deps["request"], "good-plugin", mock_deps["settings"])
+
+        assert result is mock_deps["template_response"]
+
+    def test_plugin_details_not_found_returns_404(self, mock_deps: dict) -> None:
+        mock_deps["service"].get_plugin.return_value = None
+
+        result = plugin_details(mock_deps["request"], "missing-plugin", mock_deps["settings"])
+
+        assert result.status_code == 404
+        assert "Plugin not found" in result.body.decode()
+
     def test_marketplace_error_returns_generic_500(self, mock_deps: dict) -> None:
         from file_organizer.plugins.marketplace import MarketplaceError
 
