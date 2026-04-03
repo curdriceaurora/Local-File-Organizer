@@ -435,4 +435,8 @@ DEP002 = [
     "PyQt6",
     # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
     "netCDF4",
+    # ecdsa: transitive via python-jose; pinned for CVE-2026-33936
+    "ecdsa",
+    # Pygments: transitive via rich/textual; pinned for CVE-2026-4539
+    "Pygments",
 ]
