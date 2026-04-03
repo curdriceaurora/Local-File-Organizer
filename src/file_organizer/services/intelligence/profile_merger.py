@@ -135,7 +135,7 @@ class ProfileMerger:
 
             return merged_profile
 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             print(f"Error merging profiles: {e}")
             return None
 
@@ -430,7 +430,7 @@ class ProfileMerger:
 
             return self.profile_manager.get_profile(name)
 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             print(f"Error creating merged profile: {e}")
             return None
 
@@ -492,6 +492,6 @@ class ProfileMerger:
             )
             return conflicts
 
-        except Exception as e:
+        except (KeyError, TypeError, ValueError) as e:
             print(f"Error detecting conflicts: {e}")
             return conflicts

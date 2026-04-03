@@ -256,7 +256,7 @@ class AudioOrganizer:
                 plan.planned_moves.append(
                     FileMove(source=source, destination=dest, audio_type=audio_type)
                 )
-            except Exception as exc:
+            except (KeyError, ValueError, TypeError) as exc:
                 plan.skipped_files.append((source, str(exc)))
 
         return plan
@@ -287,7 +287,7 @@ class AudioOrganizer:
             try:
                 rel_path = self.generate_path(audio_type, metadata)
                 dest = base_path / rel_path
-            except Exception as exc:
+            except (KeyError, ValueError, TypeError) as exc:
                 result.skipped_files.append((source, str(exc)))
                 continue
 
@@ -375,7 +375,7 @@ class AudioOrganizer:
                 audio_type=audio_type,
                 success=True,
             )
-        except Exception as exc:
+        except OSError as exc:
             logger.error(f"Failed to move {source}: {exc}")
             return FileMove(
                 source=source,

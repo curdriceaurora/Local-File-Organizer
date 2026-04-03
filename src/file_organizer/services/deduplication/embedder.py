@@ -121,7 +121,7 @@ class DocumentEmbedder:
 
             return np.asarray(dense_embeddings)
 
-        except Exception as e:
+        except ValueError as e:
             logger.error(f"Error during fit_transform: {e}")
             raise
 
@@ -246,7 +246,7 @@ class DocumentEmbedder:
 
             logger.info(f"Saved vectorizer to {path}")
 
-        except Exception as e:
+        except (OSError, pickle.PicklingError) as e:
             logger.error(f"Error saving vectorizer: {e}")
 
     def load_model(self, path: Path) -> None:
@@ -262,7 +262,7 @@ class DocumentEmbedder:
             self.is_fitted = True
             logger.info(f"Loaded vectorizer from {path}")
 
-        except Exception as e:
+        except (OSError, pickle.UnpicklingError, ValueError) as e:
             logger.error(f"Error loading vectorizer: {e}")
             raise
 
@@ -289,7 +289,7 @@ class DocumentEmbedder:
 
             logger.debug(f"Saved {len(self.embedding_cache)} embeddings to cache")
 
-        except Exception as e:
+        except (OSError, pickle.PicklingError) as e:
             logger.error(f"Error saving cache: {e}")
 
     def _load_cache(self) -> None:
@@ -303,7 +303,7 @@ class DocumentEmbedder:
 
             logger.info(f"Loaded {len(self.embedding_cache)} embeddings from cache")
 
-        except Exception as e:
+        except (OSError, pickle.UnpicklingError, ValueError) as e:
             logger.error(f"Error loading cache: {e}")
 
     def __del__(self) -> None:

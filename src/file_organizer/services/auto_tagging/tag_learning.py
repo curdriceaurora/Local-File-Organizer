@@ -454,7 +454,7 @@ class TagLearningEngine:
 
             logger.debug(f"Saved learning data to {storage_path}")
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             logger.error(f"Error saving learning data: {e}")
 
     def _load_data(self) -> None:
@@ -491,5 +491,5 @@ class TagLearningEngine:
 
             logger.info(f"Loaded learning data: {len(self.tag_usage)} tags tracked")
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError) as e:
             logger.error(f"Error loading learning data: {e}")

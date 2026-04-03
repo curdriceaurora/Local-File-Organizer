@@ -204,7 +204,7 @@ class ProfileManager:
 
             return True
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"Error saving profile to disk: {e}")
             return False
 
@@ -238,7 +238,7 @@ class ProfileManager:
             print(f"Error: Corrupted profile file: {profile_name} - {e}")
             return None
 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             print(f"Error loading profile: {profile_name} - {e}")
             return None
 
@@ -248,7 +248,7 @@ class ProfileManager:
             if self.active_profile_file.exists():
                 with open(self.active_profile_file, encoding="utf-8") as f:
                     return f.read().strip()
-        except Exception as e:
+        except OSError as e:
             print(f"Error reading active profile: {e}")
 
         return "default"
@@ -273,7 +273,7 @@ class ProfileManager:
 
             return True
 
-        except Exception as e:
+        except OSError as e:
             print(f"Error setting active profile: {e}")
             return False
 
@@ -399,14 +399,14 @@ class ProfileManager:
             backup_path = profile_path.parent / f"{profile_path.name}.deleted.backup"
             try:
                 shutil.copy2(profile_path, backup_path)
-            except Exception as e:
+            except OSError as e:
                 print(f"Warning: Failed to create backup: {e}")
 
             # Delete profile file
             try:
                 profile_path.unlink()
                 return True
-            except Exception as e:
+            except OSError as e:
                 print(f"Error deleting profile: {e}")
                 return False
 

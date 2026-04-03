@@ -351,7 +351,7 @@ class SuggestionFeedback:
 
             logger.info(f"Loaded {len(self.feedback_entries)} feedback entries")
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             logger.error(f"Failed to load feedback: {e}")
             self.feedback_entries = []
             self.pattern_adjustments = {}
@@ -370,7 +370,7 @@ class SuggestionFeedback:
 
             logger.debug(f"Saved {len(self.feedback_entries)} feedback entries")
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             logger.error(f"Failed to save feedback: {e}")
 
     def export_feedback(self, output_file: Path) -> None:

@@ -178,7 +178,7 @@ class AudioTranscriber:
                 "faster-whisper is required for audio transcription. "
                 "Install it with: pip install faster-whisper"
             ) from e
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             logger.error(f"Failed to load model: {e}")
             raise
 
@@ -282,7 +282,7 @@ class AudioTranscriber:
 
             return result
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             logger.error(f"Transcription failed: {e}")
             raise
 
@@ -305,7 +305,7 @@ class AudioTranscriber:
             try:
                 result = self.transcribe(audio_path, options)
                 results.append(result)
-            except Exception as e:
+            except (OSError, RuntimeError, ValueError, ImportError) as e:
                 logger.error(f"Failed to transcribe {audio_path}: {e}")
                 # Continue with other files
 

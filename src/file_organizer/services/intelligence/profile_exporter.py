@@ -91,7 +91,7 @@ class ProfileExporter:
 
             return True
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"Error exporting profile: {e}")
             return False
 
@@ -175,7 +175,7 @@ class ProfileExporter:
 
             return True
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"Error exporting selective preferences: {e}")
             return False
 
@@ -243,7 +243,7 @@ class ProfileExporter:
             print(f"Error: Invalid JSON in export file: {e}")
             return False
 
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"Error validating export: {e}")
             return False
 
@@ -283,7 +283,7 @@ class ProfileExporter:
 
             return preview
 
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             print(f"Error creating export preview: {e}")
             return None
 
@@ -309,7 +309,7 @@ class ProfileExporter:
             else:
                 return f"{size_bytes / (1024 * 1024):.1f} MB"
 
-        except Exception:
+        except (TypeError, ValueError, OSError):
             return "Unknown"
 
     def export_multiple(self, profile_names: list[str], output_dir: Path) -> dict[str, bool]:

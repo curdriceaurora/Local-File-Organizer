@@ -126,7 +126,7 @@ class ComparisonViewer:
             try:
                 metadata = self._get_image_metadata(img_path)
                 metadata_list.append(metadata)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 self.console.print(f"[yellow]Warning: Could not load {img_path}: {e}[/yellow]")
 
         if not metadata_list:
@@ -337,7 +337,7 @@ class ComparisonViewer:
 
                 return "\n".join(ascii_lines)
 
-        except Exception:
+        except (OSError, ValueError):
             return None
 
     def _prompt_user_action(self, image_count: int) -> UserAction:
@@ -449,7 +449,7 @@ class ComparisonViewer:
         """
         try:
             metadata_list = [self._get_image_metadata(img) for img in images]
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self.console.print(f"[yellow]Warning: Could not auto-select: {e}[/yellow]")
             return DuplicateReview([], [], skipped=True)
 
@@ -552,7 +552,7 @@ class ComparisonViewer:
             metadata = self._get_image_metadata(image_path)
             table = self._create_image_info_table(1, metadata)
             self.console.print(table)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self.console.print(f"[red]Error loading image metadata: {e}[/red]")
 
     def interactive_select(
@@ -580,7 +580,7 @@ class ComparisonViewer:
                     f"  [{idx}] {metadata.path.name} "
                     f"({metadata.dimensions}, {metadata.size_mb:.2f} MB)"
                 )
-            except Exception:
+            except (OSError, ValueError):
                 self.console.print(f"  [{idx}] {img_path.name} (could not load)")
 
         # Get selection

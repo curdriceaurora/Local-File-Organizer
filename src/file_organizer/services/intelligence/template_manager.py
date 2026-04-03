@@ -356,7 +356,7 @@ class TemplateManager:
 
             return self.profile_manager.get_profile(profile_name)
 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             print(f"Error creating profile from template: {e}")
             return None
 
@@ -439,7 +439,7 @@ class TemplateManager:
 
             return True
 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             print(f"Error creating custom template: {e}")
             return False
 
@@ -551,6 +551,6 @@ class TemplateManager:
 
             return comparison
 
-        except Exception as e:
+        except (KeyError, TypeError, ValueError) as e:
             print(f"Error comparing templates: {e}")
             return None

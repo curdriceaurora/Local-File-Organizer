@@ -221,7 +221,7 @@ class TagRecommender:
             try:
                 recommendation = self.recommend_tags(file_path, top_n=top_n)
                 results[file_path] = recommendation
-            except Exception as e:
+            except (OSError, ValueError, KeyError) as e:
                 logger.error(f"Error recommending tags for {file_path}: {e}")
                 results[file_path] = TagRecommendation(file_path=file_path, suggestions=[])
 
@@ -324,7 +324,7 @@ class TagRecommender:
 
             return normalized
 
-        except Exception as e:
+        except (OSError, ValueError, ZeroDivisionError) as e:
             logger.debug(f"Error getting content suggestions: {e}")
             return []
 
@@ -343,7 +343,7 @@ class TagRecommender:
 
             return suggestions
 
-        except Exception as e:
+        except (KeyError, ValueError) as e:
             logger.debug(f"Error getting behavior suggestions: {e}")
             return []
 

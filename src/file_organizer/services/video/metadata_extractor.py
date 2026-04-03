@@ -222,7 +222,7 @@ class VideoMetadataExtractor:
                 metadata.duration = frame_count / metadata.fps
 
             return True
-        except Exception:
+        except (OSError, ValueError, RuntimeError):
             logger.debug(f"OpenCV extraction failed for {video_path.name}", exc_info=True)
             return False
         finally:
