@@ -141,7 +141,7 @@ class DocumentDeduplicator:
 
             return similarity
 
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             logger.error(f"Error comparing documents: {e}")
             return None
 

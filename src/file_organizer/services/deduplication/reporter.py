@@ -129,7 +129,7 @@ class StorageReporter:
 
             logger.info(f"Exported duplicate report to {output_path}")
 
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Error exporting to CSV: {e}")
             raise
 
@@ -146,6 +146,6 @@ class StorageReporter:
 
             logger.info(f"Exported duplicate report to {output_path}")
 
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Error exporting to JSON: {e}")
             raise

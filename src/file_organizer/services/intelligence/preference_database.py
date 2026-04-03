@@ -184,7 +184,7 @@ class PreferenceDatabaseManager:
                 self._initialized = True
                 logger.info("Preference database initialization complete")
 
-            except Exception as e:
+            except (sqlite3.Error, OSError) as e:
                 conn.rollback()
                 logger.error(f"Database initialization failed: {e}")
                 raise
@@ -239,7 +239,7 @@ class PreferenceDatabaseManager:
                 conn.execute("BEGIN")
                 yield conn
                 conn.commit()
-            except Exception as e:
+            except (sqlite3.Error, OSError) as e:
                 conn.rollback()
                 logger.error(f"Transaction failed: {e}")
                 raise
@@ -326,7 +326,7 @@ class PreferenceDatabaseManager:
                 if pref_id is None:
                     raise RuntimeError("Failed to retrieve preference ID after insert/update")
                 return pref_id
-            except Exception as e:
+            except (sqlite3.Error, OSError, RuntimeError) as e:
                 logger.error(f"Failed to add preference: {e}")
                 raise
 

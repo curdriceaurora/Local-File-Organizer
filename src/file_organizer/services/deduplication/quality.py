@@ -179,7 +179,7 @@ class ImageQualityAnalyzer:
                     color_depth=color_depth,
                     modification_time=modification_time,
                 )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.warning(f"Failed to extract metrics from {path}: {e}")
             return None
 

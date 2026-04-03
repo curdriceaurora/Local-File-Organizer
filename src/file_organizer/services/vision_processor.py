@@ -205,7 +205,7 @@ class VisionProcessor:
                 processing_time=processing_time,
             )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.exception(f"Failed to process {file_path.name}: {e}")
             return ProcessedImage(
                 file_path=file_path,
@@ -300,7 +300,7 @@ Provide a clear, descriptive paragraph (100-150 words)."""
                 max_tokens=250,
             )
             return response.strip()
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate description: {e}")
             return f"Image from {image_path.name}"
 
@@ -343,7 +343,7 @@ If there's no readable text, respond with "NO_TEXT"."""
 
             return response
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to extract text: {e}")
             return None
 
@@ -417,7 +417,7 @@ CATEGORY:"""
             logger.info(f"Final folder name: '{result}'")
             return result
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate folder name: {e}")
             return "images"
 
@@ -494,7 +494,7 @@ FILENAME:"""
             logger.info(f"Final filename: '{result}'")
             return result
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate filename: {e}")
             return image_path.stem
 
@@ -511,7 +511,7 @@ FILENAME:"""
 
         try:
             return self.vision_model.generate(**kwargs)
-        except Exception as exc:
+        except Exception as exc:  # Intentional catch-all: circuit-breaker for any backend error
             if self._is_fatal_backend_error(exc):
                 self._trip_backend_circuit(exc)
             raise

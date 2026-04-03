@@ -187,7 +187,7 @@ class CopilotEngine:
         if self._text_model is not None:
             try:
                 return self._generate_with_llm(intent, exec_result)
-            except Exception as exc:
+            except (RuntimeError, ValueError, OSError, AttributeError) as exc:
                 logger.warning("LLM generation failed, falling back to template: {}", exc)
 
         # Template fallback

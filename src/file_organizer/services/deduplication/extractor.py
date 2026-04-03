@@ -65,7 +65,7 @@ class DocumentExtractor:
                 logger.warning(f"No extractor for {extension}, treating as text")
                 return self._extract_text(file_path)
 
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
 
@@ -85,7 +85,7 @@ class DocumentExtractor:
                 text = self.extract_text(file_path)
                 results[file_path] = text
                 logger.debug(f"Extracted {len(text)} chars from {file_path.name}")
-            except Exception as e:
+            except (OSError, ValueError, ImportError) as e:
                 logger.warning(f"Failed to extract {file_path}: {e}")
                 results[file_path] = ""
 
@@ -144,7 +144,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 
@@ -179,7 +179,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("python-docx not installed. Install with: pip install python-docx")
             return ""
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             logger.error(f"Error extracting DOCX {file_path}: {e}")
             return ""
 
@@ -211,7 +211,7 @@ class DocumentExtractor:
 
             return text
 
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Error reading text file {file_path}: {e}")
             return ""
 
@@ -253,7 +253,7 @@ class DocumentExtractor:
 
                 return text
 
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             logger.error(f"Error extracting RTF {file_path}: {e}")
             return ""
 
@@ -304,7 +304,7 @@ class DocumentExtractor:
 
             return full_text
 
-        except Exception as e:
+        except (OSError, KeyError, ValueError) as e:
             logger.error(f"Error extracting ODT {file_path}: {e}")
             return ""
 

@@ -152,7 +152,7 @@ class AudioPreprocessor:
             # (input file existence already validated above)
             logger.debug(f"ffmpeg not found ({e}), falling back to pydub")
             return self._convert_with_pydub(audio_path, output_path, sample_rate, channels)
-        except Exception as e:
+        except (subprocess.SubprocessError, RuntimeError, OSError) as e:
             logger.error(f"Conversion failed: {e}")
             raise
 

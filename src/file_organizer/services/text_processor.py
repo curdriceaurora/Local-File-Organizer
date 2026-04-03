@@ -199,7 +199,7 @@ class TextProcessor:
                 filename=file_path.stem,
                 error=str(e),
             )
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.exception(f"Failed to process {file_path.name}: {e}")
             return ProcessedFile(
                 file_path=file_path,
@@ -271,7 +271,7 @@ SUMMARY:"""
                     summary = summary[len(prefix) :].strip()
 
             return summary
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate description: {e}")
             return f"Content about {content[:100]}..."
 
@@ -350,7 +350,7 @@ CATEGORY:"""
             logger.info(f"Folder name generated ({len(result)} chars)")
             return result
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate folder name: {e}")
             return "documents"
 
@@ -434,7 +434,7 @@ FILENAME:"""
             logger.info(f"Filename generated ({len(result)} chars)")
             return result
 
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate filename: {e}")
             return "document"
 

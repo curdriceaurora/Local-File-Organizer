@@ -104,7 +104,7 @@ class ProfileImporter:
             valid = len(errors) == 0
             return ValidationResult(valid, errors, warnings, profile_data)
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             errors.append(f"Validation error: {e}")
             return ValidationResult(False, errors, warnings)
 
@@ -265,7 +265,7 @@ class ProfileImporter:
 
             return preview
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error creating import preview: {e}")
             return None
 
@@ -299,7 +299,7 @@ class ProfileImporter:
             # Full import
             return self._import_full_profile(data, profile_name)
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error importing profile: {e}")
             return None
 
@@ -461,7 +461,7 @@ class ProfileImporter:
 
             print(f"Created backup: {backup_path}")
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"Warning: Failed to create backup: {e}")
 
     def import_selective(
@@ -515,6 +515,6 @@ class ProfileImporter:
             # Import filtered data
             return self._import_selective_profile(filtered_data, filtered_data["profile_name"])
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error importing selective preferences: {e}")
             return None

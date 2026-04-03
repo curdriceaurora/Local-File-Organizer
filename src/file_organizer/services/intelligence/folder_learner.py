@@ -328,5 +328,5 @@ class FolderPreferenceLearner:
             self.total_choices = data.get("total_choices", 0)
 
             logger.info(f"Loaded {len(self.type_folder_map)} folder preferences")
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             logger.error(f"Error loading preferences: {e}")

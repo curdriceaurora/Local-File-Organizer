@@ -230,7 +230,7 @@ class PreferenceStore:
                 print(f"Error: Corrupted JSON in {self.preference_file}: {e}")
                 return self._try_load_backup()
 
-            except Exception as e:
+            except (OSError, KeyError, TypeError, ValueError) as e:
                 print(f"Error loading preferences: {e}")
                 self._preferences = self._create_empty_preferences()
                 self._loaded = True
@@ -262,7 +262,7 @@ class PreferenceStore:
             self.save_preferences()
             return True
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error loading backup: {e}, using defaults...")
             self._preferences = self._create_empty_preferences()
             self._loaded = True
@@ -297,7 +297,7 @@ class PreferenceStore:
 
                 return True
 
-            except Exception as e:
+            except (OSError, TypeError, ValueError) as e:
                 print(f"Error saving preferences: {e}")
                 return False
 
@@ -487,7 +487,7 @@ class PreferenceStore:
 
                 return True
 
-            except Exception as e:
+            except (OSError, TypeError, ValueError) as e:
                 print(f"Error exporting preferences: {e}")
                 return False
 
@@ -539,7 +539,7 @@ class PreferenceStore:
                 print(f"Error: Invalid JSON in import file: {e}")
                 return False
 
-            except Exception as e:
+            except (OSError, KeyError, TypeError, ValueError) as e:
                 print(f"Error importing preferences: {e}")
                 return False
 

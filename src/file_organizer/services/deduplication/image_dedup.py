@@ -122,7 +122,7 @@ class ImageDeduplicator:
         except OSError as e:
             logger.warning(f"Could not read image {image_path}: {e}")
             return None
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(f"Error processing image {image_path}: {e}")
             return None
 
@@ -419,5 +419,5 @@ class ImageDeduplicator:
             return True, None
         except OSError as e:
             return False, f"Cannot read image: {e}"
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return False, f"Corrupt or invalid image: {e}"

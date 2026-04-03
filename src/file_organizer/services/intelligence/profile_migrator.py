@@ -84,7 +84,7 @@ class ProfileMigrator:
             # Execute migration
             return self._execute_migration(profile_name, profile, target_version, backup_path)
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error migrating profile: {e}")
             return False
 
@@ -170,7 +170,7 @@ class ProfileMigrator:
 
             try:
                 migrated_data = migration_func(migrated_data)
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
                 print(f"Error during migration step {step}: {e}")
                 if backup_path:
                     self.rollback_migration(profile_name, backup_path)
@@ -279,7 +279,7 @@ class ProfileMigrator:
             print(f"Created migration backup: {backup_path}")
             return backup_path
 
-        except Exception as e:
+        except OSError as e:
             print(f"Error creating migration backup: {e}")
             return None
 
@@ -329,7 +329,7 @@ class ProfileMigrator:
 
             return success
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error rolling back migration: {e}")
             return False
 
@@ -363,7 +363,7 @@ class ProfileMigrator:
             print("Profile validation successful")
             return True
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error validating migration: {e}")
             return False
 
@@ -412,7 +412,7 @@ class ProfileMigrator:
             profile_dict = profile.to_dict()
             return list(profile_dict.get("migration_history", []))
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             print(f"Error getting migration history: {e}")
             return None
 
@@ -442,7 +442,7 @@ class ProfileMigrator:
 
             return backups
 
-        except Exception as e:
+        except OSError as e:
             print(f"Error listing backups: {e}")
             return []
 

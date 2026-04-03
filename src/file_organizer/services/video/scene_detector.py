@@ -335,7 +335,7 @@ class SceneDetector:
             try:
                 result = self.detect_scenes(video_path, method)
                 results.append(result)
-            except Exception as e:
+            except (OSError, ValueError, ImportError, RuntimeError) as e:
                 logger.error(f"Failed to detect scenes in {video_path}: {e}")
                 # Continue with other files
 

@@ -218,7 +218,7 @@ class DuplicateDetector:
                     if options.progress_callback:
                         try:
                             options.progress_callback(processed, total)
-                        except Exception:
+                        except (TypeError, ValueError, RuntimeError):
                             logger.debug("Progress callback failed", exc_info=True)
 
     def find_duplicates_of_file(

@@ -188,7 +188,7 @@ def validate_audio_file(audio_path: str | Path) -> tuple[bool, str | None]:
         if duration <= 0:
             return False, "Audio file has zero duration"
         return True, None
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         return False, f"Failed to read audio file: {str(e)}"
 
 

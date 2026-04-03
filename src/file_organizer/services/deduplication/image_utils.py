@@ -110,7 +110,7 @@ def get_image_metadata(image_path: Path) -> ImageMetadata | None:
     except OSError as e:
         logger.warning(f"Could not read image {image_path}: {e}")
         return None
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error(f"Error getting metadata for {image_path}: {e}")
         return None
 
@@ -127,7 +127,7 @@ def get_image_dimensions(image_path: Path) -> tuple[int, int] | None:
     try:
         with Image.open(image_path) as img:
             return img.size
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.warning(f"Could not get dimensions for {image_path}: {e}")
         return None
 
@@ -144,7 +144,7 @@ def get_image_format(image_path: Path) -> str | None:
     try:
         with Image.open(image_path) as img:
             return img.format
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.warning(f"Could not determine format for {image_path}: {e}")
         return None
 
@@ -202,7 +202,7 @@ def validate_image_file(image_path: Path) -> tuple[bool, str | None]:
 
     except OSError as e:
         return False, f"Cannot read image: {e}"
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         return False, f"Corrupt or invalid image: {e}"
 
 

@@ -187,7 +187,7 @@ class ContentTagAnalyzer:
             scored_keywords.sort(key=lambda x: x[1], reverse=True)
             return scored_keywords[:top_n]
 
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, ValueError) as e:
             logger.error(f"Error extracting keywords from {file_path}: {e}")
             return []
 
@@ -230,7 +230,7 @@ class ContentTagAnalyzer:
 
             return sorted(entities)[:20]  # Limit to top 20
 
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, ValueError) as e:
             logger.error(f"Error extracting entities from {file_path}: {e}")
             return []
 
@@ -250,7 +250,7 @@ class ContentTagAnalyzer:
             try:
                 tags = self.analyze_file(file_path)
                 results[file_path] = tags
-            except Exception as e:
+            except (OSError, UnicodeDecodeError, ValueError) as e:
                 logger.error(f"Error analyzing {file_path}: {e}")
                 results[file_path] = []
 
@@ -340,7 +340,7 @@ class ContentTagAnalyzer:
             # Return top words
             return [word for word, _ in word_freq.most_common(20)]
 
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
             logger.debug(f"Could not extract content tags from {file_path}: {e}")
             return []
 
@@ -369,7 +369,7 @@ class ContentTagAnalyzer:
             # - python-docx for Word documents
             # - pypdf for PDFs
 
-        except Exception as e:
+        except OSError as e:
             logger.debug(f"Could not extract metadata from {file_path}: {e}")
 
         return tags
@@ -421,7 +421,7 @@ class ContentTagAnalyzer:
             except UnicodeDecodeError:
                 return file_path.read_text(encoding="latin-1")
 
-        except Exception as e:
+        except OSError as e:
             logger.debug(f"Could not read {file_path}: {e}")
             return ""
 

@@ -236,7 +236,7 @@ class StorageAnalyzer:
                     yield from self._walk_directory(item, max_depth, current_depth + 1)
         except PermissionError:
             logger.warning(f"Permission denied: {path}")
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Error walking {path}: {e}")
 
     def walk_directory(self, path: Path, max_depth: int | None = None) -> Any:

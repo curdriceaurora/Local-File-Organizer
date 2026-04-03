@@ -94,7 +94,7 @@ class BackupManager:
         # Copy file to backup directory
         try:
             shutil.copy2(file_path, backup_path)
-        except Exception as e:
+        except (OSError, shutil.Error) as e:
             raise OSError(f"Failed to create backup: {e}") from e
 
         # Update manifest
@@ -151,7 +151,7 @@ class BackupManager:
         # Copy backup to target location
         try:
             shutil.copy2(backup_path, target_path)
-        except Exception as e:
+        except (OSError, shutil.Error) as e:
             raise OSError(f"Failed to restore backup: {e}") from e
 
         return target_path
@@ -186,7 +186,7 @@ class BackupManager:
                     try:
                         backup_path.unlink()
                         removed_backups.append(backup_path)
-                    except Exception:
+                    except OSError:
                         # Keep retention cleanup non-fatal but observable.
                         logger.debug(
                             "Failed to remove old backup file %s during cleanup",

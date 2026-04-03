@@ -101,7 +101,7 @@ class AudioMetadataExtractor:
         # Try mutagen first (more comprehensive)
         try:
             return self._extract_with_mutagen(audio_path)
-        except Exception as e:
+        except (OSError, ValueError, KeyError, AttributeError) as e:
             logger.warning(f"Mutagen extraction failed: {e}")
             if self.use_fallback:
                 logger.info("Falling back to tinytag")
@@ -358,7 +358,7 @@ class AudioMetadataExtractor:
             try:
                 metadata = self.extract(audio_path)
                 results.append(metadata)
-            except Exception as e:
+            except (OSError, ValueError, ImportError, KeyError) as e:
                 logger.error(f"Failed to extract metadata from {audio_path}: {e}")
                 # Continue with other files
 
