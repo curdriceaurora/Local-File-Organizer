@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 
 from loguru import logger
@@ -155,7 +156,7 @@ def organize_files(
                         destination_path=new_path,
                         transaction_id=transaction_id,
                     )
-                except (OSError, ValueError, RuntimeError) as undo_err:
+                except (OSError, ValueError, RuntimeError, sqlite3.Error) as undo_err:
                     logger.warning("Undo log failed for {}: {}", result.file_path, undo_err)
 
             organized.setdefault(result.folder_name, []).append(new_filename)

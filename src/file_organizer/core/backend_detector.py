@@ -19,7 +19,11 @@ except ImportError:
 
 from loguru import logger
 
-OLLAMA_CLIENT_EXCEPTIONS = (ConnectionError, RuntimeError, OSError)
+OLLAMA_CLIENT_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    ConnectionError,
+    RuntimeError,
+    OSError,
+)
 if OLLAMA_AVAILABLE:
     for _error_name in ("ConnectionError", "ResponseError"):
         _error = getattr(ollama, _error_name, None)

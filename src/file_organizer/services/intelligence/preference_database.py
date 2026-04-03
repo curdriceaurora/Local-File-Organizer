@@ -184,7 +184,7 @@ class PreferenceDatabaseManager:
                 self._initialized = True
                 logger.info("Preference database initialization complete")
 
-            except (sqlite3.Error, OSError) as e:
+            except Exception as e:
                 conn.rollback()
                 logger.error(f"Database initialization failed: {e}")
                 raise

@@ -7,7 +7,11 @@ from typing import Any
 
 from loguru import logger
 
-from file_organizer.models._openai_client import OPENAI_AVAILABLE, create_openai_client
+from file_organizer.models._openai_client import (
+    OPENAI_AVAILABLE,
+    create_openai_client,
+    get_openai_api_error,
+)
 from file_organizer.models._openai_response import is_openai_token_exhausted
 from file_organizer.models._vision_helpers import bytes_to_data_url, image_to_data_url
 from file_organizer.models.base import (
@@ -20,14 +24,7 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
-try:
-    from openai import APIError as OpenAIAPIError
-except ImportError:  # pragma: no cover - optional dependency
-
-    class OpenAIAPIError(Exception):
-        """Fallback type when openai is not installed."""
-
-        pass
+OpenAIAPIError = get_openai_api_error()
 
 
 # Module-level aliases preserved for backward compatibility — external code that

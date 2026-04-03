@@ -11,6 +11,21 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+try:
+    from pydub.exceptions import PydubException
+except ImportError:  # pragma: no cover - optional dependency
+
+    class PydubException(Exception):
+        """Fallback when pydub is unavailable."""
+
+
+try:
+    from tinytag import TinyTagException  # pyre-ignore[21]
+except ImportError:  # pragma: no cover - optional dependency
+
+    class TinyTagException(Exception):
+        """Fallback when tinytag is unavailable."""
+
 
 def get_audio_duration(audio_path: str | Path) -> float:
     """Get audio file duration in seconds.
@@ -188,8 +203,8 @@ def validate_audio_file(audio_path: str | Path) -> tuple[bool, str | None]:
         if duration <= 0:
             return False, "Audio file has zero duration"
         return True, None
-    except (OSError, ValueError, RuntimeError) as e:
-        return False, f"Failed to read audio file: {str(e)}"
+    except (OSError, ValueError, RuntimeError, PydubException, TinyTagException) as e:
+        return False, f"Failed to read audio file: {e!s}"
 
 
 def detect_silence_segments(

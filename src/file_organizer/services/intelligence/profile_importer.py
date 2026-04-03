@@ -192,8 +192,12 @@ class ProfileImporter:
         """Validate selective export structure."""
         if "included_preferences" not in profile_data:
             errors.append("Selective export missing 'included_preferences'")
+        elif not isinstance(profile_data["included_preferences"], list):
+            errors.append("Invalid included_preferences structure")
         if "preferences" not in profile_data:
             errors.append("Missing 'preferences' field")
+        elif not isinstance(profile_data["preferences"], dict):
+            errors.append("Invalid preferences structure")
 
     def _validate_timestamps(self, profile_data: dict[str, Any], warnings: list[str]) -> None:
         """Validate timestamp fields."""
@@ -254,10 +258,11 @@ class ProfileImporter:
             # Count preferences
             if "preferences" in data:
                 prefs = data["preferences"]
-                preview["preferences_count"] = {
-                    "global": len(prefs.get("global", {})),
-                    "directory_specific": len(prefs.get("directory_specific", {})),
-                }
+                if isinstance(prefs, dict):
+                    preview["preferences_count"] = {
+                        "global": len(prefs.get("global", {})),
+                        "directory_specific": len(prefs.get("directory_specific", {})),
+                    }
 
             # Count learned patterns and confidence data
             preview["learned_patterns_count"] = len(data.get("learned_patterns", {}))

@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
-from typing import cast
 
 from file_organizer.models.base import BaseModel, ModelConfig
 
@@ -125,7 +124,8 @@ class LazyModelLoader:
         with self._lock:
             if self._model is not None:
                 logger.info("Unloading model '%s'", self._config.name)
-                model = cast(BaseModel, self._model)
+                model = self._model
+                assert model is not None
                 try:
                     model.cleanup()
                 except Exception:
@@ -168,27 +168,27 @@ class LazyModelLoader:
         if framework == "ollama":
             from file_organizer.models.text_model import TextModel
 
-            model = TextModel(config)
-            model.initialize()
-            return model
+            ollama_model: BaseModel = TextModel(config)
+            ollama_model.initialize()
+            return ollama_model
 
         if framework in ("openai", "llama_cpp", "mlx"):
             from file_organizer.models.provider_factory import get_text_model
 
-            model = get_text_model(config)
-            model.initialize()
-            return model
+            provider_model: BaseModel = get_text_model(config)
+            provider_model.initialize()
+            return provider_model
 
         if framework == "claude":
             from file_organizer.models.base import ModelType
             from file_organizer.models.provider_factory import get_text_model, get_vision_model
 
             if config.model_type == ModelType.VISION:
-                model = get_vision_model(config)
+                claude_model: BaseModel = get_vision_model(config)
             else:
-                model = get_text_model(config)
-            model.initialize()
-            return model
+                claude_model = get_text_model(config)
+            claude_model.initialize()
+            return claude_model
 
         raise ValueError(
             f"Unsupported framework '{framework}' for lazy loading. "

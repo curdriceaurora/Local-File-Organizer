@@ -520,7 +520,7 @@ class PipelineOrchestrator:
         requested = max(pool.buffer_size, file_size)
         try:
             return pool.acquire(size=requested)
-        except (MemoryError, RuntimeError, ValueError):
+        except (MemoryError, RuntimeError, ValueError, TimeoutError):
             logger.warning("Failed to acquire buffer for %s", file_path, exc_info=True)
             return None
 

@@ -27,7 +27,12 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
-OLLAMA_MODEL_INIT_EXCEPTIONS = (RuntimeError, ImportError, OSError, ConnectionError)
+OLLAMA_MODEL_INIT_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    RuntimeError,
+    ImportError,
+    OSError,
+    ConnectionError,
+)
 if OLLAMA_AVAILABLE:
     for _error_name in ("ConnectionError", "ResponseError"):
         _error = getattr(ollama, _error_name, None)

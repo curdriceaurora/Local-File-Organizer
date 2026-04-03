@@ -33,6 +33,7 @@ from __future__ import annotations
 import os
 from typing import Literal
 
+import yaml  # type: ignore[import-untyped]
 from loguru import logger
 
 from file_organizer.models.base import ModelConfig, ModelType
@@ -315,7 +316,15 @@ def _get_model_configs_from_profile(
             vision_cfg.name,
         )
         return text_cfg, vision_cfg
-    except Exception:  # Intentional catch-all: config loading involves YAML parsing, imports, etc.
+    except (
+        ImportError,
+        OSError,
+        RuntimeError,
+        UnicodeDecodeError,
+        ValueError,
+        TypeError,
+        yaml.YAMLError,
+    ):
         logger.opt(exception=True).debug("Could not load config profile '{}', skipping", profile)
         return None
 
