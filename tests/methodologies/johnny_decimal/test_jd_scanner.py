@@ -185,10 +185,11 @@ class TestScannerCoverage:
     # Lines 144-146: _scan_folder with max depth exceeded
     def test_scan_folder_max_depth(self, tmp_path: Path) -> None:
         scanner = FolderScanner(scheme=JohnnyDecimalSystem().scheme, max_depth=0)
-        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "inner").mkdir(parents=True)
         result = scanner.scan_directory(tmp_path)
-        # Max depth 0 means no recursion into first-level dirs' children
-        assert result.total_folders >= 0
+        assert len(result.folder_tree) == 1
+        assert result.folder_tree[0].name == "sub"
+        assert result.folder_tree[0].children == []
 
     # Lines 158->148: _scan_folder PermissionError in iterdir (branch)
     def test_scan_folder_permission_denied(self, scanner: FolderScanner, tmp_path: Path) -> None:

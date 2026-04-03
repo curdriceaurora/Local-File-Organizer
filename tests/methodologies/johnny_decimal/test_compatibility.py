@@ -530,7 +530,7 @@ class TestCompatibilityCoverage:
 
     # Line 203: detect_para_structure skips non-directory items
     def test_detect_para_skips_files(self, config: JohnnyDecimalConfig, tmp_path: Path) -> None:
-        (tmp_path / "projects.txt").write_text("not a dir")
+        (tmp_path / "Projects").write_text("not a dir")
         analyzer = CompatibilityAnalyzer(config)
         result = analyzer.detect_para_structure(tmp_path)
         assert result[PARACategory.PROJECTS] is None

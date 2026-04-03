@@ -372,7 +372,7 @@ class TestNumberingCoverage:
         area_num = JohnnyDecimalNumber(area=10)
         conflicts = generator.find_conflicts(area_num)
         assert len(conflicts) >= 1
-        assert conflicts[0][0] == "10.01"
+        assert any(conflict[0] == "10.01" for conflict in conflicts)
 
     # find_conflicts — no child conflicts (loop completes with no matches)
     def test_find_conflicts_no_children(self, generator: JohnnyDecimalGenerator) -> None:

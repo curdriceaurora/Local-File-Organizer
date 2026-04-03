@@ -558,9 +558,9 @@ class TestCategoriesCoverage:
             CategoryDefinition(area=10, category=1, name="", description="")
 
     # Line 282: NumberingResult.__post_init__ — file_path as string
-    def test_numbering_result_string_path(self) -> None:
+    def test_numbering_result_string_path(self, tmp_path: Path) -> None:
         result = NumberingResult(
-            file_path="/tmp/test.txt",  # type: ignore[arg-type]
+            file_path=str(tmp_path / "test.txt"),  # type: ignore[arg-type]
             number=JohnnyDecimalNumber(area=10),
             confidence=0.5,
             reasons=["test"],
