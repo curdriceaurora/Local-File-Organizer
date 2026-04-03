@@ -282,7 +282,7 @@ def plugin_details(
         )
         return templates.TemplateResponse(request, "marketplace/plugin_details.html", context)
     except MarketplaceError as exc:
-        logger.warning("Failed to load plugin details: %s", exc)
+        logger.error("Failed to load plugin details: %s", exc)
         return HTMLResponse(
             "<p>Error loading plugin details. Please try again later.</p>",
             status_code=500,
