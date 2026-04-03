@@ -205,7 +205,7 @@ def process_audio_files(
             )
             logger.debug("Audio processed: {} → {}/{}", audio_path.name, folder_name, filename_stem)
 
-        except (OSError, ValueError, KeyError, RuntimeError) as exc:
+        except (OSError, ValueError, KeyError, RuntimeError, ImportError) as exc:
             logger.warning("Audio metadata extraction failed for {}: {}", audio_path.name, exc)
             processed.append(
                 ProcessedFile(

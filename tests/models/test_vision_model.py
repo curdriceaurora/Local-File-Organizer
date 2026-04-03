@@ -78,7 +78,7 @@ class TestVisionModel:
             model = VisionModel(vision_model_config)
 
             mock_client = MagicMock()
-            mock_client.generate.side_effect = Exception("Ollama error")
+            mock_client.generate.side_effect = RuntimeError("Ollama error")
 
             with patch(
                 "file_organizer.models.vision_model.ollama.Client", return_value=mock_client
@@ -163,7 +163,7 @@ class TestVisionModelInitialize:
         """Test initialization error propagates."""
         with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
             model = VisionModel(vision_model_config)
-            mock_client_cls.side_effect = Exception("connection refused")
+            mock_client_cls.side_effect = RuntimeError("connection refused")
 
             with pytest.raises(Exception, match="connection refused"):
                 model.initialize()

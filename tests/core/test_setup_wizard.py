@@ -477,7 +477,7 @@ class TestWizardRun:
 
     @patch.object(SetupWizard, "detect_capabilities")
     def test_run_handles_exception(self, mock_detect):
-        mock_detect.side_effect = Exception("Hardware detection failed")
+        mock_detect.side_effect = RuntimeError("Hardware detection failed")
 
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
         result = wizard.run()

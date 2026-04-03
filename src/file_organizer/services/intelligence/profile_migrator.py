@@ -84,7 +84,7 @@ class ProfileMigrator:
             # Execute migration
             return self._execute_migration(profile_name, profile, target_version, backup_path)
 
-        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError, RuntimeError) as e:
             print(f"Error migrating profile: {e}")
             return False
 
@@ -442,7 +442,7 @@ class ProfileMigrator:
 
             return backups
 
-        except OSError as e:
+        except (OSError, TypeError) as e:
             print(f"Error listing backups: {e}")
             return []
 

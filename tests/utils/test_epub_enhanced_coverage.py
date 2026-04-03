@@ -206,7 +206,7 @@ class TestDetectVersion:
             reader = EnhancedEPUBReader()
             mock_book = MagicMock()
             mock_book.version = None
-            mock_book.get_items.side_effect = Exception("fail")
+            mock_book.get_items.side_effect = RuntimeError("fail")
             assert reader._detect_epub_version(mock_book) is None
 
 

@@ -48,7 +48,7 @@ class TestExtractText:
     def test_extract_catches_internal_errors(self, extractor, tmp_path):
         f = tmp_path / "bad.txt"
         f.write_text("x")
-        with patch.object(extractor, "_extract_text", side_effect=Exception("boom")):
+        with patch.object(extractor, "_extract_text", side_effect=ValueError("boom")):
             result = extractor.extract_text(f)
         assert result == ""
 
@@ -185,7 +185,7 @@ class TestExtractRtf:
     def test_rtf_error(self, extractor, tmp_path):
         f = tmp_path / "test.rtf"
         f.write_text("content")
-        with patch("builtins.open", side_effect=Exception("fail")):
+        with patch("builtins.open", side_effect=OSError("fail")):
             result = extractor._extract_rtf(f)
         assert result == ""
 

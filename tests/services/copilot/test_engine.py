@@ -395,7 +395,7 @@ class TestErrorHandling:
                 confidence=0.9,
             )
         )
-        engine._executor.execute = MagicMock(side_effect=Exception("Execution error"))
+        engine._executor.execute = MagicMock(side_effect=RuntimeError("Execution error"))
 
         # Errors are propagated (not silently handled)
         with pytest.raises(Exception, match="Execution error"):
@@ -404,7 +404,7 @@ class TestErrorHandling:
     def test_model_generation_failure_fallback(self):
         """Test fallback when model generation fails."""
         mock_model = MagicMock()
-        mock_model.generate.side_effect = Exception("Model error")
+        mock_model.generate.side_effect = RuntimeError("Model error")
         engine = CopilotEngine(text_model=mock_model)
 
         engine._intent_parser.parse = MagicMock(

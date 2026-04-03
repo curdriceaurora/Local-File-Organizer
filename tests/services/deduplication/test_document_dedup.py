@@ -182,7 +182,7 @@ class TestDocumentDeduplicator(unittest.TestCase):
         )
 
         dedup = DocumentDeduplicator()
-        dedup.extractor.extract_text.side_effect = RuntimeError("boom")
+        dedup.extractor.extract_text.side_effect = ValueError("boom")
 
         result = dedup.compare_documents(Path("/a.txt"), Path("/b.txt"))
         self.assertIsNone(result)

@@ -27,7 +27,7 @@ class TestReadHdf5:
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.H5PY_AVAILABLE", True):
             mock_h5py = MagicMock()
-            mock_h5py.File.side_effect = Exception("bad file")
+            mock_h5py.File.side_effect = RuntimeError("bad file")
             with patch(
                 "file_organizer.utils.readers.scientific.h5py",
                 mock_h5py,
@@ -55,7 +55,7 @@ class TestReadNetcdf:
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", True):
             mock_nc = MagicMock()
-            mock_nc.Dataset.side_effect = Exception("bad file")
+            mock_nc.Dataset.side_effect = RuntimeError("bad file")
             with patch(
                 "file_organizer.utils.readers.scientific.netCDF4",
                 mock_nc,
@@ -82,7 +82,7 @@ class TestReadMat:
 
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True):
-            mock_loadmat = MagicMock(side_effect=Exception("bad file"))
+            mock_loadmat = MagicMock(side_effect=RuntimeError("bad file"))
             with patch(
                 "file_organizer.utils.readers.scientific.loadmat",
                 mock_loadmat,

@@ -104,7 +104,7 @@ class ProfileImporter:
             valid = len(errors) == 0
             return ValidationResult(valid, errors, warnings, profile_data)
 
-        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
             errors.append(f"Validation error: {e}")
             return ValidationResult(False, errors, warnings)
 

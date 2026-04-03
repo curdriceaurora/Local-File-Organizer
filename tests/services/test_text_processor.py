@@ -258,7 +258,7 @@ class TestTextProcessorFileProcessing:
         self, mock_read: MagicMock, text_processor: TextProcessor
     ) -> None:
         """Test processing file that raises generic Exception."""
-        mock_read.side_effect = Exception("Unexpected failure")
+        mock_read.side_effect = RuntimeError("Unexpected failure")
 
         result = text_processor.process_file("test.txt")
 
@@ -462,7 +462,7 @@ class TestGenerateDescription:
         self, text_processor: TextProcessor, mock_text_model: MagicMock
     ) -> None:
         """Fallback when AI description fails returns truncated content."""
-        mock_text_model.generate.side_effect = Exception("AI Failed")
+        mock_text_model.generate.side_effect = RuntimeError("AI Failed")
 
         long = "A very long piece of content that exceeds one hundred characters ... " * 5
         desc = text_processor._generate_description(long)
@@ -558,7 +558,7 @@ class TestGenerateFolderName:
         self, text_processor: TextProcessor, mock_text_model: MagicMock
     ) -> None:
         """Returns 'documents' on exception."""
-        mock_text_model.generate.side_effect = Exception("AI Error")
+        mock_text_model.generate.side_effect = RuntimeError("AI Error")
 
         folder = text_processor._generate_folder_name("Content")
 
@@ -746,7 +746,7 @@ class TestGenerateFilename:
         self, text_processor: TextProcessor, mock_text_model: MagicMock
     ) -> None:
         """Returns 'document' on exception."""
-        mock_text_model.generate.side_effect = Exception("AI Error")
+        mock_text_model.generate.side_effect = RuntimeError("AI Error")
 
         filename = text_processor._generate_filename("Content")
 

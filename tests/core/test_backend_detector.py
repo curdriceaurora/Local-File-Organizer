@@ -57,7 +57,7 @@ class TestDetectOllama:
     def test_ollama_installed_but_not_running(self, mock_run, mock_client):
         """When Ollama CLI installed but service not running."""
         mock_run.return_value = Mock(returncode=0, stdout="ollama version 0.1.0\n")
-        mock_client.return_value.list.side_effect = Exception("Connection refused")
+        mock_client.return_value.list.side_effect = RuntimeError("Connection refused")
 
         result = detect_ollama()
 
@@ -214,7 +214,7 @@ class TestListInstalledModels:
     @patch("ollama.Client")
     def test_list_models_fallback_to_cli_json(self, mock_client, mock_run):
         """When Python client fails, fallback to CLI JSON output."""
-        mock_client.return_value.list.side_effect = Exception("Client failed")
+        mock_client.return_value.list.side_effect = RuntimeError("Client failed")
 
         mock_run.return_value = Mock(
             returncode=0, stdout='{"models": [{"name": "llama2:7b", "size": 3825819519}]}'
@@ -230,7 +230,7 @@ class TestListInstalledModels:
     @patch("ollama.Client")
     def test_list_models_fallback_to_cli_text(self, mock_client, mock_run):
         """When JSON parsing fails, fallback to text output parser."""
-        mock_client.return_value.list.side_effect = Exception("Client failed")
+        mock_client.return_value.list.side_effect = RuntimeError("Client failed")
 
         # First call: JSON format fails
         # Second call: Text format succeeds
@@ -253,7 +253,7 @@ class TestListInstalledModels:
     @patch("ollama.Client")
     def test_list_models_cli_not_found(self, mock_client, mock_run):
         """When CLI not found, return empty list."""
-        mock_client.return_value.list.side_effect = Exception("Client failed")
+        mock_client.return_value.list.side_effect = RuntimeError("Client failed")
         mock_run.side_effect = FileNotFoundError("ollama not found")
 
         result = list_installed_models()

@@ -113,7 +113,8 @@ class ConfigManager:
         if config_path.exists():
             try:
                 existing = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-            except (OSError, yaml.YAMLError, UnicodeDecodeError):
+            except (OSError, yaml.YAMLError, UnicodeDecodeError) as e:
+                logger.warning("Failed to load existing config from %s: %s", config_path, e)
                 existing = {}
 
         if not isinstance(existing, dict):
@@ -170,7 +171,12 @@ class ConfigManager:
         except (OSError, yaml.YAMLError, UnicodeDecodeError):
             return False
 
+        if not isinstance(raw, dict):
+            return False
+
         profiles = raw.get("profiles", {})
+        if not isinstance(profiles, dict):
+            return False
         if profile not in profiles:
             return False
 

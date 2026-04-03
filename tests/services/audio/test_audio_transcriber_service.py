@@ -517,7 +517,7 @@ class TestTranscribeBatch:
 
         def side_effect(path, options=None):
             if str(path) == str(f1):
-                raise Exception("corrupt file")
+                raise RuntimeError("corrupt file")
             return mock_result
 
         with patch.object(transcriber, "transcribe", side_effect=side_effect):

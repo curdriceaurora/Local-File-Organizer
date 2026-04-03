@@ -195,7 +195,7 @@ class TestShowComparison:
 
     def test_all_images_fail_to_load(self, viewer: ComparisonViewer):
         """When every image fails to load, result is skipped."""
-        with patch.object(viewer, "_get_image_metadata", side_effect=RuntimeError("bad")):
+        with patch.object(viewer, "_get_image_metadata", side_effect=ValueError("bad")):
             result = viewer.show_comparison([Path("/fake/a.png"), Path("/fake/b.png")])
         assert result.skipped is True
 
@@ -224,7 +224,7 @@ class TestShowComparison:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise RuntimeError("corrupt")
+                raise ValueError("corrupt")
             return sample_metadata
 
         with (
@@ -690,7 +690,7 @@ class TestAutoSelectBest:
         assert small in result.files_to_delete
 
     def test_handles_load_error(self, viewer: ComparisonViewer):
-        with patch.object(viewer, "_get_image_metadata", side_effect=RuntimeError("boom")):
+        with patch.object(viewer, "_get_image_metadata", side_effect=ValueError("boom")):
             result = viewer._auto_select_best([Path("/fake/a.png")])
         assert result.skipped is True
 

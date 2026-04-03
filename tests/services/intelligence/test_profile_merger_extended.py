@@ -503,7 +503,7 @@ class TestCreateMergedProfile:
 
     def test_create_handles_exception(self, merger, profile_manager):
         """Test create_merged_profile handles exceptions gracefully."""
-        with patch.object(profile_manager, "create_profile", side_effect=RuntimeError("error")):
+        with patch.object(profile_manager, "create_profile", side_effect=ValueError("error")):
             result = merger.create_merged_profile("exc_create", {})
         assert result is None
 
@@ -567,7 +567,7 @@ class TestMergeProfilesExtended:
 
     def test_merge_exception(self, merger, profile_manager):
         """Test merge_profiles handles exceptions gracefully."""
-        with patch.object(profile_manager, "get_profile", side_effect=RuntimeError("error")):
+        with patch.object(profile_manager, "get_profile", side_effect=ValueError("error")):
             result = merger.merge_profiles(["a", "b"], "confident")
         assert result is None
 
@@ -626,7 +626,7 @@ class TestGetMergeConflictsExtended:
 
     def test_exception_returns_empty(self, merger, profile_manager):
         """Test get_merge_conflicts returns empty dict on exception."""
-        with patch.object(profile_manager, "get_profile", side_effect=RuntimeError("error")):
+        with patch.object(profile_manager, "get_profile", side_effect=ValueError("error")):
             conflicts = merger.get_merge_conflicts(["a", "b"])
         assert conflicts == {}
 

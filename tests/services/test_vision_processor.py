@@ -382,7 +382,7 @@ class TestVisionProcessorDescriptionAndOCR:
         """Test description error returns fallback message."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
-        mock_vision_model.generate.side_effect = Exception("model error")
+        mock_vision_model.generate.side_effect = RuntimeError("model error")
 
         result = vision_processor._generate_description(img)
 
@@ -442,7 +442,7 @@ class TestVisionProcessorDescriptionAndOCR:
         """Test extraction error returns None."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
-        mock_vision_model.generate.side_effect = Exception("error")
+        mock_vision_model.generate.side_effect = RuntimeError("error")
 
         result = vision_processor._extract_text(img)
 
@@ -520,7 +520,7 @@ class TestVisionProcessorFolderAndFilename:
         """Test folder name error returns 'images'."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
-        mock_vision_model.generate.side_effect = Exception("error")
+        mock_vision_model.generate.side_effect = RuntimeError("error")
 
         result = vision_processor._generate_folder_name(img, "context")
 
@@ -569,7 +569,7 @@ class TestVisionProcessorFolderAndFilename:
         """Test filename error returns original stem."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
-        mock_vision_model.generate.side_effect = Exception("error")
+        mock_vision_model.generate.side_effect = RuntimeError("error")
 
         result = vision_processor._generate_filename(img, "context")
 

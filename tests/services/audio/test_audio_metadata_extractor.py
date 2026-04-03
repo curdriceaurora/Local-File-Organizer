@@ -213,7 +213,7 @@ class TestExtract:
 
     def test_mutagen_fails_falls_back_to_tinytag(self, extractor, audio_file):
         with patch.object(
-            extractor, "_extract_with_mutagen", side_effect=Exception("mutagen error")
+            extractor, "_extract_with_mutagen", side_effect=ValueError("mutagen error")
         ):
             with patch.object(extractor, "_extract_with_tinytag") as mock_tt:
                 mock_tt.return_value = AudioMetadata(
@@ -233,9 +233,9 @@ class TestExtract:
         with patch.object(
             no_fallback_extractor,
             "_extract_with_mutagen",
-            side_effect=Exception("mutagen error"),
+            side_effect=ValueError("mutagen error"),
         ):
-            with pytest.raises(Exception, match="mutagen error"):
+            with pytest.raises(ValueError, match="mutagen error"):
                 no_fallback_extractor.extract(audio_file)
 
 
@@ -725,7 +725,7 @@ class TestExtractBatch:
 
         def side_effect(path):
             if str(path) == str(f1):
-                raise Exception("corrupt file")
+                raise ValueError("corrupt file")
             return meta
 
         with patch.object(extractor, "extract", side_effect=side_effect):

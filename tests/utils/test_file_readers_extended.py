@@ -75,7 +75,7 @@ class TestRead7zFile:
             patch("file_organizer.utils.readers.archives.PY7ZR_AVAILABLE", True),
             patch("file_organizer.utils.readers.archives.py7zr", create=True) as mock_py7zr,
         ):
-            mock_py7zr.SevenZipFile.side_effect = Exception("corrupt archive")
+            mock_py7zr.SevenZipFile.side_effect = RuntimeError("corrupt archive")
             with pytest.raises(FileReadError, match="Failed to read 7Z"):
                 read_7z_file(archive_path)
 
@@ -355,7 +355,7 @@ class TestReadDwgFile:
             patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
             patch("file_organizer.utils.readers.cad.ezdxf", create=True) as mock_ezdxf,
         ):
-            mock_ezdxf.readfile.side_effect = Exception("cannot parse DWG")
+            mock_ezdxf.readfile.side_effect = RuntimeError("cannot parse DWG")
             result = read_dwg_file(dwg_path)
 
         assert "DWG File Information" in result
@@ -371,7 +371,7 @@ class TestReadDwgFile:
             patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
             patch("file_organizer.utils.readers.cad.ezdxf", create=True) as mock_ezdxf,
         ):
-            mock_ezdxf.readfile.side_effect = Exception("not found")
+            mock_ezdxf.readfile.side_effect = RuntimeError("not found")
             with pytest.raises(FileReadError, match="File not found"):
                 read_dwg_file(dwg_path)
 

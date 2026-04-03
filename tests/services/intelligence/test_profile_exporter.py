@@ -97,7 +97,7 @@ class TestProfileExporter(unittest.TestCase):
 
     def test_export_profile_exception(self):
         """Test export handles exceptions gracefully."""
-        self.mock_manager.get_profile.side_effect = RuntimeError("db error")
+        self.mock_manager.get_profile.side_effect = ValueError("db error")
         exporter = self._make_exporter()
 
         result = exporter.export_profile("test_profile", self.test_dir / "out.json")
@@ -182,7 +182,7 @@ class TestProfileExporter(unittest.TestCase):
 
     def test_export_selective_exception(self):
         """Test selective export handles exceptions."""
-        self.mock_manager.get_profile.side_effect = RuntimeError("err")
+        self.mock_manager.get_profile.side_effect = ValueError("err")
         exporter = self._make_exporter()
 
         result = exporter.export_selective("test_profile", self.test_dir / "out.json", ["global"])
@@ -342,7 +342,7 @@ class TestProfileExporter(unittest.TestCase):
 
     def test_preview_export_exception(self):
         """Test preview_export returns None on exception."""
-        self.mock_manager.get_profile.side_effect = RuntimeError("err")
+        self.mock_manager.get_profile.side_effect = ValueError("err")
         exporter = self._make_exporter()
 
         result = exporter.preview_export("test_profile")
@@ -379,7 +379,7 @@ class TestProfileExporter(unittest.TestCase):
         """Test _estimate_export_size returns 'Unknown' on error."""
         exporter = self._make_exporter()
         bad_profile = MagicMock()
-        bad_profile.to_dict.side_effect = RuntimeError("err")
+        bad_profile.to_dict.side_effect = TypeError("err")
 
         result = exporter._estimate_export_size(bad_profile)
         self.assertEqual(result, "Unknown")

@@ -284,7 +284,7 @@ class TestValidateAudioFile:
     def test_read_error(self, audio_file):
         with patch(
             "file_organizer.services.audio.utils.get_audio_duration",
-            side_effect=Exception("corrupt"),
+            side_effect=RuntimeError("corrupt"),
         ):
             valid, msg = validate_audio_file(audio_file)
         assert not valid

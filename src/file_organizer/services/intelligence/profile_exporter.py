@@ -243,7 +243,7 @@ class ProfileExporter:
             print(f"Error: Invalid JSON in export file: {e}")
             return False
 
-        except (OSError, ValueError, KeyError) as e:
+        except (OSError, TypeError, ValueError, KeyError) as e:
             print(f"Error validating export: {e}")
             return False
 

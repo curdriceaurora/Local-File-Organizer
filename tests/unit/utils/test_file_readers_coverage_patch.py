@@ -43,7 +43,7 @@ def test_read_spreadsheet_xlsx_max_rows(tmp_path: Path) -> None:
 @patch("file_organizer.utils.readers.documents.PPTX_AVAILABLE", True)
 @patch("file_organizer.utils.readers.documents.Presentation", create=True)
 def test_read_presentation_file_error(mock_prs_cls: MagicMock, tmp_path: Path) -> None:
-    mock_prs_cls.side_effect = Exception("Test error")
+    mock_prs_cls.side_effect = RuntimeError("Test error")
     test_file = tmp_path / "test.pptx"
     test_file.write_bytes(b"dummy")
     with pytest.raises(FileReadError):
@@ -154,7 +154,7 @@ def test_read_netcdf_file_max_vars(mock_netcdf4: MagicMock, tmp_path: Path) -> N
 @patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", True)
 @patch("file_organizer.utils.readers.scientific.netCDF4", create=True)
 def test_read_netcdf_file_error(mock_netcdf4: MagicMock, tmp_path: Path) -> None:
-    mock_netcdf4.Dataset.side_effect = Exception("Test error")
+    mock_netcdf4.Dataset.side_effect = RuntimeError("Test error")
     test_file = tmp_path / "test.nc"
     test_file.write_bytes(b"dummy")
     with pytest.raises(FileReadError):
@@ -176,7 +176,7 @@ def test_read_mat_file_max_vars(mock_loadmat: MagicMock, tmp_path: Path) -> None
 @patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True)
 @patch("file_organizer.utils.readers.scientific.loadmat", create=True)
 def test_read_mat_file_error(mock_loadmat: MagicMock, tmp_path: Path) -> None:
-    mock_loadmat.side_effect = Exception("Test error")
+    mock_loadmat.side_effect = RuntimeError("Test error")
     test_file = tmp_path / "test.mat"
     test_file.write_bytes(b"dummy")
     with pytest.raises(FileReadError):

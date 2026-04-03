@@ -187,7 +187,7 @@ class TestTextProcessing:
     ) -> None:
         """Test ensure_nltk_data when download fails."""
         mock_stopwords.words.side_effect = LookupError()
-        mock_download.side_effect = Exception("Download failed")
+        mock_download.side_effect = RuntimeError("Download failed")
 
         with patch("nltk.corpus.wordnet"):
             ensure_nltk_data()
@@ -320,7 +320,7 @@ class TestTextProcessing:
         """Test clean_text when lemmatization fails."""
         mock_tokenize.return_value = ["hello", "world"]
         mock_lemmatizer = MagicMock()
-        mock_lemmatizer.lemmatize.side_effect = Exception("Lemmatization error")
+        mock_lemmatizer.lemmatize.side_effect = LookupError("Lemmatization error")
         mock_lemmatizer_cls.return_value = mock_lemmatizer
 
         result = clean_text("hello world", lemmatize=True, remove_unwanted=False)
@@ -384,7 +384,7 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.word_tokenize")
     def test_extract_keywords_error(self, mock_tokenize: MagicMock) -> None:
         """Test keyword extraction handles errors gracefully."""
-        mock_tokenize.side_effect = Exception("error")
+        mock_tokenize.side_effect = RuntimeError("error")
         keywords = extract_keywords("test text")
         assert keywords == []
 

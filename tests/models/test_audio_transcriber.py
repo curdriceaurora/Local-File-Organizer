@@ -357,7 +357,7 @@ class TestLoadModel:
         t = make_transcriber()
         with patch(
             "file_organizer.models.audio_transcriber.WhisperModel",
-            side_effect=Exception("download failed"),
+            side_effect=RuntimeError("download failed"),
         ):
             with pytest.raises(RuntimeError, match="Model loading failed"):
                 t._load_model()
@@ -465,7 +465,7 @@ class TestDetectLanguage:
     def test_detect_language_failure(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         t = make_transcriber()
         mock_model = MagicMock()
-        mock_model.transcribe.side_effect = Exception("decode error")
+        mock_model.transcribe.side_effect = RuntimeError("decode error")
 
         with patch.object(t, "_load_model", return_value=mock_model):
             with pytest.raises(RuntimeError, match="Language detection failed"):

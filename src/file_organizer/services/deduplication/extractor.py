@@ -304,7 +304,7 @@ class DocumentExtractor:
 
             return full_text
 
-        except (OSError, KeyError, ValueError) as e:
+        except (OSError, KeyError, ValueError, zipfile.BadZipFile) as e:
             logger.error(f"Error extracting ODT {file_path}: {e}")
             return ""
 

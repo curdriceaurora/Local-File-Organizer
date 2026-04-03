@@ -759,7 +759,7 @@ class TestValidateImage:
 
         dedup = _make_dedup()
         with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
-            mock_image.open.return_value.__enter__ = MagicMock(side_effect=Exception("weird error"))
+            mock_image.open.return_value.__enter__ = MagicMock(side_effect=RuntimeError("weird error"))
             mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)

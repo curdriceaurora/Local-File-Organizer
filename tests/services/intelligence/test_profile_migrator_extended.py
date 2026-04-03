@@ -161,7 +161,7 @@ class TestMigrateVersionWithRegisteredFunction:
         migrator.SUPPORTED_VERSIONS = ["0.9", "1.0"]
 
         def bad_migration(data):
-            raise RuntimeError("boom")
+            raise ValueError("boom")
 
         migrator.register_migration("0.9", "1.0", bad_migration)
 
@@ -283,7 +283,7 @@ class TestValidateMigrationExtended:
     def test_validate_exception(self, migrator):
         """Test validate_migration handles exceptions gracefully."""
         with patch.object(
-            migrator.profile_manager, "get_profile", side_effect=RuntimeError("error")
+            migrator.profile_manager, "get_profile", side_effect=ValueError("error")
         ):
             result = migrator.validate_migration("any_profile")
         assert result is False
@@ -387,7 +387,7 @@ class TestGetMigrationHistoryExtended:
     def test_exception_returns_none(self, migrator):
         """Test get_migration_history returns None on exception."""
         with patch.object(
-            migrator.profile_manager, "get_profile", side_effect=RuntimeError("error")
+            migrator.profile_manager, "get_profile", side_effect=ValueError("error")
         ):
             result = migrator.get_migration_history("any_profile")
         assert result is None

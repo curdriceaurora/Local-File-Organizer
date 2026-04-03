@@ -375,7 +375,7 @@ class AudioOrganizer:
                 audio_type=audio_type,
                 success=True,
             )
-        except OSError as exc:
+        except (OSError, RuntimeError) as exc:
             logger.error(f"Failed to move {source}: {exc}")
             return FileMove(
                 source=source,

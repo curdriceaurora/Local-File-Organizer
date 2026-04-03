@@ -239,7 +239,7 @@ class PreferenceDatabaseManager:
                 conn.execute("BEGIN")
                 yield conn
                 conn.commit()
-            except (sqlite3.Error, OSError) as e:
+            except (sqlite3.Error, OSError, ValueError, KeyError, TypeError, RuntimeError) as e:
                 conn.rollback()
                 logger.error(f"Transaction failed: {e}")
                 raise

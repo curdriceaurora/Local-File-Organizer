@@ -277,7 +277,7 @@ class TestGetImageDimensions:
 
         with patch(
             "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=Exception("fail"),
+            side_effect=OSError("fail"),
         ):
             result = get_image_dimensions(p)
 
@@ -315,7 +315,7 @@ class TestGetImageFormat:
 
         with patch(
             "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=Exception("fail"),
+            side_effect=OSError("fail"),
         ):
             result = get_image_format(p)
 

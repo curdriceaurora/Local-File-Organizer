@@ -553,7 +553,8 @@ class EnhancedEPUBReader:
                         return True
 
             return False
-        except (KeyError, AttributeError, TypeError):
+        except (KeyError, AttributeError, TypeError) as e:
+            logger.debug("Cover detection failed for EPUB: %s", e)
             return False
 
     def _extract_cover(
@@ -647,7 +648,8 @@ class EnhancedEPUBReader:
                     return "3.0"  # EPUB 3 uses nav documents
 
             return "2.0"  # Default to EPUB 2
-        except Exception:  # Intentional catch-all: ebooklib raises library-specific errors
+        except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
+            logger.debug("EPUB version detection failed: %s", e)
             return None
 
 

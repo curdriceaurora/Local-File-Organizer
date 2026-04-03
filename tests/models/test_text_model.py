@@ -60,7 +60,7 @@ class TestTextModel:
             model = TextModel(text_model_config)
 
             mock_client = MagicMock()
-            mock_client.generate.side_effect = Exception("Ollama error")
+            mock_client.generate.side_effect = RuntimeError("Ollama error")
 
             with patch("file_organizer.models.text_model.ollama.Client", return_value=mock_client):
                 model.initialize()
@@ -126,7 +126,7 @@ class TestTextModel:
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
 
-            mock_client_cls.side_effect = Exception("init error")
+            mock_client_cls.side_effect = RuntimeError("init error")
 
             with pytest.raises(Exception, match="init error"):
                 model.initialize()

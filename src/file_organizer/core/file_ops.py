@@ -148,12 +148,17 @@ def organize_files(
                 shutil.copy2(result.file_path, new_path)
 
             if undo_manager is not None and transaction_id is not None:
-                undo_manager.history.log_operation(
-                    OperationType.COPY,
-                    source_path=result.file_path,
-                    destination_path=new_path,
-                    transaction_id=transaction_id,
-                )
+                try:
+                    undo_manager.history.log_operation(
+                        OperationType.COPY,
+                        source_path=result.file_path,
+                        destination_path=new_path,
+                        transaction_id=transaction_id,
+                    )
+                except (OSError, ValueError, RuntimeError) as undo_err:
+                    logger.warning(
+                        "Undo log failed for {}: {}", result.file_path, undo_err
+                    )
 
             organized.setdefault(result.folder_name, []).append(new_filename)
 

@@ -210,7 +210,7 @@ class TestExtractPdf:
         p = tmp_path / "doc.pdf"
         p.write_bytes(b"fake pdf")
 
-        with patch("builtins.open", side_effect=Exception("corrupt")):
+        with patch("builtins.open", side_effect=OSError("corrupt")):
             result = extractor._extract_pdf(p)
 
         assert result == ""
@@ -299,7 +299,7 @@ class TestExtractRtf:
         p = tmp_path / "doc.rtf"
         p.write_text("bad content", encoding="utf-8")
 
-        with patch("builtins.open", side_effect=Exception("fail")):
+        with patch("builtins.open", side_effect=OSError("fail")):
             result = extractor._extract_rtf(p)
 
         assert result == ""
@@ -409,7 +409,7 @@ class TestEdgeCases:
 
         with patch(
             "file_organizer.services.deduplication.extractor.DocumentExtractor._extract_pdf",
-            side_effect=Exception("boom"),
+            side_effect=ValueError("boom"),
         ):
             result = extractor.extract_text(p)
             assert result == ""

@@ -93,7 +93,8 @@ class ModelManager:
                 if parts:
                     names.add(parts[0])
             return names
-        except (subprocess.SubprocessError, OSError):
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.debug("Failed to parse ollama model list: %s", e)
             return set()
 
     # ------------------------------------------------------------------
@@ -236,7 +237,7 @@ class ModelManager:
                     if new_model is not None and hasattr(new_model, "cleanup"):
                         try:
                             new_model.cleanup()
-                        except (RuntimeError, OSError, AttributeError):
+                        except (RuntimeError, OSError, AttributeError, TypeError, ValueError):
                             logger.debug("Cleanup of partial model failed", exc_info=True)
                     return False
 
@@ -253,7 +254,7 @@ class ModelManager:
             if old_model is not None and hasattr(old_model, "safe_cleanup"):
                 try:
                     old_model.safe_cleanup()
-                except (RuntimeError, OSError, AttributeError):
+                except (RuntimeError, OSError, AttributeError, TypeError, ValueError):
                     logger.exception("Drain failed for old %s model (swap committed)", model_type)
 
             return True

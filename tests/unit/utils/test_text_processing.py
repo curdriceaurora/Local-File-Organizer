@@ -42,7 +42,7 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing._nltk_ready", False)
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch(
-        "file_organizer.utils.text_processing.nltk.download", side_effect=Exception("Network error")
+        "file_organizer.utils.text_processing.nltk.download", side_effect=RuntimeError("Network error")
     )
     def test_ensure_nltk_data_download_error(self, mock_download):
         from file_organizer.utils.text_processing import stopwords
@@ -55,7 +55,7 @@ class TestTextProcessing:
     def test_ensure_nltk_data_general_error(self):
         from file_organizer.utils.text_processing import stopwords
 
-        with patch.object(stopwords, "words", side_effect=Exception("Some other error")):
+        with patch.object(stopwords, "words", side_effect=RuntimeError("Some other error")):
             # Should catch exception and not raise
             ensure_nltk_data()
 
@@ -111,7 +111,7 @@ class TestTextProcessing:
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch(
-        "file_organizer.utils.text_processing.WordNetLemmatizer", side_effect=Exception("Failed")
+        "file_organizer.utils.text_processing.WordNetLemmatizer", side_effect=ValueError("Failed")
     )
     def test_clean_text_lemmatize_error(self, mock_lemmatizer_class):
         result = clean_text("Test error")
@@ -141,7 +141,7 @@ class TestTextProcessing:
                 assert "apple" in result
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.word_tokenize", side_effect=Exception("Error"))
+    @patch("file_organizer.utils.text_processing.word_tokenize", side_effect=RuntimeError("Error"))
     def test_extract_keywords_error(self, mock_tokenize):
         assert (
             extract_keywords(

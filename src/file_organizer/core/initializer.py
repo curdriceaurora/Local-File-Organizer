@@ -42,7 +42,7 @@ def init_text_processor(
         processor.initialize()
         console.print("[green]✓[/green] Text model ready")
         return processor
-    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError) as e:
+    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError, TypeError, AttributeError) as e:
         if processor is not None:
             try:
                 processor.cleanup()
@@ -85,7 +85,7 @@ def init_vision_processor(
         processor.initialize()
         console.print("[green]✓[/green] Vision model ready")
         return processor
-    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError) as e:
+    except (RuntimeError, ImportError, OSError, ConnectionError, ValueError, TypeError, AttributeError) as e:
         if processor is not None:
             try:
                 processor.cleanup()

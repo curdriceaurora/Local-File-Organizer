@@ -400,7 +400,7 @@ class TestPreviewImportExtended:
         export_file = temp_storage / "exc.json"
         _write_json(export_file, _make_valid_export())
 
-        with patch.object(importer, "validate_import_file", side_effect=RuntimeError("boom")):
+        with patch.object(importer, "validate_import_file", side_effect=ValueError("boom")):
             preview = importer.preview_import(export_file)
 
         assert preview is None
@@ -563,7 +563,7 @@ class TestImportProfileExtended:
         export_file = temp_storage / "exc.json"
         _write_json(export_file, _make_valid_export())
 
-        with patch.object(importer, "validate_import_file", side_effect=RuntimeError("kaboom")):
+        with patch.object(importer, "validate_import_file", side_effect=ValueError("kaboom")):
             result = importer.import_profile(export_file)
 
         assert result is None
@@ -726,7 +726,7 @@ class TestBackupProfile:
 
         with patch(
             "file_organizer.services.intelligence.profile_exporter.ProfileExporter",
-            side_effect=RuntimeError("export error"),
+            side_effect=ValueError("export error"),
         ):
             # Should not raise
             importer._backup_profile(profile)
@@ -844,7 +844,7 @@ class TestImportSelective:
         export_file = temp_storage / "exc.json"
         _write_json(export_file, _make_valid_export())
 
-        with patch.object(importer, "validate_import_file", side_effect=RuntimeError("boom")):
+        with patch.object(importer, "validate_import_file", side_effect=ValueError("boom")):
             result = importer.import_selective(export_file, ["global"])
 
         assert result is None

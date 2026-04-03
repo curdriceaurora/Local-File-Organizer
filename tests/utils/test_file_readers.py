@@ -110,7 +110,7 @@ class TestFileReaders:
     @patch("file_organizer.utils.readers.documents.docx", create=True)
     def test_read_docx_error(self, mock_docx: MagicMock, tmp_path: Path) -> None:
         """Test reading DOCX file with error."""
-        mock_docx.Document.side_effect = Exception("Doc error")
+        mock_docx.Document.side_effect = RuntimeError("Doc error")
         test_file = tmp_path / "test.docx"
         test_file.touch()
 
@@ -148,7 +148,7 @@ class TestFileReaders:
     @patch("file_organizer.utils.readers.documents.fitz", create=True)
     def test_read_pdf_error(self, mock_fitz: MagicMock, tmp_path: Path) -> None:
         """Test PDF reading error."""
-        mock_fitz.open.side_effect = Exception("PDF render error")
+        mock_fitz.open.side_effect = RuntimeError("PDF render error")
         test_file = tmp_path / "test.pdf"
         test_file.touch()
 
