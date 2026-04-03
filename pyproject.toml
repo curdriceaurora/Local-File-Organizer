@@ -52,9 +52,10 @@ dependencies = [
     "websockets~=12.0",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
-    # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
-    # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
-    # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
+    # Security: ecdsa is transitive via python-jose. Pin >= 0.19.2 for CVE-2026-33936.
+    # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
+    "ecdsa>=0.19.2",
+    "Pygments>=2.20.0",
     "python-jose~=3.3",
     "bcrypt>=4.0.0,<6.0.0",
     # Database
@@ -100,9 +101,10 @@ web = [
     "websockets~=12.0",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
-    # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
-    # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
-    # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
+    # Security: ecdsa is transitive via python-jose. Pin >= 0.19.2 for CVE-2026-33936.
+    # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
+    "ecdsa>=0.19.2",
+    "Pygments>=2.20.0",
     "python-jose~=3.3",
     "bcrypt>=4.0.0,<6.0.0",
 
