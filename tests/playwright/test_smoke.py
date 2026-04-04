@@ -28,7 +28,13 @@ To watch the tests execute in a visible window add ``--headed``::
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Page, Response, expect
+
+pytest.importorskip(
+    "playwright",
+    reason="playwright not installed — run: pip install 'file-organizer[dev]' && playwright install chromium",
+)
+
+from playwright.sync_api import Page, Response, expect  # noqa: E402
 
 pytestmark = [
     pytest.mark.e2e,
@@ -79,26 +85,32 @@ class TestPageLoads:
     """Verify that each primary web UI page renders without a server error."""
 
     def test_setup_wizard_page(self, page: Page) -> None:
-        """Setup wizard renders on a fresh (unconfigured) server."""
-        # Home route redirects to /ui/setup when setup_completed is False.
-        # Navigate directly so the test is independent of that redirect logic.
+        """Setup wizard renders on a fresh (unconfigured) server.
+
+        Navigate directly so this test does not depend on the home-redirect logic.
+        """
         _goto_ok(page, "/ui/setup")
         _assert_no_server_error(page)
         expect(page.locator("html")).to_be_visible()
 
     def test_home_redirect(self, page: Page) -> None:
-        """Root path responds with a 2xx (possibly after redirect to /ui/setup)."""
-        response = page.goto("/ui/")
+        """Root path redirects to ``/ui/setup`` on a fresh server.
+
+        On a fresh server ``setup_completed`` defaults to ``False``, so the
+        home route always redirects to ``/ui/setup``.  Playwright follows the
+        redirect and lands on a 2xx page.
+        """
+        response = page.goto("/")
         assert response is not None
         # After following redirects Playwright lands on a 2xx page.
         assert response.ok, f"Expected 2xx after redirect, got {response.status}"
+        assert "/ui/setup" in page.url, f"Expected redirect to /ui/setup, got {page.url}"
         _assert_no_server_error(page)
 
     def test_files_browser_page(self, page: Page) -> None:
         """File browser renders the main listing view."""
         _goto_ok(page, "/ui/files")
         _assert_no_server_error(page)
-        # The files page should contain some structural wrapper element.
         expect(page.locator("body")).to_be_visible()
         assert page.title() != "", "Files page rendered with empty <title>"
 
@@ -145,29 +157,36 @@ class TestAPIEndpoints:
     """Verify core REST API endpoints are reachable and return expected shapes."""
 
     def test_health_endpoint(self, page: Page) -> None:
-        """Health endpoint returns 200 with a JSON body."""
+        """Health endpoint returns a valid health status JSON body.
+
+        Accepts 200 (ok), 207 (degraded — Ollama unreachable), or 503 (error)
+        as per the documented health route contract.  Plain ``response.ok``
+        would reject 207, causing false failures when Ollama is not running.
+        """
         response = page.request.get("/api/v1/health")
-        assert response.ok, f"Health endpoint returned {response.status}"
+        assert response.status in (200, 207, 503), (
+            f"Unexpected health status {response.status}; expected 200/207/503"
+        )
         body = response.json()
         assert "status" in body, f"Unexpected health payload: {body}"
 
     def test_static_assets_reachable(self, page: Page) -> None:
         """At least one static asset (CSS or JS) is served correctly."""
         # Navigate to a known page first so the static route is mounted.
-        page.goto("/ui/settings")
+        _goto_ok(page, "/ui/settings")
         # Collect all stylesheet hrefs from the DOM.
         hrefs: list[str] = page.eval_on_selector_all(
             "link[rel='stylesheet']",
             "els => els.map(el => el.href)",
         )
-        if not hrefs:
-            pytest.skip("No <link rel='stylesheet'> found — static assets may not be mounted")
+        assert hrefs, (
+            "Expected at least one <link rel='stylesheet'> on /ui/settings — "
+            "static assets may not be mounted or base template failed to render"
+        )
 
         # Request the first stylesheet and verify it's served.
-        first = hrefs[0]
-        # Use Playwright's request context (no browser rendering needed).
-        resp = page.request.get(first)
-        assert resp.ok, f"Static asset {first!r} returned {resp.status}"
+        resp = page.request.get(hrefs[0])
+        assert resp.ok, f"Static asset {hrefs[0]!r} returned {resp.status}"
 
 
 # ---------------------------------------------------------------------------
@@ -208,3 +227,15 @@ class TestPageStructure:
             assert page.locator("html").count() == 1, f"{path!r}: no <html> element"
             assert page.locator("body").count() == 1, f"{path!r}: no <body> element"
             _assert_no_server_error(page)
+
+    def test_unknown_route_returns_404(self, page: Page) -> None:
+        """A nonexistent UI route returns 404, not 500.
+
+        Verifies that the exception handler correctly converts unknown-route
+        errors into client errors rather than server errors.
+        """
+        response = page.goto("/ui/this-route-does-not-exist-smoke-check")
+        assert response is not None, "page.goto() returned None for 404 path"
+        assert response.status == 404, (
+            f"Expected 404 for unknown route, got {response.status}"
+        )

@@ -26,6 +26,7 @@ class TestFindFreePort:
 
         port = _find_free_port()
         assert isinstance(port, int)
+        assert 1024 <= port <= 65535
 
     def test_port_in_valid_range(self) -> None:
         from file_organizer.desktop.app import _find_free_port

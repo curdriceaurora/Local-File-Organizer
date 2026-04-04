@@ -10,11 +10,15 @@ live_server_url : str  (session-scoped)
 base_url : str  (session-scoped, overrides pytest-playwright default)
     Returns ``live_server_url``, enabling relative paths in ``page.goto()``.
     e.g. ``page.goto("/ui/files")`` resolves to the live server.
+    pytest-playwright's built-in ``base_url`` fixture reads from the
+    ``--base-url`` CLI flag (not set in this project's default invocation).
+    This fixture replaces it with the dynamically assigned live server URL
+    so the flag is unnecessary.
 
 Running
 -------
 Playwright tests are NOT included in the default test run (they require a
-real browser and are too slow for the smoke/ci suites).  Run them with::
+real browser and are excluded from CI shards).  Run them with::
 
     # First-time browser installation (once per machine / CI image):
     playwright install chromium
@@ -29,11 +33,14 @@ interfere with browser-process isolation.
 
 from __future__ import annotations
 
+import select
 import socket
 import threading
 import time
+from collections.abc import Iterator
 
 import pytest
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -41,21 +48,41 @@ import pytest
 
 
 def _find_free_port() -> int:
-    """Return an ephemeral port that is free at call time."""
+    """Return an ephemeral port that is free at call time.
+
+    Note: There is an inherent TOCTOU window between releasing the socket
+    and uvicorn binding it.  On low-traffic developer machines this is
+    negligible; on heavily loaded CI runners with parallel test shards the
+    port may be stolen.  If this becomes flaky, switch to binding port 0
+    in uvicorn and reading the actual port from server.servers after start.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
 def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
-    """Block until the port accepts TCP connections or *timeout* expires."""
+    """Block until the port accepts TCP connections or *timeout* expires.
+
+    Uses ``select.select`` for inter-attempt rate-limiting instead of
+    ``time.sleep`` so the poll rate is event-driven (OS scheduler yields
+    rather than busy-spinning).
+
+    Note: TCP acceptance indicates uvicorn's socket is bound; the ASGI
+    lifespan startup hook (``reset_startup_time`` + log) completes before
+    uvicorn starts accepting connections, so TCP-ready is equivalent to
+    HTTP-ready for this application's trivial lifespan.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=0.2):
                 return True
         except OSError:
-            time.sleep(0.1)
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                # Rate-limit retries via select instead of time.sleep
+                select.select([], [], [], min(0.1, remaining))
     return False
 
 
@@ -65,7 +92,7 @@ def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
 
 
 @pytest.fixture(scope="session")
-def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> str:
+def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     """Start the FastAPI server once for the whole test session.
 
     Uses an in-process uvicorn server bound to a random free port on
@@ -74,6 +101,11 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> str:
 
     Yields:
         Base URL string, e.g. ``"http://127.0.0.1:54321"``.
+
+    Raises:
+        RuntimeError: If the server does not become ready within 20 seconds.
+            The error message includes the daemon thread's exception (if any)
+            to aid debugging.
     """
     import uvicorn
 
@@ -97,18 +129,40 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> str:
     )
     server = uvicorn.Server(config)
 
-    thread = threading.Thread(target=server.run, daemon=True, name="pw-server")
+    # Capture any exception raised by server.run() so it can be surfaced in
+    # the timeout RuntimeError instead of being permanently lost in the daemon.
+    _server_error: list[BaseException] = []
+
+    def _run() -> None:
+        try:
+            server.run()
+        except Exception as exc:  # noqa: BLE001
+            _server_error.append(exc)
+
+    thread = threading.Thread(target=_run, daemon=True, name="pw-server")
     thread.start()
 
     if not _wait_for_port(port, timeout=20.0):
         server.should_exit = True
+        thread.join(timeout=5.0)
+        cause = _server_error[0] if _server_error else None
         raise RuntimeError(
             f"Playwright live server did not become ready on port {port} within 20 s"
-        )
+            + (f" — server thread raised: {cause!r}" if cause else "")
+        ) from cause
 
     yield f"http://127.0.0.1:{port}"
 
     server.should_exit = True
+    thread.join(timeout=5.0)
+    if thread.is_alive():
+        # Non-fatal: daemon thread will be killed at process exit anyway.
+        import warnings
+
+        warnings.warn(
+            "Playwright live server thread did not stop within 5 s after shutdown signal.",
+            stacklevel=1,
+        )
 
 
 # ---------------------------------------------------------------------------
