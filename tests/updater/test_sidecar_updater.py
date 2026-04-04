@@ -20,7 +20,7 @@ from file_organizer.updater.sidecar_updater import (
     coordinated_update,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 _CHECKER_PATH = "file_organizer.updater.sidecar_updater.UpdateChecker"
 _INSTALLER_PATH = "file_organizer.updater.sidecar_updater.UpdateInstaller"
