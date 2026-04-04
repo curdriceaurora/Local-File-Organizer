@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate app icons for File Organizer desktop app (Tauri).
+Generate app icons for File Organizer desktop app.
 
 Produces all required icon formats:
   - icon.png          : 512x512 master PNG

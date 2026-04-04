@@ -4,7 +4,7 @@ Checks GitHub Releases for new versions, downloads with SHA256
 verification, and performs atomic binary replacement.
 
 The :mod:`~file_organizer.updater.sidecar_updater` sub-module adds
-coordinated update support so the Tauri shell and the Python sidecar
+coordinated update support so the launcher and the Python backend
 are always kept in sync.
 """
 

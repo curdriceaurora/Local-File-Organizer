@@ -1,13 +1,12 @@
 ; Inno Setup Script for File Organizer
-; Generates a Windows installer (.exe) from Tauri + PyInstaller output.
+; Generates a Windows installer (.exe) from PyInstaller output.
 ;
 ; Usage:
 ;   iscc scripts/build_windows.iss
 ;
 ; Requires:
 ;   - Inno Setup 6+ (https://jrsoftware.org/isinfo.php)
-;   - Tauri build output (file-organizer_*.msi / .exe) in src-tauri/target/release/bundle/
-;   - PyInstaller sidecar in dist/
+;   - PyInstaller output in dist/
 
 #define AppName "File Organizer"
 #ifndef AppVersion
@@ -18,8 +17,6 @@
 #ifndef AppExeName
   #define AppExeName "file-organizer.exe"
 #endif
-#define SidecarTriple "x86_64-pc-windows-msvc"
-
 ; Inno Download Plugin — required for downloading WebView2 at install time.
 ; Install from: https://mitrichsoftware.wordpress.com/inno-setup-tools/inno-download-plugin/
 #include <idp.iss>
@@ -57,9 +54,6 @@ Name: "addtopath"; Description: "Add to system PATH"; GroupDescription: "System 
 [Files]
 ; Main executable from PyInstaller dist/
 Source: "..\dist\file-organizer-*-windows-*.exe"; DestDir: "{app}"; DestName: "{#AppExeName}"; Flags: ignoreversion
-
-; Tauri sidecar backend binary (named per Tauri target-triple convention)
-Source: "..\dist\file-organizer-backend-{#SidecarTriple}.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; WebView2 Bootstrapper - downloaded/included for offline install support
 Source: "{tmp}\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall external skipifsourcedoesntexist

@@ -1,10 +1,9 @@
-"""Coordinated update system for the sidecar (Python backend).
+"""Coordinated update system for the Python backend.
 
-This module adds sidecar-aware update helpers that work alongside the Tauri
-shell's ``tauri-plugin-updater``. The key addition is ``coordinated_update``,
-which ensures both the shell and the sidecar are updated atomically: if the
-sidecar update fails, the shell is rolled back so the two components always
-stay in sync.
+Provides helpers for checking and applying updates to the Python backend
+binary.  The key addition is ``coordinated_update``, which ensures both
+the launcher and the backend are updated atomically: if the backend update
+fails, the launcher is rolled back so the two components always stay in sync.
 
 Typical usage::
 
@@ -14,7 +13,7 @@ Typical usage::
     if result.success:
         print("Both components updated to", result.sidecar_version)
     elif result.rolled_back:
-        print("Partial update detected; rolled back shell to previous version")
+        print("Partial update detected; rolled back launcher to previous version")
     else:
         print("No update available or update failed:", result.message)
 """
@@ -63,15 +62,15 @@ class SidecarUpdateStatus:
 
 @dataclass
 class CoordinatedUpdateResult:
-    """Result of a coordinated shell + sidecar update attempt.
+    """Result of a coordinated launcher + backend update attempt.
 
     Attributes:
         success: Both components updated successfully.
-        rolled_back: Shell was rolled back due to sidecar failure.
-        shell_updated: Whether the shell component was updated.
-        sidecar_updated: Whether the sidecar component was updated.
-        sidecar_version: New sidecar version (empty if not updated).
-        shell_version: New shell version (empty if not updated).
+        rolled_back: Launcher was rolled back due to backend failure.
+        shell_updated: Whether the launcher component was updated.
+        sidecar_updated: Whether the backend component was updated.
+        sidecar_version: New backend version (empty if not updated).
+        shell_version: New launcher version (empty if not updated).
         message: Human-readable status message.
         events: List of notification events emitted during the process.
     """
@@ -141,29 +140,25 @@ def coordinated_update(
     event_callback: Callable[[str, object], None] | None = None,
     dry_run: bool = False,
 ) -> CoordinatedUpdateResult:
-    """Update both the Tauri shell and the sidecar atomically.
+    """Update both the launcher and the backend atomically.
 
     The coordination protocol is:
 
-    1. Check whether a sidecar update is available.
+    1. Check whether a backend update is available.
     2. If no update is available, return early.
-    3. Download and install the sidecar update.
-    4. If the sidecar update succeeds, emit ``update-installed``.
-    5. If the sidecar update fails:
-       a. Attempt to roll back the shell via :meth:`UpdateManager.rollback`.
+    3. Download and install the backend update.
+    4. If the backend update succeeds, emit ``update-installed``.
+    5. If the backend update fails:
+       a. Attempt to roll back the launcher via :meth:`UpdateManager.rollback`.
        b. Emit ``update-failed`` and return with ``rolled_back=True``.
 
-    The *shell* update itself is handled by the Tauri plugin on the Rust side;
-    this function only coordinates the Python sidecar portion and manages
-    rollback.
-
     Args:
-        repo: GitHub ``owner/repo`` for the sidecar release.
+        repo: GitHub ``owner/repo`` for the backend release.
         current_version: Override the auto-detected running version.
-        install_dir: Directory where the sidecar binary lives.
+        install_dir: Directory where the backend binary lives.
         include_prereleases: Whether to include pre-release versions.
         event_callback: Optional ``callback(event_name, payload)`` called for
-            each lifecycle event (mirrors Tauri event emission).
+            each lifecycle event.
         dry_run: If ``True``, check and download but do not install.
 
     Returns:

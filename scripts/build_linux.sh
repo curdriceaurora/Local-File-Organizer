@@ -63,22 +63,6 @@ fi
 echo "    Found: ${EXECUTABLE}"
 
 # ---------------------------------------------------------------------------
-# Create Tauri sidecar copy (Tauri expects: file-organizer-backend-{target-triple})
-#
-# Target triples follow the Rust convention (`rustc -vV | grep host`) so that
-# Tauri can resolve the correct sidecar binary at build and runtime.
-# ---------------------------------------------------------------------------
-echo "==> Creating Tauri sidecar copy..."
-SIDECAR_TRIPLE="x86_64-unknown-linux-gnu"
-if [[ "$ARCH" == "arm64" ]]; then
-    SIDECAR_TRIPLE="aarch64-unknown-linux-gnu"
-fi
-SIDECAR_PATH="${DIST_DIR}/file-organizer-backend-${SIDECAR_TRIPLE}"
-cp "${EXECUTABLE}" "${SIDECAR_PATH}"
-chmod +x "${SIDECAR_PATH}"
-echo "    Sidecar: ${SIDECAR_PATH}"
-
-# ---------------------------------------------------------------------------
 # Download appimagetool if needed
 # ---------------------------------------------------------------------------
 APPIMAGETOOL="${BUILD_DIR}/appimagetool-${APPIMAGE_ARCH}"

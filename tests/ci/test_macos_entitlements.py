@@ -16,11 +16,11 @@ import pytest
 # Paths
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).parent.parent.parent
-TAURI_DIR = REPO_ROOT / "desktop" / "src-tauri"
+BUILD_DIR = REPO_ROOT / "desktop" / "build"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 
-ENTITLEMENTS_PLIST = TAURI_DIR / "entitlements.plist"
-DEBUG_ENTITLEMENTS_PLIST = TAURI_DIR / "macos-entitlements-debug.plist"
+ENTITLEMENTS_PLIST = BUILD_DIR / "entitlements.plist"
+DEBUG_ENTITLEMENTS_PLIST = BUILD_DIR / "macos-entitlements-debug.plist"
 SIGN_SCRIPT = SCRIPTS_DIR / "sign_macos.sh"
 
 # ---------------------------------------------------------------------------

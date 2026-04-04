@@ -1,7 +1,7 @@
 """Health check endpoints.
 
-The /health route is the authoritative readiness probe for the Tauri sidecar.
-The Tauri shell polls this endpoint to determine when the Python backend is ready.
+The /health route is the authoritative readiness probe for the desktop launcher.
+The pywebview launcher polls this endpoint to determine when the Python backend is ready.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def reset_startup_time() -> None:
 
 @router.get("/health")
 async def health(response: Response) -> dict[str, object]:
-    """Return rich health status for the API and sidecar readiness probe.
+    """Return rich health status for the API and desktop launcher readiness probe.
 
     Response shape::
 
@@ -68,7 +68,7 @@ async def health(response: Response) -> dict[str, object]:
     # Use the status derived by the facade rather than re-deriving it here.
     # The facade returns "ok" / "degraded" / "unknown"; we add "error" for
     # total failure.  "unknown" means the provider has not been probed (e.g.
-    # OpenAI-compatible endpoint) — treat as ready so the sidecar starts.
+    # OpenAI-compatible endpoint) — treat as ready so the desktop launcher starts.
     status: str = str(payload.get("status", "error")) if payload else "error"
 
     _READINESS_MAP: dict[str, str] = {

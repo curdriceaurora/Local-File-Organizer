@@ -29,9 +29,8 @@ Tasks:
   test-full     run main-branch non-benchmark suite on Python 3.11.15 and 3.12.13 in parallel
   benchmark     run benchmark suite on Python 3.11.15 then 3.12.13 sequentially
   integration   integration coverage gate
-  rust          cargo check + cargo test for desktop/src-tauri
   security      pip-audit and bandit
-  all           quick + benchmark + integration + rust + security
+  all           quick + benchmark + integration + security
 
 Options:
   --python BIN  Python executable to use for non-matrix tasks (default: python3)
@@ -60,7 +59,6 @@ Available tasks:
   test-full
   benchmark
   integration
-  rust
   security
   all
 EOF
@@ -343,30 +341,6 @@ run_integration() {
     --override-ini=addopts=
 }
 
-run_rust() {
-  require_cmd cargo
-  require_cmd rustc
-
-  local target_triple
-  target_triple="$(rustc -vV | awk "/^host:/ {print \$2}")"
-
-  run_step \
-    "Prepare Tauri sidecar placeholder" \
-    bash \
-    -lc \
-    "
-      cd desktop/src-tauri
-      sidecar_path=\"binaries/file-organizer-backend-${target_triple}\"
-      mkdir -p binaries
-      if [[ ! -f \"\${sidecar_path}\" ]]; then
-        printf '#!/usr/bin/env bash\nexit 0\n' > \"\${sidecar_path}\"
-        chmod +x \"\${sidecar_path}\"
-      fi
-    "
-  run_step "Run cargo check" bash -lc "cd desktop/src-tauri && cargo check --all-features"
-  run_step "Run cargo test" bash -lc "cd desktop/src-tauri && cargo test"
-}
-
 run_security() {
   run_step \
     "Run pip-audit" \
@@ -391,11 +365,10 @@ expand_task() {
         "test"
         "benchmark"
         "integration"
-        "rust"
         "security"
       )
       ;;
-    lint|unused-deps|type-check|links|test|test-full|benchmark|integration|rust|security)
+    lint|unused-deps|type-check|links|test|test-full|benchmark|integration|security)
       TASKS+=("$task")
       ;;
     *)
@@ -478,9 +451,6 @@ for task in "${TASKS[@]}"; do
       ;;
     integration)
       run_integration
-      ;;
-    rust)
-      run_rust
       ;;
     security)
       run_security

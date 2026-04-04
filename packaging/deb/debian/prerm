@@ -8,12 +8,6 @@ case "$1" in
             systemctl stop file-organizer.service 2>/dev/null || true
         fi
 
-        # Kill the sidecar backend process using exact binary name matching
-        # to avoid accidentally signalling unrelated processes.
-        if command -v pkill >/dev/null 2>&1; then
-            pkill -x "file-organizer-backend-x86_64-unknown-linux-gnu" 2>/dev/null || true
-            pkill -x "file-organizer-backend-aarch64-unknown-linux-gnu" 2>/dev/null || true
-        fi
         ;;
 esac
 

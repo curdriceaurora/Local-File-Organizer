@@ -1,6 +1,6 @@
 """ServiceFacade: unified entry point for desktop shell integration.
 
-Provides a clean, importable interface for the Tauri desktop shell to interact
+Provides a clean, importable interface for the desktop launcher to interact
 with the Python backend without starting the FastAPI server.
 """
 
@@ -24,8 +24,8 @@ class ServiceFacade:
     """Unified facade over the file-organizer backend services.
 
     Designed to be imported and used without starting the HTTP server.
-    All methods are async to allow callers (e.g. Tauri IPC bridges) to
-    await results without blocking the event loop.
+    All methods are async to allow callers (e.g. desktop integration bridges)
+    to await results without blocking the event loop.
 
     Example usage::
 

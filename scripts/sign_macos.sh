@@ -23,9 +23,9 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-TAURI_DIR="${REPO_ROOT}/desktop/src-tauri"
-ENTITLEMENTS="${TAURI_DIR}/entitlements.plist"
-DEBUG_ENTITLEMENTS="${TAURI_DIR}/macos-entitlements-debug.plist"
+BUILD_DIR="${REPO_ROOT}/desktop/build"
+ENTITLEMENTS="${BUILD_DIR}/entitlements.plist"
+DEBUG_ENTITLEMENTS="${BUILD_DIR}/macos-entitlements-debug.plist"
 
 APP_PATH="${1:-}"
 DEBUG_MODE=false

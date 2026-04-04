@@ -115,30 +115,6 @@ fi
 echo "    Found: ${EXECUTABLE}"
 
 # ---------------------------------------------------------------------------
-# Create Tauri sidecar copy (Tauri expects: file-organizer-backend-{target-triple})
-#
-# Tauri resolves sidecar binaries by appending a Rust-style target triple to
-# the base name declared in tauri.conf.json "externalBin".  The triples used
-# here (aarch64-apple-darwin, x86_64-apple-darwin) match the values that
-# `rustc -vV | grep host` prints on each architecture, which is what Tauri
-# uses at build time and runtime to locate the correct binary.
-# ---------------------------------------------------------------------------
-echo "==> Creating Tauri sidecar copy..."
-if [[ "$UNIVERSAL" == "true" ]]; then
-    SIDECAR_TRIPLE="universal-apple-darwin"
-else
-    if [[ "$ARCH" == "arm64" ]]; then
-        SIDECAR_TRIPLE="aarch64-apple-darwin"
-    else
-        SIDECAR_TRIPLE="x86_64-apple-darwin"
-    fi
-fi
-SIDECAR_PATH="${DIST_DIR}/file-organizer-backend-${SIDECAR_TRIPLE}"
-cp "${EXECUTABLE}" "${SIDECAR_PATH}"
-chmod +x "${SIDECAR_PATH}"
-echo "    Sidecar: ${SIDECAR_PATH}"
-
-# ---------------------------------------------------------------------------
 # Create .app bundle structure
 # ---------------------------------------------------------------------------
 echo "==> Creating .app bundle..."
@@ -190,7 +166,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "==> Signing with identity: ${SIGN_IDENTITY}..."
     codesign --deep --force --options runtime \
         --sign "${SIGN_IDENTITY}" \
-        --entitlements "${SCRIPT_DIR}/../desktop/src-tauri/entitlements.plist" \
+        --entitlements "${SCRIPT_DIR}/../desktop/build/entitlements.plist" \
         "${APP_DIR}"
     echo "    Signed successfully."
 

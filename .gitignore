@@ -112,9 +112,6 @@ __snapshots__/
 # Node modules (if not already there)
 node_modules/
 
-# Tauri sidecar binaries (built locally, not committed)
-desktop/src-tauri/binaries/file-organizer-backend-*
-
 # MkDocs build output
 site/
 .claude/worktrees/

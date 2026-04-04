@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 MANIFEST_PATH = (
-    Path(__file__).parent.parent.parent / "desktop" / "src-tauri" / "windows-manifest.xml"
+    Path(__file__).parent.parent.parent / "desktop" / "build" / "app.manifest"
 )
 
 # XML namespace map used in the manifest
@@ -32,7 +32,7 @@ class TestWindowsManifestExists:
     """Verify the manifest file is present in the expected location."""
 
     def test_manifest_file_exists(self) -> None:
-        """The windows-manifest.xml file must exist at desktop/src-tauri/windows-manifest.xml."""
+        """The app.manifest file must exist at desktop/build/app.manifest."""
         assert MANIFEST_PATH.exists(), (
             f"Windows manifest not found at {MANIFEST_PATH}. "
             "Run the Windows manifest creation step."
@@ -40,7 +40,7 @@ class TestWindowsManifestExists:
 
     def test_manifest_is_not_empty(self) -> None:
         """The manifest file must not be empty."""
-        assert MANIFEST_PATH.stat().st_size > 0, "windows-manifest.xml is empty."
+        assert MANIFEST_PATH.stat().st_size > 0, "app.manifest is empty."
 
 
 class TestWindowsManifestXML:

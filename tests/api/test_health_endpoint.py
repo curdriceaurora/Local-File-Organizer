@@ -1,7 +1,7 @@
 """Tests for the /health REST endpoint (issue #558).
 
-The endpoint must act as the authoritative readiness probe for the Tauri
-sidecar: it must respond quickly (< 500 ms), carry all required fields, and
+The endpoint must act as the authoritative readiness probe for the desktop
+launcher: it must respond quickly (< 500 ms), carry all required fields, and
 return the correct HTTP status code based on Ollama availability.
 """
 

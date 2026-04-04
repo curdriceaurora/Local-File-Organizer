@@ -1,7 +1,7 @@
 """Daemon control endpoints.
 
 Provides REST API endpoints for starting, stopping, and toggling the
-background daemon service. Called by the Tauri system tray menu.
+background daemon service. Called by the desktop context menu.
 """
 
 from __future__ import annotations
