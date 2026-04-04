@@ -63,6 +63,19 @@ fi
 echo "    Found: ${EXECUTABLE}"
 
 # ---------------------------------------------------------------------------
+# Detect whether we're packaging the CLI or the pywebview desktop executable.
+# If a desktop-specific binary exists in dist/, prefer it for the AppImage.
+# ---------------------------------------------------------------------------
+DESKTOP_EXECUTABLE=$(find "${DIST_DIR}" -maxdepth 1 -name "file-organizer-desktop-*" \
+    -not -name "*.AppImage" -not -name "*.sha256" -type f 2>/dev/null | head -1)
+IS_DESKTOP=false
+if [[ -n "$DESKTOP_EXECUTABLE" ]]; then
+    EXECUTABLE="${DESKTOP_EXECUTABLE}"
+    IS_DESKTOP=true
+    echo "==> Desktop executable detected: ${EXECUTABLE}"
+fi
+
+# ---------------------------------------------------------------------------
 # Download appimagetool if needed
 # ---------------------------------------------------------------------------
 APPIMAGETOOL="${BUILD_DIR}/appimagetool-${APPIMAGE_ARCH}"
@@ -107,7 +120,11 @@ mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
 cp "${EXECUTABLE}" "${APPDIR}/usr/bin/file-organizer"
 chmod +x "${APPDIR}/usr/bin/file-organizer"
 
-# Create .desktop file
+# Create .desktop file (Terminal=false for pywebview desktop app; true for CLI)
+TERMINAL_FLAG="true"
+if [[ "$IS_DESKTOP" == "true" ]]; then
+    TERMINAL_FLAG="false"
+fi
 cat > "${APPDIR}/usr/share/applications/${APP_NAME}.desktop" << DESKTOP
 [Desktop Entry]
 Type=Application
@@ -116,7 +133,7 @@ Comment=AI-powered local file management
 Exec=file-organizer
 Icon=file-organizer
 Categories=Utility;FileManager;
-Terminal=true
+Terminal=${TERMINAL_FLAG}
 DESKTOP
 
 # Copy desktop file to root (required by AppImage spec)

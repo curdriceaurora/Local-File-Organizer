@@ -12,34 +12,6 @@ on:
         default: ''
 
 jobs:
-  test-rust:
-    name: Rust Tests
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
-        with:
-          workspaces: desktop
-
-      - name: Install Tauri Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Run Rust tests
-        working-directory: desktop
-        run: cargo test --all
-
   build:
     strategy:
       fail-fast: false
@@ -72,123 +44,77 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
-        with:
-          workspaces: desktop
-
-      - name: Install Tauri Linux build dependencies
+      - name: Install pywebview Linux build dependencies
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libgirepository1.0-dev \
+            libcairo2-dev \
+            gir1.2-webkit2-4.1 \
+            fuse \
+            libfuse2
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[desktop,dev]"
           pip install pyinstaller
-
-      - name: Install AppImage dependencies
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get install -y fuse libfuse2
 
       - name: Run tests
         run: |
           pytest tests/ -q --override-ini="addopts=" -p no:cacheprovider --tb=short
 
-      - name: Build executable
+      - name: Build CLI executable
         run: |
           python scripts/build.py --clean
+
+      - name: Build Desktop executable
+        run: |
+          python scripts/build.py --desktop
 
       - name: Build AppImage
         if: matrix.platform == 'linux'
         run: |
           bash scripts/build_linux.sh
 
-      - name: Verify executable
+      - name: Verify executables
         shell: bash
         run: |
-          # Find the built executable
+          # Find CLI executable
           if [ "${{ matrix.platform }}" = "windows" ]; then
-            exe=$(find dist -name "*.exe" -type f | head -1)
+            cli_exe=$(find dist -name "file-organizer-*" -not -name "*desktop*" -name "*.exe" -type f | head -1)
+            desktop_exe=$(find dist -name "file-organizer-desktop-*.exe" -type f | head -1)
           else
-            exe=$(find dist -type f -perm /111 | head -1)
+            cli_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-*" -not -name "*desktop*" -perm /111 | head -1)
+            desktop_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-desktop-*" -perm /111 | head -1)
           fi
 
-          if [ -z "$exe" ]; then
-            echo "ERROR: No executable found in dist/"
+          if [ -z "$cli_exe" ]; then
+            echo "ERROR: No CLI executable found in dist/"
             ls -la dist/
             exit 1
           fi
+          echo "CLI executable: $cli_exe ($(du -h "$cli_exe" | cut -f1))"
 
-          echo "Found executable: $exe"
-          echo "Size: $(du -h "$exe" | cut -f1)"
-
-          # Basic smoke test
-          "$exe" --help || true
-
-      - name: Rename sidecar for Tauri
-        shell: bash
-        run: |
-          # Get Rust target triple
-          TARGET_TRIPLE=$(rustc -vV | grep host | cut -d' ' -f2)
-          SIDECAR_NAME="file-organizer-backend-${TARGET_TRIPLE}"
-
-          # Copy PyInstaller output to sidecar location expected by Tauri
-          if [ "${{ matrix.platform }}" = "windows" ]; then
-            SRC=$(find dist -name "file-organizer.exe" | head -1)
-            mkdir -p desktop/src-tauri/binaries
-            cp "$SRC" "desktop/src-tauri/binaries/${SIDECAR_NAME}.exe"
+          if [ -z "$desktop_exe" ]; then
+            echo "WARNING: No desktop executable found in dist/ (expected for pywebview build)"
           else
-            SRC=$(find dist -type f -perm /111 -name "file-organizer" | head -1)
-            mkdir -p desktop/src-tauri/binaries
-            cp "$SRC" "desktop/src-tauri/binaries/${SIDECAR_NAME}"
-            chmod +x "desktop/src-tauri/binaries/${SIDECAR_NAME}"
+            echo "Desktop executable: $desktop_exe ($(du -h "$desktop_exe" | cut -f1))"
           fi
-          echo "Sidecar placed: desktop/src-tauri/binaries/${SIDECAR_NAME}"
 
-      - name: Build Tauri desktop app
-        working-directory: desktop
-        run: |
-          npm install
-          npm run tauri build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Collect Tauri artifacts
-        shell: bash
-        run: |
-          mkdir -p combined-artifacts
-          # Copy PyInstaller output
-          cp -r dist/* combined-artifacts/ 2>/dev/null || true
-          # Copy Tauri bundles
-          if [ "${{ matrix.platform }}" = "macos" ]; then
-            find desktop/src-tauri/target/release/bundle -name "*.dmg" -exec cp {} combined-artifacts/ \; 2>/dev/null || true
-            find desktop/src-tauri/target/release/bundle -name "*.app" -exec cp -r {} combined-artifacts/ \; 2>/dev/null || true
-          elif [ "${{ matrix.platform }}" = "linux" ]; then
-            find desktop/src-tauri/target/release/bundle -name "*.AppImage" -exec cp {} combined-artifacts/ \; 2>/dev/null || true
-            find desktop/src-tauri/target/release/bundle -name "*.deb" -exec cp {} combined-artifacts/ \; 2>/dev/null || true
-          elif [ "${{ matrix.platform }}" = "windows" ]; then
-            find desktop/src-tauri/target/release/bundle -name "*.exe" -exec cp {} combined-artifacts/ \; 2>/dev/null || true
-            find desktop/src-tauri/target/release/bundle -name "*.msi" -exec cp {} combined-artifacts/ \; 2>/dev/null || true
-          fi
-          ls -la combined-artifacts/
+          # Basic smoke test for CLI
+          "$cli_exe" --help || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: file-organizer-${{ matrix.platform }}-${{ matrix.arch }}
-          path: combined-artifacts/*
+          path: dist/*
           retention-days: 30
 
   release:
-    needs: [build, test-rust]
+    needs: [build]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
