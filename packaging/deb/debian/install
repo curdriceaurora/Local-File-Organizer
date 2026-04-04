@@ -1,3 +1,2 @@
 file-organizer usr/bin/
 file-organizer.desktop usr/share/applications/
-file-organizer-backend-* usr/lib/file-organizer/

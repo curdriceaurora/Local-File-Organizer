@@ -422,4 +422,3 @@ jobs:
         # 2026-03-22: 56% combined (ratchet after PR3 web+plugins tests; actual 56.64%; 3507 integration tests).
         # 2026-03-22: 60% combined (ratchet after PR4 services+review_regressions+benchmark+cli tests; actual 60.06%; 4112 integration tests).
         run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=60 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
-

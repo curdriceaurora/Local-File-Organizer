@@ -33,13 +33,8 @@ print(tomllib.loads(Path("pyproject.toml").read_text())['project']['version'])
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
-# ---------------------------------------------------------------------------
-# Application manifest path (passed explicitly when invoking PyInstaller)
-# ---------------------------------------------------------------------------
-$manifestFile = Join-Path $repoRoot "desktop\build\app.manifest"
-
 if (-not $SkipBuild) {
-  python scripts/build.py --clean --manifest-file $manifestFile
+  python scripts/build.py --clean
 }
 
 $version = Get-Version

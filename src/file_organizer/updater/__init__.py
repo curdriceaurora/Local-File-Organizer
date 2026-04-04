@@ -14,9 +14,9 @@ from file_organizer.updater.checker import ReleaseInfo, UpdateChecker
 from file_organizer.updater.installer import UpdateInstaller
 from file_organizer.updater.manager import UpdateManager
 from file_organizer.updater.sidecar_updater import (
+    BackendUpdateStatus,
     CoordinatedUpdateResult,
-    SidecarUpdateStatus,
-    check_sidecar_update,
+    check_backend_update,
     coordinated_update,
     verify_sha256,
 )
@@ -24,11 +24,11 @@ from file_organizer.updater.sidecar_updater import (
 __all__ = [
     "CoordinatedUpdateResult",
     "ReleaseInfo",
-    "SidecarUpdateStatus",
+    "BackendUpdateStatus",
     "UpdateChecker",
     "UpdateInstaller",
     "UpdateManager",
-    "check_sidecar_update",
+    "check_backend_update",
     "coordinated_update",
     "verify_sha256",
 ]

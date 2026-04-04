@@ -11,7 +11,7 @@ Typical usage::
 
     result = coordinated_update()
     if result.success:
-        print("Both components updated to", result.sidecar_version)
+        print("Both components updated to", result.backend_version)
     elif result.rolled_back:
         print("Partial update detected; rolled back launcher to previous version")
     else:
@@ -40,12 +40,12 @@ _DEFAULT_REPO = "curdriceaurora/Local-File-Organizer"
 
 
 @dataclass
-class SidecarUpdateStatus:
-    """Status of a check or installation for the sidecar component.
+class BackendUpdateStatus:
+    """Status of a check or installation for the backend component.
 
     Attributes:
-        available: Whether a sidecar update is available.
-        current_version: Currently running sidecar version.
+        available: Whether a backend update is available.
+        current_version: Currently running backend version.
         latest_version: Latest available version (empty if unavailable).
         release: Full release info (``None`` if no update found).
         install_result: Installation outcome (``None`` if not installed).
@@ -68,8 +68,8 @@ class CoordinatedUpdateResult:
         success: Both components updated successfully.
         rolled_back: Launcher was rolled back due to backend failure.
         shell_updated: Whether the launcher component was updated.
-        sidecar_updated: Whether the backend component was updated.
-        sidecar_version: New backend version (empty if not updated).
+        backend_updated: Whether the backend component was updated.
+        backend_version: New backend version (empty if not updated).
         shell_version: New launcher version (empty if not updated).
         message: Human-readable status message.
         events: List of notification events emitted during the process.
@@ -78,8 +78,8 @@ class CoordinatedUpdateResult:
     success: bool = False
     rolled_back: bool = False
     shell_updated: bool = False
-    sidecar_updated: bool = False
-    sidecar_version: str = ""
+    backend_updated: bool = False
+    backend_version: str = ""
     shell_version: str = ""
     message: str = ""
     events: list[str] = field(default_factory=list)
@@ -90,16 +90,16 @@ class CoordinatedUpdateResult:
 # ---------------------------------------------------------------------------
 
 
-def check_sidecar_update(
+def check_backend_update(
     *,
     repo: str = _DEFAULT_REPO,
     current_version: str = "",
     include_prereleases: bool = False,
-) -> SidecarUpdateStatus:
-    """Check whether a sidecar (Python backend) update is available.
+) -> BackendUpdateStatus:
+    """Check whether a backend (Python binary) update is available.
 
     Delegates to the existing :class:`~file_organizer.updater.checker.UpdateChecker`
-    and wraps the result in a :class:`SidecarUpdateStatus`.
+    and wraps the result in a :class:`BackendUpdateStatus`.
 
     Args:
         repo: GitHub ``owner/repo`` to query.
@@ -107,7 +107,7 @@ def check_sidecar_update(
         include_prereleases: Whether pre-releases count as updates.
 
     Returns:
-        :class:`SidecarUpdateStatus` describing the current state.
+        :class:`BackendUpdateStatus` describing the current state.
     """
     checker = UpdateChecker(
         repo=repo,
@@ -116,18 +116,18 @@ def check_sidecar_update(
     )
     release = checker.check()
     if release is None:
-        return SidecarUpdateStatus(
+        return BackendUpdateStatus(
             available=False,
             current_version=checker.current_version,
-            message=f"Sidecar up to date: {checker.current_version}",
+            message=f"Backend up to date: {checker.current_version}",
         )
 
-    return SidecarUpdateStatus(
+    return BackendUpdateStatus(
         available=True,
         current_version=checker.current_version,
         latest_version=release.version,
         release=release,
-        message=f"Sidecar update available: {checker.current_version} -> {release.version}",
+        message=f"Backend update available: {checker.current_version} -> {release.version}",
     )
 
 
@@ -173,8 +173,8 @@ def coordinated_update(
         if event_callback is not None:
             event_callback(event, payload)
 
-    # Step 1: Check for sidecar update.
-    status = check_sidecar_update(
+    # Step 1: Check for backend update.
+    status = check_backend_update(
         repo=repo,
         current_version=current_version,
         include_prereleases=include_prereleases,
@@ -219,12 +219,12 @@ def coordinated_update(
         result.success = True
         return result
 
-    # Step 4: Install sidecar.
+    # Step 4: Install backend.
     install_result = installer.install(downloaded)
 
     if install_result.success:
-        result.sidecar_updated = True
-        result.sidecar_version = status.latest_version
+        result.backend_updated = True
+        result.backend_version = status.latest_version
         result.success = True
         result.message = f"Backend updated: {status.current_version} -> {status.latest_version}"
         emit("update-installed", {"version": status.latest_version})
