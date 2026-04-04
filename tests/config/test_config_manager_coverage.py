@@ -113,6 +113,7 @@ class TestConfigManagerSave:
         profiles = mgr.list_profiles()
         assert "overridden" in profiles
 
+    @pytest.mark.ci
     def test_save_overwrites_invalid_existing(self, tmp_path):
         config_path = tmp_path / "config.yaml"
         config_path.write_text("invalid yaml: {{")
@@ -166,6 +167,7 @@ class TestConfigManagerDeleteProfile:
         mgr = ConfigManager(config_dir=tmp_path)
         assert mgr.delete_profile("any") is False
 
+    @pytest.mark.ci
     def test_delete_invalid_yaml(self, tmp_path):
         (tmp_path / "config.yaml").write_text("{{bad")
         mgr = ConfigManager(config_dir=tmp_path)

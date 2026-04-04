@@ -115,7 +115,9 @@ class ConfigManager:
                 existing = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
             except (OSError, yaml.YAMLError, UnicodeDecodeError):
                 logger.warning(
-                    "Failed to load existing config from %s, starting fresh", config_path, exc_info=True
+                    "Failed to load existing config from %s, starting fresh",
+                    config_path,
+                    exc_info=True,
                 )
                 existing = {}
 
