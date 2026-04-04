@@ -11,9 +11,7 @@ from pathlib import Path
 
 import pytest
 
-MANIFEST_PATH = (
-    Path(__file__).parent.parent.parent / "desktop" / "build" / "app.manifest"
-)
+MANIFEST_PATH = Path(__file__).parent.parent.parent / "desktop" / "build" / "app.manifest"
 
 # XML namespace map used in the manifest
 NS = {
@@ -52,7 +50,7 @@ class TestWindowsManifestXML:
         try:
             return ET.parse(str(MANIFEST_PATH))
         except ET.ParseError as exc:
-            pytest.fail(f"windows-manifest.xml is not valid XML: {exc}")
+            pytest.fail(f"app.manifest is not valid XML: {exc}")
 
     def test_xml_parses_without_error(self, manifest_tree: ET.ElementTree) -> None:
         """The manifest must be parseable XML with no syntax errors."""

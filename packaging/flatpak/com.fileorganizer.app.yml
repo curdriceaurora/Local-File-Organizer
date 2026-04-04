@@ -16,7 +16,7 @@ modules:
   - name: file-organizer
     buildsystem: simple
     build-commands:
-      # Install the desktop binary
+      # Install the pywebview desktop binary (produced by PyInstaller via build_linux.sh)
       - install -Dm755 file-organizer /app/bin/file-organizer
       # Install desktop entry
       - install -Dm644 com.fileorganizer.app.desktop /app/share/applications/com.fileorganizer.app.desktop
@@ -27,6 +27,9 @@ modules:
       # Install AppStream metadata
       - install -Dm644 com.fileorganizer.app.metainfo.xml /app/share/metainfo/com.fileorganizer.app.metainfo.xml
     sources:
+      # Note: build_linux.sh produces a versioned binary (e.g. file-organizer-1.0.0-linux-x86_64).
+      # The Flatpak build step expects an unversioned copy at dist/file-organizer.
+      # Ensure "cp dist/file-organizer-* dist/file-organizer" is run before flatpak-builder.
       - type: file
         path: ../../dist/file-organizer
         dest-filename: file-organizer

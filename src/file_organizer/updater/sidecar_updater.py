@@ -193,13 +193,13 @@ def coordinated_update(
 
     asset = installer.select_asset(release)
     if asset is None:
-        result.message = "No compatible sidecar asset found for this platform."
+        result.message = "No compatible backend asset found for this platform."
         emit("update-failed", {"reason": result.message})
         return result
 
     expected_sha256 = installer.find_checksum(release, asset.name)
     if expected_sha256:
-        logger.info("Expected sidecar SHA256: {}...", expected_sha256[:16])
+        logger.info("Expected backend SHA256: {}...", expected_sha256[:16])
 
     # Step 3: Download.
     emit("update-downloading", {"version": status.latest_version, "asset": asset.name})
@@ -209,13 +209,13 @@ def coordinated_update(
     )
 
     if downloaded is None:
-        result.message = "Sidecar download failed or SHA256 verification failed."
+        result.message = "Backend download failed or SHA256 verification failed."
         emit("update-failed", {"reason": result.message})
         return result
 
     if dry_run:
         downloaded.unlink(missing_ok=True)
-        result.message = f"Dry run: would install sidecar {status.latest_version} from {asset.name}"
+        result.message = f"Dry run: would install backend {status.latest_version} from {asset.name}"
         result.success = True
         return result
 
@@ -226,12 +226,14 @@ def coordinated_update(
         result.sidecar_updated = True
         result.sidecar_version = status.latest_version
         result.success = True
-        result.message = f"Sidecar updated: {status.current_version} -> {status.latest_version}"
+        result.message = f"Backend updated: {status.current_version} -> {status.latest_version}"
         emit("update-installed", {"version": status.latest_version})
         return result
 
-    # Step 5: Sidecar install failed — attempt shell rollback.
-    logger.error("Sidecar install failed: {}. Attempting shell rollback.", install_result.message)
+    # Step 5: Backend install failed — attempt launcher rollback.
+    logger.error(
+        "Backend install failed: {}. Attempting launcher rollback.", install_result.message
+    )
     emit("update-failed", {"reason": install_result.message})
 
     shell_manager = UpdateManager(
@@ -244,8 +246,8 @@ def coordinated_update(
 
     result.rolled_back = rolled_back
     result.success = False
-    result.message = f"Sidecar install failed: {install_result.message}. " + (
-        "Shell rolled back successfully." if rolled_back else "Shell rollback also failed."
+    result.message = f"Backend install failed: {install_result.message}. " + (
+        "Launcher rolled back successfully." if rolled_back else "Launcher rollback also failed."
     )
 
     return result

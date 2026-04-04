@@ -143,16 +143,6 @@ install_python_dependencies() {
   run_step "Install CI helper packages" "$PYTHON_BIN" -m pip install faker pip-audit bandit[toml]
 }
 
-install_node_dependencies() {
-  if [[ -f desktop/package.json ]]; then
-    if command -v npm >/dev/null 2>&1; then
-      run_step "Install desktop npm dependencies" npm --prefix desktop install
-    else
-      echo "Skipping desktop npm install: npm not found."
-    fi
-  fi
-}
-
 run_in_matrix_parallel() {
   local label="$1"
   local fn_name="$2"
@@ -420,7 +410,6 @@ TASKS=("${EXPANDED_TASKS[@]}")
 
 if $RUN_INSTALL; then
   install_python_dependencies
-  install_node_dependencies
 fi
 
 echo "Running local CI tasks: ${TASKS[*]}"
