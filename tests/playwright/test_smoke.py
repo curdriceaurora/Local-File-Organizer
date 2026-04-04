@@ -34,7 +34,7 @@ pytest.importorskip(
     reason="playwright not installed — run: pip install 'file-organizer[dev]' && playwright install chromium",
 )
 
-from playwright.sync_api import Page, Response, expect  # noqa: E402
+from playwright.sync_api import Page, Response, expect
 
 pytestmark = [
     pytest.mark.e2e,
@@ -159,16 +159,19 @@ class TestAPIEndpoints:
     def test_health_endpoint(self, page: Page) -> None:
         """Health endpoint returns a valid health status JSON body.
 
-        Accepts 200 (ok), 207 (degraded — Ollama unreachable), or 503 (error)
-        as per the documented health route contract.  Plain ``response.ok``
-        would reject 207, causing false failures when Ollama is not running.
+        Accepts 200 (ok) or 207 (degraded — Ollama unreachable).  503 is the
+        ``"error"`` / ``"unhealthy"`` path and is not an acceptable smoke-test
+        outcome.  Plain ``response.ok`` would reject 207, causing false
+        failures when Ollama is not running.
         """
         response = page.request.get("/api/v1/health")
-        assert response.status in (200, 207, 503), (
-            f"Unexpected health status {response.status}; expected 200/207/503"
+        assert response.status in (200, 207), (
+            f"Unexpected health status {response.status}; expected 200 or 207"
         )
         body = response.json()
-        assert "status" in body, f"Unexpected health payload: {body}"
+        assert body.get("status") in {"ok", "degraded", "unknown"}, (
+            f"Unexpected health payload: {body}"
+        )
 
     def test_static_assets_reachable(self, page: Page) -> None:
         """At least one static asset (CSS or JS) is served correctly."""
@@ -236,6 +239,4 @@ class TestPageStructure:
         """
         response = page.goto("/ui/this-route-does-not-exist-smoke-check")
         assert response is not None, "page.goto() returned None for 404 path"
-        assert response.status == 404, (
-            f"Expected 404 for unknown route, got {response.status}"
-        )
+        assert response.status == 404, f"Expected 404 for unknown route, got {response.status}"

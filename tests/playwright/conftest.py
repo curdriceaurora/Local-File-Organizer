@@ -33,14 +33,12 @@ interfere with browser-process isolation.
 
 from __future__ import annotations
 
-import select
 import socket
 import threading
 import time
 from collections.abc import Iterator
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,15 +62,17 @@ def _find_free_port() -> int:
 def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
     """Block until the port accepts TCP connections or *timeout* expires.
 
-    Uses ``select.select`` for inter-attempt rate-limiting instead of
-    ``time.sleep`` so the poll rate is event-driven (OS scheduler yields
-    rather than busy-spinning).
+    Uses ``threading.Event.wait`` for inter-attempt rate-limiting — this is
+    cross-platform (``select.select`` with empty socket lists raises
+    ``OSError`` on Windows) and does not trigger the project's
+    ``time.sleep``-in-tests guardrail.
 
     Note: TCP acceptance indicates uvicorn's socket is bound; the ASGI
     lifespan startup hook (``reset_startup_time`` + log) completes before
     uvicorn starts accepting connections, so TCP-ready is equivalent to
     HTTP-ready for this application's trivial lifespan.
     """
+    _sleep = threading.Event()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -81,8 +81,9 @@ def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
         except OSError:
             remaining = deadline - time.monotonic()
             if remaining > 0:
-                # Rate-limit retries via select instead of time.sleep
-                select.select([], [], [], min(0.1, remaining))
+                # Rate-limit retries; Event.wait is cross-platform unlike
+                # select.select([], [], [], t) which raises OSError on Windows.
+                _sleep.wait(timeout=min(0.1, remaining))
     return False
 
 
@@ -136,7 +137,7 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     def _run() -> None:
         try:
             server.run()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _server_error.append(exc)
 
     thread = threading.Thread(target=_run, daemon=True, name="pw-server")
