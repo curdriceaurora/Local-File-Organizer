@@ -1476,6 +1476,45 @@ file-organizer autotag batch ~/Documents --pattern "*.pdf" --json
 
 ---
 
+## `file-organizer-desktop` — Native Desktop Window
+
+Launch the File Organizer desktop application as a native OS window powered by
+pywebview.
+
+**Usage:**
+
+```bash
+file-organizer-desktop
+```
+
+The command starts the FastAPI web UI on a random free port in a background
+thread, waits up to 10 seconds for the server to become ready, then opens a
+native OS window (WebKit on macOS, Edge WebView2 on Windows, WebKitGTK on
+Linux) pointing at the local server.
+
+The process exits cleanly when the window is closed; no background server is
+left running.
+
+**Prerequisites:**
+
+- `pip install "local-file-organizer[desktop]"` (installs pywebview + uvicorn)
+- Ollama running with at least one model pulled
+- Linux: `sudo apt-get install -y gir1.2-webkit2-4.1`
+
+**Examples:**
+
+```bash
+# Start the desktop window
+file-organizer-desktop
+
+# Start with Ollama running in the background
+ollama serve & file-organizer-desktop
+```
+
+See [Desktop App Guide](desktop-app.md) for full documentation.
+
+---
+
 ## Short Alias
 
 Use `fo` as a short alias for `file-organizer`:

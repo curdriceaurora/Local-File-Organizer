@@ -23,6 +23,7 @@
 - **Deduplication**: Hash and semantic duplicate detection
 - **Undo/Redo**: Full operation history
 - **PARA + Johnny Decimal**: Built-in organizational methodologies
+- **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
 - **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
 
 ## Screenshots
@@ -34,7 +35,7 @@
 ## Quick Start
 
 ```bash
-pip install -e .
+pip install -e ".[desktop]"
 
 # Pull models
 ollama pull qwen2.5:3b-instruct-q4_K_M
@@ -45,6 +46,9 @@ file-organizer organize ./Downloads ./Organized --dry-run
 
 # Launch the TUI
 file-organizer tui
+
+# Launch the native desktop window
+file-organizer-desktop
 ```
 
 ## Web UI (Preview)
@@ -61,6 +65,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 - [User Guide](docs/USER_GUIDE.md)
 - [CLI Reference](docs/cli-reference.md)
+- [Desktop App Guide](docs/desktop-app.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Getting Started](docs/getting-started.md)
@@ -78,6 +83,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 | Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
 | Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB formats |
 | CAD | `pip install -e ".[cad]"` | DXF and CAD format support |
+| Desktop | `pip install -e ".[desktop]"` | Native desktop window via pywebview (uvicorn + WebKit/Edge) |
 | Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
 | All | `pip install -e ".[all]"` | Everything above |
 

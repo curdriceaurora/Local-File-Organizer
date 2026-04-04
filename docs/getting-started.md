@@ -53,6 +53,40 @@ file-organizer serve
 See [Installation Guide](admin/installation.md) for options.
 ````
 
+=== "Desktop App"
+
+````markdown
+**Best for**: Users who want a native window without managing a browser tab
+
+**Prerequisites**:
+- Python 3.11 or higher
+- Ollama installed and running
+- Linux only: `sudo apt-get install -y gir1.2-webkit2-4.1`
+
+**Install**:
+
+```bash
+# From PyPI
+pip install "local-file-organizer[desktop]"
+
+# Or from source
+git clone https://github.com/curdriceaurora/Local-File-Organizer.git
+cd Local-File-Organizer
+pip install -e ".[desktop]"
+```
+
+**Launch**:
+
+```bash
+ollama serve &
+file-organizer-desktop
+```
+
+A native OS window opens automatically — no browser required.
+
+See [Desktop App Guide](desktop-app.md) for installation options, configuration, and troubleshooting.
+````
+
 === "From Source"
 
 ````markdown

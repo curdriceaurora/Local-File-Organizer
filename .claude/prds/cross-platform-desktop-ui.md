@@ -1,72 +1,70 @@
 ---
 name: cross-platform-desktop-ui
-description: Cross-Platform Desktop UI & Packaging Strategy using Tauri v2
-status: in-progress
+description: Cross-Platform Desktop UI & Packaging Strategy using pywebview
+status: completed
 created: 2026-03-02T03:55:10Z
-updated: 2026-03-02T03:55:10Z
+updated: 2026-04-04T00:00:00Z
 ---
 
 # Cross-Platform Desktop UI & Packaging Strategy
 
 ## Context
 
-File Organizer v2.0 is a Python-based AI-powered file management tool (~78,800 LOC, 314 modules) with four existing interfaces: CLI (Typer), TUI (Textual), Web UI (FastAPI + Jinja2 + HTMX), and REST API (FastAPI). All UIs directly couple to `FileOrganizer` core with no service facade. The project currently ships via PyInstaller with platform-specific packaging scripts (macOS .dmg, Windows Inno Setup .exe, Linux AppImage) but lacks native OS integration (no system tray, no context menus, no daemon management via launchd/systemd/Windows Service).
+File Organizer v2.0 is a Python-based AI-powered file management tool (~78,800 LOC, 314 modules)
+with four existing interfaces: CLI (Typer), TUI (Textual), Web UI (FastAPI + Jinja2 + HTMX), and
+REST API (FastAPI). The project ships native desktop binaries on macOS (arm64 + x86_64), Windows
+(x86_64), and Linux (x86_64) using a pure-Python pywebview approach.
 
-**Goal**: Ship native desktop binaries on macOS (arm64 + x86_64), Windows (x86_64 + arm64), and Linux (x86_64 + arm64) with proper packaging, code signing, permissions, and native OS integration.
+**Goal**: Ship native desktop binaries with a single-process Python architecture — no Rust,
+no Node, no Electron.
 
-## Strategy: Hybrid (Tauri v2 Shell + Existing Web UI)
+## Strategy: pywebview (single Python process)
 
-**Tauri v2** uses system webview (0 MB added), shell adds only ~5-10 MB, existing Web UI works as-is inside webview, first-class system tray/notifications/dialogs/updater, sidecar plugin manages PyInstaller backend.
+A single `file-organizer-desktop` process:
 
-## Phases
+1. Allocates a free ephemeral port via `socket`
+2. Starts uvicorn (serving the existing FastAPI web UI) in a daemon thread
+3. Polls for TCP readiness (50 ms intervals, 10 s timeout)
+4. Opens a native OS window via `webview.create_window()` + `webview.start()`
+5. Exits cleanly when the window closes (daemon thread tears down automatically)
 
-### Phase 1: Service Facade + Config Consolidation (1-2 weeks)
+**Platform webview backends:**
 
-- Create `services/facade.py` wrapping `FileOrganizer` + key services
-- Fix hardcoded config paths to use `PathManager`
-- Ensure `/api/v1/health` endpoint is reliable
+| Platform | Backend |
+|----------|---------|
+| macOS | WebKit (`webview.platforms.cocoa`) |
+| Linux | WebKitGTK (`webview.platforms.gtk`) |
+| Windows | Edge WebView2 (`webview.platforms.edgechromium`) |
 
-### Phase 2: Tauri Shell Scaffold (2-3 weeks)
+## Implementation
 
-- Initialize Tauri v2 project at `desktop/`
-- Configure sidecar process management
-- Splash screen, basic system tray, native file dialogs
-- Verify Web UI in webview on macOS
+### Completed
 
-### Phase 3: Cross-Platform Builds + Packaging (2-3 weeks)
+- `src/file_organizer/desktop/app.py` — `launch()` entry point
+- `scripts/build_config.py` — `DesktopBuildConfig`, `DESKTOP_HIDDEN_IMPORTS`
+- `scripts/build.py` — `--desktop` flag, `file_organizer_desktop.spec`
+- `.github/workflows/build.yml` — pywebview-only CI pipeline
+- `scripts/build_linux.sh` — AppImage packaging for desktop binary
+- `desktop/build/entitlements.plist` — macOS code-signing entitlements
 
-- Sidecar-named binaries, platform build scripts
-- CI/CD with Rust toolchain, app icons
-- entitlements.plist, Windows app.manifest
+### Bundle Size Estimate
 
-### Phase 4: Native OS Integration (3-4 weeks)
+- Python backend (PyInstaller): ~100–150 MB
+- pywebview: ~5 MB
+- System webview: 0 MB (uses OS built-in)
+- **Total: ~105–155 MB** (vs Electron ~250–350 MB)
 
-- Full system tray menu
-- Daemon manager (launchd/systemd/Windows Service)
-- Context menus (Finder/Explorer/Nautilus)
-- Native notifications, auto-launch
+## Key Design Decisions
 
-### Phase 5: Update System Integration (1-2 weeks)
+- `webview.start()` **must** be called from the main thread (OS requirement on macOS and Windows).
+  The uvicorn server runs in a daemon background thread.
+- Port is allocated by binding to port 0 and immediately releasing; no TOCTOU issue under
+  normal single-user desktop conditions.
+- No system tray, no daemon manager in v1. These are deferred to a future epic.
 
-- tauri-plugin-updater + existing UpdateInstaller coordination
-- In-app update banner via WebSocket
+## Future Work
 
-### Phase 6: Additional Linux Packaging (1-2 weeks)
-
-- Flatpak manifest
-- Debian packaging (.deb)
-- CI matrix additions
-
-## Bundle Size Estimate
-
-- Python backend (PyInstaller): ~100-150 MB
-- Tauri shell: ~5-10 MB
-- System webview: 0 MB
-- **Total: ~110-165 MB** (vs Electron ~250-350 MB)
-
-## Key Risks
-
-- WebView2 missing on older Windows 10 (mitigated: Tauri bundles bootstrapper)
-- WebKitGTK version variance on Linux (mitigated: AppImage/Flatpak bundles it)
-- Python sidecar startup latency (mitigated: splash screen + daemon pre-warm)
-- Rust learning curve (mitigated: small shell ~500-1000 LOC)
+- System tray integration (show/hide window, quit)
+- Auto-launch on login (launchd/systemd/Windows Task Scheduler)
+- Context-menu integration (Finder/Explorer/Nautilus)
+- In-app auto-update banner
