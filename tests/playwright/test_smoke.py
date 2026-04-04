@@ -91,7 +91,9 @@ class TestPageLoads:
         """
         _goto_ok(page, "/ui/setup")
         _assert_no_server_error(page)
-        expect(page.locator("html")).to_be_visible()
+        headings = page.locator("h1, h2, h3")
+        assert headings.count() > 0, "Setup page has no heading elements"
+        assert page.title() != "", "Setup page rendered with empty <title>"
 
     def test_home_redirect(self, page: Page) -> None:
         """Root path redirects to ``/ui/setup`` on a fresh server.
@@ -111,14 +113,16 @@ class TestPageLoads:
         """File browser renders the main listing view."""
         _goto_ok(page, "/ui/files")
         _assert_no_server_error(page)
-        expect(page.locator("body")).to_be_visible()
+        headings = page.locator("h1, h2, h3")
+        assert headings.count() > 0, "Files page has no heading elements"
         assert page.title() != "", "Files page rendered with empty <title>"
 
     def test_organize_dashboard_page(self, page: Page) -> None:
         """Organize dashboard renders the scan/execute workflow page."""
         _goto_ok(page, "/ui/organize")
         _assert_no_server_error(page)
-        expect(page.locator("body")).to_be_visible()
+        headings = page.locator("h1, h2, h3")
+        assert headings.count() > 0, "Organize page has no heading elements"
         assert page.title() != "", "Organize page rendered with empty <title>"
 
     def test_settings_page(self, page: Page) -> None:
@@ -139,13 +143,13 @@ class TestPageLoads:
         """Login page renders (available regardless of auth_enabled setting)."""
         _goto_ok(page, "/ui/profile/login")
         _assert_no_server_error(page)
-        expect(page.locator("body")).to_be_visible()
+        expect(page.locator("form")).to_be_visible()
 
     def test_profile_register_page(self, page: Page) -> None:
         """Registration page renders without errors."""
         _goto_ok(page, "/ui/profile/register")
         _assert_no_server_error(page)
-        expect(page.locator("body")).to_be_visible()
+        expect(page.locator("form")).to_be_visible()
 
 
 # ---------------------------------------------------------------------------

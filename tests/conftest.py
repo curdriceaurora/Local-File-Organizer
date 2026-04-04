@@ -23,7 +23,17 @@ from file_organizer.tui.app import FileOrganizerApp
 
 # Review-regression fixtures include intentionally failing `test_*.py` files used as detector input.
 # Ignore them in normal pytest discovery so they don't execute as real tests in full-suite CI runs.
-collect_ignore_glob = ["fixtures/review_regressions/**/tests/test_*.py"]
+collect_ignore_glob = [
+    # Review-regression fixtures contain intentionally failing test_*.py files used
+    # as detector input — exclude from normal pytest discovery.
+    "fixtures/review_regressions/**/tests/test_*.py",
+    # Playwright browser tests require `playwright install chromium` and
+    # --override-ini='addopts=' to suppress --cov interference.  Exclude from
+    # default collection so `pytest tests/` does not attempt to import
+    # playwright (which raises ImportError on machines without the package).
+    # Run explicitly: pytest tests/playwright/ --browser chromium --override-ini='addopts='
+    "playwright/**",
+]
 
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
