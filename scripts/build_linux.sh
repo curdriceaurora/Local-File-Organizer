@@ -63,20 +63,17 @@ fi
 echo "    Found: ${EXECUTABLE}"
 
 # ---------------------------------------------------------------------------
-# Create Tauri sidecar copy (Tauri expects: file-organizer-backend-{target-triple})
-#
-# Target triples follow the Rust convention (`rustc -vV | grep host`) so that
-# Tauri can resolve the correct sidecar binary at build and runtime.
+# Detect whether we're packaging the CLI or the pywebview desktop executable.
+# If a desktop-specific binary exists in dist/, prefer it for the AppImage.
 # ---------------------------------------------------------------------------
-echo "==> Creating Tauri sidecar copy..."
-SIDECAR_TRIPLE="x86_64-unknown-linux-gnu"
-if [[ "$ARCH" == "arm64" ]]; then
-    SIDECAR_TRIPLE="aarch64-unknown-linux-gnu"
+DESKTOP_EXECUTABLE=$(find "${DIST_DIR}" -maxdepth 1 -name "file-organizer-desktop-*" \
+    -not -name "*.AppImage" -not -name "*.sha256" -type f 2>/dev/null | head -1)
+IS_DESKTOP=false
+if [[ -n "$DESKTOP_EXECUTABLE" ]]; then
+    EXECUTABLE="${DESKTOP_EXECUTABLE}"
+    IS_DESKTOP=true
+    echo "==> Desktop executable detected: ${EXECUTABLE}"
 fi
-SIDECAR_PATH="${DIST_DIR}/file-organizer-backend-${SIDECAR_TRIPLE}"
-cp "${EXECUTABLE}" "${SIDECAR_PATH}"
-chmod +x "${SIDECAR_PATH}"
-echo "    Sidecar: ${SIDECAR_PATH}"
 
 # ---------------------------------------------------------------------------
 # Download appimagetool if needed
@@ -123,7 +120,11 @@ mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
 cp "${EXECUTABLE}" "${APPDIR}/usr/bin/file-organizer"
 chmod +x "${APPDIR}/usr/bin/file-organizer"
 
-# Create .desktop file
+# Create .desktop file (Terminal=false for pywebview desktop app; true for CLI)
+TERMINAL_FLAG="true"
+if [[ "$IS_DESKTOP" == "true" ]]; then
+    TERMINAL_FLAG="false"
+fi
 cat > "${APPDIR}/usr/share/applications/${APP_NAME}.desktop" << DESKTOP
 [Desktop Entry]
 Type=Application
@@ -132,7 +133,7 @@ Comment=AI-powered local file management
 Exec=file-organizer
 Icon=file-organizer
 Categories=Utility;FileManager;
-Terminal=true
+Terminal=${TERMINAL_FLAG}
 DESKTOP
 
 # Copy desktop file to root (required by AppImage spec)

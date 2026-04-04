@@ -14,9 +14,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from build_config import (
     APP_NAME,
     APP_VERSION,
+    DESKTOP_HIDDEN_IMPORTS,
     EXCLUDES,
     HIDDEN_IMPORTS,
     BuildConfig,
+    DesktopBuildConfig,
     current_arch,
     current_platform,
 )
@@ -123,3 +125,80 @@ class TestConstants:
         # Should be semver-like
         parts = APP_VERSION.split(".")
         assert len(parts) >= 2
+
+
+@pytest.mark.unit
+class TestDesktopHiddenImports:
+    def test_contains_webview(self) -> None:
+        assert "webview" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_uvicorn(self) -> None:
+        assert "uvicorn" in DESKTOP_HIDDEN_IMPORTS
+        assert "uvicorn.config" in DESKTOP_HIDDEN_IMPORTS
+        assert "uvicorn.main" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_fastapi(self) -> None:
+        assert "fastapi" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_starlette(self) -> None:
+        assert "starlette" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_jinja2(self) -> None:
+        assert "jinja2" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_file_organizer_desktop(self) -> None:
+        assert "file_organizer.desktop" in DESKTOP_HIDDEN_IMPORTS
+        assert "file_organizer.desktop.app" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_contains_file_organizer_api(self) -> None:
+        assert "file_organizer.api" in DESKTOP_HIDDEN_IMPORTS
+
+    def test_no_duplicates(self) -> None:
+        assert len(DESKTOP_HIDDEN_IMPORTS) == len(set(DESKTOP_HIDDEN_IMPORTS))
+
+
+@pytest.mark.unit
+class TestDesktopBuildConfig:
+    def test_windowed_mode(self) -> None:
+        cfg = DesktopBuildConfig()
+        assert cfg.console is False
+
+    def test_output_name_contains_desktop(self) -> None:
+        cfg = DesktopBuildConfig(platform="linux", arch="x86_64")
+        assert "desktop" in cfg.output_name
+
+    def test_output_name_format(self) -> None:
+        cfg = DesktopBuildConfig(platform="linux", arch="x86_64", version="1.2.3")
+        assert cfg.output_name == "file-organizer-desktop-1.2.3-linux-x86_64"
+
+    def test_output_name_windows_has_exe(self) -> None:
+        cfg = DesktopBuildConfig(platform="windows", arch="x86_64")
+        assert cfg.output_name.endswith(".exe")
+
+    def test_hidden_imports_includes_base(self) -> None:
+        cfg = DesktopBuildConfig()
+        for imp in HIDDEN_IMPORTS:
+            assert imp in cfg.hidden_imports
+
+    def test_hidden_imports_includes_desktop(self) -> None:
+        cfg = DesktopBuildConfig()
+        assert "webview" in cfg.hidden_imports
+        assert "uvicorn" in cfg.hidden_imports
+        assert "fastapi" in cfg.hidden_imports
+        assert "file_organizer.desktop.app" in cfg.hidden_imports
+
+    def test_platform_backend_macos(self) -> None:
+        cfg = DesktopBuildConfig(platform="macos")
+        assert "webview.platforms.cocoa" in cfg.hidden_imports
+
+    def test_platform_backend_linux(self) -> None:
+        cfg = DesktopBuildConfig(platform="linux")
+        assert "webview.platforms.gtk" in cfg.hidden_imports
+
+    def test_platform_backend_windows(self) -> None:
+        cfg = DesktopBuildConfig(platform="windows")
+        assert "webview.platforms.edgechromium" in cfg.hidden_imports
+
+    def test_inherits_from_build_config(self) -> None:
+        cfg = DesktopBuildConfig()
+        assert isinstance(cfg, BuildConfig)
