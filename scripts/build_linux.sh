@@ -67,7 +67,8 @@ echo "    Found: ${EXECUTABLE}"
 # If a desktop-specific binary exists in dist/, prefer it for the AppImage.
 # ---------------------------------------------------------------------------
 DESKTOP_EXECUTABLE=$(find "${DIST_DIR}" -maxdepth 1 -name "file-organizer-desktop-*" \
-    -not -name "*.AppImage" -not -name "*.sha256" -type f 2>/dev/null | head -1)
+    -not -name "*.AppImage" -not -name "*.sha256" -not -name "*.tar.gz" -not -name "*.dmg" \
+    -type f 2>/dev/null | head -1)
 IS_DESKTOP=false
 if [[ -n "$DESKTOP_EXECUTABLE" ]]; then
     EXECUTABLE="${DESKTOP_EXECUTABLE}"

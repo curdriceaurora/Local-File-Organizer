@@ -98,10 +98,11 @@ jobs:
           echo "CLI executable: $cli_exe ($(du -h "$cli_exe" | cut -f1))"
 
           if [ -z "$desktop_exe" ]; then
-            echo "WARNING: No desktop executable found in dist/ (expected for pywebview build)"
-          else
-            echo "Desktop executable: $desktop_exe ($(du -h "$desktop_exe" | cut -f1))"
+            echo "ERROR: No desktop executable found in dist/"
+            ls -la dist/
+            exit 1
           fi
+          echo "Desktop executable: $desktop_exe ($(du -h "$desktop_exe" | cut -f1))"
 
           # Basic smoke test for CLI
           "$cli_exe" --help || true
