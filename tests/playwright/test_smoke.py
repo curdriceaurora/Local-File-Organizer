@@ -1,0 +1,210 @@
+"""Playwright E2E smoke tests for the File Organizer web UI.
+
+Each test verifies that a core page:
+  1. Returns a non-error HTTP status (< 400 after redirects).
+  2. Renders valid HTML (``<html>`` element present).
+  3. Does not display a server-error indicator.
+  4. Shows at least one expected structural element.
+
+These tests are intentionally coarse — they are *smoke* tests, not
+functional tests.  They catch regressions where a template fails to
+render, a route 500s, or a critical import breaks at startup.
+
+Running
+-------
+Playwright browser binaries must be installed once::
+
+    playwright install chromium
+
+Then run (stripping the default ``--cov`` addopts that break browser tests)::
+
+    pytest tests/playwright/ --browser chromium --override-ini='addopts='
+
+To watch the tests execute in a visible window add ``--headed``::
+
+    pytest tests/playwright/ --browser chromium --headed --override-ini='addopts='
+"""
+
+from __future__ import annotations
+
+import pytest
+from playwright.sync_api import Page, Response, expect
+
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.playwright,
+    pytest.mark.timeout(60),  # browser ops need more headroom than unit tests
+]
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _assert_no_server_error(page: Page) -> None:
+    """Assert the rendered page does not contain a server-error indicator."""
+    body_text = page.locator("body").inner_text()
+    assert "Internal Server Error" not in body_text, (
+        "Page rendered a server error:\n" + body_text[:500]
+    )
+    assert "500" not in page.title(), f"Page title suggests 5xx: {page.title()!r}"
+
+
+def _goto_ok(page: Page, path: str) -> Response:
+    """Navigate to *path* (relative to base_url) and assert the response is OK.
+
+    Playwright follows redirects automatically; the returned Response reflects
+    the *final* destination after any 3xx chain.
+
+    Args:
+        page: Playwright Page object.
+        path: Relative path, e.g. ``"/ui/files"``.
+
+    Returns:
+        The final HTTP response.
+    """
+    response = page.goto(path)
+    assert response is not None, f"page.goto({path!r}) returned None"
+    assert response.ok, f"Expected 2xx for {path!r}, got {response.status} ({page.url})"
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Core page smoke tests
+# ---------------------------------------------------------------------------
+
+
+class TestPageLoads:
+    """Verify that each primary web UI page renders without a server error."""
+
+    def test_setup_wizard_page(self, page: Page) -> None:
+        """Setup wizard renders on a fresh (unconfigured) server."""
+        # Home route redirects to /ui/setup when setup_completed is False.
+        # Navigate directly so the test is independent of that redirect logic.
+        _goto_ok(page, "/ui/setup")
+        _assert_no_server_error(page)
+        expect(page.locator("html")).to_be_visible()
+
+    def test_home_redirect(self, page: Page) -> None:
+        """Root path responds with a 2xx (possibly after redirect to /ui/setup)."""
+        response = page.goto("/ui/")
+        assert response is not None
+        # After following redirects Playwright lands on a 2xx page.
+        assert response.ok, f"Expected 2xx after redirect, got {response.status}"
+        _assert_no_server_error(page)
+
+    def test_files_browser_page(self, page: Page) -> None:
+        """File browser renders the main listing view."""
+        _goto_ok(page, "/ui/files")
+        _assert_no_server_error(page)
+        # The files page should contain some structural wrapper element.
+        expect(page.locator("body")).to_be_visible()
+        assert page.title() != "", "Files page rendered with empty <title>"
+
+    def test_organize_dashboard_page(self, page: Page) -> None:
+        """Organize dashboard renders the scan/execute workflow page."""
+        _goto_ok(page, "/ui/organize")
+        _assert_no_server_error(page)
+        expect(page.locator("body")).to_be_visible()
+        assert page.title() != "", "Organize page rendered with empty <title>"
+
+    def test_settings_page(self, page: Page) -> None:
+        """Settings index page renders without errors."""
+        _goto_ok(page, "/ui/settings")
+        _assert_no_server_error(page)
+        expect(page.locator("body")).to_be_visible()
+        assert page.title() != "", "Settings page rendered with empty <title>"
+
+    def test_marketplace_page(self, page: Page) -> None:
+        """Marketplace plugin browser renders without errors."""
+        _goto_ok(page, "/ui/marketplace")
+        _assert_no_server_error(page)
+        expect(page.locator("body")).to_be_visible()
+        assert page.title() != "", "Marketplace page rendered with empty <title>"
+
+    def test_profile_login_page(self, page: Page) -> None:
+        """Login page renders (available regardless of auth_enabled setting)."""
+        _goto_ok(page, "/ui/profile/login")
+        _assert_no_server_error(page)
+        expect(page.locator("body")).to_be_visible()
+
+    def test_profile_register_page(self, page: Page) -> None:
+        """Registration page renders without errors."""
+        _goto_ok(page, "/ui/profile/register")
+        _assert_no_server_error(page)
+        expect(page.locator("body")).to_be_visible()
+
+
+# ---------------------------------------------------------------------------
+# REST API smoke tests (no browser rendering, just HTTP)
+# ---------------------------------------------------------------------------
+
+
+class TestAPIEndpoints:
+    """Verify core REST API endpoints are reachable and return expected shapes."""
+
+    def test_health_endpoint(self, page: Page) -> None:
+        """Health endpoint returns 200 with a JSON body."""
+        response = page.request.get("/api/v1/health")
+        assert response.ok, f"Health endpoint returned {response.status}"
+        body = response.json()
+        assert "status" in body, f"Unexpected health payload: {body}"
+
+    def test_static_assets_reachable(self, page: Page) -> None:
+        """At least one static asset (CSS or JS) is served correctly."""
+        # Navigate to a known page first so the static route is mounted.
+        page.goto("/ui/settings")
+        # Collect all stylesheet hrefs from the DOM.
+        hrefs: list[str] = page.eval_on_selector_all(
+            "link[rel='stylesheet']",
+            "els => els.map(el => el.href)",
+        )
+        if not hrefs:
+            pytest.skip("No <link rel='stylesheet'> found — static assets may not be mounted")
+
+        # Request the first stylesheet and verify it's served.
+        first = hrefs[0]
+        # Use Playwright's request context (no browser rendering needed).
+        resp = page.request.get(first)
+        assert resp.ok, f"Static asset {first!r} returned {resp.status}"
+
+
+# ---------------------------------------------------------------------------
+# Navigation / page-structure tests
+# ---------------------------------------------------------------------------
+
+
+class TestPageStructure:
+    """Verify structural elements that must exist on rendered pages."""
+
+    def test_settings_page_has_heading(self, page: Page) -> None:
+        """Settings page contains at least one heading element."""
+        _goto_ok(page, "/ui/settings")
+        _assert_no_server_error(page)
+        headings = page.locator("h1, h2, h3")
+        assert headings.count() > 0, "Settings page has no heading elements"
+
+    def test_marketplace_page_has_heading(self, page: Page) -> None:
+        """Marketplace page contains at least one heading element."""
+        _goto_ok(page, "/ui/marketplace")
+        _assert_no_server_error(page)
+        headings = page.locator("h1, h2, h3")
+        assert headings.count() > 0, "Marketplace page has no heading elements"
+
+    def test_pages_share_consistent_html_structure(self, page: Page) -> None:
+        """Several pages all render a complete HTML document (html > head > body)."""
+        pages_to_check = [
+            "/ui/setup",
+            "/ui/files",
+            "/ui/settings",
+            "/ui/marketplace",
+        ]
+        for path in pages_to_check:
+            response = page.goto(path)
+            assert response is not None and response.ok, (
+                f"{path!r} returned {response.status if response else 'None'}"
+            )
+            assert page.locator("html").count() == 1, f"{path!r}: no <html> element"
+            assert page.locator("body").count() == 1, f"{path!r}: no <body> element"
+            _assert_no_server_error(page)
