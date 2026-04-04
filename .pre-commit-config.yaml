@@ -111,6 +111,25 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
+      # Diff-coverage gate: changed lines must have ≥80% test coverage
+      # Runs pytest with coverage, then diff-cover against merge base.
+      # Skips if no src/ Python files are staged.
+      # ----------------------------------------------------------------
+      - id: diff-cover
+        name: diff-cover gate (80%)
+        entry: |
+          bash -c '
+          CHANGED=$(git diff --cached --name-only -- "src/**/*.py" "src/*.py")
+          if [ -z "$CHANGED" ]; then exit 0; fi
+          MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~1)
+          pytest tests/ -q --override-ini="addopts=" --cov=file_organizer --cov-report=xml:coverage.xml --no-header 2>/dev/null
+          diff-cover coverage.xml --compare-branch="$MERGE_BASE" --fail-under=80 --quiet
+          '
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # ----------------------------------------------------------------
       # Spelling
       # ----------------------------------------------------------------
       - id: codespell
