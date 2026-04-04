@@ -29,12 +29,12 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip(
-    "playwright",
-    reason="playwright not installed — run: pip install 'file-organizer[dev]' && playwright install chromium",
-)
-
-from playwright.sync_api import Page, Response, expect
+try:
+    from playwright.sync_api import Page, Response, expect
+except ImportError as _exc:
+    raise ImportError(
+        "playwright not installed — run: pip install -e '.[dev]' && playwright install chromium"
+    ) from _exc
 
 pytestmark = [
     pytest.mark.e2e,
@@ -215,7 +215,13 @@ class TestPageStructure:
         assert headings.count() > 0, "Marketplace page has no heading elements"
 
     def test_pages_share_consistent_html_structure(self, page: Page) -> None:
-        """Several pages all render a complete HTML document (html > head > body)."""
+        """Several pages return a complete HTML document in the raw server response.
+
+        Validates DOCTYPE + html + head + body in ``response.text()`` rather
+        than the browser DOM — browsers synthesize ``<html>`` and ``<body>``
+        around bare fragment responses, so DOM-based locator checks pass even
+        when the server returns an incomplete document.
+        """
         pages_to_check = [
             "/ui/setup",
             "/ui/files",
@@ -227,8 +233,15 @@ class TestPageStructure:
             assert response is not None and response.ok, (
                 f"{path!r} returned {response.status if response else 'None'}"
             )
-            assert page.locator("html").count() == 1, f"{path!r}: no <html> element"
-            assert page.locator("body").count() == 1, f"{path!r}: no <body> element"
+            raw = response.text().lower()
+            assert "<!doctype" in raw, f"{path!r}: missing DOCTYPE in raw response"
+            assert "<html" in raw, f"{path!r}: missing <html> in raw response"
+            assert "<head" in raw, f"{path!r}: missing <head> in raw response"
+            assert "<body" in raw, f"{path!r}: missing <body> in raw response"
+            content_type = response.headers.get("content-type", "")
+            assert "text/html" in content_type, (
+                f"{path!r}: unexpected Content-Type {content_type!r}"
+            )
             _assert_no_server_error(page)
 
     def test_unknown_route_returns_404(self, page: Page) -> None:
