@@ -26,7 +26,13 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from build_config import BuildConfig, DesktopBuildConfig, current_platform  # noqa: E402
+from build_config import (  # noqa: E402
+    DATA_FILES,
+    DESKTOP_DATA_FILES,
+    BuildConfig,
+    DesktopBuildConfig,
+    current_platform,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -183,17 +189,14 @@ def generate_spec(config: BuildConfig) -> Path:
     spec_file = _spec_path(config)
     entry = _entry_point(config)
 
-    # Build datas list from config if available, else fall back to default.
-    from build_config import DATA_FILES, DESKTOP_DATA_FILES
-
     data_files = DESKTOP_DATA_FILES if isinstance(config, DesktopBuildConfig) else DATA_FILES
     datas_lines = "\n        ".join(f"('{src}', '{dst}')," for src, dst in data_files)
 
     hidden = ",\n    ".join(f"'{h}'" for h in config.hidden_imports)
     excludes = ",\n    ".join(f"'{e}'" for e in config.excludes)
 
-    # Use relative path from project root for the entry point in the spec.
-    entry_rel = entry.relative_to(_PROJECT_ROOT)
+    # Use posix-style path so spec file works on all platforms including Windows.
+    entry_rel = entry.relative_to(_PROJECT_ROOT).as_posix()
 
     spec_content = f"""\
 # -*- mode: python ; coding: utf-8 -*-
@@ -250,7 +253,11 @@ exe = EXE(
     entitlements_file=None,
 )
 """
-    spec_file.write_text(spec_content)
+    try:
+        spec_file.write_text(spec_content)
+    except OSError as e:
+        print(f"ERROR: Failed to write spec file {spec_file}: {e}")
+        sys.exit(1)
     print(f"Generated spec file: {spec_file}")
     return spec_file
 
