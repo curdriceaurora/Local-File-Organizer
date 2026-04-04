@@ -214,35 +214,32 @@ class TestPageStructure:
         headings = page.locator("h1, h2, h3")
         assert headings.count() > 0, "Marketplace page has no heading elements"
 
-    def test_pages_share_consistent_html_structure(self, page: Page) -> None:
-        """Several pages return a complete HTML document in the raw server response.
+    @pytest.mark.parametrize(
+        "path",
+        ["/ui/setup", "/ui/files", "/ui/settings", "/ui/marketplace"],
+    )
+    def test_pages_share_consistent_html_structure(self, page: Page, path: str) -> None:
+        """Each UI page returns a complete HTML document in the raw server response.
 
         Validates DOCTYPE + html + head + body in ``response.text()`` rather
         than the browser DOM — browsers synthesize ``<html>`` and ``<body>``
         around bare fragment responses, so DOM-based locator checks pass even
-        when the server returns an incomplete document.
+        when the server returns an incomplete document.  Each path is a separate
+        parametrized case so a failure for one path does not prevent the others
+        from running.
         """
-        pages_to_check = [
-            "/ui/setup",
-            "/ui/files",
-            "/ui/settings",
-            "/ui/marketplace",
-        ]
-        for path in pages_to_check:
-            response = page.goto(path)
-            assert response is not None and response.ok, (
-                f"{path!r} returned {response.status if response else 'None'}"
-            )
-            raw = response.text().lower()
-            assert "<!doctype" in raw, f"{path!r}: missing DOCTYPE in raw response"
-            assert "<html" in raw, f"{path!r}: missing <html> in raw response"
-            assert "<head" in raw, f"{path!r}: missing <head> in raw response"
-            assert "<body" in raw, f"{path!r}: missing <body> in raw response"
-            content_type = response.headers.get("content-type", "")
-            assert "text/html" in content_type, (
-                f"{path!r}: unexpected Content-Type {content_type!r}"
-            )
-            _assert_no_server_error(page)
+        response = page.goto(path)
+        assert response is not None and response.ok, (
+            f"{path!r} returned {response.status if response else 'None'}"
+        )
+        raw = response.text().lower()
+        assert "<!doctype" in raw, f"{path!r}: missing DOCTYPE in raw response"
+        assert "<html" in raw, f"{path!r}: missing <html> in raw response"
+        assert "<head" in raw, f"{path!r}: missing <head> in raw response"
+        assert "<body" in raw, f"{path!r}: missing <body> in raw response"
+        content_type = response.headers.get("content-type", "")
+        assert "text/html" in content_type, f"{path!r}: unexpected Content-Type {content_type!r}"
+        _assert_no_server_error(page)
 
     def test_unknown_route_returns_404(self, page: Page) -> None:
         """A nonexistent UI route returns 404, not 500.
