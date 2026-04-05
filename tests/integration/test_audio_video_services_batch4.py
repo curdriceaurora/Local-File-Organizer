@@ -1,9 +1,12 @@
 """Integration tests for audio/video service modules and vision/text processors."""
+
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 from typing import Any
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
@@ -346,8 +349,8 @@ class TestAudioClassifier:
 
     def test_count_keyword_matches(self) -> None:
         from file_organizer.services.audio.classifier import (
-            _count_keyword_matches,
             PODCAST_KEYWORDS,
+            _count_keyword_matches,
         )
 
         text = "Welcome to our podcast episode and subscribe today"
@@ -388,8 +391,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_with_mutagen_mock(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "song.mp3"
@@ -430,8 +433,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_file_path_is_preserved(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "track.mp3"
@@ -456,8 +459,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_format_from_suffix(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "track.flac"
@@ -532,8 +535,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_mutagen_exception_falls_back(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "song.mp3"
@@ -577,8 +580,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_batch_returns_list(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         files = []
@@ -609,8 +612,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_batch_skips_failed_files(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         good_fp = tmp_path / "good.mp3"
@@ -636,9 +639,7 @@ class TestAudioMetadataExtractor:
             "._extract_with_mutagen",
             side_effect=side_effect,
         ):
-            results = AudioMetadataExtractor(use_fallback=False).extract_batch(
-                [good_fp, bad_fp]
-            )
+            results = AudioMetadataExtractor(use_fallback=False).extract_batch([good_fp, bad_fp])
 
         assert len(results) == 1
         assert results[0].file_path == good_fp
@@ -675,8 +676,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_with_id3_tags(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "track.mp3"
@@ -706,8 +707,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_track_number_slash_format(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "track.mp3"
@@ -733,8 +734,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_file_size_in_bytes(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "track.mp3"
@@ -765,8 +766,8 @@ class TestAudioMetadataExtractor:
 
     def test_extract_tinytag_track_slash_format(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         fp = tmp_path / "song.mp3"
@@ -814,8 +815,8 @@ class TestVideoMetadataExtractor:
 
     def test_extract_returns_video_metadata(self, tmp_path: Path) -> None:
         from file_organizer.services.video.metadata_extractor import (
-            VideoMetadataExtractor,
             VideoMetadata,
+            VideoMetadataExtractor,
         )
 
         fp = tmp_path / "video.mp4"
@@ -933,7 +934,6 @@ class TestVideoMetadataExtractor:
 
     def test_extract_creation_date_from_tags(self, tmp_path: Path) -> None:
         import json
-        from datetime import datetime
 
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 
@@ -1080,14 +1080,15 @@ class TestVideoOrganizer:
         assert name == fp.stem
 
     def test_generate_path_screen_recording_with_year(self, tmp_path: Path) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from file_organizer.services.video.organizer import VideoOrganizer
 
         fp = tmp_path / "Screen Recording 2025-01-15 at 3.45.22 PM.mov"
         meta = _make_video_metadata(
             fp,
             duration=45.0,
-            creation_date=datetime(2025, 1, 15, tzinfo=timezone.utc),
+            creation_date=datetime(2025, 1, 15, tzinfo=UTC),
         )
         folder, _ = VideoOrganizer().generate_path(meta)
         assert "2025" in folder
@@ -1102,14 +1103,15 @@ class TestVideoOrganizer:
         assert name == "clip"
 
     def test_generate_path_video_with_year(self, tmp_path: Path) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from file_organizer.services.video.organizer import VideoOrganizer
 
         fp = tmp_path / "vacation.mp4"
         meta = _make_video_metadata(
             fp,
             duration=600.0,
-            creation_date=datetime(2023, 7, 4, tzinfo=timezone.utc),
+            creation_date=datetime(2023, 7, 4, tzinfo=UTC),
         )
         folder, _ = VideoOrganizer().generate_path(meta)
         assert folder == "Videos/2023"
@@ -1213,7 +1215,7 @@ class TestVideoOrganizer:
         assert is_screen_recording("Minecraft 2025-01-15 14-05-32") is True
 
     def test_generate_path_short_clip_exactly_at_threshold(self, tmp_path: Path) -> None:
-        from file_organizer.services.video.organizer import VideoOrganizer, SHORT_CLIP_THRESHOLD
+        from file_organizer.services.video.organizer import SHORT_CLIP_THRESHOLD, VideoOrganizer
 
         fp = tmp_path / "edge.mp4"
         # Duration exactly at threshold should NOT be "Short_Clips"
@@ -1222,7 +1224,7 @@ class TestVideoOrganizer:
         assert folder != "Short_Clips"
 
     def test_generate_path_below_threshold_is_short_clip(self, tmp_path: Path) -> None:
-        from file_organizer.services.video.organizer import VideoOrganizer, SHORT_CLIP_THRESHOLD
+        from file_organizer.services.video.organizer import SHORT_CLIP_THRESHOLD, VideoOrganizer
 
         fp = tmp_path / "short.mp4"
         meta = _make_video_metadata(fp, duration=SHORT_CLIP_THRESHOLD - 1.0)
@@ -1313,21 +1315,17 @@ class TestVisionProcessor:
         result = processor.process_file(fp, perform_ocr=False)
         assert len(result.description) > 0
 
-    def test_process_file_circuit_breaker_opens_on_fatal_error(
-        self, tmp_path: Path
-    ) -> None:
+    def test_process_file_circuit_breaker_opens_on_fatal_error(self, tmp_path: Path) -> None:
         from file_organizer.services.vision_processor import VisionProcessor
 
         fp = tmp_path / "img.jpg"
         fp.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
 
         mock_model = self._make_mock_model()
-        mock_model.generate = MagicMock(
-            side_effect=RuntimeError("connection refused to backend")
-        )
+        mock_model.generate = MagicMock(side_effect=RuntimeError("connection refused to backend"))
 
         processor = VisionProcessor(vision_model=mock_model, backend_cooldown_seconds=9999.0)
-        result1 = processor.process_file(fp, perform_ocr=False)
+        processor.process_file(fp, perform_ocr=False)
         # After fatal error the circuit should be open
         assert processor._is_circuit_open() is True
         # Second call should return fallback immediately
@@ -1335,9 +1333,7 @@ class TestVisionProcessor:
         assert result2.error is not None
         assert "Vision backend" in result2.error
 
-    def test_process_file_non_fatal_error_does_not_open_circuit(
-        self, tmp_path: Path
-    ) -> None:
+    def test_process_file_non_fatal_error_does_not_open_circuit(self, tmp_path: Path) -> None:
         from file_organizer.services.vision_processor import VisionProcessor
 
         fp = tmp_path / "img.jpg"
@@ -1361,9 +1357,7 @@ class TestVisionProcessor:
         from file_organizer.services.vision_processor import VisionProcessor
 
         mock_model = self._make_mock_model()
-        processor = VisionProcessor(
-            vision_model=mock_model, backend_cooldown_seconds=9999.0
-        )
+        processor = VisionProcessor(vision_model=mock_model, backend_cooldown_seconds=9999.0)
         processor._trip_backend_circuit(RuntimeError("test"))
         assert processor._is_circuit_open() is True
 
@@ -1371,9 +1365,7 @@ class TestVisionProcessor:
         from file_organizer.services.vision_processor import VisionProcessor
 
         mock_model = self._make_mock_model()
-        processor = VisionProcessor(
-            vision_model=mock_model, backend_cooldown_seconds=9999.0
-        )
+        processor = VisionProcessor(vision_model=mock_model, backend_cooldown_seconds=9999.0)
         processor._trip_backend_circuit(RuntimeError("dial tcp refused"))
         msg = processor._circuit_open_error()
         assert "Vision backend unavailable" in msg
@@ -1555,9 +1547,18 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="programming")
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value="Python programming content"):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value="Python programming content"):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="programming"):
+            with patch(
+                "file_organizer.services.text_processor.read_file",
+                return_value="Python programming content",
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text",
+                    return_value="Python programming content",
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text",
+                        return_value="programming",
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
@@ -1619,9 +1620,17 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(side_effect=gen_side_effect)
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value="python content"):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value="python content"):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="programming"):
+            with patch(
+                "file_organizer.services.text_processor.read_file", return_value="python content"
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text",
+                    return_value="python content",
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text",
+                        return_value="programming",
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
@@ -1637,9 +1646,17 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="programming")
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value="hello world"):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value="hello world"):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="programming"):
+            with patch(
+                "file_organizer.services.text_processor.read_file", return_value="hello world"
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text",
+                    return_value="hello world",
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text",
+                        return_value="programming",
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(
                             fp, generate_description=False, generate_folder=True
@@ -1657,9 +1674,15 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="notes")
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value="some text"):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value="some text"):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="notes"):
+            with patch(
+                "file_organizer.services.text_processor.read_file", return_value="some text"
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text", return_value="some text"
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text", return_value="notes"
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
@@ -1766,9 +1789,16 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="sample")
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value="sample text"):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value="sample text"):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="sample"):
+            with patch(
+                "file_organizer.services.text_processor.read_file", return_value="sample text"
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text",
+                    return_value="sample text",
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text", return_value="sample"
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
@@ -1785,9 +1815,16 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="words")
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.read_file", return_value=long_content):
-                with patch("file_organizer.services.text_processor.truncate_text", return_value=long_content[:5000]):
-                    with patch("file_organizer.services.text_processor.clean_text", return_value="words"):
+            with patch(
+                "file_organizer.services.text_processor.read_file", return_value=long_content
+            ):
+                with patch(
+                    "file_organizer.services.text_processor.truncate_text",
+                    return_value=long_content[:5000],
+                ):
+                    with patch(
+                        "file_organizer.services.text_processor.clean_text", return_value="words"
+                    ):
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
@@ -1829,7 +1866,9 @@ class TestTextProcessor:
         mock_model.generate = MagicMock(return_value="the a an")  # all stop words
 
         with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch("file_organizer.services.text_processor.clean_text", return_value="programming"):
+            with patch(
+                "file_organizer.services.text_processor.clean_text", return_value="programming"
+            ):
                 processor = TextProcessor(text_model=mock_model)
         result = processor._generate_folder_name("Python programming tutorials and guides")
         # Should be non-empty even with stop-word-only AI response

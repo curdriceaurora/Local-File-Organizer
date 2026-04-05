@@ -1,6 +1,7 @@
 """Integration tests for plugin executor, SDK client, marketplace metadata,
 and deduplication detector/document modules.
 """
+
 from __future__ import annotations
 
 import json
@@ -211,7 +212,6 @@ class TestPluginExecutor:
     def test_call_raises_plugin_error_on_broken_pipe(self, tmp_path: Path) -> None:
         from file_organizer.plugins.errors import PluginError
         from file_organizer.plugins.executor import PluginExecutor
-        from file_organizer.plugins.ipc import PluginResult, encode_result
 
         plugin_file = tmp_path / "my_plugin.py"
         plugin_file.write_text("# dummy")
@@ -856,9 +856,7 @@ class TestPluginMetadataStore:
 
     def test_search_by_tags(self, tmp_path: Path) -> None:
         store = self._make_store(tmp_path)
-        pkg = self._make_package(
-            name="tag-plugin", version="1.0.0", tags=["organizer", "images"]
-        )
+        pkg = self._make_package(name="tag-plugin", version="1.0.0", tags=["organizer", "images"])
         store.sync([pkg])
         results = store.search("", tags=["organizer"])
         assert len(results) == 1
@@ -1189,9 +1187,7 @@ class TestDocumentDeduplicator:
         assert result["analyzed_documents"] == 0
         assert result["space_wasted"] == 0
 
-    def test_find_duplicates_insufficient_docs_returns_empty_groups(
-        self, tmp_path: Path
-    ) -> None:
+    def test_find_duplicates_insufficient_docs_returns_empty_groups(self, tmp_path: Path) -> None:
         from file_organizer.services.deduplication.document_dedup import DocumentDeduplicator
 
         f = tmp_path / "only.txt"
@@ -1272,9 +1268,7 @@ class TestDocumentDeduplicator:
         assert "space_wasted" in result
         assert result["total_documents"] == 2
 
-    def test_compare_documents_returns_none_on_extraction_failure(
-        self, tmp_path: Path
-    ) -> None:
+    def test_compare_documents_returns_none_on_extraction_failure(self, tmp_path: Path) -> None:
         from file_organizer.services.deduplication.document_dedup import DocumentDeduplicator
 
         f1 = tmp_path / "doc1.txt"
@@ -1312,7 +1306,9 @@ class TestDocumentDeduplicator:
 
         dedup = DocumentDeduplicator()
         with patch.object(dedup.extractor, "extract_text", return_value="some text content"):
-            with patch.object(dedup.embedder, "fit_transform", return_value=[[1.0, 0.0], [1.0, 0.0]]):
+            with patch.object(
+                dedup.embedder, "fit_transform", return_value=[[1.0, 0.0], [1.0, 0.0]]
+            ):
                 with patch.object(dedup.analyzer, "compute_similarity", return_value=0.95):
                     result = dedup.compare_documents(f1, f2)
 
@@ -1404,7 +1400,9 @@ class TestMisplacementDetector:
         assert hidden not in paths
 
     def test_detect_misplaced_returns_sorted_by_score(self, tmp_path: Path) -> None:
-        from file_organizer.services.misplacement_detector import MisplacementDetector, MisplacedFile
+        from file_organizer.services.misplacement_detector import (
+            MisplacementDetector,
+        )
 
         # Create files with known types to get some mismatch
         (tmp_path / "image.jpg").write_bytes(b"\xff\xd8\xff" + b"x" * 100)
@@ -1418,7 +1416,10 @@ class TestMisplacementDetector:
             assert result[0].mismatch_score >= result[1].mismatch_score
 
     def test_analyze_context_returns_context_analysis(self, tmp_path: Path) -> None:
-        from file_organizer.services.misplacement_detector import ContextAnalysis, MisplacementDetector
+        from file_organizer.services.misplacement_detector import (
+            ContextAnalysis,
+            MisplacementDetector,
+        )
 
         f = tmp_path / "test.txt"
         f.write_text("hello world")
@@ -1525,9 +1526,7 @@ class TestMisplacementDetector:
         location = detector.find_correct_location(f, pattern_analysis)
         assert isinstance(location, Path)
 
-    def test_find_similar_files_returns_empty_when_target_not_exist(
-        self, tmp_path: Path
-    ) -> None:
+    def test_find_similar_files_returns_empty_when_target_not_exist(self, tmp_path: Path) -> None:
         from file_organizer.services.misplacement_detector import MisplacementDetector
         from file_organizer.services.pattern_analyzer import PatternAnalysis
 
@@ -1608,7 +1607,9 @@ class TestMisplacementDetector:
         assert "detected_at" in d
 
     def test_context_analysis_to_dict(self, tmp_path: Path) -> None:
-        from file_organizer.services.misplacement_detector import ContextAnalysis, MisplacementDetector
+        from file_organizer.services.misplacement_detector import (
+            MisplacementDetector,
+        )
 
         f = tmp_path / "test.txt"
         f.write_text("hello")
@@ -1631,9 +1632,7 @@ class TestMisplacementDetector:
         detector = MisplacementDetector()
         assert detector._is_in_or_near(f, subdir) is True
 
-    def test_is_in_or_near_returns_false_for_deeply_unrelated_path(
-        self, tmp_path: Path
-    ) -> None:
+    def test_is_in_or_near_returns_false_for_deeply_unrelated_path(self, tmp_path: Path) -> None:
         from file_organizer.services.misplacement_detector import MisplacementDetector
 
         # Create a deeper nesting so parent.parent != target.parent

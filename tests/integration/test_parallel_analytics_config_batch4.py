@@ -1,9 +1,11 @@
 """Integration tests for parallel processing, analytics, config manager, and related modules."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 from typing import Any
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
@@ -38,7 +40,6 @@ class TestResumableProcessor:
 
     def test_process_with_resume_creates_job_state(self, tmp_path: Path) -> None:
         from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobStatus
 
         mock_persistence = MagicMock()
         mock_checkpoint_mgr = MagicMock()
@@ -95,8 +96,8 @@ class TestResumableProcessor:
         assert len(saved_ids[0]) > 0
 
     def test_process_with_resume_returns_batch_result(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
         from file_organizer.parallel.result import BatchResult
+        from file_organizer.parallel.resume import ResumableProcessor
 
         mock_persistence = MagicMock()
         mock_checkpoint_mgr = MagicMock()
@@ -168,9 +169,10 @@ class TestResumableProcessor:
             rp.resume_job("nonexistent-id", lambda p: "ok")
 
     def test_resume_job_raises_when_checkpoint_missing(self) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         mock_persistence = MagicMock()
         now = datetime.now(UTC)
@@ -192,10 +194,11 @@ class TestResumableProcessor:
             rp.resume_job("j1", lambda p: "ok")
 
     def test_resume_job_skips_completed_files(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus, Checkpoint
-        from file_organizer.parallel.result import BatchResult
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import Checkpoint, JobState, JobStatus
+        from file_organizer.parallel.result import BatchResult
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         file_done = tmp_path / "done.txt"
@@ -234,9 +237,10 @@ class TestResumableProcessor:
         assert result.failed == 0
 
     def test_resume_job_reprocesses_modified_files(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus, Checkpoint
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import Checkpoint, JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         file_mod = tmp_path / "modified.txt"
@@ -280,9 +284,10 @@ class TestResumableProcessor:
         assert result.succeeded >= 1
 
     def test_process_and_checkpoint_marks_job_completed(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         f = tmp_path / "f.txt"
@@ -294,9 +299,7 @@ class TestResumableProcessor:
         mock_checkpoint_mgr = MagicMock()
         mock_checkpoint_mgr.load_checkpoint.return_value = None
         mock_processor = MagicMock()
-        mock_processor.process_batch_iter.return_value = iter(
-            [_make_file_result(f, success=True)]
-        )
+        mock_processor.process_batch_iter.return_value = iter([_make_file_result(f, success=True)])
 
         job = JobState(id="j4", status=JobStatus.RUNNING, created=now, updated=now, total_files=1)
 
@@ -312,9 +315,10 @@ class TestResumableProcessor:
         assert final_job.status == JobStatus.COMPLETED
 
     def test_process_and_checkpoint_marks_job_failed_on_exception(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         f = tmp_path / "f.txt"
@@ -343,8 +347,8 @@ class TestResumableProcessor:
         assert failed_job.error == "crash"
 
     def test_process_with_resume_empty_file_list(self) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
         from file_organizer.parallel.result import BatchResult
+        from file_organizer.parallel.resume import ResumableProcessor
 
         mock_persistence = MagicMock()
         mock_checkpoint_mgr = MagicMock()
@@ -399,10 +403,10 @@ class TestResumableProcessor:
         assert mock_checkpoint_mgr.update_checkpoint_state.call_count == 3
 
     def test_default_constructor_creates_internal_components(self) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.processor import ParallelProcessor
-        from file_organizer.parallel.persistence import JobPersistence
         from file_organizer.parallel.checkpoint import CheckpointManager
+        from file_organizer.parallel.persistence import JobPersistence
+        from file_organizer.parallel.processor import ParallelProcessor
+        from file_organizer.parallel.resume import ResumableProcessor
 
         rp = ResumableProcessor()
 
@@ -411,8 +415,8 @@ class TestResumableProcessor:
         assert isinstance(rp._checkpoint_mgr, CheckpointManager)
 
     def test_process_with_resume_saves_job_at_end(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
         from file_organizer.parallel.models import JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         mock_persistence = MagicMock()
         mock_checkpoint_mgr = MagicMock()
@@ -437,9 +441,10 @@ class TestResumableProcessor:
         assert saved_statuses[-1] == str(JobStatus.COMPLETED)
 
     def test_resume_job_pending_files_reprocessed(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus, Checkpoint
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import Checkpoint, JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         pending_file = tmp_path / "pending.txt"
@@ -477,9 +482,10 @@ class TestResumableProcessor:
         assert result.succeeded >= 1
 
     def test_process_and_checkpoint_failed_all_marks_failed(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         f = tmp_path / "fail.txt"
@@ -521,8 +527,10 @@ class TestResumableProcessor:
             f = tmp_path / f"mix{i}.txt"
             f.write_text("x")
             files.append(f)
-            success = (i % 2 == 0)
-            results_iter.append(_make_file_result(f, success=success, error=None if success else "err"))
+            success = i % 2 == 0
+            results_iter.append(
+                _make_file_result(f, success=success, error=None if success else "err")
+            )
 
         mock_checkpoint_mgr.create_checkpoint.return_value = MagicMock(
             pending_paths=[], completed_paths=[]
@@ -542,9 +550,10 @@ class TestResumableProcessor:
         assert result.total == 4
 
     def test_resume_job_adjusts_total_to_full_job(self, tmp_path: Path) -> None:
-        from file_organizer.parallel.resume import ResumableProcessor
-        from file_organizer.parallel.models import JobState, JobStatus, Checkpoint
         from datetime import UTC, datetime
+
+        from file_organizer.parallel.models import Checkpoint, JobState, JobStatus
+        from file_organizer.parallel.resume import ResumableProcessor
 
         now = datetime.now(UTC)
         done_file = tmp_path / "done2.txt"
@@ -728,8 +737,8 @@ class TestAnalyticsService:
     """Tests for file_organizer.services.analytics.analytics_service.AnalyticsService."""
 
     def test_calculate_time_saved_returns_time_savings(self) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import TimeSavings
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         svc = AnalyticsService(
             storage_analyzer=MagicMock(),
@@ -778,8 +787,8 @@ class TestAnalyticsService:
         assert result.manual_time_seconds > result.automated_time_seconds
 
     def test_get_duplicate_stats_empty_groups(self) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import DuplicateStats
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         svc = AnalyticsService(
             storage_analyzer=MagicMock(),
@@ -852,8 +861,8 @@ class TestAnalyticsService:
         assert result.space_recoverable == 1024
 
     def test_get_storage_stats_delegates_to_analyzer(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import StorageStats
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         mock_analyzer = MagicMock()
         expected = StorageStats(
@@ -872,8 +881,8 @@ class TestAnalyticsService:
         mock_analyzer.analyze_directory.assert_called_once_with(tmp_path, None)
 
     def test_get_storage_stats_passes_max_depth(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import StorageStats
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         mock_analyzer = MagicMock()
         mock_analyzer.analyze_directory.return_value = StorageStats(
@@ -886,8 +895,8 @@ class TestAnalyticsService:
         mock_analyzer.analyze_directory.assert_called_once_with(tmp_path, 3)
 
     def test_get_quality_metrics_returns_quality_metrics(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import QualityMetrics
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         f = tmp_path / "doc.txt"
         f.write_text("hello world")
@@ -962,16 +971,17 @@ class TestAnalyticsService:
 
     def test_export_dashboard_json(self, tmp_path: Path) -> None:
         import json
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
+        from datetime import UTC, datetime
+
         from file_organizer.models.analytics import (
             AnalyticsDashboard,
-            FileDistribution,
-            StorageStats,
             DuplicateStats,
+            FileDistribution,
             QualityMetrics,
+            StorageStats,
             TimeSavings,
         )
-        from datetime import UTC, datetime
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         dashboard = AnalyticsDashboard(
             storage_stats=StorageStats(
@@ -1007,16 +1017,17 @@ class TestAnalyticsService:
         assert isinstance(data, dict)
 
     def test_export_dashboard_text(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
+        from datetime import UTC, datetime
+
         from file_organizer.models.analytics import (
             AnalyticsDashboard,
-            FileDistribution,
-            StorageStats,
             DuplicateStats,
+            FileDistribution,
             QualityMetrics,
+            StorageStats,
             TimeSavings,
         )
-        from datetime import UTC, datetime
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         dashboard = AnalyticsDashboard(
             storage_stats=StorageStats(
@@ -1052,16 +1063,17 @@ class TestAnalyticsService:
         assert "QUALITY METRICS" in content
 
     def test_export_dashboard_unsupported_format_raises(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
+        from datetime import UTC, datetime
+
         from file_organizer.models.analytics import (
             AnalyticsDashboard,
-            FileDistribution,
-            StorageStats,
             DuplicateStats,
+            FileDistribution,
             QualityMetrics,
+            StorageStats,
             TimeSavings,
         )
-        from datetime import UTC, datetime
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         dashboard = AnalyticsDashboard(
             storage_stats=StorageStats(
@@ -1093,12 +1105,12 @@ class TestAnalyticsService:
             svc.export_dashboard(dashboard, tmp_path / "out.xyz", format="csv")
 
     def test_generate_dashboard_calls_all_sub_methods(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import (
             AnalyticsDashboard,
             FileDistribution,
             StorageStats,
         )
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         mock_analyzer = MagicMock()
         mock_analyzer.analyze_directory.return_value = StorageStats(
@@ -1119,8 +1131,8 @@ class TestAnalyticsService:
         mock_analyzer.calculate_size_distribution.assert_called_once()
 
     def test_generate_dashboard_with_duplicate_groups(self, tmp_path: Path) -> None:
-        from file_organizer.services.analytics.analytics_service import AnalyticsService
         from file_organizer.models.analytics import FileDistribution, StorageStats
+        from file_organizer.services.analytics.analytics_service import AnalyticsService
 
         f1 = tmp_path / "d1.txt"
         f2 = tmp_path / "d2.txt"
@@ -1179,8 +1191,8 @@ class TestAnalyticsService:
 
     def test_default_constructor_creates_components(self) -> None:
         from file_organizer.services.analytics.analytics_service import AnalyticsService
-        from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
         from file_organizer.services.analytics.metrics_calculator import MetricsCalculator
+        from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 
         svc = AnalyticsService()
 
@@ -1452,7 +1464,7 @@ class TestIntentParser:
     def test_extract_quoted_strings_static_method(self) -> None:
         from file_organizer.services.copilot.intent_parser import IntentParser
 
-        result = IntentParser._extract_quoted_strings('say "hello" and \'world\'')
+        result = IntentParser._extract_quoted_strings("say \"hello\" and 'world'")
 
         assert "hello" in result
         assert "world" in result
@@ -1486,11 +1498,11 @@ class TestConfigManager:
         assert cfg.profile_name == "default"
 
     def test_load_returns_defaults_for_missing_profile(self, tmp_path: Path) -> None:
-        from file_organizer.config.manager import ConfigManager
-        from file_organizer.config.schema import AppConfig
-
         # Create file with different profile
         import yaml
+
+        from file_organizer.config.manager import ConfigManager
+        from file_organizer.config.schema import AppConfig
 
         config_path = tmp_path / "config.yaml"
         config_path.write_text(
@@ -1945,6 +1957,7 @@ class TestServiceFacade:
 
     def test_health_check_structure_for_ollama_provider(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -1964,6 +1977,7 @@ class TestServiceFacade:
 
     def test_health_check_degraded_when_ollama_down(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -1981,6 +1995,7 @@ class TestServiceFacade:
 
     def test_health_check_includes_capabilities_when_ollama_down(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -1998,6 +2013,7 @@ class TestServiceFacade:
 
     def test_health_check_openai_provider_status_unknown(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2014,6 +2030,7 @@ class TestServiceFacade:
 
     def test_health_check_llama_cpp_provider_status_unknown(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2031,6 +2048,7 @@ class TestServiceFacade:
 
     def test_get_status_returns_required_keys(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2048,6 +2066,7 @@ class TestServiceFacade:
 
     def test_organize_files_returns_success_false_on_error(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2065,6 +2084,7 @@ class TestServiceFacade:
 
     def test_undo_last_operation_wraps_undo_manager(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2084,6 +2104,7 @@ class TestServiceFacade:
 
     def test_undo_last_operation_success_true_when_undone(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2102,6 +2123,7 @@ class TestServiceFacade:
 
     def test_undo_last_operation_returns_error_on_exception(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2119,6 +2141,7 @@ class TestServiceFacade:
 
     def test_get_operation_history_returns_list(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2138,6 +2161,7 @@ class TestServiceFacade:
 
     def test_get_operation_history_error_on_exception(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2154,6 +2178,7 @@ class TestServiceFacade:
 
     def test_get_daemon_status_returns_success(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2174,6 +2199,7 @@ class TestServiceFacade:
 
     def test_start_daemon_returns_started_true(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2191,6 +2217,7 @@ class TestServiceFacade:
 
     def test_stop_daemon_returns_stopped_true(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2207,6 +2234,7 @@ class TestServiceFacade:
 
     def test_get_model_status_returns_models_list(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2227,6 +2255,7 @@ class TestServiceFacade:
 
     def test_get_model_status_error_on_exception(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
@@ -2243,13 +2272,12 @@ class TestServiceFacade:
 
     def test_find_duplicates_error_on_exception(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
 
-        with patch(
-            "file_organizer.services.deduplication.detector.DuplicateDetector"
-        ) as mock_cls:
+        with patch("file_organizer.services.deduplication.detector.DuplicateDetector") as mock_cls:
             mock_cls.side_effect = RuntimeError("dedup broken")
 
             async def run() -> dict[str, Any]:
@@ -2290,8 +2318,8 @@ class TestServiceFacade:
 
     def test_check_ollama_returns_false_on_connection_error(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
-        import urllib.error
 
         facade = ServiceFacade()
 
@@ -2306,6 +2334,7 @@ class TestServiceFacade:
 
     def test_health_check_ollama_ok_gives_ok_status(self) -> None:
         import asyncio
+
         from file_organizer.api.service_facade import ServiceFacade
 
         facade = ServiceFacade()
