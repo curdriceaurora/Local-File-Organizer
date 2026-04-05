@@ -62,3 +62,7 @@ Final Output: Organized files + Operation history
 ```
 
 ---
+
+## Deep Dives
+
+- [Module Diagrams](module-diagrams.md) covers the current alpha3 flows for `parallel/`, `pipeline/`, and `services/intelligence/`.

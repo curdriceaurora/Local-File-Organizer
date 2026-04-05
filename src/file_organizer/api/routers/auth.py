@@ -36,8 +36,16 @@ from file_organizer.api.models import (
     UserCreateRequest,
     UserResponse,
 )
+from file_organizer.api.openapi_responses import (
+    ADMIN_403_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    detail_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"], responses=INTERNAL_500_RESPONSE)
 
 _LOCALHOSTS = {"127.0.0.1", "::1", "localhost"}
 
@@ -67,7 +75,29 @@ def _access_ttl_seconds(settings: ApiSettings, payload: dict[str, object]) -> in
     return max(ttl, 0)
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=merge_responses(
+        success_response(
+            "Created a user account.",
+            {
+                "id": "user_123",
+                "username": "demo",
+                "email": "demo@example.com",
+                "full_name": "Demo User",
+                "is_active": True,
+                "is_admin": False,
+                "created_at": "2026-04-05T14:00:00Z",
+                "last_login": None,
+            },
+            status_code=201,
+        ),
+        detail_error_response(400, detail="Username already taken"),
+        validation_error_response(),
+    ),
+)
 def register_user(
     request: UserCreateRequest,
     http_request: Request,
@@ -105,7 +135,23 @@ def register_user(
     return _to_user_response(user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses=merge_responses(
+        success_response(
+            "Authenticated user and issued tokens.",
+            {
+                "access_token": "access.jwt.token",
+                "refresh_token": "refresh.jwt.token",
+                "token_type": "bearer",
+            },
+        ),
+        detail_error_response(400, detail="Inactive user"),
+        detail_error_response(401, detail="Incorrect username or password"),
+        detail_error_response(429, detail="Too many login attempts. Try again later."),
+    ),
+)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -159,7 +205,22 @@ def login(
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    responses=merge_responses(
+        success_response(
+            "Refreshed authentication tokens.",
+            {
+                "access_token": "new.access.jwt.token",
+                "refresh_token": "new.refresh.jwt.token",
+                "token_type": "bearer",
+            },
+        ),
+        detail_error_response(401, detail="Invalid refresh token"),
+        validation_error_response(),
+    ),
+)
 def refresh(
     request: TokenRefreshRequest,
     db: Session = Depends(get_db),
@@ -201,7 +262,14 @@ def refresh(
     )
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=merge_responses(
+        detail_error_response(401, detail="Missing access token"),
+        validation_error_response(),
+    ),
+)
 def logout(
     request: TokenRevokeRequest,
     current_user: User = Depends(get_current_active_user),
@@ -243,7 +311,27 @@ def logout(
     return None
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned the current authenticated user.",
+            {
+                "id": "user_123",
+                "username": "demo",
+                "email": "demo@example.com",
+                "full_name": "Demo User",
+                "is_active": True,
+                "is_admin": False,
+                "created_at": "2026-04-05T14:00:00Z",
+                "last_login": "2026-04-05T14:05:00Z",
+            },
+        ),
+        detail_error_response(401, detail="Not authenticated"),
+        ADMIN_403_RESPONSE,
+    ),
+)
 def me(current_user: User = Depends(get_current_active_user)) -> UserResponse:
     """Return the currently authenticated user."""
     return _to_user_response(current_user)

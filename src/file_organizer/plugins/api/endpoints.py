@@ -19,6 +19,13 @@ from file_organizer.api.dependencies import (
 )
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import FileInfo
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    merge_responses,
+    validation_error_response,
+)
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.config.manager import ConfigManager
 from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
@@ -37,7 +44,24 @@ from file_organizer.plugins.api.models import (
     PluginOrganizeFileResponse,
 )
 
-router = APIRouter(tags=["plugins"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["plugins"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(
+        AUTH_401_RESPONSE,
+        INTERNAL_500_RESPONSE,
+        api_error_response(400, error="invalid_key", message="Config key must not be empty"),
+        api_error_response(400, error="invalid_path", message="Path is not a file"),
+        api_error_response(404, error="not_found", message="File not found"),
+        api_error_response(
+            404,
+            error="config_key_not_found",
+            message="Config key not found: updates.interval_hours",
+        ),
+        api_error_response(409, error="conflict", message="Destination already exists"),
+        validation_error_response(),
+    ),
+)
 
 
 @lru_cache

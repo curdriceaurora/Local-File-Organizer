@@ -424,3 +424,24 @@ class ApiErrorResponse(BaseModel):
     error: str
     message: str
     details: Any | None = None
+
+
+class HttpDetailErrorResponse(BaseModel):
+    """FastAPI HTTPException response body."""
+
+    detail: str
+
+
+class ValidationErrorItem(BaseModel):
+    """Single validation error entry returned by request parsing."""
+
+    loc: list[str | int]
+    msg: str
+
+
+class ValidationErrorResponse(BaseModel):
+    """Request validation error response body."""
+
+    error: str = "validation_error"
+    message: str = "Invalid request payload."
+    details: list[ValidationErrorItem]

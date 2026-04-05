@@ -39,8 +39,8 @@ The File Organizer API allows you to:
 ### Response Formats
 
 - JSON responses
-- Proper HTTP status codes
-- Error details in response body
+- OpenAPI examples for success and error payloads
+- Proper HTTP status codes with route-level error documentation
 
 ## Quick Start
 
@@ -153,45 +153,63 @@ API keys have configurable expiration:
 
 ## Response Format
 
-All API responses use consistent JSON format:
+The alpha3 API uses endpoint-specific response models for successful requests rather than a single `success/data/meta` envelope.
 
-### Success Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "files": [
-      {
-        "id": "file_123",
-        "name": "document.pdf",
-        "size": 1024000,
-        "type": "pdf"
-      }
-    ]
-  },
-  "meta": {
-    "total": 1,
-    "page": 1,
-    "pageSize": 50
-  }
-}
-```
-
-### Error Response
+### Success response example
 
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INVALID_REQUEST",
-    "message": "File not found",
-    "details": {
-      "file_id": "file_xyz"
+  "items": [
+    {
+      "path": "/Users/demo/Documents/report.pdf",
+      "name": "report.pdf",
+      "size": 102400,
+      "created": "2026-04-01T12:00:00Z",
+      "modified": "2026-04-04T09:30:00Z",
+      "file_type": "pdf",
+      "mime_type": "application/pdf"
     }
-  }
+  ],
+  "total": 1,
+  "skip": 0,
+  "limit": 100
 }
 ```
+
+### `ApiError` response example
+
+```json
+{
+  "error": "not_found",
+  "message": "Path not found",
+  "details": null
+}
+```
+
+### `HTTPException` response example
+
+```json
+{
+  "detail": "Incorrect username or password"
+}
+```
+
+### Validation response example
+
+```json
+{
+  "error": "validation_error",
+  "message": "Invalid request payload.",
+  "details": [
+    {
+      "loc": ["body", "path"],
+      "msg": "Path must not be empty"
+    }
+  ]
+}
+```
+
+**Guide**: [Endpoint Error Reference](error-reference.md)
 
 ## HTTP Status Codes
 

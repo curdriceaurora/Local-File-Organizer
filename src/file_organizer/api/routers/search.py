@@ -12,11 +12,18 @@ from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.api.openapi_responses import (
+    INTERNAL_500_RESPONSE,
+    detail_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.api.utils import is_hidden, resolve_path
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["search"])
+router = APIRouter(tags=["search"], responses=INTERNAL_500_RESPONSE)
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000
@@ -251,7 +258,34 @@ def _semantic_search(
     return results
 
 
-@router.get("/search", response_model=list[SearchResult])
+@router.get(
+    "/search",
+    response_model=list[SearchResult],
+    responses=merge_responses(
+        success_response(
+            "Returned ranked search results.",
+            [
+                {
+                    "filename": "report.pdf",
+                    "path": "Documents/report.pdf",
+                    "score": 1.0,
+                    "type": "pdf",
+                    "size": 102400,
+                    "created": "2026-04-04T09:30:00Z",
+                }
+            ],
+        ),
+        detail_error_response(400, detail="Query parameter 'q' is required"),
+        detail_error_response(
+            503,
+            detail=(
+                "Semantic search is not available: search dependencies not installed. "
+                "Install with: pip install 'file-organizer[search]'"
+            ),
+        ),
+        validation_error_response(),
+    ),
+)
 def search(
     q: str = Query(..., description="Search query"),
     file_type: str | None = Query(None, alias="type"),

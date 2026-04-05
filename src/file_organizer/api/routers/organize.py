@@ -21,10 +21,23 @@ from file_organizer.api.models import (
     ScanRequest,
     ScanResponse,
 )
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    detail_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 
-router = APIRouter(tags=["organize"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["organize"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(AUTH_401_RESPONSE, INTERNAL_500_RESPONSE),
+)
 
 
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
@@ -103,7 +116,22 @@ def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
         update_job(job_id, status="failed", error=str(exc))
 
 
-@router.post("/organize/scan", response_model=ScanResponse)
+@router.post(
+    "/organize/scan",
+    response_model=ScanResponse,
+    responses=merge_responses(
+        success_response(
+            "Scanned the input directory.",
+            {
+                "input_dir": "/Users/demo/Downloads",
+                "total_files": 3,
+                "counts": {"text": 1, "image": 1, "video": 0, "audio": 0, "cad": 0, "other": 1},
+            },
+        ),
+        api_error_response(404, error="not_found", message="Input path not found"),
+        validation_error_response(),
+    ),
+)
 def scan_directory(
     request: ScanRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -122,7 +150,27 @@ def scan_directory(
     )
 
 
-@router.post("/organize/preview", response_model=OrganizationResultResponse)
+@router.post(
+    "/organize/preview",
+    response_model=OrganizationResultResponse,
+    responses=merge_responses(
+        success_response(
+            "Generated an organization preview.",
+            {
+                "total_files": 3,
+                "processed_files": 3,
+                "skipped_files": 0,
+                "failed_files": 0,
+                "deduplicated_files": 0,
+                "processing_time": 1.24,
+                "organized_structure": {"Documents": ["report.pdf"], "Images": ["photo.jpg"]},
+                "errors": [],
+            },
+        ),
+        api_error_response(404, error="not_found", message="Input path not found"),
+        validation_error_response(),
+    ),
+)
 def preview_organization(
     request: OrganizeRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -142,7 +190,18 @@ def preview_organization(
     return _result_to_response(result)
 
 
-@router.post("/organize/execute", response_model=OrganizeExecuteResponse)
+@router.post(
+    "/organize/execute",
+    response_model=OrganizeExecuteResponse,
+    responses=merge_responses(
+        success_response(
+            "Queued or completed an organization run.",
+            {"status": "queued", "job_id": "job_123", "result": None, "error": None},
+        ),
+        api_error_response(404, error="not_found", message="Input path not found"),
+        validation_error_response(),
+    ),
+)
 def execute_organization(
     request: OrganizeRequest,
     background_tasks: BackgroundTasks,
@@ -180,7 +239,24 @@ def execute_organization(
         return OrganizeExecuteResponse(status="failed", error=str(exc))
 
 
-@router.get("/organize/status/{job_id}", response_model=JobStatusResponse)
+@router.get(
+    "/organize/status/{job_id}",
+    response_model=JobStatusResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned background job status.",
+            {
+                "job_id": "job_123",
+                "status": "completed",
+                "created_at": "2026-04-05T14:10:00Z",
+                "updated_at": "2026-04-05T14:11:00Z",
+                "result": None,
+                "error": None,
+            },
+        ),
+        api_error_response(404, error="not_found", message="Job not found"),
+    ),
+)
 def get_job_status(job_id: str) -> JobStatusResponse:
     """Retrieve the status of an organization job."""
     job = get_job(job_id)
@@ -212,7 +288,17 @@ class SimpleOrganizeResponse(BaseModel):
     confidence: float
 
 
-@router.post("/organize", response_model=None)
+@router.post(
+    "/organize",
+    response_model=None,
+    responses=merge_responses(
+        success_response(
+            "Generated a simple organization suggestion.",
+            {"filename": "report_organized.pdf", "folder_name": "Documents", "confidence": 0.85},
+        ),
+        detail_error_response(400, detail="Either file upload or request body must be provided"),
+    ),
+)
 async def organize_file(
     file: UploadFile | None = File(None),
     request: SimpleOrganizeRequest | None = None,

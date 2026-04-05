@@ -8,6 +8,11 @@ from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.api.openapi_responses import (
+    detail_error_response,
+    merge_responses,
+    success_response,
+)
 from file_organizer.models.text_model import TextModel
 from file_organizer.services.analyzer import (
     MAX_CONTENT_LENGTH,
@@ -44,7 +49,26 @@ class AnalyzeResponse(BaseModel):
     confidence: float
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
+@router.post(
+    "/analyze",
+    response_model=AnalyzeResponse,
+    responses=merge_responses(
+        success_response(
+            "Analyzed content successfully.",
+            {
+                "description": "Quarterly report with revenue tables and executive summary.",
+                "category": "Documents",
+                "confidence": 0.91,
+            },
+        ),
+        detail_error_response(400, detail="Either content or file must be provided"),
+        detail_error_response(
+            503,
+            detail="AI analysis unavailable. Please ensure Ollama is installed and running.",
+        ),
+        detail_error_response(500, detail="Analysis failed: model backend unavailable"),
+    ),
+)
 async def analyze(
     content: str | None = None,
     file: UploadFile | None = None,

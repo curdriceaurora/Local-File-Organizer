@@ -11,11 +11,17 @@ from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_config_manager, get_settings
+from file_organizer.api.openapi_responses import (
+    INTERNAL_500_RESPONSE,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.config.manager import ConfigManager
 from file_organizer.core.hardware_profile import GpuType
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode
 
-router = APIRouter(tags=["setup"])
+router = APIRouter(tags=["setup"], responses=INTERNAL_500_RESPONSE)
 
 
 class SetupStatusResponse(BaseModel):
@@ -79,7 +85,16 @@ class SetupResponse(BaseModel):
     errors: list[str] = []
 
 
-@router.get("/setup/status", response_model=SetupStatusResponse)
+@router.get(
+    "/setup/status",
+    response_model=SetupStatusResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned setup completion status.",
+            {"completed": True, "profile": "default"},
+        ),
+    ),
+)
 def get_setup_status(
     settings: ApiSettings = Depends(get_settings),
     manager: ConfigManager = Depends(get_config_manager),
@@ -92,7 +107,32 @@ def get_setup_status(
     )
 
 
-@router.get("/setup/capabilities", response_model=CapabilitiesResponse)
+@router.get(
+    "/setup/capabilities",
+    response_model=CapabilitiesResponse,
+    responses=merge_responses(
+        success_response(
+            "Detected host capabilities.",
+            {
+                "hardware": {
+                    "total_ram_gb": 16.0,
+                    "gpu_available": False,
+                    "gpu_vram_gb": None,
+                    "gpu_name": None,
+                    "cpu_cores": 8,
+                    "recommended_model": "qwen2.5:3b-instruct-q4_K_M",
+                },
+                "ollama": {
+                    "installed": True,
+                    "running": True,
+                    "version": "0.4.0",
+                    "models_count": 2,
+                },
+                "models": [],
+            },
+        ),
+    ),
+)
 def detect_capabilities(
     settings: ApiSettings = Depends(get_settings),
 ) -> CapabilitiesResponse:
@@ -132,7 +172,23 @@ def detect_capabilities(
     )
 
 
-@router.post("/setup/complete", response_model=SetupResponse)
+@router.post(
+    "/setup/complete",
+    response_model=SetupResponse,
+    responses=merge_responses(
+        success_response(
+            "Completed guided setup.",
+            {
+                "success": True,
+                "profile": "default",
+                "messages": ["Setup completed successfully with model: qwen2.5:3b-instruct-q4_K_M"],
+                "warnings": [],
+                "errors": [],
+            },
+        ),
+        validation_error_response(),
+    ),
+)
 def complete_setup(
     request: SetupRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -189,7 +245,16 @@ class BrowseFolderResponse(BaseModel):
     cancelled: bool = False
 
 
-@router.get("/setup/browse-folder", response_model=BrowseFolderResponse)
+@router.get(
+    "/setup/browse-folder",
+    response_model=BrowseFolderResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned native folder picker result.",
+            {"path": "/Users/demo/Documents", "available": True, "cancelled": False},
+        ),
+    ),
+)
 def browse_folder() -> BrowseFolderResponse:
     """Open a native OS folder-picker dialog on the server host.
 

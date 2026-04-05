@@ -20,11 +20,23 @@ from file_organizer.api.models import (
     DedupeScanRequest,
     DedupeScanResponse,
 )
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.api.utils import resolve_path
 from file_organizer.services.deduplication import DuplicateDetector
 from file_organizer.services.deduplication.detector import ScanOptions
 
-router = APIRouter(tags=["dedupe"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["dedupe"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(AUTH_401_RESPONSE, INTERNAL_500_RESPONSE),
+)
 
 
 def _scan_duplicates(
@@ -76,7 +88,19 @@ def _preview(groups: list[DedupeGroup]) -> list[DedupePreviewGroup]:
     return previews
 
 
-@router.post("/dedupe/scan", response_model=DedupeScanResponse)
+@router.post(
+    "/dedupe/scan",
+    response_model=DedupeScanResponse,
+    responses=merge_responses(
+        success_response(
+            "Scanned for duplicate files.",
+            {"path": "/Users/demo/Documents", "duplicates": [], "stats": {"scanned_files": 12}},
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a directory"),
+        api_error_response(404, error="not_found", message="Path not found"),
+        validation_error_response(),
+    ),
+)
 def scan_duplicates(
     request: DedupeScanRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -92,7 +116,19 @@ def scan_duplicates(
     return DedupeScanResponse(path=str(path), duplicates=groups, stats=stats)
 
 
-@router.post("/dedupe/preview", response_model=DedupePreviewResponse)
+@router.post(
+    "/dedupe/preview",
+    response_model=DedupePreviewResponse,
+    responses=merge_responses(
+        success_response(
+            "Prepared deduplication preview.",
+            {"path": "/Users/demo/Documents", "preview": [], "stats": {"scanned_files": 12}},
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a directory"),
+        api_error_response(404, error="not_found", message="Path not found"),
+        validation_error_response(),
+    ),
+)
 def preview_duplicates(
     request: DedupeScanRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -109,7 +145,24 @@ def preview_duplicates(
     return DedupePreviewResponse(path=str(path), preview=preview, stats=stats)
 
 
-@router.post("/dedupe/execute", response_model=DedupeExecuteResponse)
+@router.post(
+    "/dedupe/execute",
+    response_model=DedupeExecuteResponse,
+    responses=merge_responses(
+        success_response(
+            "Executed deduplication plan.",
+            {
+                "path": "/Users/demo/Documents",
+                "removed": ["/Users/demo/.local/share/file-organizer/trash/report-copy.pdf"],
+                "dry_run": False,
+                "stats": {"scanned_files": 12},
+            },
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a directory"),
+        api_error_response(404, error="not_found", message="Path not found"),
+        validation_error_response(),
+    ),
+)
 def execute_deduplication(
     request: DedupeExecuteRequest,
     settings: ApiSettings = Depends(get_settings),

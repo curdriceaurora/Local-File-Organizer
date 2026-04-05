@@ -11,7 +11,9 @@ import time
 from fastapi import APIRouter, Response
 from loguru import logger
 
-router = APIRouter(tags=["health"])
+from file_organizer.api.openapi_responses import INTERNAL_500_RESPONSE, merge_responses
+
+router = APIRouter(tags=["health"], responses=merge_responses(INTERNAL_500_RESPONSE))
 
 # Startup time used to compute uptime in health responses.
 # Use monotonic time to avoid issues with system clock adjustments (NTP sync).

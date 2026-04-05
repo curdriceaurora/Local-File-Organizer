@@ -184,6 +184,30 @@ class TestAppRoutes:
             assert resp.status_code == 200
             assert "openapi" in resp.json()
 
+    def test_openapi_schema_includes_examples_and_error_responses(self) -> None:
+        """Key REST routes should expose success and error response examples."""
+        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
+            mock_settings.return_value = ApiSettings(environment="test")
+            app = create_app()
+            client = TestClient(app)
+
+            schema = client.get("/openapi.json").json()
+            files_get = schema["paths"]["/api/v1/files"]["get"]["responses"]
+            auth_login = schema["paths"]["/api/v1/auth/login"]["post"]["responses"]
+            organize_execute = schema["paths"]["/api/v1/organize/execute"]["post"]["responses"]
+
+            assert "example" in files_get["200"]["content"]["application/json"]
+            assert (
+                files_get["404"]["content"]["application/json"]["example"]["error"] == "not_found"
+            )
+            assert auth_login["401"]["content"]["application/json"]["example"]["detail"] == (
+                "Incorrect username or password"
+            )
+            assert organize_execute["200"]["content"]["application/json"]["example"]["status"] in {
+                "queued",
+                "completed",
+            }
+
 
 @pytest.mark.unit
 class TestAppConfiguration:

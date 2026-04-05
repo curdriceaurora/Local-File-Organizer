@@ -84,6 +84,13 @@ For hand-written endpoint guides, see the other pages in the API Reference secti
       show_root_heading: true
       members_order: source
 
+## OpenAPI Response Helpers
+
+::: file_organizer.api.openapi_responses
+    options:
+      show_root_heading: true
+      members_order: source
+
 ## Authentication Models
 
 ::: file_organizer.api.auth_models

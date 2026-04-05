@@ -24,12 +24,25 @@ from file_organizer.api.models import (
     MoveFileRequest,
     MoveFileResponse,
 )
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    detail_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["files"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(AUTH_401_RESPONSE, INTERNAL_500_RESPONSE),
+)
 
 _FILE_TYPE_GROUPS = {
     "text": FileOrganizer.TEXT_EXTENSIONS,
@@ -83,7 +96,34 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
     return files
 
 
-@router.get("/files", response_model=FileListResponse)
+@router.get(
+    "/files",
+    response_model=FileListResponse,
+    responses=merge_responses(
+        success_response(
+            "Listed files successfully.",
+            {
+                "items": [
+                    {
+                        "path": "/Users/demo/Documents/report.pdf",
+                        "name": "report.pdf",
+                        "size": 102400,
+                        "created": "2026-04-01T12:00:00Z",
+                        "modified": "2026-04-04T09:30:00Z",
+                        "file_type": "pdf",
+                        "mime_type": "application/pdf",
+                    }
+                ],
+                "total": 1,
+                "skip": 0,
+                "limit": 100,
+                "files": [],
+            },
+        ),
+        api_error_response(404, error="not_found", message="Path does not exist"),
+        validation_error_response(),
+    ),
+)
 def list_files(
     path: str = Query(None, description="Directory or file path"),
     recursive: bool = Query(False),
@@ -134,7 +174,27 @@ def list_files(
     return FileListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
-@router.get("/files/info", response_model=FileInfo)
+@router.get(
+    "/files/info",
+    response_model=FileInfo,
+    responses=merge_responses(
+        success_response(
+            "Returned file metadata.",
+            {
+                "path": "/Users/demo/Documents/report.pdf",
+                "name": "report.pdf",
+                "size": 102400,
+                "created": "2026-04-01T12:00:00Z",
+                "modified": "2026-04-04T09:30:00Z",
+                "file_type": "pdf",
+                "mime_type": "application/pdf",
+            },
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a file"),
+        api_error_response(404, error="not_found", message="File not found"),
+        validation_error_response(),
+    ),
+)
 def get_file_info(
     path: str = Query(...),
     settings: ApiSettings = Depends(get_settings),
@@ -148,7 +208,26 @@ def get_file_info(
     return file_info_from_path(target)
 
 
-@router.get("/files/content", response_model=FileContentResponse)
+@router.get(
+    "/files/content",
+    response_model=FileContentResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned file contents.",
+            {
+                "path": "/Users/demo/Documents/notes.txt",
+                "content": "Project notes",
+                "encoding": "utf-8",
+                "truncated": False,
+                "size": 13,
+                "mime_type": "text/plain",
+            },
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a file"),
+        api_error_response(404, error="not_found", message="File not found"),
+        validation_error_response(),
+    ),
+)
 def read_file_content(
     path: str = Query(...),
     max_bytes: int = Query(200_000, ge=1, le=5_000_000),
@@ -180,7 +259,27 @@ def read_file_content(
     )
 
 
-@router.get("/files/{file_id}")
+@router.get(
+    "/files/{file_id}",
+    response_model=FileInfo,
+    responses=merge_responses(
+        success_response(
+            "Returned file metadata for the requested identifier.",
+            {
+                "path": "/Users/demo/Documents/report.pdf",
+                "name": "report.pdf",
+                "size": 102400,
+                "created": "2026-04-01T12:00:00Z",
+                "modified": "2026-04-04T09:30:00Z",
+                "file_type": "pdf",
+                "mime_type": "application/pdf",
+            },
+        ),
+        api_error_response(400, error="invalid_id", message="File ID has an invalid format"),
+        api_error_response(404, error="not_found", message="File not found"),
+        api_error_response(422, error="invalid_id", message="File ID cannot be empty"),
+    ),
+)
 def get_file_by_id(
     file_id: str,
     settings: ApiSettings = Depends(get_settings),
@@ -199,7 +298,29 @@ def get_file_by_id(
     return file_info_from_path(target)
 
 
-@router.post("/files/move", response_model=MoveFileResponse)
+@router.post(
+    "/files/move",
+    response_model=MoveFileResponse,
+    responses=merge_responses(
+        success_response(
+            "Moved file successfully.",
+            {
+                "source": "/Users/demo/Downloads/report.pdf",
+                "destination": "/Users/demo/Documents/report.pdf",
+                "moved": True,
+                "dry_run": False,
+            },
+        ),
+        api_error_response(
+            400,
+            error="invalid_request",
+            message="Directory overwrite requires allow_directory_overwrite=true.",
+        ),
+        api_error_response(404, error="not_found", message="Source not found"),
+        api_error_response(409, error="conflict", message="Destination exists"),
+        validation_error_response(),
+    ),
+)
 def move_file(
     request: MoveFileRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -261,7 +382,23 @@ def _trash_target(path: Path) -> Path:
     return trash_dir / f"{stem}-{uuid4().hex}{suffix}"
 
 
-@router.delete("/files", response_model=DeleteFileResponse)
+@router.delete(
+    "/files",
+    response_model=DeleteFileResponse,
+    responses=merge_responses(
+        success_response(
+            "Deleted or trashed file successfully.",
+            {
+                "path": "/Users/demo/Documents/report.pdf",
+                "deleted": True,
+                "dry_run": False,
+                "trashed_path": "/Users/demo/.local/share/file-organizer/trash/report.pdf",
+            },
+        ),
+        api_error_response(404, error="not_found", message="File not found"),
+        validation_error_response(),
+    ),
+)
 def delete_file(
     request: DeleteFileRequest,
     settings: ApiSettings = Depends(get_settings),
@@ -293,7 +430,25 @@ def delete_file(
     )
 
 
-@router.delete("/files/{file_id}", response_model=DeleteFileResponse)
+@router.delete(
+    "/files/{file_id}",
+    response_model=DeleteFileResponse,
+    responses=merge_responses(
+        success_response(
+            "Deleted or trashed file by identifier.",
+            {
+                "path": "/Users/demo/Documents/report.pdf",
+                "deleted": True,
+                "dry_run": False,
+                "trashed_path": "/Users/demo/.local/share/file-organizer/trash/report.pdf",
+            },
+        ),
+        api_error_response(400, error="invalid_id", message="File ID has an invalid format"),
+        api_error_response(404, error="not_found", message="File not found"),
+        api_error_response(422, error="invalid_id", message="File ID cannot be empty"),
+        validation_error_response(),
+    ),
+)
 def delete_file_by_id(
     file_id: str,
     permanent: bool = Query(False),
@@ -338,7 +493,17 @@ class FileUploadResponse(BaseModel):
     size: int
 
 
-@router.post("/files/upload", response_model=None)
+@router.post(
+    "/files/upload",
+    response_model=None,
+    responses=merge_responses(
+        success_response(
+            "Uploaded one or more files.",
+            {"file_id": "upload_123", "filename": "report.pdf", "size": 102400},
+        ),
+        detail_error_response(400, detail="At least one file must be provided"),
+    ),
+)
 async def upload_files(
     files: list[UploadFile] | None = File(None),
     file: UploadFile | None = File(None),

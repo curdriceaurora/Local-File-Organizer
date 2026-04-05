@@ -22,14 +22,47 @@ from file_organizer.api.models import (
     StorageStatsResponse,
     SystemStatusResponse,
 )
+from file_organizer.api.openapi_responses import (
+    ADMIN_403_RESPONSE,
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    merge_responses,
+    success_response,
+    validation_error_response,
+)
 from file_organizer.api.utils import file_info_from_path, resolve_path
 from file_organizer.config.manager import ConfigManager
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 
-router = APIRouter(tags=["system"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["system"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(AUTH_401_RESPONSE, INTERNAL_500_RESPONSE),
+)
 
 
-@router.get("/system/status", response_model=SystemStatusResponse)
+@router.get(
+    "/system/status",
+    response_model=SystemStatusResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned runtime system status.",
+            {
+                "app": "File Organizer",
+                "version": "2.0.0-alpha.3",
+                "environment": "production",
+                "disk_total": 1000000,
+                "disk_used": 400000,
+                "disk_free": 600000,
+                "active_jobs": 0,
+            },
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a directory"),
+        api_error_response(404, error="not_found", message="Path not found"),
+        validation_error_response(),
+    ),
+)
 def system_status(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(".", description="Path for disk usage"),
@@ -52,7 +85,21 @@ def system_status(
     )
 
 
-@router.get("/system/config", response_model=ConfigResponse)
+@router.get(
+    "/system/config",
+    response_model=ConfigResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned configuration profile.",
+            {
+                "profile": "default",
+                "config": {"default_methodology": "PARA"},
+                "profiles": ["default"],
+            },
+        ),
+        validation_error_response(),
+    ),
+)
 def get_config(
     profile: str = Query("default"),
     manager: ConfigManager = Depends(get_config_manager),
@@ -63,7 +110,22 @@ def get_config(
     return ConfigResponse(profile=profile, config=payload, profiles=manager.list_profiles())
 
 
-@router.patch("/system/config", response_model=ConfigResponse)
+@router.patch(
+    "/system/config",
+    response_model=ConfigResponse,
+    responses=merge_responses(
+        success_response(
+            "Updated configuration profile.",
+            {
+                "profile": "default",
+                "config": {"default_methodology": "PARA"},
+                "profiles": ["default"],
+            },
+        ),
+        ADMIN_403_RESPONSE,
+        validation_error_response(),
+    ),
+)
 def update_config(
     request: ConfigUpdateRequest,
     manager: ConfigManager = Depends(get_config_manager),
@@ -101,7 +163,27 @@ def update_config(
     )
 
 
-@router.get("/system/stats", response_model=StorageStatsResponse)
+@router.get(
+    "/system/stats",
+    response_model=StorageStatsResponse,
+    responses=merge_responses(
+        success_response(
+            "Returned storage statistics.",
+            {
+                "total_size": 1000000,
+                "organized_size": 750000,
+                "saved_size": 250000,
+                "file_count": 120,
+                "directory_count": 18,
+                "size_by_type": {"pdf": 400000},
+                "largest_files": [],
+            },
+        ),
+        api_error_response(400, error="invalid_path", message="Path is not a directory"),
+        api_error_response(404, error="not_found", message="Path not found"),
+        validation_error_response(),
+    ),
+)
 def get_stats(
     path: str = Query(".", description="Directory to analyze"),
     max_depth: int | None = Query(None, ge=1),

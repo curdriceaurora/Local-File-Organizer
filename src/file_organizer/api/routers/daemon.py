@@ -10,7 +10,9 @@ from typing import Any
 
 from fastapi import APIRouter
 
-router = APIRouter(prefix="/daemon", tags=["daemon"])
+from file_organizer.api.openapi_responses import INTERNAL_500_RESPONSE
+
+router = APIRouter(prefix="/daemon", tags=["daemon"], responses=INTERNAL_500_RESPONSE)
 
 
 @router.post("/toggle")

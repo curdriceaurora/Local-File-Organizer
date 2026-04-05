@@ -24,6 +24,13 @@ from file_organizer.api.integration_models import (
     IntegrationStatusListResponse,
     IntegrationStatusPayload,
 )
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    merge_responses,
+    validation_error_response,
+)
 from file_organizer.api.utils import resolve_path
 from file_organizer.integrations import (
     BrowserExtensionManager,
@@ -35,7 +42,17 @@ from file_organizer.integrations import (
     WorkflowIntegration,
 )
 
-router = APIRouter(tags=["integrations"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(
+    tags=["integrations"],
+    dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(
+        AUTH_401_RESPONSE,
+        INTERNAL_500_RESPONSE,
+        api_error_response(404, error="not_found", message="Integration not found"),
+        api_error_response(400, error="invalid_filename", message="Invalid filename in path"),
+        validation_error_response(),
+    ),
+)
 
 
 def _default_integration_root() -> Path:

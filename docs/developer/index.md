@@ -30,6 +30,7 @@ python -m uvicorn main:app --reload
 ### Understanding the System
 
 - [Architecture Guide](architecture.md) - System design and components
+- [Architecture Module Diagrams](../architecture/module-diagrams.md) - Mermaid flow diagrams for pipeline, parallel, and intelligence subsystems
 - Understanding API structure
 - Database schema overview
 

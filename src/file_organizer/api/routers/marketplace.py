@@ -9,6 +9,13 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from file_organizer.api.dependencies import UserLike, get_current_active_user
 from file_organizer.api.exceptions import ApiError
+from file_organizer.api.openapi_responses import (
+    AUTH_401_RESPONSE,
+    INTERNAL_500_RESPONSE,
+    api_error_response,
+    merge_responses,
+    validation_error_response,
+)
 from file_organizer.plugins.marketplace import (
     InstalledPlugin,
     MarketplaceError,
@@ -20,6 +27,14 @@ from file_organizer.plugins.marketplace import (
 router = APIRouter(
     tags=["marketplace"],
     dependencies=[Depends(get_current_active_user)],
+    responses=merge_responses(
+        AUTH_401_RESPONSE,
+        INTERNAL_500_RESPONSE,
+        api_error_response(400, error="marketplace_error", message="Marketplace request failed"),
+        api_error_response(404, error="not_found", message="Plugin not found"),
+        api_error_response(422, error="checksum_failed", message="Plugin package checksum failed"),
+        validation_error_response(),
+    ),
 )
 
 

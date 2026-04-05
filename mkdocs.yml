@@ -91,6 +91,7 @@ nav:
       - Settings & Configuration: web-ui/settings.md
   - API Reference:
       - Overview: api/index.md
+      - Error Reference: api/error-reference.md
       - Authentication: api/authentication.md
       - File Management: api/file-endpoints.md
       - Organization: api/organization-endpoints.md
@@ -98,6 +99,9 @@ nav:
       - Search: api/search-endpoints.md
       - WebSocket Events: api/websocket-api.md
       - Auto-Generated Reference: api/reference.md
+  - Architecture:
+      - Overview: architecture/architecture-overview.md
+      - Module Diagrams: architecture/module-diagrams.md
   - Admin Guide:
       - Overview: admin/index.md
       - Installation: admin/installation.md
