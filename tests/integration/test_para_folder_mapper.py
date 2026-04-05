@@ -155,7 +155,9 @@ class TestMapFile:
         mapper = _make_mapper(tmp_path)
         result = mapper.map_file(file_path, tmp_path / "para")
 
+        # reasoning is always a list (may be empty for a new file with no learned patterns)
         assert isinstance(result.reasoning, list)
+        assert result.target_folder is not None  # mapping always returns a target
 
     def test_no_category_defaults_to_resource(self, tmp_path: Path) -> None:
         """A file with no keyword signals defaults to Resource category."""
