@@ -1332,6 +1332,7 @@ class TestVisionProcessor:
         result2 = processor.process_file(fp, perform_ocr=False)
         assert result2.error is not None
         assert "Vision backend" in result2.error
+        assert mock_model.generate.call_count == 1
 
     def test_process_file_non_fatal_error_does_not_open_circuit(self, tmp_path: Path) -> None:
         from file_organizer.services.vision_processor import VisionProcessor

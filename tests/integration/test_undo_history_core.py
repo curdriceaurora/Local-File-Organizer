@@ -41,6 +41,19 @@ def _make_history(tmp_path: Path) -> Any:
     return OperationHistory(db_path=db_path)
 
 
+def _backdate_operations(db: Any, *, days_old: int, status: str | None = None) -> None:
+    """Move recorded operations into the past for deterministic cleanup tests."""
+    timestamp = (datetime.now(UTC) - timedelta(days=days_old)).isoformat().replace("+00:00", "Z")
+    if status is None:
+        query = "UPDATE operations SET timestamp = ?"
+        params: tuple[object, ...] = (timestamp,)
+    else:
+        query = "UPDATE operations SET timestamp = ? WHERE status = ?"
+        params = (timestamp, status)
+    with db.transaction() as conn:
+        conn.execute(query, params)
+
+
 def _make_operation(
     tmp_path: Path,
     op_type: str = "move",
@@ -1337,15 +1350,13 @@ class TestHistoryCleanup:
         src = tmp_path / "file.txt"
         src.write_text("x")
         history.log_operation(OperationType.MOVE, src, tmp_path / "dest.txt")
+        _backdate_operations(db, days_old=1)
 
         cleanup = HistoryCleanup(db)
-        # Use 0 days to delete everything
         deleted = cleanup.cleanup_old_operations(max_age_days=0)
 
-        assert isinstance(deleted, int)
-        # The operation just recorded should be deleted (0 days ago = now)
-        # May or may not delete it depending on exact timing, but no error
-        assert deleted >= 0
+        assert deleted == 1
+        assert db.get_operation_count() == 0
 
     def test_cleanup_by_count_keeps_most_recent(self, tmp_path: Path) -> None:
         from file_organizer.history.cleanup import HistoryCleanup
@@ -1410,13 +1421,13 @@ class TestHistoryCleanup:
         history.log_operation(
             OperationType.MOVE, src, tmp_path / "dest.txt", status=OperationStatus.FAILED
         )
+        _backdate_operations(history.db, days_old=1, status=OperationStatus.FAILED.value)
 
         cleanup = HistoryCleanup(history.db)
-        # 0 days means anything older than now is deleted
         deleted = cleanup.cleanup_failed_operations(older_than_days=0)
 
-        assert isinstance(deleted, int)
-        assert deleted >= 0
+        assert deleted == 1
+        assert history.db.get_operation_count() == 0
 
     def test_cleanup_rolled_back_operations(self, tmp_path: Path) -> None:
         from file_organizer.history.cleanup import HistoryCleanup
@@ -1428,12 +1439,13 @@ class TestHistoryCleanup:
         history.log_operation(
             OperationType.MOVE, src, tmp_path / "dest.txt", status=OperationStatus.ROLLED_BACK
         )
+        _backdate_operations(history.db, days_old=1, status=OperationStatus.ROLLED_BACK.value)
 
         cleanup = HistoryCleanup(history.db)
         deleted = cleanup.cleanup_rolled_back_operations(older_than_days=0)
 
-        assert isinstance(deleted, int)
-        assert deleted >= 0
+        assert deleted == 1
+        assert history.db.get_operation_count() == 0
 
     def test_clear_all_requires_confirm(self, tmp_path: Path) -> None:
         from file_organizer.history.cleanup import HistoryCleanup

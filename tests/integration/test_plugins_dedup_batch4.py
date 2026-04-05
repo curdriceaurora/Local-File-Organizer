@@ -35,6 +35,10 @@ def _make_package_dict(**overrides: Any) -> dict[str, Any]:
     return base
 
 
+def _assert_bearer_auth(request: httpx.Request, token: str = "tok") -> None:
+    assert request.headers["Authorization"] == f"Bearer {token}"
+
+
 # ---------------------------------------------------------------------------
 # TestPluginExecutor
 # ---------------------------------------------------------------------------
@@ -393,6 +397,13 @@ class TestPluginClient:
         response_payload = {"items": items}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "GET"
+            assert request.url.path == "/api/v1/plugins/files/list"
+            assert request.url.params["path"] == "/data"
+            assert request.url.params["recursive"] == "false"
+            assert request.url.params["include_hidden"] == "false"
+            assert request.url.params["max_items"] == "200"
             return httpx.Response(200, json=response_payload)
 
         client = PluginClient(
@@ -456,6 +467,10 @@ class TestPluginClient:
         meta = {"name": "file.txt", "size": 100}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "GET"
+            assert request.url.path == "/api/v1/plugins/files/metadata"
+            assert request.url.params["path"] == "/data/file.txt"
             return httpx.Response(200, json=meta)
 
         client = PluginClient(
@@ -488,6 +503,15 @@ class TestPluginClient:
         resp = {"moved": True, "destination": "/dest/file.txt"}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/files/organize"
+            assert json.loads(request.content.decode()) == {
+                "source_path": "/data/file.txt",
+                "destination_path": "/dest/file.txt",
+                "overwrite": False,
+                "dry_run": False,
+            }
             return httpx.Response(200, json=resp)
 
         client = PluginClient(
@@ -505,6 +529,11 @@ class TestPluginClient:
         from file_organizer.plugins.sdk.client import PluginClient
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "GET"
+            assert request.url.path == "/api/v1/plugins/config/get"
+            assert request.url.params["key"] == "some_key"
+            assert request.url.params["profile"] == "default"
             return httpx.Response(200, json={"value": "my-setting"})
 
         client = PluginClient(
@@ -538,6 +567,14 @@ class TestPluginClient:
         resp = {"id": "reg-123", "event": "file.scanned"}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/hooks/register"
+            assert json.loads(request.content.decode()) == {
+                "event": "file.scanned",
+                "callback_url": "http://cb.example.com/hook",
+                "secret": None,
+            }
             return httpx.Response(200, json=resp)
 
         client = PluginClient(
@@ -557,6 +594,14 @@ class TestPluginClient:
         resp = {"id": "reg-456"}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/hooks/register"
+            assert json.loads(request.content.decode()) == {
+                "event": "custom.event",
+                "callback_url": "http://cb.example.com",
+                "secret": None,
+            }
             return httpx.Response(200, json=resp)
 
         client = PluginClient(
@@ -573,6 +618,13 @@ class TestPluginClient:
         from file_organizer.plugins.sdk.client import PluginClient
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/hooks/unregister"
+            assert json.loads(request.content.decode()) == {
+                "event": "file.scanned",
+                "callback_url": "http://cb.example.com/hook",
+            }
             return httpx.Response(200, json={"removed": True})
 
         client = PluginClient(
@@ -591,6 +643,13 @@ class TestPluginClient:
         from file_organizer.plugins.sdk.client import PluginClient
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/hooks/unregister"
+            assert json.loads(request.content.decode()) == {
+                "event": "file.scanned",
+                "callback_url": "http://cb.example.com/hook",
+            }
             return httpx.Response(200, json={"removed": False})
 
         client = PluginClient(
@@ -611,6 +670,10 @@ class TestPluginClient:
         items = [{"id": "h1", "event": "file.scanned"}]
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "GET"
+            assert request.url.path == "/api/v1/plugins/hooks"
+            assert request.url.params["event"] == "file.scanned"
             return httpx.Response(200, json={"items": items})
 
         client = PluginClient(
@@ -629,6 +692,10 @@ class TestPluginClient:
         items = [{"id": "h1"}, {"id": "h2"}]
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "GET"
+            assert request.url.path == "/api/v1/plugins/hooks"
+            assert "event" not in request.url.params
             return httpx.Response(200, json={"items": items})
 
         client = PluginClient(
@@ -647,6 +714,13 @@ class TestPluginClient:
         resp = {"delivered": 1, "failed": 0}
 
         def handler(request: httpx.Request) -> httpx.Response:
+            _assert_bearer_auth(request)
+            assert request.method == "POST"
+            assert request.url.path == "/api/v1/plugins/hooks/trigger"
+            assert json.loads(request.content.decode()) == {
+                "event": "file.scanned",
+                "payload": {"path": "/f.txt"},
+            }
             return httpx.Response(200, json=resp)
 
         client = PluginClient(
@@ -1435,10 +1509,21 @@ class TestMisplacementDetector:
 
         f = tmp_path / "test.txt"
         f.write_text("hello world")
+        sibling = tmp_path / "other.txt"
+        sibling.write_text("neighbor")
         detector = MisplacementDetector()
-        with patch("pathlib.Path.stat", side_effect=OSError("permission denied")):
+        real_stat = Path.stat
+
+        def flaky_stat(path: Path, *args: Any, **kwargs: Any) -> Any:
+            if path == sibling:
+                raise OSError("permission denied")
+            return real_stat(path, *args, **kwargs)
+
+        with patch("pathlib.Path.stat", autospec=True, side_effect=flaky_stat):
             context = detector.analyze_context(f)
-        assert context.size == 0
+        assert context.file_path == f
+        assert context.size > 0
+        assert context.sibling_files == []
 
     def test_analyze_context_infers_sibling_types(self, tmp_path: Path) -> None:
         from file_organizer.services.misplacement_detector import MisplacementDetector

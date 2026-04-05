@@ -313,7 +313,9 @@ class TestFileOps:
         )
 
         assert "Docs" in result
-        assert any("_1" in name or name == "note.txt" for name in result["Docs"])
+        assert (dest_dir / "note.txt").read_text() == "old"
+        assert any("_1" in name for name in result["Docs"])
+        assert len(list(dest_dir.iterdir())) == 2
 
     def test_simulate_organization(self, tmp_path: Path) -> None:
         from file_organizer.core import file_ops
@@ -1398,16 +1400,22 @@ class TestAudioUtils:
             get_audio_duration(tmp_path / "nonexistent.mp3")
 
     def test_get_audio_duration_returns_float_when_no_libs(self, tmp_path: Path) -> None:
+        import builtins
+
+        from file_organizer.services.audio.utils import get_audio_duration
 
         f = tmp_path / "dummy.mp3"
         f.write_bytes(b"\xff\xfb")
 
-        with (
-            patch("builtins.__import__", side_effect=ImportError("no pydub")),
-            patch("file_organizer.services.audio.utils.get_audio_duration") as mock_gad,
-        ):
-            mock_gad.return_value = 0.0
-            result = mock_gad(f)
+        real_import = builtins.__import__
+
+        def import_without_audio_libs(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name in {"pydub", "tinytag"} or name.startswith(("pydub.", "tinytag.")):
+                raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=import_without_audio_libs):
+            result = get_audio_duration(f)
 
         assert result == 0.0
 
@@ -1638,7 +1646,8 @@ class TestFileOrganizer:
             result = fo.organize(src, out)
 
         assert not (out / "PDFs" / "file.pdf").exists()
-        assert result.organized_structure != {} or result.processed_files >= 0
+        assert result.processed_files == 1
+        assert result.organized_structure == {"PDFs": ["file.pdf"]}
 
     def test_organize_returns_organization_result(self, tmp_path: Path) -> None:
         from file_organizer.core.types import OrganizationResult

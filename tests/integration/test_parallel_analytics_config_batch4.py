@@ -281,7 +281,18 @@ class TestResumableProcessor:
 
         result = rp.resume_job("j3", lambda p: "ok")
 
-        assert result.succeeded >= 1
+        assert result.succeeded == 1
+        mock_checkpoint_mgr.load_checkpoint.assert_called_once_with("j3")
+        mock_checkpoint_mgr.has_file_changed.assert_called_once_with(checkpoint, file_mod)
+        mock_checkpoint_mgr.create_checkpoint.assert_called_once_with(
+            job_id="j3",
+            completed_files=[],
+            pending_files=[file_mod],
+        )
+        mock_processor.process_batch_iter.assert_called_once()
+        files_arg, process_fn_arg = mock_processor.process_batch_iter.call_args.args
+        assert files_arg == [file_mod]
+        assert callable(process_fn_arg)
 
     def test_process_and_checkpoint_marks_job_completed(self, tmp_path: Path) -> None:
         from datetime import UTC, datetime
@@ -479,7 +490,17 @@ class TestResumableProcessor:
 
         result = rp.resume_job("j6", lambda p: "ok")
 
-        assert result.succeeded >= 1
+        assert result.succeeded == 1
+        mock_checkpoint_mgr.load_checkpoint.assert_called_once_with("j6")
+        mock_checkpoint_mgr.create_checkpoint.assert_called_once_with(
+            job_id="j6",
+            completed_files=[],
+            pending_files=[pending_file],
+        )
+        mock_processor.process_batch_iter.assert_called_once()
+        files_arg, process_fn_arg = mock_processor.process_batch_iter.call_args.args
+        assert files_arg == [pending_file]
+        assert callable(process_fn_arg)
 
     def test_process_and_checkpoint_failed_all_marks_failed(self, tmp_path: Path) -> None:
         from datetime import UTC, datetime
@@ -2270,7 +2291,7 @@ class TestServiceFacade:
 
         assert result["success"] is False
 
-    def test_find_duplicates_error_on_exception(self) -> None:
+    def test_find_duplicates_error_on_exception(self, tmp_path: Path) -> None:
         import asyncio
 
         from file_organizer.api.service_facade import ServiceFacade
@@ -2281,7 +2302,7 @@ class TestServiceFacade:
             mock_cls.side_effect = RuntimeError("dedup broken")
 
             async def run() -> dict[str, Any]:
-                return await facade.find_duplicates("/tmp/scan")
+                return await facade.find_duplicates(str(tmp_path / "scan"))
 
             result = asyncio.get_event_loop().run_until_complete(run())
 
