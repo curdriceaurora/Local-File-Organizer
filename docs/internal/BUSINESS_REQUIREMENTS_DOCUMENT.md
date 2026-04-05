@@ -4,8 +4,8 @@
 
 **Document Version**: 1.1
 **Date**: 2026-01-20
-**Product Version**: 2.0.0-alpha.2
-**Status**: Phase 1 Complete + Enhanced Roadmap
+**Product Version**: 2.0.0-alpha.3
+**Status**: Alpha 3 shipped; roadmap document requires refresh
 **Author**: Product Team
 **Approved By**: [Pending]
 
@@ -1527,23 +1527,23 @@ This roadmap incorporates user-requested features alongside the original strateg
 
 | Feature | Phase | Status | Priority |
 |---------|-------|--------|----------|
-| **Copilot Mode** (chat with AI) | Phase 2 | Planned | High |
-| **CLI Model Switching** | Phase 2 | Planned | High |
-| **Cross-Platform Executables** | Phase 2 | Planned | High |
+| **Copilot Mode** (chat with AI) | Phase 2 | ✅ Complete | High |
+| **CLI Model Switching** | Phase 2 | ✅ Complete | High |
+| **Cross-Platform Executables** | Phase 2 | ✅ Complete | High |
 | **Ebook Support** (.epub) | Phase 1 | ✅ Complete | - |
-| **Audio File Support** | Phase 3 | Planned | High |
+| **Audio File Support** | Phase 3 | ✅ Complete | High |
 | **Video Support** (basic) | Phase 1 | ✅ Complete | - |
 | **Video Support** (advanced) | Phase 3 | Planned | High |
-| **Johnny Decimal** | Phase 3 | Planned | Medium |
-| **File Deduplication** | Phase 4 | Planned | High |
-| **Dockerfile** | Phase 5 | Planned | Medium |
+| **Johnny Decimal** | Phase 3 | ✅ Complete | Medium |
+| **File Deduplication** | Phase 4 | ✅ Complete | High |
+| **Dockerfile** | Phase 5 | ✅ Complete | Medium |
 
 **Quick Status:**
-- ✅ **Ebook support**: Already implemented via EPUB format support
-- ✅ **Basic video support**: First-frame analysis functional
-- 📅 **Interactive features**: Copilot Mode and model switching coming in Phase 2
-- 📅 **Advanced media**: Full audio + multi-frame video in Phase 3
-- 📅 **Deployment**: Executables (Phase 2), Docker (Phase 5)
+- ✅ **Ebook support**: Implemented via EPUB format support
+- ✅ **Interactive features**: Copilot Mode and model switching are available in alpha3
+- ✅ **Advanced media**: Audio transcription and expanded media workflows are available
+- ✅ **Deployment**: Cross-platform executables and Dockerfile support are in-tree
+- ⚠️ **Planning note**: This BRD still contains historical roadmap sections and should be treated as partially archival
 
 ### 15.1 Completed Phases
 

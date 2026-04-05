@@ -1,6 +1,6 @@
 # Terminal User Interface (TUI)
 
-> **Version**: 2.0.0+
+> **Version**: 2.0.0-alpha.3
 
 File Organizer includes a full-featured Terminal User Interface (TUI) built with [Textual](https://textual.textualize.io/). It provides an interactive, keyboard-driven experience for organizing files without leaving your terminal.
 

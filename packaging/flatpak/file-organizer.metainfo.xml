@@ -27,6 +27,11 @@
   <url type="bugtracker">https://github.com/curdriceaurora/Local-File-Organizer/issues</url>
   <developer_name>File Organizer Contributors</developer_name>
   <releases>
+    <release version="2.0.0-alpha.3" date="2026-03-26">
+      <description>
+        <p>Alpha 3 is a quality-and-stability release focused on desktop packaging, CI hardening, and expanded integration coverage.</p>
+      </description>
+    </release>
     <release version="2.0.0-alpha.1" date="2026-01-01">
       <description>
         <p>Initial alpha release with full AI-powered file organization capabilities.</p>

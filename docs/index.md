@@ -55,12 +55,12 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 - 🔍 **Smart Search**: Full-text search with filters and saved searches
 - 📊 **Analytics**: Storage analysis, duplicate detection, and insights
 - 🔄 **Undo/Redo**: Reverse any operation instantly
-- 🎨 **Multiple Interfaces**: Web UI, CLI, and Terminal UI
+- 🎨 **Multiple Interfaces**: Web UI, CLI, Terminal UI, and native desktop app
 - 🔌 **Extensible**: Plugin system for custom functionality
 
 ## Supported File Types
 
-File Organizer processes **43+ file formats** including:
+File Organizer processes **48+ file formats** including:
 
 - **Documents**: PDF, Word, Excel, PowerPoint, Markdown, EPUB
 - **Images**: JPEG, PNG, GIF, BMP, TIFF
@@ -152,10 +152,10 @@ See the [Installation Guide](admin/installation.md) for detailed instructions.
 
 ## Documentation Updates
 
-This documentation is maintained for File Organizer v2.0+. For older versions, check the [GitHub releases](https://github.com/curdriceaurora/Local-File-Organizer/releases).
+This documentation is maintained for File Organizer `2.0.0-alpha.3`. For older versions, check the [GitHub releases](https://github.com/curdriceaurora/Local-File-Organizer/releases).
 
-**Last Updated**: 2026-02-16
-**Version**: 2.0.0+
+**Last Updated**: 2026-04-05
+**Version**: 2.0.0-alpha.3
 
 ______________________________________________________________________
 

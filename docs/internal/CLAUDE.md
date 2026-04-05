@@ -4,8 +4,8 @@
 
 An AI-powered local file management system with privacy-first architecture. Organizes files intelligently using local LLMs with zero cloud dependencies.
 
-**Core Metrics**: ~78,800 LOC | 314 modules | 237 tests | Python 3.11+
-**Version**: 2.0.0-alpha.1
+**Core Metrics**: ~100,000 LOC | 407 modules | 18k+ tests | Python 3.11+
+**Version**: 2.0.0-alpha.3
 
 ---
 
@@ -571,5 +571,5 @@ pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=<floor> --t
 
 ---
 
-**Last Updated**: 2026-02-18
-**Version**: 2.0.0-alpha.1
+**Last Updated**: 2026-04-05
+**Version**: 2.0.0-alpha.3

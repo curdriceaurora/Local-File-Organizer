@@ -6,7 +6,7 @@
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
-**307 tests** | **334 modules** | **48+ file types** | Python 3.11+
+**18k+ tests** | **407 modules** | **48+ file types** | Python 3.11+
 
 ## Features
 
@@ -133,6 +133,17 @@ ruff check src/
 
 Config lives in `config/file-organizer/config.yaml` relative to your config home. Override with `FILE_ORGANIZER_CONFIG`.
 
+## Release Status
+
+`2.0.0-alpha.3` is the current alpha milestone. Alpha 3 is a quality-and-stability release focused on hardening the existing CLI, TUI, web, desktop, deduplication, and analytics workflows rather than introducing a new surface area.
+
+Highlights of the current alpha3 status:
+
+- Integration and branch-coverage expansion across the main product areas
+- Native desktop packaging via `pywebview` and PyInstaller
+- Broader CI guardrails, diff-cover enforcement, and ratcheting coverage gates
+- Continued local-first AI support with optional cloud/Claude providers
+
 ---
 
-**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-03-01
+**Status**: Alpha 3 | **Version**: 2.0.0-alpha.3 | **Last Updated**: 2026-04-05
