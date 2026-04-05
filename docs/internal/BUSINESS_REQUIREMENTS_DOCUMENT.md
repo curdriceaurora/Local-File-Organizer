@@ -1545,7 +1545,7 @@ This roadmap incorporates user-requested features alongside the original strateg
 - ✅ **Interactive features**: Copilot Mode and model switching are available in alpha3
 - ✅ **Advanced media**: Audio transcription and expanded media workflows are available
 - ✅ **Deployment**: Cross-platform executables and Dockerfile support are in-tree
-- ⚠️ **Planning note**: This BRD still contains historical roadmap sections and should be treated as partially archival
+- ⚠️ **Planning note**: This BRD is an archival snapshot and still contains historical roadmap sections. Use the GitHub issue tracker, milestones, and `CHANGELOG.md` as the canonical sources for current roadmap and release status.
 
 ### 15.1 Completed Phases
 
