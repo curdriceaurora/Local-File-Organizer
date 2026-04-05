@@ -1,3 +1,79 @@
+// Expose folder-picker helper globally so onclick= attributes can reach it.
+//
+// Priority chain (each stage falls through to the next on failure/unavailability):
+//   1. pywebview js_api  — desktop app, full absolute path
+//   2. Server API        — direct uvicorn on macOS, full absolute path via osascript
+//   3. showDirectoryPicker — browser File System Access API, folder name only
+//   4. <input webkitdirectory> — last resort, folder name only
+window.browseDirectory = async (inputId) => {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  // 1. pywebview desktop: Python DesktopAPI.browse_directory() returns absolute path.
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.browse_directory) {
+    try {
+      const path = await window.pywebview.api.browse_directory();
+      if (path) { input.value = path; return; }
+    } catch (e) {
+      console.warn("pywebview browse_directory error:", e);
+      // fall through to next method
+    }
+  }
+
+  // 2. Server-side native dialog: works when server runs directly on macOS (not Docker).
+  //    Returns {path, available, cancelled}. If available=false, fall through.
+  try {
+    const resp = await fetch("/api/v1/setup/browse-folder");
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.available && !data.cancelled && data.path) {
+        input.value = data.path;
+        return;
+      }
+      if (data.available && data.cancelled) {
+        return; // user dismissed the dialog — do nothing
+      }
+      // data.available === false → server can't show dialog, fall through
+    }
+  } catch (e) {
+    // Network error or server unreachable — fall through to browser methods
+    console.warn("browse-folder API error:", e);
+  }
+
+  // 3. File System Access API (Chromium 86+, Safari 15.2+).
+  //    Can only return folder *name*, not the full path (browser security sandbox).
+  //    On error (SecurityError, NotSupportedError, etc.) fall through — do NOT return.
+  if (window.showDirectoryPicker) {
+    try {
+      const handle = await window.showDirectoryPicker({ mode: "read" });
+      if (!input.value) input.value = handle.name;
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // user cancelled — do nothing
+      console.warn("showDirectoryPicker error, falling back:", e);
+      // Any other error (SecurityError, NotAllowedError, etc.) → fall through
+    }
+  }
+
+  // 4. Fallback: hidden <input type=file webkitdirectory>.
+  //    Shows a native Finder dialog; can only return folder name (not absolute path).
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.webkitdirectory = true;
+  picker.style.position = "fixed";
+  picker.style.opacity = "0";
+  picker.style.pointerEvents = "none";
+  picker.onchange = () => {
+    if (picker.files && picker.files.length > 0) {
+      const rel = picker.files[0].webkitRelativePath;
+      if (!input.value) input.value = rel.split("/")[0];
+    }
+    picker.remove();
+  };
+  document.body.appendChild(picker);
+  picker.click();
+};
+
 (() => {
   let currentStep = 1;
   let selectedMode = null;

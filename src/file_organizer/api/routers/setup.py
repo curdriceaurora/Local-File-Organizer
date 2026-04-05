@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -171,3 +173,50 @@ def complete_setup(
         profile=request.profile,
         messages=[f"Setup completed successfully with model: {config.models.text_model}"],
     )
+
+
+class BrowseFolderResponse(BaseModel):
+    """Response for the native folder-picker endpoint.
+
+    Args:
+        path: Absolute POSIX path of the selected folder, or empty string.
+        available: Whether a native picker could be invoked on this server.
+        cancelled: True when the picker was shown but the user dismissed it.
+    """
+
+    path: str
+    available: bool
+    cancelled: bool = False
+
+
+@router.get("/setup/browse-folder", response_model=BrowseFolderResponse)
+def browse_folder() -> BrowseFolderResponse:
+    """Open a native OS folder-picker dialog on the server host.
+
+    Works when the API server is running directly on the user's desktop (macOS).
+    Returns ``available=False`` without spawning a subprocess when the server
+    is running inside a container or on a headless Linux host.
+
+    Returns:
+        BrowseFolderResponse with the selected absolute path, or an indication
+        that a native dialog is not available in this environment.
+    """
+    if sys.platform != "darwin":
+        # Linux (Docker) and Windows cannot show a macOS Finder dialog.
+        return BrowseFolderResponse(path="", available=False)
+
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", "POSIX path of (choose folder)"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return BrowseFolderResponse(path="", available=False)
+
+    if result.returncode != 0:
+        # Non-zero means the user pressed Cancel in the Finder dialog.
+        return BrowseFolderResponse(path="", available=True, cancelled=True)
+
+    return BrowseFolderResponse(path=result.stdout.strip(), available=True, cancelled=False)

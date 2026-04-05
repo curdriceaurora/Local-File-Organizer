@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import runpy
 import socket
-from unittest.mock import MagicMock, patch
+import sys
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -110,20 +111,21 @@ class TestLaunch:
         from file_organizer.desktop import app as desktop_app
 
         with (
-            patch.dict(__import__("sys").modules, {"webview": mock_webview}),
+            patch.dict(sys.modules, {"webview": mock_webview}),
             patch("file_organizer.desktop.app._wait_for_server", return_value=True),
             patch("file_organizer.desktop.app._run_server"),
             patch("file_organizer.desktop.app.threading"),
         ):
-            desktop_app.launch(title="My App", width=800, height=600)
+            desktop_app.launch(title="My App", width=1024, height=768)
 
         mock_webview.create_window.assert_called_once_with(
             "My App",
-            __import__("unittest.mock", fromlist=["ANY"]).ANY,
-            width=800,
-            height=600,
+            ANY,
+            width=1024,
+            height=768,
             resizable=True,
             min_size=(800, 600),
+            js_api=ANY,
         )
 
     def test_happy_path_calls_webview_start(self) -> None:
@@ -180,8 +182,6 @@ class TestRunServer:
 
     def test_forwards_extra_kwargs_to_uvicorn(self) -> None:
         """_run_server() should forward **uvicorn_kwargs to uvicorn.run."""
-        import sys
-
         from file_organizer.desktop.app import _run_server
 
         mock_uvicorn = MagicMock()
@@ -193,8 +193,15 @@ class TestRunServer:
         ):
             _run_server(9999, workers=2)
 
-        _, kwargs = mock_uvicorn.run.call_args
-        assert kwargs.get("workers") == 2
+        assert mock_uvicorn.run.call_count == 1
+        args, kwargs = mock_uvicorn.run.call_args
+        assert args == (mock_api_main.create_app.return_value,)
+        assert kwargs == {
+            "host": "127.0.0.1",
+            "port": 9999,
+            "log_level": "warning",
+            "workers": 2,
+        }
 
 
 # ---------------------------------------------------------------------------

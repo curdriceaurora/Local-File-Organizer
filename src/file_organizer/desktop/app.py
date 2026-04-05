@@ -29,6 +29,25 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _DEFAULT_TITLE = "File Organizer"
+
+
+class DesktopAPI:
+    """Python methods exposed to the webview JavaScript context via ``js_api``.
+
+    Accessible in the browser as ``window.pywebview.api.<method>()``.
+    """
+
+    def browse_directory(self) -> str:
+        """Open a native folder-picker dialog and return the selected path.
+
+        Returns:
+            Absolute path to the selected folder, or an empty string if the
+            user cancelled the dialog.
+        """
+        import webview  # type: ignore[import-untyped]
+
+        result = webview.active_window().create_file_dialog(webview.FOLDER_DIALOG)
+        return result[0] if result else ""
 _DEFAULT_WIDTH = 1280
 _DEFAULT_HEIGHT = 800
 _READY_POLL_INTERVAL = 0.05  # seconds
@@ -136,6 +155,7 @@ def launch(
 
     logger.info("Server ready — opening window")
 
+    api = DesktopAPI()
     window = webview.create_window(
         title,
         url,
@@ -143,6 +163,7 @@ def launch(
         height=height,
         resizable=True,
         min_size=(800, 600),
+        js_api=api,
     )
     # webview.start() blocks until the window is closed; MUST run on main thread.
     webview.start(debug=False)

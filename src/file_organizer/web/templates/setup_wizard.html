@@ -173,12 +173,18 @@
 
                         <div class="form-group">
                             <label for="input-dir">Input Directory</label>
-                            <input type="text" id="input-dir" name="input_dir" class="form-input" placeholder="/path/to/input">
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" id="input-dir" name="input_dir" class="form-input" placeholder="/path/to/input" style="flex:1;">
+                                <button type="button" class="btn-ghost" onclick="window.browseDirectory('input-dir')" style="white-space:nowrap;">Browse…</button>
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label for="output-dir">Output Directory</label>
-                            <input type="text" id="output-dir" name="output_dir" class="form-input" placeholder="/path/to/output">
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" id="output-dir" name="output_dir" class="form-input" placeholder="/path/to/output" style="flex:1;">
+                                <button type="button" class="btn-ghost" onclick="window.browseDirectory('output-dir')" style="white-space:nowrap;">Browse…</button>
+                            </div>
                         </div>
                     </div>
                 </form>
