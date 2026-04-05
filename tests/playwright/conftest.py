@@ -42,11 +42,8 @@ import pytest
 
 try:
     from playwright.sync_api import Page
-except ImportError as exc:
-    raise ImportError(
-        "Playwright is required to run the desktop E2E tests. "
-        "Install it with: pip install playwright && playwright install chromium"
-    ) from exc
+except ImportError:
+    Page = object  # type: ignore[assignment,misc]
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -245,6 +242,14 @@ class PywebviewMockHandle:
             path: Absolute file path string the mock should resolve to.
         """
         self._page.evaluate(f"() => {{ window.__mockPyw.browse_file_result = {path!r}; }}")
+
+    def set_save_file_result(self, path: str) -> None:
+        """Override the path returned by ``save_file()``.
+
+        Args:
+            path: Absolute file path string the mock should resolve to.
+        """
+        self._page.evaluate(f"() => {{ window.__mockPyw.save_file_result = {path!r}; }}")
 
     def set_open_path_result(self, value: bool) -> None:
         """Override the bool returned by ``open_path()``.

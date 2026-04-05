@@ -65,6 +65,27 @@ class TestWizardStep1:
         expect(page.locator("[data-step='2'].wizard-step-active")).to_be_visible()
 
 
+class TestWizardStep2:
+    """Step 2: capability detection panel."""
+
+    def test_step2_renders_detection_panel(self, page: Page) -> None:
+        """Step 2 must include capability detection status elements."""
+        page.goto(_WIZARD_URL)
+        _force_show_step(page, 2)
+        expect(page.locator("#ollama-status")).to_be_attached()
+        expect(page.locator("#models-status")).to_be_attached()
+
+    def test_continue_button_advances_to_step3(self, page: Page) -> None:
+        """Force-clicking 'Continue' from step 2 must show step 3."""
+        page.goto(_WIZARD_URL)
+        _force_show_step(page, 2)
+        # Dispatch click via JS to bypass disabled attribute and z-index issues.
+        page.evaluate(
+            "() => document.getElementById('btn-next-step2').dispatchEvent(new MouseEvent('click', {bubbles: true}))"
+        )
+        expect(page.locator("[data-step='3'].wizard-step-active")).to_be_visible()
+
+
 class TestWizardStep3:
     """Step 3: directory configuration and Browse integration."""
 
@@ -84,7 +105,7 @@ class TestWizardStep3:
         _force_show_step(page, 3)
 
         # Call browseDirectory directly (same as onclick="window.browseDirectory('input-dir')")
-        page.evaluate("() => window.browseDirectory('input-dir')")
+        page.evaluate("async () => { await window.browseDirectory('input-dir'); }")
 
         expect(page.locator("#input-dir")).to_have_value("/mock/dir")
 
@@ -142,24 +163,3 @@ class TestWizardStep3:
             "new MouseEvent('click', {bubbles: true}))"
         )
         expect(page.locator("[data-step='4'].wizard-step-active")).to_be_visible()
-
-
-class TestWizardStep2:
-    """Step 2: capability detection panel."""
-
-    def test_step2_renders_detection_panel(self, page: Page) -> None:
-        """Step 2 must include capability detection status elements."""
-        page.goto(_WIZARD_URL)
-        _force_show_step(page, 2)
-        expect(page.locator("#ollama-status")).to_be_attached()
-        expect(page.locator("#models-status")).to_be_attached()
-
-    def test_continue_button_advances_to_step3(self, page: Page) -> None:
-        """Force-clicking 'Continue' from step 2 must show step 3."""
-        page.goto(_WIZARD_URL)
-        _force_show_step(page, 2)
-        # Dispatch click via JS to bypass disabled attribute and z-index issues.
-        page.evaluate(
-            "() => document.getElementById('btn-next-step2').dispatchEvent(new MouseEvent('click', {bubbles: true}))"
-        )
-        expect(page.locator("[data-step='3'].wizard-step-active")).to_be_visible()
