@@ -108,11 +108,9 @@ class TestDocumentExtractor:
         mock_pypdf.PdfReader.return_value = mock_reader
 
         with patch.dict("sys.modules", {"pypdf": mock_pypdf, "pypdf.errors": MagicMock()}):
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value = MagicMock()
-                result = extractor._extract_pdf(f)
-        # We patched open so result will be empty string (pypdf import is stale in context)
-        assert result == "" or result == "page text"
+            result = extractor._extract_pdf(f)
+
+        assert result == "page text"
 
     def test_extract_docx_returns_empty_when_docx_missing(self, tmp_path: Path) -> None:
         extractor = self._make_extractor()
@@ -209,8 +207,8 @@ class TestDocumentExtractor:
             "sys.modules", {"striprtf": mock_striprtf, "striprtf.striprtf": mock_striprtf.striprtf}
         ):
             result = extractor._extract_rtf(f)
-        # striprtf module injection may or may not intercept depending on import cache
-        assert result == "Hello World" or result == "" or "Hello World" in result
+
+        assert result == "Hello World"
 
     def test_supports_format_case_insensitive(self, tmp_path: Path) -> None:
         extractor = self._make_extractor()
@@ -401,13 +399,7 @@ class TestImageDeduplicator:
             str(img2): [],
         }
         result = dedup.find_duplicates(tmp_path)
-        assert isinstance(result, dict)
-        # Result must be non-empty since we have duplicate images
-        assert len(result) >= 1
-        # Result keys are strings, values are lists of paths
-        for key, val in result.items():
-            assert isinstance(key, str)
-            assert isinstance(val, list)
+        assert result == {hash_val: [img1, img2]}
 
     def test_batch_compute_hashes_empty_list(self) -> None:
         dedup = self._make_deduplicator()
@@ -1193,8 +1185,14 @@ class TestConfidenceScorer:
         f = tmp_path / "file.txt"
         f.write_text("data")
         pa = self._make_mock_pattern_analysis()
+        pattern = MagicMock()
+        pattern.example_files = ["file.txt"]
+        pattern.confidence = 80.0
+        pa.naming_patterns = [pattern]
+        baseline = scorer.score_suggestion(f, None, SuggestionType.MOVE)
         result = scorer.score_suggestion(f, None, SuggestionType.MOVE, pattern_analysis=pa)
-        assert result is not None
+        assert result.pattern_strength != baseline.pattern_strength
+        assert result.pattern_strength == 80.0
 
     def test_calculate_recency_score_recent_file(self, tmp_path: Path) -> None:
         scorer = self._make_scorer()
@@ -1281,11 +1279,13 @@ class TestConfidenceScorer:
         scorer = self._make_scorer()
         f = tmp_path / "file.txt"
         f.write_text("data")
-        history = {"move_history": {".txt": {str(tmp_path): 2}}}
-        result = scorer.score_suggestion(
-            f, tmp_path / "file.txt", SuggestionType.MOVE, user_history=history
-        )
-        assert result is not None
+        target = tmp_path / "archive" / "file.txt"
+        target.parent.mkdir()
+        history = {"move_history": {".txt": {str(target.parent): 2}}}
+        baseline = scorer.score_suggestion(f, target, SuggestionType.MOVE)
+        result = scorer.score_suggestion(f, target, SuggestionType.MOVE, user_history=history)
+        assert result.user_history != baseline.user_history
+        assert result.user_history == 70.0
 
     def test_calculate_pattern_strength_no_patterns(self, tmp_path: Path) -> None:
         scorer = self._make_scorer()
