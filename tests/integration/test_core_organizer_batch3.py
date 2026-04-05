@@ -6,6 +6,7 @@ ParallelProcessor, StorageAnalyzer, AudioUtils.
 
 from __future__ import annotations
 
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -389,7 +390,7 @@ class TestDisplay:
 
         from file_organizer.core.display import show_file_breakdown
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         show_file_breakdown(
             console,
             text_files=[Path("a.txt")],
@@ -408,7 +409,7 @@ class TestDisplay:
 
         from file_organizer.core.display import show_file_breakdown
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         show_file_breakdown(
             console,
             text_files=[],
@@ -428,7 +429,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(total_files=3, processed_files=2, failed_files=1)
 
         show_summary(console, result, tmp_path, dry_run=True)
@@ -442,7 +443,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(
             total_files=5,
             processed_files=5,
@@ -459,7 +460,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(
             total_files=2,
             failed_files=2,
@@ -477,7 +478,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(
             total_files=20,
             failed_files=20,
@@ -494,7 +495,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(
             total_files=10,
             processed_files=8,
@@ -511,7 +512,7 @@ class TestDisplay:
         from file_organizer.core.display import show_summary
         from file_organizer.core.types import OrganizationResult
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         result = OrganizationResult(
             total_files=4,
             processed_files=4,
@@ -541,7 +542,7 @@ class TestDisplay:
 
         from file_organizer.core.display import show_file_breakdown
 
-        console = Console(record=True, quiet=True)
+        console = Console(record=True, file=StringIO())
         show_file_breakdown(
             console,
             text_files=[],
