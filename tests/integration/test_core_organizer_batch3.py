@@ -1208,7 +1208,7 @@ class TestStorageAnalyzer:
         analyzer = StorageAnalyzer()
         wasted = analyzer.get_duplicate_space(groups)
 
-        assert wasted == 1000  # 2 extra copies × 500 bytes
+        assert wasted == 1000  # 2 extra copies x 500 bytes
 
     def test_get_duplicate_space_single_file_group(self, tmp_path: Path) -> None:
         from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
