@@ -16,9 +16,17 @@ services:
       - FILE_ORGANIZER_LOG_LEVEL=DEBUG
       - FILE_ORGANIZER_DEBUG=1
       - FO_REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      # Point Ollama at the host machine so the container can reach the Mac's Ollama server.
+      # OLLAMA_HOST is read by the ollama Python client; FO_OLLAMA_URL by the API config.
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - FO_OLLAMA_URL=http://host.docker.internal:11434
+      # Ensure live-mounted src/ takes precedence over the installed package
+      - PYTHONPATH=/app/src
     ports:
       - "8000:8000"
       - "5678:5678"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   redis:
     ports:

@@ -78,7 +78,9 @@ def detect_ollama() -> OllamaStatus:
         logger.debug("Ollama Python package not available")
         return OllamaStatus(installed=False, running=False)
 
-    # Check if Ollama CLI is installed
+    # Check if Ollama CLI is installed (optional — service may run remotely or in Docker)
+    cli_installed = False
+    version = ""
     try:
         result = subprocess.run(
             ["ollama", "--version"],
@@ -86,35 +88,36 @@ def detect_ollama() -> OllamaStatus:
             text=True,
             timeout=5,
         )
-        if result.returncode != 0:
+        if result.returncode == 0:
+            cli_installed = True
+            version = result.stdout.strip()
+            logger.debug("Ollama CLI found: {}", version)
+        else:
             logger.debug("Ollama CLI not found or returned error")
-            return OllamaStatus(installed=False, running=False)
-
-        version = result.stdout.strip()
-        logger.debug("Ollama CLI found: {}", version)
-
     except FileNotFoundError:
-        logger.debug("Ollama CLI not found in PATH")
-        return OllamaStatus(installed=False, running=False)
+        logger.debug("Ollama CLI not found in PATH — will still probe service endpoint")
     except (subprocess.SubprocessError, OSError) as e:
         logger.debug("Failed to check Ollama CLI: {}", e)
-        return OllamaStatus(installed=False, running=False)
 
-    # Check if Ollama service is running by trying to list models
+    # Check if Ollama service is running by trying to list models.
+    # Respects OLLAMA_HOST env var (set e.g. to http://host.docker.internal:11434
+    # when running inside Docker so the client reaches the host machine).
     try:
         client = ollama.Client()
         models_response = client.list()
 
-        # Count installed models
+        # Count installed models — handle dict, list, and ListResponse object
         models_count = 0
         if isinstance(models_response, dict) and "models" in models_response:
             models_count = len(models_response["models"])
         elif isinstance(models_response, list):
             models_count = len(models_response)
+        elif hasattr(models_response, "models"):
+            models_count = len(models_response.models)
 
         logger.debug("Ollama service is running with {} models", models_count)
         return OllamaStatus(
-            installed=True,
+            installed=True,  # service reachable implies Ollama is present
             running=True,
             version=version,
             models_count=models_count,
@@ -123,7 +126,7 @@ def detect_ollama() -> OllamaStatus:
     except OLLAMA_CLIENT_EXCEPTIONS as e:
         logger.debug("Ollama service not responding: {}", e)
         return OllamaStatus(
-            installed=True,
+            installed=cli_installed,
             running=False,
             version=version,
             models_count=0,
@@ -152,17 +155,28 @@ def list_installed_models() -> list[InstalledModel]:
 
         models: list[InstalledModel] = []
 
+        # Normalise to a flat iterable — handles dict, list, and ListResponse object
         if isinstance(response, dict) and "models" in response:
-            for model_data in response["models"]:
+            raw_models = response["models"]
+        elif isinstance(response, list):
+            raw_models = response
+        elif hasattr(response, "models"):
+            raw_models = response.models
+        else:
+            raw_models = []
+
+        for model_data in raw_models:
+            if hasattr(model_data, "model"):
+                # ollama.Model dataclass
                 models.append(
                     InstalledModel(
-                        name=model_data.get("name", ""),
-                        size=model_data.get("size"),
-                        modified=model_data.get("modified_at"),
+                        name=model_data.model,
+                        size=getattr(model_data, "size", None),
+                        modified=str(getattr(model_data, "modified_at", None)),
                     )
                 )
-        elif isinstance(response, list):
-            for model_data in response:
+            else:
+                # plain dict fallback
                 models.append(
                     InstalledModel(
                         name=model_data.get("name", ""),
