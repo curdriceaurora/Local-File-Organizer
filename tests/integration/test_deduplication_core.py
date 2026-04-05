@@ -355,8 +355,7 @@ class TestImageDeduplicator:
         img2.write_bytes(b"\xff\xd8\xff")
         dedup.hasher.encode_image.return_value = "ff00ff00ff00ff00"
         result = dedup.compute_similarity(img1, img2)
-        assert result is not None
-        assert 0.0 <= result <= 1.0
+        assert result == pytest.approx(1.0)
 
     def test_compute_similarity_returns_none_when_hash_fails(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
@@ -657,10 +656,11 @@ class TestSemanticAnalyzer:
         p2.write_text("b")
         groups = analyzer.get_duplicate_groups(emb, [p1, p2])
         assert isinstance(groups, list)
-        if groups:
-            assert "files" in groups[0]
-            assert "count" in groups[0]
-            assert groups[0]["count"] >= 2
+        assert groups
+        assert "files" in groups[0]
+        assert "count" in groups[0]
+        assert len(groups[0]["files"]) == 2
+        assert groups[0]["count"] == 2
 
     def test_get_statistics_above_threshold_count_is_int(self) -> None:
         analyzer = self._make_analyzer(threshold=0.5)
