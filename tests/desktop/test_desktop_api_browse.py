@@ -132,10 +132,16 @@ class TestDesktopAPIBrowseDirectory:
         """Return type must always be str (never None, list, or tuple)."""
         from file_organizer.desktop.app import DesktopAPI
 
-        for dialog_result in [("/mock/path",), None, (), []]:
+        cases: list[tuple[object, str]] = [
+            (("/mock/path",), "/mock/path"),
+            (None, ""),
+            ((), ""),
+            ([], ""),
+        ]
+        for dialog_result, expected in cases:
             mock_webview, _ = self._make_mock_webview(dialog_result)
             with patch.dict("sys.modules", {"webview": mock_webview}):
                 result = DesktopAPI().browse_directory()
-            assert isinstance(result, str), (
-                f"Expected str, got {type(result)} for {dialog_result!r}"
+            assert result == expected, (
+                f"For {dialog_result!r}: expected {expected!r}, got {result!r}"
             )

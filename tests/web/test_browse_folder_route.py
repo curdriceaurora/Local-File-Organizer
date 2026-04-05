@@ -59,12 +59,12 @@ class TestBrowseFolderSchema:
     def test_path_is_string(self, client: TestClient) -> None:
         with patch("file_organizer.api.routers.setup.sys.platform", "linux"):
             resp = client.get("/api/setup/browse-folder")
-        assert isinstance(resp.json()["path"], str)
+        assert resp.json()["path"] == ""
 
     def test_available_is_bool(self, client: TestClient) -> None:
         with patch("file_organizer.api.routers.setup.sys.platform", "linux"):
             resp = client.get("/api/setup/browse-folder")
-        assert isinstance(resp.json()["available"], bool)
+        assert resp.json()["available"] is False
 
 
 # ---------------------------------------------------------------------------

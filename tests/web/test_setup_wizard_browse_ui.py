@@ -19,13 +19,9 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 TEMPLATE_PATH = (
-    Path(__file__).parent.parent.parent
-    / "src/file_organizer/web/templates/setup_wizard.html"
+    Path(__file__).parent.parent.parent / "src/file_organizer/web/templates/setup_wizard.html"
 )
-JS_PATH = (
-    Path(__file__).parent.parent.parent
-    / "src/file_organizer/web/static/js/setup_wizard.js"
-)
+JS_PATH = Path(__file__).parent.parent.parent / "src/file_organizer/web/static/js/setup_wizard.js"
 
 
 # ---------------------------------------------------------------------------
@@ -102,9 +98,7 @@ class TestSetupWizardJSBrowseFunction:
         """Function must include the webkitdirectory fallback input as last resort."""
         assert "webkitdirectory" in js
 
-    def test_showdirectorypicker_error_does_not_use_bare_return(
-        self, js: str
-    ) -> None:
+    def test_showdirectorypicker_error_does_not_use_bare_return(self, js: str) -> None:
         """
         When showDirectoryPicker throws an error that is NOT AbortError, the code
         must NOT simply `return` — it must fall through to the next picker method.
@@ -116,7 +110,7 @@ class TestSetupWizardJSBrowseFunction:
         error logging.
         """
         # The correct pattern: only return on AbortError, otherwise fall through
-        assert 'e.name === "AbortError"' in js or "e.name !== \"AbortError\"" in js
+        assert 'e.name === "AbortError"' in js or 'e.name !== "AbortError"' in js
 
     def test_fetch_fallback_on_server_unavailable(self, js: str) -> None:
         """The fetch call must have error handling so server errors fall through."""
