@@ -3,6 +3,7 @@
 Covers: FileDispatcher/process_* functions, FileOrganizer, FileOps, DisplayHelper,
 ParallelProcessor, StorageAnalyzer, AudioUtils.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -744,9 +745,7 @@ class TestDispatcher:
         mock_classifier_cls.return_value.classify.return_value = mock_classification
 
         mock_organizer_cls = MagicMock()
-        mock_organizer_cls.return_value.generate_path.return_value = Path(
-            "Music/Artist/Track.mp3"
-        )
+        mock_organizer_cls.return_value.generate_path.return_value = Path("Music/Artist/Track.mp3")
 
         # AudioClassifier and AudioOrganizer are imported locally inside
         # process_audio_files; patch their module-level definitions so the
@@ -804,7 +803,9 @@ class TestDispatcher:
         mock_organizer_cls.return_value.generate_description.return_value = "An action video"
 
         with patch("file_organizer.services.video.organizer.VideoOrganizer", mock_organizer_cls):
-            with patch("file_organizer.core.dispatcher.VideoOrganizer", mock_organizer_cls, create=True):
+            with patch(
+                "file_organizer.core.dispatcher.VideoOrganizer", mock_organizer_cls, create=True
+            ):
                 results = dispatcher.process_video_files([f], extractor_cls=mock_extractor_cls)
 
         assert len(results) == 1
@@ -1397,7 +1398,6 @@ class TestAudioUtils:
             get_audio_duration(tmp_path / "nonexistent.mp3")
 
     def test_get_audio_duration_returns_float_when_no_libs(self, tmp_path: Path) -> None:
-        from file_organizer.services.audio.utils import get_audio_duration
 
         f = tmp_path / "dummy.mp3"
         f.write_bytes(b"\xff\xfb")
@@ -1574,8 +1574,8 @@ class TestFileOrganizer:
     """Tests for file_organizer.core.organizer.FileOrganizer."""
 
     def _make_organizer(self) -> Any:
-        from file_organizer.models.base import ModelConfig, ModelType
         from file_organizer.core.organizer import FileOrganizer
+        from file_organizer.models.base import ModelConfig, ModelType
 
         text_cfg = ModelConfig(name="mock-text", model_type=ModelType.TEXT)
         vision_cfg = ModelConfig(name="mock-vision", model_type=ModelType.VISION)
@@ -1750,8 +1750,8 @@ class TestFileOrganizer:
         assert len(fo.AUDIO_EXTENSIONS) >= 1
 
     def test_no_prefetch_overrides_prefetch_depth(self) -> None:
-        from file_organizer.models.base import ModelConfig, ModelType
         from file_organizer.core.organizer import FileOrganizer
+        from file_organizer.models.base import ModelConfig, ModelType
 
         text_cfg = ModelConfig(name="mock", model_type=ModelType.TEXT)
         vision_cfg = ModelConfig(name="mock", model_type=ModelType.VISION)
@@ -1818,8 +1818,8 @@ class TestFileOrganizer:
         assert result.deduplicated_files == 1
 
     def test_organize_enable_vision_false(self, tmp_path: Path) -> None:
-        from file_organizer.models.base import ModelConfig, ModelType
         from file_organizer.core.organizer import FileOrganizer
+        from file_organizer.models.base import ModelConfig, ModelType
 
         text_cfg = ModelConfig(name="mock", model_type=ModelType.TEXT)
         vision_cfg = ModelConfig(name="mock", model_type=ModelType.VISION)

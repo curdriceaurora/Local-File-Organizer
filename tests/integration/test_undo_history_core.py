@@ -3,6 +3,7 @@
 Covers UndoManager, RollbackEngine, UndoViewer, UndoValidator, HistoryCleanup, HistoryExport.
 All filesystem operations use pytest tmp_path. External services are mocked.
 """
+
 from __future__ import annotations
 
 import csv
@@ -10,7 +11,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,6 +21,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.ci]
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_db(tmp_path: Path) -> Any:
     """Create a fresh in-memory-like DatabaseManager backed by tmp_path."""
@@ -70,6 +72,7 @@ def _make_operation(
 # TestOperationValidator
 # ===========================================================================
 
+
 class TestOperationValidator:
     """Tests for OperationValidator — validate_undo / validate_redo paths."""
 
@@ -77,12 +80,14 @@ class TestOperationValidator:
         from file_organizer.undo.validator import OperationValidator
 
         # Create files so conditions are satisfied
-        src = tmp_path / "original.txt"
+        _src = tmp_path / "original.txt"
         dst = tmp_path / "moved.txt"
         dst.write_text("content")  # file is at destination
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt")
+        op = _make_operation(
+            tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt"
+        )
         result = validator.validate_undo(op)
 
         assert result.can_proceed is True
@@ -92,7 +97,9 @@ class TestOperationValidator:
         from file_organizer.undo.validator import OperationValidator
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt")
+        op = _make_operation(
+            tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt"
+        )
         # destination does NOT exist → conflict
         result = validator.validate_undo(op)
 
@@ -115,12 +122,14 @@ class TestOperationValidator:
     def test_validate_undo_failed_operation_has_warning(self, tmp_path: Path) -> None:
         from file_organizer.undo.validator import OperationValidator
 
-        src = tmp_path / "original.txt"
+        _src = tmp_path / "original.txt"
         dst = tmp_path / "moved.txt"
         dst.write_text("content")
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="move", status="failed", src_name="original.txt", dst_name="moved.txt")
+        op = _make_operation(
+            tmp_path, op_type="move", status="failed", src_name="original.txt", dst_name="moved.txt"
+        )
         result = validator.validate_undo(op)
 
         # Should have at least a warning about failed operation
@@ -133,7 +142,9 @@ class TestOperationValidator:
         new_name.write_text("content")
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="rename", src_name="old_name.txt", dst_name="new_name.txt")
+        op = _make_operation(
+            tmp_path, op_type="rename", src_name="old_name.txt", dst_name="new_name.txt"
+        )
         result = validator.validate_undo(op)
 
         assert result.can_proceed is True
@@ -184,7 +195,9 @@ class TestOperationValidator:
         trash_file.write_text("deleted content")
 
         validator = OperationValidator(trash_dir=trash_dir)
-        op = _make_operation(tmp_path, op_type="delete", src_name="deleted.txt", dst_name=None, op_id=op_id)
+        op = _make_operation(
+            tmp_path, op_type="delete", src_name="deleted.txt", dst_name=None, op_id=op_id
+        )
         result = validator.validate_undo(op)
 
         assert result.can_proceed is True
@@ -217,7 +230,13 @@ class TestOperationValidator:
         src.write_text("content")  # source exists again after undo
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="move", status="rolled_back", src_name="source.txt", dst_name="dest.txt")
+        op = _make_operation(
+            tmp_path,
+            op_type="move",
+            status="rolled_back",
+            src_name="source.txt",
+            dst_name="dest.txt",
+        )
         result = validator.validate_redo(op)
 
         assert result.can_proceed is True
@@ -229,7 +248,9 @@ class TestOperationValidator:
         existing.write_text("conflict")
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
-        op = _make_operation(tmp_path, op_type="create", status="rolled_back", src_name="existing.txt", dst_name=None)
+        op = _make_operation(
+            tmp_path, op_type="create", status="rolled_back", src_name="existing.txt", dst_name=None
+        )
         result = validator.validate_redo(op)
 
         assert result.can_proceed is False
@@ -341,6 +362,7 @@ class TestOperationValidator:
 # TestRollbackEngine
 # ===========================================================================
 
+
 class TestRollbackEngine:
     """Tests for RollbackExecutor — rollback/redo of each operation type."""
 
@@ -354,7 +376,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt")
+        op = _make_operation(
+            tmp_path, op_type="move", src_name="original.txt", dst_name="moved.txt"
+        )
 
         result = executor.rollback_move(op)
 
@@ -413,7 +437,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="copy", src_name="original.txt", dst_name="copy.txt", op_id=99)
+        op = _make_operation(
+            tmp_path, op_type="copy", src_name="original.txt", dst_name="copy.txt", op_id=99
+        )
 
         result = executor.rollback_copy(op)
 
@@ -441,7 +467,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="create", src_name="created.txt", dst_name=None, op_id=55)
+        op = _make_operation(
+            tmp_path, op_type="create", src_name="created.txt", dst_name=None, op_id=55
+        )
 
         result = executor.rollback_create(op)
 
@@ -463,7 +491,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=trash_dir)
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="delete", src_name="deleted.txt", dst_name=None, op_id=op_id)
+        op = _make_operation(
+            tmp_path, op_type="delete", src_name="deleted.txt", dst_name=None, op_id=op_id
+        )
 
         result = executor.rollback_delete(op)
 
@@ -491,8 +521,13 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="move", status="rolled_back",
-                             src_name="source.txt", dst_name="dest.txt")
+        op = _make_operation(
+            tmp_path,
+            op_type="move",
+            status="rolled_back",
+            src_name="source.txt",
+            dst_name="dest.txt",
+        )
 
         result = executor.redo_move(op)
 
@@ -508,7 +543,9 @@ class TestRollbackEngine:
         src.write_text("content")
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="move", status="rolled_back", src_name="source.txt", dst_name=None)
+        op = _make_operation(
+            tmp_path, op_type="move", status="rolled_back", src_name="source.txt", dst_name=None
+        )
 
         result = executor.redo_move(op)
 
@@ -523,8 +560,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="rename", status="rolled_back",
-                             src_name="old.txt", dst_name="new.txt")
+        op = _make_operation(
+            tmp_path, op_type="rename", status="rolled_back", src_name="old.txt", dst_name="new.txt"
+        )
 
         result = executor.redo_rename(op)
 
@@ -540,8 +578,13 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="copy", status="rolled_back",
-                             src_name="source.txt", dst_name="copy.txt")
+        op = _make_operation(
+            tmp_path,
+            op_type="copy",
+            status="rolled_back",
+            src_name="source.txt",
+            dst_name="copy.txt",
+        )
 
         result = executor.redo_copy(op)
 
@@ -556,7 +599,9 @@ class TestRollbackEngine:
         src.write_text("x")
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="copy", status="rolled_back", src_name="source.txt", dst_name=None)
+        op = _make_operation(
+            tmp_path, op_type="copy", status="rolled_back", src_name="source.txt", dst_name=None
+        )
 
         result = executor.redo_copy(op)
 
@@ -571,8 +616,13 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="create", status="rolled_back",
-                             src_name="recreated.txt", dst_name=None)
+        op = _make_operation(
+            tmp_path,
+            op_type="create",
+            status="rolled_back",
+            src_name="recreated.txt",
+            dst_name=None,
+        )
         op.metadata = {}
 
         result = executor.redo_create(op)
@@ -586,8 +636,9 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="create", status="rolled_back",
-                             src_name="new_dir", dst_name=None)
+        op = _make_operation(
+            tmp_path, op_type="create", status="rolled_back", src_name="new_dir", dst_name=None
+        )
         op.metadata = {"is_dir": True}
 
         result = executor.redo_create(op)
@@ -604,8 +655,14 @@ class TestRollbackEngine:
 
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
-        op = _make_operation(tmp_path, op_type="delete", status="rolled_back",
-                             src_name="target.txt", dst_name=None, op_id=20)
+        op = _make_operation(
+            tmp_path,
+            op_type="delete",
+            status="rolled_back",
+            src_name="target.txt",
+            dst_name=None,
+            op_id=20,
+        )
 
         result = executor.redo_delete(op)
 
@@ -625,8 +682,12 @@ class TestRollbackEngine:
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
 
-        op1 = _make_operation(tmp_path, op_type="move", src_name="src1.txt", dst_name="dest1.txt", op_id=1)
-        op2 = _make_operation(tmp_path, op_type="move", src_name="src2.txt", dst_name="dest2.txt", op_id=2)
+        op1 = _make_operation(
+            tmp_path, op_type="move", src_name="src1.txt", dst_name="dest1.txt", op_id=1
+        )
+        op2 = _make_operation(
+            tmp_path, op_type="move", src_name="src2.txt", dst_name="dest2.txt", op_id=2
+        )
 
         result = executor.rollback_transaction("txn-1", [op1, op2])
 
@@ -645,8 +706,12 @@ class TestRollbackEngine:
         validator = OperationValidator(trash_dir=tmp_path / "trash")
         executor = RollbackExecutor(validator)
 
-        op1 = _make_operation(tmp_path, op_type="move", src_name="src1.txt", dst_name="dest1.txt", op_id=1)
-        op2 = _make_operation(tmp_path, op_type="move", src_name="src2.txt", dst_name="missing_dst.txt", op_id=2)
+        op1 = _make_operation(
+            tmp_path, op_type="move", src_name="src1.txt", dst_name="dest1.txt", op_id=1
+        )
+        op2 = _make_operation(
+            tmp_path, op_type="move", src_name="src2.txt", dst_name="missing_dst.txt", op_id=2
+        )
 
         result = executor.rollback_transaction("txn-1", [op1, op2])
 
@@ -686,6 +751,7 @@ class TestRollbackEngine:
 # ===========================================================================
 # TestUndoManager
 # ===========================================================================
+
 
 class TestUndoManager:
     """Tests for UndoManager high-level undo/redo interface."""
@@ -745,7 +811,6 @@ class TestUndoManager:
 
     def test_get_undo_stack_with_operations(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -840,7 +905,6 @@ class TestUndoManager:
 
     def test_undo_operation_already_rolled_back(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationStatus, OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -861,7 +925,6 @@ class TestUndoManager:
 
     def test_redo_operation_not_rolled_back(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -877,7 +940,6 @@ class TestUndoManager:
 
     def test_can_undo_already_rolled_back(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationStatus, OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -898,7 +960,6 @@ class TestUndoManager:
 
     def test_can_redo_operation_not_rolled_back(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -922,7 +983,6 @@ class TestUndoManager:
 
     def test_undo_last_with_completed_operation_calls_rollback(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.undo_manager import UndoManager
 
         src = tmp_path / "file.txt"
@@ -950,6 +1010,7 @@ class TestUndoManager:
 # TestHistoryViewer
 # ===========================================================================
 
+
 class TestHistoryViewer:
     """Tests for HistoryViewer display and filtering methods."""
 
@@ -965,7 +1026,6 @@ class TestHistoryViewer:
 
     def test_show_recent_with_operations(self, tmp_path: Path, capsys: Any) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -981,7 +1041,6 @@ class TestHistoryViewer:
 
     def test_filter_operations_by_type(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -997,7 +1056,9 @@ class TestHistoryViewer:
         assert len(results) == 1
         assert results[0].operation_type.value == "move"
 
-    def test_filter_operations_invalid_type_returns_empty(self, tmp_path: Path, capsys: Any) -> None:
+    def test_filter_operations_invalid_type_returns_empty(
+        self, tmp_path: Path, capsys: Any
+    ) -> None:
         from file_organizer.undo.viewer import HistoryViewer
 
         history = _make_history(tmp_path)
@@ -1007,7 +1068,9 @@ class TestHistoryViewer:
         assert isinstance(results, list)
         assert len(results) == 0
 
-    def test_filter_operations_invalid_status_returns_empty(self, tmp_path: Path, capsys: Any) -> None:
+    def test_filter_operations_invalid_status_returns_empty(
+        self, tmp_path: Path, capsys: Any
+    ) -> None:
         from file_organizer.undo.viewer import HistoryViewer
 
         history = _make_history(tmp_path)
@@ -1019,7 +1082,6 @@ class TestHistoryViewer:
 
     def test_filter_operations_by_status(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -1036,7 +1098,6 @@ class TestHistoryViewer:
 
     def test_search_by_path_found(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "unique_search_term.txt"
@@ -1075,7 +1136,6 @@ class TestHistoryViewer:
 
     def test_get_statistics_with_data(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -1105,7 +1165,6 @@ class TestHistoryViewer:
 
     def test_show_operation_details_found(self, tmp_path: Path, capsys: Any) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -1132,7 +1191,6 @@ class TestHistoryViewer:
 
     def test_display_filtered_by_search(self, tmp_path: Path, capsys: Any) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "important_file.txt"
@@ -1207,7 +1265,6 @@ class TestHistoryViewer:
 
     def test_filter_with_date_range(self, tmp_path: Path) -> None:
         from file_organizer.history.models import OperationType
-
         from file_organizer.undo.viewer import HistoryViewer
 
         src = tmp_path / "file.txt"
@@ -1227,6 +1284,7 @@ class TestHistoryViewer:
 # ===========================================================================
 # TestHistoryCleanup
 # ===========================================================================
+
 
 class TestHistoryCleanup:
     """Tests for HistoryCleanup — retention policies and database maintenance."""
@@ -1350,8 +1408,7 @@ class TestHistoryCleanup:
         src = tmp_path / "file.txt"
         src.write_text("x")
         history.log_operation(
-            OperationType.MOVE, src, tmp_path / "dest.txt",
-            status=OperationStatus.FAILED
+            OperationType.MOVE, src, tmp_path / "dest.txt", status=OperationStatus.FAILED
         )
 
         cleanup = HistoryCleanup(history.db)
@@ -1369,8 +1426,7 @@ class TestHistoryCleanup:
         src = tmp_path / "file.txt"
         src.write_text("x")
         history.log_operation(
-            OperationType.MOVE, src, tmp_path / "dest.txt",
-            status=OperationStatus.ROLLED_BACK
+            OperationType.MOVE, src, tmp_path / "dest.txt", status=OperationStatus.ROLLED_BACK
         )
 
         cleanup = HistoryCleanup(history.db)
@@ -1492,6 +1548,7 @@ class TestHistoryCleanup:
 # ===========================================================================
 # TestHistoryExporter
 # ===========================================================================
+
 
 class TestHistoryExporter:
     """Tests for HistoryExporter — JSON/CSV export of operations and transactions."""

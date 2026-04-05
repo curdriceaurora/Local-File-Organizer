@@ -4,6 +4,7 @@ Covers: DocumentExtractor, ImageDeduplicator, SemanticAnalyzer, BackupManager,
 ImageUtils (functions + ImageMetadata), ConfidenceScorer, SuggestionEngine.
 External models/APIs are mocked.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,7 +30,9 @@ class TestDocumentExtractor:
     def _make_extractor(self) -> Any:
         from file_organizer.services.deduplication.extractor import DocumentExtractor
 
-        with patch("file_organizer.services.deduplication.extractor.DocumentExtractor._check_dependencies"):
+        with patch(
+            "file_organizer.services.deduplication.extractor.DocumentExtractor._check_dependencies"
+        ):
             return DocumentExtractor()
 
     def test_supported_formats_populated(self) -> None:
@@ -202,7 +205,9 @@ class TestDocumentExtractor:
         f.write_text(r"{\rtf1 Hello World}", encoding="utf-8")
         mock_striprtf = MagicMock()
         mock_striprtf.striprtf.rtf_to_text.return_value = "Hello World"
-        with patch.dict("sys.modules", {"striprtf": mock_striprtf, "striprtf.striprtf": mock_striprtf.striprtf}):
+        with patch.dict(
+            "sys.modules", {"striprtf": mock_striprtf, "striprtf.striprtf": mock_striprtf.striprtf}
+        ):
             result = extractor._extract_rtf(f)
         # striprtf module injection may or may not intercept depending on import cache
         assert result == "Hello World" or result == "" or "Hello World" in result
@@ -234,10 +239,18 @@ class TestImageDeduplicator:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
         mock_hasher = MagicMock()
-        with patch("file_organizer.services.deduplication.image_dedup.PHash", return_value=mock_hasher), \
-             patch("file_organizer.services.deduplication.image_dedup.DHash", return_value=mock_hasher), \
-             patch("file_organizer.services.deduplication.image_dedup.AHash", return_value=mock_hasher), \
-             patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True):
+        with (
+            patch(
+                "file_organizer.services.deduplication.image_dedup.PHash", return_value=mock_hasher
+            ),
+            patch(
+                "file_organizer.services.deduplication.image_dedup.DHash", return_value=mock_hasher
+            ),
+            patch(
+                "file_organizer.services.deduplication.image_dedup.AHash", return_value=mock_hasher
+            ),
+            patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
+        ):
             dedup = ImageDeduplicator(hash_method=method, threshold=threshold)
             dedup.hasher = mock_hasher
         return dedup
@@ -258,23 +271,29 @@ class TestImageDeduplicator:
     def test_init_invalid_method_raises(self) -> None:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
-        with patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True), \
-             patch("file_organizer.services.deduplication.image_dedup.PHash"):
+        with (
+            patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
+            patch("file_organizer.services.deduplication.image_dedup.PHash"),
+        ):
             with pytest.raises(ValueError, match="Unsupported hash method"):
                 ImageDeduplicator(hash_method="whash")
 
     def test_init_invalid_threshold_raises(self) -> None:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
-        with patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True), \
-             patch("file_organizer.services.deduplication.image_dedup.PHash"):
+        with (
+            patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
+            patch("file_organizer.services.deduplication.image_dedup.PHash"),
+        ):
             with pytest.raises(ValueError, match="Threshold must be between"):
                 ImageDeduplicator(hash_method="phash", threshold=100)
 
     def test_init_imagededup_not_available_raises(self) -> None:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
-        with patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", False):
+        with patch(
+            "file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", False
+        ):
             with pytest.raises(ImportError, match="imagededup is required"):
                 ImageDeduplicator()
 
@@ -1342,9 +1361,15 @@ class TestSuggestionEngine:
         from file_organizer.models.suggestion_types import Suggestion, SuggestionType
 
         engine = self._make_engine()
-        s1 = Suggestion("id1", SuggestionType.MOVE, tmp_path / "a.txt", confidence=30.0, reasoning="r")
-        s2 = Suggestion("id2", SuggestionType.MOVE, tmp_path / "b.txt", confidence=80.0, reasoning="r")
-        s3 = Suggestion("id3", SuggestionType.MOVE, tmp_path / "c.txt", confidence=50.0, reasoning="r")
+        s1 = Suggestion(
+            "id1", SuggestionType.MOVE, tmp_path / "a.txt", confidence=30.0, reasoning="r"
+        )
+        s2 = Suggestion(
+            "id2", SuggestionType.MOVE, tmp_path / "b.txt", confidence=80.0, reasoning="r"
+        )
+        s3 = Suggestion(
+            "id3", SuggestionType.MOVE, tmp_path / "c.txt", confidence=50.0, reasoning="r"
+        )
         ranked = engine.rank_suggestions([s1, s2, s3])
         assert ranked[0].confidence >= ranked[1].confidence
         assert ranked[1].confidence >= ranked[2].confidence
