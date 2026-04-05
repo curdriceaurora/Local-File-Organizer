@@ -195,7 +195,10 @@ class MisplacementDetector:
             size = 0
 
         # Get sibling files
-        sibling_files = [f for f in directory.iterdir() if f.is_file() and f != file_path]
+        try:
+            sibling_files = [f for f in directory.iterdir() if f.is_file() and f != file_path]
+        except OSError:
+            sibling_files = []
         sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
 
         # Infer parent category
