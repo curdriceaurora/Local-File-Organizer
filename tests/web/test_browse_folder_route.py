@@ -2,9 +2,9 @@
 
 Covers:
 - Endpoint exists and returns correct schema
-- macOS: calls osascript and parses the POSIX path correctly
-- macOS: returns {path: "", cancelled: true} when user cancels
-- macOS: returns {path: "", available: false} when osascript fails
+- macOS: calls /usr/bin/osascript and parses the POSIX path correctly
+- macOS: returns {path: "", cancelled: true} when user cancels (stderr contains -128)
+- macOS: returns {path: "", available: false} when osascript errors (not a cancel)
 - Non-macOS (Linux/Docker): immediately returns {available: false} without
   spawning a subprocess
 - Subprocess timeout is respected
@@ -44,9 +44,7 @@ def client() -> TestClient:
 class TestBrowseFolderSchema:
     def test_endpoint_exists(self, client: TestClient) -> None:
         """GET /api/setup/browse-folder must be reachable (not 404)."""
-        with patch(
-            "file_organizer.api.routers.setup.sys.platform", "linux"
-        ):
+        with patch("file_organizer.api.routers.setup.sys.platform", "linux"):
             resp = client.get("/api/setup/browse-folder")
         assert resp.status_code == 200
 
@@ -97,10 +95,11 @@ class TestBrowseFolderLinux:
 
 
 class TestBrowseFolderMacOS:
-    def _make_run_result(self, stdout: str, returncode: int = 0) -> MagicMock:
+    def _make_run_result(self, stdout: str, returncode: int = 0, stderr: str = "") -> MagicMock:
         result = MagicMock(spec=subprocess.CompletedProcess)
         result.returncode = returncode
         result.stdout = stdout
+        result.stderr = stderr
         return result
 
     def test_returns_path_on_success(self, client: TestClient) -> None:
@@ -131,9 +130,9 @@ class TestBrowseFolderMacOS:
             resp = client.get("/api/setup/browse-folder")
         assert resp.json()["path"] == "/Users/rahul/Desktop/"
 
-    def test_calls_osascript_posix_path(self, client: TestClient) -> None:
-        """Must call osascript with 'POSIX path of (choose folder)'."""
-        mock_result = self._make_run_result("/tmp/\n")
+    def test_calls_absolute_osascript_path(self, client: TestClient) -> None:
+        """Must call /usr/bin/osascript (absolute path) with POSIX path of (choose folder)."""
+        mock_result = self._make_run_result("/mock/folder/\n")
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(
@@ -144,42 +143,47 @@ class TestBrowseFolderMacOS:
             client.get("/api/setup/browse-folder")
         args, kwargs = mock_run.call_args
         cmd = args[0]
-        assert cmd[0] == "osascript"
+        assert cmd[0] == "/usr/bin/osascript"
         assert "POSIX path of (choose folder)" in " ".join(cmd)
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True
+        assert kwargs["timeout"] == 60
 
 
 # ---------------------------------------------------------------------------
-# macOS: user cancelled (osascript returns non-zero)
+# macOS: user cancelled (osascript -128 / "User canceled." in stderr)
 # ---------------------------------------------------------------------------
 
 
 class TestBrowseFolderMacOSCancel:
-    def test_cancelled_when_nonzero_returncode(self, client: TestClient) -> None:
-        mock_result = MagicMock(spec=subprocess.CompletedProcess)
-        mock_result.returncode = 1
-        mock_result.stdout = ""
+    def _make_cancel_result(self) -> MagicMock:
+        result = MagicMock(spec=subprocess.CompletedProcess)
+        result.returncode = 1
+        result.stdout = ""
+        result.stderr = "1:205: execution error: User canceled. (-128)"
+        return result
+
+    def test_cancelled_when_user_canceled_in_stderr(self, client: TestClient) -> None:
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(
                 "file_organizer.api.routers.setup.subprocess.run",
-                return_value=mock_result,
+                return_value=self._make_cancel_result(),
             ),
         ):
             resp = client.get("/api/setup/browse-folder")
         data = resp.json()
         assert data["path"] == ""
         assert data["cancelled"] is True
+        assert data["available"] is True
 
-    def test_available_true_even_on_cancel(self, client: TestClient) -> None:
+    def test_available_true_on_cancel(self, client: TestClient) -> None:
         """Cancel means available=True (picker worked, user just cancelled it)."""
-        mock_result = MagicMock(spec=subprocess.CompletedProcess)
-        mock_result.returncode = 1
-        mock_result.stdout = ""
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(
                 "file_organizer.api.routers.setup.subprocess.run",
-                return_value=mock_result,
+                return_value=self._make_cancel_result(),
             ),
         ):
             resp = client.get("/api/setup/browse-folder")
@@ -187,14 +191,33 @@ class TestBrowseFolderMacOSCancel:
 
 
 # ---------------------------------------------------------------------------
-# macOS: osascript not found / error
+# macOS: non-cancel failure → available=False so browser fallbacks can run
 # ---------------------------------------------------------------------------
 
 
 class TestBrowseFolderMacOSError:
-    def test_returns_unavailable_when_osascript_missing(
-        self, client: TestClient
-    ) -> None:
+    def _make_error_result(self, stderr: str = "some other error") -> MagicMock:
+        result = MagicMock(spec=subprocess.CompletedProcess)
+        result.returncode = 1
+        result.stdout = ""
+        result.stderr = stderr
+        return result
+
+    def test_non_cancel_nonzero_returns_unavailable(self, client: TestClient) -> None:
+        """Non-cancel failure must return available=False so browser fallbacks run."""
+        with (
+            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
+            patch(
+                "file_organizer.api.routers.setup.subprocess.run",
+                return_value=self._make_error_result("GUI unavailable"),
+            ),
+        ):
+            resp = client.get("/api/setup/browse-folder")
+        data = resp.json()
+        assert data["available"] is False
+        assert data["path"] == ""
+
+    def test_returns_unavailable_when_osascript_missing(self, client: TestClient) -> None:
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(

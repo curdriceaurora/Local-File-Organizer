@@ -42,12 +42,18 @@ class DesktopAPI:
 
         Returns:
             Absolute path to the selected folder, or an empty string if the
-            user cancelled the dialog.
+            user cancelled the dialog or if the dialog could not be opened.
         """
         import webview  # type: ignore[import-untyped]
 
-        result = webview.active_window().create_file_dialog(webview.FOLDER_DIALOG)
-        return result[0] if result else ""
+        try:
+            result = webview.active_window().create_file_dialog(webview.FOLDER_DIALOG)
+            return result[0] if result else ""
+        except Exception:
+            logger.debug("browse_directory: create_file_dialog raised an exception")
+            return ""
+
+
 _DEFAULT_WIDTH = 1280
 _DEFAULT_HEIGHT = 800
 _READY_POLL_INTERVAL = 0.05  # seconds

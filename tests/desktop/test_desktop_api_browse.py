@@ -4,7 +4,7 @@ Covers:
 - browse_directory() calls webview.active_window().create_file_dialog(FOLDER_DIALOG)
 - Returns the first selected path on confirm
 - Returns empty string when user cancels (None or empty list returned by webview)
-- Returns empty string on exception from webview
+- Returns empty string on exception from create_file_dialog
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ class TestDesktopAPIBrowseDirectory:
         """browse_directory() must return the first element of the result tuple."""
         from file_organizer.desktop.app import DesktopAPI
 
-        mock_webview, mock_window = self._make_mock_webview(("/Users/rahul/Documents",))
+        mock_webview, _ = self._make_mock_webview(("/Users/rahul/Documents",))
 
         with patch.dict("sys.modules", {"webview": mock_webview}):
             api = DesktopAPI()
@@ -48,7 +48,7 @@ class TestDesktopAPIBrowseDirectory:
         """Must call create_file_dialog with FOLDER_DIALOG, not a file dialog."""
         from file_organizer.desktop.app import DesktopAPI
 
-        mock_webview, mock_window = self._make_mock_webview(("/tmp/test",))
+        mock_webview, mock_window = self._make_mock_webview(("/mock/test",))
 
         with patch.dict("sys.modules", {"webview": mock_webview}):
             api = DesktopAPI()
@@ -60,7 +60,7 @@ class TestDesktopAPIBrowseDirectory:
         """Must use the currently active webview window, not a hardcoded reference."""
         from file_organizer.desktop.app import DesktopAPI
 
-        mock_webview, _ = self._make_mock_webview(("/tmp/test",))
+        mock_webview, _ = self._make_mock_webview(("/mock/test",))
 
         with patch.dict("sys.modules", {"webview": mock_webview}):
             api = DesktopAPI()
@@ -106,6 +106,25 @@ class TestDesktopAPIBrowseDirectory:
         assert result == ""
 
     # ------------------------------------------------------------------
+    # Exception handling
+    # ------------------------------------------------------------------
+
+    def test_returns_empty_string_on_dialog_exception(self) -> None:
+        """If create_file_dialog raises, browse_directory() must return '' gracefully."""
+        from file_organizer.desktop.app import DesktopAPI
+
+        mock_webview = MagicMock()
+        mock_webview.active_window.return_value.create_file_dialog.side_effect = RuntimeError(
+            "dialog unavailable"
+        )
+        mock_webview.FOLDER_DIALOG = 1
+
+        with patch.dict("sys.modules", {"webview": mock_webview}):
+            result = DesktopAPI().browse_directory()
+
+        assert result == ""
+
+    # ------------------------------------------------------------------
     # Return type contract
     # ------------------------------------------------------------------
 
@@ -113,8 +132,10 @@ class TestDesktopAPIBrowseDirectory:
         """Return type must always be str (never None, list, or tuple)."""
         from file_organizer.desktop.app import DesktopAPI
 
-        for dialog_result in [("/tmp/x",), None, (), []]:
+        for dialog_result in [("/mock/path",), None, (), []]:
             mock_webview, _ = self._make_mock_webview(dialog_result)
             with patch.dict("sys.modules", {"webview": mock_webview}):
                 result = DesktopAPI().browse_directory()
-            assert isinstance(result, str), f"Expected str, got {type(result)} for {dialog_result!r}"
+            assert isinstance(result, str), (
+                f"Expected str, got {type(result)} for {dialog_result!r}"
+            )

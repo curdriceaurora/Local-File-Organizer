@@ -42,6 +42,9 @@ window.browseDirectory = async (inputId) => {
 
   // 3. File System Access API (Chromium 86+, Safari 15.2+).
   //    Can only return folder *name*, not the full path (browser security sandbox).
+  //    Intentional: only populate when empty — partial folder name should not
+  //    clobber a full path the user typed manually. Tiers 1 & 2 always overwrite
+  //    because they return a reliable absolute path.
   //    On error (SecurityError, NotSupportedError, etc.) fall through — do NOT return.
   if (window.showDirectoryPicker) {
     try {
@@ -57,6 +60,7 @@ window.browseDirectory = async (inputId) => {
 
   // 4. Fallback: hidden <input type=file webkitdirectory>.
   //    Shows a native Finder dialog; can only return folder name (not absolute path).
+  //    Intentional: only populate when empty (same rationale as tier 3 above).
   const picker = document.createElement("input");
   picker.type = "file";
   picker.webkitdirectory = true;
@@ -70,6 +74,8 @@ window.browseDirectory = async (inputId) => {
     }
     picker.remove();
   };
+  // Remove the element if the user cancels without selecting (no onchange fires).
+  picker.addEventListener("cancel", () => picker.remove());
   document.body.appendChild(picker);
   picker.click();
 };

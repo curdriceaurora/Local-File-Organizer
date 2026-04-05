@@ -207,7 +207,7 @@ def browse_folder() -> BrowseFolderResponse:
 
     try:
         result = subprocess.run(
-            ["osascript", "-e", "POSIX path of (choose folder)"],
+            ["/usr/bin/osascript", "-e", "POSIX path of (choose folder)"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -216,7 +216,12 @@ def browse_folder() -> BrowseFolderResponse:
         return BrowseFolderResponse(path="", available=False)
 
     if result.returncode != 0:
-        # Non-zero means the user pressed Cancel in the Finder dialog.
-        return BrowseFolderResponse(path="", available=True, cancelled=True)
+        # osascript exit code 1 + "User canceled." in stderr → explicit cancel.
+        # Any other failure (permissions, GUI unavailable, etc.) is treated as
+        # unavailable so the browser-side fallbacks (showDirectoryPicker,
+        # webkitdirectory) still run.
+        if "user canceled" in result.stderr.lower() or "-128" in result.stderr:
+            return BrowseFolderResponse(path="", available=True, cancelled=True)
+        return BrowseFolderResponse(path="", available=False)
 
     return BrowseFolderResponse(path=result.stdout.strip(), available=True, cancelled=False)
