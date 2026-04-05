@@ -226,7 +226,9 @@ class TestPARAFileMover:
         src.write_text("# plan")
 
         sugg = mover.suggest_move(src)
+        # Verify the engine's exact stub reasoning was passed through
         assert len(sugg.reasoning) >= 1
+        assert sugg.reasoning[0] == "stub: project"
 
     def test_suggest_move_with_subfolder(self, tmp_path: Path) -> None:
         """When engine returns a suggested_subfolder, target_path includes it."""
@@ -255,6 +257,8 @@ class TestPARAFileMover:
         assert result.success is True
         assert result.dry_run is True
         assert src.exists()  # file not moved
+        # Target must not have been created — a buggy dry-run might copy it
+        assert not sugg.target_path.exists()
 
     def test_move_file_actual_move_succeeds(self, tmp_path: Path) -> None:
         """move_file with dry_run=False moves the file and returns success."""

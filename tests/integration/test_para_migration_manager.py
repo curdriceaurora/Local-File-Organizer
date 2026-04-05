@@ -240,7 +240,7 @@ class TestGeneratePreview:
         plan = manager.analyze_source(source_dir, tmp_path / "para")
         preview = manager.generate_preview(plan)
 
-        assert "2" in preview
+        assert "Total files: 2" in preview
 
     def test_preview_contains_para_header(self, tmp_path: Path) -> None:
         """Preview starts with the PARA Migration Plan header."""
@@ -266,7 +266,7 @@ class TestGeneratePreview:
         manager = _make_manager(tmp_path)
         preview = manager.generate_preview(plan)
 
-        assert "0" in preview
+        assert "Total files: 0" in preview
 
 
 # ---------------------------------------------------------------------------
@@ -289,9 +289,10 @@ class TestExecuteMigration:
 
         assert report.success is True
         assert len(report.migrated) == 2
-        # Source files must still exist
+        # Source files must still exist and target must NOT have been created
         for mf in plan.files:
             assert mf.source_path.exists(), f"Source file missing: {mf.source_path}"
+            assert not mf.target_path.exists(), f"Dry-run created target: {mf.target_path}"
 
     def test_live_migration_moves_files(self, tmp_path: Path) -> None:
         """dry_run=False: files are physically moved to target locations."""
@@ -408,7 +409,7 @@ class TestCreateBackup:
         assert data["files_backed_up"] == 2
 
     def test_source_files_copied_into_backup(self, tmp_path: Path) -> None:
-        """Source files are physically present inside the backup directory."""
+        """Source files are physically present inside the backup directory with identical content."""
         source_dir = tmp_path / "source"
         source_dir.mkdir()
         target_dir = tmp_path / "para"
@@ -419,9 +420,17 @@ class TestCreateBackup:
 
         backup_dir = manager.backup_root / backup_id
         backed_up_files = list(backup_dir.rglob("*"))
-        # At least 2 source files + manifest.json
+        # Exactly 2 data files (excluding manifest.json)
         data_files = [p for p in backed_up_files if p.is_file() and p.name != "manifest.json"]
         assert len(data_files) == 2
+        # Backed-up file names match original source file names
+        backed_up_names = {p.name for p in data_files}
+        source_names = {mf.source_path.name for mf in plan.files}
+        assert backed_up_names == source_names
+        # Backed-up file content matches original
+        for mf in plan.files:
+            backed = next(p for p in data_files if p.name == mf.source_path.name)
+            assert backed.read_text() == mf.source_path.read_text()
 
 
 # ---------------------------------------------------------------------------

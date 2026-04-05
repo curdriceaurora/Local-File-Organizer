@@ -448,9 +448,9 @@ class TestProcessAudioFiles:
         ):
             results = process_audio_files([audio_path], extractor_cls=mock_extractor_cls)
 
-        # Description should contain audio type, artist, and title
+        # Description should contain audio type, artist, and title — all three
         desc = results[0].description
-        assert "Music" in desc or "DJ Echo" in desc or "Night Drive" in desc
+        assert "Music" in desc and "DJ Echo" in desc and "Night Drive" in desc
 
     def test_extraction_os_error_uses_audio_fallback_folder(self) -> None:
         """OSError during extract() → fallback folder, error message preserved."""

@@ -440,9 +440,11 @@ class TestGenerateConfig:
         hw = _make_hardware()
         ollama = _make_ollama_status(running=False)
 
+        hw_mock = MagicMock(return_value=hw)
+        ollama_mock = MagicMock(return_value=ollama)
         with (
-            patch(_HW_TARGET, return_value=hw),
-            patch(_OLLAMA_TARGET, return_value=ollama),
+            patch(_HW_TARGET, hw_mock),
+            patch(_OLLAMA_TARGET, ollama_mock),
             patch(_MODELS_TARGET, return_value=[]),
             patch(_CFG_MGR_TARGET),
         ):
@@ -451,6 +453,9 @@ class TestGenerateConfig:
 
         assert config is not None
         assert wizard.capabilities is not None
+        # Verify detect_capabilities() ran the hardware and Ollama discovery paths
+        hw_mock.assert_called()
+        ollama_mock.assert_called()
 
     def test_uses_stored_capabilities_if_present(self) -> None:
         from file_organizer.core.setup_wizard import SetupWizard, WizardMode
@@ -647,6 +652,10 @@ class TestValidateConfig:
 
         assert is_valid is False
         assert len(errors) >= 2
+        # Both temperature and max_tokens violations must be reported
+        errors_lower = [e.lower() for e in errors]
+        assert any("temperature" in e for e in errors_lower)
+        assert any("max_token" in e or "token" in e for e in errors_lower)
 
     def test_non_ollama_framework_skips_ollama_check(self) -> None:
         """If framework != 'ollama', Ollama-running check should be skipped."""
@@ -708,9 +717,14 @@ class TestSaveConfig:
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
 
         config = AppConfig(profile_name="default", setup_completed=False)
+        # Capture setup_completed at the moment save() is invoked — it must be True
+        # already at that point, not set afterward.
+        state_at_save: list[bool] = []
+        mock_mgr.save.side_effect = lambda cfg, _profile: state_at_save.append(cfg.setup_completed)
         wizard.save_config(config)
 
         assert config.setup_completed is True
+        assert state_at_save == [True], "setup_completed must be True before save() is called"
 
     def test_profile_name_override(self) -> None:
         from file_organizer.config.schema import AppConfig

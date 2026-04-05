@@ -166,8 +166,8 @@ class TestMapFile:
         mapper = _make_mapper(tmp_path)
         result = mapper.map_file(file_path, tmp_path / "para", use_rules=False)
 
-        # Either Resource (the default) or any valid PARA category; mainly check no crash
-        assert result.target_category in list(PARACategory)
+        # Neutral input should default to PARACategory.RESOURCE
+        assert result.target_category == PARACategory.RESOURCE
 
 
 # ---------------------------------------------------------------------------
@@ -522,7 +522,7 @@ class TestGenerateMappingReport:
         results = mapper.map_batch(files, tmp_path / "para")
         report = mapper.generate_mapping_report(results)
 
-        assert "4" in report
+        assert "Total files: 4" in report
 
     def test_report_contains_header(self, tmp_path: Path) -> None:
         """Report starts with the PARA Folder Mapping Report header."""

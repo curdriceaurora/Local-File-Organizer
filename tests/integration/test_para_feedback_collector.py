@@ -253,6 +253,9 @@ class TestFeedbackCollector:
 
         collector.clear()
         assert collector.get_events() == []
+        # Also verify a fresh instance sees no events (proves clear() persisted to disk)
+        fresh = FeedbackCollector(storage_dir=tmp_path)
+        assert fresh.get_events() == []
 
     def test_persistence_across_instances(self, tmp_path: Path) -> None:
         """Events written by one FeedbackCollector are loaded by a new instance."""
