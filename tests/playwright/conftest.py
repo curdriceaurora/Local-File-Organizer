@@ -40,6 +40,11 @@ from collections.abc import Iterator
 
 import pytest
 
+try:
+    from playwright.sync_api import Page
+except ImportError:
+    Page = object  # type: ignore[assignment,misc]
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -179,3 +184,97 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
     and Playwright resolves it against the live server automatically.
     """
     return live_server_url
+
+
+# ---------------------------------------------------------------------------
+# pywebview mock fixture
+# ---------------------------------------------------------------------------
+
+_PYWEBVIEW_MOCK_SCRIPT = """
+window.__mockPyw = {
+  browse_directory_result: "/mock/dir",
+  browse_file_result:      "/mock/file.json",
+  save_file_result:        "/mock/save/dest.json",
+  open_path_result:        true,
+  open_path_calls:         [],
+};
+window.pywebview = {
+  api: {
+    browse_directory: function()     { return Promise.resolve(window.__mockPyw.browse_directory_result || ""); },
+    browse_file:      function(ft)   { return Promise.resolve(window.__mockPyw.browse_file_result || ""); },
+    save_file:        function(n,ft) { return Promise.resolve(window.__mockPyw.save_file_result || ""); },
+    open_path:        function(p)    {
+      window.__mockPyw.open_path_calls.push(p);
+      return Promise.resolve(window.__mockPyw.open_path_result !== undefined ? window.__mockPyw.open_path_result : true);
+    },
+  }
+};
+"""
+
+
+class PywebviewMockHandle:
+    """Helpers for mutating the injected pywebview mock state from Python tests.
+
+    All methods use ``page.evaluate()`` to read/write ``window.__mockPyw``
+    in the browser context.
+    """
+
+    def __init__(self, page: Page) -> None:  # type: ignore[name-defined]
+        """Store a reference to the Playwright page.
+
+        Args:
+            page: The Playwright ``Page`` object whose JS context hosts the mock.
+        """
+        self._page = page
+
+    def set_browse_directory_result(self, path: str) -> None:
+        """Override the path returned by ``browse_directory()``.
+
+        Args:
+            path: Absolute path string the mock should resolve to.
+        """
+        self._page.evaluate(f"() => {{ window.__mockPyw.browse_directory_result = {path!r}; }}")
+
+    def set_browse_file_result(self, path: str) -> None:
+        """Override the path returned by ``browse_file()``.
+
+        Args:
+            path: Absolute file path string the mock should resolve to.
+        """
+        self._page.evaluate(f"() => {{ window.__mockPyw.browse_file_result = {path!r}; }}")
+
+    def set_open_path_result(self, value: bool) -> None:
+        """Override the bool returned by ``open_path()``.
+
+        Args:
+            value: ``True`` to simulate success, ``False`` to simulate failure.
+        """
+        js_value = "true" if value else "false"
+        self._page.evaluate(f"() => {{ window.__mockPyw.open_path_result = {js_value}; }}")
+
+    def get_open_path_calls(self) -> list[str]:
+        """Return the list of paths that ``open_path()`` was called with.
+
+        Returns:
+            Ordered list of path strings passed to ``open_path()`` since the
+            mock was last reset (i.e. since page navigation).
+        """
+        result: list[str] = self._page.evaluate("() => window.__mockPyw.open_path_calls || []")
+        return result
+
+
+@pytest.fixture
+def pywebview_mock(page: Page) -> PywebviewMockHandle:  # type: ignore[name-defined]
+    """Inject a controllable ``window.pywebview.api`` mock into the page.
+
+    Uses ``page.add_init_script()`` so the mock is available before any
+    navigation.  After the fixture is applied, desktop_api.js will detect
+    ``window.pywebview`` and set ``document.body.dataset.desktopApp = "1"``,
+    enabling ``[data-desktop-only]`` elements.
+
+    Returns:
+        A :class:`PywebviewMockHandle` with helpers to read and override
+        mock return values and call records.
+    """
+    page.add_init_script(_PYWEBVIEW_MOCK_SCRIPT)
+    return PywebviewMockHandle(page)
