@@ -80,7 +80,7 @@ def detect_ollama() -> OllamaStatus:
 
     # Check if Ollama CLI is installed (optional — service may run remotely or in Docker)
     cli_installed = False
-    version = ""
+    version: str | None = None
     try:
         result = subprocess.run(
             ["ollama", "--version"],

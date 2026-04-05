@@ -173,7 +173,8 @@ class TestDetectOllama:
         assert result.installed is True
         assert result.running is True
         assert result.models_count == 1
-        assert result.version == ""
+        # version stays None (no CLI); UI must handle None gracefully
+        assert result.version is None
 
     @patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True)
     @patch("ollama.Client")
@@ -187,7 +188,7 @@ class TestDetectOllama:
 
         assert result.installed is True
         assert result.running is True
-        assert result.version == ""
+        assert result.version is None
 
 
 class TestListInstalledModels:
@@ -294,7 +295,10 @@ class TestListInstalledModels:
         assert len(result) == 2
         assert result[0].name == "llama2:7b"
         assert result[0].size == 3825819519
+        assert result[0].modified == "2024-01-15T10:30:00Z"
         assert result[1].name == "qwen2.5:3b-instruct"
+        assert result[1].size == 1974030336
+        assert result[1].modified == "2024-01-20T14:45:00Z"
 
     @patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True)
     @patch("ollama.Client")
@@ -302,7 +306,11 @@ class TestListInstalledModels:
         """When ListResponse contains plain dict items (fallback dict path)."""
         mock_response = MagicMock()
         # Models are plain dicts (no .model attribute)
-        dict_model = {"name": "mistral:7b", "size": 4109799670, "modified_at": "2024-02-01T09:00:00Z"}
+        dict_model = {
+            "name": "mistral:7b",
+            "size": 4109799670,
+            "modified_at": "2024-02-01T09:00:00Z",
+        }
         mock_response.models = [dict_model]
         mock_client.return_value.list.return_value = mock_response
 
@@ -311,6 +319,7 @@ class TestListInstalledModels:
         assert len(result) == 1
         assert result[0].name == "mistral:7b"
         assert result[0].size == 4109799670
+        assert result[0].modified == "2024-02-01T09:00:00Z"
 
     @patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True)
     @patch("file_organizer.core.backend_detector.subprocess.run")
