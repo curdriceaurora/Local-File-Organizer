@@ -100,6 +100,63 @@ before launching:
 
 See [Configuration Guide](CONFIGURATION.md) for the full list.
 
+## Python–JavaScript Bridge API
+
+The desktop app exposes a set of Python methods to the web UI's JavaScript
+context via pywebview's `js_api` mechanism. They are available on
+`window.pywebview.api` when running inside the native app.
+
+The `desktop_api.js` utility (loaded automatically by the app) wraps each
+method with browser-safe fallbacks so the same HTML works in both the native
+app and a regular browser session.
+
+### Methods
+
+| Method | JS entry-point | Returns | Description |
+|--------|---------------|---------|-------------|
+| `browse_directory()` | `window.desktopOpenPath(path)` / `window.pywebview.api.browse_directory()` | `str` | Opens a native folder-picker dialog. Returns the absolute path of the selected folder, or `""` if cancelled. |
+| `browse_file(file_types)` | `window.desktopBrowseFile(inputId, fileTypes)` / `window.pywebview.api.browse_file(fileTypes)` | `str` | Opens a native file-picker dialog. Returns the absolute path of the selected file, or `""` if cancelled. |
+| `save_file(suggested_name, file_types)` | `window.desktopSaveFile(suggestedName, fileTypes)` | `str` | Opens a native Save-As dialog. Returns the chosen destination path, or `""` if cancelled. |
+| `open_path(path)` | `window.desktopOpenPath(path)` | `bool` | Reveals *path* in the native file manager (Finder / Explorer / Nautilus). Returns `True` on success. |
+
+### `file_types` format
+
+Both `browse_file` and `save_file` accept a sequence of
+`(description, glob_pattern)` pairs that filter the file types shown in the
+dialog. In JavaScript, pass an array of two-element arrays:
+
+```javascript
+// Show only JSON files
+window.desktopBrowseFile("my-input-id", [["JSON files (*.json)", "*.json"]]);
+
+// Show JSON or YAML files
+window.desktopSaveFile("export.json", [
+  ["JSON files (*.json)", "*.json"],
+  ["YAML files (*.yaml)", "*.yaml"],
+]);
+```
+
+Pass an empty array (`[]`) to show all file types.
+
+### Security guarantees
+
+- `browse_file` and `save_file` delegate entirely to the OS dialog — no file
+  I/O is performed by the Python method itself. The returned path is an
+  absolute string; path validation for subsequent server operations is
+  performed by the server-side route handlers.
+- `open_path` always invokes the OS command with `shell=False` so the path
+  cannot be interpreted as a shell command regardless of its content.
+- `save_file` strips any `/` or `\` characters from `suggested_name` before
+  forwarding to the dialog, preventing accidental path injection via the
+  filename hint.
+
+### Desktop-only UI elements
+
+Elements with the `data-desktop-only` attribute are hidden in browser mode
+and shown automatically when `desktop_api.js` detects `window.pywebview`.
+The script sets `data-desktop-app="1"` on `<body>`, which the CSS uses to
+toggle visibility.
+
 ## Troubleshooting
 
 ### Blank window on launch

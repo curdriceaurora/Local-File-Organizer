@@ -1396,3 +1396,14 @@ body {
     padding-right: 1rem;
   }
 }
+
+
+/* Desktop-app-only elements: hidden in browser mode, shown when pywebview
+   sets data-desktop-app="1" on <body> via desktop_api.js. */
+[data-desktop-only] {
+  display: none;
+}
+
+body[data-desktop-app="1"] [data-desktop-only] {
+  display: revert;
+}

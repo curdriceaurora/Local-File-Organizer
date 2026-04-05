@@ -34,6 +34,21 @@
                 <input type="file" name="settings_file" accept=".json" required>
                 <button class="btn-ghost" type="submit">Import</button>
             </form>
+            <button
+                class="btn-ghost"
+                type="button"
+                data-desktop-only
+                onclick="window.desktopBrowseFile('settings-file-path', [['JSON files (*.json)', '*.json']])"
+                title="Browse for a settings file (desktop app only)"
+            >Browse settings file…</button>
+            <input
+                type="text"
+                id="settings-file-path"
+                data-desktop-only
+                readonly
+                placeholder="Selected file path will appear here"
+                style="flex: 1; min-width: 0;"
+            >
             <a class="btn-ghost" href="/ui/settings/export">Export</a>
             <form
                 hx-post="/ui/settings/reset"
