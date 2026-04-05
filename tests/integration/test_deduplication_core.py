@@ -596,9 +596,8 @@ class TestSemanticAnalyzer:
         p1.write_text("a")
         p2.write_text("b")
         result = analyzer.find_similar_to_query(query, doc_emb, [p1, p2])
-        assert len(result) >= 1
-        if len(result) >= 2:
-            assert result[0][1] >= result[1][1]
+        assert [path for path, _score in result] == [p1, p2]
+        assert result[0][1] > result[1][1]
 
     def test_find_similar_to_query_top_k(self, tmp_path: Path) -> None:
         analyzer = self._make_analyzer(threshold=0.0)
@@ -656,11 +655,10 @@ class TestSemanticAnalyzer:
         p1.write_text("a")
         p2.write_text("b")
         groups = analyzer.get_duplicate_groups(emb, [p1, p2])
-        assert isinstance(groups, list)
-        if groups:
-            assert "files" in groups[0]
-            assert "count" in groups[0]
-            assert groups[0]["count"] >= 2
+        assert groups
+        assert any(
+            set(group["files"]) == {str(p1), str(p2)} and group["count"] == 2 for group in groups
+        )
 
     def test_get_statistics_above_threshold_count_is_int(self) -> None:
         analyzer = self._make_analyzer(threshold=0.5)
@@ -766,7 +764,8 @@ class TestBackupManager:
         mgr.create_backup(src)
         backups = mgr.list_backups()
         assert len(backups) == 1
-        assert "original_path" in backups[0]
+        assert backups[0]["original_path"] == str(src.resolve())
+        assert backups[0]["exists"] is True
 
     def test_get_backup_info_returns_dict(self, tmp_path: Path) -> None:
         mgr = self._make_manager(tmp_path)
@@ -1091,7 +1090,7 @@ class TestImageUtils:
         PILImage.new("RGB", (10, 10), color=(0, 0, 0)).save(str(img1))
         PILImage.new("RGB", (10, 10), color=(0, 0, 0)).save(str(img2))
         result = compare_image_quality(img1, img2)
-        assert result in (-1, 0, 1)
+        assert result == 0
 
     def test_get_best_quality_image_from_list(self, tmp_path: Path) -> None:
         from PIL import Image as PILImage
@@ -1425,13 +1424,13 @@ class TestSuggestionEngine:
     def test_get_common_root_empty_returns_cwd(self) -> None:
         engine = self._make_engine()
         result = engine._get_common_root([])
-        assert isinstance(result, Path)
+        assert result == Path.cwd()
 
     def test_get_common_root_single_file(self, tmp_path: Path) -> None:
         engine = self._make_engine()
         f = tmp_path / "file.txt"
         result = engine._get_common_root([f])
-        assert isinstance(result, Path)
+        assert result == f.parent
 
     def test_find_best_location_no_candidates(self, tmp_path: Path) -> None:
         engine = self._make_engine()
