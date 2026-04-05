@@ -264,6 +264,7 @@ The product addresses a critical pain point: digital file chaos. Users spend an 
 ### 6.1 What We Have (Phase 1 Complete)
 
 **Technology Stack:**
+
 ```text
 AI Models:
 - Qwen2.5 3B Instruct (text processing)
@@ -282,6 +283,7 @@ Libraries:
 ```
 
 **Architecture:**
+
 ```text
 Local-File-Organizer/
 ├── models/         # AI model abstractions
