@@ -430,8 +430,10 @@ class TestGenerateConfig:
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
         config = wizard.generate_config(caps, custom_settings={"text_model": "my-custom-model"})
 
-        # QUICK_START mode does NOT apply custom_settings overrides
+        # QUICK_START mode does NOT apply custom_settings overrides;
+        # it picks the first matching recommended model from available list
         assert config.models.text_model != "my-custom-model"
+        assert config.models.text_model == "qwen2.5:7b-instruct-q4_K_M"
 
     def test_no_capabilities_triggers_detect(self) -> None:
         """When capabilities=None and self.capabilities is None, detect_capabilities is called."""
@@ -831,6 +833,8 @@ class TestWizardRun:
 
         assert result.success is False
         assert len(result.errors) >= 1
+        # Specifically: Ollama-not-running error must be present
+        assert any("ollama" in e.lower() and "not running" in e.lower() for e in result.errors)
         assert wizard.status == SetupStatus.FAILED
 
     def test_exception_in_detect_returns_failure(self) -> None:
@@ -881,10 +885,8 @@ class TestWizardRun:
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
-        assert any(
-            "Ollama not detected" in w or "not installed" in w.lower() or "https://ollama.ai" in w
-            for w in result.warnings
-        )
+        # Source emits: "Ollama not detected. Install from: https://ollama.ai"
+        assert any("Ollama not detected" in w for w in result.warnings)
 
     def test_messages_populated_on_success(self) -> None:
         from file_organizer.core.setup_wizard import SetupWizard, WizardMode

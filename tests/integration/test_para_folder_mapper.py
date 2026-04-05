@@ -373,17 +373,17 @@ class TestMatchKeywordFolder:
     """Tests for _match_keyword_folder."""
 
     def test_matching_keyword_returns_folder_name(self, tmp_path: Path) -> None:
-        """A filename containing a mapped keyword returns the folder name."""
-        file_path = _real_file(tmp_path, "project_alpha_report.txt")
+        """A filename containing exactly one mapped keyword returns that folder name."""
+        # Use non-overlapping keyword so only "Projects" can match
+        file_path = _real_file(tmp_path, "project_alpha_meeting.txt")
         strategy = MappingStrategy(
             use_keyword_folders=True,
-            keyword_mapping={"project": "Projects", "report": "Reports"},
+            keyword_mapping={"project": "Projects", "invoice": "Finance"},
         )
         mapper = _make_mapper(tmp_path, strategy=strategy)
         result = mapper._match_keyword_folder(file_path)
 
-        # At least one keyword must match
-        assert result in ("Projects", "Reports")
+        assert result == "Projects"
 
     def test_no_matching_keyword_returns_none(self, tmp_path: Path) -> None:
         """File with no matching keyword returns None."""
