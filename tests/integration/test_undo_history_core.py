@@ -1332,13 +1332,12 @@ class TestHistoryCleanup:
         from file_organizer.history.cleanup import HistoryCleanup
         from file_organizer.history.models import OperationType
 
-        db = _make_db(tmp_path)
         history = _make_history(tmp_path)
         src = tmp_path / "file.txt"
         src.write_text("x")
         history.log_operation(OperationType.MOVE, src, tmp_path / "dest.txt")
 
-        cleanup = HistoryCleanup(db)
+        cleanup = HistoryCleanup(history.db)
         # Use 0 days to delete everything
         deleted = cleanup.cleanup_old_operations(max_age_days=0)
 
