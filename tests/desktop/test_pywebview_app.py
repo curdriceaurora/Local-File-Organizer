@@ -7,6 +7,7 @@ launch() without requiring pywebview to be installed.
 
 from __future__ import annotations
 
+import runpy
 import socket
 from unittest.mock import MagicMock, patch
 
@@ -102,6 +103,29 @@ class TestLaunch:
 
         _ = sys  # keep import for clarity
 
+    def test_launch_passes_custom_title_width_height(self) -> None:
+        """launch() should forward title/width/height to webview.create_window."""
+        mock_webview = MagicMock()
+
+        from file_organizer.desktop import app as desktop_app
+
+        with (
+            patch.dict(__import__("sys").modules, {"webview": mock_webview}),
+            patch("file_organizer.desktop.app._wait_for_server", return_value=True),
+            patch("file_organizer.desktop.app._run_server"),
+            patch("file_organizer.desktop.app.threading"),
+        ):
+            desktop_app.launch(title="My App", width=800, height=600)
+
+        mock_webview.create_window.assert_called_once_with(
+            "My App",
+            __import__("unittest.mock", fromlist=["ANY"]).ANY,
+            width=800,
+            height=600,
+            resizable=True,
+            min_size=(800, 600),
+        )
+
     def test_happy_path_calls_webview_start(self) -> None:
         """launch() must call webview.start() when server is ready."""
         import sys
@@ -123,3 +147,65 @@ class TestLaunch:
             desktop_app.launch()
 
         mock_webview.start.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _run_server — exercises lines 76-81 (uvicorn import + create_app + run)
+# ---------------------------------------------------------------------------
+
+
+class TestRunServer:
+    def test_calls_uvicorn_run_with_correct_args(self) -> None:
+        """_run_server() should call uvicorn.run with host/port/log_level."""
+        import sys
+
+        from file_organizer.desktop.app import _run_server
+
+        mock_uvicorn = MagicMock()
+        mock_app = MagicMock()
+        mock_api_main = MagicMock()
+        mock_api_main.create_app.return_value = mock_app
+
+        with patch.dict(
+            sys.modules, {"uvicorn": mock_uvicorn, "file_organizer.api.main": mock_api_main}
+        ):
+            _run_server(54321)
+
+        mock_uvicorn.run.assert_called_once_with(
+            mock_app,
+            host="127.0.0.1",
+            port=54321,
+            log_level="warning",
+        )
+
+    def test_forwards_extra_kwargs_to_uvicorn(self) -> None:
+        """_run_server() should forward **uvicorn_kwargs to uvicorn.run."""
+        import sys
+
+        from file_organizer.desktop.app import _run_server
+
+        mock_uvicorn = MagicMock()
+        mock_api_main = MagicMock()
+        mock_api_main.create_app.return_value = MagicMock()
+
+        with patch.dict(
+            sys.modules, {"uvicorn": mock_uvicorn, "file_organizer.api.main": mock_api_main}
+        ):
+            _run_server(9999, workers=2)
+
+        _, kwargs = mock_uvicorn.run.call_args
+        assert kwargs.get("workers") == 2
+
+
+# ---------------------------------------------------------------------------
+# __main__ — covers the if __name__ == "__main__" guard in __main__.py
+# ---------------------------------------------------------------------------
+
+
+class TestMainModule:
+    def test_main_calls_launch(self) -> None:
+        """Running the package as __main__ should call launch()."""
+        with patch("file_organizer.desktop.app.launch") as mock_launch:
+            runpy.run_module("file_organizer.desktop", run_name="__main__")
+
+        mock_launch.assert_called_once_with()

@@ -113,9 +113,11 @@ class ConfigManager:
         if config_path.exists():
             try:
                 existing = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-            except (OSError, yaml.YAMLError, UnicodeDecodeError) as e:
-                logger.opt(exception=e).warning(
-                    "Failed to load existing config from {}", config_path
+            except (OSError, yaml.YAMLError, UnicodeDecodeError):
+                logger.warning(
+                    "Failed to load existing config from %s, starting fresh",
+                    config_path,
+                    exc_info=True,
                 )
                 existing = {}
 
@@ -170,9 +172,9 @@ class ConfigManager:
 
         try:
             raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        except (OSError, yaml.YAMLError, UnicodeDecodeError) as e:
-            logger.opt(exception=e).warning(
-                "Failed to load config while deleting profile {}", profile
+        except (OSError, yaml.YAMLError, UnicodeDecodeError):
+            logger.warning(
+                "Failed to load config while deleting profile %s", profile, exc_info=True
             )
             return False
 
