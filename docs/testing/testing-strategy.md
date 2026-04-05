@@ -25,6 +25,7 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.slow          # Slow tests
 @pytest.mark.regression    # Regression tests (full suite only)
 @pytest.mark.no_ollama     # Tests that verify fallback behavior when Ollama is unavailable
+@pytest.mark.playwright    # Playwright browser smoke tests (require a running server)
 
 def test_example():
     pass

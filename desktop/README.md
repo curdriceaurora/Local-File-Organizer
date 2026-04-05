@@ -56,7 +56,7 @@ The server thread is a daemon so it is torn down automatically when
 
 - Python 3.11 or higher
 - [Ollama](https://ollama.com/) installed and running
-- `pip install -e ".[desktop,dev]"`
+- `pip install -e ".[desktop,web,dev]"`
 
 ### Platform system dependencies (development)
 
@@ -119,5 +119,14 @@ production code-signing time:
 - `com.apple.security.network.client` — allows outbound connections to the
   local Ollama server
 
-The debug variant (`macos-entitlements-debug.plist`) additionally grants
-`com.apple.security.get-task-allow` for the Xcode debugger.
+The debug variant (`macos-entitlements-debug.plist`) grants additional
+entitlements for development use:
+
+- `com.apple.security.network.server` — allows the embedded uvicorn server to
+  accept connections
+- `com.apple.security.files.user-selected.read-write` — read/write access to
+  user-selected files via open/save panels
+- `com.apple.security.cs.allow-jit` — required for WebKit's JIT engine in
+  debug builds
+- `com.apple.security.cs.disable-library-validation` — allows loading unsigned
+  or ad-hoc-signed dylibs during development
