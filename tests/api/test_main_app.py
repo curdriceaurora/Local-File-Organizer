@@ -198,7 +198,10 @@ class TestAppRoutes:
 
             assert "example" in files_get["200"]["content"]["application/json"]
             assert (
-                files_get["404"]["content"]["application/json"]["example"]["error"] == "not_found"
+                files_get["404"]["content"]["application/json"]["examples"]["not_found"]["value"][
+                    "error"
+                ]
+                == "not_found"
             )
             assert auth_login["401"]["content"]["application/json"]["example"]["detail"] == (
                 "Incorrect username or password"

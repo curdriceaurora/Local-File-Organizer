@@ -44,15 +44,37 @@ def api_error_response(
     message: str,
     description: str | None = None,
     details: Any | None = None,
+    example_name: str | None = None,
 ) -> OpenAPIResponses:
-    """Build an ApiError-style response entry."""
+    """Build an ApiError-style response entry with a named OpenAPI example.
+
+    Args:
+        status_code: HTTP status code for this response variant.
+        error: Machine-readable error slug (also used as the default example name).
+        message: Human-readable description of the error.
+        description: Optional override for the response-level description line.
+        details: Optional extra payload attached under ``"details"``.
+        example_name: Key used in the ``examples`` map.  Defaults to ``error``.
+
+    Returns:
+        Single-entry ``OpenAPIResponses`` dict whose example is keyed by
+        ``example_name`` so that :func:`merge_responses` can preserve multiple
+        same-status variants side-by-side.
+    """
     payload: dict[str, Any] = {"error": error, "message": message}
     if details is not None:
         payload["details"] = details
+    name = example_name or error
+    schema = ApiErrorResponse.model_json_schema()
     return {
         status_code: {
             "description": description or message,
-            "content": _json_content(ApiErrorResponse, payload),
+            "content": {
+                "application/json": {
+                    "schema": schema,
+                    "examples": {name: {"value": payload}},
+                }
+            },
         }
     }
 
@@ -92,14 +114,44 @@ def validation_error_response() -> OpenAPIResponses:
 
 
 def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
-    """Merge multiple OpenAPI response maps.
+    """Merge multiple OpenAPI response maps, preserving same-status variants.
 
-    When multiple sets define the same status code, later arguments override
-    earlier ones. Callers should order response sets accordingly.
+    For each status code:
+
+    - If only one response set defines it, the entry is used as-is.
+    - If multiple sets define the same status code **and** both entries carry
+      a ``content["application/json"]["examples"]`` dict (as produced by
+      :func:`api_error_response`), their example dicts are merged so that
+      every named variant is retained.
+    - Otherwise (e.g. a ``success_response`` that uses ``"example"`` singular)
+      the later entry wins, matching the previous ``dict.update`` semantics.
+
+    Args:
+        *response_sets: Zero or more ``OpenAPIResponses`` dicts to merge in
+            order.  Later entries take precedence for non-example conflicts.
+
+    Returns:
+        A single merged ``OpenAPIResponses`` dict.
     """
     merged: OpenAPIResponses = {}
     for response_set in response_sets:
-        merged.update(response_set)
+        for status_code, incoming in response_set.items():
+            if status_code not in merged:
+                merged[status_code] = incoming
+                continue
+            # Attempt two-level examples merge for api_error_response entries.
+            try:
+                existing_examples: dict[str, Any] = merged[status_code]["content"][
+                    "application/json"
+                ]["examples"]
+                incoming_examples: dict[str, Any] = incoming["content"][
+                    "application/json"
+                ]["examples"]
+                existing_examples.update(incoming_examples)
+            except (KeyError, TypeError):
+                # One or both entries use "example" singular (success/detail
+                # responses) — fall back to last-wins.
+                merged[status_code] = incoming
     return merged
 
 
