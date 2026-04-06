@@ -376,6 +376,7 @@ class TestSettingsUtilities:
         assert "Content-Disposition" in response.headers
 
     @pytest.mark.usefixtures("_patch_settings_file")
+    @pytest.mark.ci
     def test_settings_import(self, tmp_path: Path, _patch_settings_file: Path) -> None:
         client = _build_client(tmp_path)
         payload = {

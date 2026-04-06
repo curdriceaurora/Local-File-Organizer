@@ -687,6 +687,7 @@ class TestSettingsImportPathBased:
         app.include_router(settings_router)
         yield TestClient(app, raise_server_exceptions=False), tmp_path
 
+    @pytest.mark.ci
     def test_import_via_path_returns_200(self, _client):
         """A valid JSON file under allowed_paths should be imported with status 200."""
         client, tmp_path = _client
@@ -732,6 +733,7 @@ class TestSettingsImportPathBased:
         assert r.status_code == 200
         assert "Import failed" in r.text
 
+    @pytest.mark.ci
     def test_import_with_neither_file_nor_path_returns_error_flash(self, _client):
         """Submitting with no file and no path must return an error flash."""
         client, _tmp = _client
