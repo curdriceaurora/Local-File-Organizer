@@ -290,8 +290,7 @@ def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -
     Detects two forms and their reversed comparisons:
     1. len(...) compared to 0: `assert len(x) >= 0` or `assert 0 <= len(x)`
     2. Known non-negative attributes compared to 0: `assert x.count >= 0` or `assert 0 <= x.count`
-    These matches use the module's blocklist of known-non-negative attribute names
-    (``_GTE_ZERO_NON_NEGATIVE_ATTRS``).
+    These matches use the module's allowlist of non-negative attribute names.
 
     Parameters:
         source (str): Python source code to analyze.
