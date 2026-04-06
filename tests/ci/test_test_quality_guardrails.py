@@ -373,7 +373,7 @@ def test_detector_flags_vacuous_len_gte_zero(source: str, expected_count: int) -
 def test_changed_tests_have_no_vacuous_len_gte_zero_assertions() -> None:
     """
     Fail the test if any test file contains tautological comparisons that assert a length or certain non-negative attributes are greater than or equal to zero.
-    
+
     Flags examples such as `assert len(x) >= 0`, `assert 0 <= len(x)`, and attribute checks like `assert x.count >= 0` where the left-hand expression is known to be non-negative; the test fails when any such occurrences are found.
     """
     violations: list[str] = []
@@ -410,13 +410,13 @@ _GTE_ZERO_BARE_NAME_VARS = frozenset(
 def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
     """
     Detect assertions that tautologically compare certain bare variable names to zero.
-    
+
     Flags occurrences of "assert VAR >= 0" and "assert 0 <= VAR" where VAR is a bare name present in _GTE_ZERO_BARE_NAME_VARS; each finding is reported as "path:lineno".
-    
+
     Parameters:
         source (str): Python source code to analyze.
         path (str): File path used in reported violation strings (defaults to "<string>").
-    
+
     Returns:
         list[str]: Violation strings in the form "path:lineno" for each detected tautological assertion.
     """
@@ -442,10 +442,10 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
         def _is_zero(n: ast.AST) -> bool:
             """
             Check whether an AST node represents the integer constant 0.
-            
+
             Parameters:
                 n (ast.AST): The AST node to inspect.
-            
+
             Returns:
                 `True` if `n` is an `ast.Constant` whose value is the integer 0, `False` otherwise.
             """
@@ -454,10 +454,10 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
         def _is_bare_name_var(n: ast.AST) -> bool:
             """
             Check whether an AST node is a bare name listed as a non-negative semantic variable.
-            
+
             Parameters:
                 n (ast.AST): The AST node to inspect.
-            
+
             Returns:
                 bool: `True` if `n` is an `ast.Name` whose identifier is a member of `_GTE_ZERO_BARE_NAME_VARS`, `False` otherwise.
             """
@@ -498,7 +498,7 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
 def test_detector_flags_vacuous_bare_name_gte_zero(source: str, expected_count: int) -> None:
     """
     Asserts that the bare-name `>= 0` detector finds the expected number of violations in a Python source snippet.
-    
+
     Parameters:
         source (str): Python source code to analyze.
         expected_count (int): Number of violations the detector is expected to return.
