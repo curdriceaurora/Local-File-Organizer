@@ -54,7 +54,7 @@ class DesktopAPI:
             result = webview.active_window().create_file_dialog(webview.FOLDER_DIALOG)
             return result[0] if result else ""
         except Exception:
-            logger.debug("browse_directory: create_file_dialog raised an exception")
+            logger.debug("browse_directory: create_file_dialog raised an exception", exc_info=True)
             return ""
 
     def browse_file(
@@ -82,7 +82,7 @@ class DesktopAPI:
             )
             return result[0] if result else ""
         except Exception:
-            logger.debug("browse_file: create_file_dialog raised an exception")
+            logger.debug("browse_file: create_file_dialog raised an exception", exc_info=True)
             return ""
 
     def save_file(
@@ -117,7 +117,7 @@ class DesktopAPI:
             )
             return result[0] if result else ""
         except Exception:
-            logger.debug("save_file: create_file_dialog raised an exception")
+            logger.debug("save_file: create_file_dialog raised an exception", exc_info=True)
             return ""
 
     def open_path(self, path: str) -> bool:
@@ -180,7 +180,7 @@ class DesktopAPI:
                 )
                 return False
         except (OSError, ValueError, RuntimeError, _SubprocessError):
-            logger.debug("open_path: subprocess raised for path %r", path)
+            logger.debug("open_path: subprocess raised for path %r", path, exc_info=True)
             return False
 
         return True
