@@ -80,6 +80,9 @@
       }
       document.body.removeChild(fallback);
     });
+    fallback.addEventListener("cancel", function () {
+      document.body.removeChild(fallback);
+    });
     document.body.appendChild(fallback);
     fallback.click();
   };
