@@ -284,19 +284,20 @@ _GTE_ZERO_NON_NEGATIVE_ATTRS = frozenset(
 
 
 def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
-    """Return assertions that are always true because the left side is non-negative by definition.
-
-    Detects two forms:
-
-    1. ``assert len(x) >= 0``  (forward) and ``assert 0 <= len(x)``  (reverse)
-       ``len()`` always returns a non-negative integer, so ``>= 0`` is tautological.
-
-    2. ``assert x.attr >= 0``  (forward) and ``assert 0 <= x.attr``  (reverse)
-       where ``attr`` is one of the known non-negative attribute names
-       (``count``, ``duration``, ``total_size``, ``size``, ``length``).
-
-    These pass even when the code under test is completely broken.  Use a
-    meaningful bound (``>= 1``, ``== N``, ``< max_val``) instead.
+    """
+    Finds assert statements that are tautologically true because the compared expression is always >= 0.
+    
+    Detects two forms and their reversed comparisons:
+    1. len(...) compared to 0: `assert len(x) >= 0` or `assert 0 <= len(x)`
+    2. Known non-negative attributes compared to 0: `assert x.count >= 0` or `assert 0 <= x.count`
+    These matches use the module's allowlist of non-negative attribute names.
+    
+    Parameters:
+        source (str): Python source code to analyze.
+        path (str): Optional filename used in reported violation strings.
+    
+    Returns:
+        list[str]: A list of violation strings formatted as "{path}:{lineno}".
     """
     try:
         tree = ast.parse(source, filename=path)
@@ -366,14 +367,10 @@ def test_detector_flags_vacuous_len_gte_zero(source: str, expected_count: int) -
 
 
 def test_changed_tests_have_no_vacuous_len_gte_zero_assertions() -> None:
-    """Test files must not use ``assert len(x) >= 0`` or ``assert x.attr >= 0`` tautologies.
-
-    ``len()`` is always non-negative by definition, as are counts, durations,
-    and sizes.  Asserting ``>= 0`` provides zero signal — the assertion passes
-    even when the code under test returns no results or is completely broken.
-
-    Use a meaningful lower bound (``>= 1``), exact count (``== N``), or an
-    upper bound (``< max_val``) instead.
+    """
+    Fail the test if any test file contains tautological comparisons that assert a length or certain non-negative attributes are greater than or equal to zero.
+    
+    Flags examples such as `assert len(x) >= 0`, `assert 0 <= len(x)`, and attribute checks like `assert x.count >= 0` where the left-hand expression is known to be non-negative; the test fails when any such occurrences are found.
     """
     violations: list[str] = []
     for path in _changed_test_files():
@@ -407,20 +404,17 @@ _GTE_ZERO_BARE_NAME_VARS = frozenset(
 
 
 def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
-    """Return assertions that are always true because the variable is non-negative by definition.
-
-    Detects two forms:
-
-    1. ``assert count >= 0``  (forward) where ``count`` is a bare ``ast.Name`` node
-       whose identifier is in ``_GTE_ZERO_BARE_NAME_VARS``.
-
-    2. ``assert 0 <= count``  (reverse) — the same pattern with operands swapped.
-
-    These variables (count, size, score, bytes, duration, elapsed, length,
-    num_files, num_items, total_size) are semantically non-negative by definition.
-    Asserting ``>= 0`` provides zero signal — the assertion passes even when the
-    code under test returns a wrong or sentinel value.  Use a meaningful bound
-    (``>= 1``, ``== N``, ``< max_val``) instead.
+    """
+    Detect assertions that tautologically compare certain bare variable names to zero.
+    
+    Flags occurrences of "assert VAR >= 0" and "assert 0 <= VAR" where VAR is a bare name present in _GTE_ZERO_BARE_NAME_VARS; each finding is reported as "path:lineno".
+    
+    Parameters:
+        source (str): Python source code to analyze.
+        path (str): File path used in reported violation strings (defaults to "<string>").
+    
+    Returns:
+        list[str]: Violation strings in the form "path:lineno" for each detected tautological assertion.
     """
     try:
         tree = ast.parse(source, filename=path)
@@ -442,9 +436,27 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
         right = test.comparators[0]
 
         def _is_zero(n: ast.AST) -> bool:
+            """
+            Check whether an AST node represents the integer constant 0.
+            
+            Parameters:
+                n (ast.AST): The AST node to inspect.
+            
+            Returns:
+                `True` if `n` is an `ast.Constant` whose value is the integer 0, `False` otherwise.
+            """
             return isinstance(n, ast.Constant) and n.value == 0
 
         def _is_bare_name_var(n: ast.AST) -> bool:
+            """
+            Check whether an AST node is a bare name listed as a non-negative semantic variable.
+            
+            Parameters:
+                n (ast.AST): The AST node to inspect.
+            
+            Returns:
+                bool: `True` if `n` is an `ast.Name` whose identifier is a member of `_GTE_ZERO_BARE_NAME_VARS`, `False` otherwise.
+            """
             return isinstance(n, ast.Name) and n.id in _GTE_ZERO_BARE_NAME_VARS
 
         # assert count >= 0  (forward)
@@ -480,6 +492,13 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
     ],
 )
 def test_detector_flags_vacuous_bare_name_gte_zero(source: str, expected_count: int) -> None:
+    """
+    Asserts that the bare-name `>= 0` detector finds the expected number of violations in a Python source snippet.
+    
+    Parameters:
+        source (str): Python source code to analyze.
+        expected_count (int): Number of violations the detector is expected to return.
+    """
     assert len(_find_vacuous_bare_name_gte_zero_assertions(source)) == expected_count
 
 
