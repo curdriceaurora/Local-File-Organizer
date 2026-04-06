@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, fields
 
-import anyio
+import aiofiles
 import httpx
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
@@ -372,7 +372,8 @@ async def settings_import(
             raw = raw_bytes.decode("utf-8")
         elif settings_path and settings_path.strip():
             resolved = resolve_path(settings_path, settings.allowed_paths)
-            raw = await anyio.Path(resolved).read_text(encoding="utf-8")
+            async with aiofiles.open(resolved, encoding="utf-8") as fh:
+                raw = await fh.read()
         else:
             ws = _load_web_settings()
             return _render_section(
