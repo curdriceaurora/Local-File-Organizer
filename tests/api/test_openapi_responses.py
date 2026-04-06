@@ -104,8 +104,8 @@ class TestMergeResponses:
         assert "unauthorized" in examples
         assert examples["unauthorized"]["value"]["message"] == "X"
 
-    def test_merge_same_status_description_honors_last_wins(self) -> None:
-        """Non-example fields (description) use the later entry's values."""
+    def test_merge_same_status_uses_neutral_description(self) -> None:
+        """Merged responses use a neutral HTTP phrase, not a variant-specific description."""
         first = api_error_response(400, error="err_a", message="First", description="desc-first")
         second = api_error_response(400, error="err_b", message="Second", description="desc-second")
         merged = merge_responses(first, second)
@@ -113,8 +113,8 @@ class TestMergeResponses:
         examples: dict[str, Any] = merged[400]["content"]["application/json"]["examples"]
         assert "err_a" in examples
         assert "err_b" in examples
-        # Description from the later entry wins
-        assert merged[400]["description"] == "desc-second"
+        # Merged description is neutral (HTTP phrase), not variant-specific
+        assert merged[400]["description"] == "Bad Request"
 
     def test_merge_responses_does_not_mutate_inputs(self) -> None:
         """merge_responses() must not mutate any of its input dicts."""
