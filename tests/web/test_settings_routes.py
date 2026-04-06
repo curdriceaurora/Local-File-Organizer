@@ -703,6 +703,10 @@ class TestSettingsImportPathBased:
 
         assert r.status_code == 200
         assert "Settings imported successfully" in r.text
+        # Verify that the imported values were actually persisted to disk.
+        ws = _load_web_settings()
+        assert ws.theme == "dark"
+        assert ws.language == "en"
 
     def test_import_via_path_outside_allowed_root_returns_error(self, tmp_path):
         """A path outside allowed_paths must trigger an error flash (not a 403 raise)."""

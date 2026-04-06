@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import http
 from typing import Any
 
 from file_organizer.api.models import (
@@ -159,6 +160,12 @@ def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
                     **copy.deepcopy(incoming_examples),
                 }
                 merged_entry["content"]["application/json"]["examples"] = merged_examples
+                # Use a neutral description so the merged response is not
+                # mislabelled with one variant's specific message.
+                try:
+                    merged_entry["description"] = http.HTTPStatus(status_code).phrase
+                except ValueError:
+                    merged_entry["description"] = str(status_code)
                 merged[status_code] = merged_entry
             except (KeyError, TypeError):
                 # One or both entries use "example" singular (success/detail

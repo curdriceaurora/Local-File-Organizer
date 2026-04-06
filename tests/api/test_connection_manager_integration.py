@@ -11,6 +11,7 @@ import json
 import pytest
 from fastapi import FastAPI, WebSocket
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from file_organizer.api.realtime import ConnectionManager
 
@@ -35,7 +36,7 @@ def _make_ws_app() -> tuple[FastAPI, ConnectionManager]:
                     await manager.broadcast(msg["payload"], msg.get("channel", "global"))
                 elif msg.get("type") == "disconnect":
                     break
-        except Exception:
+        except WebSocketDisconnect:
             pass
         finally:
             await manager.disconnect(websocket)
@@ -49,7 +50,7 @@ class TestConnectionManagerLifecycle:
 
     @pytest.mark.ci
     def test_connect_and_receive_broadcast(self):
-        app, manager = _make_ws_app()
+        app, _ = _make_ws_app()
         with TestClient(app) as client:
             with client.websocket_connect("/ws/client1") as ws:
                 # Consume the initial "connection" message sent by connect()
@@ -76,7 +77,7 @@ class TestConnectionManagerLifecycle:
         assert len(manager._connections) == 0
 
     def test_subscribe_then_unsubscribe(self):
-        app, manager = _make_ws_app()
+        app, _ = _make_ws_app()
         with TestClient(app) as client:
             with client.websocket_connect("/ws/csub") as ws:
                 # Consume the initial connection message
@@ -86,9 +87,29 @@ class TestConnectionManagerLifecycle:
                 # No error expected — just verifying it doesn't raise
 
     @pytest.mark.ci
-    def test_broadcast_to_unsubscribed_channel_delivers_nothing(self):
-        """Client subscribed to 'alpha' must not receive 'beta' broadcasts."""
-        # enqueue_event on empty manager should return False (no consumers)
+    def test_broadcast_to_named_channel_reaches_subscriber(self):
+        """Client subscribed to a named channel receives broadcasts on that channel."""
+        app, _ = _make_ws_app()
+        with TestClient(app) as client:
+            with client.websocket_connect("/ws/cnamed") as ws:
+                ws.receive_text()  # initial connection message
+                ws.send_text(json.dumps({"type": "subscribe", "channel": "alpha"}))
+                ws.send_text(
+                    json.dumps(
+                        {
+                            "type": "broadcast",
+                            "payload": {"event": "named"},
+                            "channel": "alpha",
+                        }
+                    )
+                )
+                msg = ws.receive_text()
+                data = json.loads(msg)
+                assert data["event"] == "named"
+
+    @pytest.mark.ci
+    def test_enqueue_event_returns_false_when_uninitialised(self):
+        """enqueue_event returns False before _loop/_queue are initialised."""
         from file_organizer.api.realtime import ConnectionManager as CM
 
         m = CM()
