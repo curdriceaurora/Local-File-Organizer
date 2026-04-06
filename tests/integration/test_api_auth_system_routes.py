@@ -441,9 +441,7 @@ class TestAuthLoginRateLimit:
         return client, mock_limiter
 
     def test_login_rate_limited_returns_429(self, tmp_path: Path) -> None:
-        client, mock_limiter = self._make_rate_limit_client(
-            tmp_path, rate_limit_enabled=True
-        )
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=True)
         mock_limiter.is_blocked.return_value = (True, 60)
         r = client.post(
             "/api/v1/auth/login",
@@ -453,9 +451,7 @@ class TestAuthLoginRateLimit:
         assert "Too many login attempts" in r.json()["detail"]
 
     def test_login_rate_limit_header_present(self, tmp_path: Path) -> None:
-        client, mock_limiter = self._make_rate_limit_client(
-            tmp_path, rate_limit_enabled=True
-        )
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=True)
         mock_limiter.is_blocked.return_value = (True, 60)
         r = client.post(
             "/api/v1/auth/login",
@@ -464,12 +460,8 @@ class TestAuthLoginRateLimit:
         assert r.status_code == 429
         assert r.headers.get("retry-after") == "60"
 
-    def test_login_rate_limit_disabled_does_not_check_limiter(
-        self, tmp_path: Path
-    ) -> None:
-        client, mock_limiter = self._make_rate_limit_client(
-            tmp_path, rate_limit_enabled=False
-        )
+    def test_login_rate_limit_disabled_does_not_check_limiter(self, tmp_path: Path) -> None:
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=False)
         mock_limiter.is_blocked.return_value = (False, None)
         # Register then login successfully with rate limiting disabled
         client.post(
@@ -504,12 +496,8 @@ class TestAuthRefreshExpiredToken:
         assert r.status_code == 401
         assert r.json()["detail"] == "Invalid refresh token"
 
-    def test_refresh_with_access_token_as_refresh_returns_401(
-        self, tmp_path: Path
-    ) -> None:
-        client, _, tokens = create_auth_client(
-            tmp_path, allowed_paths=[str(tmp_path)]
-        )
+    def test_refresh_with_access_token_as_refresh_returns_401(self, tmp_path: Path) -> None:
+        client, _, tokens = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
         access_token: str = tokens["access_token"]
         r = client.post(
             "/api/v1/auth/refresh",

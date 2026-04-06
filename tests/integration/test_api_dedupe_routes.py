@@ -67,9 +67,7 @@ class TestDedupeScan:
         body = r.json()
         assert body["error"] == "not_found"
 
-    def test_scan_file_path_returns_400(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_scan_file_path_returns_400(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         f = tmp_path / "file.txt"
         f.write_text("hello")
         r = dedupe_client.post("/dedupe/scan", json={"path": str(f)})
@@ -77,9 +75,7 @@ class TestDedupeScan:
         body = r.json()
         assert body["error"] == "invalid_path"
 
-    def test_scan_empty_dir_returns_200(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_scan_empty_dir_returns_200(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         scan_dir = tmp_path / "empty_dir"
         scan_dir.mkdir()
         r = dedupe_client.post("/dedupe/scan", json={"path": str(scan_dir)})
@@ -124,9 +120,7 @@ class TestDedupePreview:
         body = r.json()
         assert body["error"] == "not_found"
 
-    def test_preview_file_path_returns_400(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_preview_file_path_returns_400(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         f = tmp_path / "single.txt"
         f.write_text("data")
         r = dedupe_client.post("/dedupe/preview", json={"path": str(f)})
@@ -174,9 +168,7 @@ class TestDedupeExecute:
         body = r.json()
         assert body["error"] == "not_found"
 
-    def test_execute_file_path_returns_400(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_execute_file_path_returns_400(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         f = tmp_path / "notadir.txt"
         f.write_text("x")
         r = dedupe_client.post(
@@ -209,9 +201,7 @@ class TestDedupeExecute:
         assert original.exists()
         assert duplicate.exists()
 
-    def test_execute_removes_duplicates(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_execute_removes_duplicates(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         exec_dir = tmp_path / "real_delete_dir"
         exec_dir.mkdir()
         content = "content to be deduplicated for real"
@@ -232,9 +222,7 @@ class TestDedupeExecute:
         removed_path = body["removed"][0]
         assert not Path(removed_path).exists()
 
-    def test_execute_response_shape(
-        self, dedupe_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_execute_response_shape(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         shape_dir = tmp_path / "shape_dir"
         shape_dir.mkdir()
 

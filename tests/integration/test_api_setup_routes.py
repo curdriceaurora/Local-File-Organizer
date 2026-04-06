@@ -72,9 +72,7 @@ class TestSetupStatus:
         r = setup_client.get("/setup/status")
         assert r.status_code == 200
 
-    def test_setup_status_completed_true(
-        self, test_settings: ApiSettings
-    ) -> None:
+    def test_setup_status_completed_true(self, test_settings: ApiSettings) -> None:
         mock_manager = _make_mock_manager(completed=True, profile="default")
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: test_settings
@@ -87,9 +85,7 @@ class TestSetupStatus:
         assert r.status_code == 200
         assert r.json()["completed"] is True
 
-    def test_setup_status_completed_false(
-        self, test_settings: ApiSettings
-    ) -> None:
+    def test_setup_status_completed_false(self, test_settings: ApiSettings) -> None:
         mock_manager = _make_mock_manager(completed=False, profile="default")
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: test_settings
@@ -226,9 +222,7 @@ class TestSetupComplete:
 
 
 class TestBrowseFolder:
-    def test_browse_folder_non_darwin_returns_unavailable(
-        self, setup_client: TestClient
-    ) -> None:
+    def test_browse_folder_non_darwin_returns_unavailable(self, setup_client: TestClient) -> None:
         with patch.object(sys, "platform", "linux"):
             r = setup_client.get("/setup/browse-folder")
         assert r.status_code == 200
@@ -244,8 +238,9 @@ class TestBrowseFolder:
         mock_result.stderr = "User canceled."
         mock_result.stdout = ""
 
-        with patch.object(sys, "platform", "darwin"), patch(
-            "subprocess.run", return_value=mock_result
+        with (
+            patch.object(sys, "platform", "darwin"),
+            patch("subprocess.run", return_value=mock_result),
         ):
             r = setup_client.get("/setup/browse-folder")
 

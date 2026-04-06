@@ -646,9 +646,7 @@ class TestListFilesHiddenAndSymlink:
         names = [f["name"] for f in r.json()["items"]]
         assert "config" not in names
 
-    def test_list_files_skips_symlinks(
-        self, files_client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_list_files_skips_symlinks(self, files_client: TestClient, tmp_path: Path) -> None:
         real = tmp_path / "real.txt"
         real.write_text("content")
         link = tmp_path / "link.txt"

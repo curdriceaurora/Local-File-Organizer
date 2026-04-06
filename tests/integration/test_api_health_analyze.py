@@ -238,9 +238,7 @@ class TestHealthResponseFields:
             "ollama": status == "ok",
         }
 
-    def test_health_degraded_response_fields_all_present(
-        self, health_client: TestClient
-    ) -> None:
+    def test_health_degraded_response_fields_all_present(self, health_client: TestClient) -> None:
         with patch(_FACADE_PATH) as mock_cls:
             mock_facade = MagicMock()
             mock_facade.health_check = AsyncMock(return_value=self._mock_facade("degraded"))
@@ -266,9 +264,7 @@ class TestHealthResponseFields:
             r = health_client.get("/health")
         assert r.json()["readiness"] == "starting"
 
-    def test_health_error_response_fields_all_present(
-        self, health_client: TestClient
-    ) -> None:
+    def test_health_error_response_fields_all_present(self, health_client: TestClient) -> None:
         with patch(_FACADE_PATH) as mock_cls:
             mock_facade = MagicMock()
             mock_facade.health_check = AsyncMock(return_value=self._mock_facade("error"))

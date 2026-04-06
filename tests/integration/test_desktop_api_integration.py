@@ -127,9 +127,7 @@ class TestSaveFile:
             result = api.save_file(suggested_name="report.pdf")
         assert result == "/out/report.pdf"
 
-    def test_save_file_strips_forward_slash_from_suggested_name(
-        self, api: DesktopAPI
-    ) -> None:
+    def test_save_file_strips_forward_slash_from_suggested_name(self, api: DesktopAPI) -> None:
         """Forward slashes in suggested_name are stripped before reaching the dialog."""
         wv = _make_webview(dialog_result=["/dest/abc.txt"])
         with patch.dict("sys.modules", {"webview": wv}):
@@ -137,9 +135,7 @@ class TestSaveFile:
         _, kwargs = wv.active_window().create_file_dialog.call_args
         assert kwargs["save_filename"] == "abc.txt"
 
-    def test_save_file_strips_backslash_from_suggested_name(
-        self, api: DesktopAPI
-    ) -> None:
+    def test_save_file_strips_backslash_from_suggested_name(self, api: DesktopAPI) -> None:
         r"""Backslashes in suggested_name are stripped before reaching the dialog."""
         wv = _make_webview(dialog_result=["/dest/abc.txt"])
         with patch.dict("sys.modules", {"webview": wv}):
