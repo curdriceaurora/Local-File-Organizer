@@ -146,15 +146,18 @@ def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
                 existing_examples: dict[str, Any] = merged[status_code]["content"][
                     "application/json"
                 ]["examples"]
-                incoming_examples: dict[str, Any] = incoming["content"][
-                    "application/json"
-                ]["examples"]
+                incoming_examples: dict[str, Any] = incoming["content"]["application/json"][
+                    "examples"
+                ]
                 # Start from a deep copy of *incoming* so that non-example
                 # top-level fields (description, schema, …) honor last-wins.
                 merged_entry = copy.deepcopy(incoming)
                 # Combine examples: existing first, then incoming overwrites
                 # duplicate keys so the later definition wins within examples too.
-                merged_examples = {**copy.deepcopy(existing_examples), **copy.deepcopy(incoming_examples)}
+                merged_examples = {
+                    **copy.deepcopy(existing_examples),
+                    **copy.deepcopy(incoming_examples),
+                }
                 merged_entry["content"]["application/json"]["examples"] = merged_examples
                 merged[status_code] = merged_entry
             except (KeyError, TypeError):
