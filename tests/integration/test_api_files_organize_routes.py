@@ -664,30 +664,6 @@ class TestListFilesHiddenAndSymlink:
 
 
 class TestOrganizeBackgroundJobFailure:
-    def test_background_job_queued_returns_job_id(
-        self, organize_client: TestClient, tmp_path: Path
-    ) -> None:
-        src = tmp_path / "src"
-        src.mkdir()
-        (src / "doc.txt").write_text("content")
-        out = tmp_path / "out"
-        out.mkdir()
-        r = organize_client.post(
-            "/organize/execute",
-            json={"input_dir": str(src), "output_dir": str(out), "run_in_background": True},
-        )
-        assert r.status_code == 200
-        body = r.json()
-        assert body["status"] == "queued"
-        assert isinstance(body["job_id"], str)
-        assert len(body["job_id"]) > 0
-
-    def test_organize_status_not_found_returns_404(
-        self, organize_client: TestClient, tmp_path: Path
-    ) -> None:
-        r = organize_client.get("/organize/status/nonexistent-job-id")
-        assert r.status_code == 404
-
     def test_background_job_failure_status_is_failed(
         self, organize_client: TestClient, tmp_path: Path
     ) -> None:

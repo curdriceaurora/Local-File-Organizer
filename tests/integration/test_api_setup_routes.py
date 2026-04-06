@@ -240,7 +240,7 @@ class TestBrowseFolder:
 
         with (
             patch.object(sys, "platform", "darwin"),
-            patch("subprocess.run", return_value=mock_result),
+            patch("file_organizer.api.routers.setup.subprocess.run", return_value=mock_result),
         ):
             r = setup_client.get("/setup/browse-folder")
 
