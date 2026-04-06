@@ -64,12 +64,20 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 
 ```json
 {
-  "success": true,
-  "data": {
-    "files": [...],
-    "total": 42,
-    "page": 1
-  }
+  "items": [
+    {
+      "path": "/Users/demo/Documents/report.pdf",
+      "name": "report.pdf",
+      "size": 102400,
+      "created": "2026-04-01T12:00:00Z",
+      "modified": "2026-04-04T09:30:00Z",
+      "file_type": "pdf",
+      "mime_type": "application/pdf"
+    }
+  ],
+  "total": 1,
+  "skip": 0,
+  "limit": 100
 }
 ```
 

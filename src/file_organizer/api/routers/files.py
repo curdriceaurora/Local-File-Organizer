@@ -117,7 +117,6 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
                 "total": 1,
                 "skip": 0,
                 "limit": 100,
-                "files": [],
             },
         ),
         api_error_response(404, error="not_found", message="Path does not exist"),

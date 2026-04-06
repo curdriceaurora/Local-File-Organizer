@@ -13,7 +13,7 @@ from file_organizer.api.models import (
 OpenAPIResponses = dict[int | str, dict[str, Any]]
 
 
-def _json_content(model: type[Any], example: dict[str, Any]) -> dict[str, Any]:
+def _json_content(model: type[Any], example: Any) -> dict[str, Any]:
     return {
         "application/json": {
             "schema": model.model_json_schema(),
@@ -24,11 +24,11 @@ def _json_content(model: type[Any], example: dict[str, Any]) -> dict[str, Any]:
 
 def success_response(
     description: str,
-    example: dict[str, Any],
+    example: Any,
     *,
     status_code: int = 200,
 ) -> OpenAPIResponses:
-    """Build a documented success response with an example payload."""
+    """Build a documented success response with an example object or array payload."""
     return {
         status_code: {
             "description": description,
@@ -92,7 +92,11 @@ def validation_error_response() -> OpenAPIResponses:
 
 
 def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
-    """Merge multiple OpenAPI response maps."""
+    """Merge multiple OpenAPI response maps.
+
+    When multiple sets define the same status code, later arguments override
+    earlier ones. Callers should order response sets accordingly.
+    """
     merged: OpenAPIResponses = {}
     for response_set in response_sets:
         merged.update(response_set)

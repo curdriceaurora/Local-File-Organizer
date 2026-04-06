@@ -37,7 +37,6 @@ from file_organizer.api.models import (
     UserResponse,
 )
 from file_organizer.api.openapi_responses import (
-    ADMIN_403_RESPONSE,
     INTERNAL_500_RESPONSE,
     detail_error_response,
     merge_responses,
@@ -329,7 +328,7 @@ def logout(
             },
         ),
         detail_error_response(401, detail="Not authenticated"),
-        ADMIN_403_RESPONSE,
+        detail_error_response(400, detail="Inactive user"),
     ),
 )
 def me(current_user: User = Depends(get_current_active_user)) -> UserResponse:
