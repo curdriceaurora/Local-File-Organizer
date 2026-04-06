@@ -397,21 +397,25 @@ Example: `74.87%` → `NEW_FLOOR=74.8`.
 In `.github/workflows/ci.yml`, find the `test-integration` job and update:
 
 **a) Step name** — change `(floor: 71.9%` to `(floor: NEW_FLOOR%`:
+
 ```yaml
 - name: "Integration coverage gate (floor: NEW_FLOOR% combined line+branch)"
 ```
 
 **b) `--cov-fail-under` value** in the `run:` command:
+
 ```bash
 pytest tests/ -m "integration" ... --cov-fail-under=NEW_FLOOR ...
 ```
 
 **c) Ratchet comment** — add a new line above `run:`:
+
 ```yaml
 # YYYY-MM-DD: NEW_FLOOR% combined (ratchet after auth+rate-limit tests; actual MEASURED%)
 ```
 
 **d) `docs/internal/CLAUDE.md`**, "Integration Coverage Gate" section:
+
 ```markdown
 - **Current floor**: NEW_FLOOR% (ratchet — bumped with each coverage PR, target 90% per issue #856)
 ```
@@ -1022,6 +1026,7 @@ combined % ≥ 90.0.
 - [ ] **Step 5: Bump gate to 90% in all four locations**
 
 `.github/workflows/ci.yml`:
+
 ```yaml
 - name: "Integration coverage gate (floor: 90% combined line+branch)"
   # ...
@@ -1030,6 +1035,7 @@ combined % ≥ 90.0.
 ```
 
 `docs/internal/CLAUDE.md`:
+
 ```markdown
 - **Current floor**: 90% — target reached (issue #856 closed)
 ```

@@ -150,21 +150,25 @@ place — this is the new ratchet floor. Example: if coverage is 74.87%, the flo
 All three must be updated in the same commit:
 
 **a) CI job step name** in `.github/workflows/ci.yml`:
+
 ```yaml
 - name: "Integration coverage gate (floor: <new>% combined line+branch)"
 ```
 
 **b) CI `--cov-fail-under` value** in the same step's `run:` command:
+
 ```bash
 pytest tests/ -m "integration" ... --cov-fail-under=<new_floor> ...
 ```
 
 **c) Ratchet comment** directly above the `run:` line:
+
 ```yaml
 # YYYY-MM-DD: <new_floor>% combined (ratchet after <domain> tests; actual <measured>%)
 ```
 
 **d) CLAUDE.md** — `docs/internal/CLAUDE.md`, "Integration Coverage Gate" section:
+
 ```markdown
 - **Current floor**: <new_floor>% (ratchet — bumped with each coverage PR, target 90% per issue #856)
 ```

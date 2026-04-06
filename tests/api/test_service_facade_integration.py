@@ -7,7 +7,6 @@ AI/model inference is mocked at the FileOrganizer boundary.
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

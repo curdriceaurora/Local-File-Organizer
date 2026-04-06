@@ -56,11 +56,13 @@ class TestConnectionManagerLifecycle:
                 ws.receive_text()
                 ws.send_text(json.dumps({"type": "subscribe", "channel": "global"}))
                 ws.send_text(
-                    json.dumps({
-                        "type": "broadcast",
-                        "payload": {"event": "test"},
-                        "channel": "global",
-                    })
+                    json.dumps(
+                        {
+                            "type": "broadcast",
+                            "payload": {"event": "test"},
+                            "channel": "global",
+                        }
+                    )
                 )
                 msg = ws.receive_text()
                 data = json.loads(msg)
