@@ -286,16 +286,16 @@ _GTE_ZERO_NON_NEGATIVE_ATTRS = frozenset(
 def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
     """
     Finds assert statements that are tautologically true because the compared expression is always >= 0.
-    
+
     Detects two forms and their reversed comparisons:
     1. len(...) compared to 0: `assert len(x) >= 0` or `assert 0 <= len(x)`
     2. Known non-negative attributes compared to 0: `assert x.count >= 0` or `assert 0 <= x.count`
     These matches use the module's allowlist of non-negative attribute names.
-    
+
     Parameters:
         source (str): Python source code to analyze.
         path (str): Optional filename used in reported violation strings.
-    
+
     Returns:
         list[str]: A list of violation strings formatted as "{path}:{lineno}".
     """
@@ -353,6 +353,10 @@ def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -
         ("assert x.total_size >= 0\n", 1),
         ("assert x.size >= 0\n", 1),
         ("assert x.length >= 0\n", 1),
+        ("assert x.score >= 0\n", 1),
+        ("assert x.bytes >= 0\n", 1),
+        ("assert x.elapsed >= 0\n", 1),
+        ("assert x.total >= 0\n", 1),
         ("assert 0 <= x.count\n", 1),
         # Meaningful bounds — should NOT flag
         ("assert len(results) >= 1\n", 0),
