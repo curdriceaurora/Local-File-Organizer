@@ -31,7 +31,8 @@
                 enctype="multipart/form-data"
             >
                 <input type="hidden" name="section" value="general">
-                <input type="file" name="settings_file" accept=".json" required>
+                <input type="hidden" name="settings_path" id="settings-path-hidden">
+                <input type="file" name="settings_file" accept=".json">
                 <button class="btn-ghost" type="submit">Import</button>
             </form>
             <button
@@ -115,4 +116,17 @@
         <div class="loading-state">Loading settings...</div>
     </div>
 </div>
+<script>
+(function () {
+    var pathInput = document.getElementById('settings-file-path');
+    var hiddenInput = document.getElementById('settings-path-hidden');
+    if (pathInput && hiddenInput) {
+        // window.desktopBrowseFile dispatches a 'change' event after populating
+        // pathInput; listen on both 'change' and 'input' for robustness.
+        function syncPath() { hiddenInput.value = pathInput.value; }
+        pathInput.addEventListener('change', syncPath);
+        pathInput.addEventListener('input', syncPath);
+    }
+}());
+</script>
 {% endblock %}

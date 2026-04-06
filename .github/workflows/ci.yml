@@ -422,4 +422,5 @@ jobs:
         # 2026-03-22: 56% combined (ratchet after PR3 web+plugins tests; actual 56.64%; 3507 integration tests).
         # 2026-03-22: 60% combined (ratchet after PR4 services+review_regressions+benchmark+cli tests; actual 60.06%; 4112 integration tests).
         # 2026-04-05: 71.9% combined (ratchet after batch3/batch4 integration coverage expansion on main).
+        # 2026-04-06: floor held at 71.9% — new integration tests added (auth+service-facade+websocket); local measurement 71.76% due to missing [search] extras in local venv vs CI env with [dev,search]
         run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=71.9 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="

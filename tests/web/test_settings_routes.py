@@ -17,8 +17,12 @@ from dataclasses import asdict
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.web.settings_routes import (
     LANGUAGE_OPTIONS,
     LOG_LEVEL_OPTIONS,
@@ -37,6 +41,7 @@ from file_organizer.web.settings_routes import (
     _validate_choice,
     _validate_methodology,
     _validate_rules,
+    settings_router,
 )
 
 pytestmark = [pytest.mark.unit]
@@ -642,3 +647,126 @@ class TestSettingsIntegration:
         assert ws.language == "en"  # Defaults
         assert ws.timezone == "UTC"
         assert ws.theme == "light"
+
+
+# ---------------------------------------------------------------------------
+# TestSettingsImportPathBased — HTTP-level integration tests
+# ---------------------------------------------------------------------------
+
+
+def _make_tpl_side_effect():
+    """Return a TemplateResponse side_effect that echoes context keys as HTML."""
+
+    def _side_effect(request: object, template: str, context: dict) -> HTMLResponse:
+        success = context.get("success_message", "")
+        error = context.get("error_message", "")
+        body = f"<html><body>{success}{error}</body></html>"
+        return HTMLResponse(body)
+
+    return _side_effect
+
+
+@pytest.mark.integration
+class TestSettingsImportPathBased:
+    """Integration tests for the path-based settings import flow.
+
+    Covers POST /settings/import with a ``settings_path`` form field (desktop
+    picker path) rather than a multipart ``settings_file`` upload.
+    """
+
+    @pytest.fixture()
+    def _client(self, tmp_path):
+        """Yield a TestClient with settings_router mounted and get_settings overridden."""
+        api_settings = ApiSettings(
+            allowed_paths=[str(tmp_path)],
+            auth_enabled=False,
+            auth_db_path=str(tmp_path / "auth.db"),
+        )
+        app = FastAPI()
+        app.dependency_overrides[get_settings] = lambda: api_settings
+        app.include_router(settings_router)
+        yield TestClient(app, raise_server_exceptions=False), tmp_path
+
+    @pytest.mark.ci
+    def test_import_via_path_returns_200(self, _client):
+        """A valid JSON file under allowed_paths should be imported with status 200."""
+        client, tmp_path = _client
+        cfg_file = tmp_path / "cfg.json"
+        cfg_file.write_text(json.dumps({"theme": "dark", "language": "en"}))
+
+        with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
+            mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
+            r = client.post(
+                "/settings/import",
+                data={"settings_path": str(cfg_file), "section": "general"},
+            )
+
+        assert r.status_code == 200
+        assert "Settings imported successfully" in r.text
+        # Verify that the imported values were actually persisted to disk.
+        ws = _load_web_settings()
+        assert ws.theme == "dark"
+        assert ws.language == "en"
+
+    def test_import_via_path_outside_allowed_root_returns_error(self, tmp_path):
+        """A path outside allowed_paths must trigger an error flash (not a 403 raise)."""
+        # allowed_paths points at a *different* directory, not tmp_path
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as other_dir:
+            api_settings = ApiSettings(
+                allowed_paths=[other_dir],
+                auth_enabled=False,
+                auth_db_path=str(tmp_path / "auth.db"),
+            )
+            cfg_file = tmp_path / "secret.json"
+            cfg_file.write_text(json.dumps({"theme": "dark"}))
+
+            app = FastAPI()
+            app.dependency_overrides[get_settings] = lambda: api_settings
+            app.include_router(settings_router)
+            client = TestClient(app, raise_server_exceptions=False)
+
+            with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
+                mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
+                r = client.post(
+                    "/settings/import",
+                    data={"settings_path": str(cfg_file), "section": "general"},
+                )
+
+        assert r.status_code == 200
+        assert "Import failed" in r.text
+
+    @pytest.mark.ci
+    def test_import_with_neither_file_nor_path_returns_error_flash(self, _client):
+        """Submitting with no file and no path must return an error flash."""
+        client, _tmp = _client
+
+        with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
+            mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
+            r = client.post(
+                "/settings/import",
+                data={"section": "general"},
+            )
+
+        assert r.status_code == 200
+        assert "Import failed" in r.text
+
+    def test_import_prefers_multipart_over_path(self, _client):
+        """When both settings_file and settings_path are provided, the file wins."""
+        client, _ = _client
+
+        # settings_path points outside allowed_paths so path-resolution would fail
+        outside_path = "/nonexistent/outside/path/cfg.json"
+        valid_json = json.dumps({"theme": "light"}).encode()
+
+        with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
+            mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
+            r = client.post(
+                "/settings/import",
+                data={"settings_path": outside_path, "section": "general"},
+                files={"settings_file": ("cfg.json", valid_json, "application/json")},
+            )
+
+        assert r.status_code == 200
+        assert "Settings imported successfully" in r.text

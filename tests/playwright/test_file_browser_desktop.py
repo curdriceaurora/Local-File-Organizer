@@ -53,7 +53,7 @@ class TestDesktopModeGating:
         page.goto(_FILES_URL)
         page.wait_for_load_state("networkidle")
         value: str | None = page.evaluate("() => document.body.getAttribute('data-desktop-app')")
-        assert value != "1"
+        assert value is None
 
     def test_body_is_desktop_app_with_mock(
         self, page: Page, pywebview_mock: PywebviewMockHandle

@@ -122,7 +122,7 @@ dev = [
     "mypy~=1.8",
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
-    "black~=23.12",
+    "black>=23.12,<27.0",
     "isort~=5.13",
     "pre-commit~=3.6",
     "codespell~=2.2",
@@ -172,7 +172,7 @@ audio = [
     "faster-whisper~=1.0",
     "torch~=2.1",  # GPU acceleration for audio transcription
     "mutagen~=1.47",  # Audio metadata extraction
-    "tinytag~=1.10",  # Lightweight audio metadata fallback
+    "tinytag>=1.10,<3.0",  # Lightweight audio metadata fallback
     "pydub>=0.25.0",  # 0.x — unstable API, keep >=; Audio manipulation
 ]
 
@@ -184,7 +184,7 @@ video = [
 dedup = [
     "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
     "scikit-learn~=1.4",  # ML-based text similarity for deduplication
-    "pypdf~=4.0",  # PDF text extraction fallback in dedup extractor
+    "pypdf>=4,<7",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
 ]
 

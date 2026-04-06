@@ -351,3 +351,156 @@ class TestSystemStats:
         f.write_text("x")
         r = system_client.get("/system/stats", params={"path": str(f)})
         assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Auth router — duplicate email registration
+# ---------------------------------------------------------------------------
+
+
+class TestAuthRegisterEmailDuplicate:
+    def test_register_duplicate_email_returns_400(self, tmp_path: Path) -> None:
+        client, _, _ = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
+        r1 = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "emaildup_user_a",
+                "email": "shared@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "User A",
+            },
+        )
+        assert r1.status_code == 201
+        r2 = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "emaildup_user_b",
+                "email": "shared@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "User B",
+            },
+        )
+        assert r2.status_code == 400
+        assert "Email already registered" in r2.json()["detail"]
+
+    def test_register_different_email_succeeds(self, tmp_path: Path) -> None:
+        client, _, _ = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
+        r1 = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "diffemail_user_a",
+                "email": "user_a@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "User A",
+            },
+        )
+        assert r1.status_code == 201
+        r2 = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "diffemail_user_b",
+                "email": "user_b@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "User B",
+            },
+        )
+        assert r2.status_code == 201
+        assert r2.json()["username"] == "diffemail_user_b"
+
+
+# ---------------------------------------------------------------------------
+# Auth router — login rate limiting
+# ---------------------------------------------------------------------------
+
+
+class TestAuthLoginRateLimit:
+    def _make_rate_limit_client(
+        self, tmp_path: Path, rate_limit_enabled: bool
+    ) -> tuple[TestClient, MagicMock]:
+        from file_organizer.api.config import ApiSettings
+        from file_organizer.api.dependencies import get_login_rate_limiter
+        from file_organizer.api.main import create_app
+
+        real_settings = ApiSettings(
+            environment="test",
+            enable_docs=False,
+            allowed_paths=[str(tmp_path)],
+            auth_enabled=True,
+            auth_db_path=str(tmp_path / "auth.db"),
+            auth_jwt_secret="test-secret",
+            auth_access_token_minutes=5,
+            auth_refresh_token_days=1,
+            auth_redis_url=None,
+            rate_limit_enabled=False,
+            auth_login_rate_limit_enabled=rate_limit_enabled,
+        )
+        app = create_app(real_settings)
+        mock_limiter = MagicMock()
+        app.dependency_overrides[get_login_rate_limiter] = lambda: mock_limiter
+        client = TestClient(app, raise_server_exceptions=False)
+        return client, mock_limiter
+
+    def test_login_rate_limited_returns_429(self, tmp_path: Path) -> None:
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=True)
+        mock_limiter.is_blocked.return_value = (True, 60)
+        r = client.post(
+            "/api/v1/auth/login",
+            data={"username": "anyuser", "password": "AnyPass1!"},
+        )
+        assert r.status_code == 429
+        assert "Too many login attempts" in r.json()["detail"]
+
+    def test_login_rate_limit_header_present(self, tmp_path: Path) -> None:
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=True)
+        mock_limiter.is_blocked.return_value = (True, 60)
+        r = client.post(
+            "/api/v1/auth/login",
+            data={"username": "anyuser", "password": "AnyPass1!"},
+        )
+        assert r.status_code == 429
+        assert r.headers.get("retry-after") == "60"
+
+    def test_login_rate_limit_disabled_does_not_check_limiter(self, tmp_path: Path) -> None:
+        client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=False)
+        mock_limiter.is_blocked.return_value = (False, 0)
+        # Register then login successfully with rate limiting disabled
+        client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "ratelimit_off_user",
+                "email": "ratelimit_off@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "RL Off User",
+            },
+        )
+        r = client.post(
+            "/api/v1/auth/login",
+            data={"username": "ratelimit_off_user", "password": "T3stP@ssword1!"},
+        )
+        assert r.status_code == 200
+        mock_limiter.is_blocked.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Auth router — refresh token edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestAuthRefreshExpiredToken:
+    def test_refresh_with_malformed_token_returns_401(self, tmp_path: Path) -> None:
+        client, _, _ = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
+        r = client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": "not.a.jwt"},
+        )
+        assert r.status_code == 401
+        assert r.json()["detail"] == "Invalid refresh token"
+
+    def test_refresh_with_access_token_as_refresh_returns_401(self, tmp_path: Path) -> None:
+        client, _, tokens = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
+        access_token: str = tokens["access_token"]
+        r = client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": access_token},
+        )
+        assert r.status_code == 401

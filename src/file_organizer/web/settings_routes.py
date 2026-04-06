@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, fields
 
+import aiofiles
 import httpx
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
@@ -20,6 +21,7 @@ from loguru import logger
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.api.utils import resolve_path
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.web._helpers import base_context, templates
 
@@ -347,9 +349,16 @@ def settings_export() -> Response:
 async def settings_import(
     request: Request,
     section: str = Form("general"),
-    settings_file: UploadFile = File(...),
+    settings_file: UploadFile | None = File(None),
+    settings_path: str | None = Form(None),
+    settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Import web settings from an uploaded JSON file.
+    """Import web settings from an uploaded JSON file or a desktop file path.
+
+    Accepts either a multipart ``settings_file`` upload (browser) or a
+    ``settings_path`` string (desktop picker).  When both are present the
+    uploaded file takes precedence.  The path is validated against
+    ``settings.allowed_paths`` before reading (F4).
 
     Returns:
         Re-rendered section partial with a success or error flash.
@@ -358,8 +367,22 @@ async def settings_import(
     target_section = section if section in valid_sections else "general"
 
     try:
-        raw_bytes = await settings_file.read()
-        payload = json.loads(raw_bytes.decode("utf-8"))
+        if settings_file is not None:
+            raw_bytes = await settings_file.read()
+            raw = raw_bytes.decode("utf-8")
+        elif settings_path and settings_path.strip():
+            resolved = resolve_path(settings_path, settings.allowed_paths)
+            async with aiofiles.open(resolved, encoding="utf-8") as fh:
+                raw = await fh.read()
+        else:
+            ws = _load_web_settings()
+            return _render_section(
+                request,
+                ws,
+                section=target_section,
+                error_message="Import failed: provide either a settings file or a valid path.",
+            )
+        payload = json.loads(raw)
         if not isinstance(payload, dict):
             raise ValueError("Imported payload must be a JSON object.")
 

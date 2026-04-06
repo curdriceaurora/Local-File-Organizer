@@ -85,7 +85,7 @@ class TestDesktopModeVisibility:
         page.goto("/ui/settings")
         page.wait_for_load_state("networkidle")
         value: str | None = page.evaluate("() => document.body.getAttribute('data-desktop-app')")
-        assert value != "1"
+        assert value is None
 
     def test_desktop_browse_file_populates_settings_input(
         self, page: Page, pywebview_mock: PywebviewMockHandle

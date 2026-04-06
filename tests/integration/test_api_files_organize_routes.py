@@ -605,3 +605,117 @@ class TestSimpleOrganize:
         body = r.json()
         assert "confidence" in body
         assert 0.0 <= body["confidence"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# files router — GET /files hidden-file and symlink filtering
+# ---------------------------------------------------------------------------
+
+
+class TestListFilesHiddenAndSymlink:
+    def test_list_files_excludes_dotfiles_by_default(
+        self, files_client: TestClient, tmp_path: Path
+    ) -> None:
+        (tmp_path / "visible.txt").write_text("hello")
+        (tmp_path / ".hidden_file").write_text("secret")
+        r = files_client.get("/files", params={"path": str(tmp_path)})
+        assert r.status_code == 200
+        names = [f["name"] for f in r.json()["items"]]
+        assert "visible.txt" in names
+        assert ".hidden_file" not in names
+
+    def test_list_files_include_hidden_true_shows_dotfiles(
+        self, files_client: TestClient, tmp_path: Path
+    ) -> None:
+        (tmp_path / "visible.txt").write_text("hello")
+        (tmp_path / ".hidden_file").write_text("secret")
+        r = files_client.get("/files", params={"path": str(tmp_path), "include_hidden": "true"})
+        assert r.status_code == 200
+        names = [f["name"] for f in r.json()["items"]]
+        assert "visible.txt" in names
+        assert ".hidden_file" in names
+
+    def test_list_files_excludes_dot_directory_contents(
+        self, files_client: TestClient, tmp_path: Path
+    ) -> None:
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        (git_dir / "config").write_text("[core]")
+        r = files_client.get("/files", params={"path": str(tmp_path), "recursive": "true"})
+        assert r.status_code == 200
+        names = [f["name"] for f in r.json()["items"]]
+        assert "config" not in names
+
+    def test_list_files_skips_symlinks(self, files_client: TestClient, tmp_path: Path) -> None:
+        real = tmp_path / "real.txt"
+        real.write_text("content")
+        link = tmp_path / "link.txt"
+        link.symlink_to(real)
+        r = files_client.get("/files", params={"path": str(tmp_path)})
+        assert r.status_code == 200
+        names = [f["name"] for f in r.json()["items"]]
+        assert "real.txt" in names
+        assert "link.txt" not in names
+
+
+# ---------------------------------------------------------------------------
+# organize router — background job failure and edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestOrganizeBackgroundJobFailure:
+    def test_background_job_failure_status_is_failed(
+        self, organize_client: TestClient, tmp_path: Path
+    ) -> None:
+        from file_organizer.api.jobs import update_job
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "doc.txt").write_text("content")
+        out = tmp_path / "out"
+        out.mkdir()
+
+        def _failing_job(job_id: str, request: object) -> None:
+            update_job(job_id, status="failed", error="intentional test failure")
+
+        with patch(
+            "file_organizer.api.routers.organize._run_organize_job",
+            side_effect=_failing_job,
+        ):
+            r = organize_client.post(
+                "/organize/execute",
+                json={
+                    "input_dir": str(src),
+                    "output_dir": str(out),
+                    "run_in_background": True,
+                },
+            )
+        assert r.status_code == 200
+        job_id = r.json()["job_id"]
+
+        status_r = organize_client.get(f"/organize/status/{job_id}")
+        assert status_r.status_code == 200
+        body = status_r.json()
+        assert body["status"] == "failed"
+        assert isinstance(body["error"], str)
+        assert len(body["error"]) > 0
+
+    def test_background_job_completes_with_valid_dirs(
+        self, organize_client: TestClient, tmp_path: Path
+    ) -> None:
+        """Background job with distinct input/output dirs is queued successfully."""
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
+        r = organize_client.post(
+            "/organize/execute",
+            json={
+                "input_dir": str(tmp_path),
+                "output_dir": str(out_dir),
+                "run_in_background": True,
+            },
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "queued"
+        assert isinstance(body["job_id"], str)
+        assert len(body["job_id"]) > 0

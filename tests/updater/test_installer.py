@@ -213,19 +213,22 @@ class TestRollback:
         backup = tmp_path / "test-app.bak"
         backup.write_bytes(b"old binary")
 
-        assert inst.rollback("test-app") is True
+        with patch("platform.system", return_value="Linux"):
+            assert inst.rollback("test-app") is True
 
     def test_rollback_no_backup(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
-        assert inst.rollback("test-app") is False
+        with patch("platform.system", return_value="Linux"):
+            assert inst.rollback("test-app") is False
 
     def test_rollback_failure(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
         backup = tmp_path / "test-app.bak"
         backup.write_bytes(b"old binary")
 
-        with patch("shutil.move", side_effect=OSError("fail")):
-            assert inst.rollback("test-app") is False
+        with patch("platform.system", return_value="Linux"):
+            with patch("shutil.move", side_effect=OSError("fail")):
+                assert inst.rollback("test-app") is False
 
 
 # ---------------------------------------------------------------------------

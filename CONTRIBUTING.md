@@ -348,6 +348,29 @@ def test_organizer_creates_output(
 
 Integration tests run on main branch pushes only (`pytest -m integration`), not on every PR. See [Testing Guide](docs/developer/testing.md#integration-testing) for the full fixture reference.
 
+### Playwright E2E Tests
+
+Browser-based end-to-end tests live in `tests/playwright/` and use `@pytest.mark.playwright`. They exercise the desktop UI in a real Chromium browser with a mocked `window.pywebview.api` injected by `tests/playwright/conftest.py`. These tests are **not** part of the standard CI suite — run them manually when working on the desktop UI layer.
+
+**Setup (one-time):**
+
+```bash
+pip install 'file-organizer[desktop,test]'
+playwright install chromium
+```
+
+**Running:**
+
+```bash
+# Run all playwright tests (skips addopts coverage gate)
+pytest tests/playwright/ --override-ini='addopts='
+
+# Run a single file
+pytest tests/playwright/test_desktop_api_contract.py --override-ini='addopts='
+```
+
+The `--override-ini='addopts='` flag is required to suppress the default `--cov-fail-under=95` coverage gate, which is not meaningful for a browser-driven test run targeting the UI layer.
+
 ---
 
 ## Quality Gates

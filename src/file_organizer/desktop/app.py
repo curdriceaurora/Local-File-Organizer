@@ -71,7 +71,9 @@ class DesktopAPI:
 
         Returns:
             Absolute path to the selected file, or an empty string if the
-            user cancelled the dialog or if the dialog could not be opened.
+            user cancelled the dialog or if the dialog raised
+            ``OSError``, ``RuntimeError``, or ``ValueError``.  Any other
+            unexpected exception is logged and re-raised.
         """
         import webview  # type: ignore[import-untyped]
 
@@ -104,7 +106,9 @@ class DesktopAPI:
 
         Returns:
             Absolute destination path the user confirmed, or an empty string
-            if they cancelled or if the dialog could not be opened.
+            if they cancelled or if the dialog raised ``OSError``,
+            ``RuntimeError``, or ``ValueError``.  Any other unexpected
+            exception is logged and re-raised.
         """
         import webview  # type: ignore[import-untyped]
 
