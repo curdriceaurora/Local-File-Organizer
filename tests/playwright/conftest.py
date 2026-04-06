@@ -42,8 +42,11 @@ import pytest
 
 try:
     from playwright.sync_api import Page
-except ImportError:
-    Page = object  # type: ignore[assignment,misc]
+except ImportError as exc:
+    raise ImportError(
+        "Playwright is required to run the desktop E2E tests. "
+        "Install it with: pip install playwright && playwright install chromium"
+    ) from exc
 
 # ---------------------------------------------------------------------------
 # Helpers
