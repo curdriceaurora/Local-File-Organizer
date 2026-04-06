@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from subprocess import SubprocessError as _SubprocessError
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,8 @@ class DesktopAPI:
 
         - **macOS**: ``open -R <path>`` reveals the item in Finder.
         - **Windows**: ``explorer /select,<path>`` selects the item in Explorer.
-        - **Linux**: ``xdg-open <parent>`` opens the parent directory.
+        - **Linux**: ``xdg-open <path>`` opens a directory directly, or
+          ``xdg-open <parent>`` for files.
 
         The subprocess is always invoked without a shell (``shell=False``) so
         the path cannot be interpreted as a shell command regardless of its
@@ -138,37 +140,46 @@ class DesktopAPI:
                 returns ``False`` immediately without spawning a process.
 
         Returns:
-            ``True`` if the command was dispatched without error, ``False`` if
-            *path* is empty, the subprocess raised, or the platform is not
-            recognised.
+            ``True`` if the command was dispatched and exited with return code
+            zero, ``False`` if *path* is empty, the path resolution or
+            subprocess raised, the subprocess returned a non-zero exit code,
+            or the platform is not recognised.
         """
         if not path:
             return False
 
-        resolved = str(Path(path).resolve())
-
         try:
+            resolved = str(Path(path).resolve())
             if sys.platform == "darwin":
-                subprocess.run(
+                proc = subprocess.run(
                     ["open", "-R", resolved],
                     check=False,
                     timeout=5,
                 )
             elif sys.platform == "win32":
-                subprocess.run(
+                proc = subprocess.run(
                     ["explorer", f"/select,{resolved}"],
                     check=False,
                     timeout=5,
                 )
-            else:
-                # Linux and other POSIX: open the parent directory.
-                parent = str(Path(resolved).parent)
-                subprocess.run(
-                    ["xdg-open", parent],
+            elif sys.platform.startswith("linux"):
+                # Open the directory itself; fall back to parent for files.
+                target = resolved if Path(resolved).is_dir() else str(Path(resolved).parent)
+                proc = subprocess.run(
+                    ["xdg-open", target],
                     check=False,
                     timeout=5,
                 )
-        except Exception:
+            else:
+                return False
+            if proc.returncode != 0:
+                logger.debug(
+                    "open_path: command failed for path %r with rc=%s",
+                    path,
+                    proc.returncode,
+                )
+                return False
+        except (OSError, ValueError, RuntimeError, _SubprocessError):
             logger.debug("open_path: subprocess raised for path %r", path)
             return False
 

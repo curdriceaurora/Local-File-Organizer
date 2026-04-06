@@ -201,7 +201,8 @@
                             type="button"
                             data-context-action="reveal"
                             data-desktop-only
-                            onclick="window.desktopOpenPath('{{ entry.path }}')"
+                            data-open-path="{{ entry.path }}"
+                            onclick="window.desktopOpenPath(this.dataset.openPath)"
                         >Reveal in Files</button>
                     </div>
                 </div>

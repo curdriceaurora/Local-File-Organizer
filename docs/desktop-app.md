@@ -114,7 +114,7 @@ app and a regular browser session.
 
 | Method | JS entry-point | Returns | Description |
 |--------|---------------|---------|-------------|
-| `browse_directory()` | `window.desktopOpenPath(path)` / `window.pywebview.api.browse_directory()` | `str` | Opens a native folder-picker dialog. Returns the absolute path of the selected folder, or `""` if cancelled. |
+| `browse_directory()` | `window.pywebview.api.browse_directory()` | `str` | Opens a native folder-picker dialog. Returns the absolute path of the selected folder, or `""` if cancelled. |
 | `browse_file(file_types)` | `window.desktopBrowseFile(inputId, fileTypes)` / `window.pywebview.api.browse_file(fileTypes)` | `str` | Opens a native file-picker dialog. Returns the absolute path of the selected file, or `""` if cancelled. |
 | `save_file(suggested_name, file_types)` | `window.desktopSaveFile(suggestedName, fileTypes)` | `str` | Opens a native Save-As dialog. Returns the chosen destination path, or `""` if cancelled. |
 | `open_path(path)` | `window.desktopOpenPath(path)` | `bool` | Reveals *path* in the native file manager (Finder / Explorer / Nautilus). Returns `True` on success. |
