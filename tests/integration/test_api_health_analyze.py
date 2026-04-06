@@ -222,3 +222,70 @@ class TestAnalyzeEndpoint:
         ):
             r = analyze_client.post("/analyze", params={"content": "text"})
         assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# GET /health — full field verification across status codes
+# ---------------------------------------------------------------------------
+
+
+class TestHealthResponseFields:
+    def _mock_facade(self, status: str) -> dict[str, object]:
+        return {
+            "status": status,
+            "version": "1.0.0",
+            "provider": "ollama",
+            "ollama": status == "ok",
+        }
+
+    def test_health_degraded_response_fields_all_present(
+        self, health_client: TestClient
+    ) -> None:
+        with patch(_FACADE_PATH) as mock_cls:
+            mock_facade = MagicMock()
+            mock_facade.health_check = AsyncMock(return_value=self._mock_facade("degraded"))
+            mock_cls.return_value = mock_facade
+            r = health_client.get("/health")
+        body = r.json()
+        for key in ("status", "readiness", "version", "provider", "ollama", "uptime"):
+            assert key in body, f"missing key: {key}"
+
+    def test_health_degraded_ollama_is_false(self, health_client: TestClient) -> None:
+        with patch(_FACADE_PATH) as mock_cls:
+            mock_facade = MagicMock()
+            mock_facade.health_check = AsyncMock(return_value=self._mock_facade("degraded"))
+            mock_cls.return_value = mock_facade
+            r = health_client.get("/health")
+        assert r.json()["ollama"] is False
+
+    def test_health_degraded_readiness_is_starting(self, health_client: TestClient) -> None:
+        with patch(_FACADE_PATH) as mock_cls:
+            mock_facade = MagicMock()
+            mock_facade.health_check = AsyncMock(return_value=self._mock_facade("degraded"))
+            mock_cls.return_value = mock_facade
+            r = health_client.get("/health")
+        assert r.json()["readiness"] == "starting"
+
+    def test_health_error_response_fields_all_present(
+        self, health_client: TestClient
+    ) -> None:
+        with patch(_FACADE_PATH) as mock_cls:
+            mock_facade = MagicMock()
+            mock_facade.health_check = AsyncMock(return_value=self._mock_facade("error"))
+            mock_cls.return_value = mock_facade
+            r = health_client.get("/health")
+        assert r.status_code == 503
+        body = r.json()
+        for key in ("status", "readiness", "version", "provider", "ollama", "uptime"):
+            assert key in body, f"missing key: {key}"
+        assert body["status"] == "error"
+        assert body["readiness"] == "unhealthy"
+
+    def test_health_uptime_is_non_negative_float(self, health_client: TestClient) -> None:
+        with patch(_FACADE_PATH) as mock_cls:
+            mock_facade = MagicMock()
+            mock_facade.health_check = AsyncMock(return_value=self._mock_facade("ok"))
+            mock_cls.return_value = mock_facade
+            r = health_client.get("/health")
+        uptime = r.json()["uptime"]
+        assert isinstance(uptime, (int, float))
