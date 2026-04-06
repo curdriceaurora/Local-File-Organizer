@@ -494,7 +494,7 @@ def test_changed_tests_have_no_vacuous_bare_name_gte_zero_assertions() -> None:
     upper bound (``< max_val``) instead.
     """
     violations: list[str] = []
-    for path in _changed_test_files():
+    for path in _git_changed_test_files():
         source = path.read_text(encoding="utf-8")
         violations.extend(_find_vacuous_bare_name_gte_zero_assertions(source, str(path)))
 
