@@ -218,9 +218,11 @@ class TestDedupeExecute:
         body = r.json()
         assert body["dry_run"] is False
         assert len(body["removed"]) == 1
-        # The removed file must no longer exist on disk (T2 state verification)
-        removed_path = body["removed"][0]
-        assert not Path(removed_path).exists()
+        removed_path = Path(body["removed"][0])
+        assert removed_path == duplicate
+        assert not duplicate.exists()
+        assert original.exists()
+        assert len(list(exec_dir.iterdir())) == 1
 
     def test_execute_response_shape(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         shape_dir = tmp_path / "shape_dir"

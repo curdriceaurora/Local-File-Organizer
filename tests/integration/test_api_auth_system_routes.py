@@ -462,7 +462,7 @@ class TestAuthLoginRateLimit:
 
     def test_login_rate_limit_disabled_does_not_check_limiter(self, tmp_path: Path) -> None:
         client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=False)
-        mock_limiter.is_blocked.return_value = (False, None)
+        mock_limiter.is_blocked.return_value = (False, 0)
         # Register then login successfully with rate limiting disabled
         client.post(
             "/api/v1/auth/register",
