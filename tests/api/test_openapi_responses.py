@@ -103,3 +103,29 @@ class TestMergeResponses:
         examples: dict[str, Any] = merged[401]["content"]["application/json"]["examples"]
         assert "unauthorized" in examples
         assert examples["unauthorized"]["value"]["message"] == "X"
+
+    def test_merge_same_status_description_honors_last_wins(self) -> None:
+        """Non-example fields (description) use the later entry's values."""
+        first = api_error_response(400, error="err_a", message="First", description="desc-first")
+        second = api_error_response(400, error="err_b", message="Second", description="desc-second")
+        merged = merge_responses(first, second)
+        # Both examples preserved
+        examples: dict[str, Any] = merged[400]["content"]["application/json"]["examples"]
+        assert "err_a" in examples
+        assert "err_b" in examples
+        # Description from the later entry wins
+        assert merged[400]["description"] == "desc-second"
+
+    def test_merge_responses_does_not_mutate_inputs(self) -> None:
+        """merge_responses() must not mutate any of its input dicts."""
+        import copy
+
+        first = api_error_response(400, error="err_a", message="First")
+        second = api_error_response(400, error="err_b", message="Second")
+        first_copy = copy.deepcopy(first)
+        second_copy = copy.deepcopy(second)
+
+        merge_responses(first, second)
+
+        assert first == first_copy, "first input was mutated"
+        assert second == second_copy, "second input was mutated"

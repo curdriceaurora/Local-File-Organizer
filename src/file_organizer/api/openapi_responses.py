@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from file_organizer.api.models import (
@@ -137,7 +138,8 @@ def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
     for response_set in response_sets:
         for status_code, incoming in response_set.items():
             if status_code not in merged:
-                merged[status_code] = incoming
+                # Deep-copy so mutations to merged never affect caller's dicts.
+                merged[status_code] = copy.deepcopy(incoming)
                 continue
             # Attempt two-level examples merge for api_error_response entries.
             try:
@@ -147,11 +149,18 @@ def merge_responses(*response_sets: OpenAPIResponses) -> OpenAPIResponses:
                 incoming_examples: dict[str, Any] = incoming["content"][
                     "application/json"
                 ]["examples"]
-                existing_examples.update(incoming_examples)
+                # Start from a deep copy of *incoming* so that non-example
+                # top-level fields (description, schema, …) honor last-wins.
+                merged_entry = copy.deepcopy(incoming)
+                # Combine examples: existing first, then incoming overwrites
+                # duplicate keys so the later definition wins within examples too.
+                merged_examples = {**copy.deepcopy(existing_examples), **copy.deepcopy(incoming_examples)}
+                merged_entry["content"]["application/json"]["examples"] = merged_examples
+                merged[status_code] = merged_entry
             except (KeyError, TypeError):
                 # One or both entries use "example" singular (success/detail
-                # responses) — fall back to last-wins.
-                merged[status_code] = incoming
+                # responses) — fall back to last-wins, still deep-copied.
+                merged[status_code] = copy.deepcopy(incoming)
     return merged
 
 

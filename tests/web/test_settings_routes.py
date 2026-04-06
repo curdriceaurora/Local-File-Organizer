@@ -748,7 +748,7 @@ class TestSettingsImportPathBased:
 
     def test_import_prefers_multipart_over_path(self, _client):
         """When both settings_file and settings_path are provided, the file wins."""
-        client, tmp_path = _client
+        client, _ = _client
 
         # settings_path points outside allowed_paths so path-resolution would fail
         outside_path = "/nonexistent/outside/path/cfg.json"
