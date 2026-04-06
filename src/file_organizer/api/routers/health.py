@@ -15,29 +15,25 @@ from file_organizer.api.openapi_responses import (
     INTERNAL_500_RESPONSE,
     detail_error_response,
     merge_responses,
+    success_response,
 )
 
 router = APIRouter(
     tags=["health"],
     responses=merge_responses(
         INTERNAL_500_RESPONSE,
-        {
-            207: {
-                "description": "Backend is running but degraded while dependencies warm up.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "degraded",
-                            "readiness": "starting",
-                            "version": "2.0.0-alpha.3",
-                            "provider": "ollama",
-                            "ollama": False,
-                            "uptime": 2.14,
-                        }
-                    }
-                },
-            }
-        },
+        success_response(
+            "Backend is running but degraded while dependencies warm up.",
+            {
+                "status": "degraded",
+                "readiness": "starting",
+                "version": "2.0.0-alpha.3",
+                "provider": "ollama",
+                "ollama": False,
+                "uptime": 2.14,
+            },
+            status_code=207,
+        ),
         detail_error_response(503, detail="Health check returned an unhealthy status."),
     ),
 )
