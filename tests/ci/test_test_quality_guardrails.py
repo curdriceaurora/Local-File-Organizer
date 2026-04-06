@@ -413,17 +413,20 @@ _GTE_ZERO_BARE_NAME_VARS = frozenset(
 
 
 def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
-    """
-    Detect assertions that tautologically compare certain bare variable names to zero.
+    """Return assertions that are always true because the variable is non-negative by definition.
 
-    Flags occurrences of "assert VAR >= 0" and "assert 0 <= VAR" where VAR is a bare name present in _GTE_ZERO_BARE_NAME_VARS; each finding is reported as "path:lineno".
+    Detects two forms:
 
-    Parameters:
-        source (str): Python source code to analyze.
-        path (str): File path used in reported violation strings (defaults to "<string>").
+    1. ``assert count >= 0``  (forward) where ``count`` is a bare ``ast.Name`` node
+       whose identifier is in ``_GTE_ZERO_BARE_NAME_VARS``.
 
-    Returns:
-        list[str]: Violation strings in the form "path:lineno" for each detected tautological assertion.
+    2. ``assert 0 <= count``  (reverse) — the same pattern with operands swapped.
+
+    These variables (count, size, score, bytes, duration, elapsed, length,
+    num_files, num_items, total_size) are semantically non-negative by definition.
+    Asserting ``>= 0`` provides zero signal — the assertion passes even when the
+    code under test returns a wrong or sentinel value.  Use a meaningful bound
+    (``>= 1``, ``== N``, ``< max_val``) instead.
     """
     try:
         tree = ast.parse(source, filename=path)
@@ -445,27 +448,9 @@ def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<strin
         right = test.comparators[0]
 
         def _is_zero(n: ast.AST) -> bool:
-            """
-            Check whether an AST node represents the integer constant 0.
-
-            Parameters:
-                n (ast.AST): The AST node to inspect.
-
-            Returns:
-                `True` if `n` is an `ast.Constant` whose value is the integer 0, `False` otherwise.
-            """
             return isinstance(n, ast.Constant) and n.value == 0
 
         def _is_bare_name_var(n: ast.AST) -> bool:
-            """
-            Check whether an AST node is a bare name listed as a non-negative semantic variable.
-
-            Parameters:
-                n (ast.AST): The AST node to inspect.
-
-            Returns:
-                bool: `True` if `n` is an `ast.Name` whose identifier is a member of `_GTE_ZERO_BARE_NAME_VARS`, `False` otherwise.
-            """
             return isinstance(n, ast.Name) and n.id in _GTE_ZERO_BARE_NAME_VARS
 
         # assert count >= 0  (forward)
@@ -524,12 +509,9 @@ def test_changed_tests_have_no_vacuous_bare_name_gte_zero_assertions() -> None:
 
     Use a meaningful bound (``>= 1``, ``> 0``), exact value (``== N``), or an
     upper bound (``< max_val``) instead.
-
-    This guardrail is diff-scoped (checks only files changed relative to ``main``)
-    because pre-existing violations in the full test suite have not yet been cleaned up.
     """
     violations: list[str] = []
-    for path in _git_changed_test_files():
+    for path in _changed_test_files():
         source = path.read_text(encoding="utf-8")
         violations.extend(_find_vacuous_bare_name_gte_zero_assertions(source, str(path)))
 
