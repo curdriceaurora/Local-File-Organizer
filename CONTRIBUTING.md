@@ -350,7 +350,7 @@ Integration tests run on main branch pushes only (`pytest -m integration`), not 
 
 ### Playwright E2E Tests
 
-Browser-based end-to-end tests live in `tests/playwright/` and use `@pytest.mark.playwright`. They exercise the desktop UI in a real Chromium browser with a mocked `window.pywebview.api` injected by [`tests/playwright/conftest.py`](/Users/rahul/Projects/Local-File-Organizer/tests/playwright/conftest.py). These tests are **not** part of the standard CI suite — run them manually when working on the desktop UI layer.
+Browser-based end-to-end tests live in `tests/playwright/` and use `@pytest.mark.playwright`. They exercise the desktop UI in a real Chromium browser with a mocked `window.pywebview.api` injected by `tests/playwright/conftest.py`. These tests are **not** part of the standard CI suite — run them manually when working on the desktop UI layer.
 
 **Setup (one-time):**
 
