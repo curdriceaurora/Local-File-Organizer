@@ -156,6 +156,17 @@ class TestDesktopAPISaveFile:
 
         assert result == ""
 
+    def test_returns_empty_string_when_empty_list_returned(self) -> None:
+        """webview may return [] on cancel — save_file() must return ''."""
+        from file_organizer.desktop.app import DesktopAPI
+
+        mock_webview, _ = self._make_mock_webview([])
+
+        with patch.dict("sys.modules", {"webview": mock_webview}):
+            result = DesktopAPI().save_file()
+
+        assert result == ""
+
     # ------------------------------------------------------------------
     # Exception handling
     # ------------------------------------------------------------------

@@ -101,33 +101,12 @@ class TestDesktopAPIBrowseFile:
     # Cancellation (user closes dialog without selecting)
     # ------------------------------------------------------------------
 
-    def test_returns_empty_string_when_none_returned(self) -> None:
-        """webview returns None when user cancels — browse_file() must return ''."""
+    @pytest.mark.parametrize("cancel_value", [None, (), []])
+    def test_returns_empty_string_on_cancel(self, cancel_value) -> None:
+        """browse_file() must return '' for all cancel return values (None, (), [])."""
         from file_organizer.desktop.app import DesktopAPI
 
-        mock_webview, _ = self._make_mock_webview(None)
-
-        with patch.dict("sys.modules", {"webview": mock_webview}):
-            result = DesktopAPI().browse_file()
-
-        assert result == ""
-
-    def test_returns_empty_string_when_empty_tuple_returned(self) -> None:
-        """webview may return () on cancel — browse_file() must return ''."""
-        from file_organizer.desktop.app import DesktopAPI
-
-        mock_webview, _ = self._make_mock_webview(())
-
-        with patch.dict("sys.modules", {"webview": mock_webview}):
-            result = DesktopAPI().browse_file()
-
-        assert result == ""
-
-    def test_returns_empty_string_when_empty_list_returned(self) -> None:
-        """webview may return [] on cancel — browse_file() must return ''."""
-        from file_organizer.desktop.app import DesktopAPI
-
-        mock_webview, _ = self._make_mock_webview([])
+        mock_webview, _ = self._make_mock_webview(cancel_value)
 
         with patch.dict("sys.modules", {"webview": mock_webview}):
             result = DesktopAPI().browse_file()

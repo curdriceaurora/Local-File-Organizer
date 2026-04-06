@@ -81,9 +81,12 @@ class DesktopAPI:
                 file_types=file_types,
             )
             return result[0] if result else ""
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
             logger.debug("browse_file: create_file_dialog raised an exception", exc_info=True)
             return ""
+        except Exception:
+            logger.exception("browse_file: unexpected exception from create_file_dialog")
+            raise
 
     def save_file(
         self,
@@ -116,9 +119,12 @@ class DesktopAPI:
                 file_types=file_types,
             )
             return result[0] if result else ""
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
             logger.debug("save_file: create_file_dialog raised an exception", exc_info=True)
             return ""
+        except Exception:
+            logger.exception("save_file: unexpected exception from create_file_dialog")
+            raise
 
     def open_path(self, path: str) -> bool:
         """Reveal *path* in the native file manager.
