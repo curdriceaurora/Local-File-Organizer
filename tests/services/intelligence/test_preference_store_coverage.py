@@ -382,8 +382,9 @@ class TestScorePreference:
         store = self._make_store(tmp_path)
         pref = {"confidence": 0.5, "correction_count": 0, "updated": "bad-date"}
         score = store._score_preference(pref)
-        # Should not raise, recency_score = 0.0
-        assert score >= 0.0
+        # Should not raise; recency_score = 0.0 (bad date), frequency_score = 0.0
+        # score = 0.4 * 0.5 + 0.3 * 0.0 + 0.3 * 0.0 = 0.2
+        assert score == pytest.approx(0.2)
 
 
 # ---------------------------------------------------------------------------

@@ -65,7 +65,7 @@ class TestCalculateQualityScore:
             structure_consistency=1.0,
         )
         assert isinstance(score, float)
-        assert score >= 0.0
+        assert score == 100.0
 
     def test_zero_files_no_error(self, metrics: MetricsCalculator) -> None:
         score = metrics.calculate_quality_score(
@@ -85,7 +85,7 @@ class TestCalculateQualityScore:
             structure_consistency=0.5,
         )
         assert isinstance(score, float)
-        assert score >= 0.0
+        assert score == 50.0
 
     def test_returns_float(self, metrics: MetricsCalculator) -> None:
         score = metrics.calculate_quality_score(10, 8, 0.9, 0.85)

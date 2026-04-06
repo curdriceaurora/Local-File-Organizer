@@ -137,7 +137,7 @@ class TestFormatQualityScore:
         f = tmp_path / "image.png"
         f.write_bytes(b"\x89PNG\r\n\x1a\n")
         score = get_format_quality_score(f)
-        assert score >= 0
+        assert score == 5  # PNG has score 5 (FORMAT_QUALITY_RANK[".png"] = 5)
 
     def test_unknown_extension_returns_value(self, tmp_path: Path) -> None:
         f = tmp_path / "file.xyz"

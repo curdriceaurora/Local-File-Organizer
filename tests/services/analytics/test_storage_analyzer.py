@@ -151,7 +151,7 @@ class TestStorageAnalyzer:
         stats = analyzer.analyze_directory(temp_directory)
 
         assert len(stats.size_by_type) > 0
-        assert all(size >= 0 for size in stats.size_by_type.values())
+        assert all(size > 0 for size in stats.size_by_type.values())
 
     def test_largest_files_ordering(self, temp_directory):
         """Test that largest files are properly ordered."""

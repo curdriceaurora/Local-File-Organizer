@@ -278,7 +278,9 @@ def test_changed_tests_have_no_vacuous_len_lte_assertions() -> None:
 # Fix 5b: vacuous >= 0 assertions (always-true lower bounds)
 # -------------------------------------------------------------------------
 
-_GTE_ZERO_NON_NEGATIVE_ATTRS = frozenset({"count", "duration", "total_size", "size", "length"})
+_GTE_ZERO_NON_NEGATIVE_ATTRS = frozenset(
+    {"count", "duration", "total_size", "size", "length", "score", "bytes", "elapsed", "total"}
+)
 
 
 def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
@@ -380,6 +382,124 @@ def test_changed_tests_have_no_vacuous_len_gte_zero_assertions() -> None:
 
     assert not violations, (
         "Vacuous ``>= 0`` assertion found — use a meaningful bound instead:\n"
+        + "\n".join(violations)
+    )
+
+
+# -------------------------------------------------------------------------
+# Fix 5c: bare-name >= 0 assertions (e.g. assert count >= 0)
+# -------------------------------------------------------------------------
+
+_GTE_ZERO_BARE_NAME_VARS = frozenset(
+    {
+        "count",
+        "size",
+        "total_size",
+        "score",
+        "bytes",
+        "duration",
+        "elapsed",
+        "length",
+        "num_files",
+        "num_items",
+    }
+)
+
+
+def _find_vacuous_bare_name_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
+    """Return assertions that are always true because the variable is non-negative by definition.
+
+    Detects two forms:
+
+    1. ``assert count >= 0``  (forward) where ``count`` is a bare ``ast.Name`` node
+       whose identifier is in ``_GTE_ZERO_BARE_NAME_VARS``.
+
+    2. ``assert 0 <= count``  (reverse) — the same pattern with operands swapped.
+
+    These variables (count, size, score, bytes, duration, elapsed, length,
+    num_files, num_items, total_size) are semantically non-negative by definition.
+    Asserting ``>= 0`` provides zero signal — the assertion passes even when the
+    code under test returns a wrong or sentinel value.  Use a meaningful bound
+    (``>= 1``, ``== N``, ``< max_val``) instead.
+    """
+    try:
+        tree = ast.parse(source, filename=path)
+    except SyntaxError:
+        return []
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assert):
+            continue
+        test = node.test
+        if not isinstance(test, ast.Compare):
+            continue
+        if len(test.ops) != 1 or len(test.comparators) != 1:
+            continue
+
+        left = test.left
+        op = test.ops[0]
+        right = test.comparators[0]
+
+        def _is_zero(n: ast.AST) -> bool:
+            return isinstance(n, ast.Constant) and n.value == 0
+
+        def _is_bare_name_var(n: ast.AST) -> bool:
+            return isinstance(n, ast.Name) and n.id in _GTE_ZERO_BARE_NAME_VARS
+
+        # assert count >= 0  (forward)
+        forward = _is_bare_name_var(left) and isinstance(op, ast.GtE) and _is_zero(right)
+        # assert 0 <= count  (reverse)
+        reverse = _is_zero(left) and isinstance(op, ast.LtE) and _is_bare_name_var(right)
+
+        if forward or reverse:
+            violations.append(f"{path}:{node.lineno}")
+
+    return violations
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_count"),
+    [
+        # bare name >= 0 — always true, should flag
+        ("assert count >= 0\n", 1),
+        ("assert size >= 0\n", 1),
+        ("assert score >= 0\n", 1),
+        ("assert bytes >= 0\n", 1),
+        ("assert duration >= 0\n", 1),
+        ("assert elapsed >= 0\n", 1),
+        ("assert 0 <= count\n", 1),
+        # Meaningful bounds — should NOT flag
+        ("assert count >= 1\n", 0),
+        ("assert count > 0\n", 0),
+        ("assert count == 0\n", 0),
+        ("assert duration < 5.0\n", 0),
+        # Generic variable names — should NOT flag (not in the semantic set)
+        ("assert value >= 0\n", 0),
+        ("assert result >= 0\n", 0),
+    ],
+)
+def test_detector_flags_vacuous_bare_name_gte_zero(source: str, expected_count: int) -> None:
+    assert len(_find_vacuous_bare_name_gte_zero_assertions(source)) == expected_count
+
+
+def test_changed_tests_have_no_vacuous_bare_name_gte_zero_assertions() -> None:
+    """Test files must not use ``assert count >= 0`` or similar bare-name tautologies.
+
+    Variables like ``count``, ``size``, ``score``, ``bytes``, ``duration``, and
+    ``elapsed`` are semantically non-negative by definition.  Asserting ``>= 0``
+    provides zero signal — it passes even when the code under test is broken.
+
+    Use a meaningful bound (``>= 1``, ``> 0``), exact value (``== N``), or an
+    upper bound (``< max_val``) instead.
+    """
+    violations: list[str] = []
+    for path in _changed_test_files():
+        source = path.read_text(encoding="utf-8")
+        violations.extend(_find_vacuous_bare_name_gte_zero_assertions(source, str(path)))
+
+    assert not violations, (
+        "Vacuous bare-name ``>= 0`` assertion found — use a meaningful bound instead:\n"
         + "\n".join(violations)
     )
 

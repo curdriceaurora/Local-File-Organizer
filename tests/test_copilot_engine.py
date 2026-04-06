@@ -116,7 +116,7 @@ class TestConversationManager:
             role = MessageRole.USER if i % 2 == 0 else MessageRole.ASSISTANT
             mgr.add_message(CopilotMessage(role=role, content=f"msg-{i}"))
         assert mgr.message_count == 4
-        assert mgr.summary_text != ""
+        assert mgr.summary_text == "msg-0"
 
     def test_get_recent_n(self) -> None:
         mgr = ConversationManager()

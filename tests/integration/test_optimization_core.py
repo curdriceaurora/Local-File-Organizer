@@ -403,7 +403,7 @@ class TestConnectionPool:
         try:
             stats = pool.stats()
             assert stats.pool_size == 3
-            assert stats.total >= 0
+            assert stats.total == 0  # no connections acquired yet
         finally:
             pool.close()
 

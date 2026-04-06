@@ -610,7 +610,7 @@ class TestSuggestionEngineIntegration:
         assert len(suggestions) > 0
         for suggestion in suggestions:
             assert suggestion.confidence >= 30.0
-            assert suggestion.reasoning != ""
+            assert "Move to" in suggestion.reasoning
             assert suggestion.suggestion_type in SuggestionType
 
     def test_confidence_scorer_real(self, organized_structure):
