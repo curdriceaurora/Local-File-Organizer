@@ -166,26 +166,32 @@ Every entry below is `file:line — symbol` from `interrogate -vv src/`. Open th
 ### Step 1.2: Verify ruff is clean on the touched files
 
 Run:
+
 ```bash
 ruff check src/file_organizer/api/api_keys.py src/file_organizer/api/auth.py src/file_organizer/api/auth_rate_limit.py src/file_organizer/api/auth_store.py src/file_organizer/api/dependencies.py src/file_organizer/api/exceptions.py src/file_organizer/api/jobs.py src/file_organizer/api/main.py src/file_organizer/api/middleware.py src/file_organizer/api/models.py src/file_organizer/api/openapi_responses.py src/file_organizer/api/rate_limit.py src/file_organizer/api/realtime.py src/file_organizer/api/test_utils.py src/file_organizer/api/repositories/file_metadata_repo.py
 ruff format --check src/file_organizer/api/api_keys.py src/file_organizer/api/auth.py src/file_organizer/api/auth_rate_limit.py src/file_organizer/api/auth_store.py src/file_organizer/api/dependencies.py src/file_organizer/api/exceptions.py src/file_organizer/api/jobs.py src/file_organizer/api/main.py src/file_organizer/api/middleware.py src/file_organizer/api/models.py src/file_organizer/api/openapi_responses.py src/file_organizer/api/rate_limit.py src/file_organizer/api/realtime.py src/file_organizer/api/test_utils.py src/file_organizer/api/repositories/file_metadata_repo.py
 ```
+
 Expected: both exit 0.
 
 ### Step 1.3: Run interrogate on the api/ subtree to confirm progress
 
 Run:
+
 ```bash
 interrogate -v src/file_organizer/api/ --fail-under 0 2>&1 | tail -30
 ```
+
 Expected: None of the 15 files listed above should appear with a coverage below 100%. (Files in `api/routers/` are still below 100% — those are Task 2.)
 
 ### Step 1.4: Run the fast test suite to confirm no accidental breakage
 
 Run:
+
 ```bash
 pytest -m "ci" -x -q
 ```
+
 Expected: All tests pass. (Docstring additions must never affect runtime behavior; if a test fails, you edited something other than a docstring.)
 
 ### Step 1.5: Commit
@@ -244,18 +250,22 @@ Part of the docstring-completion effort toward 100% interrogate coverage."
 ### Step 2.2: Verify ruff is clean
 
 Run:
+
 ```bash
 ruff check src/file_organizer/api/routers/
 ruff format --check src/file_organizer/api/routers/
 ```
+
 Expected: both exit 0.
 
 ### Step 2.3: Run the fast test suite
 
 Run:
+
 ```bash
 pytest -m "ci" -x -q
 ```
+
 Expected: All tests pass.
 
 ### Step 2.4: Commit
@@ -292,11 +302,13 @@ Every missed symbol in this file is a nested `_blocking_*` function — the sync
 ### Step 3.2: Verify ruff + tests
 
 Run:
+
 ```bash
 ruff check src/file_organizer/api/service_facade.py
 ruff format --check src/file_organizer/api/service_facade.py
 pytest -m "ci" -x -q
 ```
+
 Expected: all pass.
 
 ### Step 3.3: Commit
@@ -607,9 +619,11 @@ git commit -m "docs: document 3 helpers in optimization/ and pipeline/"
 ### Step 11.1: Run interrogate against the full src/ tree at the current floor
 
 Run:
+
 ```bash
 interrogate -v src/ --fail-under 100 2>&1 | tail -20
 ```
+
 Expected: `RESULT: PASSED (minimum: 100.0%, actual: 100.0%)` — every file reports 100%.
 
 **If the command fails:** interrogate will show a non-empty detailed list of remaining `MISSED` symbols. Find each one, add the docstring, commit with message `docs: fix remaining interrogate findings`, and re-run this step. Do not proceed to Step 11.2 until Step 11.1 passes at `--fail-under 100`.
@@ -627,6 +641,7 @@ ruff format --check src/
 # Type check
 mypy src/
 ```
+
 Expected: all four exit 0.
 
 ### Step 11.3: Run pre-commit validation
@@ -634,14 +649,17 @@ Expected: all four exit 0.
 ```bash
 bash .claude/scripts/pre-commit-validation.sh || true
 ```
+
 Expected: script exits 0. If the script is broken on this host (known: `mapfile: command not found` on older bash), manually run the equivalent: `ruff check`, `ruff format --check`, `mypy src/`, and `pytest -m "ci"`, each expected to exit 0.
 
 ### Step 11.4: Confirm no floor bump slipped into this PR
 
 Run:
+
 ```bash
 grep -n "fail-under\|fail_under" pyproject.toml .github/workflows/ci.yml
 ```
+
 Expected: all occurrences still show `95`. If any show `100`, you bumped the floor too early — revert the bump from this PR and move it to Task 12 (the follow-up PR).
 
 ### Step 11.5: Push branch and open PR1
@@ -700,6 +718,7 @@ git checkout -b docs/interrogate-ratchet-100 origin/main
 ```bash
 interrogate -v src/ --fail-under 100 2>&1 | tail -5
 ```
+
 Expected: `RESULT: PASSED (minimum: 100.0%, actual: 100.0%)`.
 
 **If this fails:** new code landed on main after PR1 introduced new undocumented symbols. Add docstrings for those in this branch before proceeding. Use the same style guide as Task 1. Do not skip this check — the ratchet bump will break CI otherwise.
@@ -733,17 +752,21 @@ Edit `.github/workflows/ci.yml:266`:
 ### Step 12.5: Grep for any other stale `95` references
 
 Run:
+
 ```bash
 grep -rn "interrogate.*95\|fail.under.*95\|docstring.*95%\|95%.*docstring" docs/ README.md CONTRIBUTING.md .claude/rules/ pyproject.toml .github/ 2>/dev/null
 ```
+
 Expected: only hits are in historical changelogs or this plan document. If any doc claims "95% docstring gate" as the current state, update it to "100% docstring gate" in the same commit. (This is the C4 pattern from ci-generation-patterns.md — stale threshold docs.)
 
 ### Step 12.6: Update `docs/internal/CLAUDE.md` if it references the current floor
 
 Run:
+
 ```bash
 grep -n "interrogate\|docstring.*coverage\|95%" docs/internal/CLAUDE.md 2>/dev/null || echo "no matches"
 ```
+
 If there are matches that document the current docstring floor, update them to `100%`. If there are no matches, skip this step.
 
 ### Step 12.7: Verify the bump
@@ -751,6 +774,7 @@ If there are matches that document the current docstring floor, update them to `
 ```bash
 interrogate -v src/ --fail-under 100 2>&1 | tail -5
 ```
+
 Expected: `RESULT: PASSED (minimum: 100.0%, actual: 100.0%)`.
 
 ### Step 12.8: Run fast tests + ruff
@@ -759,6 +783,7 @@ Expected: `RESULT: PASSED (minimum: 100.0%, actual: 100.0%)`.
 pytest -m "ci" -x -q
 ruff check src/
 ```
+
 Expected: both pass.
 
 ### Step 12.9: Commit
