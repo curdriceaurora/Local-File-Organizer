@@ -1,5 +1,8 @@
 """Integration tests for JobRepository against a real SQLite DB."""
+
 from __future__ import annotations
+
+from collections.abc import Generator
 
 import pytest
 from sqlalchemy import create_engine
@@ -14,7 +17,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 @pytest.fixture()
-def db_session():
+def db_session() -> Generator[Session, None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -41,9 +44,14 @@ class TestJobRepositoryCreate:
 
     def test_create_with_all_options(self, db_session: Session) -> None:
         job = JobRepository.create(
-            db_session, "/in", "/out",
-            workspace_id="ws-1", owner_id="user-1",
-            job_type="dedupe", methodology="para", dry_run=True,
+            db_session,
+            "/in",
+            "/out",
+            workspace_id="ws-1",
+            owner_id="user-1",
+            job_type="dedupe",
+            methodology="para",
+            dry_run=True,
         )
         db_session.flush()
         assert job.workspace_id == "ws-1"
@@ -137,8 +145,12 @@ class TestJobRepositoryUpdateResult:
         job = JobRepository.create(db_session, "/in", "/out")
         db_session.flush()
         updated = JobRepository.update_result(
-            db_session, job.id,
-            total_files=10, processed_files=9, failed_files=1, skipped_files=0,
+            db_session,
+            job.id,
+            total_files=10,
+            processed_files=9,
+            failed_files=1,
+            skipped_files=0,
         )
         db_session.flush()
         assert updated.total_files == 10

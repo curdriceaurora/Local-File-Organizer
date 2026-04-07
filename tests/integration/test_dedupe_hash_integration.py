@@ -111,9 +111,7 @@ class TestProgressTracker:
 
 
 class TestScanForDuplicates:
-    def test_finds_duplicate_pair(
-        self, dir_with_duplicates: Path, console: Console
-    ) -> None:
+    def test_finds_duplicate_pair(self, dir_with_duplicates: Path, console: Console) -> None:
         detector = initialize_hash_detector()
         opts = create_scan_options("sha256")
         groups = scan_for_duplicates(dir_with_duplicates, detector, opts, console)

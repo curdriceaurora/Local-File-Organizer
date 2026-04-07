@@ -1,4 +1,5 @@
 """Integration tests for FileMetadataRepository against a real SQLite DB."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -12,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 import file_organizer.api.db_models  # noqa: F401
 from file_organizer.api.auth_models import Base
 from file_organizer.api.cache import InMemoryCache
-from file_organizer.api.repositories.file_metadata_repo import FileMetadataRepository
+from file_organizer.api.repositories.file_metadata_repo import FileMetadata, FileMetadataRepository
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
@@ -31,15 +32,15 @@ def db_session() -> Session:
     Base.metadata.drop_all(engine)
 
 
-def _upsert(session: Session, **kwargs: object) -> object:
+def _upsert(session: Session, **kwargs: object) -> FileMetadata:
     """Helper: call upsert with sensible defaults, overridden by kwargs."""
-    defaults: dict[str, object] = dict(
-        workspace_id="ws-1",
-        path="/root/docs/readme.md",
-        relative_path="docs/readme.md",
-        name="readme.md",
-        size_bytes=1024,
-    )
+    defaults: dict[str, object] = {
+        "workspace_id": "ws-1",
+        "path": "/root/docs/readme.md",
+        "relative_path": "docs/readme.md",
+        "name": "readme.md",
+        "size_bytes": 1024,
+    }
     defaults.update(kwargs)
     return FileMetadataRepository.upsert(session, **defaults)  # type: ignore[arg-type]
 

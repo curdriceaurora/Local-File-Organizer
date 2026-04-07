@@ -63,9 +63,7 @@ class TestRemoveFiles:
         assert files[0]["path"].exists()
         assert files[1]["path"].exists()
 
-    def test_oserror_on_missing_file_is_handled(
-        self, tmp_path: Path, console: Console
-    ) -> None:
+    def test_oserror_on_missing_file_is_handled(self, tmp_path: Path, console: Console) -> None:
         files = _make_files(tmp_path, count=1, size=30)
         files[0]["path"].unlink()  # delete before calling remove_files
 
@@ -102,9 +100,7 @@ class TestProcessDuplicateGroup:
         group.files = file_metas
         return group
 
-    def test_removes_file_when_user_selects_index(
-        self, tmp_path: Path, console: Console
-    ) -> None:
+    def test_removes_file_when_user_selects_index(self, tmp_path: Path, console: Console) -> None:
         group = self._make_group(tmp_path, count=2)
 
         # Patch the source modules — the imports in dedupe_removal are lazy
@@ -133,9 +129,7 @@ class TestProcessDuplicateGroup:
         assert removed == 1
         assert saved == 30
 
-    def test_skip_when_user_selects_nothing(
-        self, tmp_path: Path, console: Console
-    ) -> None:
+    def test_skip_when_user_selects_nothing(self, tmp_path: Path, console: Console) -> None:
         group = self._make_group(tmp_path, count=2)
 
         with (
