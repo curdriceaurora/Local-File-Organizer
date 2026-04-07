@@ -198,7 +198,7 @@ Expected: All tests pass. (Docstring additions must never affect runtime behavio
 
 ```bash
 git add src/file_organizer/api/
-git commit -m "docs(api): add docstrings to 39 symbols in api/ core modules
+git commit -m "docs(api): add docstrings to 37 symbols in api/ core modules
 
 Adds docstrings to every symbol in src/file_organizer/api/ (excluding
 routers/) that interrogate flagged as MISSED. No behavior changes.
@@ -437,7 +437,7 @@ ruff check src/file_organizer/plugins/marketplace/
 ruff format --check src/file_organizer/plugins/marketplace/
 pytest -m "ci" -x -q
 git add src/file_organizer/plugins/marketplace/
-git commit -m "docs(plugins/marketplace): add docstrings to 20 marketplace helpers"
+git commit -m "docs(plugins/marketplace): add docstrings to 22 marketplace helpers"
 ```
 
 ---
@@ -840,9 +840,9 @@ Standard PR monitoring per `.claude/rules/pr-workflow-master.md`. Merge when gre
 
 **1. Spec coverage**
 
-- Every symbol from `interrogate -vv src/` (185 total) is listed in exactly one of Tasks 1–10. I verified this by grouping the `/tmp/missed-docstrings.txt` file by cluster: 39 + 25 + 10 + 11 + 13 + 20 + 12 + 34 + 18 + 3 = **185**. ✓
+- Every symbol from `interrogate -vv src/` (185 total) is listed in exactly one of Tasks 1–10. I verified this by grouping the `/tmp/missed-docstrings.txt` file by cluster: 37 + 25 + 10 + 11 + 13 + 22 + 12 + 34 + 18 + 3 = **185**. ✓
 - Correction: Task 7 was listed as 10 in the table but the enumerated list has 12 entries (1+1+1+2+2+2+1+2). Recounted: `config.py` 1 + `executor.py` 1 + `security.py` 1 + `api/endpoints.py` 2 + `api/hooks.py` 2 + `api/models.py` 2 + `sdk/client.py` 1 + `sdk/decorators.py` 2 = **12**. The file-structure table says 10 — that's wrong. But the interrogate output showed 10 for this cluster. Let me recount from the extracted list:
-  - `plugins/sdk/decorators.py` 2, `plugins/security.py` 1, `plugins/sdk/client.py` 1, `plugins/executor.py` 1, `plugins/config.py` 1, `plugins/api/endpoints.py` 2, `plugins/api/hooks.py` 2, `plugins/api/models.py` 2 = **12**. So the cluster table entry for Task 7 should be 12, not 10, and Task 8 counted 34 but the extracted list says 17+8+8+1 = 34. ✓. The total then becomes 39+25+10+11+13+20+**12**+34+18+3 = **185**. ✓ Task 7 cluster count fixed below.
+  - `plugins/sdk/decorators.py` 2, `plugins/security.py` 1, `plugins/sdk/client.py` 1, `plugins/executor.py` 1, `plugins/config.py` 1, `plugins/api/endpoints.py` 2, `plugins/api/hooks.py` 2, `plugins/api/models.py` 2 = **12**. So the cluster table entry for Task 7 should be 12, not 10, and Task 8 counted 34 but the extracted list says 17+8+8+1 = 34. ✓. The total then becomes 37+25+10+11+13+22+**12**+34+18+3 = **185**. ✓ Task 7 cluster count fixed below.
 
 - Ratchet bump requirement ("Update ratchet after that PR goes live") is covered by Task 12, which is explicitly gated on PR1 being merged. ✓
 - "Address all current known findings" — 185/185 covered. ✓

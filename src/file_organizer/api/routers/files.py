@@ -54,7 +54,7 @@ _FILE_TYPE_GROUPS = {
 
 
 def _parse_file_types(file_type: str | None) -> set[str] | None:
-    """Parse a comma-separated file-type filter string into a normalized tuple."""
+    """Return normalized extensions from comma-separated tokens, expanding known groups and prefixing bare suffixes with `.`."""
     if not file_type:
         return None
     types: set[str] = set()
@@ -71,7 +71,7 @@ def _parse_file_types(file_type: str | None) -> set[str] | None:
 
 
 def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
-    """Walk the allowed root and yield files matching the request filters."""
+    """Return a list of files under `path` that match the recursion and hidden-file filters."""
     files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):

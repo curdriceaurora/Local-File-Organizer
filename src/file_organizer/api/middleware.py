@@ -39,7 +39,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return False
 
     def _rule_for_path(self, path: str) -> dict[str, int] | None:
-        """Return the RateLimitRule matching the given request path, or the default rule."""
+        """Return the matching path rule, or None so `dispatch()` can apply the default rate limit."""
         rules = self._settings.rate_limit_rules
         for rule_path in self._rule_prefixes:
             if path.startswith(rule_path):

@@ -77,7 +77,7 @@ class PluginMetadataStore:
         return results
 
     def _read_payload(self) -> dict[str, Any]:
-        """Read the metadata store JSON file, returning an empty dict if absent."""
+        """Return the parsed metadata JSON, or `{"plugins": []}` when the store file is absent."""
         if not self.db_path.exists():
             return {"plugins": []}
         try:

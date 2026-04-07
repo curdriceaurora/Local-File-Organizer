@@ -219,7 +219,7 @@ def _prefix_mismatch(
     actual: tuple[str, ...],
     expected: tuple[str, ...],
 ) -> bool:
-    """Return the first index where two parameter lists diverge, or None if aligned."""
+    """Return True when `actual` is shorter than `expected` or `actual[:len(expected)]` differs."""
     if len(actual) < len(expected):
         return True
     return actual[: len(expected)] != expected

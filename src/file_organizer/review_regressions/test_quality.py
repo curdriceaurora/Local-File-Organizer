@@ -71,7 +71,7 @@ def _is_test_python_path(root: Path, path: Path) -> bool:
 
 
 def _iter_test_python_files(root: Path) -> list[Path]:
-    """Yield Python files under `tests/` that the guardrail should scan."""
+    """Return the Python test files under `tests/` that the guardrail should scan."""
     tests_root = root / "tests"
     if not tests_root.exists():
         return []
@@ -79,7 +79,7 @@ def _iter_test_python_files(root: Path) -> list[Path]:
 
 
 def _git_stdout(root: Path, *args: str) -> str:
-    """Run a git command and return stdout as a string, or None if git failed."""
+    """Run a git command and return stripped stdout, or an empty string if it fails."""
     result = subprocess.run(
         ["git", *args],
         cwd=root,
@@ -192,7 +192,7 @@ def discover_changed_test_files(root: Path) -> list[Path]:
 
 
 def _weak_assert_nodes(source: str, filename: str) -> list[ast.Assert]:
-    """Yield AST nodes that look like weak assertions (sole-isinstance, `>=0` on len, etc.)."""
+    """Return AST assert nodes that look like weak assertions (sole-isinstance, `>=0` on len, etc.)."""
     tree = ast.parse(source, filename=filename)
     weak_nodes: list[ast.Assert] = []
     for node in ast.walk(tree):

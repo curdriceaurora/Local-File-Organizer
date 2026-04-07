@@ -20,7 +20,7 @@ _MAX_EXTRACTED_BYTES = 100 * 1024 * 1024  # 100 MB safety guard
 
 
 def _normalize_version(version: str) -> tuple[tuple[int, str], ...]:
-    """Normalize a version string (strip whitespace, lowercase, drop leading "v")."""
+    """Return tuple segments for version sorting by splitting on dots/hyphens and lowercasing non-numeric parts."""
     parts = version.replace("-", ".").split(".")
     result: list[tuple[int, str]] = []
     for part in parts:

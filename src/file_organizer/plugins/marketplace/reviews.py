@@ -135,7 +135,7 @@ class ReviewManager:
         raise MarketplaceReviewError("Review does not exist.")
 
     def _read_payload(self) -> dict[str, Any]:
-        """Read the reviews JSON file, returning an empty list if absent."""
+        """Return the parsed reviews JSON object, or an empty dict when the store file is absent."""
         if not self.db_path.exists():
             return {}
         try:

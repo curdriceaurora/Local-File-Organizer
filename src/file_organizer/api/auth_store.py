@@ -43,7 +43,7 @@ class InMemoryTokenStore:
         self._revoked: dict[str, float] = {}
 
     def _is_active(self, bucket: dict[str, float], jti: str) -> bool:
-        """Return True if the refresh token is present and not expired or revoked."""
+        """Return True when `jti` exists in `bucket` and its stored expiry is still in the future."""
         expires_at = bucket.get(jti)
         if expires_at is None:
             return False
