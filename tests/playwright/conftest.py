@@ -151,72 +151,76 @@ def live_server_url(
     orig_default_config_dir = _config_manager.DEFAULT_CONFIG_DIR
     # APP_NAME subdir mirrors what ``get_config_dir()`` would have produced.
     _config_manager.DEFAULT_CONFIG_DIR = playwright_config_dir / "file-organizer"
-    _config_manager.DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    import uvicorn
+    thread: threading.Thread | None = None
+    server = None
+    try:
+        _config_manager.DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    from file_organizer.api.config import ApiSettings
-    from file_organizer.api.main import create_app
+        import uvicorn
 
-    tmp = tmp_path_factory.mktemp("playwright_server")
-    settings = ApiSettings(
-        allowed_paths=[str(tmp)],
-        auth_enabled=False,
-        auth_db_path=str(tmp / "auth.db"),
-    )
-    app = create_app(settings)
-    port = _find_free_port()
+        from file_organizer.api.config import ApiSettings
+        from file_organizer.api.main import create_app
 
-    config = uvicorn.Config(
-        app,
-        host="127.0.0.1",
-        port=port,
-        log_level="error",  # keep test output clean
-    )
-    server = uvicorn.Server(config)
-
-    # Capture any exception raised by server.run() so it can be surfaced in
-    # the timeout RuntimeError instead of being permanently lost in the daemon.
-    _server_error: list[BaseException] = []
-
-    def _run() -> None:
-        try:
-            server.run()
-        except Exception as exc:
-            _server_error.append(exc)
-
-    thread = threading.Thread(target=_run, daemon=True, name="pw-server")
-    thread.start()
-
-    if not _wait_for_port(port, timeout=20.0):
-        server.should_exit = True
-        thread.join(timeout=5.0)
-        cause = _server_error[0] if _server_error else None
-        raise RuntimeError(
-            f"Playwright live server did not become ready on port {port} within 20 s"
-            + (f" — server thread raised: {cause!r}" if cause else "")
-        ) from cause
-
-    yield f"http://127.0.0.1:{port}"
-
-    server.should_exit = True
-    thread.join(timeout=5.0)
-    if thread.is_alive():
-        # Non-fatal: daemon thread will be killed at process exit anyway.
-        import warnings
-
-        warnings.warn(
-            "Playwright live server thread did not stop within 5 s after shutdown signal.",
-            stacklevel=1,
+        tmp = tmp_path_factory.mktemp("playwright_server")
+        settings = ApiSettings(
+            allowed_paths=[str(tmp)],
+            auth_enabled=False,
+            auth_db_path=str(tmp / "auth.db"),
         )
+        app = create_app(settings)
+        port = _find_free_port()
 
-    # Restore module-level config dir + XDG env var so other test sessions
-    # in the same process (or pytest re-runs) don't see the tmp value.
-    _config_manager.DEFAULT_CONFIG_DIR = orig_default_config_dir
-    if orig_xdg is None:
-        os.environ.pop("XDG_CONFIG_HOME", None)
-    else:
-        os.environ["XDG_CONFIG_HOME"] = orig_xdg
+        config = uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level="error",  # keep test output clean
+        )
+        server = uvicorn.Server(config)
+
+        # Capture any exception raised by server.run() so it can be surfaced in
+        # the timeout RuntimeError instead of being permanently lost in the daemon.
+        _server_error: list[BaseException] = []
+
+        def _run() -> None:
+            try:
+                server.run()
+            except Exception as exc:
+                _server_error.append(exc)
+
+        thread = threading.Thread(target=_run, daemon=True, name="pw-server")
+        thread.start()
+
+        if not _wait_for_port(port, timeout=20.0):
+            cause = _server_error[0] if _server_error else None
+            raise RuntimeError(
+                f"Playwright live server did not become ready on port {port} within 20 s"
+                + (f" — server thread raised: {cause!r}" if cause else "")
+            ) from cause
+
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        if server is not None:
+            server.should_exit = True
+        if thread is not None:
+            thread.join(timeout=5.0)
+            if thread.is_alive():
+                # Non-fatal: daemon thread will be killed at process exit anyway.
+                import warnings
+
+                warnings.warn(
+                    "Playwright live server thread did not stop within 5 s after shutdown signal.",
+                    stacklevel=1,
+                )
+
+        # Restore module-level config dir + XDG env var so other test sessions
+        # in the same process (or pytest re-runs) don't see the tmp value.
+        _config_manager.DEFAULT_CONFIG_DIR = orig_default_config_dir
+        if orig_xdg is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = orig_xdg
 
 
 # ---------------------------------------------------------------------------
