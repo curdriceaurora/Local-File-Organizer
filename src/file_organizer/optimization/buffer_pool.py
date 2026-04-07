@@ -212,6 +212,7 @@ class BufferPool:
         return self.resize(self._initial_buffers)
 
     def _mark_in_use(self, buffer: bytearray) -> None:
+        """Track ``buffer`` as in-use and update the peak-in-use watermark."""
         self._in_use_ids.add(id(buffer))
         in_use = len(self._in_use_ids)
         if in_use > self._peak_in_use:

@@ -107,6 +107,7 @@ class MemoryProfiler:
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Run ``func`` under RSS/GC instrumentation and store the ProfileResult."""
             gc.collect()
             mem_before = self._get_rss()
             peak = mem_before

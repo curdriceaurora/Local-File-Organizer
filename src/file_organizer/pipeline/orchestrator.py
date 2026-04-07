@@ -600,6 +600,7 @@ class PipelineOrchestrator:
         compute_stages = stages[effective_prefetch_stages:]
 
         def _run_io(idx: int) -> tuple[StageContext, bytearray | None]:
+            """Execute the I/O-bound prefetch stages for ``files[idx]`` and return (context, buffer)."""
             file_path = files[idx]
             buffer = self._acquire_buffer(file_path)
             try:
