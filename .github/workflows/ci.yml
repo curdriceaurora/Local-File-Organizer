@@ -240,6 +240,68 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  playwright:
+    name: "Playwright E2E (chromium)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          # [dev] provides pytest-playwright; [search] keeps parity with other
+          # test jobs so imports don't break at collection time.
+          pip install -e ".[dev,search]"
+          # Retry plugin for per-test flake tolerance. Installed here (not in
+          # pyproject.toml) because only this job needs it.
+          pip install "pytest-rerunfailures>=14.0" --no-cache-dir
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - name: Install Playwright chromium browser
+        # --with-deps pulls the system libs chromium needs on a fresh runner.
+        run: python -m playwright install --with-deps chromium
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/nltk_data
+          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: nltk-${{ runner.os }}-
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run Playwright suite
+        # Overriding addopts is required because pyproject.toml's default
+        # addopts filter out e2e/playwright-marked tests in normal runs.
+        # --reruns 2 tolerates one-off browser flakes; real failures still
+        # surface on the third attempt. Traces/screenshots/videos are
+        # retained only on failure to keep artifact size manageable.
+        run: |
+          pytest tests/playwright/ \
+            --browser chromium \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure \
+            --output=playwright-artifacts \
+            --reruns 2 --reruns-delay 2 \
+            --timeout=60 \
+            --strict-markers \
+            --override-ini="addopts="
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: playwright-artifacts/
+          retention-days: 7
+          if-no-files-found: ignore
+
   coverage-gate:
     name: "Coverage gate (py3.11)"
     needs: test-full
