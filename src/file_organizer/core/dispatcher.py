@@ -50,6 +50,7 @@ def process_text_files(
         task = progress.add_task("Processing files...", total=len(files))
 
         def _process_one(path: Path) -> ProcessedFile:
+            """Process a single text file in the dispatcher thread pool."""
             return text_processor.process_file(path)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one):
@@ -112,6 +113,7 @@ def process_image_files(
         task = progress.add_task("Processing images...", total=len(files))
 
         def _process_one_image(path: Path) -> ProcessedImage:
+            """Process a single image file in the dispatcher thread pool."""
             return vision_processor.process_file(path)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one_image):

@@ -412,9 +412,11 @@ class FileOrganizer:
     # ------------------------------------------------------------------
 
     def _collect_files(self, path: Path) -> list[Path]:
+        """Walk the input root and return the list of files eligible for organization."""
         return file_ops.collect_files(path, self.console)
 
     def _fallback_by_extension(self, files: list[Path]) -> list[ProcessedFile]:
+        """Return a target subdirectory chosen from the file extension when the classifier fails."""
         return file_ops.fallback_by_extension(files)
 
     def _organize_files(
@@ -423,6 +425,7 @@ class FileOrganizer:
         output_path: Path,
         skip_existing: bool,
     ) -> dict[str, list[str]]:
+        """Move classified files to their target locations, respecting dry-run and backup settings."""
         return file_ops.organize_files(
             processed,
             output_path,
@@ -437,12 +440,15 @@ class FileOrganizer:
         processed: list[ProcessedFile | ProcessedImage],
         output_path: Path,
     ) -> dict[str, list[str]]:
+        """Produce the list of (source, destination) pairs without touching the filesystem."""
         return file_ops.simulate_organization(processed, output_path)
 
     def _cleanup_empty_dirs(self, root: Path) -> None:
+        """Remove directories that became empty after files were moved."""
         file_ops.cleanup_empty_dirs(root)
 
     def _init_text_processor(self) -> None:
+        """Initialize the text processor; on any initialization failure, set to None and fall back."""
         self.text_processor = initializer.init_text_processor(
             self.text_model_config,
             self.console,
@@ -450,6 +456,7 @@ class FileOrganizer:
         )
 
     def _init_vision_processor(self) -> None:
+        """Initialize the vision processor; on any initialization failure, set to None and fall back."""
         self.vision_processor = initializer.init_vision_processor(
             self.vision_model_config,
             self.console,
@@ -457,19 +464,23 @@ class FileOrganizer:
         )
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
+        """Classify text files using the text processor and append results to the plan."""
         assert self.text_processor is not None
         return dispatcher.process_text_files(
             files, self.text_processor, self.parallel_processor, self.console
         )
 
     def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:
+        """Classify image files using the vision processor and append results to the plan."""
         assert self.vision_processor is not None
         return dispatcher.process_image_files(
             files, self.vision_processor, self.parallel_processor, self.console
         )
 
     def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
+        """Classify audio files and append results to the plan."""
         return dispatcher.process_audio_files(files, extractor_cls=AudioMetadataExtractor)
 
     def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
+        """Classify video files and append results to the plan."""
         return dispatcher.process_video_files(files, extractor_cls=VideoMetadataExtractor)
