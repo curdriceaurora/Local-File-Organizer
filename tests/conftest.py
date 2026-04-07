@@ -27,13 +27,18 @@ collect_ignore_glob = [
     # Review-regression fixtures contain intentionally failing test_*.py files used
     # as detector input — exclude from normal pytest discovery.
     "fixtures/review_regressions/**/tests/test_*.py",
-    # Playwright browser tests require `playwright install chromium` and
-    # --override-ini='addopts=' to suppress --cov interference.  Exclude from
-    # default collection so `pytest tests/` does not attempt to import
-    # playwright (which raises ImportError on machines without the package).
-    # Run explicitly: pytest tests/playwright/ --browser chromium --override-ini='addopts='
-    "playwright/**",
 ]
+
+# Playwright browser tests require the `playwright` package and a browser install.
+# When playwright is NOT installed (the common case for default `pytest tests/`),
+# importing tests/playwright/conftest.py would raise ImportError at collection time.
+# Exclude the directory only in that case. The dedicated Playwright E2E CI job
+# installs the package and therefore collects and runs them.
+# Run explicitly: pytest tests/playwright/ --browser chromium --override-ini='addopts='
+try:
+    import playwright  # noqa: F401
+except ImportError:
+    collect_ignore_glob.append("playwright/**")
 
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
