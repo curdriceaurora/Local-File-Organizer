@@ -92,8 +92,8 @@ ALLOWLIST: frozenset[str] = frozenset()
 
 
 def _is_glob_pattern(path: str) -> bool:
-    """Return True if path contains shell glob characters."""
-    return "*" in path or "?" in path or "[" in path
+    """Return True if path contains shell glob characters or template placeholders."""
+    return "*" in path or "?" in path or "[" in path or "<" in path
 
 
 def _excluded_doc_dir(md_file: Path) -> bool:
@@ -111,7 +111,7 @@ def _get_doc_path_params() -> list[tuple[str, str]]:
 
     Returns only pairs that:
     - Are not from excluded doc directories (e.g. docs/plans/)
-    - Do not contain glob wildcards
+    - Do not contain glob wildcards or template placeholders (e.g. ``<module>``)
     - Are not in the ALLOWLIST
     """
     params: list[tuple[str, str]] = []

@@ -1350,8 +1350,8 @@ class TestJSONOutputFormat:
 
         output = json.loads(mock_echo.call_args[0][0])
         assert output["directory"] == str(tmp_path)
-        # Must be absolute
-        assert output["directory"].startswith("/")
+        # Must be absolute (cross-platform: Unix starts with /, Windows with drive letter)
+        assert Path(output["directory"]).is_absolute()
 
     def test_json_missing_groups_sorted(self, tmp_path):
         """JSON missing_groups list is sorted alphabetically."""

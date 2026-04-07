@@ -533,8 +533,8 @@ class TestDisplayDuplicateGroup:
         output = console.export_text()
         assert "Duplicate Group 1/3" in output
         assert "abc123def4567890..." in output
-        assert "/a/file1.txt" in output
-        assert "/a/file2.txt" in output
+        assert str(Path("/a/file1.txt")) in output
+        assert str(Path("/a/file2.txt")) in output
         assert "Potential space savings: 1.0 KB" in output
 
     def test_displays_group_no_keep(self, capsys):
@@ -552,8 +552,8 @@ class TestDisplayDuplicateGroup:
         )
         output = console.export_text()
         assert "Duplicate Group 2/5" in output
-        assert "/x/y.txt" in output
-        assert "/x/z.txt" in output
+        assert str(Path("/x/y.txt")) in output
+        assert str(Path("/x/z.txt")) in output
         assert "Potential space savings: 500.0 B" in output
 
 
