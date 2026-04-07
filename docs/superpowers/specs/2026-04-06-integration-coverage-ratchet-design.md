@@ -208,7 +208,7 @@ test(integration): <domain> coverage expansion (ratchet → <new_floor>%)
   `github.event_name == 'push' && github.ref == 'refs/heads/main'`).
 - Each new API endpoint must ship with at least one integration test in its introducing PR
   (ongoing requirement, not specific to this ratchet).
-- Error-path guidance: see `.claude/rules/feature-generation-patterns.md` F1.
+- Error-path guidance: see `.claude/patterns/feature-generation-patterns.md` F1.
 
 ---
 
@@ -218,5 +218,5 @@ test(integration): <domain> coverage expansion (ratchet → <new_floor>%)
 - CI job: `.github/workflows/ci.yml` → `test-integration`
 - Measurement script: `.claude/scripts/measure-integration-coverage.sh`
 - CLAUDE.md gate docs: `docs/internal/CLAUDE.md` → "Integration Coverage Gate"
-- Anti-pattern rules: `.claude/rules/feature-generation-patterns.md`
-- Test generation patterns: `.claude/rules/test-generation-patterns.md`
+- Anti-pattern rules: `.claude/patterns/feature-generation-patterns.md`
+- Test generation patterns: `.claude/patterns/test-generation-patterns.md`

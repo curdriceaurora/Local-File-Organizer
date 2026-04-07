@@ -399,7 +399,6 @@ gh pr merge <PR_NUMBER> --squash
 - `.claude/rules/pr-workflow-master.md` — Navigation guide
 - `.claude/rules/pr-review-response-protocol.md` — Finding categorization
 - `.claude/rules/pr-monitoring-protocol.md` — Manual monitoring reference
-- `.claude/rules/pr-workflow-state-machine.md` — State definitions
 
 **GitHub Configuration**:
 - Repository settings → Webhooks → Configure for Phase 3

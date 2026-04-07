@@ -121,7 +121,7 @@ heuristics.
 Implementation detail:
 - Guardrail logic lives in `tests/ci/test_search_code_quality.py` (function `_find_unguarded_traversals`).
 - Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
-- Rule definitions and fix examples live in `.claude/rules/search-generation-patterns.md` patterns S1 and S2.
+- Rule definitions and fix examples live in `.claude/patterns/search-generation-patterns.md` patterns S1 and S2.
 
 ## T10 Predicate Negative-Case Rule Index
 

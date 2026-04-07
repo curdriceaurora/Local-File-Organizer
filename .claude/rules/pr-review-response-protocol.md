@@ -185,75 +185,17 @@ git push origin <branch>
 
 ---
 
-## Step 5B: Resolve Review Threads (Automated)
+## Step 5B: Resolve Review Threads
 
-**CRITICAL**: After pushing fixes, ALL review threads related to APPLY findings MUST be marked as resolved. Use the automated script instead of manual commands.
+After pushing, mark all threads for APPLY findings as resolved. Reviewers use resolution status to gauge PR readiness.
 
-### Why This is Required
-
-- Marking threads as resolved indicates findings have been addressed
-- Reviewers check thread resolution status to gauge PR readiness
-- Without resolution, threads stay open and create noise
-- Automated script eliminates manual GraphQL mutations and repetition
-
-### Automated Resolution via Script
-
-Use the dedicated script that automates the entire thread resolution process:
+Run the script (supports optional replies JSON and `--dry-run`):
 
 ```bash
-.claude/scripts/resolve-pr-threads.sh <PR_NUMBER> --replies <replies.json>
+.claude/scripts/resolve-pr-threads.sh <PR_NUMBER> [--replies replies.json] [--dry-run]
 ```
 
-**The script handles:**
-1. ✅ Fetching all unresolved threads
-2. ✅ Adding your replies to each thread (optional)
-3. ✅ Resolving all threads via GraphQL
-4. ✅ Reporting summary of resolved threads
-
-### Quick Start: Three Usage Patterns
-
-**Pattern 1: Resolve without replies**
-```bash
-.claude/scripts/resolve-pr-threads.sh 627
-```
-
-**Pattern 2: Resolve with replies from JSON**
-```bash
-# Create replies.json with your responses
-cat > replies.json << 'EOF'
-{
-  "THREAD_ID_1": "✅ Fixed: Description of fix",
-  "THREAD_ID_2": "✅ Fixed: Another fix"
-}
-EOF
-
-.claude/scripts/resolve-pr-threads.sh 627 --replies replies.json
-```
-
-**Pattern 3: Preview before executing (dry-run)**
-```bash
-.claude/scripts/resolve-pr-threads.sh 627 --replies replies.json --dry-run
-```
-
-### Example Workflow
-
-```bash
-# 1. Make all fixes locally
-# 2. Commit and push
-git push origin my-branch
-
-# 3. Create replies.json with your responses (optional)
-# 4. Resolve all threads with the script
-.claude/scripts/resolve-pr-threads.sh 627 --replies replies.json
-
-# 5. All threads now resolved with your replies visible
-```
-
-### Documentation
-
-For complete documentation, examples, and troubleshooting:
-- See: `.claude/scripts/THREAD_RESOLUTION_GUIDE.md`
-- Template: `.claude/scripts/example-replies.json`
+Full usage, JSON schema, and troubleshooting: see `.claude/scripts/THREAD_RESOLUTION_GUIDE.md`.
 
 ---
 

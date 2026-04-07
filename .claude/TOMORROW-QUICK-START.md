@@ -85,8 +85,6 @@ gh pr create --title "Fix/Feat: description" --body "..."
 - `.claude/rules/pr-workflow-master.md` — PR workflow navigation
 - `.claude/rules/pr-review-response-protocol.md` — Finding categorization
 - `.claude/rules/pr-monitoring-protocol.md` — Monitoring checklist
-- `.claude/rules/pr-workflow-state-machine.md` — State definitions
-- `.claude/rules/pr-workflow-conformance.md` — Industry standards eval
 
 ### Scripts
 

@@ -244,15 +244,26 @@ A: Usually means PR branch is behind main (another PR merged after yours was cre
 
 ---
 
+## Example Flows
+
+**Happy path**: INITIAL → PAUSED (fix) → CHECKING (no new feedback) → MONITORING (fresh CI) → READY TO MERGE → MERGED
+
+**CI failure mid-monitoring**: MONITORING (CI fails) → PAUSED (treat failure as finding) → CHECKING → MONITORING → READY TO MERGE
+
+**CI failure + new comments together**: MONITORING → PAUSED (extract BOTH as one batch, fix together) → CHECKING → MONITORING → READY TO MERGE
+
+**Blocked by clarification**: MONITORING → PAUSED (mark one CLARIFY, fix other APPLY) → push reply asking clarification → BLOCKED (waiting) → reviewer responds → PAUSED (add clarification as new finding) → CHECKING → MONITORING → READY TO MERGE
+
+**Key rule**: Multiple findings from multiple sources = one batch, one PR Review Response cycle.
+
+---
+
 ## Quick Reference Links
 
 **Detailed Protocols** (reference when needed, not during navigation):
 - [PR Review Response Protocol](.claude/rules/pr-review-response-protocol.md) - Full Steps 1-6, detailed decision matrix
 - [PR Monitoring Protocol](.claude/rules/pr-monitoring-protocol.md) - Full checklist, detailed scenarios
-- [PR Workflow State Machine](.claude/rules/pr-workflow-state-machine.md) - Complete state machine, example flows
-
-**Improvement Guidance** (for future enhancement):
-- [PR Workflow Conformance](.claude/rules/pr-workflow-conformance.md) - Industry standards evaluation, improvement roadmap
+- [PR Merge Troubleshooting](.claude/rules/pr-merge-troubleshooting.md) - Diagnosis for blocked merges
 
 ---
 

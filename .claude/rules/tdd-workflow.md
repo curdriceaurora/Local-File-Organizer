@@ -76,7 +76,7 @@ Alternative from issue #850 Option A (JSON contract) duplicates information alre
 - `.claude/settings.json` — hook registration
 - `docs/internal/CLAUDE.md` — TDD Workflow Rule section
 - Issue #850 — upstream generation constraints
-- `.claude/rules/feature-generation-patterns.md` — F1–F10 anti-patterns
+- `.claude/patterns/feature-generation-patterns.md` — F1–F10 anti-patterns
 
 ---
 

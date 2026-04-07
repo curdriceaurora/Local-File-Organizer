@@ -169,7 +169,7 @@ def test_search_service_rglob_filters_symlinks_and_hidden() -> None:
     - Filter hidden files/dirs via a ``startswith(".")`` check (prevents indexing
       ``.git``, ``.env``, ``.ssh/authorized_keys``, etc.).
 
-    See ``.claude/rules/search-generation-patterns.md`` patterns S1 and S2.
+    See ``.claude/patterns/search-generation-patterns.md`` patterns S1 and S2.
     """
     assert SEARCH_SRC.exists(), (
         f"Search service directory not found: {SEARCH_SRC}\n"

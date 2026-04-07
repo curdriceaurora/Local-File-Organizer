@@ -7,7 +7,7 @@ author: Claude Code PM System
 
 # Technical Context
 
-> **CI patterns to follow**: `.claude/rules/ci-generation-patterns.md`
+> **CI patterns to follow**: `.claude/patterns/ci-generation-patterns.md`
 > Key: coverage gate is `cov-fail-under=95` in `pyproject.toml` — verify before documenting.
 > PR CI runs `pytest -m "ci"` only (no coverage gate). Main push enforces 95%.
 

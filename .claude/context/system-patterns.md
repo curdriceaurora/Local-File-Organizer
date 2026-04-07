@@ -7,7 +7,7 @@ author: Claude Code PM System
 
 # System Patterns
 
-> **Anti-patterns to avoid when implementing**: `.claude/rules/feature-generation-patterns.md`
+> **Anti-patterns to avoid when implementing**: `.claude/patterns/feature-generation-patterns.md`
 > Covers: F1 missing error handling, F2 type annotations, F3 thread safety,
 > F4 security (auth tokens, path traversal), F5 hardcoded values, F8 wrong abstraction layer.
 

@@ -168,7 +168,7 @@ def health(settings: ApiSettings = Depends(get_api_settings)):
 - [ ] User input in SQL? → Must use parameterized query, never f-string
 - [ ] Secret in any log statement? → Remove or mask
 - [ ] Using injected dependency correctly? → Don't call `get_settings()` directly inside routes
-- [ ] Writing search/index code? → Apply search-specific checklist (see `.claude/rules/search-generation-patterns.md`)
+- [ ] Writing search/index code? → Apply search-specific checklist (see `.claude/patterns/search-generation-patterns.md`)
 
 ---
 
@@ -360,6 +360,6 @@ For every new feature, ask:
 5. **F5**: *"Does ConfigManager already own this value?"*
 6. **F9**: *"Am I using `__import__()` inline? If yes — move to top-level import."*
 7. **F10**: *"Did I change exception handling, return types, or control flow? Does the docstring still match?"*
-8. **F4+**: *"Am I writing search/index code? Apply `.claude/rules/search-generation-patterns.md` checklist."*
+8. **F4+**: *"Am I writing search/index code? Apply `.claude/patterns/search-generation-patterns.md` checklist."*
 
 **Last audited PR**: #921

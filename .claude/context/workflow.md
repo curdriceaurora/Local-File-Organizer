@@ -23,10 +23,10 @@ All rules live in `.claude/rules/`. Load the relevant ones before each task.
 
 | Situation | Rule File to Read |
 |-----------|------------------|
-| Writing feature code | `.claude/rules/feature-generation-patterns.md` (F1-F9 anti-patterns) |
+| Writing feature code | `.claude/patterns/feature-generation-patterns.md` (F1-F9 anti-patterns) |
 | Writing tests | `.claude/rules/test-execution.md`, `.claude/rules/quick-validation-checklist.md` |
-| Writing CI config | `.claude/rules/ci-generation-patterns.md` (C1-C6 anti-patterns) |
-| Writing documentation | `.claude/rules/docs-generation-patterns.md`, `.claude/rules/documentation-generation-checklist.md` |
+| Writing CI config | `.claude/patterns/ci-generation-patterns.md` (C1-C6 anti-patterns) |
+| Writing documentation | `.claude/patterns/docs-generation-patterns.md`, `.claude/rules/documentation-generation-checklist.md` |
 | Using GitHub paths/files | `.claude/rules/path-standards.md` (no absolute paths) |
 | Creating issues/PRs | `.claude/rules/github-operations.md`, `.claude/rules/github-issue-ccpm-integration.md` |
 
@@ -45,11 +45,9 @@ Follow `.claude/rules/pr-workflow-master.md` as the entry point. It links to:
 
 | Step | Rule File |
 |------|-----------|
-| State machine | `.claude/rules/pr-workflow-state-machine.md` |
 | Review response | `.claude/rules/pr-review-response-protocol.md` |
 | Monitoring | `.claude/rules/pr-monitoring-protocol.md` |
 | Merge troubleshooting | `.claude/rules/pr-merge-troubleshooting.md` |
-| Industry conformance | `.claude/rules/pr-workflow-conformance.md` |
 
 ### CCPM Project Management
 

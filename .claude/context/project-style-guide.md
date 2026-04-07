@@ -10,7 +10,7 @@ author: Claude Code PM System
 > **Rule files**: Before generating any code, read these first:
 > - `.claude/rules/quick-validation-checklist.md` — G1-G5 patterns, pre-commit checklist
 > - `.claude/rules/code-quality-validation.md` — full validation patterns with examples
-> - `.claude/rules/feature-generation-patterns.md` — F1-F9 feature anti-patterns
+> - `.claude/patterns/feature-generation-patterns.md` — F1-F9 feature anti-patterns
 > - `.claude/rules/test-execution.md` — always use Agent(test-runner), never raw pytest
 
 ## Python Code Style

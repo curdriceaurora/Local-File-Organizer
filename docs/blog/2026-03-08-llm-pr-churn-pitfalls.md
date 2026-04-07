@@ -369,7 +369,7 @@ generation workflow *before* the model writes any code:
 
 ### 6.2 Persistent Memory Across Sessions
 
-Rule files committed to the repository (e.g. `.claude/rules/feature-generation-patterns.md`,
+Rule files committed to the repository (e.g. `.claude/patterns/feature-generation-patterns.md`,
 `.claude/rules/test-execution.md`) travel with the generation prompt
 automatically. Unlike a one-time instruction in a chat session, they are
 present for every subsequent generation.

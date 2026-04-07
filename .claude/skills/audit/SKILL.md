@@ -17,9 +17,9 @@ Checks changed code against the project's documented anti-pattern rules. Catches
 
 /simplify uses generic software engineering judgment. The pre-commit script uses regex/lint rules. Neither reads the project's anti-pattern documentation:
 
-- `.claude/rules/feature-generation-patterns.md` (F1-F9)
-- `memory/test-generation-patterns.md`
-- `.claude/rules/ci-generation-patterns.md` (C1-C6)
+- `.claude/patterns/feature-generation-patterns.md` (F1-F9)
+- `.claude/patterns/test-generation-patterns.md`
+- `.claude/patterns/ci-generation-patterns.md` (C1-C6)
 
 This skill bridges that gap by checking new code against documented patterns that caused past PR review churn.
 
@@ -48,7 +48,7 @@ Use the Agent tool to launch two agents concurrently.
 
 #### Agent 1: Feature Generation Audit
 
-Read `.claude/rules/feature-generation-patterns.md` in full, then audit ALL source code changes against each pattern:
+Read `.claude/patterns/feature-generation-patterns.md` in full, then audit ALL source code changes against each pattern:
 
 - **F1 MISSING_ERROR_HANDLING**: For every external call (file I/O, network, model init, subprocess), identify what exceptions it can raise. Flag any `except` that's narrower than the failure modes warrant. Flag any external call with no exception handling.
 - **F2 TYPE_ANNOTATION**: Every new/modified function must have parameter types and `-> return_type`. Flag any `Any` that should be concrete.
@@ -65,7 +65,7 @@ For each finding, cite the exact file, line number, and which pattern it violate
 
 #### Agent 2: Test Generation Audit
 
-Read `memory/test-generation-patterns.md` in full, then audit ALL test code changes against each anti-pattern:
+Read `.claude/patterns/test-generation-patterns.md` in full, then audit ALL test code changes against each anti-pattern:
 
 - **Weak assertions**: `assert result is not None` instead of `assert result is mock_obj`. `assert X.call_count > 0` without verifying args/payload.
 - **Missing mock verification**: Mock declared in `@patch` decorator but never asserted (no `assert_called_once_with`, no `assert_not_called`).
