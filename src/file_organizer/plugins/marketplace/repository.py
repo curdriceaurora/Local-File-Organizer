@@ -24,10 +24,12 @@ _DEFAULT_CACHE_TTL_SECONDS = 300
 
 
 def _to_file_url(path: Path) -> str:
+    """Convert a local filesystem path to a `file://` URL."""
     return path.resolve().as_uri()
 
 
 def _url_to_local_path(url: str) -> Path:
+    """Convert a `file://` URL back to a local filesystem path."""
     parsed = urlparse(url)
     if parsed.scheme != "file":
         raise MarketplaceRepositoryError(f"Expected file URL, got: {url}")
@@ -56,6 +58,7 @@ class PluginRepository:
 
     @staticmethod
     def _normalize_repo_url(repo_url: str) -> str:
+        """Normalize a repository URL (strip trailing slash, resolve file:// scheme)."""
         candidate = repo_url.strip()
         if not candidate:
             raise MarketplaceRepositoryError("Repository URL must not be empty.")
@@ -66,6 +69,7 @@ class PluginRepository:
 
     @staticmethod
     def _resolve_base_file_root(repo_url: str) -> Path | None:
+        """Return the local root directory for a file-backed repository."""
         parsed = urlparse(repo_url)
         if parsed.scheme != "file":
             return None
@@ -197,6 +201,7 @@ class PluginRepository:
         return digest.hexdigest().lower() == expected_sha256.lower()
 
     def _resolve_package_url(self, package_url: str) -> str:
+        """Build the download URL for a specific plugin package."""
         parsed = urlparse(package_url)
         if parsed.scheme in {"http", "https", "file"}:
             return package_url
@@ -213,6 +218,7 @@ class PluginRepository:
         return urljoin(base, package_url)
 
     def _index_url(self) -> str:
+        """Return the URL of the repository's plugin index."""
         parsed = urlparse(self.repo_url)
         if parsed.scheme == "file":
             path = _url_to_local_path(self.repo_url)
@@ -226,6 +232,7 @@ class PluginRepository:
         return urljoin(base, "index.json")
 
     def _load_packages(self) -> list[PluginPackage]:
+        """Load and parse the repository's package index."""
         now = time.time()
         if self._cache is not None and now < self._cache_expires_at:
             return self._cache
@@ -247,6 +254,7 @@ class PluginRepository:
         return packages
 
     def _load_index_payload(self, index_url: str) -> dict[str, Any]:
+        """Fetch the raw index payload from the repository (HTTP or file)."""
         parsed: ParseResult = urlparse(index_url)
         if parsed.scheme == "file":
             path = _url_to_local_path(index_url)

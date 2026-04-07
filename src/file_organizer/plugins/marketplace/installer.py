@@ -20,6 +20,7 @@ _MAX_EXTRACTED_BYTES = 100 * 1024 * 1024  # 100 MB safety guard
 
 
 def _normalize_version(version: str) -> tuple[tuple[int, str], ...]:
+    """Normalize a version string (strip whitespace, lowercase, drop leading "v")."""
     parts = version.replace("-", ".").split(".")
     result: list[tuple[int, str]] = []
     for part in parts:
@@ -57,6 +58,7 @@ class PluginInstaller:
         version: str | None,
         install_stack: list[str],
     ) -> InstalledPlugin:
+        """Install a plugin and all its declared dependencies, guarding against cycles."""
         try:
             normalized_name = normalize_plugin_name(name)
         except ValueError as exc:
@@ -159,6 +161,7 @@ class PluginInstaller:
         min_version: str,
         max_version: str | None,
     ) -> None:
+        """Reject installation if the plugin declares an incompatible host version."""
         current = _normalize_version(__version__)
         minimum = _normalize_version(min_version)
         if current < minimum:
@@ -171,6 +174,7 @@ class PluginInstaller:
             )
 
     def _extract_plugin_archive(self, archive_path: Path, destination: Path) -> None:
+        """Extract a plugin archive into the install directory, rejecting path-traversal entries."""
         total_uncompressed = 0
         destination_root = destination.resolve()
 
@@ -220,6 +224,7 @@ class PluginInstaller:
         )
 
     def _load_installed(self) -> dict[str, InstalledPlugin]:
+        """Load the installed-plugins manifest from disk."""
         if not self.installed_plugins_file.exists():
             return {}
         try:
@@ -238,6 +243,7 @@ class PluginInstaller:
         return installed
 
     def _save_installed(self, installed: dict[str, InstalledPlugin]) -> None:
+        """Atomically write the installed-plugins manifest to disk."""
         self.installed_plugins_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {name: plugin.to_dict() for name, plugin in installed.items()}
 
@@ -258,6 +264,7 @@ class PluginInstaller:
                 leftover.unlink(missing_ok=True)
 
     def _resolve_plugin_path(self, name: str) -> Path:
+        """Return the filesystem path for an installed plugin by name."""
         normalized = self._normalize_plugin_name(name)
         plugin_root = self.plugin_dir.resolve()
         destination = (plugin_root / normalized).resolve()
@@ -270,6 +277,7 @@ class PluginInstaller:
         return destination
 
     def _normalize_plugin_name(self, name: str) -> str:
+        """Normalize a plugin name for storage and lookup (lowercase, strip)."""
         try:
             return normalize_plugin_name(name)
         except ValueError as exc:

@@ -135,6 +135,7 @@ class ReviewManager:
         raise MarketplaceReviewError("Review does not exist.")
 
     def _read_payload(self) -> dict[str, Any]:
+        """Read the reviews JSON file, returning an empty list if absent."""
         if not self.db_path.exists():
             return {}
         try:
@@ -146,6 +147,7 @@ class ReviewManager:
         return payload
 
     def _write_payload(self, payload: dict[str, Any]) -> None:
+        """Atomically write the reviews JSON file."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp_path = tempfile.mkstemp(
             dir=str(self.db_path.parent),

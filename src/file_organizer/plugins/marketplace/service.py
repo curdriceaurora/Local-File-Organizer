@@ -60,6 +60,7 @@ class MarketplaceService:
         return packages
 
     def _read_or_refresh_metadata(self) -> list[PluginPackage]:
+        """Return cached metadata, refreshing from the repository if stale."""
         metadata_path = self.home_dir / "metadata.json"
         try:
             is_missing_or_empty = (not metadata_path.exists()) or metadata_path.stat().st_size == 0

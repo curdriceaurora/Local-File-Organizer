@@ -77,6 +77,7 @@ class PluginMetadataStore:
         return results
 
     def _read_payload(self) -> dict[str, Any]:
+        """Read the metadata store JSON file, returning an empty dict if absent."""
         if not self.db_path.exists():
             return {"plugins": []}
         try:
@@ -90,6 +91,7 @@ class PluginMetadataStore:
         return payload
 
     def _write_payload(self, payload: dict[str, Any]) -> None:
+        """Atomically write the metadata store JSON file."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp_path = tempfile.mkstemp(
             dir=str(self.db_path.parent),
