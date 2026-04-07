@@ -63,6 +63,7 @@ class PluginClient:
         params: Mapping[str, Any] | None = None,
         body: Mapping[str, Any] | None = None,
     ) -> Any:
+        """Execute an HTTP request, handling errors and mapping to plugin-specific exceptions."""
         try:
             response = self._client.request(method, path, params=params, json=body)
         except httpx.HTTPError as exc:

@@ -56,10 +56,12 @@ class WebhookDeliveryResult:
 
 
 def _default_http_client_factory() -> httpx.Client:
+    """Build and return the default HTTP client for webhook delivery."""
     return httpx.Client(follow_redirects=False)
 
 
 def _validate_callback_url(callback_url: str) -> str:
+    """Validate callback URL has http/https scheme and a hostname, raising on invalid input."""
     candidate = callback_url.strip()
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:

@@ -16,6 +16,7 @@ _PLUGIN_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def _validate_plugin_name(name: str) -> str:
+    """Validate a plugin name against alphanumeric pattern, raising on invalid input."""
     candidate = name.strip()
     if not _PLUGIN_NAME_PATTERN.match(candidate):
         raise PluginConfigError(f"Invalid plugin name: {name!r}")

@@ -26,6 +26,7 @@ def hook(
         raise ValueError("Hook event must not be empty")
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        """Attach hook event and priority metadata to a function."""
         setattr(func, _HOOK_EVENT_ATTR, event_name)
         setattr(func, _HOOK_PRIORITY_ATTR, priority)
         return func
@@ -42,6 +43,7 @@ def command(
         raise ValueError("Command name must not be empty")
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        """Attach command name and description metadata to a function."""
         setattr(func, _COMMAND_NAME_ATTR, command_name)
         setattr(func, _COMMAND_DESCRIPTION_ATTR, description.strip())
         return func

@@ -10,6 +10,7 @@ from file_organizer.plugins.errors import PluginPermissionError
 
 
 def _normalize_path(path: str | Path) -> Path:
+    """Expand user shorthand and resolve a path to its absolute form."""
     return Path(path).expanduser().resolve(strict=False)
 
 

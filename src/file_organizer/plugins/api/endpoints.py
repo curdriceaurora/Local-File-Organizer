@@ -79,6 +79,7 @@ def _plugin_identity(user: UserLike) -> str:
 
 
 def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    """Collect files from a path, optionally filtering hidden files and recursing."""
     files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):
@@ -97,6 +98,7 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
 
 
 def _read_config_key(manager: ConfigManager, profile: str, key: str) -> Any:
+    """Return a nested config value by dot-separated key, raising ApiError if missing."""
     cleaned_key = key.strip()
     if not cleaned_key:
         raise ApiError(status_code=400, error="invalid_key", message="Config key must not be empty")

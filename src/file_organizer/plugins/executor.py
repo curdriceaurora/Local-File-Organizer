@@ -341,6 +341,7 @@ class PluginExecutor:
             result_queue: queue.Queue[bytes | Exception] = queue.Queue()
 
             def _reader() -> None:
+                """Read one line from subprocess stdout, placing result or exception in queue."""
                 try:
                     result_queue.put(stdout.readline())
                 except Exception as exc:

@@ -16,6 +16,7 @@ _MAX_CALLBACK_URL_LENGTH = 2048
 
 
 def _validate_path(value: str) -> str:
+    """Validate a path is non-empty, within length limit, and contains no null bytes."""
     if not value:
         raise ValueError("Path must not be empty")
     if len(value) > _MAX_PATH_LENGTH:
@@ -26,6 +27,7 @@ def _validate_path(value: str) -> str:
 
 
 def _validate_callback_url(value: str) -> str:
+    """Validate a callback URL is non-empty, within length limit, and contains no null bytes."""
     candidate = value.strip()
     if not candidate:
         raise ValueError("Callback URL must not be empty")
