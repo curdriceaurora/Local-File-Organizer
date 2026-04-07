@@ -187,6 +187,7 @@ class ServiceFacade:
             from file_organizer.core.organizer import FileOrganizer
 
             def _blocking_organize() -> dict[str, Any]:
+                """Blocking implementation of `organize_files`, executed in a thread pool."""
                 organizer = FileOrganizer(dry_run=dry_run)
                 dest = output_dir if output_dir is not None else source_dir
                 result = organizer.organize(
@@ -251,6 +252,7 @@ class ServiceFacade:
             daemon = self._get_daemon_service()
 
             def _blocking_status() -> dict[str, Any]:
+                """Blocking implementation of `get_daemon_status`."""
                 return {
                     "running": daemon.is_running,
                     "uptime_seconds": daemon.uptime_seconds,
@@ -278,6 +280,7 @@ class ServiceFacade:
             daemon = self._get_daemon_service()
 
             def _blocking_start() -> None:
+                """Blocking implementation of `start_daemon`."""
                 daemon.start_background()
 
             await asyncio.to_thread(_blocking_start)
@@ -300,6 +303,7 @@ class ServiceFacade:
             daemon = self._get_daemon_service()
 
             def _blocking_stop() -> None:
+                """Blocking implementation of `stop_daemon`."""
                 daemon.stop()
 
             await asyncio.to_thread(_blocking_stop)
@@ -328,6 +332,7 @@ class ServiceFacade:
             from file_organizer.models.model_manager import ModelManager
 
             def _blocking_models() -> list[dict[str, Any]]:
+                """Blocking implementation of `get_model_status`."""
                 manager = ModelManager()
                 models = manager.list_models()
                 return [
@@ -372,6 +377,7 @@ class ServiceFacade:
             from file_organizer.services.smart_suggestions import SuggestionEngine
 
             def _blocking_suggestions() -> list[dict[str, Any]]:
+                """Blocking implementation of `get_suggestions`."""
                 engine = SuggestionEngine()
                 # Path must be pre-validated at API boundary
                 target = Path(path)
@@ -424,6 +430,7 @@ class ServiceFacade:
             )
 
             def _blocking_dedup() -> dict[str, Any]:
+                """Blocking implementation of `find_duplicates`."""
                 detector = DuplicateDetector()
                 # Path must be pre-validated at API boundary
                 detector.scan_directory(Path(scan_dir))
@@ -473,6 +480,7 @@ class ServiceFacade:
             from file_organizer.undo.undo_manager import UndoManager
 
             def _blocking_undo() -> bool:
+                """Blocking implementation of `undo_last_operation`."""
                 manager = UndoManager()
                 return manager.undo_last_operation()
 
@@ -500,6 +508,7 @@ class ServiceFacade:
             from file_organizer.history.tracker import OperationHistory
 
             def _blocking_history() -> list[dict[str, Any]]:
+                """Blocking implementation of `get_operation_history`."""
                 history = OperationHistory()
                 ops = history.get_recent_operations(limit=limit)
 
@@ -556,6 +565,7 @@ class ServiceFacade:
         url = settings.ollama_url
 
         def _blocking_check() -> bool:
+            """Blocking implementation of `_check_ollama`."""
             try:
                 with urllib.request.urlopen(url, timeout=2) as response:
                     return bool(response.status == 200)
