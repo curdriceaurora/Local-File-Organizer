@@ -290,7 +290,8 @@ def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -
     Detects two forms and their reversed comparisons:
     1. len(...) compared to 0: `assert len(x) >= 0` or `assert 0 <= len(x)`
     2. Known non-negative attributes compared to 0: `assert x.count >= 0` or `assert 0 <= x.count`
-    These matches use the module's allowlist of non-negative attribute names.
+    These matches use the module's blocklist of known-non-negative attribute names
+    (``_GTE_ZERO_NON_NEGATIVE_ATTRS``).
 
     Parameters:
         source (str): Python source code to analyze.
@@ -371,10 +372,14 @@ def test_detector_flags_vacuous_len_gte_zero(source: str, expected_count: int) -
 
 
 def test_changed_tests_have_no_vacuous_len_gte_zero_assertions() -> None:
-    """
-    Fail the test if any test file contains tautological comparisons that assert a length or certain non-negative attributes are greater than or equal to zero.
+    """Test files must not use ``assert len(x) >= 0`` or ``assert x.attr >= 0`` tautologies.
 
-    Flags examples such as `assert len(x) >= 0`, `assert 0 <= len(x)`, and attribute checks like `assert x.count >= 0` where the left-hand expression is known to be non-negative; the test fails when any such occurrences are found.
+    ``len()`` is always non-negative by definition, as are counts, durations,
+    and sizes.  Asserting ``>= 0`` provides zero signal — the assertion passes
+    even when the code under test returns no results or is completely broken.
+
+    Use a meaningful lower bound (``>= 1``), exact count (``== N``), or an
+    upper bound (``< max_val``) instead.
     """
     violations: list[str] = []
     for path in _changed_test_files():
@@ -519,6 +524,9 @@ def test_changed_tests_have_no_vacuous_bare_name_gte_zero_assertions() -> None:
 
     Use a meaningful bound (``>= 1``, ``> 0``), exact value (``== N``), or an
     upper bound (``< max_val``) instead.
+
+    This guardrail is diff-scoped (checks only files changed relative to ``main``)
+    because pre-existing violations in the full test suite have not yet been cleaned up.
     """
     violations: list[str] = []
     for path in _git_changed_test_files():
