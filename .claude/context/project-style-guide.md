@@ -45,6 +45,7 @@ author: Claude Code PM System
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`
 
 Examples:
+
 ```
 feat(audio): add podcast chapter detection
 fix(#392): address Copilot review — ci marker, weak assertions

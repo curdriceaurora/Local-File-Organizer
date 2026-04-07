@@ -23,6 +23,7 @@ Sourced from CodeRabbit and Copilot review comments — 84 classified CI finding
 **What it is**: Hard wall-clock time limits in CI (e.g., `assert duration < 1`) that fail under shared runner load; `time.sleep` in tests instead of event-based waits.
 
 **Bad**:
+
 ```python
 # BAD — strict wall-clock limit fails under CI load
 start = time.time()
@@ -32,9 +33,11 @@ assert time.time() - start < 1.0, "Processing too slow"
 # BAD — time.sleep blocks test runner unnecessarily
 time.sleep(2)
 assert service.is_ready()
+
 ```
 
 **Good**:
+
 ```python
 # GOOD — relative threshold or no timing assertion
 result = process_file(large_file)
@@ -49,6 +52,7 @@ while time.time() < deadline:
     time.sleep(0.1)
 else:
     pytest.fail("Service not ready within 10s")
+
 ```
 
 **Pre-generation check**: Search for `assert.*< [0-9]` in test files before adding timing assertions.
@@ -60,6 +64,7 @@ else:
 **What it is**: Job runs on events where it shouldn't — e.g., coverage upload on `pull_request` events (partial suite gives misleading metrics), or expensive jobs running on every push to every branch.
 
 **Bad**:
+
 ```yaml
 # BAD — coverage upload on PR events (partial suite = wrong metrics)
 on:
@@ -71,9 +76,11 @@ jobs:
     steps:
       - run: pytest --cov
       - uses: codecov/codecov-action@v3
+
 ```
 
 **Good**:
+
 ```yaml
 # GOOD — coverage upload only on main push
 on:
@@ -88,6 +95,7 @@ jobs:
       - name: Upload coverage (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: codecov/codecov-action@v3
+
 ```
 
 **Pre-generation check**: For every `uses:` action that writes to an external service (codecov, GitHub releases, etc.), add `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`.
@@ -99,15 +107,18 @@ jobs:
 **What it is**: `@lru_cache` on functions that read env vars — cache holds stale values across test runs or when the env var changes between calls.
 
 **Bad**:
+
 ```python
 # BAD — cached function reads env var; cache never invalidated between tests
 @lru_cache(maxsize=None)
 def get_config_manager() -> ConfigManager:
     config_dir = os.environ.get("FO_CONFIG_DIR", "~/.config/file-organizer")
     return ConfigManager(config_dir)
+
 ```
 
 **Good**:
+
 ```python
 # GOOD — no cache, fresh read each time (env may change in tests)
 def get_config_manager() -> ConfigManager:
@@ -126,6 +137,7 @@ def get_config_manager() -> ConfigManager:
 def reset_config_manager() -> None:
     global _config_manager
     _config_manager = None
+
 ```
 
 **Pre-generation check**: Search for `@lru_cache` on any function that calls `os.environ.get` or `os.getenv`.
@@ -133,6 +145,7 @@ def reset_config_manager() -> None:
 ```bash
 # Detection command
 rg "@lru_cache" src/ -A 5 | grep -B 3 "environ\|getenv"
+
 ```
 
 ---
@@ -142,6 +155,7 @@ rg "@lru_cache" src/ -A 5 | grep -B 3 "environ\|getenv"
 **What it is**: Coverage threshold declared in PR description, README, or docs doesn't match the value actually enforced in `pyproject.toml` or the workflow file.
 
 **Bad**:
+
 ```markdown
 <!-- In README.md — WRONG threshold -->
 ## CI Requirements
@@ -149,10 +163,13 @@ rg "@lru_cache" src/ -A 5 | grep -B 3 "environ\|getenv"
 
 # In PR description — WRONG threshold
 Coverage gate: 75%
+
 ```
+
 *(Actual enforced value in pyproject.toml: `cov-fail-under = 95`)*
 
 **Good**:
+
 ```bash
 # ALWAYS check actual value before documenting
 grep "cov-fail-under\|fail_under" pyproject.toml
@@ -160,19 +177,26 @@ grep "cov-fail-under\|fail_under" pyproject.toml
 
 # THEN document the actual value
 # "Code coverage gate: 95% (enforced via pyproject.toml cov-fail-under=95)"
+
 ```
 
 **Pre-generation check**: Before writing any coverage percentage in any document, run:
+
 ```bash
 grep "cov-fail-under\|fail_under" pyproject.toml
+
 ```
+
 Use only the number that command returns.
 
 **Post-change sweep** (run after ANY threshold change): Find all stale references to the old value:
+
 ```bash
 OLD=90; NEW=95
 grep -rn "$OLD" docs/ .github/ README.md CONTRIBUTING.md .claude/rules/ | grep -i "cover\|docstring\|gate\|threshold\|fail-under"
+
 ```
+
 Update every hit before committing. A threshold change in `pyproject.toml` is incomplete until all doc references are also updated.
 
 **Current project values** (verify before using):
@@ -185,6 +209,7 @@ Update every hit before committing. A threshold change in `pyproject.toml` is in
 **What it is**: Tokens logged or passed via query string in CI context; env vars echoed in workflow steps.
 
 **Bad**:
+
 ```yaml
 # BAD — env var echoed to logs
 - name: Debug
@@ -192,9 +217,11 @@ Update every hit before committing. A threshold change in `pyproject.toml` is in
 
 # BAD — secret passed as CLI argument (visible in process list)
 - run: python script.py --token ${{ secrets.API_TOKEN }}
+
 ```
 
 **Good**:
+
 ```yaml
 # GOOD — secret passed as environment variable
 - name: Run script
@@ -204,6 +231,7 @@ Update every hit before committing. A threshold change in `pyproject.toml` is in
 
 # GOOD — mask in logs if must echo
 - run: echo "::add-mask::${{ secrets.API_TOKEN }}"
+
 ```
 
 ---
@@ -213,15 +241,18 @@ Update every hit before committing. A threshold change in `pyproject.toml` is in
 **What it is**: Full matrix on every PR; duplicated jobs; unnecessary steps not gated behind `if:` conditions; no caching of dependencies.
 
 **Bad**:
+
 ```yaml
 # BAD — full OS matrix on every PR
 strategy:
   matrix:
     os: [ubuntu-latest, windows-latest, macos-latest]
     python-version: ["3.9", "3.10", "3.11", "3.12"]
+
 ```
 
 **Good**:
+
 ```yaml
 # GOOD — fast matrix on PR, full matrix on main
 strategy:
@@ -234,6 +265,7 @@ strategy:
   with:
     path: ~/.cache/pip
     key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+
 ```
 
 ---
@@ -243,24 +275,31 @@ strategy:
 **What it is**: Setting a `--cov-fail-under` ratchet floor from a local measurement taken without erasing `.coverage` first. `pytest-cov` accumulates data across runs — a stale file from unit tests inflates the integration coverage number, and the floor is set too high. CI fails because it starts clean.
 
 **Bad**:
+
 ```bash
 # BAD — stale .coverage from unit runs pollutes the measurement
 pytest tests/ -m "integration" --cov=file_organizer --cov-report=term-missing
 # Reports 51% — but unit test data is mixed in
 # → You set --cov-fail-under=51, CI fails with 35%
+
 ```
 
 **Good**:
+
 ```bash
 # GOOD — always erase first so the measurement is clean
 bash .claude/scripts/measure-integration-coverage.sh
 # Equivalent to: coverage erase && pytest tests/ -m "integration" --cov=file_organizer ...
+
 ```
 
 **Pre-generation check**: Before setting or bumping any `--cov-fail-under` floor, run:
+
 ```bash
 bash .claude/scripts/measure-integration-coverage.sh
+
 ```
+
 Use only the `TOTAL` line from that output. Never use a number from a run that did not start with `coverage erase`.
 
 ---
@@ -273,27 +312,33 @@ When `pip install` resolves the constraint it either silently installs an older 
 the constraint resolves by coincidence) or fails entirely.
 
 **Bad**:
+
 ```toml
 # BAD — rank-bm25 0.7.2 does not exist on PyPI; latest is 0.2.2
 [project.optional-dependencies]
 search = [
     "rank-bm25>=0.7.2",
 ]
+
 ```
 
 **Good**:
+
 ```bash
 # ALWAYS verify the version exists before writing the constraint
 pip index versions rank-bm25
 # → Available versions: 0.2.2, 0.2.1, 0.2.0, ...
 
 # THEN write the real latest version
+
 ```
+
 ```toml
 [project.optional-dependencies]
 search = [
     "rank-bm25>=0.2.2",
 ]
+
 ```
 
 **Pre-generation check**: Before adding or bumping ANY dependency version in `pyproject.toml`,

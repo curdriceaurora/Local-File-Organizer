@@ -24,6 +24,7 @@ Sourced from CodeRabbit and Copilot review comments across 590 feature-type find
 **What it is**: Error paths not implemented — exception raised by a dependency propagates unhandled to the caller, with no wrapping or user-facing message.
 
 **Bad**:
+
 ```python
 # BAD — exception from dependency propagates raw to caller
 def process_file(path: Path) -> ProcessResult:
@@ -32,6 +33,7 @@ def process_file(path: Path) -> ProcessResult:
 ```
 
 **Good**:
+
 ```python
 # GOOD — wrap with context and handle gracefully
 def process_file(path: Path) -> ProcessResult:
@@ -55,6 +57,7 @@ def process_file(path: Path) -> ProcessResult:
 **What it is**: Missing or incorrect type hints; `Any` used where a concrete type is known; return type not declared. Mypy strict mode rejects these.
 
 **Bad**:
+
 ```python
 # BAD — no type hints, Any used implicitly
 def get_metadata(file_path, config=None):
@@ -63,6 +66,7 @@ def get_metadata(file_path, config=None):
 ```
 
 **Good**:
+
 ```python
 # GOOD — concrete types, explicit return
 def get_metadata(
@@ -82,6 +86,7 @@ def get_metadata(
 **What it is**: Race conditions, unprotected shared state, missing locks, non-atomic read-modify-write on shared data.
 
 **Bad**:
+
 ```python
 # BAD — 'w' truncates file before flock; race window between truncate and lock
 with open(cache_file, 'w') as f:
@@ -93,6 +98,7 @@ self.count += 1  # read, increment, write — not atomic across threads
 ```
 
 **Good**:
+
 ```python
 # GOOD — atomic write via temp file + rename
 import tempfile, os
@@ -122,6 +128,7 @@ with self._lock:
 **What it is**: Auth tokens in query strings (log exposure), unsanitized path inputs (directory traversal), secrets in logs, missing input validation at API boundary.
 
 **Bad**:
+
 ```python
 # BAD — token in query string; appears in access logs, browser history, proxies
 @router.get("/api/files")
@@ -140,6 +147,7 @@ def health(settings: ApiSettings = Depends(get_settings)):
 ```
 
 **Good**:
+
 ```python
 # GOOD — token in Authorization header
 @router.get("/api/files")
@@ -177,6 +185,7 @@ def health(settings: ApiSettings = Depends(get_api_settings)):
 **What it is**: Magic strings/numbers inline; paths like `~/.config/file-organizer/trash` hardcoded instead of using the config system.
 
 **Bad**:
+
 ```python
 # BAD — hardcoded path, hardcoded magic number
 TRASH_DIR = Path("~/.config/file-organizer/trash").expanduser()
@@ -187,6 +196,7 @@ model = OllamaModel("qwen2.5:3b-instruct-q4_K_M")
 ```
 
 **Good**:
+
 ```python
 # GOOD — use ConfigManager for paths, settings for tunables
 from file_organizer.config import ConfigManager
@@ -206,6 +216,7 @@ model = OllamaModel(settings.text_model)
 **What it is**: Implemented API shape diverges from documented schema; field names inconsistent with actual plugin base class; response model doesn't match the Pydantic model.
 
 **Bad**:
+
 ```python
 # BAD — plugin uses get_info()/run() but base class defines get_metadata()/execute()
 class MyPlugin(PluginBase):
@@ -214,6 +225,7 @@ class MyPlugin(PluginBase):
 ```
 
 **Good**:
+
 ```python
 # GOOD — always read the base class before implementing
 # Read: src/file_organizer/plugins/base.py → PluginBase
@@ -233,6 +245,7 @@ class MyPlugin(PluginBase):
 **What it is**: File handles, DB connections, or async generators not wrapped in context managers; missing `finally` blocks.
 
 **Bad**:
+
 ```python
 # BAD — connection not closed on exception
 conn = db.connect()
@@ -241,6 +254,7 @@ conn.close()  # never called if execute() raises
 ```
 
 **Good**:
+
 ```python
 # GOOD — context manager guarantees close
 with db.connect() as conn:
@@ -261,6 +275,7 @@ async def stream_results():
 **What it is**: Mixed concerns in a single module; business logic in route handler instead of service layer; presentation logic in data layer.
 
 **Bad**:
+
 ```python
 # BAD — route handler doing business logic + DB access + formatting
 @router.post("/organize")
@@ -274,6 +289,7 @@ async def organize_files(request: OrganizeRequest):
 ```
 
 **Good**:
+
 ```python
 # GOOD — route delegates to service
 @router.post("/organize")
@@ -298,6 +314,7 @@ class OrganizeService:
 **What it is**: `__import__()` used inline (e.g., in `default_factory` lambdas) instead of top-level `import` statements. Makes code harder to analyze, breaks static analysis tools, and creates subtle behavior differences. Most common in `dataclasses.field(default_factory=lambda: __import__("module").something)`.
 
 **Bad**:
+
 ```python
 # BAD — dynamic import in default_factory; mypy can't analyze; no tree-shaking
 @dataclass
@@ -306,6 +323,7 @@ class Config:
 ```
 
 **Good**:
+
 ```python
 # GOOD — top-level import; analyzable; explicit
 import platformdirs
@@ -324,6 +342,7 @@ class Config:
 **What it is**: Docstring describes old behavior after the implementation changed — e.g., docstring says "On failure (Ollama unavailable)" but code catches all exceptions, not just network errors.
 
 **Bad**:
+
 ```python
 # BAD — docstring says "Ollama unavailable" but except clause catches everything
 def _init_text_processor(self) -> None:
@@ -335,6 +354,7 @@ def _init_text_processor(self) -> None:
 ```
 
 **Good**:
+
 ```python
 # GOOD — docstring matches actual exception scope
 def _init_text_processor(self) -> None:

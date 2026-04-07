@@ -30,6 +30,7 @@ return type but not the value. Since most methods have a defined success/failure
 the test passes even if the implementation returns the wrong one.
 
 **Bad**:
+
 ```python
 def test_update_rule(self, rule_manager, sample_rule):
     rule_manager.add_rule("default", sample_rule)
@@ -51,6 +52,7 @@ def test_list_rules(self, rule_manager):
 ```
 
 **Good**:
+
 ```python
 def test_update_rule(self, rule_manager, sample_rule):
     rule_manager.add_rule("default", sample_rule)
@@ -87,6 +89,7 @@ enforcement will follow the cleanup phase.
 asserts the return value, not that the state actually changed.
 
 **Bad**:
+
 ```python
 def test_remove_rule(self, rule_manager, sample_rule):
     rule_manager.add_rule("default", sample_rule)
@@ -95,6 +98,7 @@ def test_remove_rule(self, rule_manager, sample_rule):
 ```
 
 **Good**:
+
 ```python
 def test_remove_rule(self, rule_manager, sample_rule):
     rule_manager.add_rule("default", sample_rule)
@@ -113,6 +117,7 @@ def test_remove_rule(self, rule_manager, sample_rule):
 what arguments it was called with. The test passes even if the mock was called with garbage.
 
 **Bad**:
+
 ```python
 def test_sends_notification(self, mock_notifier):
     service.process(item)
@@ -120,6 +125,7 @@ def test_sends_notification(self, mock_notifier):
 ```
 
 **Good**:
+
 ```python
 def test_sends_notification(self, mock_notifier):
     service.process(item)
@@ -137,12 +143,14 @@ def test_sends_notification(self, mock_notifier):
 value of type `T`. Equivalent to asserting nothing meaningful about the non-None case.
 
 **Bad**:
+
 ```python
 result = rule_manager.toggle_rule("default", "ghost")
 assert result is None or isinstance(result, bool)  # always True for None or bool
 ```
 
 **Good**:
+
 ```python
 result = rule_manager.toggle_rule("default", "ghost")
 assert result is None  # nonexistent rule returns None specifically
@@ -157,6 +165,7 @@ with and without the optional dependency. All classes in the file are skipped wh
 package is absent, including ones that don't need it.
 
 **Bad**:
+
 ```python
 # test_security_bm25_decorators.py
 pytest.importorskip("rank_bm25")  # skips security + decorator tests too!
@@ -166,6 +175,7 @@ class TestBM25Index: ...              # does use rank_bm25
 ```
 
 **Good**:
+
 ```python
 # test_security_bm25_decorators.py
 class TestPluginSecurityPolicy: ...   # no importorskip needed
@@ -184,6 +194,7 @@ class TestBM25Index:
 `isinstance(level, str)` passes even if the function returns `"garbage"`.
 
 **Bad**:
+
 ```python
 def test_high_confidence(self, conf_engine):
     level = conf_engine.get_confidence_level(0.9)
@@ -191,6 +202,7 @@ def test_high_confidence(self, conf_engine):
 ```
 
 **Good**:
+
 ```python
 def test_high_confidence(self, conf_engine):
     level = conf_engine.get_confidence_level(0.9)
@@ -212,6 +224,7 @@ code never raises that exception (e.g. returns an empty dict instead), the guard
 swallows any real errors the test should have caught.
 
 **Bad**:
+
 ```python
 try:
     result = deduplicator.find_duplicates([f1, f2], min_text_length=10)
@@ -221,6 +234,7 @@ except ValueError:
 ```
 
 **Good**:
+
 ```python
 result = deduplicator.find_duplicates([f1, f2], min_text_length=10)
 assert isinstance(result, dict)
@@ -242,6 +256,7 @@ Distinct from T5 (IMPORTSKIP_SCOPE) which covers a *misplaced* guard; T8 covers 
 guard entirely.
 
 **Bad**:
+
 ```python
 from rank_bm25 import BM25Okapi  # crashes entire file if rank_bm25 not installed
 
@@ -253,6 +268,7 @@ class TestFileValidator:      # doesn't use rank_bm25, but also silenced
 ```
 
 **Good**:
+
 ```python
 class TestBM25Search:
     @pytest.fixture(autouse=True)
@@ -289,6 +305,7 @@ The assertion provides zero signal: it passes whether `results` is empty, full, 
 `None` (which would have raised before the assertion).
 
 **Bad**:
+
 ```python
 results = searcher.find(query)
 assert len(results) >= 0   # always True — len() is never negative
@@ -301,6 +318,7 @@ assert duration >= 0       # always True — elapsed time is non-negative
 ```
 
 **Good**:
+
 ```python
 results = searcher.find(query)
 assert len(results) >= 1   # lower bound > 0 is meaningful
@@ -336,6 +354,7 @@ The bug survived because tests only covered `resolve_path(x)` (bare call) and
 `my_alias(x)` (imported alias) — never `unrelated_service.resolve_path(x)`.
 
 **Bad**:
+
 ```python
 # Only positive cases — does not catch overly-permissive matching
 def test_is_resolve_path_call_bare():
@@ -350,6 +369,7 @@ def test_is_resolve_path_call_alias():
 ```
 
 **Good**:
+
 ```python
 # Positive cases as above, PLUS a false-positive rejection case
 def test_is_resolve_path_call_does_not_match_arbitrary_receiver():

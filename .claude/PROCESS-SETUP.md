@@ -47,6 +47,7 @@ This document describes the three phases that enable autonomous PR execution wit
 - `.claude/scripts/pre-commit-validation.sh` orchestrates those layers but does not define duplicate blocking policy
 
 **When It Runs**:
+
 ```bash
 bash .claude/scripts/pre-commit-validation.sh  # Before every commit
 ```
@@ -67,6 +68,7 @@ bash .claude/scripts/pre-commit-validation.sh  # Before every commit
 **What It Does**: Automatically merges PR when conditions are met (no manual action needed).
 
 **Configuration** (already applied):
+
 ```bash
 gh repo edit \
   --enable-auto-merge \
@@ -85,6 +87,7 @@ gh repo edit \
 **Branch Cleanup**: Automatic (branch deleted after merge)
 
 **How to Enable Auto-Merge on a PR**:
+
 ```bash
 # Via GitHub UI:
 1. Go to PR
@@ -129,6 +132,7 @@ gh pr merge <PR_NUMBER> --auto --squash
 - Verifies GitHub webhook signatures (security)
 
 **Running It**:
+
 ```bash
 python3 .claude/scripts/webhook-receiver.py
 
@@ -151,6 +155,7 @@ python3 .claude/scripts/webhook-receiver.py
 4. Explains local vs remote setup
 
 **Run Setup**:
+
 ```bash
 bash .claude/scripts/setup-webhook.sh
 ```
@@ -182,6 +187,7 @@ Active: ✓
 ```
 
 **Remote Access** (if webhook receiver not on same machine):
+
 ```bash
 # In separate terminal:
 ngrok http 9000
@@ -195,6 +201,7 @@ ngrok http 9000
 When events arrive, webhook receiver displays:
 
 **PR Opened/Reopened**:
+
 ```
 ============================================================
 PR #123 OPENED
@@ -206,6 +213,7 @@ Action: /pm:issue-start 123 (if not already tracking)
 ```
 
 **PR Approved**:
+
 ```
 ============================================================
 ✅ PR #123 APPROVED
@@ -216,6 +224,7 @@ Action: Check merge conditions (CI passing? All comments resolved?)
 ```
 
 **Code Review Comments** (from CodeRabbit, Copilot):
+
 ```
 ============================================================
 🤖 CODE REVIEW from @CodeRabbit on PR #123
@@ -225,6 +234,7 @@ Action: /pm:issue-start 123 to address findings
 ```
 
 **CI Passed**:
+
 ```
 ============================================================
 ✅ CI PASSED on PR #123
@@ -239,6 +249,7 @@ If YES to all: Enable auto-merge on PR
 ```
 
 **CI Failed**:
+
 ```
 ============================================================
 ❌ CI FAILED on PR #123
@@ -270,6 +281,7 @@ python3 .claude/scripts/webhook-receiver.py
 ### During Development (Every Day)
 
 **1. Start coding on feature**:
+
 ```bash
 git checkout main && git pull
 git checkout -b feature/issue-123-description
@@ -277,6 +289,7 @@ git checkout -b feature/issue-123-description
 ```
 
 **2. Before committing** (Phase 1):
+
 ```bash
 # Pre-commit validation runs automatically (or manually):
 bash .claude/scripts/pre-commit-validation.sh
@@ -288,6 +301,7 @@ git push origin feature/issue-123-description
 ```
 
 **3. Create PR and push**:
+
 ```bash
 gh pr create --title "Fix: description" --body "..."
 ```
@@ -357,6 +371,7 @@ bash .claude/scripts/pre-commit-validation.sh  # Re-run
 4. Check webhook recent deliveries (GitHub shows errors)
 
 **Fix**:
+
 ```bash
 # Restart receiver
 python3 .claude/scripts/webhook-receiver.py
@@ -377,6 +392,7 @@ tail -f .claude/logs/webhook.log
 2. Did you click "Enable auto-merge"?
 
 **Fix**:
+
 ```bash
 # Manually check:
 gh pr view <PR_NUMBER>

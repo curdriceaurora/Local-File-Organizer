@@ -178,6 +178,7 @@ grep -n "complete\|planned\|TODO\|not yet\|coming soon" docs/my-doc.md
 **What it is**: Shell scripts embedded in documentation have code bugs — wrong regex, missing `read -r`, non-recursive globs, or incorrect variable quoting. Distinct from D3 BROKEN_EXAMPLE (which is about API/import errors); D7 is script logic bugs that won't work as described.
 
 **Bad**:
+
 ```bash
 # BAD — non-recursive glob misses nested files
 for f in /path/to/files/*.py; do ...
@@ -193,6 +194,7 @@ if [[ "$filename" =~ .*\.py ]]; then  # . matches any char
 ```
 
 **Good**:
+
 ```bash
 # GOOD — recursive glob with ** and globstar
 shopt -s globstar
@@ -209,6 +211,7 @@ if [[ "$filename" =~ .*\.py$ ]]; then
 ```
 
 **Pre-generation check**: For every shell script in documentation, run it locally before committing. Use `shellcheck` for automated detection:
+
 ```bash
 shellcheck your_script.sh
 ```

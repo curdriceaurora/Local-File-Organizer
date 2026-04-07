@@ -30,12 +30,14 @@ inside the indexed directory pointing to `/etc/passwd` or any other file on the 
 The content is then indexed and potentially surfaced in search results.
 
 **Bad**:
+
 ```python
 def _collect_files(self, root: Path) -> list[Path]:
     return [p for p in root.rglob("*") if p.is_file()]
 ```
 
 **Good**:
+
 ```python
 def _collect_files(self, root: Path) -> list[Path]:
     allowed = root.resolve()
@@ -60,12 +62,14 @@ filter out symlinks before collecting files for indexing.
 sensitive content (credentials, config, SSH keys) that must not be indexed or surfaced.
 
 **Bad**:
+
 ```python
 def _collect_files(self, root: Path) -> list[Path]:
     return [p for p in root.rglob("*") if p.is_file()]
 ```
 
 **Good**:
+
 ```python
 def _collect_files(self, root: Path) -> list[Path]:
     files = []
@@ -91,6 +95,7 @@ search. Indexing thousands of files causes OOM errors, hangs, or extreme latency
 indexing is O(N) in memory for embeddings — without a cap, large directories become DoS vectors.
 
 **Bad**:
+
 ```python
 class SemanticIndex:
     def build(self, files: list[Path]) -> None:
@@ -99,6 +104,7 @@ class SemanticIndex:
 ```
 
 **Good**:
+
 ```python
 _MAX_SEMANTIC = 500  # defined as module-level constant
 
@@ -128,6 +134,7 @@ These expose the full directory structure, reveal the user's home directory, and
 expose information about unrelated paths that should not be visible to API callers.
 
 **Bad**:
+
 ```python
 def search(self, query: str) -> list[dict]:
     return [
@@ -137,6 +144,7 @@ def search(self, query: str) -> list[dict]:
 ```
 
 **Good**:
+
 ```python
 def search(self, query: str, root: Path) -> list[dict]:
     allowed = root.resolve()
@@ -162,6 +170,7 @@ debug output, or metric events. Documents may contain PII (names, emails, SSNs) 
 must not appear in log files, benchmark output, or telemetry.
 
 **Bad**:
+
 ```python
 def _benchmark_query(self, query: str, results: list[SearchResult]) -> None:
     logger.debug(
@@ -173,6 +182,7 @@ def _benchmark_query(self, query: str, results: list[SearchResult]) -> None:
 ```
 
 **Good**:
+
 ```python
 def _benchmark_query(self, query: str, results: list[SearchResult]) -> None:
     logger.debug(
@@ -200,6 +210,7 @@ This pattern is the search-specific trigger. The general fix is F3 (THREAD_SAFET
 use temp file + `os.replace()`. See F3 for the full solution.
 
 **Bad**:
+
 ```python
 def _save_cache(self, cache_path: Path, embeddings: dict) -> None:
     with open(cache_path, "w") as f:      # truncates file first — half-written on crash
@@ -207,6 +218,7 @@ def _save_cache(self, cache_path: Path, embeddings: dict) -> None:
 ```
 
 **Good**:
+
 ```python
 import tempfile, os
 
