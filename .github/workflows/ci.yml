@@ -241,9 +241,21 @@ jobs:
           retention-days: 1
 
   playwright:
-    name: "Playwright E2E (chromium)"
+    # Matrix execution policy: all three browsers run on every PR and push.
+    # Rationale: catching firefox/webkit-only regressions at PR review time is
+    # the entire point of cross-browser testing — chromium-only on PRs would
+    # let those regressions land and be discovered later by nightly runs (or
+    # users). The three browsers run in parallel, so wall-clock cost is ~1x
+    # the chromium-only run, only the runner-minute cost is ~3x. fail-fast is
+    # disabled so a firefox failure does not cancel the in-progress webkit run
+    # (review value of seeing all three results > saving a few runner minutes).
+    name: "Playwright E2E (${{ matrix.browser }})"
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
@@ -263,11 +275,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: playwright-${{ runner.os }}-
-      - name: Install Playwright chromium browser
-        # --with-deps pulls the system libs chromium needs on a fresh runner.
-        run: python -m playwright install --with-deps chromium
+          # Browser is part of the cache key so chromium/firefox/webkit caches
+          # do not clobber each other across matrix legs.
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-${{ matrix.browser }}-
+      - name: Install Playwright browser
+        # --with-deps pulls the system libs the browser needs on a fresh runner.
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
       - name: Cache NLTK data
         uses: actions/cache@v4
         with:
@@ -284,7 +298,7 @@ jobs:
         # retained only on failure to keep artifact size manageable.
         run: |
           pytest tests/playwright/ \
-            --browser chromium \
+            --browser ${{ matrix.browser }} \
             --tracing retain-on-failure \
             --screenshot only-on-failure \
             --video retain-on-failure \
@@ -297,7 +311,9 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          # Browser name in artifact name prevents matrix legs from clobbering
+          # each other when uploading to the same workflow run.
+          name: playwright-artifacts-${{ matrix.browser }}
           path: playwright-artifacts/
           retention-days: 7
           if-no-files-found: ignore
