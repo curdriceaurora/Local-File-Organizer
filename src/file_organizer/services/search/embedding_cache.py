@@ -48,16 +48,19 @@ CREATE TABLE IF NOT EXISTS embeddings (
 
 
 def _now_iso() -> str:
+    """Return current UTC time in ISO 8601 format."""
     return datetime.now(UTC).isoformat()
 
 
 def _array_to_blob(arr: np.ndarray) -> bytes:
+    """Serialize numpy array to bytes for SQLite storage."""
     buf = io.BytesIO()
     np.save(buf, arr, allow_pickle=False)
     return buf.getvalue()
 
 
 def _blob_to_array(blob: bytes) -> np.ndarray:
+    """Deserialize numpy array from SQLite blob bytes."""
     return np.load(io.BytesIO(blob), allow_pickle=False)
 
 

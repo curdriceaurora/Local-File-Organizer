@@ -25,12 +25,14 @@ class VSCodeIntegration(Integration):
         super().__init__(config)
 
     def _workspace_path(self) -> Path | None:
+        """Return the configured VSCode workspace directory."""
         raw = str(self.config.settings.get("workspace_path", "")).strip()
         if not raw:
             return None
         return Path(raw).expanduser()
 
     def _command_output_path(self) -> Path:
+        """Return the path where VSCode command output is captured."""
         raw = str(self.config.settings.get("command_output_path", "")).strip()
         if raw:
             return Path(raw).expanduser()

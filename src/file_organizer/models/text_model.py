@@ -57,9 +57,11 @@ class _GuardedIterator:
         self._closed = False
 
     def __iter__(self) -> _GuardedIterator:
+        """Return self (iterator protocol)."""
         return self
 
     def __next__(self) -> str:
+        """Return the next token, finalizing the guard when the wrapped iterator is exhausted."""
         try:
             return next(self._inner)
         except BaseException:
@@ -71,6 +73,7 @@ class _GuardedIterator:
         self._finish()
 
     def _finish(self) -> None:
+        """Release the guard resource after iteration completes or errors."""
         if not self._closed:
             self._closed = True
             if hasattr(self._inner, "close"):
@@ -78,6 +81,7 @@ class _GuardedIterator:
             self._on_close()
 
     def __del__(self) -> None:
+        """Ensure the guard is released even if iteration was abandoned."""
         self._finish()
 
 

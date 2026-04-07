@@ -274,6 +274,7 @@ class SettingsView(Vertical):
 
     @property
     def _is_sequential(self) -> bool:
+        """Property indicating if sequential execution mode is enabled."""
         return self._max_workers == 1 and self._prefetch_depth == 0
 
     def _record_non_sequential_snapshot(self) -> None:
@@ -283,10 +284,12 @@ class SettingsView(Vertical):
             self._last_non_sequential_prefetch_depth = self._prefetch_depth
 
     def _refresh_panel(self) -> None:
+        """Refresh the settings panel with current values."""
         body = self.query_one("#settings-body", Static)
         body.update(self._render_text())
 
     def _render_text(self) -> str:
+        """Render formatted text content for the settings display."""
         workers_text = "auto" if self._max_workers is None else str(self._max_workers)
         sequential_text = "on" if self._is_sequential else "off"
         return (

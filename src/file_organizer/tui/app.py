@@ -53,6 +53,7 @@ class SetupWizardViewIntegrated:
 
         # Override to post completion message when on COMPLETE screen
         async def action_continue_wizard_with_completion() -> None:
+            """Continue the setup wizard and emit the completion signal."""
             # Check if we're on the complete screen before calling original
             if wizard._current_screen == WizardScreen.COMPLETE:
                 # Post completion message to parent app
@@ -63,6 +64,7 @@ class SetupWizardViewIntegrated:
 
         # Override skip to also post completion message
         def action_skip_setup_with_completion() -> None:
+            """Skip the setup wizard and emit the completion signal."""
             original_skip()
             # Post completion message to skip wizard and go to main app
             wizard.post_message(WizardCompleteMessage())
@@ -327,6 +329,7 @@ class FileOrganizerApp(App[None]):
         status.set_status(f"View: {name.capitalize()}")
 
     def _check_for_updates(self) -> None:
+        """Background task that checks for application updates and notifies on result."""
         from file_organizer.updater.background import maybe_check_for_updates
 
         status = maybe_check_for_updates()
@@ -335,6 +338,7 @@ class FileOrganizerApp(App[None]):
         self.call_from_thread(self._notify_update, status.latest_version)
 
     def _notify_update(self, latest_version: str) -> None:
+        """Show a notification to the user about an available update."""
         status_bar = self.query_one(StatusBar)
         status_bar.set_status(
             f"Update available: {latest_version} (run file-organizer update install)"

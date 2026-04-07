@@ -27,6 +27,7 @@ class ObsidianIntegration(Integration):
         super().__init__(config)
 
     def _vault_path(self) -> Path:
+        """Return the configured Obsidian vault directory."""
         raw = str(self.config.settings.get("vault_path", "")).strip()
         return Path(raw).expanduser()
 
@@ -100,6 +101,7 @@ class ObsidianIntegration(Integration):
         destination: Path,
         metadata: dict[str, Any] | None,
     ) -> str:
+        """Build the markdown body of an Obsidian note from a file-organization record."""
         payload = metadata or {}
         now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         frontmatter: dict[str, Any] = {
