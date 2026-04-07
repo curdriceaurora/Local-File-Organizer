@@ -50,22 +50,26 @@ _LOCALHOSTS = {"127.0.0.1", "::1", "localhost"}
 
 
 def _to_user_response(user: User) -> UserResponse:
+    """Convert an AuthUser row into the public UserResponse schema."""
     return UserResponse.model_validate(user)
 
 
 def _rate_limit_key(request: Request, username: str) -> str:
+    """Return the rate-limit key for a login attempt (IP + username)."""
     client_host = request.client.host if request.client else "unknown"
     user_key = username.strip().lower() if username else "unknown"
     return f"{client_host}:{user_key}"
 
 
 def _is_local_request(request: Request) -> bool:
+    """Return True if the request originated from localhost."""
     if request.client is None:
         return False
     return request.client.host in _LOCALHOSTS
 
 
 def _access_ttl_seconds(settings: ApiSettings, payload: dict[str, object]) -> int:
+    """Return the configured access-token lifetime in seconds."""
     exp = payload.get("exp")
     if not isinstance(exp, (int, float)):
         return settings.auth_access_token_minutes * 60

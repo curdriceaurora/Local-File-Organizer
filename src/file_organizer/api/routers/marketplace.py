@@ -106,10 +106,12 @@ class MarketplaceReviewResponse(BaseModel):
 
 
 def _service() -> MarketplaceService:
+    """Return a MarketplaceService instance for the current request."""
     return MarketplaceService()
 
 
 def _package_to_response(package: PluginPackage) -> MarketplacePluginResponse:
+    """Convert a PluginPackage into the API response schema."""
     return MarketplacePluginResponse(
         name=package.name,
         version=package.version,
@@ -128,6 +130,7 @@ def _package_to_response(package: PluginPackage) -> MarketplacePluginResponse:
 
 
 def _installed_to_response(installed: InstalledPlugin) -> MarketplaceInstalledResponse:
+    """Convert an InstalledPlugin into the API response schema."""
     return MarketplaceInstalledResponse(
         name=installed.name,
         version=installed.version,
@@ -137,6 +140,7 @@ def _installed_to_response(installed: InstalledPlugin) -> MarketplaceInstalledRe
 
 
 def _review_to_response(review: PluginReview) -> MarketplaceReviewResponse:
+    """Convert a PluginReview into the API response schema."""
     return MarketplaceReviewResponse(
         plugin_name=review.plugin_name,
         user_id=review.user_id,
@@ -150,6 +154,7 @@ def _review_to_response(review: PluginReview) -> MarketplaceReviewResponse:
 
 
 def _raise_marketplace_error(exc: MarketplaceError) -> NoReturn:
+    """Map a MarketplaceError to the appropriate HTTP exception with status code."""
     message = str(exc)
     lowered = message.lower()
     if "not found" in lowered:

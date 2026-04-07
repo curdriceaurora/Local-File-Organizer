@@ -42,6 +42,7 @@ router = APIRouter(
 def _scan_duplicates(
     path: Path, request: DedupeScanRequest
 ) -> tuple[list[DedupeGroup], dict[str, int]]:
+    """Run the duplicate detector against the given root and return grouped results."""
     detector = DuplicateDetector()
     options = ScanOptions(
         algorithm=request.algorithm,
@@ -78,6 +79,7 @@ def _scan_duplicates(
 
 
 def _preview(groups: list[DedupeGroup]) -> list[DedupePreviewGroup]:
+    """Build a preview response summarizing what a dedupe run would remove."""
     previews: list[DedupePreviewGroup] = []
     for group in groups:
         if not group.files:

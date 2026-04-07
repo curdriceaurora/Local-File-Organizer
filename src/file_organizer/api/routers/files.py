@@ -54,6 +54,7 @@ _FILE_TYPE_GROUPS = {
 
 
 def _parse_file_types(file_type: str | None) -> set[str] | None:
+    """Parse a comma-separated file-type filter string into a normalized tuple."""
     if not file_type:
         return None
     types: set[str] = set()
@@ -70,6 +71,7 @@ def _parse_file_types(file_type: str | None) -> set[str] | None:
 
 
 def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    """Walk the allowed root and yield files matching the request filters."""
     files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):
@@ -155,6 +157,7 @@ def list_files(
     elif sort_by == "created":
         # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
         def _creation_key(p: Path) -> float:
+            """Sort key returning the file's creation time for ordering results."""
             s = p.stat()
             if hasattr(s, "st_birthtime"):
                 return s.st_birthtime
@@ -365,6 +368,7 @@ def move_file(
 
 
 def _trash_target(path: Path) -> Path:
+    """Return the trash destination path for a given source file."""
     from file_organizer.config.path_manager import get_data_dir
 
     trash_dir = get_data_dir() / "trash"

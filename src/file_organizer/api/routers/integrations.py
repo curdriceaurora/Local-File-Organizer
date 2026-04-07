@@ -56,6 +56,7 @@ router = APIRouter(
 
 
 def _default_integration_root() -> Path:
+    """Return the default integration root directory for the given settings."""
     from file_organizer.config.path_manager import get_config_dir
     from file_organizer.config.path_migration import resolve_legacy_path
 
@@ -151,6 +152,7 @@ def _validate_setting_paths(
     settings_update: dict[str, Any],
     settings: ApiSettings,
 ) -> dict[str, Any]:
+    """Reject integration settings whose paths escape the allowed root."""
     normalized = dict(settings_update)
     path_keys = {"vault_path", "workspace_path", "output_dir", "command_output_path"}
     for key in path_keys:
@@ -182,6 +184,7 @@ def _validate_setting_paths(
 
 
 def _require_integration(manager: IntegrationManager, integration_name: str) -> None:
+    """Raise 404 if the named integration is not registered."""
     if manager.get(integration_name) is None:
         raise ApiError(status_code=404, error="not_found", message="Integration not found")
 

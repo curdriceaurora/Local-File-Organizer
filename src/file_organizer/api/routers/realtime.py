@@ -27,6 +27,7 @@ def _jwt_valid(
     db: Session,
     token_store: TokenStore,
 ) -> bool:
+    """Return True if JWT is well-formed, unexpired, signed correctly, and not revoked."""
     try:
         payload = decode_token(token, settings)
     except TokenError:
@@ -51,6 +52,7 @@ def _token_valid(
     db: Session,
     token_store: TokenStore,
 ) -> bool:
+    """Return True if token is currently valid for WebSocket access."""
     if settings.auth_enabled:
         if token and _jwt_valid(token, settings, db, token_store):
             return True
@@ -68,6 +70,7 @@ def _token_valid(
 
 
 def _extract_token(websocket: WebSocket, token: str | None) -> str | None:
+    """Extract bearer token from WebSocket connection query string or Authorization header."""
     if token:
         return token
     auth_header = websocket.headers.get("authorization")
@@ -80,6 +83,7 @@ def _extract_token(websocket: WebSocket, token: str | None) -> str | None:
 
 
 async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -> None:
+    """Background task sending periodic ping frames to keep WebSocket connection alive."""
     while not stop.is_set():
         try:
             await asyncio.wait_for(stop.wait(), timeout=interval)
@@ -94,6 +98,7 @@ async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -
 
 
 async def _send_error(websocket: WebSocket, message: str) -> None:
+    """Send a structured error message frame to a WebSocket client."""
     if websocket.client_state != WebSocketState.CONNECTED:
         return
     try:

@@ -41,6 +41,7 @@ router = APIRouter(
 
 
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    """Scan a directory and return a list of file paths matching the filter criteria."""
     files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):
@@ -58,6 +59,7 @@ def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[P
 
 
 def _counts_by_type(files: list[Path]) -> dict[str, int]:
+    """Count the number of files in each category based on file extension."""
     counts = {
         "text": 0,
         "image": 0,
