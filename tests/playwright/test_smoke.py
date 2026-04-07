@@ -98,11 +98,12 @@ class TestPageLoads:
         assert page.title() != "", "Setup page rendered with empty <title>"
 
     def test_home_redirect(self, page: Page, playwright_config_dir: Path) -> None:
-        """Root path redirects to ``/ui/setup`` on a fresh server.
+        """``/ui/`` redirects to ``/ui/setup`` on a fresh server.
 
-        On a fresh server ``setup_completed`` defaults to ``False``, so the
-        home route always redirects to ``/ui/setup``.  Playwright follows the
-        redirect and lands on a 2xx page.
+        The web router is mounted at ``/ui`` in ``api/main.py`` (the bare ``/``
+        route returns JSON metadata, not a redirect). On a fresh server
+        ``setup_completed`` defaults to ``False``, so ``/ui/`` redirects to
+        ``/ui/setup``. Playwright follows the redirect and lands on a 2xx page.
 
         Resets ``setup_completed`` immediately before the navigation by
         deleting any ``config.yaml`` left behind by sibling tests
@@ -114,7 +115,7 @@ class TestPageLoads:
         if config_file.exists():
             config_file.unlink()
 
-        response = page.goto("/")
+        response = page.goto("/ui/")
         assert response is not None
         # After following redirects Playwright lands on a 2xx page.
         assert response.ok, f"Expected 2xx after redirect, got {response.status}"
