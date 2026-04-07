@@ -374,12 +374,15 @@ class _BenchmarkModelStub:
 
     @property
     def is_initialized(self) -> bool:
+        """Stub always reports initialized for benchmark timing."""
         return self._initialized
 
     def initialize(self) -> None:
+        """No-op initializer for the benchmark stub."""
         self._initialized = True
 
     def generate(self, prompt: str, **_: Any) -> str:
+        """Return a fixed canned response used to isolate non-model overhead."""
         lowered = prompt.lower()
         for needle, response in self._prompt_responses.items():
             if needle in lowered:
@@ -387,6 +390,7 @@ class _BenchmarkModelStub:
         return self._default_response
 
     def cleanup(self) -> None:
+        """No-op cleanup for the benchmark stub."""
         self._initialized = False
 
     def safe_cleanup(self) -> None:
@@ -636,12 +640,14 @@ def _run_e2e_suite(files: list[Path]) -> _SuiteIterationOutcome:
 def _classify_io_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for an I/O-suite result."""
     return _SuiteExecutionClassification(effective_suite="io", degraded=False)
 
 
 def _classify_text_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for a text-processing-suite result."""
     candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -655,6 +661,7 @@ def _classify_text_suite(
 def _classify_vision_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for a vision-suite result."""
     candidates = _suite_candidates(files, _VISION_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -668,6 +675,7 @@ def _classify_vision_suite(
 def _classify_audio_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for an audio-suite result."""
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -687,12 +695,14 @@ def _classify_audio_suite(
 def _classify_pipeline_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for a pipeline-suite result."""
     return _SuiteExecutionClassification(effective_suite="pipeline", degraded=False)
 
 
 def _classify_e2e_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Return the benchmark category for an end-to-end-suite result."""
     if files and outcome.processed_count == 0:
         return _SuiteExecutionClassification(
             effective_suite="e2e",

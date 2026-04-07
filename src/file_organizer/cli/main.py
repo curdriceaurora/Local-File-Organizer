@@ -33,6 +33,8 @@ console = Console()
 
 
 class _CliGlobals(Protocol):
+    """Container for CLI-global state (console, config, verbosity) shared across subcommands."""
+
     verbose: bool
     dry_run: bool
     json_output: bool
