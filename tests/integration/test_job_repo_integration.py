@@ -132,6 +132,7 @@ class TestJobRepositoryUpdateStatus:
         db_session.flush()
         updated = JobRepository.update_status(db_session, job.id, "failed", error="disk full")
         db_session.flush()
+        assert updated is not None
         assert updated.status == "failed"
         assert updated.error == "disk full"
 
@@ -166,8 +167,11 @@ class TestJobRepositoryUpdateResult:
         JobRepository.update_result(db_session, job.id, processed_files=3)
         db_session.flush()
         refreshed = JobRepository.get_by_id(db_session, job.id)
+        assert refreshed is not None
         assert refreshed.total_files == 5
         assert refreshed.processed_files == 3
+        assert refreshed.failed_files == 0
+        assert refreshed.skipped_files == 0
 
     def test_returns_none_for_unknown_id(self, db_session: Session) -> None:
         result = JobRepository.update_result(db_session, "ghost-id", total_files=1)

@@ -40,7 +40,7 @@ class TestRemoveFiles:
         removed, saved = remove_files(files, [0, 2], None, dry_run=False, console=console)
 
         assert removed == 2
-        assert saved == 100  # 2 × 50 bytes
+        assert saved == 100  # 2 x 50 bytes
         assert not files[0]["path"].exists()
         assert files[1]["path"].exists()  # index 1 was not removed
         assert not files[2]["path"].exists()
@@ -81,6 +81,8 @@ class TestRemoveFiles:
         removed, saved = remove_files(files, [0], backup_manager, dry_run=False, console=console)
 
         assert removed == 1
+        assert saved == 10  # one file of size 10 bytes
+        assert not files[0]["path"].exists()  # original removed after backup
         backup_manager.create_backup.assert_called_once_with(files[0]["path"])
 
 

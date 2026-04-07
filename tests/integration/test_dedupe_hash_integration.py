@@ -137,5 +137,6 @@ class TestScanForDuplicates:
         detector = initialize_hash_detector()
         opts = create_scan_options("sha256")
         tracker = ProgressTracker(console)
+        tracker.progress_bar = MagicMock()  # sentinel: proves close() was called
         scan_for_duplicates(dir_with_duplicates, detector, opts, console, tracker)
         assert tracker.progress_bar is None  # closed after scan

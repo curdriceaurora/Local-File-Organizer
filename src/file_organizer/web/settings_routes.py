@@ -369,6 +369,14 @@ async def settings_import(
     try:
         if settings_file is not None:
             raw_bytes = await settings_file.read()
+            if not raw_bytes or not raw_bytes.strip():
+                ws = _load_web_settings()
+                return _render_section(
+                    request,
+                    ws,
+                    section=target_section,
+                    error_message="Import failed: uploaded file is empty.",
+                )
             raw = raw_bytes.decode("utf-8")
         elif settings_path and settings_path.strip():
             resolved = resolve_path(settings_path, settings.allowed_paths)

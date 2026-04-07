@@ -355,7 +355,7 @@ Browser-based end-to-end tests live in `tests/playwright/` and use `@pytest.mark
 **Setup (one-time):**
 
 ```bash
-pip install 'file-organizer[desktop,test]'
+pip install 'file-organizer[desktop,dev]'
 playwright install chromium
 ```
 

@@ -192,9 +192,7 @@ class TestSetupComplete:
         assert body["profile"] == "default"
         assert len(body["messages"]) >= 1
 
-    def test_complete_setup_invalid_mode_uses_quick_start(
-        self, test_settings: ApiSettings, tmp_path: Path
-    ) -> None:
+    def test_complete_setup_invalid_mode_uses_quick_start(self, test_settings: ApiSettings) -> None:
         mock_mgr = MagicMock()
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: test_settings

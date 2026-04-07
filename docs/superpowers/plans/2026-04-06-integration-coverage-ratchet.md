@@ -18,7 +18,7 @@
 | Create | `tests/api/test_service_facade_integration.py` | ServiceFacade real-wiring |
 | Create | `tests/api/test_connection_manager_integration.py` | WebSocket ConnectionManager lifecycle |
 | Modify | `.github/workflows/ci.yml` | Bump `--cov-fail-under` (×4 PRs) |
-| Modify | `docs/internal/CLAUDE.md` | Update "Current floor" line (final PR) |
+| Modify | `docs/internal/CLAUDE.md` | Update "Current floor" line (each PR) |
 
 ---
 

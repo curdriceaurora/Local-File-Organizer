@@ -44,6 +44,7 @@ class TestServiceFacadeHealthCheck:
         # so unreachable probe → "degraded" (not "unknown")
         assert result["status"] == "degraded"
 
+    @pytest.mark.ci
     async def test_health_returns_correct_version(self):
         from file_organizer.version import __version__
 
@@ -85,6 +86,7 @@ class TestServiceFacadeGetConfig:
         expected_keys = {"version", "ai"}
         assert expected_keys.issubset(result.keys())
 
+    @pytest.mark.ci
     async def test_get_config_returns_dict_with_ai_key(self):
         settings = ApiSettings(auth_enabled=False, environment="staging")
         facade = ServiceFacade(settings=settings)

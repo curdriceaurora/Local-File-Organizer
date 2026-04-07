@@ -84,7 +84,31 @@ class TestConnectionManagerLifecycle:
                 ws.receive_text()
                 ws.send_text(json.dumps({"type": "subscribe", "channel": "news"}))
                 ws.send_text(json.dumps({"type": "unsubscribe", "channel": "news"}))
-                # No error expected — just verifying it doesn't raise
+                # Postcondition: after unsubscribing, a broadcast to "news" must
+                # NOT reach this client.  Subscribe to "global" and send a sentinel
+                # broadcast — the sentinel must be the first (and only) message
+                # received, proving the "news" broadcast was not delivered.
+                ws.send_text(json.dumps({"type": "subscribe", "channel": "global"}))
+                ws.send_text(
+                    json.dumps(
+                        {
+                            "type": "broadcast",
+                            "payload": {"topic": "news", "should_not_arrive": True},
+                            "channel": "news",
+                        }
+                    )
+                )
+                ws.send_text(
+                    json.dumps(
+                        {
+                            "type": "broadcast",
+                            "payload": {"topic": "sentinel"},
+                            "channel": "global",
+                        }
+                    )
+                )
+                received = json.loads(ws.receive_text())
+                assert received == {"topic": "sentinel"}
 
     @pytest.mark.ci
     def test_broadcast_to_named_channel_reaches_subscriber(self):

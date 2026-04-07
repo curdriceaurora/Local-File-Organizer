@@ -145,9 +145,9 @@ place — this is the new ratchet floor. Example: if coverage is 74.87%, the flo
 **Safeguard**: never set `--cov-fail-under` above the value measured in a clean local run
 (`coverage erase` first). If the measurement was not clean, re-run before bumping.
 
-### 4. Bump the gate — three locations
+### 4. Bump the gate — four locations
 
-All three must be updated in the same commit:
+All four must be updated in the same commit:
 
 **a) CI job step name** in `.github/workflows/ci.yml`:
 

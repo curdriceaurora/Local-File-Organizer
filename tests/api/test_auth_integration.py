@@ -88,10 +88,11 @@ class TestAuthRegistrationAndLogin:
     @pytest.mark.ci
     def test_login_wrong_password_returns_401(self, client_settings):
         client, _ = client_settings
-        client.post(
+        reg = client.post(
             "/api/v1/auth/register",
             json={"username": "bob", "password": "correctpass", "email": "b@example.com"},
         )
+        assert reg.status_code == 201  # ensure user was actually registered
         r = client.post(
             "/api/v1/auth/login",
             data={"username": "bob", "password": "wrongpass"},
@@ -140,13 +141,18 @@ class TestAuthRegistrationAndLogin:
             "/api/v1/auth/login",
             data={"username": "dave", "password": "refreshtest"},
         )
+        original_access = login.json()["access_token"]
         refresh_token = login.json()["refresh_token"]
         r = client.post(
             "/api/v1/auth/refresh",
             json={"refresh_token": refresh_token},
         )
         assert r.status_code == 200
-        assert "access_token" in r.json()
+        new_access = r.json()["access_token"]
+        assert new_access != original_access  # token rotation produces a different token
+        # New access token must be accepted by the protected /me endpoint.
+        me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_access}"})
+        assert me.status_code == 200
 
     def test_logout_invalidates_token(self, client_settings):
         client, _ = client_settings
@@ -167,6 +173,12 @@ class TestAuthRegistrationAndLogin:
             headers={"Authorization": f"Bearer {access_token}"},
         )
         assert r.status_code in (200, 204)
+        # Revoked refresh token must be rejected on next refresh attempt.
+        retry = client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+        assert retry.status_code in (401, 403)
 
 
 @pytest.mark.integration
@@ -234,12 +246,28 @@ class TestRateLimiterIntegration:
             "/api/v1/auth/register",
             json={"username": "frank", "password": "goodpass", "email": "f@example.com"},
         )
-        client.post(
-            "/api/v1/auth/login",
-            data={"username": "frank", "password": "wrong"},
-        )
+        # Exhaust max_attempts - 1 failures to get close to the limit, then succeed.
+        for _ in range(settings.auth_login_max_attempts - 1):
+            client.post(
+                "/api/v1/auth/login",
+                data={"username": "frank", "password": "wrong"},
+            )
         r = client.post(
             "/api/v1/auth/login",
             data={"username": "frank", "password": "goodpass"},
         )
         assert r.status_code == 200
+        # Successful login must have reset the failure counter.  A full
+        # max_attempts run of wrong-password attempts must still be 401 (not 429).
+        for _ in range(settings.auth_login_max_attempts):
+            resp = client.post(
+                "/api/v1/auth/login",
+                data={"username": "frank", "password": "wrong"},
+            )
+            assert resp.status_code == 401  # wrong password, not rate-limited
+        # One more attempt crosses the new limit → 429.
+        blocked = client.post(
+            "/api/v1/auth/login",
+            data={"username": "frank", "password": "wrong"},
+        )
+        assert blocked.status_code == 429
