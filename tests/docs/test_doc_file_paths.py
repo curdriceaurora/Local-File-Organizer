@@ -102,8 +102,9 @@ def _excluded_doc_dir(md_file: Path) -> bool:
         rel = md_file.relative_to(DOCS_DIR)
     except ValueError:
         return False
-    # Check whether the first path component is an excluded directory name.
-    return rel.parts[0] in EXCLUDED_DOC_DIRS if rel.parts else False
+    # Check whether any path component is an excluded directory name.
+    # This covers both docs/plans/… and docs/superpowers/plans/… etc.
+    return any(part in EXCLUDED_DOC_DIRS for part in rel.parts)
 
 
 def _get_doc_path_params() -> list[tuple[str, str]]:
