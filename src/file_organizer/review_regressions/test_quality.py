@@ -26,10 +26,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _is_literal_int(node: ast.AST, value: int) -> bool:
+    """Return True if the AST node is a literal integer constant."""
     return isinstance(node, ast.Constant) and type(node.value) is int and node.value == value
 
 
 def _is_call_count_attr(node: ast.AST) -> bool:
+    """Return True if the AST node is an attribute access ending in `call_count`."""
     if not isinstance(node, ast.Attribute) or node.attr != "call_count":
         return False
     value = node.value
@@ -53,6 +55,7 @@ def _is_call_count_attr(node: ast.AST) -> bool:
 
 
 def _is_test_python_path(root: Path, path: Path) -> bool:
+    """Return True if the path is a Python file under `tests/`."""
     try:
         rel = path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
@@ -68,6 +71,7 @@ def _is_test_python_path(root: Path, path: Path) -> bool:
 
 
 def _iter_test_python_files(root: Path) -> list[Path]:
+    """Yield Python files under `tests/` that the guardrail should scan."""
     tests_root = root / "tests"
     if not tests_root.exists():
         return []
@@ -75,6 +79,7 @@ def _iter_test_python_files(root: Path) -> list[Path]:
 
 
 def _git_stdout(root: Path, *args: str) -> str:
+    """Run a git command and return stdout as a string, or None if git failed."""
     result = subprocess.run(
         ["git", *args],
         cwd=root,
@@ -88,6 +93,7 @@ def _git_stdout(root: Path, *args: str) -> str:
 
 
 def _git_ref_exists(root: Path, ref: str) -> bool:
+    """Return True if the given git ref resolves in the current repo."""
     return bool(_git_stdout(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"))
 
 
@@ -186,6 +192,7 @@ def discover_changed_test_files(root: Path) -> list[Path]:
 
 
 def _weak_assert_nodes(source: str, filename: str) -> list[ast.Assert]:
+    """Yield AST nodes that look like weak assertions (sole-isinstance, `>=0` on len, etc.)."""
     tree = ast.parse(source, filename=filename)
     weak_nodes: list[ast.Assert] = []
     for node in ast.walk(tree):
@@ -233,6 +240,7 @@ class WeakMockCallCountAssertionDetector:
         self._changed_files_provider = changed_files_provider or discover_changed_test_files
 
     def _candidate_files(self, root: Path) -> list[Path]:
+        """Return the test files the detector should scan (filtered to the PR diff when available)."""
         if self._scan_mode == "full_repo":
             return _iter_test_python_files(root)
         return self._changed_files_provider(root)

@@ -31,6 +31,8 @@ class PublicCallableContract:
 
 @dataclass(frozen=True, slots=True)
 class _ParameterInfo:
+    """Lightweight record describing a callable parameter for compatibility checks."""
+
     name: str
     kind: str
     has_default: bool
@@ -88,6 +90,7 @@ _DEFAULT_PUBLIC_CALLABLE_CONTRACTS: tuple[PublicCallableContract, ...] = (
 def _iter_defaults_aligned_positional_args(
     args: ast.arguments,
 ) -> list[tuple[ast.arg, ast.expr | None, str]]:
+    """Yield positional parameters aligned with their defaults for compatibility comparison."""
     positional: list[tuple[ast.arg, ast.expr | None, str]] = []
     positional_only = args.posonlyargs
     positional_or_keyword = args.args
@@ -103,6 +106,7 @@ def _iter_defaults_aligned_positional_args(
 def _parameters_for_callable(
     node: ast.FunctionDef | ast.AsyncFunctionDef, *, is_bound_method: bool
 ) -> list[_ParameterInfo]:
+    """Return the _ParameterInfo list describing a callable's signature."""
     params: list[_ParameterInfo] = []
     positional_args = _iter_defaults_aligned_positional_args(node.args)
     dropped_bound = False
@@ -166,6 +170,7 @@ def _find_allowlisted_callable(
 def _find_toplevel_callable(
     tree: ast.AST, name: str
 ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    """Locate a top-level callable by name in a module AST, or None."""
     for stmt in getattr(tree, "body", []):
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and stmt.name == name:
             return stmt
@@ -173,12 +178,14 @@ def _find_toplevel_callable(
 
 
 def _find_named_classes(body: list[ast.stmt], class_name: str) -> list[ast.ClassDef]:
+    """Yield class nodes in a module AST matching the given name."""
     return [stmt for stmt in body if isinstance(stmt, ast.ClassDef) and stmt.name == class_name]
 
 
 def _find_named_methods(
     body: list[ast.stmt], method_name: str
 ) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Yield method nodes in a class AST matching the given name."""
     return [
         stmt
         for stmt in body
@@ -190,6 +197,7 @@ def _find_class_method_callable(
     tree: ast.AST,
     parts: list[str],
 ) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | None, bool]:
+    """Locate a class method by `ClassName.method_name` in a module AST, or None."""
     classes = _find_named_classes(getattr(tree, "body", []), parts[0])
     for class_name in parts[1:-1]:
         next_classes: list[ast.ClassDef] = []
@@ -211,6 +219,7 @@ def _prefix_mismatch(
     actual: tuple[str, ...],
     expected: tuple[str, ...],
 ) -> bool:
+    """Return the first index where two parameter lists diverge, or None if aligned."""
     if len(actual) < len(expected):
         return True
     return actual[: len(expected)] != expected

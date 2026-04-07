@@ -37,6 +37,7 @@ def _is_detector(value: Any) -> bool:
 
 
 def _coerce_detectors(obj: Any) -> list[ReviewRegressionDetector]:
+    """Normalize a detector-spec iterable into a list of detector instances."""
     if _is_detector(obj):
         return [obj]
     if isinstance(obj, Iterable) and not isinstance(obj, (str, bytes)):

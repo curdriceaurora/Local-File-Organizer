@@ -21,12 +21,14 @@ _PRIMITIVE_TYPES = {"bool", "float", "int", "str"}
 
 
 def _iter_correctness_python_files(root: Path) -> list[Path]:
+    """Yield Python files in the repo that the correctness guardrail should scan."""
     source_root = root / _SOURCE_ROOT
     scan_root = source_root if source_root.exists() else root
     return iter_python_files(scan_root)
 
 
 def _call_matches_object_setattr(node: ast.Call) -> bool:
+    """Return True if the AST call is `object.__setattr__(...)`."""
     return (
         isinstance(node.func, ast.Attribute)
         and node.func.attr == "__setattr__"
@@ -36,6 +38,7 @@ def _call_matches_object_setattr(node: ast.Call) -> bool:
 
 
 def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
+    """Build a child-node → parent-node map for an AST tree."""
     parents: dict[ast.AST, ast.AST] = {}
     for parent in ast.walk(tree):
         for child in ast.iter_child_nodes(parent):
@@ -65,10 +68,12 @@ def _stage_context_aliases(tree: ast.AST) -> set[str]:
 
 
 def _is_name_annotation(node: ast.AST, names: set[str]) -> bool:
+    """Return True if the annotation AST is a bare Name node."""
     return isinstance(node, ast.Name) and node.id in names
 
 
 def _is_stage_context_annotation(node: ast.AST | None, aliases: set[str]) -> bool:
+    """Return True if the annotation refers to `StageContext`."""
     if node is None:
         return False
     if _is_name_annotation(node, aliases):
@@ -79,10 +84,12 @@ def _is_stage_context_annotation(node: ast.AST | None, aliases: set[str]) -> boo
 
 
 def _is_stage_context_constructor(node: ast.AST, aliases: set[str]) -> bool:
+    """Return True if the call AST constructs a `StageContext`."""
     return isinstance(node, ast.Call) and _is_name_annotation(node.func, aliases)
 
 
 def _stage_context_names(scope: ast.AST, aliases: set[str]) -> set[str]:
+    """Return the set of local variable names bound to StageContext instances in a scope."""
     names: set[str] = set()
     if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
         for arg in (*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs):
@@ -109,6 +116,7 @@ def _stage_context_names(scope: ast.AST, aliases: set[str]) -> set[str]:
 
 
 def _stage_field_name(node: ast.Call) -> str | None:
+    """Extract the StageContext field name from an attribute-assign target, or None."""
     if len(node.args) < 2:
         return None
     field = node.args[1]
@@ -118,6 +126,7 @@ def _stage_field_name(node: ast.Call) -> str | None:
 
 
 def _setattr_target_name(node: ast.Call) -> str | None:
+    """Extract the target attribute name from an `object.__setattr__` call, or None."""
     if not node.args:
         return None
     target = node.args[0]
@@ -127,6 +136,7 @@ def _setattr_target_name(node: ast.Call) -> str | None:
 
 
 def _is_active_models_target(node: ast.AST) -> bool:
+    """Return True if the assignment target is `_active_models[...]`."""
     return (
         isinstance(node, ast.Subscript)
         and isinstance(node.value, ast.Attribute)
@@ -137,6 +147,7 @@ def _is_active_models_target(node: ast.AST) -> bool:
 
 
 def _annotation_contains_primitive(node: ast.AST | None) -> bool:
+    """Return True if an annotation includes a primitive type name (`int`, `str`, ...)."""
     if node is None:
         return False
     if isinstance(node, ast.Name):
@@ -155,10 +166,12 @@ def _annotation_contains_primitive(node: ast.AST | None) -> bool:
 
 
 def _is_primitive_constant(node: ast.AST) -> bool:
+    """Return True if the AST node is a constant of a primitive type."""
     return isinstance(node, ast.Constant) and isinstance(node.value, (str, int, float, bool))
 
 
 def _iter_scope_nodes(scope: ast.AST) -> Iterable[ast.AST]:
+    """Yield the AST nodes that define a lexical scope (module, class, function)."""
     if isinstance(scope, ast.Module):
         stack = list(reversed(scope.body))
     elif isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -178,6 +191,7 @@ def _iter_scope_nodes(scope: ast.AST) -> Iterable[ast.AST]:
 
 
 def _primitive_like_names(scope: ast.AST) -> set[str]:
+    """Return names in the scope that are bound to primitive constants."""
     primitive_names: set[str] = set()
 
     if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -211,6 +225,7 @@ def _primitive_like_names(scope: ast.AST) -> set[str]:
 
 
 def _enclosing_scope(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
+    """Return the innermost scope node enclosing the given AST node."""
     current: ast.AST | None = node
     while current is not None:
         current = parents.get(current)
@@ -220,6 +235,7 @@ def _enclosing_scope(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
 
 
 def _enclosing_class_name(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> str | None:
+    """Return the name of the innermost class enclosing the given AST node, or None."""
     current: ast.AST | None = node
     while current is not None:
         current = parents.get(current)
@@ -229,6 +245,7 @@ def _enclosing_class_name(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> str
 
 
 def _is_primitive_model_assignment(value: ast.AST, primitive_names: set[str]) -> bool:
+    """Return True if the assignment stores a primitive into a model-style target."""
     if isinstance(value, ast.Constant):
         return isinstance(value.value, (str, int, float, bool))
     return isinstance(value, ast.Name) and value.id in primitive_names
