@@ -27,6 +27,8 @@ To watch the tests execute in a visible window add ``--headed``::
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 try:
@@ -95,13 +97,23 @@ class TestPageLoads:
         assert headings.count() > 0, "Setup page has no heading elements"
         assert page.title() != "", "Setup page rendered with empty <title>"
 
-    def test_home_redirect(self, page: Page) -> None:
+    def test_home_redirect(self, page: Page, playwright_config_dir: Path) -> None:
         """Root path redirects to ``/ui/setup`` on a fresh server.
 
         On a fresh server ``setup_completed`` defaults to ``False``, so the
         home route always redirects to ``/ui/setup``.  Playwright follows the
         redirect and lands on a 2xx page.
+
+        Resets ``setup_completed`` immediately before the navigation by
+        deleting any ``config.yaml`` left behind by sibling tests
+        (``test_setup_wizard_flow`` flips it to True). ``ConfigManager.load()``
+        returns ``AppConfig`` defaults when the file is absent, restoring
+        ``setup_completed=False`` regardless of test ordering.
         """
+        config_file = playwright_config_dir / "file-organizer" / "config.yaml"
+        if config_file.exists():
+            config_file.unlink()
+
         response = page.goto("/")
         assert response is not None
         # After following redirects Playwright lands on a 2xx page.

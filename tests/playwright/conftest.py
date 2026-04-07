@@ -33,10 +33,12 @@ interfere with browser-process isolation.
 
 from __future__ import annotations
 
+import os
 import socket
 import threading
 import time
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -101,12 +103,33 @@ def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
 
 
 @pytest.fixture(scope="session")
-def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+def playwright_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Session-scoped isolated config dir for the Playwright live server.
+
+    Returned so tests that need to reset ``setup_completed`` (e.g.
+    ``test_home_redirect``) can delete or rewrite ``config.yaml`` directly.
+    """
+    return tmp_path_factory.mktemp("playwright_config")
+
+
+@pytest.fixture(scope="session")
+def live_server_url(
+    tmp_path_factory: pytest.TempPathFactory,
+    playwright_config_dir: Path,
+) -> Iterator[str]:
     """Start the FastAPI server once for the whole test session.
 
     Uses an in-process uvicorn server bound to a random free port on
     localhost.  ``auth_enabled=False`` removes the login gate so tests
     can reach protected pages without credentials.
+
+    Isolation: Monkeypatches ``file_organizer.config.manager.DEFAULT_CONFIG_DIR``
+    and sets ``XDG_CONFIG_HOME`` so any ``ConfigManager()`` instantiated by
+    route handlers reads from a session-scoped tmp dir instead of the
+    developer's or CI runner's real ``~/.config/file-organizer``. Without
+    this, tests pollute the host config and pollute each other (e.g.
+    ``test_setup_wizard_flow`` flips ``setup_completed=True``, breaking
+    ``test_home_redirect`` under randomized order).
 
     Yields:
         Base URL string, e.g. ``"http://127.0.0.1:54321"``.
@@ -116,6 +139,20 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
             The error message includes the daemon thread's exception (if any)
             to aid debugging.
     """
+    # Redirect config lookups BEFORE importing the API modules so any
+    # module-level ``DEFAULT_CONFIG_DIR = get_config_dir()`` capture lands on
+    # the tmp dir. ``platformdirs.user_config_dir(APP_NAME)`` honours
+    # ``XDG_CONFIG_HOME`` on macOS/Linux.
+    orig_xdg = os.environ.get("XDG_CONFIG_HOME")
+    os.environ["XDG_CONFIG_HOME"] = str(playwright_config_dir)
+
+    import file_organizer.config.manager as _config_manager
+
+    orig_default_config_dir = _config_manager.DEFAULT_CONFIG_DIR
+    # APP_NAME subdir mirrors what ``get_config_dir()`` would have produced.
+    _config_manager.DEFAULT_CONFIG_DIR = playwright_config_dir / "file-organizer"
+    _config_manager.DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
     import uvicorn
 
     from file_organizer.api.config import ApiSettings
@@ -172,6 +209,14 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
             "Playwright live server thread did not stop within 5 s after shutdown signal.",
             stacklevel=1,
         )
+
+    # Restore module-level config dir + XDG env var so other test sessions
+    # in the same process (or pytest re-runs) don't see the tmp value.
+    _config_manager.DEFAULT_CONFIG_DIR = orig_default_config_dir
+    if orig_xdg is None:
+        os.environ.pop("XDG_CONFIG_HOME", None)
+    else:
+        os.environ["XDG_CONFIG_HOME"] = orig_xdg
 
 
 # ---------------------------------------------------------------------------
