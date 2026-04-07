@@ -88,6 +88,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """FastAPI lifespan context that initializes and tears down app-wide resources."""
         from file_organizer.api.routers.health import reset_startup_time
 
         reset_startup_time()
@@ -135,6 +136,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     @app.get("/")
     def root() -> dict[str, str]:
+        """Root endpoint returning basic API metadata."""
         return {
             "name": resolved_settings.app_name,
             "version": resolved_settings.version,

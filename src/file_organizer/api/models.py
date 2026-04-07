@@ -13,6 +13,7 @@ _USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$")
 
 
 def _validate_path(value: str) -> str:
+    """Reject paths that are empty or contain traversal sequences."""
     if not value:
         raise ValueError("Path must not be empty")
     if len(value) > _MAX_PATH_LENGTH:
@@ -23,6 +24,7 @@ def _validate_path(value: str) -> str:
 
 
 def _validate_text(value: str, field_name: str, max_length: int) -> str:
+    """Reject text inputs that exceed the configured maximum length."""
     if not value:
         raise ValueError(f"{field_name} must not be empty")
     if len(value) > max_length:

@@ -51,6 +51,7 @@ def api_key_identifier(api_key: str, hashes: Iterable[str]) -> str | None:
 
 
 def _write_key(path: Path, api_key: str) -> None:
+    """Write a single API key record to the key store file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -58,10 +59,12 @@ def _write_key(path: Path, api_key: str) -> None:
 
 
 def _print_usage() -> None:
+    """Print CLI usage instructions for the api_keys script."""
     print("Usage: python -m file_organizer.api.api_keys --output PATH [--prefix PREFIX]")
 
 
 def _main(argv: list[str]) -> int:
+    """CLI entry point for the api_keys management script."""
     prefix = "fo"
     output_path: Path | None = None
     if "--help" in argv or "-h" in argv:

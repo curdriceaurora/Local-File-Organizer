@@ -91,6 +91,7 @@ def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
 
 
 def _now() -> datetime:
+    """Return the current UTC time as a timezone-aware datetime."""
     return datetime.now(UTC)
 
 
@@ -100,6 +101,17 @@ def _build_token(
     expires_delta: timedelta,
     settings: ApiSettings,
 ) -> tuple[str, str, datetime]:
+    """Encode a signed JWT with the given subject, type, and expiry.
+
+    Args:
+        payload: User claims to include in the token (e.g., sub, identifier).
+        token_type: Token type identifier (e.g., "access", "refresh").
+        expires_delta: Time delta from now until token expires.
+        settings: API settings containing JWT secret and algorithm.
+
+    Returns:
+        Tuple of (token_str, jti, expires_at_datetime).
+    """
     issued_at = _now()
     expires_at = issued_at + expires_delta
     jti = str(uuid4())

@@ -32,6 +32,7 @@ class ConnectionManager:
         self._queue_task: asyncio.Task[None] | None = None
 
     def _ensure_lock(self) -> asyncio.Lock:
+        """Return the lock, creating one if necessary."""
         if self._lock is None:
             self._lock = asyncio.Lock()
         return self._lock
@@ -108,6 +109,7 @@ class ConnectionManager:
         self._queue = None
 
     async def _await_task(self, task: asyncio.Task[None]) -> None:
+        """Await task completion, suppressing CancelledError and logging other exceptions."""
         try:
             await task
         except asyncio.CancelledError:
@@ -172,6 +174,7 @@ class ConnectionManager:
             return False
 
     async def _queue_consumer(self) -> None:
+        """Continuously consume broadcast events from the queue and deliver to subscribers."""
         queue = self._queue
         if queue is None:
             return

@@ -16,6 +16,7 @@ OpenAPIResponses = dict[int | str, dict[str, Any]]
 
 
 def _json_content(model: type[Any], example: Any) -> dict[str, Any]:
+    """Build the `content` block for an OpenAPI JSON response with the given example."""
     return {
         "application/json": {
             "schema": model.model_json_schema(),

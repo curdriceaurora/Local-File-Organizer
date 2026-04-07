@@ -34,6 +34,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestValidationError,
     ) -> JSONResponse:
+        """Convert a Pydantic ValidationError into a 422 JSON response."""
         logger.warning("Validation error on {}: {}", request.url.path, exc)
         return JSONResponse(
             status_code=422,
@@ -49,6 +50,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: ApiError,
     ) -> JSONResponse:
+        """Convert an ApiError into a structured JSON response with the error's status code."""
         logger.warning("API error on {}: {}", request.url.path, exc.error)
         payload: dict[str, Any] = {
             "error": exc.error,
@@ -63,6 +65,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        """Fallback handler that logs unexpected errors and returns a 500."""
         logger.exception("Unhandled error on {}", request.url.path)
         return JSONResponse(
             status_code=500,

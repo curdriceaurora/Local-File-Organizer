@@ -58,6 +58,7 @@ def create_auth_client(
     _TEST_PASSWORD = "T3stP@ssword1!"
 
     def _register(username: str, email: str) -> None:
+        """Register a new user with the given credentials."""
         response = client.post(
             "/api/v1/auth/register",
             json={

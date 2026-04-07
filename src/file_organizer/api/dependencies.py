@@ -81,6 +81,7 @@ def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, 
 
 @lru_cache
 def _token_store_cached(redis_url: str | None) -> TokenStore:
+    """Return a lazily-built singleton TokenStore for the given settings."""
     return build_token_store(redis_url)
 
 
@@ -95,6 +96,7 @@ def _login_rate_limiter_cached(
     max_attempts: int,
     window_seconds: int,
 ) -> LoginRateLimiter:
+    """Return a lazily-built singleton LoginRateLimiter for the given settings."""
     return build_login_rate_limiter(redis_url, max_attempts, window_seconds)
 
 

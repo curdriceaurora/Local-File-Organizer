@@ -14,10 +14,12 @@ _CACHE_PREFIX = "file_metadata"
 
 
 def _cache_key(workspace_id: str, relative_path: str) -> str:
+    """Return the cache key for a file metadata record."""
     return f"{_CACHE_PREFIX}:{workspace_id}:{relative_path}"
 
 
 def _cache_payload(row: FileMetadata) -> dict[str, object]:
+    """Serialize a FileMetadata row to a cacheable dict."""
     return {
         "id": row.id,
         "workspace_id": row.workspace_id,

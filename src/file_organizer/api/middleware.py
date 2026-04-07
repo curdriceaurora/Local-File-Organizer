@@ -29,6 +29,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._rule_prefixes = sorted(settings.rate_limit_rules.keys(), key=len, reverse=True)
 
     def _is_exempt(self, path: str) -> bool:
+        """Return True if the request path is exempt from rate limiting."""
         for exempt in self._settings.rate_limit_exempt_paths:
             normalized = exempt.rstrip("/") if exempt != "/" else exempt
             if path == normalized:
@@ -38,6 +39,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return False
 
     def _rule_for_path(self, path: str) -> dict[str, int] | None:
+        """Return the RateLimitRule matching the given request path, or the default rule."""
         rules = self._settings.rate_limit_rules
         for rule_path in self._rule_prefixes:
             if path.startswith(rule_path):
@@ -45,6 +47,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return None
 
     def _client_id(self, request: Request) -> str:
+        """Derive a stable client identifier from the request (API key, token, or IP)."""
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header.split(" ", 1)[1]
@@ -72,6 +75,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return f"ip:{client_ip}"
 
     def _apply_headers(self, response: Response, result: RateLimitResult, limit: int) -> None:
+        """Attach X-RateLimit-* headers to the outgoing response."""
         response.headers["X-RateLimit-Limit"] = str(limit)
         response.headers["X-RateLimit-Remaining"] = str(result.remaining)
         response.headers["X-RateLimit-Reset"] = str(result.reset_at)

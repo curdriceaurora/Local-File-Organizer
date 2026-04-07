@@ -43,6 +43,7 @@ class InMemoryTokenStore:
         self._revoked: dict[str, float] = {}
 
     def _is_active(self, bucket: dict[str, float], jti: str) -> bool:
+        """Return True if the refresh token is present and not expired or revoked."""
         expires_at = bucket.get(jti)
         if expires_at is None:
             return False
@@ -81,9 +82,11 @@ class RedisTokenStore:
     revoked_prefix: str = "auth:revoked:"
 
     def _refresh_key(self, jti: str) -> str:
+        """Return the Redis key for a stored refresh token."""
         return f"{self.refresh_prefix}{jti}"
 
     def _revoked_key(self, jti: str) -> str:
+        """Return the Redis key for a revoked access-token marker."""
         return f"{self.revoked_prefix}{jti}"
 
     def store_refresh(self, jti: str, user_id: str, ttl_seconds: int) -> None:

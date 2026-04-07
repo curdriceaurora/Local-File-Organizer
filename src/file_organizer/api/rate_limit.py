@@ -50,6 +50,7 @@ class InMemoryRateLimiter:
         self._sweep_interval_seconds = sweep_interval_seconds
 
     def _sweep(self, now: int) -> None:
+        """Drop expired rate-limit buckets to bound memory usage."""
         expired = [key for key, state in self._state.items() if state.reset_at <= now]
         for key in expired:
             self._state.pop(key, None)
@@ -84,6 +85,7 @@ class RedisRateLimiter:
         self._prefix = prefix
 
     def _key(self, key: str) -> str:
+        """Return the Redis key used to store the rate-limit counter for this identifier."""
         return f"{self._prefix}{key}"
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:

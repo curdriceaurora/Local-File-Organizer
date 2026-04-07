@@ -47,6 +47,7 @@ class InMemoryLoginRateLimiter:
     _state: dict[str, RateLimitState] = field(default_factory=dict)
 
     def _get_state(self, key: str, now: float) -> RateLimitState | None:
+        """Return the mutable state for a key, creating one if missing."""
         state = self._state.get(key)
         if state is None:
             return None
@@ -92,9 +93,11 @@ class RedisLoginRateLimiter:
     prefix: str = "auth:login:"
 
     def _key(self, key: str) -> str:
+        """Return the Redis key used to store failure counts for this identifier."""
         return f"{self.prefix}{key}"
 
     def _ttl(self, key: str) -> int:
+        """Return the configured window TTL in seconds."""
         ttl = self.redis.ttl(key)
         if ttl is None or int(ttl) < 0:
             return self.window_seconds

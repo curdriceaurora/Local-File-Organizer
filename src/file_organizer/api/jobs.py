@@ -36,10 +36,12 @@ _JOB_TTL = timedelta(hours=24)
 
 
 def _now() -> datetime:
+    """Return the current UTC time as a timezone-aware datetime."""
     return datetime.now(UTC)
 
 
 def _prune_jobs(now: datetime) -> None:
+    """Remove completed jobs older than the configured retention window."""
     cutoff = now - _JOB_TTL
     expired = [job_id for job_id, job in _JOB_STORE.items() if job.updated_at < cutoff]
     for job_id in expired:
@@ -124,6 +126,7 @@ def job_count() -> int:
 
 
 def _build_job_payload(job: JobState, event_type: str) -> dict[str, Any]:
+    """Serialize a Job into a dict suitable for JSON responses and websocket broadcasts."""
     return {
         "type": event_type,
         "job_id": job.job_id,
@@ -137,6 +140,7 @@ def _build_job_payload(job: JobState, event_type: str) -> dict[str, Any]:
 
 
 def _notify_job_event(payload: dict[str, Any]) -> None:
+    """Enqueue a websocket event describing a job state transition."""
     realtime_manager.enqueue_event(payload, channel="jobs")
     job_id = payload.get("job_id")
     if job_id:
