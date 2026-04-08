@@ -20,6 +20,17 @@ playwright_allowed_root : Path  (session-scoped)
     Shared with B-series file-tree fixtures (organize_file_tree,
     organize_output_dir).
 
+registered_user : _UserCreds  (session-scoped)
+    Creates one test user per session via ``POST /api/v1/auth/register``.
+    Returns a ``_UserCreds`` dataclass with ``username``, ``password``,
+    ``email``.  Used by ``authed_page`` and auth lifecycle tests.
+
+authed_page : Page  (function-scoped)
+    Navigates to ``/ui/profile/login``, fills the form with
+    ``registered_user`` credentials, submits, and waits for the redirect
+    to ``/ui/profile``.  Returns the Playwright ``Page`` holding a valid
+    ``fo_session`` cookie.  This is the reusable primitive for B3 and B4.
+
 Running
 -------
 Playwright tests are NOT included in the default test run (they require a
@@ -54,10 +65,12 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import httpx
 import pytest
 
 from file_organizer.services import ProcessedFile
@@ -91,17 +104,13 @@ def _find_free_port() -> int:
 
 
 def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
-    """Block until the port accepts TCP connections or *timeout* expires.
+    """
+    Wait until a TCP connection to 127.0.0.1:port is accepted or the timeout elapses.
 
-    Uses ``threading.Event.wait`` for inter-attempt rate-limiting — this is
-    cross-platform (``select.select`` with empty socket lists raises
-    ``OSError`` on Windows) and does not trigger the project's
-    ``time.sleep``-in-tests guardrail.
+    Returns immediately when a TCP connection to the given port succeeds. For this application, a TCP-ready socket is equivalent to the HTTP server being ready. If the timeout is reached without a successful connection, the function returns False.
 
-    Note: TCP acceptance indicates uvicorn's socket is bound; the ASGI
-    lifespan startup hook (``reset_startup_time`` + log) completes before
-    uvicorn starts accepting connections, so TCP-ready is equivalent to
-    HTTP-ready for this application's trivial lifespan.
+    Returns:
+        bool: `True` if a TCP connection to the port was accepted before the timeout, `False` otherwise.
     """
     _sleep = threading.Event()
     deadline = time.monotonic() + timeout
@@ -116,6 +125,24 @@ def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
                 # select.select([], [], [], t) which raises OSError on Windows.
                 _sleep.wait(timeout=min(0.1, remaining))
     return False
+
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _UserCreds:
+    """Credentials for the session-scoped test user.
+
+    Created once per session by ``registered_user`` and consumed by
+    ``authed_page`` and any test that needs pre-existing credentials.
+    """
+
+    username: str
+    password: str
+    email: str
 
 
 # ---------------------------------------------------------------------------
@@ -152,27 +179,16 @@ def live_server_url(
     playwright_config_dir: Path,
     playwright_allowed_root: Path,
 ) -> Iterator[str]:
-    """Start the FastAPI server once for the whole test session.
+    """
+    Start a FastAPI test server once for the entire pytest session.
 
-    Uses an in-process uvicorn server bound to a random free port on
-    localhost.  ``auth_enabled=False`` removes the login gate so tests
-    can reach protected pages without credentials.
-
-    Isolation: Monkeypatches ``file_organizer.config.manager.DEFAULT_CONFIG_DIR``
-    and sets ``XDG_CONFIG_HOME`` so any ``ConfigManager()`` instantiated by
-    route handlers reads from a session-scoped tmp dir instead of the
-    developer's or CI runner's real ``~/.config/file-organizer``. Without
-    this, tests pollute the host config and pollute each other (e.g.
-    ``test_setup_wizard_flow`` flips ``setup_completed=True``, breaking
-    ``test_home_redirect`` under randomized order).
+    This fixture launches an in-process uvicorn server bound to a random free localhost port, configures the application to permit only the provided allowed root paths, enables authentication for profile routes, and isolates the application's config directory by temporarily setting XDG_CONFIG_HOME and overriding file_organizer.config.manager.DEFAULT_CONFIG_DIR. The temporary configuration and environment are restored when the fixture tears down.
 
     Yields:
-        Base URL string, e.g. ``"http://127.0.0.1:54321"``.
+        Base URL string for the running server, e.g. "http://127.0.0.1:54321".
 
     Raises:
-        RuntimeError: If the server does not become ready within 20 seconds.
-            The error message includes the daemon thread's exception (if any)
-            to aid debugging.
+        RuntimeError: If the server does not become ready within 20 seconds. If the server thread raised an exception while starting, that exception is attached to the RuntimeError to aid debugging.
     """
     # Redirect config lookups BEFORE importing the API modules so any
     # module-level ``DEFAULT_CONFIG_DIR = get_config_dir()`` capture lands on
@@ -199,7 +215,7 @@ def live_server_url(
 
         settings = ApiSettings(
             allowed_paths=[str(playwright_allowed_root)],
-            auth_enabled=False,
+            auth_enabled=True,
             auth_db_path=str(playwright_allowed_root / "auth.db"),
             security_headers_enabled=False,  # CSP blocks the inline CSRF script; disable for tests
         )
@@ -258,6 +274,43 @@ def live_server_url(
             os.environ["XDG_CONFIG_HOME"] = orig_xdg
 
 
+@pytest.fixture(scope="session")
+def registered_user(live_server_url: str) -> _UserCreds:
+    """
+    Register a unique test user with the live server's registration API for the test session.
+
+    Posts a registration request to the server and verifies the response succeeded; returns the created credentials.
+
+    Returns:
+        _UserCreds: Credentials for the created user (username, password, email).
+
+    Raises:
+        AssertionError: If the server response is not successful or the returned username does not match the requested username.
+    """
+    suffix = uuid.uuid4().hex[:8]
+    creds = _UserCreds(
+        username=f"testuser_{suffix}",
+        password="TestPass1!xyz",
+        email=f"testuser_{suffix}@example.com",
+    )
+    response = httpx.post(
+        f"{live_server_url}/api/v1/auth/register",
+        json={
+            "username": creds.username,
+            "email": creds.email,
+            "password": creds.password,
+            "full_name": "Test User",
+        },
+    )
+    assert response.status_code == 201, (
+        f"registered_user: expected 201, got {response.status_code}: {response.text}"
+    )
+    assert response.json()["username"] == creds.username, (
+        f"registered_user: username mismatch in response: {response.json()}"
+    )
+    return creds
+
+
 # ---------------------------------------------------------------------------
 # Override pytest-playwright's base_url so relative goto() paths work
 # ---------------------------------------------------------------------------
@@ -265,12 +318,31 @@ def live_server_url(
 
 @pytest.fixture(scope="session")
 def base_url(live_server_url: str) -> str:  # type: ignore[override]
-    """Return the live server URL as the Playwright base URL.
+    """
+    Provide the live server URL used as Playwright's base URL so tests can use relative paths.
 
-    With this fixture in place tests may call ``page.goto("/ui/files")``
-    and Playwright resolves it against the live server automatically.
+    Returns:
+        The live server URL used by Playwright as its base URL.
     """
     return live_server_url
+
+
+@pytest.fixture
+def authed_page(page: Page, registered_user: _UserCreds) -> Page:
+    """
+    Provide a Playwright Page already logged into the application with a valid `fo_session` cookie.
+
+    Navigates to the login UI, submits the supplied user's credentials, and waits for the profile page to load.
+
+    Returns:
+        The same Playwright `Page` instance after successful login (the `fo_session` cookie is set in the browser context).
+    """
+    page.goto("/ui/profile/login")
+    page.locator("#login-username").fill(registered_user.username)
+    page.locator("#login-password").fill(registered_user.password)
+    page.get_by_role("button", name="Log in").click()
+    page.wait_for_url("**/ui/profile")
+    return page
 
 
 # ---------------------------------------------------------------------------

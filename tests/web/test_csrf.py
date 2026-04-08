@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -86,7 +89,19 @@ class TestValidateCSRFToken:
 
 
 def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
-    """Create a minimal FastAPI app with CSRF middleware for testing."""
+    """
+    Create a minimal FastAPI application configured with CSRFMiddleware and test routes.
+
+    Parameters:
+        exempt_paths (list[str] | None): Optional list of URL paths or prefixes that the middleware will skip (defaults to empty list).
+
+    Returns:
+        app (FastAPI): FastAPI instance with registered CSRFMiddleware and test endpoints:
+            - GET /form: returns HTML containing the CSRF form field populated from request.state.csrf_token
+            - POST /submit: simple JSON success endpoint
+            - POST /submit-form-echo: reads form data and echoes the "field" value as JSON
+            - POST /exempt and POST /api/session/refresh: endpoints intended to be exempt from CSRF checks
+    """
     app = FastAPI()
     app.add_middleware(CSRFMiddleware, exempt_paths=exempt_paths or [])
 
@@ -97,10 +112,36 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
 
     @app.post("/submit")
     async def post_submit() -> JSONResponse:
+        """
+        Return a JSON response indicating a successful POST to the submit endpoint.
+
+        Returns:
+            JSONResponse: JSON object {"ok": True}.
+        """
         return JSONResponse({"ok": True})
+
+    @app.post("/submit-form-echo")
+    async def post_submit_form_echo(request: Request) -> JSONResponse:
+        """
+        Echoes the submitted form field named "field" back in a JSON response.
+
+        Parameters:
+            request (Request): Incoming HTTP request containing form-encoded data.
+
+        Returns:
+            JSONResponse: JSON object with a single key `"field"` whose value is the submitted form value for `"field"`, or `None` if it was not present.
+        """
+        form = await request.form()
+        return JSONResponse({"field": form.get("field")})
 
     @app.post("/exempt")
     async def exempt_endpoint() -> JSONResponse:
+        """
+        Provide a successful JSON response used by CSRF-exempt endpoints.
+
+        Returns:
+            JSONResponse: JSON object {"ok": True}.
+        """
         return JSONResponse({"ok": True})
 
     @app.post("/api/session/refresh")
@@ -145,6 +186,20 @@ class TestCSRFMiddleware:
         # POST with matching form field
         response = client.post("/submit", data={CSRF_FORM_FIELD: token})
         assert response.status_code == 200
+
+    def test_post_with_valid_form_token_preserves_body_for_downstream_form_parsing(
+        self, client: TestClient
+    ) -> None:
+        get_resp = client.get("/form")
+        token = get_resp.cookies[CSRF_COOKIE_NAME]
+
+        response = client.post(
+            "/submit-form-echo",
+            data={CSRF_FORM_FIELD: token, "field": "kept"},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"field": "kept"}
 
     def test_post_with_valid_header_token_succeeds(self, client: TestClient) -> None:
         # First GET to obtain the CSRF cookie
@@ -218,3 +273,13 @@ class TestCSRFMiddleware:
         resp2 = client.get("/form")
         # The token in the rendered page should match
         assert token1 in resp2.text
+
+    def test_reset_request_body_replays_buffered_payload(self) -> None:
+        request = SimpleNamespace()
+        body = b"field=kept"
+
+        CSRFMiddleware._reset_request_body(request, body)
+
+        message = asyncio.run(request._receive())
+
+        assert message == {"type": "http.request", "body": body, "more_body": False}
