@@ -52,16 +52,25 @@ machine per browser.
 ```bash
 pytest tests/playwright/ \
     --browser chromium \
-    --override-ini='addopts='
+    --override-ini='addopts=' \
+    --strict-markers \
+    --timeout=60
 ```
 
 - `--browser chromium` — pick the browser. `firefox` and `webkit` are
   the other valid values. CI runs all three in parallel (see below);
   locally you usually only need one.
 - `--override-ini='addopts='` — **required**. `pyproject.toml`'s
-  project-wide `addopts` includes `--cov` / `--cov-fail-under`, which
-  break browser-process isolation. Stripping `addopts` for this run
-  disables coverage measurement just for the Playwright suite.
+  project-wide `addopts` includes `--cov` / `--cov-fail-under` (which
+  break browser-process isolation), `--strict-markers`, and
+  `--timeout=30`. Stripping `addopts` clears **all** of those flags for
+  this run.
+- `--strict-markers` — re-adds strict-marker enforcement so pytest still
+  fails if any test uses an unregistered marker (stripped from `addopts`
+  above).
+- `--timeout=60` — re-adds a per-test timeout appropriate for browser
+  tests. The project-wide 30 s is too tight for browser startup; 60 s
+  matches what CI uses (stripped from `addopts` above).
 
 ### Interactive debugging
 
@@ -85,6 +94,8 @@ trace and open it in Playwright's trace viewer:
 pytest tests/playwright/test_smoke.py \
     --browser chromium \
     --override-ini='addopts=' \
+    --strict-markers \
+    --timeout=60 \
     --tracing=retain-on-failure \
     --output=playwright-artifacts
 
@@ -131,7 +142,7 @@ cost.
 4. `python -m playwright install --with-deps ${browser}` — downloads
    the browser binary and pulls the system libs a fresh Ubuntu runner
    needs.
-5. `pytest tests/playwright/ --browser ${browser} --tracing=retain-on-failure --screenshot=only-on-failure --video=retain-on-failure --output=playwright-artifacts --reruns 2 --reruns-delay 2 --timeout=60 --strict-markers --override-ini='addopts='`
+5. `pytest tests/playwright/ --browser ${{ matrix.browser }} --tracing retain-on-failure --screenshot only-on-failure --video retain-on-failure --output=playwright-artifacts --reruns 2 --reruns-delay 2 --timeout=60 --strict-markers --override-ini="addopts="`
 
 ### Debugging a CI failure
 
@@ -278,12 +289,19 @@ the next navigation.
 
    - The `e2e` marker keeps the suite visible to developers running
      `pytest -m "integration or e2e"` and keeps
-     `docs/developer/testing.md`'s marker taxonomy consistent.
-   - The `playwright` marker is what the CI job's selector expects and
-     what `tests/conftest.py`'s `collect_ignore_glob` gate keys off
-     when the `playwright` dep is not installed.
+     `docs/developer/testing.md`'s marker taxonomy consistent. Omitting
+     it excludes the test from those selectors.
+   - The `playwright` marker enables `pytest -m playwright` as a
+     convenience selector and satisfies the project-wide
+     `--strict-markers` flag (which makes pytest fail collection if
+     any test uses an unregistered marker). Omitting it means
+     `pytest -m playwright` skips the test.
 
-   Omitting either marker silently breaks one of those two flows.
+   Note: `tests/conftest.py`'s `collect_ignore_glob` gate is
+   import-based (it skips the directory when `import playwright` raises
+   `ImportError`), not marker-based. CI selects the suite by directory
+   (`pytest tests/playwright/`), not by marker selector. Neither
+   mechanism is affected by which markers your test carries.
 
 3. **Fixtures.** Take `page` (from `pytest-playwright`) and
    `live_server_url` (or any of the other session fixtures above).
@@ -362,6 +380,6 @@ window where another process could steal the port. This is negligible
 on developer machines but occasionally trips on heavily-loaded CI
 runners. The CI job's `--reruns 2` covers it.
 
-If local runs start failing with `OSError: [Errno 48] Address already
-in use` during fixture setup, simply re-run — do **not** bump
+If local runs start failing with `OSError: ... Address already in use`
+during fixture setup, simply re-run — do **not** bump
 `_wait_for_port`'s timeout.
