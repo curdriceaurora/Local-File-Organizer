@@ -65,11 +65,14 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
+
+import httpx
 
 from file_organizer.services import ProcessedFile
 
@@ -127,6 +130,24 @@ def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
                 # select.select([], [], [], t) which raises OSError on Windows.
                 _sleep.wait(timeout=min(0.1, remaining))
     return False
+
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _UserCreds:
+    """Credentials for the session-scoped test user.
+
+    Created once per session by ``registered_user`` and consumed by
+    ``authed_page`` and any test that needs pre-existing credentials.
+    """
+
+    username: str
+    password: str
+    email: str
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +290,50 @@ def live_server_url(
             os.environ.pop("XDG_CONFIG_HOME", None)
         else:
             os.environ["XDG_CONFIG_HOME"] = orig_xdg
+
+
+@pytest.fixture(scope="session")
+def registered_user(live_server_url: str) -> _UserCreds:
+    """Create one test user per session via the REST API.
+
+    Posts to ``/api/v1/auth/register`` (API-exempt from CSRF middleware)
+    using ``httpx``.  The username is uuid-suffixed so parallel or
+    repeated runs never collide in the shared ``auth.db``.
+
+    Asserts 201 + username roundtrip so any contract mismatch causes an
+    immediate, loud fixture error rather than a silent downstream failure.
+
+    Returns:
+        ``_UserCreds`` with the created user's credentials.
+
+    Raises:
+        AssertionError: If registration returns a non-201 status or the
+            response body does not contain the expected username.
+    """
+    import uuid as _uuid
+
+    suffix = _uuid.uuid4().hex[:8]
+    creds = _UserCreds(
+        username=f"testuser_{suffix}",
+        password="TestPass1!xyz",
+        email=f"testuser_{suffix}@example.com",
+    )
+    response = httpx.post(
+        f"{live_server_url}/api/v1/auth/register",
+        json={
+            "username": creds.username,
+            "email": creds.email,
+            "password": creds.password,
+            "full_name": "Test User",
+        },
+    )
+    assert response.status_code == 201, (
+        f"registered_user: expected 201, got {response.status_code}: {response.text}"
+    )
+    assert response.json()["username"] == creds.username, (
+        f"registered_user: username mismatch in response: {response.json()}"
+    )
+    return creds
 
 
 # ---------------------------------------------------------------------------
