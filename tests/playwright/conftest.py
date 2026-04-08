@@ -47,10 +47,14 @@ import os
 import socket
 import threading
 import time
+import uuid
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
+from file_organizer.services import ProcessedFile
 
 try:
     from playwright.sync_api import Page
@@ -124,9 +128,23 @@ def playwright_config_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="session")
-def live_server_url(
+def playwright_allowed_root(
     tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
+    """Session-scoped root the live server allows. Shared with file-tree fixtures.
+
+    Extracted from the inline ``tmp = tmp_path_factory.mktemp("playwright_server")``
+    that was previously inside ``live_server_url``.  Exposing it as a named fixture
+    lets B-series test fixtures build file trees inside the server's allowed-paths
+    root without reopening or inspecting ``live_server_url``'s internals.
+    """
+    return tmp_path_factory.mktemp("playwright_server")
+
+
+@pytest.fixture(scope="session")
+def live_server_url(
     playwright_config_dir: Path,
+    playwright_allowed_root: Path,
 ) -> Iterator[str]:
     """Start the FastAPI server once for the whole test session.
 
@@ -173,11 +191,10 @@ def live_server_url(
         from file_organizer.api.config import ApiSettings
         from file_organizer.api.main import create_app
 
-        tmp = tmp_path_factory.mktemp("playwright_server")
         settings = ApiSettings(
-            allowed_paths=[str(tmp)],
+            allowed_paths=[str(playwright_allowed_root)],
             auth_enabled=False,
-            auth_db_path=str(tmp / "auth.db"),
+            auth_db_path=str(playwright_allowed_root / "auth.db"),
         )
         app = create_app(settings)
         port = _find_free_port()
