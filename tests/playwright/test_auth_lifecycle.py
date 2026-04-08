@@ -19,6 +19,8 @@ import uuid
 
 import pytest
 
+from tests.playwright.conftest import _UserCreds
+
 try:
     from playwright.sync_api import Page, expect
 except ImportError as _exc:
@@ -53,15 +55,17 @@ class TestAuthLifecycle:
         page.get_by_role("button", name="Create account").click()
         page.wait_for_url("**/ui/profile/login")
 
-    def test_login_lands_on_authenticated_page(self, page: Page, registered_user: object) -> None:
+    def test_login_lands_on_authenticated_page(
+        self, page: Page, registered_user: _UserCreds
+    ) -> None:
         """
         Log in with the provided credentials and assert the profile page displays the user's full name.
 
         The `registered_user` fixture is created with `full_name = "Test User"`, so the test verifies that the profile page title equals "Test User" after successful login.
         """
         page.goto("/ui/profile/login")
-        page.locator("#login-username").fill(registered_user.username)  # type: ignore[union-attr]
-        page.locator("#login-password").fill(registered_user.password)  # type: ignore[union-attr]
+        page.locator("#login-username").fill(registered_user.username)
+        page.locator("#login-password").fill(registered_user.password)
         page.get_by_role("button", name="Log in").click()
         page.wait_for_url("**/ui/profile")
         expect(page.locator("h1.page-title")).to_have_text("Test User")

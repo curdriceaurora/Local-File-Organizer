@@ -53,6 +53,23 @@ class TestMkdocsNavIntegrity:
             + "\n".join(f"  - {p}" for p in sorted(missing))
         )
 
+    def test_nav_does_not_reference_superpowers(self, mkdocs_config: dict) -> None:
+        """No mkdocs.yml nav entry may reference a docs/superpowers/ path.
+
+        superpowers/ contains internal AI-authored planning documents that are
+        intentionally excluded from public documentation.  This test prevents
+        accidental nav additions from publishing those files.
+        """
+        nav = mkdocs_config.get("nav", [])
+        nav_paths: list[str] = []
+        self._extract_nav_paths(nav, nav_paths)
+
+        violations = [p for p in nav_paths if "superpowers" in p]
+        assert not violations, (
+            "mkdocs.yml nav references superpowers/ path(s) that must not be published:\n"
+            + "\n".join(f"  - {p}" for p in violations)
+        )
+
     def test_no_case_mismatch_in_nav(self, mkdocs_config: dict, docs_dir: Path) -> None:
         """Nav entries must use exact case matching the filesystem."""
         nav = mkdocs_config.get("nav", [])
