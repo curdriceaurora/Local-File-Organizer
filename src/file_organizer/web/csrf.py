@@ -13,10 +13,12 @@ from __future__ import annotations
 import hmac
 import secrets
 from collections.abc import Sequence
+from urllib.parse import parse_qs
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import Message
 
 CSRF_COOKIE_NAME = "_csrf_token"
 CSRF_FORM_FIELD = "csrf_token"
@@ -75,6 +77,21 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 return True
         return False
 
+    @staticmethod
+    def _reset_request_body(request: Request, body: bytes) -> None:
+        """Restore the buffered request body so downstream form parsing still works.
+
+        ``BaseHTTPMiddleware`` sits in front of FastAPI's ``Form(...)`` handling.
+        If middleware reads the body and does not replay it, downstream handlers
+        observe an empty form stream. Replacing ``_receive`` makes the body
+        available to later consumers in the same request.
+        """
+
+        async def _receive() -> Message:
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        request._receive = _receive  # type: ignore[attr-defined]
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Enforce CSRF on state-changing methods for non-exempt paths."""
         # Always make a token available on request.state for templates.
@@ -109,8 +126,16 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 "application/x-www-form-urlencoded" in content_type
                 or "multipart/form-data" in content_type
             ):
-                form = await request.form()
-                submitted = form.get(CSRF_FORM_FIELD)  # type: ignore[assignment]
+                body = await request.body()
+                self._reset_request_body(request, body)
+                if "application/x-www-form-urlencoded" in content_type:
+                    parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+                    values = parsed.get(CSRF_FORM_FIELD)
+                    submitted = values[0] if values else None
+                else:
+                    form = await request.form()
+                    submitted = form.get(CSRF_FORM_FIELD)  # type: ignore[assignment]
+                    self._reset_request_body(request, body)
 
         if not validate_csrf_token(cookie_token=cookie_token, submitted_token=submitted):
             return JSONResponse(
