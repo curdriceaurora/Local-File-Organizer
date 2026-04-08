@@ -54,11 +54,10 @@ class TestAuthLifecycle:
         page.wait_for_url("**/ui/profile/login")
 
     def test_login_lands_on_authenticated_page(self, page: Page, registered_user: object) -> None:
-        """Fill the login form and assert the profile page shows the user's name.
-
-        ``registered_user`` was created with ``full_name="Test User"``.
-        The profile ``<h1>`` renders ``user.full_name or user.username``,
-        so "Test User" is the expected text after a successful login.
+        """
+        Log in with the provided credentials and assert the profile page displays the user's full name.
+        
+        The `registered_user` fixture is created with `full_name = "Test User"`, so the test verifies that the profile page title equals "Test User" after successful login.
         """
         page.goto("/ui/profile/login")
         page.locator("#login-username").fill(registered_user.username)  # type: ignore[union-attr]
@@ -68,27 +67,20 @@ class TestAuthLifecycle:
         expect(page.locator("h1.page-title")).to_have_text("Test User")
 
     def test_access_protected_route_while_logged_in(self, authed_page: Page) -> None:
-        """/ui/profile/edit renders the edit form for an authenticated user.
-
-        ``/ui/profile/edit`` is an HTMX partial endpoint. Navigating to it
-        directly returns the raw HTML fragment. When authenticated the
-        fragment contains the profile edit form; the error paragraph is absent.
+        """
+        Navigate to /ui/profile/edit and verify the profile edit form is rendered for an authenticated user.
+        
+        This endpoint is an HTMX partial that returns an HTML fragment; when the user is authenticated the fragment contains the profile edit form and does not include the error paragraph.
         """
         authed_page.goto("/ui/profile/edit")
         expect(authed_page.locator('form[action="/ui/profile/edit"]')).to_be_visible()
         expect(authed_page.locator("p.error-text")).to_have_count(0)
 
     def test_logout_blocks_protected_route(self, authed_page: Page) -> None:
-        """After logout the protected /ui/profile/edit returns the error partial.
-
-        Logout is performed via ``page.request.post()`` which shares the
-        browser context's cookie jar.  The server's ``delete_cookie``
-        response clears ``fo_session`` before the next navigation.
-
-        CSRF: ``/ui/profile/logout`` is not API-exempt so the double-submit
-        cookie pattern applies.  ``page.context.cookies()`` returns httpOnly
-        cookies (Playwright has privileged access), giving us the
-        ``_csrf_token`` value to send as the ``x-csrf-token`` header.
+        """
+        Logs out the authenticated browser session and verifies that the protected edit route is denied access.
+        
+        Extracts the `_csrf_token` cookie value and sends it as the `x-csrf-token` header in a POST to `/ui/profile/logout`, then navigates to `/ui/profile/edit` and asserts that `p.error-text` shows "Not authenticated."
         """
         cookies = authed_page.context.cookies()
         csrf_token = next(c["value"] for c in cookies if c["name"] == "_csrf_token")
