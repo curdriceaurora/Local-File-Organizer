@@ -20,6 +20,17 @@ playwright_allowed_root : Path  (session-scoped)
     Shared with B-series file-tree fixtures (organize_file_tree,
     organize_output_dir).
 
+registered_user : _UserCreds  (session-scoped)
+    Creates one test user per session via ``POST /api/v1/auth/register``.
+    Returns a ``_UserCreds`` dataclass with ``username``, ``password``,
+    ``email``.  Used by ``authed_page`` and auth lifecycle tests.
+
+authed_page : Page  (function-scoped)
+    Navigates to ``/ui/profile/login``, fills the form with
+    ``registered_user`` credentials, submits, and waits for the redirect
+    to ``/ui/profile``.  Returns the Playwright ``Page`` holding a valid
+    ``fo_session`` cookie.  This is the reusable primitive for B3 and B4.
+
 Running
 -------
 Playwright tests are NOT included in the default test run (they require a
@@ -155,8 +166,10 @@ def live_server_url(
     """Start the FastAPI server once for the whole test session.
 
     Uses an in-process uvicorn server bound to a random free port on
-    localhost.  ``auth_enabled=False`` removes the login gate so tests
-    can reach protected pages without credentials.
+    localhost.  ``auth_enabled=True`` — all non-profile routes (files,
+    organize, settings, marketplace, setup) have no auth checks and are
+    unaffected.  Profile routes enforce auth; the ``authed_page`` fixture
+    provides a logged-in page for tests that need it.
 
     Isolation: Monkeypatches ``file_organizer.config.manager.DEFAULT_CONFIG_DIR``
     and sets ``XDG_CONFIG_HOME`` so any ``ConfigManager()`` instantiated by
@@ -199,7 +212,7 @@ def live_server_url(
 
         settings = ApiSettings(
             allowed_paths=[str(playwright_allowed_root)],
-            auth_enabled=False,
+            auth_enabled=True,
             auth_db_path=str(playwright_allowed_root / "auth.db"),
             security_headers_enabled=False,  # CSP blocks the inline CSRF script; disable for tests
         )
