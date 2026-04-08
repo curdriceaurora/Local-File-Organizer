@@ -53,9 +53,7 @@ class TestAuthLifecycle:
         page.get_by_role("button", name="Create account").click()
         page.wait_for_url("**/ui/profile/login")
 
-    def test_login_lands_on_authenticated_page(
-        self, page: Page, registered_user: object
-    ) -> None:
+    def test_login_lands_on_authenticated_page(self, page: Page, registered_user: object) -> None:
         """Fill the login form and assert the profile page shows the user's name.
 
         ``registered_user`` was created with ``full_name="Test User"``.
@@ -93,9 +91,7 @@ class TestAuthLifecycle:
         ``_csrf_token`` value to send as the ``x-csrf-token`` header.
         """
         cookies = authed_page.context.cookies()
-        csrf_token = next(
-            c["value"] for c in cookies if c["name"] == "_csrf_token"
-        )
+        csrf_token = next(c["value"] for c in cookies if c["name"] == "_csrf_token")
         authed_page.request.post(
             "/ui/profile/logout",
             headers={"x-csrf-token": csrf_token},
