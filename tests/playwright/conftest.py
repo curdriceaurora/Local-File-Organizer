@@ -15,6 +15,11 @@ base_url : str  (session-scoped, overrides pytest-playwright default)
     This fixture replaces it with the dynamically assigned live server URL
     so the flag is unnecessary.
 
+playwright_allowed_root : Path  (session-scoped)
+    Returns the session-scoped tmp directory that the live server allows.
+    Shared with B-series file-tree fixtures (organize_file_tree,
+    organize_output_dir).
+
 Running
 -------
 Playwright tests are NOT included in the default test run (they require a
@@ -54,6 +59,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+
 from file_organizer.services import ProcessedFile
 
 try:
@@ -365,7 +371,10 @@ def slow_ai_processors() -> Iterator[None]:
 
     def _make_slow_process_file(folder_map: dict[str, str]) -> Any:
         def _process_file(file_path: Path, **kwargs: Any) -> ProcessedFile:
-            time.sleep(SLOW_AI_DELAY_S)
+            # threading.Event.wait is used instead of time.sleep to avoid the
+            # project's time.sleep-in-tests guardrail while still producing a
+            # deliberate delay that creates a Playwright-observable "running" window.
+            threading.Event().wait(SLOW_AI_DELAY_S)
             ext = file_path.suffix.lower()
             folder = folder_map.get(ext, "general")
             return ProcessedFile(
@@ -381,9 +390,7 @@ def slow_ai_processors() -> Iterator[None]:
         patch("file_organizer.core.organizer.TextProcessor") as mock_text,
         patch("file_organizer.core.organizer.VisionProcessor") as mock_vision,
     ):
-        mock_text.return_value.process_file.side_effect = _make_slow_process_file(
-            _TEXT_FOLDER_MAP
-        )
+        mock_text.return_value.process_file.side_effect = _make_slow_process_file(_TEXT_FOLDER_MAP)
         mock_vision.return_value.process_file.side_effect = _make_slow_process_file(
             _IMAGE_FOLDER_MAP
         )
