@@ -268,7 +268,7 @@ jobs:
         with:
           path: .venv-playwright
           # Shared across all three browser legs: they run the same Python env.
-          key: playwright-venv-${{ runner.os }}-py3.12-${{ hashFiles('pyproject.toml') }}
+          key: playwright-venv-${{ runner.os }}-py3.12-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: playwright-venv-${{ runner.os }}-py3.12-
       - name: Install dependencies
         if: steps.playwright-venv-cache.outputs.cache-hit != 'true'
