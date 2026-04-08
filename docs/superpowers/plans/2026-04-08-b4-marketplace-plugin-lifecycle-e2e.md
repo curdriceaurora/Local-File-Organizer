@@ -227,6 +227,7 @@ pytest tests/playwright/test_marketplace_lifecycle.py::test_marketplace_page_lis
 ```
 
 Expected output (abbreviated):
+
 ```
 PASSED tests/playwright/test_marketplace_lifecycle.py::test_marketplace_page_lists_stub_plugin
 ```
@@ -312,6 +313,7 @@ pytest tests/playwright/test_marketplace_lifecycle.py::test_install_uninstall_ro
 ```
 
 Expected:
+
 ```
 PASSED tests/playwright/test_marketplace_lifecycle.py::test_install_uninstall_round_trip
 ```

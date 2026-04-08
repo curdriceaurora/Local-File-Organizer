@@ -43,7 +43,7 @@ import pytest
 from file_organizer.plugins.marketplace import MarketplaceService, compute_sha256
 
 try:
-    from playwright.sync_api import Page, expect  # noqa: F401 — used by tests added in later tasks
+    from playwright.sync_api import Page, expect
 except ImportError as exc:
     raise ImportError(
         "Playwright is required: pip install playwright && playwright install chromium"
@@ -152,9 +152,7 @@ def test_marketplace_page_lists_stub_plugin(
     plugin_name = _marketplace_service
 
     authed_page.goto("/ui/marketplace")
-    authed_page.locator("#plugins-tbody").wait_for(
-        state="visible", timeout=_LOCATOR_TIMEOUT_MS
-    )
+    authed_page.locator("#plugins-tbody").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
 
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
     expect(row).to_be_visible(timeout=_LOCATOR_TIMEOUT_MS)
@@ -191,9 +189,7 @@ def test_install_uninstall_round_trip(
     # --- Install phase ---
     row.get_by_role("button", name="Install", exact=True).click()
     # Flash message confirms the server handled the POST and re-rendered #main.
-    authed_page.locator("p.organize-hint").wait_for(
-        state="visible", timeout=_LOCATOR_TIMEOUT_MS
-    )
+    authed_page.locator("p.organize-hint").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
     # Re-acquire row locator: HTMX replaced #main, old DOM nodes are gone.
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
     expect(row.get_by_role("button", name="Uninstall", exact=True)).to_be_visible(
@@ -205,9 +201,7 @@ def test_install_uninstall_round_trip(
 
     # --- Uninstall phase ---
     row.get_by_role("button", name="Uninstall", exact=True).click()
-    authed_page.locator("p.organize-hint").wait_for(
-        state="visible", timeout=_LOCATOR_TIMEOUT_MS
-    )
+    authed_page.locator("p.organize-hint").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
     expect(row.get_by_role("button", name="Install", exact=True)).to_be_visible(
         timeout=_LOCATOR_TIMEOUT_MS
