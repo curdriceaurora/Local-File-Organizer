@@ -18,7 +18,9 @@ in-process FastAPI server. It is intentionally isolated from the default
 1. **Browser processes** do not play nicely with `pytest --cov`'s
    subprocess instrumentation — coverage measurement interferes with
    browser-process isolation, so the suite must be invoked with
-   `--override-ini='addopts='` to strip the project-wide coverage flags.
+   `--override-ini='addopts='`, which strips the entire project-wide
+   `addopts` list (not only the `--cov*` flags). See "Running locally"
+   below for the full implications and the flags you must re-add.
 2. **No Playwright dependency on the default path.** `tests/conftest.py`
    gates collection on a `try: import playwright` — if Playwright is not
    installed (the default for most contributors), the directory is
