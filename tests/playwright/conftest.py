@@ -306,9 +306,7 @@ def registered_user(live_server_url: str) -> _UserCreds:
         AssertionError: If registration returns a non-201 status or the
             response body does not contain the expected username.
     """
-    import uuid as _uuid
-
-    suffix = _uuid.uuid4().hex[:8]
+    suffix = uuid.uuid4().hex[:8]
     creds = _UserCreds(
         username=f"testuser_{suffix}",
         password="TestPass1!xyz",
