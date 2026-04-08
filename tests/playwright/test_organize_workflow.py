@@ -71,8 +71,7 @@ def test_organize_happy_path_runs_to_completion(
     #    only updates job status without performing file operations.
     output_files = [p for p in organize_output_dir.rglob("*") if p.is_file()]
     assert output_files, (
-        f"Happy path must write at least one file to {organize_output_dir}; "
-        "output dir is empty"
+        f"Happy path must write at least one file to {organize_output_dir}; output dir is empty"
     )
 
 
