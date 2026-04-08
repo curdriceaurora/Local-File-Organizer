@@ -364,7 +364,7 @@ Expected: all checks pass. Fix any lint/format/type issues before continuing.
 
 - [ ] **Step 3: Run pr-prep**
 
-```
+```bash
 /pr-prep
 ```
 

@@ -201,7 +201,10 @@ def test_install_uninstall_round_trip(
 
     # --- Uninstall phase ---
     row.get_by_role("button", name="Uninstall", exact=True).click()
-    authed_page.locator("p.organize-hint").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
+    expect(authed_page.locator("p.organize-hint")).to_have_text(
+        f"Uninstalled {plugin_name}.",
+        timeout=_LOCATOR_TIMEOUT_MS,
+    )
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
     expect(row.get_by_role("button", name="Install", exact=True)).to_be_visible(
         timeout=_LOCATOR_TIMEOUT_MS

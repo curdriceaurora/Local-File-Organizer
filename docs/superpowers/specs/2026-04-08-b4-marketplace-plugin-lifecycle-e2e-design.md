@@ -104,7 +104,7 @@ wraps the list: `{"plugins": [<metadata-dict>]}`.
 
 ## File
 
-```
+```text
 tests/playwright/test_marketplace_lifecycle.py
 ```
 
