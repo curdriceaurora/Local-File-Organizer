@@ -232,12 +232,18 @@ def test_organize_happy_path_runs_to_completion(
 def test_organize_scan_with_nonexistent_path_surfaces_error(
     page: Page,
     live_server_url: str,
+    playwright_allowed_root: Path,
     organize_output_dir: Path,
 ) -> None:
     page.goto("/ui/organize")
 
-    bogus = "/tmp/playwright-b1-does-not-exist-xyz123"
-    page.locator("#organize-input-dir").fill(bogus)
+    # Must be under allowed_paths so resolve_path() succeeds; then the
+    # existence check fires and yields the 404 "Input directory not found."
+    # An absolute path outside allowed_paths would raise ValueError from
+    # resolve_path, get caught by the broad `except Exception`, and surface
+    # the generic "Failed to generate plan." instead.
+    bogus = playwright_allowed_root / "does-not-exist-xyz123"
+    page.locator("#organize-input-dir").fill(str(bogus))
     page.locator("#organize-output-dir").fill(str(organize_output_dir))
     page.get_by_role("button", name="Generate plan").click()
 
