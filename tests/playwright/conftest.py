@@ -195,6 +195,7 @@ def live_server_url(
             allowed_paths=[str(playwright_allowed_root)],
             auth_enabled=False,
             auth_db_path=str(playwright_allowed_root / "auth.db"),
+            security_headers_enabled=False,  # CSP blocks the inline CSRF script; disable for tests
         )
         app = create_app(settings)
         port = _find_free_port()
