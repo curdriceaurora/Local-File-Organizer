@@ -68,3 +68,14 @@ class TestAuthLifecycle:
         page.get_by_role("button", name="Log in").click()
         page.wait_for_url("**/ui/profile")
         expect(page.locator("h1.page-title")).to_have_text("Test User")
+
+    def test_access_protected_route_while_logged_in(self, authed_page: Page) -> None:
+        """/ui/profile/edit renders the edit form for an authenticated user.
+
+        ``/ui/profile/edit`` is an HTMX partial endpoint. Navigating to it
+        directly returns the raw HTML fragment. When authenticated the
+        fragment contains a ``<form>``; the error paragraph is absent.
+        """
+        authed_page.goto("/ui/profile/edit")
+        expect(authed_page.locator("form")).to_be_visible()
+        expect(authed_page.locator("p.error-text")).to_have_count(0)
