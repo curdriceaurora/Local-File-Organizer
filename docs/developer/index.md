@@ -148,6 +148,17 @@ async def custom_endpoint(data: MyModel):
 
 ## Testing
 
+### Browser E2E (Playwright)
+
+Browser-based end-to-end tests live under `tests/playwright/` and run
+against all three major browsers in CI. They are isolated from the
+default `pytest` run and require `playwright install <browser>` as a
+one-time prerequisite.
+
+See [Browser E2E Tests (Playwright)](playwright-e2e.md) for the full
+guide: local invocation, CI job layout, fixture contracts, and a
+new-test skeleton.
+
 ### Run Tests
 
 ```bash
