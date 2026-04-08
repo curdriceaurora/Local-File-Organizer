@@ -157,5 +157,5 @@ def test_marketplace_page_lists_stub_plugin(
     )
 
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
-    expect(row).to_be_visible()
-    expect(row.get_by_role("button", name="Install")).to_be_visible()
+    expect(row).to_be_visible(timeout=_LOCATOR_TIMEOUT_MS)
+    expect(row.get_by_role("button", name="Install")).to_be_visible(timeout=_LOCATOR_TIMEOUT_MS)
