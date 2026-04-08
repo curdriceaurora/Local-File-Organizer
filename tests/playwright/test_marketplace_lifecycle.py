@@ -199,7 +199,9 @@ def test_install_uninstall_round_trip(
     expect(row.get_by_role("button", name="Uninstall", exact=True)).to_be_visible(
         timeout=_LOCATOR_TIMEOUT_MS
     )
-    expect(row.get_by_role("button", name="Install", exact=True)).not_to_be_visible()
+    expect(row.get_by_role("button", name="Install", exact=True)).not_to_be_visible(
+        timeout=_LOCATOR_TIMEOUT_MS
+    )
 
     # --- Uninstall phase ---
     row.get_by_role("button", name="Uninstall", exact=True).click()
@@ -210,4 +212,6 @@ def test_install_uninstall_round_trip(
     expect(row.get_by_role("button", name="Install", exact=True)).to_be_visible(
         timeout=_LOCATOR_TIMEOUT_MS
     )
-    expect(row.get_by_role("button", name="Uninstall", exact=True)).not_to_be_visible()
+    expect(row.get_by_role("button", name="Uninstall", exact=True)).not_to_be_visible(
+        timeout=_LOCATOR_TIMEOUT_MS
+    )
