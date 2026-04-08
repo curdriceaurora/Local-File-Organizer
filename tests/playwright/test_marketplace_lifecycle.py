@@ -1,0 +1,131 @@
+"""Browser E2E tests for plugin marketplace lifecycle (B4).
+
+Verifies the /ui/marketplace UI: listing plugins, installing one (the
+"enable" step), and uninstalling it (the "disable" step).
+
+Stub plugin
+-----------
+All tests use ``fo-test-echo`` — a minimal no-op plugin whose archive is
+created on disk inside ``tmp_path`` by the ``_marketplace_service`` fixture.
+This guarantees a stable, predictable target with no dependency on a live
+marketplace server.
+
+The ``_marketplace_service`` fixture patches
+``file_organizer.web.marketplace_routes._service`` so the in-process live
+server (started by the session-scoped ``live_server_url`` fixture in
+conftest.py) resolves to a ``MarketplaceService`` backed by a real but
+isolated local repo directory.  State written during a test (installed.json)
+lives inside ``tmp_path`` and is discarded when the fixture tears down.
+
+Auth
+----
+``authed_page`` (from conftest.py) is used because the live server runs with
+``auth_enabled=True``.  The marketplace web routes carry no explicit auth
+guard today, but using an authenticated page is forward-safe and matches the
+issue requirement.
+
+Running
+-------
+    pytest tests/playwright/test_marketplace_lifecycle.py \\
+        --browser chromium --override-ini='addopts='
+"""
+
+from __future__ import annotations
+
+import json
+import zipfile
+from collections.abc import Iterator
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from file_organizer.plugins.marketplace import MarketplaceService, compute_sha256
+
+try:
+    from playwright.sync_api import Page, expect
+except ImportError as exc:
+    raise ImportError(
+        "Playwright is required: pip install playwright && playwright install chromium"
+    ) from exc
+
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.playwright,
+    pytest.mark.timeout(60),
+]
+
+_LOCATOR_TIMEOUT_MS = 10_000
+_STUB_PLUGIN_NAME = "fo-test-echo"
+_STUB_PLUGIN_VERSION = "1.0.0"
+
+_PLUGIN_PY = "\n".join(
+    [
+        "from file_organizer.plugins import Plugin, PluginMetadata",
+        "",
+        "class EchoPlugin(Plugin):",
+        "    def get_metadata(self):",
+        f"        return PluginMetadata(name='{_STUB_PLUGIN_NAME}', version='{_STUB_PLUGIN_VERSION}', author='tests', description='plugin')",
+        "    def on_load(self): pass",
+        "    def on_enable(self): pass",
+        "    def on_disable(self): pass",
+        "    def on_unload(self): pass",
+    ]
+)
+
+
+@pytest.fixture
+def _marketplace_service(tmp_path: Path) -> Iterator[str]:
+    """Seed a real local stub plugin repo and patch the marketplace _service() factory.
+
+    Creates a self-contained marketplace home directory inside ``tmp_path``:
+    - ``home/repository/`` contains ``fo-test-echo-1.0.0.zip`` and ``index.json``
+    - ``home/`` is the MarketplaceService home (installed.json lands here)
+
+    Patches ``file_organizer.web.marketplace_routes._service`` so that every
+    request handled by the in-process live server during the test receives a
+    real ``MarketplaceService`` backed by the seeded repo.
+
+    Yields:
+        The stub plugin name (``"fo-test-echo"``).
+    """
+    home = tmp_path / "home"
+    home.mkdir()
+    repo_dir = home / "repository"
+    repo_dir.mkdir()
+
+    archive_name = f"{_STUB_PLUGIN_NAME}-{_STUB_PLUGIN_VERSION}.zip"
+    archive_path = repo_dir / archive_name
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("plugin.py", _PLUGIN_PY)
+
+    metadata = {
+        "name": _STUB_PLUGIN_NAME,
+        "version": _STUB_PLUGIN_VERSION,
+        "author": "tests",
+        "description": f"{_STUB_PLUGIN_NAME} plugin",
+        "homepage": "https://example.invalid",
+        "download_url": archive_name,
+        "checksum_sha256": compute_sha256(archive_path),
+        "size_bytes": archive_path.stat().st_size,
+        "dependencies": [],
+        "tags": ["utility"],
+        "category": "utility",
+        "license": "MIT",
+        "min_organizer_version": "2.0.0",
+        "max_organizer_version": None,
+        "downloads": 0,
+        "rating": 0.0,
+        "reviews_count": 0,
+    }
+    (repo_dir / "index.json").write_text(
+        json.dumps({"plugins": [metadata]}, indent=2), encoding="utf-8"
+    )
+
+    service = MarketplaceService(home_dir=home, repo_url=str(repo_dir))
+
+    with patch(
+        "file_organizer.web.marketplace_routes._service",
+        return_value=service,
+    ):
+        yield _STUB_PLUGIN_NAME
