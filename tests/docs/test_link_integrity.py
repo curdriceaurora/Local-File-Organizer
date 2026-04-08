@@ -64,7 +64,11 @@ class TestMkdocsNavIntegrity:
         nav_paths: list[str] = []
         self._extract_nav_paths(nav, nav_paths)
 
-        violations = [p for p in nav_paths if "superpowers" in p]
+        violations = [
+            p
+            for p in nav_paths
+            if any(seg.casefold() == "superpowers" for seg in p.replace("\\", "/").split("/"))
+        ]
         assert not violations, (
             "mkdocs.yml nav references superpowers/ path(s) that must not be published:\n"
             + "\n".join(f"  - {p}" for p in violations)
