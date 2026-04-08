@@ -70,9 +70,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-import pytest
-
 import httpx
+import pytest
 
 from file_organizer.services import ProcessedFile
 
@@ -347,6 +346,30 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
     and Playwright resolves it against the live server automatically.
     """
     return live_server_url
+
+
+@pytest.fixture
+def authed_page(page: Page, registered_user: _UserCreds) -> Page:
+    """Return a Playwright Page with a valid ``fo_session`` session cookie.
+
+    Navigates to ``/ui/profile/login``, fills the form with
+    ``registered_user`` credentials, submits, and waits for the
+    redirect to ``/ui/profile``.
+
+    This is the reusable entry point for B3 and B4 test modules — they
+    declare ``authed_page`` as a fixture parameter and receive a
+    logged-in browser page without coupling to the auth implementation.
+
+    Returns:
+        The Playwright ``Page`` after successful login (``fo_session``
+        cookie set in the browser context).
+    """
+    page.goto("/ui/profile/login")
+    page.locator("#login-username").fill(registered_user.username)
+    page.locator("#login-password").fill(registered_user.password)
+    page.get_by_role("button", name="Log in").click()
+    page.wait_for_url("**/ui/profile")
+    return page
 
 
 # ---------------------------------------------------------------------------
