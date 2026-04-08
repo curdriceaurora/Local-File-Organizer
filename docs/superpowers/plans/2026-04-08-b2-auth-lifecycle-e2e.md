@@ -333,7 +333,6 @@ pytest tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_register
 ```
 
 Expected output:
-
 ```
 PASSED tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_register_new_user[chromium]
 ```
@@ -386,7 +385,6 @@ pytest tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_login_la
 ```
 
 Expected output:
-
 ```
 PASSED tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_login_lands_on_authenticated_page[chromium]
 ```
@@ -432,7 +430,6 @@ pytest tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_access_p
 ```
 
 Expected output:
-
 ```
 PASSED tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_access_protected_route_while_logged_in[chromium]
 ```
@@ -490,7 +487,6 @@ pytest tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_logout_b
 ```
 
 Expected output:
-
 ```
 PASSED tests/playwright/test_auth_lifecycle.py::TestAuthLifecycle::test_logout_blocks_protected_route[chromium]
 ```
