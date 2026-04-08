@@ -159,3 +159,55 @@ def test_marketplace_page_lists_stub_plugin(
     row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
     expect(row).to_be_visible(timeout=_LOCATOR_TIMEOUT_MS)
     expect(row.get_by_role("button", name="Install")).to_be_visible(timeout=_LOCATOR_TIMEOUT_MS)
+
+
+def test_install_uninstall_round_trip(
+    authed_page: Page,
+    _marketplace_service: str,
+) -> None:
+    """Install then uninstall the stub plugin — the B4 enable → disable round-trip.
+
+    Install phase:
+    - Clicks Install on the fo-test-echo row
+    - Waits for the flash message (confirms server wrote installed.json)
+    - Asserts the row now shows Uninstall (not Install)
+
+    Uninstall phase:
+    - Clicks Uninstall on the fo-test-echo row
+    - Waits for the flash message again
+    - Asserts the row shows Install again (plugin removed from installed.json)
+
+    HTMX swap note: clicking Install/Uninstall triggers hx-post which replaces
+    the entire #main element.  Playwright locators re-evaluate lazily so the
+    ``row`` locator is re-acquired after each swap by calling
+    ``authed_page.locator(...)`` again.
+    """
+    plugin_name = _marketplace_service
+
+    authed_page.goto("/ui/marketplace")
+    row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
+    row.wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
+
+    # --- Install phase ---
+    row.get_by_role("button", name="Install", exact=True).click()
+    # Flash message confirms the server handled the POST and re-rendered #main.
+    authed_page.locator("p.organize-hint").wait_for(
+        state="visible", timeout=_LOCATOR_TIMEOUT_MS
+    )
+    # Re-acquire row locator: HTMX replaced #main, old DOM nodes are gone.
+    row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
+    expect(row.get_by_role("button", name="Uninstall", exact=True)).to_be_visible(
+        timeout=_LOCATOR_TIMEOUT_MS
+    )
+    expect(row.get_by_role("button", name="Install", exact=True)).not_to_be_visible()
+
+    # --- Uninstall phase ---
+    row.get_by_role("button", name="Uninstall", exact=True).click()
+    authed_page.locator("p.organize-hint").wait_for(
+        state="visible", timeout=_LOCATOR_TIMEOUT_MS
+    )
+    row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
+    expect(row.get_by_role("button", name="Install", exact=True)).to_be_visible(
+        timeout=_LOCATOR_TIMEOUT_MS
+    )
+    expect(row.get_by_role("button", name="Uninstall", exact=True)).not_to_be_visible()
