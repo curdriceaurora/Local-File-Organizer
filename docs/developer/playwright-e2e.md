@@ -99,3 +99,66 @@ fastest way to diagnose a broken UI test — use it before resorting to
 
 Upstream Playwright docs cover the trace viewer in detail:
 <https://playwright.dev/python/docs/trace-viewer>.
+
+## Running in CI
+
+The Playwright job is defined in `.github/workflows/ci.yml` under the
+`playwright:` job (currently around line 243, added in commit
+`6711bec0` — "ci: add Playwright E2E job to PR/push CI"). It runs on
+every `pull_request` and `push`.
+
+### Matrix
+
+| Browser  | Runner         | fail-fast |
+|----------|----------------|-----------|
+| chromium | ubuntu-latest  | no        |
+| firefox  | ubuntu-latest  | no        |
+| webkit   | ubuntu-latest  | no        |
+
+All three run in parallel. `fail-fast: false` is deliberate: a Firefox
+regression should not cancel the in-progress WebKit leg, because the
+review value of seeing all three results outweighs the runner-minute
+cost.
+
+### What the job does (condensed)
+
+1. `pip install -e ".[dev,search]"` — installs `pytest-playwright` and
+   the standard test deps.
+2. `pip install "pytest-rerunfailures>=14.0"` — installed inline
+   (not in `[dev]`) because only this job uses it for flake tolerance.
+3. Cache `~/.cache/ms-playwright` keyed on `pyproject.toml` hash +
+   browser name.
+4. `python -m playwright install --with-deps ${browser}` — downloads
+   the browser binary and pulls the system libs a fresh Ubuntu runner
+   needs.
+5. `pytest tests/playwright/ --browser ${browser} --tracing=retain-on-failure --screenshot=only-on-failure --video=retain-on-failure --output=playwright-artifacts --reruns 2 --reruns-delay 2 --timeout=60 --strict-markers --override-ini='addopts='`
+
+### Debugging a CI failure
+
+When a Playwright leg fails on a PR:
+
+1. Open the failing GitHub Actions run.
+2. Go to the **Artifacts** panel (bottom of the run summary page).
+3. Download `playwright-artifacts-<browser>` — the browser-specific
+   name prevents matrix legs from clobbering each other.
+4. Unzip locally. You will find trace files, screenshots, and videos
+   for every failed test (none for passing tests — retention is
+   `retain-on-failure` / `only-on-failure` to keep artifact size sane).
+5. Open the trace:
+
+   ```bash
+   playwright show-trace <unzipped>/<test-name>/trace.zip
+   ```
+
+Retention is 7 days. If you need the artifact longer, download and
+stash it locally.
+
+### Flake tolerance
+
+`--reruns 2 --reruns-delay 2` retries each failing test up to twice
+with a 2-second delay, via `pytest-rerunfailures`. This absorbs
+transient CI-side flakes (browser launch races, network hiccups on the
+GitHub-hosted runner) without hiding real regressions — a genuinely
+broken test still fails on the third attempt. If a test starts needing
+more than 2 reruns, treat it as broken and fix the root cause rather
+than bumping the retry count.
