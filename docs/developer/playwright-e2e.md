@@ -335,7 +335,9 @@ the next navigation.
    ```bash
    pytest tests/playwright/test_my_feature.py \
        --browser chromium \
-       --override-ini='addopts='
+       --override-ini='addopts=' \
+       --strict-markers \
+       --timeout=60
    ```
 
 `tests/playwright/test_smoke.py` is the canonical template — if you
