@@ -76,7 +76,6 @@ def _assert_no_critical_a11y(page: Page, path: str) -> None:
     assert response is not None and response.ok, (
         f"Expected 2xx loading {path}, got {getattr(response, 'status', 'None')}"
     )
-    page.wait_for_load_state("networkidle")
     results = Axe().run(page)
     critical = [v for v in results.response["violations"] if v["impact"] == "critical"]
     non_critical = [
