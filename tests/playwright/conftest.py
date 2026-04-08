@@ -267,6 +267,129 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
 
 
 # ---------------------------------------------------------------------------
+# Organize workflow fixtures
+# ---------------------------------------------------------------------------
+
+# Minimal valid 1×1 pixel PNG (all-white).  Enough for VisionProcessor to
+# receive a real file path; the slow mock never reads the bytes.
+_MINIMAL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f"
+    b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+# Per-file sleep duration for the slow AI mock.  ~20 files × 0.08 s ≈ 1.6 s
+# of "running" wall-clock — wide enough for Playwright's wait_for_function
+# (~100 ms polling) to catch a non-terminal frame.
+SLOW_AI_DELAY_S = 0.08
+
+_TEXT_FOLDER_MAP: dict[str, str] = {
+    ".txt": "documents",
+    ".md": "documents",
+    ".pdf": "documents",
+    ".docx": "documents",
+    ".csv": "spreadsheets",
+    ".xlsx": "spreadsheets",
+}
+
+_IMAGE_FOLDER_MAP: dict[str, str] = {
+    ".jpg": "images",
+    ".jpeg": "images",
+    ".png": "images",
+    ".gif": "images",
+    ".bmp": "images",
+}
+
+
+@pytest.fixture
+def organize_file_tree(playwright_allowed_root: Path) -> Path:
+    """Build a fresh ~20-file flat tree per test inside the server's allowed root.
+
+    Function-scoped so each test invocation gets a clean source tree regardless
+    of whether the organizer uses hardlinks, copies, or moves.  20 tiny files
+    take < 1 ms to create.
+
+    File mix: 10 .txt, 5 .md, 5 .png.  All content is deterministic.
+
+    Returns:
+        Path to the created input directory.
+    """
+    root = playwright_allowed_root / f"organize_input_{uuid.uuid4().hex[:8]}"
+    root.mkdir(parents=True, exist_ok=True)
+    for i in range(10):
+        (root / f"note_{i:02d}.txt").write_text(
+            f"Sample document text number {i}.\n", encoding="utf-8"
+        )
+    for i in range(5):
+        (root / f"readme_{i:02d}.md").write_text(
+            f"# Document {i}\n\nSample markdown body for file {i}.\n", encoding="utf-8"
+        )
+    for i in range(5):
+        (root / f"photo_{i:02d}.png").write_bytes(_MINIMAL_PNG)
+    return root
+
+
+@pytest.fixture
+def organize_output_dir(playwright_allowed_root: Path) -> Path:
+    """Per-test output directory under the server's allowed root.
+
+    Function-scoped with a uuid suffix so repeated test runs (e.g. --reruns 1)
+    do not share state.
+
+    Returns:
+        Path to the created (empty) output directory.
+    """
+    out = playwright_allowed_root / f"organize_output_{uuid.uuid4().hex[:8]}"
+    out.mkdir(parents=True, exist_ok=True)
+    return out
+
+
+@pytest.fixture
+def slow_ai_processors() -> Iterator[None]:
+    """Patch TextProcessor and VisionProcessor with slow deterministic mocks.
+
+    Each ``process_file`` call sleeps ``SLOW_AI_DELAY_S`` before returning a
+    ``ProcessedFile`` with a folder name derived from the file extension.  With
+    ~20 files this creates a ~1.6 s "running" window that Playwright's
+    ``wait_for_function`` can observe.
+
+    Patches ``file_organizer.core.organizer.{TextProcessor,VisionProcessor}`` —
+    the same import sites that ``tests/e2e/conftest.py`` patches — so the
+    in-process live server's background task picks them up when it instantiates
+    ``FileOrganizer`` inside ``_run_organize_job``.
+
+    Yields:
+        None.  Used as a side-effect fixture.
+    """
+
+    def _make_slow_process_file(folder_map: dict[str, str]) -> Any:
+        def _process_file(file_path: Path, **kwargs: Any) -> ProcessedFile:
+            time.sleep(SLOW_AI_DELAY_S)
+            ext = file_path.suffix.lower()
+            folder = folder_map.get(ext, "general")
+            return ProcessedFile(
+                file_path=file_path,
+                description=f"Mock description for {file_path.name}",
+                folder_name=folder,
+                filename=file_path.stem,
+            )
+
+        return _process_file
+
+    with (
+        patch("file_organizer.core.organizer.TextProcessor") as mock_text,
+        patch("file_organizer.core.organizer.VisionProcessor") as mock_vision,
+    ):
+        mock_text.return_value.process_file.side_effect = _make_slow_process_file(
+            _TEXT_FOLDER_MAP
+        )
+        mock_vision.return_value.process_file.side_effect = _make_slow_process_file(
+            _IMAGE_FOLDER_MAP
+        )
+        yield
+
+
+# ---------------------------------------------------------------------------
 # pywebview mock fixture
 # ---------------------------------------------------------------------------
 
