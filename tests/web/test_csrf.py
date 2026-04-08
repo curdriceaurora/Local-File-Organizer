@@ -91,10 +91,10 @@ class TestValidateCSRFToken:
 def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
     """
     Create a minimal FastAPI application configured with CSRFMiddleware and test routes.
-
+    
     Parameters:
         exempt_paths (list[str] | None): Optional list of URL paths or prefixes that the middleware will skip (defaults to empty list).
-
+    
     Returns:
         app (FastAPI): FastAPI instance with registered CSRFMiddleware and test endpoints:
             - GET /form: returns HTML containing the CSRF form field populated from request.state.csrf_token
@@ -114,7 +114,7 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
     async def post_submit() -> JSONResponse:
         """
         Return a JSON response indicating a successful POST to the submit endpoint.
-
+        
         Returns:
             JSONResponse: JSON object {"ok": True}.
         """
@@ -122,6 +122,15 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
 
     @app.post("/submit-form-echo")
     async def post_submit_form_echo(request: Request) -> JSONResponse:
+        """
+        Echoes the submitted form field named "field" back in a JSON response.
+        
+        Parameters:
+            request (Request): Incoming HTTP request containing form-encoded data.
+        
+        Returns:
+            JSONResponse: JSON object with a single key `"field"` whose value is the submitted form value for `"field"`, or `None` if it was not present.
+        """
         form = await request.form()
         return JSONResponse({"field": form.get("field")})
 
@@ -129,7 +138,7 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
     async def exempt_endpoint() -> JSONResponse:
         """
         Provide a successful JSON response used by CSRF-exempt endpoints.
-
+        
         Returns:
             JSONResponse: JSON object {"ok": True}.
         """

@@ -106,9 +106,9 @@ def _find_free_port() -> int:
 def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
     """
     Wait until a TCP connection to 127.0.0.1:port is accepted or the timeout elapses.
-
+    
     Returns immediately when a TCP connection to the given port succeeds. For this application, a TCP-ready socket is equivalent to the HTTP server being ready. If the timeout is reached without a successful connection, the function returns False.
-
+    
     Returns:
         bool: `True` if a TCP connection to the port was accepted before the timeout, `False` otherwise.
     """
@@ -181,24 +181,12 @@ def live_server_url(
 ) -> Iterator[str]:
     """
     Start a FastAPI test server once for the entire pytest session.
-
-    Uses an in-process uvicorn server bound to a random free port on
-    localhost.  ``auth_enabled=True`` — all non-profile routes (files,
-    organize, settings, marketplace, setup) have no auth checks and are
-    unaffected.  Profile routes enforce auth; the ``authed_page`` fixture
-    provides a logged-in page for tests that need it.
-
-    Isolation: Monkeypatches ``file_organizer.config.manager.DEFAULT_CONFIG_DIR``
-    and sets ``XDG_CONFIG_HOME`` so any ``ConfigManager()`` instantiated by
-    route handlers reads from a session-scoped tmp dir instead of the
-    developer's or CI runner's real ``~/.config/file-organizer``. Without
-    this, tests pollute the host config and pollute each other (e.g.
-    ``test_setup_wizard_flow`` flips ``setup_completed=True``, breaking
-    ``test_home_redirect`` under randomized order).
-
+    
+    This fixture launches an in-process uvicorn server bound to a random free localhost port, configures the application to permit only the provided allowed root paths, enables authentication for profile routes, and isolates the application's config directory by temporarily setting XDG_CONFIG_HOME and overriding file_organizer.config.manager.DEFAULT_CONFIG_DIR. The temporary configuration and environment are restored when the fixture tears down.
+    
     Yields:
         Base URL string for the running server, e.g. "http://127.0.0.1:54321".
-
+    
     Raises:
         RuntimeError: If the server does not become ready within 20 seconds. If the server thread raised an exception while starting, that exception is attached to the RuntimeError to aid debugging.
     """
@@ -288,21 +276,16 @@ def live_server_url(
 
 @pytest.fixture(scope="session")
 def registered_user(live_server_url: str) -> _UserCreds:
-    """Create one test user per session via the REST API.
-
-    Posts to ``/api/v1/auth/register`` (API-exempt from CSRF middleware)
-    using ``httpx``.  The username is uuid-suffixed so parallel or
-    repeated runs never collide in the shared ``auth.db``.
-
-    Asserts 201 + username roundtrip so any contract mismatch causes an
-    immediate, loud fixture error rather than a silent downstream failure.
-
+    """
+    Register a unique test user with the live server's registration API for the test session.
+    
+    Posts a registration request to the server and verifies the response succeeded; returns the created credentials.
+    
     Returns:
-        ``_UserCreds`` with the created user's credentials.
-
+        _UserCreds: Credentials for the created user (username, password, email).
+    
     Raises:
-        AssertionError: If registration returns a non-201 status or the
-            response body does not contain the expected username.
+        AssertionError: If the server response is not successful or the returned username does not match the requested username.
     """
     suffix = uuid.uuid4().hex[:8]
     creds = _UserCreds(
@@ -337,7 +320,7 @@ def registered_user(live_server_url: str) -> _UserCreds:
 def base_url(live_server_url: str) -> str:  # type: ignore[override]
     """
     Provide the live server URL used as Playwright's base URL so tests can use relative paths.
-
+    
     Returns:
         The live server URL used by Playwright as its base URL.
     """
@@ -346,19 +329,13 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
 
 @pytest.fixture
 def authed_page(page: Page, registered_user: _UserCreds) -> Page:
-    """Return a Playwright Page with a valid ``fo_session`` session cookie.
-
-    Navigates to ``/ui/profile/login``, fills the form with
-    ``registered_user`` credentials, submits, and waits for the
-    redirect to ``/ui/profile``.
-
-    This is the reusable entry point for B3 and B4 test modules — they
-    declare ``authed_page`` as a fixture parameter and receive a
-    logged-in browser page without coupling to the auth implementation.
-
+    """
+    Provide a Playwright Page already logged into the application with a valid `fo_session` cookie.
+    
+    Navigates to the login UI, submits the supplied user's credentials, and waits for the profile page to load.
+    
     Returns:
-        The Playwright ``Page`` after successful login (``fo_session``
-        cookie set in the browser context).
+        The same Playwright `Page` instance after successful login (the `fo_session` cookie is set in the browser context).
     """
     page.goto("/ui/profile/login")
     page.locator("#login-username").fill(registered_user.username)
