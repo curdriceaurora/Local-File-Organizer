@@ -53,7 +53,7 @@ import socket
 import threading
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -369,7 +369,7 @@ def slow_ai_processors() -> Iterator[None]:
         None.  Used as a side-effect fixture.
     """
 
-    def _make_slow_process_file(folder_map: dict[str, str]) -> Any:
+    def _make_slow_process_file(folder_map: dict[str, str]) -> Callable[..., ProcessedFile]:
         def _process_file(file_path: Path, **kwargs: Any) -> ProcessedFile:
             # threading.Event.wait is used instead of time.sleep to avoid the
             # project's time.sleep-in-tests guardrail while still producing a
