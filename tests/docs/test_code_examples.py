@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import re
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -65,8 +66,9 @@ class TestPythonCodeExamples:
             python_blocks = extract_code_blocks(content, "python")
 
             for i, block in enumerate(python_blocks):
-                # Skip blocks that are clearly fragments/comments only
-                stripped = block.strip()
+                # Dedent before stripping to handle code blocks inside list items,
+                # where all lines carry the list indentation as leading whitespace.
+                stripped = textwrap.dedent(block).strip()
                 if not stripped:
                     continue
                 # Skip blocks that start with #! (shebang) or are just comments

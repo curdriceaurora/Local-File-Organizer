@@ -44,8 +44,14 @@ def mkdocs_config() -> dict:
 
 @pytest.fixture(scope="session")
 def all_doc_files(docs_dir: Path) -> list[Path]:
-    """Return all markdown files under the docs directory."""
-    return list(docs_dir.rglob("*.md"))
+    """Return all markdown files under the docs directory.
+
+    Excludes docs/superpowers/ — internal AI-authored planning and specification
+    documents that contain partial code snippets and example content intended for
+    insertion into other files, not syntactically complete standalone Python or
+    navigable internal links.
+    """
+    return [f for f in docs_dir.rglob("*.md") if "superpowers" not in f.parts]
 
 
 # ---------------------------------------------------------------------------
