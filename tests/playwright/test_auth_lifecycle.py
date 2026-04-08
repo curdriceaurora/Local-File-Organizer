@@ -74,10 +74,10 @@ class TestAuthLifecycle:
 
         ``/ui/profile/edit`` is an HTMX partial endpoint. Navigating to it
         directly returns the raw HTML fragment. When authenticated the
-        fragment contains a ``<form>``; the error paragraph is absent.
+        fragment contains the profile edit form; the error paragraph is absent.
         """
         authed_page.goto("/ui/profile/edit")
-        expect(authed_page.locator("form")).to_be_visible()
+        expect(authed_page.locator('form[action="/ui/profile/edit"]')).to_be_visible()
         expect(authed_page.locator("p.error-text")).to_have_count(0)
 
     def test_logout_blocks_protected_route(self, authed_page: Page) -> None:

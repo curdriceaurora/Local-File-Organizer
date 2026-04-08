@@ -91,25 +91,15 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _reset_request_body(request: Request, body: bytes) -> None:
-        """Restore a buffered request body onto the Request so downstream consumers can re-read it.
+        """Restore the buffered request body so downstream form parsing still works.
 
-        Replaces request._receive with an async callable that replays the provided raw `body` bytes as an HTTP request message, allowing form parsers and other downstream readers to read the body after the middleware has consumed it.
-
-        Parameters:
-            request (Request): The Starlette/FastAPI request object to modify.
-            body (bytes): Raw request body bytes to be replayed.
-
+        ``BaseHTTPMiddleware`` sits in front of FastAPI's ``Form(...)`` handling.
+        If middleware reads the body and does not replay it, downstream handlers
+        observe an empty form stream. Replacing ``_receive`` makes the body
+        available to later consumers in the same request.
         """
 
         async def _receive() -> Message:
-            """ASGI receive coroutine that replays a buffered HTTP request body.
-
-            Returns:
-                Message: A single ASGI `http.request` message dictionary with keys:
-                    - `type`: `"http.request"`
-                    - `body`: the buffered request body bytes
-                    - `more_body`: `False` indicating no further body parts
-            """
             return {"type": "http.request", "body": body, "more_body": False}
 
         request._receive = _receive  # type: ignore[attr-defined]
@@ -157,12 +147,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 body = await request.body()
                 self._reset_request_body(request, body)
                 if "application/x-www-form-urlencoded" in content_type:
-                    try:
-                        parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
-                        values = parsed.get(CSRF_FORM_FIELD)
-                        submitted = values[0] if values else None
-                    except UnicodeDecodeError:
-                        submitted = None
+                    parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+                    values = parsed.get(CSRF_FORM_FIELD)
+                    submitted = values[0] if values else None
                 else:
                     form = await request.form()
                     submitted = form.get(CSRF_FORM_FIELD)  # type: ignore[assignment]
