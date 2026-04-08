@@ -166,7 +166,7 @@ jobs:
           print(f'faker {importlib.metadata.version(\"faker\")} importable')
           "
       - name: Cache NLTK data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/nltk_data
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
@@ -213,7 +213,7 @@ jobs:
           pip install -e ".[dev,search]"
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
       - name: Cache NLTK data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/nltk_data
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
@@ -272,7 +272,7 @@ jobs:
           pip install "pytest-rerunfailures>=14.0" --no-cache-dir
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           # Browser is part of the cache key so chromium/firefox/webkit caches
@@ -283,7 +283,7 @@ jobs:
         # --with-deps pulls the system libs the browser needs on a fresh runner.
         run: python -m playwright install --with-deps ${{ matrix.browser }}
       - name: Cache NLTK data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/nltk_data
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
@@ -367,7 +367,7 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Cache NLTK data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/nltk_data
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
@@ -483,7 +483,7 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev,search]"
       - name: Cache NLTK data
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/nltk_data
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
