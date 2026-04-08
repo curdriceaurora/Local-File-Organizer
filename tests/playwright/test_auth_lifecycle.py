@@ -83,10 +83,13 @@ class TestAuthLifecycle:
         Extracts the `_csrf_token` cookie value and sends it as the `x-csrf-token` header in a POST to `/ui/profile/logout`, then navigates to `/ui/profile/edit` and asserts that `p.error-text` shows "Not authenticated."
         """
         cookies = authed_page.context.cookies()
-        csrf_token = next(c["value"] for c in cookies if c["name"] == "_csrf_token")
-        authed_page.request.post(
+        csrf_cookie = next((c for c in cookies if c["name"] == "_csrf_token"), None)
+        assert csrf_cookie is not None, "CSRF token cookie not found"
+        csrf_token = csrf_cookie["value"]
+        response = authed_page.request.post(
             "/ui/profile/logout",
             headers={"x-csrf-token": csrf_token},
         )
+        assert response.ok, f"Logout failed with status {response.status}"
         authed_page.goto("/ui/profile/edit")
         expect(authed_page.locator("p.error-text")).to_have_text("Not authenticated.")
