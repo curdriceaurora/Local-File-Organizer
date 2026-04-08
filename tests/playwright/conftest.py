@@ -59,11 +59,13 @@ interfere with browser-process isolation.
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import threading
 import time
 import uuid
+import zipfile
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +75,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from file_organizer.plugins.marketplace import MarketplaceService, compute_sha256
 from file_organizer.services import ProcessedFile
 
 try:
@@ -343,6 +346,87 @@ def authed_page(page: Page, registered_user: _UserCreds) -> Page:
     page.get_by_role("button", name="Log in").click()
     page.wait_for_url("**/ui/profile")
     return page
+
+
+# ---------------------------------------------------------------------------
+# Marketplace fixtures
+# ---------------------------------------------------------------------------
+
+_STUB_PLUGIN_NAME = "fo-test-echo"
+_STUB_PLUGIN_VERSION = "1.0.0"
+
+_PLUGIN_PY = "\n".join(
+    [
+        "from file_organizer.plugins import Plugin, PluginMetadata",
+        "",
+        "class EchoPlugin(Plugin):",
+        "    def get_metadata(self):",
+        f"        return PluginMetadata(name='{_STUB_PLUGIN_NAME}', version='{_STUB_PLUGIN_VERSION}', author='tests', description='plugin')",
+        "    def on_load(self): pass",
+        "    def on_enable(self): pass",
+        "    def on_disable(self): pass",
+        "    def on_unload(self): pass",
+    ]
+)
+
+
+@pytest.fixture
+def _marketplace_service(tmp_path: Path) -> Iterator[str]:
+    """Seed a real local stub plugin repo and patch the marketplace _service() factory.
+
+    Creates a self-contained marketplace home directory inside ``tmp_path``:
+    - ``home/repository/`` contains ``fo-test-echo-1.0.0.zip`` and ``index.json``
+    - ``home/`` is the MarketplaceService home (installed.json lands here)
+
+    Patches ``file_organizer.web.marketplace_routes._service`` so that every
+    request handled by the in-process live server during the test receives a
+    real ``MarketplaceService`` backed by the seeded repo.
+
+    Yields:
+        The stub plugin name (``"fo-test-echo"``).
+    """
+    home = tmp_path / "home"
+    home.mkdir()
+    repo_dir = home / "repository"
+    repo_dir.mkdir()
+
+    archive_name = f"{_STUB_PLUGIN_NAME}-{_STUB_PLUGIN_VERSION}.zip"
+    archive_path = repo_dir / archive_name
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("plugin.py", _PLUGIN_PY)
+
+    metadata = {
+        "name": _STUB_PLUGIN_NAME,
+        "version": _STUB_PLUGIN_VERSION,
+        "author": "tests",
+        "description": f"{_STUB_PLUGIN_NAME} plugin",
+        "homepage": "https://example.invalid",
+        # Bare filename (no scheme): PluginRepository resolves it relative to
+        # _base_file_root, which is derived from repo_url=str(repo_dir).
+        "download_url": archive_name,
+        "checksum_sha256": compute_sha256(archive_path),
+        "size_bytes": archive_path.stat().st_size,
+        "dependencies": [],
+        "tags": ["utility"],
+        "category": "utility",
+        "license": "MIT",
+        "min_organizer_version": "2.0.0",
+        "max_organizer_version": None,
+        "downloads": 0,
+        "rating": 0.0,
+        "reviews_count": 0,
+    }
+    (repo_dir / "index.json").write_text(
+        json.dumps({"plugins": [metadata]}, indent=2), encoding="utf-8"
+    )
+
+    service = MarketplaceService(home_dir=home, repo_url=str(repo_dir))
+
+    with patch(
+        "file_organizer.web.marketplace_routes._service",
+        new=lambda: service,
+    ):
+        yield _STUB_PLUGIN_NAME
 
 
 # ---------------------------------------------------------------------------
