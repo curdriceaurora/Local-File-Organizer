@@ -87,9 +87,9 @@ window.browseDirectory = async (inputId) => {
 
   const showStep = (stepNumber) => {
     document.querySelectorAll(".wizard-step").forEach((step) => {
-      step.classList.remove("wizard-step-active");
+      step.classList.remove("wizard-step-active", "wizard-step-enter");
       if (parseInt(step.dataset.step) === stepNumber) {
-        step.classList.add("wizard-step-active");
+        step.classList.add("wizard-step-active", "wizard-step-enter");
       }
     });
 

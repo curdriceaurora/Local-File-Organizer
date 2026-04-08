@@ -35,7 +35,13 @@ import warnings
 from pathlib import Path
 
 import pytest
-from axe_playwright_python.sync_playwright import Axe
+
+try:
+    from axe_playwright_python.sync_playwright import Axe
+except ImportError as exc:
+    raise ImportError(
+        "axe-playwright-python is required: pip install axe-playwright-python"
+    ) from exc
 
 try:
     from playwright.sync_api import Page
