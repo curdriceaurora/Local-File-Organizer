@@ -73,8 +73,6 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-import httpx
-
 from file_organizer.services import ProcessedFile
 
 try:
@@ -348,13 +346,19 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
 
 @pytest.fixture
 def authed_page(page: Page, registered_user: _UserCreds) -> Page:
-    """
-    Provide a Playwright Page already logged into the application with a valid `fo_session` cookie.
+    """Return a Playwright Page with a valid ``fo_session`` session cookie.
 
-    Navigates to the login UI, submits the supplied user's credentials, and waits for the profile page to load.
+    Navigates to ``/ui/profile/login``, fills the form with
+    ``registered_user`` credentials, submits, and waits for the
+    redirect to ``/ui/profile``.
+
+    This is the reusable entry point for B3 and B4 test modules — they
+    declare ``authed_page`` as a fixture parameter and receive a
+    logged-in browser page without coupling to the auth implementation.
 
     Returns:
-        The same Playwright `Page` instance after successful login (the `fo_session` cookie is set in the browser context).
+        The Playwright ``Page`` after successful login (``fo_session``
+        cookie set in the browser context).
     """
     page.goto("/ui/profile/login")
     page.locator("#login-username").fill(registered_user.username)
