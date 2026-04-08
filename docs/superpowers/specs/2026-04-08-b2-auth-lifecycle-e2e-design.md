@@ -17,10 +17,13 @@ introduces.
 
 ## Scope
 
-- Upgrade the existing live server fixture to run with `auth_enabled=True`
-- Add two fixtures to `conftest.py`: `registered_user` and `authed_page`
+- Modify `tests/playwright/conftest.py`: flip `auth_enabled=False` → `True`,
+  update the `live_server_url` docstring, add `registered_user` and
+  `authed_page` fixtures
 - Add `tests/playwright/test_auth_lifecycle.py` with four lifecycle tests
-- No changes to any existing test files
+- No changes to any existing test modules (`test_smoke.py`,
+  `test_file_browser_desktop.py`, `test_organize_workflow.py`,
+  `test_setup_wizard_flow.py`, `test_desktop_api_contract.py`)
 
 ### Out of scope
 
@@ -114,7 +117,19 @@ and receive a logged-in browser without caring how auth works.
 | `test_register_new_user` | `page` | Fill `/ui/profile/register` with fresh uuid-user, submit | Redirected to `/ui/profile/login` |
 | `test_login_lands_on_authenticated_page` | `page`, `registered_user` | Fill `/ui/profile/login`, submit | URL is `/ui/profile`, username visible on page |
 | `test_access_protected_route_while_logged_in` | `authed_page` | GET `/ui/profile/edit` | Edit form visible, no error text |
-| `test_logout_blocks_protected_route` | `authed_page` | POST logout, then GET `/ui/profile/edit` | `<p class="error-text">Not authenticated.</p>` visible |
+| `test_logout_blocks_protected_route` | `authed_page` | `page.request.post("/ui/profile/logout")`, then `page.goto("/ui/profile/edit")` | `<p class="error-text">Not authenticated.</p>` visible |
+
+#### Logout mechanism
+
+`profile/index.html` contains `<form method="post" action="/ui/profile/logout">`.
+The test uses `page.request.post("/ui/profile/logout")` rather than
+navigating to the profile page and clicking the button. `page.request` in
+Playwright shares the same cookie storage as the page context, so the
+`Set-Cookie: fo_session=; Max-Age=0` response from the logout handler
+clears the session cookie in the browser before the next `page.goto()`.
+This avoids depending on the profile page rendering correctly just to reach
+the logout button, and is directly analogous to what a browser does when the
+form submits.
 
 #### Note on "redirect/denied" semantics
 
@@ -182,6 +197,27 @@ Per-test
 - Existing smoke, file browser, organize workflow, setup wizard, and desktop
   API contract tests continue to pass with `auth_enabled=True`
 - `live_server_url` docstring updated to reflect `auth_enabled=True`
+
+### Verification commands
+
+Run in this order to prove the DoD:
+
+```bash
+# 1. New auth lifecycle tests — all four pass on chromium
+pytest tests/playwright/test_auth_lifecycle.py \
+    --browser chromium --override-ini='addopts='
+
+# 2. Regression check — existing test modules unchanged by the server flip
+pytest tests/playwright/ -k "not test_auth_lifecycle" \
+    --browser chromium --override-ini='addopts='
+
+# 3. Full cross-browser matrix (matches CI playwright job)
+pytest tests/playwright/ --browser chromium --override-ini='addopts='
+pytest tests/playwright/ --browser firefox  --override-ini='addopts='
+pytest tests/playwright/ --browser webkit   --override-ini='addopts='
+```
+
+All three steps must exit 0 before the branch is considered done.
 
 ---
 
