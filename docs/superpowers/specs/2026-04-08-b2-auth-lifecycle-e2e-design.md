@@ -17,13 +17,10 @@ introduces.
 
 ## Scope
 
-- Modify `tests/playwright/conftest.py`: flip `auth_enabled=False` → `True`,
-  update the `live_server_url` docstring, add `registered_user` and
-  `authed_page` fixtures
+- Upgrade the existing live server fixture to run with `auth_enabled=True`
+- Add two fixtures to `conftest.py`: `registered_user` and `authed_page`
 - Add `tests/playwright/test_auth_lifecycle.py` with four lifecycle tests
-- No changes to any existing test modules (`test_smoke.py`,
-  `test_file_browser_desktop.py`, `test_organize_workflow.py`,
-  `test_setup_wizard_flow.py`, `test_desktop_api_contract.py`)
+- No changes to any existing test files
 
 ### Out of scope
 
@@ -38,17 +35,8 @@ introduces.
 All non-auth test routes (`/ui/files`, `/ui/organize`, `/ui/settings`,
 `/ui/marketplace`, `/ui/setup`) have zero auth checks in their handlers. No
 global auth middleware blocks them. Changing `live_server_url` from
-`auth_enabled=False` to `auth_enabled=True` is safe for all five existing
-test files.
-
-**Precise scope of "unchanged":** The smoke suite visits `/ui/profile/login`
-and `/ui/profile/register` (both public, both return 2xx regardless of
-`auth_enabled`). It does NOT visit `/ui/profile` itself. The `/ui/profile`
-index page renders differently under `auth_enabled=True` (HTMX-loads the
-login panel) versus `auth_enabled=False` ("Authentication is disabled."),
-but no existing test asserts on that page, so no existing test regresses.
-Any future smoke test added for `/ui/profile` must assert against the
-enabled-auth behaviour (login panel present, not the "disabled" message).
+`auth_enabled=False` to `auth_enabled=True` is safe — all existing tests
+continue to pass unchanged.
 
 This eliminates the need for a second live server or separate CI shard.
 
@@ -77,26 +65,11 @@ Creates one user per test session via `POST /api/v1/auth/register` using
 `httpx`. Returns a `_UserCreds` dataclass with `username`, `password`,
 `email`. Username is uuid-suffixed to prevent cross-run collisions.
 
+Password satisfies default policy (≥12 chars, uppercase, number, special
+char): `"TestPass1!xyz"` pattern.
+
 Depends on `live_server_url` to guarantee the server is accepting connections
 before the registration request fires.
-
-**Exact request payload** (all fields required by `register_user` in
-`api/routers/auth.py`):
-
-```python
-{
-    "username": f"testuser_{uuid4().hex[:8]}",
-    "email":    f"testuser_{uuid4().hex[:8]}@example.com",
-    "password": "TestPass1!xyz",   # satisfies all default policy rules:
-                                   # ≥12 chars, uppercase, number, special char
-    "full_name": "Test User",      # optional; included for completeness
-}
-```
-
-**Response contract:** assert `response.status_code == 201` and that the
-JSON body contains `"username"` matching the sent value. Any other status
-(400 username taken, 422 validation error) raises immediately so the fixture
-fails loudly rather than silently creating a broken test session.
 
 #### `authed_page` — function-scoped
 
@@ -117,19 +90,7 @@ and receive a logged-in browser without caring how auth works.
 | `test_register_new_user` | `page` | Fill `/ui/profile/register` with fresh uuid-user, submit | Redirected to `/ui/profile/login` |
 | `test_login_lands_on_authenticated_page` | `page`, `registered_user` | Fill `/ui/profile/login`, submit | URL is `/ui/profile`, username visible on page |
 | `test_access_protected_route_while_logged_in` | `authed_page` | GET `/ui/profile/edit` | Edit form visible, no error text |
-| `test_logout_blocks_protected_route` | `authed_page` | `page.request.post("/ui/profile/logout")`, then `page.goto("/ui/profile/edit")` | `<p class="error-text">Not authenticated.</p>` visible |
-
-#### Logout mechanism
-
-`profile/index.html` contains `<form method="post" action="/ui/profile/logout">`.
-The test uses `page.request.post("/ui/profile/logout")` rather than
-navigating to the profile page and clicking the button. `page.request` in
-Playwright shares the same cookie storage as the page context, so the
-`Set-Cookie: fo_session=; Max-Age=0` response from the logout handler
-clears the session cookie in the browser before the next `page.goto()`.
-This avoids depending on the profile page rendering correctly just to reach
-the logout button, and is directly analogous to what a browser does when the
-form submits.
+| `test_logout_blocks_protected_route` | `authed_page` | POST logout, then GET `/ui/profile/edit` | `<p class="error-text">Not authenticated.</p>` visible |
 
 #### Note on "redirect/denied" semantics
 
@@ -139,25 +100,11 @@ with error HTML, not an HTTP redirect. The post-logout assertion checks DOM
 content, not response status. This is the actual behaviour of the app; the
 issue's "redirect/denied" language is intentionally loose.
 
-#### Protected route choice and assertion surface
+#### Protected route choice
 
-`/ui/profile/edit` is an **HTMX partial endpoint** — it returns an HTML
-fragment, not a full page. Both tests navigate to it directly with
-`page.goto("/ui/profile/edit")`, which loads the raw partial as the page
-body. This is intentional: it tests the auth enforcement at the handler
-level, not the HTMX integration (which belongs in B3/B4).
-
-Concrete assertions for each state:
-
-- **Authenticated (test 3):** `expect(page.locator("form")).to_be_visible()`
-  — the edit partial renders a `<form>` element. Also assert
-  `expect(page.locator("p.error-text")).not_to_be_visible()` to confirm no
-  error state leaked through.
-
-- **Unauthenticated (test 4):** `expect(page.locator("p.error-text")).to_have_text("Not authenticated.")`
-  — matches the exact string returned by `_require_web_user`. This is
-  tighter than checking visibility alone and guards against the partial shape
-  changing silently.
+`/ui/profile/edit` is the protected route used for tests 3 and 4. It calls
+`_require_web_user`, has a clear authenticated state (edit form rendered) and
+a clear unauthenticated state (error paragraph), and is stable across B3/B4.
 
 ---
 
@@ -197,27 +144,6 @@ Per-test
 - Existing smoke, file browser, organize workflow, setup wizard, and desktop
   API contract tests continue to pass with `auth_enabled=True`
 - `live_server_url` docstring updated to reflect `auth_enabled=True`
-
-### Verification commands
-
-Run in this order to prove the DoD:
-
-```bash
-# 1. New auth lifecycle tests — all four pass on chromium
-pytest tests/playwright/test_auth_lifecycle.py \
-    --browser chromium --override-ini='addopts='
-
-# 2. Regression check — existing test modules unchanged by the server flip
-pytest tests/playwright/ -k "not test_auth_lifecycle" \
-    --browser chromium --override-ini='addopts='
-
-# 3. Full cross-browser matrix (matches CI playwright job)
-pytest tests/playwright/ --browser chromium --override-ini='addopts='
-pytest tests/playwright/ --browser firefox  --override-ini='addopts='
-pytest tests/playwright/ --browser webkit   --override-ini='addopts='
-```
-
-All three steps must exit 0 before the branch is considered done.
 
 ---
 
