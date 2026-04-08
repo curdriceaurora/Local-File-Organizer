@@ -39,31 +39,32 @@ pytestmark = [
     pytest.mark.timeout(60),
 ]
 
+_LOCATOR_TIMEOUT_MS = 10_000
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
 
-def _do_reset(live_server_url: str) -> None:
+def _do_reset(client: httpx.Client, live_server_url: str) -> None:
     """POST /ui/settings/reset and assert the request succeeded.
 
-    Uses an httpx.Client so the CSRF cookie set during the GET is automatically
-    forwarded on the POST.  The ``section`` parameter controls only which
-    response partial is rendered — the reset always writes a fresh
-    ``WebSettings()`` to disk regardless of section.
+    Reuses the caller's ``httpx.Client`` so the CSRF cookie obtained during
+    the GET is automatically forwarded on the POST.  The ``section`` parameter
+    controls only which response partial is rendered — the reset always writes
+    a fresh ``WebSettings()`` to disk regardless of section.
     """
-    with httpx.Client(follow_redirects=True) as client:
-        client.get(f"{live_server_url}/ui/settings").raise_for_status()
-        csrf_token = client.cookies.get("_csrf_token")
-        if csrf_token is None:
-            raise RuntimeError(
-                f"CSRF token cookie '_csrf_token' missing from GET {live_server_url}/ui/settings"
-            )
-        client.post(
-            f"{live_server_url}/ui/settings/reset",
-            data={"section": "general", "csrf_token": csrf_token},
-        ).raise_for_status()
+    client.get(f"{live_server_url}/ui/settings").raise_for_status()
+    csrf_token = client.cookies.get("_csrf_token")
+    if csrf_token is None:
+        raise RuntimeError(
+            f"CSRF token cookie '_csrf_token' missing from GET {live_server_url}/ui/settings"
+        )
+    client.post(
+        f"{live_server_url}/ui/settings/reset",
+        data={"section": "general", "csrf_token": csrf_token},
+    ).raise_for_status()
 
 
 @pytest.fixture(autouse=True)
@@ -71,13 +72,13 @@ def _reset_settings(live_server_url: str) -> Iterator[None]:
     """Reset web settings to defaults before and after each test.
 
     Yield-based so teardown runs even when the test body raises an exception.
-    Uses httpx directly so the browser context is untouched.  POSTing to
-    ``/ui/settings/reset`` calls ``_save_web_settings(WebSettings())``
-    server-side, giving every test a clean slate.
+    A single ``httpx.Client`` is reused for both the before- and after-reset
+    calls so the cookie jar is shared and no extra GET is needed.
     """
-    _do_reset(live_server_url)
-    yield
-    _do_reset(live_server_url)
+    with httpx.Client(follow_redirects=True) as client:
+        _do_reset(client, live_server_url)
+        yield
+        _do_reset(client, live_server_url)
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +93,7 @@ def _open_general_section(page: Page) -> None:
     section without clicking a tab.
     """
     page.goto("/ui/settings")
-    page.locator("#settings-language").wait_for(state="visible", timeout=10_000)
+    page.locator("#settings-language").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
 
 
 def _open_appearance_section(page: Page) -> None:
@@ -103,9 +104,9 @@ def _open_appearance_section(page: Page) -> None:
     page.goto("/ui/settings")
     # Wait for HTMX-loaded General panel to settle so the tab click does not
     # race with the initial load swap.
-    page.locator("#settings-language").wait_for(state="visible", timeout=10_000)
+    page.locator("#settings-language").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
     page.get_by_role("tab", name="Appearance").click()
-    page.locator("#settings-theme").wait_for(state="visible", timeout=10_000)
+    page.locator("#settings-theme").wait_for(state="visible", timeout=_LOCATOR_TIMEOUT_MS)
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +124,9 @@ def test_language_persists_after_reload(page: Page) -> None:
     page.locator("#settings-language").select_option("es")
     page.get_by_role("button", name="Save general settings").click()
     # Wait for the success banner to confirm the server accepted the change.
-    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)  # success banner injected by HTMX on 200 response
+    page.locator(".banner-info").wait_for(
+        state="visible", timeout=_LOCATOR_TIMEOUT_MS
+    )  # success banner injected by HTMX on 200 response
 
     # -- Assert: reload page; General section should show 'es' --
     _open_general_section(page)
@@ -141,7 +144,9 @@ def test_theme_persists_after_reload(page: Page) -> None:
     # -- Act: change theme to 'dark' and save --
     page.locator("#settings-theme").select_option("dark")
     page.get_by_role("button", name="Save appearance settings").click()
-    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)  # success banner injected by HTMX on 200 response
+    page.locator(".banner-info").wait_for(
+        state="visible", timeout=_LOCATOR_TIMEOUT_MS
+    )  # success banner injected by HTMX on 200 response
 
     # -- Assert: reload page; Appearance section should show 'dark' --
     _open_appearance_section(page)
