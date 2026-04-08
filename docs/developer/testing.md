@@ -51,6 +51,13 @@ Use pytest markers to categorize tests:
 @pytest.mark.regression    # Regression tests (full suite only)
 ```
 
+> **Browser E2E:** Playwright-driven browser tests live under
+> `tests/playwright/` and carry **both** `e2e` and `playwright`
+> markers at module level. They are excluded from the default run
+> and have their own dedicated CI job. See
+> [Browser E2E Tests (Playwright)](playwright-e2e.md) for how to run
+> them and how to add new ones.
+
 ### Running Tests by Marker
 
 ```bash
