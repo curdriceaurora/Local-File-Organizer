@@ -48,22 +48,22 @@ pytestmark = [
 def _do_reset(live_server_url: str) -> None:
     """POST /ui/settings/reset and assert the request succeeded.
 
-    First fetches /ui/settings to get a CSRF token, then POSTs the reset
-    with the token in the form data (CSRF middleware requirement).
+    Uses an httpx.Client so the CSRF cookie set during the GET is automatically
+    forwarded on the POST.  The ``section`` parameter controls only which
+    response partial is rendered — the reset always writes a fresh
+    ``WebSettings()`` to disk regardless of section.
     """
-    # Get CSRF token from the settings page (middleware sets it as a cookie)
-    get_resp = httpx.get(f"{live_server_url}/ui/settings", follow_redirects=True)
-    get_resp.raise_for_status()
-    csrf_token = get_resp.cookies.get("_csrf_token")
-
-    # POST reset with CSRF token in form data
-    response = httpx.post(
-        f"{live_server_url}/ui/settings/reset",
-        data={"section": "general", "csrf_token": csrf_token},
-        cookies=get_resp.cookies,
-        follow_redirects=True,
-    )
-    response.raise_for_status()
+    with httpx.Client(follow_redirects=True) as client:
+        client.get(f"{live_server_url}/ui/settings").raise_for_status()
+        csrf_token = client.cookies.get("_csrf_token")
+        if csrf_token is None:
+            raise RuntimeError(
+                f"CSRF token cookie '_csrf_token' missing from GET {live_server_url}/ui/settings"
+            )
+        client.post(
+            f"{live_server_url}/ui/settings/reset",
+            data={"section": "general", "csrf_token": csrf_token},
+        ).raise_for_status()
 
 
 @pytest.fixture(autouse=True)
@@ -123,7 +123,7 @@ def test_language_persists_after_reload(page: Page) -> None:
     page.locator("#settings-language").select_option("es")
     page.get_by_role("button", name="Save general settings").click()
     # Wait for the success banner to confirm the server accepted the change.
-    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)
+    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)  # success banner injected by HTMX on 200 response
 
     # -- Assert: reload page; General section should show 'es' --
     _open_general_section(page)
@@ -141,7 +141,7 @@ def test_theme_persists_after_reload(page: Page) -> None:
     # -- Act: change theme to 'dark' and save --
     page.locator("#settings-theme").select_option("dark")
     page.get_by_role("button", name="Save appearance settings").click()
-    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)
+    page.locator(".banner-info").wait_for(state="visible", timeout=10_000)  # success banner injected by HTMX on 200 response
 
     # -- Assert: reload page; Appearance section should show 'dark' --
     _open_appearance_section(page)
