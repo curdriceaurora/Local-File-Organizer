@@ -267,3 +267,101 @@ The fixture returns a `PywebviewMockHandle` (defined at
 every navigation — if you need to assert "the page called
 `open_path('/foo')`" you must read `get_open_path_calls()` **before**
 the next navigation.
+
+## Adding a new test
+
+1. **File placement.** New files go under `tests/playwright/` and must
+   be named `test_<feature>.py`.
+2. **Markers.** Apply **both** `e2e` and `playwright` at module level
+   via `pytestmark`. Not per-function decorators — the existing suite
+   uses the list form consistently.
+
+   - The `e2e` marker keeps the suite visible to developers running
+     `pytest -m "integration or e2e"` and keeps
+     `docs/developer/testing.md`'s marker taxonomy consistent.
+   - The `playwright` marker is what the CI job's selector expects and
+     what `tests/conftest.py`'s `collect_ignore_glob` gate keys off
+     when the `playwright` dep is not installed.
+
+   Omitting either marker silently breaks one of those two flows.
+
+3. **Fixtures.** Take `page` (from `pytest-playwright`) and
+   `live_server_url` (or any of the other session fixtures above).
+   Because the `base_url` fixture is wired in, you can use relative
+   paths in `page.goto()`.
+
+4. **Skeleton.** Copy the module-level marker block from
+   `tests/playwright/test_smoke.py` and add one test:
+
+   ```python
+   import pytest
+   from playwright.sync_api import Page
+
+   pytestmark = [
+       pytest.mark.e2e,
+       pytest.mark.playwright,
+       pytest.mark.timeout(60),  # browser ops need more headroom than unit tests
+   ]
+
+
+   def test_my_new_page(page: Page, live_server_url: str) -> None:
+       page.goto("/ui/files")
+       assert page.locator("h1").is_visible()
+   ```
+
+5. **Run it locally** using the canonical command from "Running
+   locally" above, targeting just your new file:
+
+   ```bash
+   pytest tests/playwright/test_my_feature.py \
+       --browser chromium \
+       --override-ini='addopts='
+   ```
+
+`tests/playwright/test_smoke.py` is the canonical template — if you
+are unsure about style or structure, mirror it.
+
+## Gotchas
+
+### `collect_ignore_glob` is gated on the Playwright import
+
+`tests/conftest.py` adds `playwright/**` to `collect_ignore_glob`
+**only** when `import playwright` raises `ImportError`. This means:
+
+- Default developer environment (Playwright not installed):
+  `pytest tests/` silently skips the directory. Surprising the first
+  time you hit it, but intentional — the suite cannot run without a
+  browser anyway.
+- Dedicated CI job (Playwright installed): the directory is collected,
+  and your new tests run on every PR.
+- **Developer machine with Playwright installed:** the directory is
+  collected on every `pytest tests/` run. If you were not expecting
+  that and your suite is slow, run with
+  `--ignore=tests/playwright` explicitly.
+
+### State leakage between tests
+
+The `live_server_url` fixture is session-scoped, so every Playwright
+test in a run shares the same FastAPI process and the same
+`playwright_config_dir`. A test that flips `setup_completed=True` (for
+example by completing the setup wizard) will break sibling tests
+under random ordering unless it resets the state.
+
+The canonical reset pattern, from `test_smoke.py`: delete
+`<playwright_config_dir>/file-organizer/config.yaml` **before** the
+navigation under test, so `ConfigManager.load()` returns
+`AppConfig()` defaults. Do this in a fixture or at the top of the
+test — never in `teardown`, because another test may run first in
+random order.
+
+### Random-port TOCTOU window
+
+`_find_free_port` binds port 0, reads the assigned port, and releases
+the socket — then `uvicorn` re-binds the same port. There is a small
+window where another process could steal the port. This is negligible
+on developer machines but occasionally trips on heavily-loaded CI
+runners. The CI job's `--reruns 2` covers it.
+
+If local runs start failing with `OSError: [Errno 48] Address already
+in use` during fixture setup, simply re-run — do **not** bump
+`_wait_for_port`'s timeout.
