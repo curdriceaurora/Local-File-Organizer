@@ -60,14 +60,43 @@ The `MarketplaceService` reads from a local file-based repository (a directory c
 `index.json` and plugin zip archives). The web route creates a fresh service instance per
 request via `_service()`.
 
-**Fixture approach**: Seed a real local stub plugin, patch
-`file_organizer.web.marketplace_routes.MarketplaceService` to return a pre-configured service
-instance for the duration of each test. This is the same in-process patch pattern used by B1's
-`slow_ai_processors`.
+**Fixture approach**: Seed a real local stub plugin, patch the `_service()` factory function at
+`file_organizer.web.marketplace_routes._service` so it returns the pre-configured service
+instance for the duration of each test. This is the established seam — every existing integration
+test in `tests/integration/test_marketplace_routes.py` patches `_service()` directly
+(`patch("file_organizer.web.marketplace_routes._service")`). Patching the factory rather than the
+class is simpler (one indirection level) and consistent with the rest of the test suite.
 
-The stub plugin uses the archive format established in `tests/plugins/test_marketplace_core.py`:
-a zip containing `plugin.py` with a minimal `Plugin` subclass, plus `index.json` with the
-required metadata fields.
+The stub plugin uses the archive format established in `tests/plugins/test_marketplace_core.py`
+(`_write_plugin_archive`, lines 28–73). The zip must contain `plugin.py` with a minimal `Plugin`
+subclass; `index.json` must include every field that `MarketplaceService` and `PluginInstaller`
+require. The full known-good metadata shape (all fields required):
+
+```python
+{
+    "name": "fo-test-echo",
+    "version": "1.0.0",
+    "author": "tests",
+    "description": "fo-test-echo plugin",
+    "homepage": "https://example.invalid",
+    "download_url": "fo-test-echo-1.0.0.zip",   # relative to repo_dir
+    "checksum_sha256": "<sha256-of-archive>",
+    "size_bytes": <archive-stat.st_size>,
+    "dependencies": [],
+    "tags": ["utility"],
+    "category": "utility",
+    "license": "MIT",
+    "min_organizer_version": "2.0.0",
+    "max_organizer_version": None,
+    "downloads": 0,
+    "rating": 0.0,
+    "reviews_count": 0,
+}
+```
+
+`checksum_sha256` and `size_bytes` must be computed from the actual archive on disk
+(`compute_sha256` is exported from `file_organizer.plugins.marketplace`). The index payload
+wraps the list: `{"plugins": [<metadata-dict>]}`.
 
 **Plugin name**: `fo-test-echo` (documented in the module docstring so it is easy to locate).
 
@@ -85,13 +114,13 @@ tests/playwright/test_marketplace_lifecycle.py
 
 ### `_marketplace_service` (function-scoped, autouse=False)
 
-1. Create `tmp_path_factory.mktemp("marketplace_home")` → `home`
+1. Create `tmp_path / "home"` → `home` (function-scoped `tmp_path`)
 2. Create `home / "repository"` → `repo_dir`
-3. Write `fo-test-echo-1.0.0.zip` into `repo_dir` (minimal `Plugin` subclass)
-4. Compute SHA-256 of the archive
-5. Write `repo_dir / "index.json"` with one-entry `{"plugins": [...]}` payload
+3. Write `fo-test-echo-1.0.0.zip` into `repo_dir` (minimal `Plugin` subclass matching the shape in `_write_plugin_archive`)
+4. Compute `checksum_sha256` via `compute_sha256(archive_path)` and read `size_bytes` from `archive_path.stat().st_size`
+5. Write `repo_dir / "index.json"` as `{"plugins": [<full-metadata-dict>]}`
 6. Instantiate `MarketplaceService(home_dir=home, repo_url=str(repo_dir))`
-7. `patch("file_organizer.web.marketplace_routes.MarketplaceService", return_value=<instance>)`
+7. `patch("file_organizer.web.marketplace_routes._service", return_value=<instance>)`
 8. Yield plugin name `"fo-test-echo"`
 
 Because `tmp_path_factory` is session-scoped but the fixture is function-scoped, each test gets
@@ -167,3 +196,23 @@ Consistent with B1, B2, B3.
 - [ ] Each test is state-isolated via function-scoped fixture
 - [ ] All quality gates pass (pre-commit → code-reviewer)
 - [ ] `#1157` closed; `#1150` child checklist updated
+
+### Verification commands
+
+```bash
+# 1. New marketplace lifecycle tests — both pass on chromium
+pytest tests/playwright/test_marketplace_lifecycle.py \
+    --browser chromium --override-ini='addopts='
+
+# 2. Regression: rest of playwright suite still passes on chromium
+pytest tests/playwright/ -k "not test_marketplace_lifecycle" \
+    --browser chromium --override-ini='addopts='
+
+# 3. Full cross-browser matrix (matches CI playwright job — deferred to CI)
+pytest tests/playwright/ --browser chromium --override-ini='addopts='
+pytest tests/playwright/ --browser firefox  --override-ini='addopts='
+pytest tests/playwright/ --browser webkit   --override-ini='addopts='
+```
+
+Cross-browser coverage (firefox, webkit) is not required locally before merging; CI runs the
+full matrix on every PR.
