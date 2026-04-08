@@ -11,7 +11,8 @@ existing Playwright live server. Two tests:
 
 1. **Happy path** — `/ui/organize` scan → preview → execute, observing
    both a non-terminal `running` frame (0 < progress < 100) **and** the
-   `completed` terminal frame (progress == 100).
+   `completed` terminal frame (progress == 100), then asserting at least
+   one file was written to the output directory.
 2. **Failure path** — scan against a nonexistent input dir, assert the
    error banner surfaces "Input directory not found." and the page does
    not 500.
@@ -26,8 +27,8 @@ existing Playwright live server. Two tests:
   - Refactor: extract `playwright_allowed_root` (session-scoped) from
     the inline `tmp_path_factory.mktemp("playwright_server")` at line
     176 of `live_server_url`.
-  - New `organize_file_tree` (session-scoped): builds a small ~20-file
-    tree under the allowed root.
+  - New `organize_file_tree` (function-scoped): builds a small ~20-file
+    tree under the allowed root per test.
   - New `organize_output_dir` (function-scoped): per-test output dir.
   - New `slow_ai_processors` (function-scoped): patches `TextProcessor`
     and `VisionProcessor` with mocks that sleep ~80 ms per file.
@@ -96,6 +97,17 @@ file-tree fixture share the path. The behaviour of `live_server_url`
 is otherwise identical: same lifetime (session), same factory, same
 directory.
 
+**Why function-scoped `organize_file_tree`:**
+A session-scoped tree would be safe only if the organize job uses
+hardlinks (never mutates source files). That relies on the `use_hardlinks`
+form checkbox remaining checked by default — an implicit, fragile
+assumption. If the default changes or form hydration regresses, the
+source tree gets mutated and later tests or reruns become
+order-dependent. Function-scoped is the correct-by-construction
+alternative: each test builds its own ~20 tiny-file tree (< 1 ms
+overhead), the session-scope optimization is not needed for two tests,
+and the correctness invariant holds regardless of form defaults.
+
 **Why function-scoped `organize_output_dir`:**
 The happy-path test writes outputs under it; running the test twice
 in the same session (e.g., `pytest --reruns 1`) would otherwise see
@@ -130,23 +142,23 @@ def playwright_allowed_root(
 `live_server_url` is updated to take this as a parameter and use it
 where it currently mints its own. No other behaviour changes.
 
-### `organize_file_tree` (session-scoped)
+### `organize_file_tree` (function-scoped)
 
-Builds a ~20-file flat tree under `playwright_allowed_root /
-"organize_input"` and yields the path. File mix:
+Builds a ~20-file flat tree under a per-test subdirectory of
+`playwright_allowed_root` and yields the path. File mix:
 
 - 10 `.txt` files with deterministic faker-seeded text
 - 5 `.md` files with short markdown content
 - 5 `.png` files (minimal valid PNG byte stub)
 
-Total payload < 50 KB. Session-scoped because the source tree is never
-mutated by tests (organize uses hardlinks by default and writes only
-to the per-test output dir).
+Total payload < 50 KB per test. Function-scoped so the source tree is
+never shared between tests — correctness holds regardless of whether
+hardlinks, copies, or moves are used during execution.
 
 ```python
-@pytest.fixture(scope="session")
+@pytest.fixture
 def organize_file_tree(playwright_allowed_root: Path) -> Path:
-    root = playwright_allowed_root / "organize_input"
+    root = playwright_allowed_root / f"organize_input_{uuid.uuid4().hex[:8]}"
     root.mkdir(parents=True, exist_ok=True)
     # ... write 20 files deterministically
     return root
@@ -214,16 +226,33 @@ def test_organize_happy_path_runs_to_completion(
     # Approve and execute
     page.get_by_role("button", name="Approve and execute").click()
 
-    # Running frame: 0 < progress < 100
-    job_panel = page.locator("[data-organize-job]")
-    expect(job_panel).to_have_attribute("data-job-status", "running", timeout=5000)
-    progress_bar = page.locator("[data-organize-job] [role='progressbar']")
-    running_pct = int(progress_bar.get_attribute("aria-valuenow") or "0")
-    assert 0 < running_pct < 100, f"running progress should be in (0,100), got {running_pct}"
+    # Running frame: atomically assert status=="running" AND 0 < progress < 100
+    # in a single JS evaluation to avoid the TOCTOU race where the panel
+    # advances to "completed" between a status read and a progress read.
+    page.wait_for_function(
+        """() => {
+            const panel = document.querySelector('[data-organize-job]');
+            if (!panel) return false;
+            const status = panel.getAttribute('data-job-status');
+            const bar = panel.querySelector('[role="progressbar"]');
+            const pct = parseInt(bar?.getAttribute('aria-valuenow') || '0', 10);
+            return status === 'running' && pct > 0 && pct < 100;
+        }""",
+        timeout=5000,
+    )
 
-    # Completion: progress == 100
+    # Completion: status=="completed" and progress==100
+    progress_bar = page.locator("[data-organize-job] [role='progressbar']")
+    job_panel = page.locator("[data-organize-job]")
     expect(job_panel).to_have_attribute("data-job-status", "completed", timeout=10000)
     expect(progress_bar).to_have_attribute("aria-valuenow", "100")
+
+    # Verify execution actually wrote files — guards against a no-op execute
+    # that only updates job status without performing any file operations.
+    output_files = list(organize_output_dir.rglob("*"))
+    assert output_files, (
+        f"Happy path must write at least one file to {organize_output_dir}; output dir is empty"
+    )
 ```
 
 ### Test 2: failure path
@@ -284,15 +313,21 @@ pytestmark = [
 ### Race condition between "running" and "completed"
 
 With `SLOW_AI_DELAY_S = 0.08` and ~20 files, the running window is
-~1.6 s. Playwright `expect()` polls roughly every 100 ms, so the
-running frame is observable in 16+ poll cycles. If a CI runner is
-severely overloaded and completes the job between two polls, the
-running assertion will fail.
+~1.6 s. The two-step pattern of "wait for `data-job-status=running`
+then read `aria-valuenow`" has a TOCTOU race: the DOM can advance to
+`completed` between those two operations.
 
-**Mitigation:** if this flakes in practice, bump `SLOW_AI_DELAY_S` to
-0.15 (single-file change). Do **not** add `pytest-rerunfailures`
-retries for this specific assertion — the assertion is the point of
-the test.
+**Resolved by `page.wait_for_function()`:** The JS predicate reads
+`data-job-status` and `aria-valuenow` in a single browser-side
+evaluation. The browser event loop cannot swap the DOM between two
+reads inside one JS function call, so the assertion is atomic.
+
+If a CI runner is so overloaded that the entire ~1.6 s window
+elapses between two `wait_for_function` polls (~100 ms apart), the
+function would never return `true` and the test would time out at 5 s
+rather than pass with a wrong result. That is a test failure, not a
+false positive. If this timeout occurs in practice, bump
+`SLOW_AI_DELAY_S` to 0.15.
 
 ### HTMX polling vs SSE
 
@@ -312,12 +347,13 @@ and remain active **until** the `completed` frame is observed. The
 function-scoped `slow_ai_processors` fixture wraps the entire test
 body, satisfying both requirements automatically.
 
-### Output dir reuse / hardlinks
+### Source-tree and output-dir isolation
 
-The dashboard form defaults `use_hardlinks=1`. The organizer
-hardlinks files from the source tree into the output dir, so the
-source tree is never mutated and is safe to reuse session-wide.
-Per-test output dirs prevent inter-test interference.
+Both `organize_file_tree` and `organize_output_dir` are
+function-scoped with unique suffixes. Each test invocation gets a
+fresh input tree and a fresh output dir, so no assumptions about
+`use_hardlinks` form defaults or execution mode affect correctness.
+Inter-test interference is structurally impossible.
 
 ### Refactor blast radius on `live_server_url`
 
@@ -375,7 +411,8 @@ suite once after the refactor lands.
 - New module `tests/playwright/test_organize_workflow.py` exists with
   both test functions.
 - Conftest additions land: `playwright_allowed_root`,
-  `organize_file_tree`, `organize_output_dir`, `slow_ai_processors`.
+  `organize_file_tree` (function-scoped), `organize_output_dir`,
+  `slow_ai_processors`.
 - `live_server_url` is refactored to consume `playwright_allowed_root`
   with no behavioural change.
 - Both new tests pass against chromium locally.
