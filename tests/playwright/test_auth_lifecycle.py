@@ -20,7 +20,7 @@ import uuid
 import pytest
 
 try:
-    from playwright.sync_api import Page, expect  # noqa: F401  # used in Tasks 5–7
+    from playwright.sync_api import Page, expect
 except ImportError as _exc:
     raise ImportError(
         "playwright not installed — run: pip install -e '.[dev]' && playwright install chromium"
@@ -52,3 +52,19 @@ class TestAuthLifecycle:
         page.locator("#reg-password").fill(_TEST_PASSWORD)
         page.get_by_role("button", name="Create account").click()
         page.wait_for_url("**/ui/profile/login")
+
+    def test_login_lands_on_authenticated_page(
+        self, page: Page, registered_user: object
+    ) -> None:
+        """Fill the login form and assert the profile page shows the user's name.
+
+        ``registered_user`` was created with ``full_name="Test User"``.
+        The profile ``<h1>`` renders ``user.full_name or user.username``,
+        so "Test User" is the expected text after a successful login.
+        """
+        page.goto("/ui/profile/login")
+        page.locator("#login-username").fill(registered_user.username)  # type: ignore[union-attr]
+        page.locator("#login-password").fill(registered_user.password)  # type: ignore[union-attr]
+        page.get_by_role("button", name="Log in").click()
+        page.wait_for_url("**/ui/profile")
+        expect(page.locator("h1.page-title")).to_have_text("Test User")
