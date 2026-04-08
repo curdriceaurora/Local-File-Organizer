@@ -95,11 +95,32 @@ def test_a11y_<page>(page: Page) -> None:
 
 | Test function | Path | Fixtures |
 |---------------|------|----------|
-| `test_a11y_setup_page` | `/ui/setup` | `page` |
+| `test_a11y_setup_page` | `/ui/setup` | `page`, `playwright_config_dir` |
 | `test_a11y_files_page` | `/ui/files` | `page` |
 | `test_a11y_organize_page` | `/ui/organize` | `page` |
 | `test_a11y_settings_page` | `/ui/settings` | `page` |
 | `test_a11y_marketplace_page` | `/ui/marketplace` | `page`, `_marketplace_service` |
+
+**All five tests use the unauthenticated `page` fixture.** None of the five routes have auth
+guards in the current implementation; the HTML rendered for an anonymous visitor is identical to
+that rendered for an authenticated one for a11y purposes. Using `authed_page` for `/ui/marketplace`
+was B4's forward-safety choice for a functional lifecycle test; a smoke a11y check does not
+require that overhead.
+
+**Setup-page isolation.** `test_a11y_setup_page` accepts `playwright_config_dir: Path` and
+deletes `config.yaml` before navigating to `/ui/setup`, matching the pattern in
+`test_smoke.py:114–116`. The session-scoped live server shares a single config directory, and
+sibling tests (e.g. `test_setup_wizard_flow`) may write `setup_completed=True` to it. Without
+the delete, the setup page could receive unexpected state depending on test-execution order.
+
+```python
+def test_a11y_setup_page(page: Page, playwright_config_dir: Path) -> None:
+    config_file = playwright_config_dir / "file-organizer" / "config.yaml"
+    if config_file.exists():
+        config_file.unlink()
+    page.goto("/ui/setup")
+    # ... axe logic ...
+```
 
 The marketplace test uses `_marketplace_service` so the plugin table is populated before axe
 runs, exercising the rendered table markup rather than the "no plugins" empty state.
@@ -150,10 +171,37 @@ Consistent with B1–B4.
 
 ---
 
+## Critical-Violation Fallback Procedure
+
+If critical violations are discovered during implementation:
+
+1. **Capture the report** — run the failing test with `-s` to capture `generate_report()` output.
+2. **File a GitHub issue** — one issue per critical violation, labelled `accessibility` and `bug`,
+   with the axe violation ID, impact, and affected selector in the body.
+3. **Mark the test `xfail`** — replace the hard `assert not critical` for the affected page with:
+   ```python
+   if critical:
+       pytest.xfail(
+           f"Known critical a11y violation(s) on /ui/<path>: "
+           f"{[v['id'] for v in critical]} — tracked in #<issue>"
+       )
+   ```
+   Use `pytest.xfail()` (call form, not decorator) so the `warnings.warn` for non-critical
+   violations still runs before the mark is applied. `strict=False` is the default for call-form
+   xfail, so an unexpected pass upgrades to `XPASS` (not an error).
+4. **Document in DoD** — check off the DoD item as "follow-up filed: #<issue>" rather than
+   "zero critical violations".
+
+This procedure lets CI pass while violations are tracked. The DoD is satisfied when either there
+are zero critical violations or every critical violation found has a corresponding open issue.
+
+---
+
 ## Definition of Done
 
 - [ ] `test_a11y_smoke.py` runs axe against all 5 pages
-- [ ] Zero `critical` violations on the current codebase (or follow-up issues filed)
+- [ ] Zero `critical` violations on the current codebase — or, for each critical violation
+  found, a GitHub issue is filed and the test uses `pytest.xfail()` as described above
 - [ ] `serious`/`moderate` violations logged via `warnings.warn()`, not raising
 - [ ] `_marketplace_service` moved to `conftest.py`; `test_marketplace_lifecycle.py` updated
 - [ ] `axe-playwright-python>=0.1.7` added to `pyproject.toml` dev deps
