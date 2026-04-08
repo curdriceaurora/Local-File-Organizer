@@ -46,28 +46,9 @@ class TestAuthLifecycle:
         Asserts the form redirects to the login page on success.
         """
         suffix = uuid.uuid4().hex[:8]
-        # Block HTMX script loading to allow traditional form submission
-        page.route("**/static/js/htmx.min.js", lambda route: route.abort())
         page.goto("/ui/profile/register")
-        # Verify form is loaded
-        expect(page.locator("#reg-username")).to_be_visible()
-        # Fill the form
-        username = f"newuser_{suffix}"
-        email = f"newuser_{suffix}@example.com"
-        page.locator("#reg-username").fill(username)
-        page.locator("#reg-email").fill(email)
+        page.locator("#reg-username").fill(f"newuser_{suffix}")
+        page.locator("#reg-email").fill(f"newuser_{suffix}@example.com")
         page.locator("#reg-password").fill(_TEST_PASSWORD)
-        # Verify values were filled
-        expect(page.locator("#reg-username")).to_have_value(username)
-        # Debug: check if form data is actually present before submitting
-        form_data = page.evaluate(
-            """() => {
-                const form = document.querySelector('form');
-                const fd = new FormData(form);
-                return Object.fromEntries(fd.entries());
-            }"""
-        )
-        # Submit the form by calling its submit() method directly
-        page.locator("form[action='/ui/profile/register']").evaluate("form => form.submit()")
-        # Wait for redirect to login page on successful registration
-        page.wait_for_url("**/ui/profile/login", timeout=10000)
+        page.get_by_role("button", name="Create account").click()
+        page.wait_for_url("**/ui/profile/login")
