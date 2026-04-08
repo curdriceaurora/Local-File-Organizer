@@ -347,7 +347,7 @@ markers = [
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
     "asyncio: marks tests as async (requires pytest-asyncio)",
-    "playwright: browser-based E2E tests (requires playwright install chromium; run with --override-ini='addopts=')",
+    "playwright: browser-based E2E tests (requires `playwright install <browser>` for chromium, firefox, or webkit; select with --browser=<name>; run with --override-ini='addopts=')",
 ]
 filterwarnings = [
     "error::DeprecationWarning:file_organizer",

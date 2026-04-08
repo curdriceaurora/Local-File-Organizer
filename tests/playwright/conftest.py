@@ -20,11 +20,21 @@ Running
 Playwright tests are NOT included in the default test run (they require a
 real browser and are excluded from CI shards).  Run them with::
 
-    # First-time browser installation (once per machine / CI image):
+    # First-time browser installation (once per machine / CI image).
+    # All three browsers run in CI; install whichever you want to use locally:
     playwright install chromium
+    playwright install firefox
+    playwright install webkit
 
-    # Then run the suite:
+    # Then run the suite against the browser of your choice:
     pytest tests/playwright/ --browser chromium --override-ini='addopts='
+    pytest tests/playwright/ --browser firefox  --override-ini='addopts='
+    pytest tests/playwright/ --browser webkit   --override-ini='addopts='
+
+CI runs the full ``[chromium, firefox, webkit]`` matrix on every PR (see the
+``playwright`` job in ``.github/workflows/ci.yml``), so any browser-specific
+regression should surface in review without having to be reproduced locally
+first.
 
 The ``--override-ini='addopts='`` flag strips the project-wide
 ``--cov`` / ``--cov-fail-under`` options so coverage measurement does not
@@ -47,7 +57,8 @@ try:
 except ImportError as exc:
     raise ImportError(
         "Playwright is required to run the desktop E2E tests. "
-        "Install it with: pip install playwright && playwright install chromium"
+        "Install it with: pip install playwright && "
+        "playwright install chromium  # or firefox, or webkit"
     ) from exc
 
 # ---------------------------------------------------------------------------
