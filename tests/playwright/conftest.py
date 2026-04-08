@@ -73,6 +73,8 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+import httpx
+
 from file_organizer.services import ProcessedFile
 
 try:
@@ -288,18 +290,25 @@ def live_server_url(
 
 @pytest.fixture(scope="session")
 def registered_user(live_server_url: str) -> _UserCreds:
-    """
-    Register a unique test user with the live server's registration API for the test session.
+    """Create one test user per session via the REST API.
 
-    Posts a registration request to the server and verifies the response succeeded; returns the created credentials.
+    Posts to ``/api/v1/auth/register`` (API-exempt from CSRF middleware)
+    using ``httpx``.  The username is uuid-suffixed so parallel or
+    repeated runs never collide in the shared ``auth.db``.
+
+    Asserts 201 + username roundtrip so any contract mismatch causes an
+    immediate, loud fixture error rather than a silent downstream failure.
 
     Returns:
-        _UserCreds: Credentials for the created user (username, password, email).
+        ``_UserCreds`` with the created user's credentials.
 
     Raises:
-        AssertionError: If the server response is not successful or the returned username does not match the requested username.
+        AssertionError: If registration returns a non-201 status or the
+            response body does not contain the expected username.
     """
-    suffix = uuid.uuid4().hex[:8]
+    import uuid as _uuid
+
+    suffix = _uuid.uuid4().hex[:8]
     creds = _UserCreds(
         username=f"testuser_{suffix}",
         password="TestPass1!xyz",
