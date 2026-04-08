@@ -79,13 +79,20 @@ def _scan_duplicates(
 
 
 def _preview(groups: list[DedupeGroup]) -> list[DedupePreviewGroup]:
-    """Build a preview response summarizing what a dedupe run would remove."""
+    """Build a preview response summarizing what a dedupe run would remove.
+
+    Files are sorted by modified time (oldest first) so the oldest copy is
+    always kept and newer duplicates are removed.  This matches the CLI
+    behaviour in dedupe_v2.py and makes selection deterministic across
+    platforms regardless of filesystem iteration order.
+    """
     previews: list[DedupePreviewGroup] = []
     for group in groups:
         if not group.files:
             continue
-        keep = group.files[0].path
-        remove = [file.path for file in group.files[1:]]
+        sorted_files = sorted(group.files, key=lambda f: f.modified)
+        keep = sorted_files[0].path
+        remove = [file.path for file in sorted_files[1:]]
         previews.append(DedupePreviewGroup(hash_value=group.hash_value, keep=keep, remove=remove))
     return previews
 
