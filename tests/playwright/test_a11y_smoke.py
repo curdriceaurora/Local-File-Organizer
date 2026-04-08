@@ -20,8 +20,8 @@ If ``_assert_no_critical_a11y`` reaches the ``pytest.fail()`` branch:
 1. Run the failing test with ``-s`` to capture ``generate_report()`` output.
 2. File a GitHub issue labelled ``accessibility`` and ``bug`` with the axe
    violation ID, impact, and affected selector.
-3. The helper already calls ``pytest.xfail()`` so CI passes while the issue
-   is open.  Add the issue number to the xfail message for traceability.
+3. Fix the violation in the template/CSS/JS and re-run the tests to confirm
+   CI is green again.  Reference the issue number in the fix commit.
 
 Running
 -------
@@ -66,7 +66,7 @@ def _assert_no_critical_a11y(page: Page, path: str) -> None:
     """Navigate to *path*, assert the page loaded, run axe, apply violation policy.
 
     Policy (documented in module docstring):
-    - critical        → ``pytest.xfail()`` with full report
+    - critical        → ``pytest.fail()`` with full ``generate_report()`` output (CI fails)
     - serious/moderate → ``warnings.warn()`` (logged, not failing)
     - minor           → ignored
 
