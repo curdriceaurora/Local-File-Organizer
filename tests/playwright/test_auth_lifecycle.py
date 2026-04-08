@@ -56,7 +56,7 @@ class TestAuthLifecycle:
     def test_login_lands_on_authenticated_page(self, page: Page, registered_user: object) -> None:
         """
         Log in with the provided credentials and assert the profile page displays the user's full name.
-        
+
         The `registered_user` fixture is created with `full_name = "Test User"`, so the test verifies that the profile page title equals "Test User" after successful login.
         """
         page.goto("/ui/profile/login")
@@ -69,7 +69,7 @@ class TestAuthLifecycle:
     def test_access_protected_route_while_logged_in(self, authed_page: Page) -> None:
         """
         Navigate to /ui/profile/edit and verify the profile edit form is rendered for an authenticated user.
-        
+
         This endpoint is an HTMX partial that returns an HTML fragment; when the user is authenticated the fragment contains the profile edit form and does not include the error paragraph.
         """
         authed_page.goto("/ui/profile/edit")
@@ -79,7 +79,7 @@ class TestAuthLifecycle:
     def test_logout_blocks_protected_route(self, authed_page: Page) -> None:
         """
         Logs out the authenticated browser session and verifies that the protected edit route is denied access.
-        
+
         Extracts the `_csrf_token` cookie value and sends it as the `x-csrf-token` header in a POST to `/ui/profile/logout`, then navigates to `/ui/profile/edit` and asserts that `p.error-text` shows "Not authenticated."
         """
         cookies = authed_page.context.cookies()
