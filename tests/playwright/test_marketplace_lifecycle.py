@@ -131,3 +131,31 @@ def _marketplace_service(tmp_path: Path) -> Iterator[str]:
         new=lambda: service,
     ):
         yield _STUB_PLUGIN_NAME
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+def test_marketplace_page_lists_stub_plugin(
+    authed_page: Page,
+    _marketplace_service: str,
+) -> None:
+    """Marketplace page should list the seeded stub plugin with an Install button.
+
+    Verifies that:
+    - /ui/marketplace returns a page with a plugin table
+    - ``fo-test-echo`` appears in the table
+    - The row shows an Install button (plugin not yet installed)
+    """
+    plugin_name = _marketplace_service
+
+    authed_page.goto("/ui/marketplace")
+    authed_page.locator("#plugins-tbody").wait_for(
+        state="visible", timeout=_LOCATOR_TIMEOUT_MS
+    )
+
+    row = authed_page.locator("#plugins-tbody tr", has_text=plugin_name)
+    expect(row).to_be_visible()
+    expect(row.get_by_role("button", name="Install")).to_be_visible()
