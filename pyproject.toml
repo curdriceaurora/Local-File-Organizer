@@ -134,6 +134,7 @@ dev = [
     "diff-cover~=7.0",  # Diff coverage gate (local pre-commit + CI validation)
     "asgi-lifespan~=2.1",  # ASGI lifespan management for integration tests
     "pytest-playwright>=0.5.0",  # Browser-based E2E smoke tests (requires: playwright install chromium)
+    "axe-playwright-python>=0.1.7",  # axe-core a11y smoke checks for Playwright tests
 ]
 
 cloud = [
