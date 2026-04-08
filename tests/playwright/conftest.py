@@ -106,9 +106,9 @@ def _find_free_port() -> int:
 def _wait_for_port(port: int, timeout: float = 20.0) -> bool:
     """
     Wait until a TCP connection to 127.0.0.1:port is accepted or the timeout elapses.
-    
+
     Returns immediately when a TCP connection to the given port succeeds. For this application, a TCP-ready socket is equivalent to the HTTP server being ready. If the timeout is reached without a successful connection, the function returns False.
-    
+
     Returns:
         bool: `True` if a TCP connection to the port was accepted before the timeout, `False` otherwise.
     """
@@ -181,12 +181,12 @@ def live_server_url(
 ) -> Iterator[str]:
     """
     Start a FastAPI test server once for the entire pytest session.
-    
+
     This fixture launches an in-process uvicorn server bound to a random free localhost port, configures the application to permit only the provided allowed root paths, enables authentication for profile routes, and isolates the application's config directory by temporarily setting XDG_CONFIG_HOME and overriding file_organizer.config.manager.DEFAULT_CONFIG_DIR. The temporary configuration and environment are restored when the fixture tears down.
-    
+
     Yields:
         Base URL string for the running server, e.g. "http://127.0.0.1:54321".
-    
+
     Raises:
         RuntimeError: If the server does not become ready within 20 seconds. If the server thread raised an exception while starting, that exception is attached to the RuntimeError to aid debugging.
     """
@@ -278,12 +278,12 @@ def live_server_url(
 def registered_user(live_server_url: str) -> _UserCreds:
     """
     Register a unique test user with the live server's registration API for the test session.
-    
+
     Posts a registration request to the server and verifies the response succeeded; returns the created credentials.
-    
+
     Returns:
         _UserCreds: Credentials for the created user (username, password, email).
-    
+
     Raises:
         AssertionError: If the server response is not successful or the returned username does not match the requested username.
     """
@@ -320,7 +320,7 @@ def registered_user(live_server_url: str) -> _UserCreds:
 def base_url(live_server_url: str) -> str:  # type: ignore[override]
     """
     Provide the live server URL used as Playwright's base URL so tests can use relative paths.
-    
+
     Returns:
         The live server URL used by Playwright as its base URL.
     """
@@ -331,9 +331,9 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
 def authed_page(page: Page, registered_user: _UserCreds) -> Page:
     """
     Provide a Playwright Page already logged into the application with a valid `fo_session` cookie.
-    
+
     Navigates to the login UI, submits the supplied user's credentials, and waits for the profile page to load.
-    
+
     Returns:
         The same Playwright `Page` instance after successful login (the `fo_session` cookie is set in the browser context).
     """

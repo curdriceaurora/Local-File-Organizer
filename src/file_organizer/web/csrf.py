@@ -68,17 +68,16 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         self._exempt_prefixes = tuple(exempt_paths)
 
     def _is_exempt(self, path: str) -> bool:
-        """
-        Determine whether a request path is exempt from CSRF validation.
-        
+        """Determine whether a request path is exempt from CSRF validation.
+
         Checks configured exempt prefixes and considers a match when:
         - a prefix equals the path,
         - the path starts with a prefix followed by '/', or
         - a prefix that ends with '/' is a direct prefix of the path.
-        
+
         Parameters:
             path (str): The request path to evaluate (e.g., '/api/items').
-        
+
         Returns:
             `true` if the path matches any exempt prefix, `false` otherwise.
         """
@@ -92,21 +91,19 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _reset_request_body(request: Request, body: bytes) -> None:
-        """
-        Restore a buffered request body onto the Request so downstream consumers can re-read it.
-        
+        """Restore a buffered request body onto the Request so downstream consumers can re-read it.
+
         Replaces request._receive with an async callable that replays the provided raw `body` bytes as an HTTP request message, allowing form parsers and other downstream readers to read the body after the middleware has consumed it.
-        
+
         Parameters:
             request (Request): The Starlette/FastAPI request object to modify.
             body (bytes): Raw request body bytes to be replayed.
-        
+
         """
 
         async def _receive() -> Message:
-            """
-            ASGI receive coroutine that replays a buffered HTTP request body.
-            
+            """ASGI receive coroutine that replays a buffered HTTP request body.
+
             Returns:
                 Message: A single ASGI `http.request` message dictionary with keys:
                     - `type`: `"http.request"`
@@ -118,11 +115,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         request._receive = _receive  # type: ignore[attr-defined]
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """
-        Enforce CSRF protection for state-changing requests and ensure a per-request CSRF token is available.
-        
+        """Enforce CSRF protection for state-changing requests and ensure a per-request CSRF token is available.
+
         Stores or generates a CSRF token on request.state.csrf_token and sets the CSRF cookie on every response. Safe HTTP methods and configured exempt paths bypass validation. For state-changing requests, the middleware prefers a token in the `x-csrf-token` header and falls back to the `csrf_token` form field (supports both application/x-www-form-urlencoded and multipart/form-data). When the body is inspected, the request body is restored so downstream handlers can still read it. If the cookie and submitted tokens do not match, returns a 403 response indicating the token is missing or invalid.
-        
+
         Returns:
             A Response with the CSRF cookie set on success, or a 403 JSONResponse with `{"detail": "CSRF token missing or invalid"}` on validation failure.
         """
@@ -161,9 +157,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 body = await request.body()
                 self._reset_request_body(request, body)
                 if "application/x-www-form-urlencoded" in content_type:
-                    parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
-                    values = parsed.get(CSRF_FORM_FIELD)
-                    submitted = values[0] if values else None
+                    try:
+                        parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+                        values = parsed.get(CSRF_FORM_FIELD)
+                        submitted = values[0] if values else None
+                    except UnicodeDecodeError:
+                        submitted = None
                 else:
                     form = await request.form()
                     submitted = form.get(CSRF_FORM_FIELD)  # type: ignore[assignment]
