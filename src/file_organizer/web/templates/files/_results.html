@@ -154,7 +154,12 @@
                 data-file-kind="{{ entry.kind }}"
             >
                 <label class="file-select">
-                    <input type="checkbox" data-file-select value="{{ entry.path }}">
+                    <input
+                        type="checkbox"
+                        data-file-select
+                        value="{{ entry.path }}"
+                        aria-label="Select {{ 'folder' if entry.is_dir else 'file' }} {{ entry.name }}"
+                    >
                 </label>
                 <div class="file-thumb">
                     {% if entry.thumbnail_url %}
