@@ -122,15 +122,6 @@ def _make_app(exempt_paths: list[str] | None = None) -> FastAPI:
 
     @app.post("/submit-form-echo")
     async def post_submit_form_echo(request: Request) -> JSONResponse:
-        """
-        Echoes the submitted form field named "field" back in a JSON response.
-
-        Parameters:
-            request (Request): Incoming HTTP request containing form-encoded data.
-
-        Returns:
-            JSONResponse: JSON object with a single key `"field"` whose value is the submitted form value for `"field"`, or `None` if it was not present.
-        """
         form = await request.form()
         return JSONResponse({"field": form.get("field")})
 
