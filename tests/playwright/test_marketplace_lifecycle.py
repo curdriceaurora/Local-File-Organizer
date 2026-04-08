@@ -43,7 +43,7 @@ import pytest
 from file_organizer.plugins.marketplace import MarketplaceService, compute_sha256
 
 try:
-    from playwright.sync_api import Page, expect
+    from playwright.sync_api import Page, expect  # noqa: F401 — used by tests added in later tasks
 except ImportError as exc:
     raise ImportError(
         "Playwright is required: pip install playwright && playwright install chromium"
@@ -105,6 +105,8 @@ def _marketplace_service(tmp_path: Path) -> Iterator[str]:
         "author": "tests",
         "description": f"{_STUB_PLUGIN_NAME} plugin",
         "homepage": "https://example.invalid",
+        # Bare filename (no scheme): PluginRepository resolves it relative to
+        # _base_file_root, which is derived from repo_url=str(repo_dir).
         "download_url": archive_name,
         "checksum_sha256": compute_sha256(archive_path),
         "size_bytes": archive_path.stat().st_size,
@@ -126,6 +128,6 @@ def _marketplace_service(tmp_path: Path) -> Iterator[str]:
 
     with patch(
         "file_organizer.web.marketplace_routes._service",
-        return_value=service,
+        new=lambda: service,
     ):
         yield _STUB_PLUGIN_NAME
