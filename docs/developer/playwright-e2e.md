@@ -162,3 +162,108 @@ GitHub-hosted runner) without hiding real regressions — a genuinely
 broken test still fails on the third attempt. If a test starts needing
 more than 2 reruns, treat it as broken and fix the root cause rather
 than bumping the retry count.
+
+## Fixture contracts
+
+All fixtures live in `tests/playwright/conftest.py`. Scopes and line
+numbers below are current as of the most recent edit to this doc — if
+you are about to write a test and any of this looks stale, re-read
+the conftest.
+
+### `playwright_config_dir` (session-scoped)
+
+Defined at `tests/playwright/conftest.py:117`.
+
+Returns a per-session `tmp_path` that is used as the FastAPI server's
+`XDG_CONFIG_HOME`. This isolates the server's `ConfigManager` from your
+real `~/.config/file-organizer` so tests cannot pollute your dev
+environment (and vice versa).
+
+**When test authors care about it:** any test that needs to *reset* or
+*mutate* persistent config mid-session must write to or delete files
+under `playwright_config_dir / "file-organizer"`, **not** the real home
+directory. The canonical reset pattern is in
+`tests/playwright/test_smoke.py` — it deletes
+`<playwright_config_dir>/file-organizer/config.yaml` immediately before
+navigation so `ConfigManager.load()` returns `AppConfig` defaults
+(`setup_completed=False`), making the test order-independent.
+
+If you do not touch persistent state, you can ignore this fixture — it
+is wired into `live_server_url` already and does its job transparently.
+
+### `live_server_url` (session-scoped)
+
+Defined at `tests/playwright/conftest.py:127`.
+
+Starts the FastAPI app in-process on a random free port in a daemon
+thread and yields a base URL like `http://127.0.0.1:54321`.
+
+What it does under the hood:
+
+1. Pulls `playwright_config_dir` to get an isolated config home.
+2. Sets `XDG_CONFIG_HOME` and monkeypatches
+   `file_organizer.config.manager.DEFAULT_CONFIG_DIR` **before**
+   importing the API modules, so the module-level constant captures
+   the tmp dir instead of the user's real config.
+3. Constructs `ApiSettings(auth_enabled=False, allowed_paths=[tmp], auth_db_path=<tmp>/auth.db)`.
+4. Builds the app via `create_app(settings)` and runs it in a daemon
+   `uvicorn.Server` thread.
+5. Waits up to 20 seconds for the port to accept TCP connections
+   (`_wait_for_port`). If the server never comes up, raises a
+   `RuntimeError` that includes any exception raised from the server
+   thread — so you get a real stack trace instead of a silent timeout.
+6. On teardown, sets `server.should_exit = True`, joins the thread,
+   and restores environment variables — wrapped in `try/finally` so
+   cleanup runs even if startup fails before `yield`.
+
+**How to override settings:** `live_server_url` is session-scoped, so
+you cannot override its `ApiSettings` per-test. That is deliberate —
+per-test overrides would force a server restart per test and tank
+wall-clock. If you need an authenticated variant for a test,
+**epic B2** will add a separate session fixture that builds the app
+with `auth_enabled=True`; this doc will be updated when that lands.
+
+### `base_url` (session-scoped, overrides `pytest-playwright`)
+
+Defined at `tests/playwright/conftest.py:243`.
+
+Returns `live_server_url` as the default URL Playwright resolves
+relative paths against. With this fixture in place you can write:
+
+```python
+page.goto("/ui/files")
+```
+
+…and Playwright rewrites it to `http://127.0.0.1:<port>/ui/files`.
+Without the override, `pytest-playwright`'s built-in `base_url`
+reads from the `--base-url` CLI flag, which this project does not
+pass.
+
+### `pywebview_mock` (function-scoped)
+
+Defined at `tests/playwright/conftest.py:338`.
+
+Injects a stub `window.pywebview.api` into the page via
+`page.add_init_script()`. Because `add_init_script` runs before **any**
+navigation in the page's lifecycle, the mock is always present when
+`desktop_api.js` runs its `if (window.pywebview)` feature detection —
+which sets `document.body.dataset.desktopApp = "1"`, enabling any
+elements decorated with `[data-desktop-only]`.
+
+The fixture returns a `PywebviewMockHandle` (defined at
+`tests/playwright/conftest.py:278`) with the following methods
+(see the conftest for full docstrings):
+
+| Method                            | Purpose                                                              |
+|-----------------------------------|----------------------------------------------------------------------|
+| `set_browse_directory_result(p)`  | Override what `window.pywebview.api.browse_directory()` resolves to. |
+| `set_browse_file_result(p)`       | Override the `browse_file()` return value.                           |
+| `set_save_file_result(p)`         | Override the `save_file()` return value.                             |
+| `set_open_path_result(bool)`      | Override the `open_path()` return value (success / failure).         |
+| `get_open_path_calls()`           | Return the ordered list of paths `open_path()` was called with.      |
+
+**Caveat:** mock state lives in `window.__mockPyw`. Because
+`add_init_script` re-runs on every page load, the state resets on
+every navigation — if you need to assert "the page called
+`open_path('/foo')`" you must read `get_open_path_calls()` **before**
+the next navigation.
