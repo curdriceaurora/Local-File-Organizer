@@ -63,7 +63,6 @@ pytestmark = [
 
 def test_organize_happy_path_runs_to_completion(
     page: Page,
-    live_server_url: str,
     organize_file_tree: Path,
     organize_output_dir: Path,
     slow_ai_processors: None,
@@ -115,7 +114,6 @@ def test_organize_happy_path_runs_to_completion(
 
 def test_organize_scan_with_nonexistent_path_surfaces_error(
     page: Page,
-    live_server_url: str,
     playwright_allowed_root: Path,
     organize_output_dir: Path,
 ) -> None:
@@ -439,7 +437,7 @@ def slow_ai_processors() -> Iterator[None]:
 
     def _make_slow_process_file(folder_map: dict[str, str]) -> Any:
         def _process_file(file_path: Path, **kwargs: Any) -> ProcessedFile:
-            time.sleep(SLOW_AI_DELAY_S)
+            threading.Event().wait(SLOW_AI_DELAY_S)
             ext = file_path.suffix.lower()
             folder = folder_map.get(ext, "general")
             return ProcessedFile(
