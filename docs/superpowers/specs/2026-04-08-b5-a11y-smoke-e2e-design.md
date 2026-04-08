@@ -226,6 +226,7 @@ If critical violations are discovered during implementation:
 2. **File a GitHub issue** — one issue per critical violation, labelled `accessibility` and `bug`,
    with the axe violation ID, impact, and affected selector in the body.
 3. **Mark the test `xfail`** — replace the hard `assert not critical` for the affected page with:
+
    ```python
    if critical:
        pytest.xfail(
@@ -233,6 +234,7 @@ If critical violations are discovered during implementation:
            f"{[v['id'] for v in critical]} — tracked in #<issue>"
        )
    ```
+
    Use `pytest.xfail()` (call form, not decorator) so the `warnings.warn` for non-critical
    violations still runs before the mark is applied. `strict=False` is the default for call-form
    xfail, so an unexpected pass upgrades to `XPASS` (not an error).

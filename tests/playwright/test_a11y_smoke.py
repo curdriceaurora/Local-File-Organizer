@@ -35,7 +35,6 @@ import warnings
 from pathlib import Path
 
 import pytest
-
 from axe_playwright_python.sync_playwright import Axe
 
 try:
@@ -79,8 +78,7 @@ def _assert_no_critical_a11y(page: Page, path: str) -> None:
     results = Axe().run(page)
     critical = [v for v in results.response["violations"] if v["impact"] == "critical"]
     non_critical = [
-        v for v in results.response["violations"]
-        if v["impact"] in ("serious", "moderate")
+        v for v in results.response["violations"] if v["impact"] in ("serious", "moderate")
     ]
     if non_critical:
         warnings.warn(
