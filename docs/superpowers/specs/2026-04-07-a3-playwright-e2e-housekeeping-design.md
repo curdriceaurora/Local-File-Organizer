@@ -206,4 +206,4 @@ $ git cherry -v origin/main origin/feat/playwright-e2e
 + b40b0fef fix: route-specific assertions in TestPageLoads + opt-in playwright collection
 ```
 
-All six marked `+` (no patch-id equivalent on main). This is the expected result for a squash merge — PR #1113 landed as one squashed commit on main whose content combines all six branch commits, so individual patch-ids do not match. A.2 and A.3 together are the substantive proof; A.4 is recorded only to pre-empt a reviewer running `git cherry` and being misled.
+All six marked `+` (no patch-id equivalent on main). This is the expected result for a squash merge — PR #1113 landed as one squashed commit on main whose content combines all six branch commits, so individual patch-ids do not match. A.2 and A.3 together are the substantive proof; A.4 is recorded only to preempt a reviewer running `git cherry` and being misled.
