@@ -182,7 +182,19 @@ def live_server_url(
     """
     Start a FastAPI test server once for the entire pytest session.
 
-    This fixture launches an in-process uvicorn server bound to a random free localhost port, configures the application to permit only the provided allowed root paths, enables authentication for profile routes, and isolates the application's config directory by temporarily setting XDG_CONFIG_HOME and overriding file_organizer.config.manager.DEFAULT_CONFIG_DIR. The temporary configuration and environment are restored when the fixture tears down.
+    Uses an in-process uvicorn server bound to a random free port on
+    localhost.  ``auth_enabled=True`` — all non-profile routes (files,
+    organize, settings, marketplace, setup) have no auth checks and are
+    unaffected.  Profile routes enforce auth; the ``authed_page`` fixture
+    provides a logged-in page for tests that need it.
+
+    Isolation: Monkeypatches ``file_organizer.config.manager.DEFAULT_CONFIG_DIR``
+    and sets ``XDG_CONFIG_HOME`` so any ``ConfigManager()`` instantiated by
+    route handlers reads from a session-scoped tmp dir instead of the
+    developer's or CI runner's real ``~/.config/file-organizer``. Without
+    this, tests pollute the host config and pollute each other (e.g.
+    ``test_setup_wizard_flow`` flips ``setup_completed=True``, breaking
+    ``test_home_redirect`` under randomized order).
 
     Yields:
         Base URL string for the running server, e.g. "http://127.0.0.1:54321".
