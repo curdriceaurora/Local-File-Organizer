@@ -262,8 +262,20 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - name: Cache Playwright virtualenv
+        id: playwright-venv-cache
+        uses: actions/cache@v5
+        with:
+          path: .venv-playwright
+          # Shared across all three browser legs: they run the same Python env.
+          key: playwright-venv-${{ runner.os }}-py3.12-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-venv-${{ runner.os }}-py3.12-
       - name: Install dependencies
+        if: steps.playwright-venv-cache.outputs.cache-hit != 'true'
         run: |
+          python -m venv .venv-playwright
+          . .venv-playwright/bin/activate
+          python -m pip install --upgrade pip
           # [dev] provides pytest-playwright; [search] keeps parity with other
           # test jobs so imports don't break at collection time.
           pip install -e ".[dev,search]"
@@ -289,7 +301,9 @@ jobs:
           key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: nltk-${{ runner.os }}-
       - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+        run: |
+          . .venv-playwright/bin/activate
+          python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run Playwright suite
         # Overriding addopts is required because pyproject.toml's default
         # addopts filter out e2e/playwright-marked tests in normal runs.
@@ -297,6 +311,7 @@ jobs:
         # surface on the third attempt. Traces/screenshots/videos are
         # retained only on failure to keep artifact size manageable.
         run: |
+          . .venv-playwright/bin/activate
           pytest tests/playwright/ \
             --browser ${{ matrix.browser }} \
             --tracing retain-on-failure \
