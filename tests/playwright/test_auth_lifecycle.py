@@ -20,7 +20,7 @@ import uuid
 import pytest
 
 try:
-    from playwright.sync_api import Page, expect
+    from playwright.sync_api import Page, expect  # noqa: F401  # used in Tasks 5–7
 except ImportError as _exc:
     raise ImportError(
         "playwright not installed — run: pip install -e '.[dev]' && playwright install chromium"
