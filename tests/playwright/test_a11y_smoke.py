@@ -4,7 +4,7 @@ Runs axe-core against the five core rendered pages and enforces this policy:
 
 Violation policy
 ----------------
-* critical     → hard fail via ``pytest.xfail()`` (tracked to a GitHub issue)
+* critical     → hard fail via ``pytest.fail()`` (CI fails on any critical violation)
 * serious /
   moderate     → ``warnings.warn()`` — logged for triage, build does not fail
 * minor        → ignored
@@ -15,7 +15,7 @@ function only.
 
 Critical-violation procedure
 -----------------------------
-If ``_assert_no_critical_a11y`` reaches the ``pytest.xfail()`` branch:
+If ``_assert_no_critical_a11y`` reaches the ``pytest.fail()`` branch:
 
 1. Run the failing test with ``-s`` to capture ``generate_report()`` output.
 2. File a GitHub issue labelled ``accessibility`` and ``bug`` with the axe
@@ -93,10 +93,8 @@ def _assert_no_critical_a11y(page: Page, path: str) -> None:
             stacklevel=2,
         )
     if critical:
-        pytest.xfail(
-            f"{path}: {len(critical)} critical a11y violation(s) — "
-            f"file a GitHub issue per violation and update this call:\n"
-            f"{results.generate_report()}"
+        pytest.fail(
+            f"{path}: {len(critical)} critical a11y violation(s):\n{results.generate_report()}"
         )
 
 

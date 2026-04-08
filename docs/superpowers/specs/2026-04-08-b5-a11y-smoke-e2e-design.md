@@ -20,7 +20,7 @@ the five core rendered pages. This is a smoke pass — zero `critical` violation
 
 | Impact | Build behaviour | How surfaced |
 |--------|----------------|-------------|
-| `critical` | **XFAIL** — tracked | `pytest.xfail()` with `generate_report()` output |
+| `critical` | **Fail** — CI fails | `pytest.fail()` with `generate_report()` output |
 | `serious` / `moderate` | **Pass** — log only | `warnings.warn()` → appears in pytest `--tb=short` warning summary |
 | `minor` | Ignored | — |
 
@@ -76,7 +76,7 @@ def _assert_no_critical_a11y(page: Page, path: str) -> None:
     """Navigate to *path*, assert the page loaded, run axe, apply violation policy.
 
     Policy (documented in module docstring):
-    - critical  → hard fail (assert)
+    - critical  → ``pytest.fail()`` raises (CI fails)
     - serious/moderate → warnings.warn (logged, not failing)
     - minor     → ignored
 
