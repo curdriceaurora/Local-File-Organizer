@@ -79,3 +79,26 @@ class TestAuthLifecycle:
         authed_page.goto("/ui/profile/edit")
         expect(authed_page.locator("form")).to_be_visible()
         expect(authed_page.locator("p.error-text")).to_have_count(0)
+
+    def test_logout_blocks_protected_route(self, authed_page: Page) -> None:
+        """After logout the protected /ui/profile/edit returns the error partial.
+
+        Logout is performed via ``page.request.post()`` which shares the
+        browser context's cookie jar.  The server's ``delete_cookie``
+        response clears ``fo_session`` before the next navigation.
+
+        CSRF: ``/ui/profile/logout`` is not API-exempt so the double-submit
+        cookie pattern applies.  ``page.context.cookies()`` returns httpOnly
+        cookies (Playwright has privileged access), giving us the
+        ``_csrf_token`` value to send as the ``x-csrf-token`` header.
+        """
+        cookies = authed_page.context.cookies()
+        csrf_token = next(
+            c["value"] for c in cookies if c["name"] == "_csrf_token"
+        )
+        authed_page.request.post(
+            "/ui/profile/logout",
+            headers={"x-csrf-token": csrf_token},
+        )
+        authed_page.goto("/ui/profile/edit")
+        expect(authed_page.locator("p.error-text")).to_have_text("Not authenticated.")
