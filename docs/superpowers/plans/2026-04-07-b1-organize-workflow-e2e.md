@@ -20,7 +20,7 @@ tests/playwright/
   test_organize_workflow.py  ← CREATE: happy-path + failure-path tests
 ```
 
-No src/ files are created or modified. All changes are test-only.
+This change modifies Playwright tests/fixtures and also includes template fixes in `src/file_organizer/web/templates/base.html` and `src/file_organizer/web/templates/marketplace/index.html`.
 
 ---
 

@@ -10,8 +10,8 @@
             across scans, organization, and deduplication.
         </p>
         <div class="hero-actions">
-            <a class="btn-primary" href="/ui/files">Explore Files</a>
-            <a class="btn-ghost" href="/ui/organize">Run Organize</a>
+            <a class="btn-primary" href="/ui/files" hx-select="#main">Explore Files</a>
+            <a class="btn-ghost" href="/ui/organize" hx-select="#main">Run Organize</a>
         </div>
     </div>
     <div class="hero-card">
@@ -43,17 +43,17 @@
     <article class="panel">
         <h2>Files at a glance</h2>
         <p>Browse, filter, and preview folders without leaving the dashboard.</p>
-        <a class="panel-link" href="/ui/files">Open browser</a>
+        <a class="panel-link" href="/ui/files" hx-select="#main">Open browser</a>
     </article>
     <article class="panel">
         <h2>Organize with intent</h2>
         <p>Kick off organized runs with a clear timeline and live progress updates.</p>
-        <a class="panel-link" href="/ui/organize">View dashboard</a>
+        <a class="panel-link" href="/ui/organize" hx-select="#main">View dashboard</a>
     </article>
     <article class="panel">
         <h2>Adjust the system</h2>
         <p>Configuration stays readable with focused settings and profile presets.</p>
-        <a class="panel-link" href="/ui/settings">Review settings</a>
+        <a class="panel-link" href="/ui/settings" hx-select="#main">Review settings</a>
     </article>
 </section>
 {% endblock %}

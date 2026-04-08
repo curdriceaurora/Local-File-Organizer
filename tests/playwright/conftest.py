@@ -277,7 +277,7 @@ def base_url(live_server_url: str) -> str:  # type: ignore[override]
 # Organize workflow fixtures
 # ---------------------------------------------------------------------------
 
-# Minimal valid 1×1 pixel PNG (all-white).  Enough for VisionProcessor to
+# Minimal valid 1x1 pixel PNG (all-white).  Enough for VisionProcessor to
 # receive a real file path; the slow mock never reads the bytes.
 _MINIMAL_PNG = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
@@ -285,7 +285,7 @@ _MINIMAL_PNG = (
     b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
-# Per-file sleep duration for the slow AI mock.  ~20 files × 0.08 s ≈ 1.6 s
+# Per-file sleep duration for the slow AI mock.  ~20 files x 0.08 s ~ 1.6 s
 # of "running" wall-clock — wide enough for Playwright's wait_for_function
 # (~100 ms polling) to catch a non-terminal frame.
 SLOW_AI_DELAY_S = 0.08
