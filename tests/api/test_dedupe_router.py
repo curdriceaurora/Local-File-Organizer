@@ -18,7 +18,15 @@ from file_organizer.api.routers.dedupe import _preview, router
 
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
-    """Create a minimal FastAPI app with the dedupe router."""
+    """
+    Create a FastAPI test application configured with the dedupe router and test settings.
+    
+    Parameters:
+        tmp_path (Path): Filesystem path that will be allowed for scans and set in test settings.
+    
+    Returns:
+        tuple[FastAPI, TestClient, ApiSettings]: A tuple containing the FastAPI app, a TestClient for that app, and the ApiSettings used for the test app.
+    """
     settings = ApiSettings(
         environment="test",
         auth_enabled=False,
