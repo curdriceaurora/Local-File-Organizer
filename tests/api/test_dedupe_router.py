@@ -13,7 +13,8 @@ from fastapi.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.dedupe import router
+from file_organizer.api.models import DedupeFileInfo, DedupeGroup
+from file_organizer.api.routers.dedupe import _preview, router
 
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
@@ -177,6 +178,41 @@ class TestScanDuplicates:
 @pytest.mark.unit
 class TestPreviewDuplicates:
     """Tests for POST /api/v1/dedupe/preview."""
+
+    def test_preview_keeps_oldest_file_by_modified_time(self) -> None:
+        older = datetime(2024, 1, 1, tzinfo=UTC)
+        newer = datetime(2024, 1, 2, tzinfo=UTC)
+        group = DedupeGroup(
+            hash_value="abc123",
+            files=[
+                DedupeFileInfo(path="/tmp/newer.txt", size=100, modified=newer, accessed=newer),
+                DedupeFileInfo(path="/tmp/older.txt", size=100, modified=older, accessed=older),
+            ],
+            total_size=200,
+            wasted_space=100,
+        )
+
+        preview = _preview([group])
+
+        assert preview[0].keep == "/tmp/older.txt"
+        assert preview[0].remove == ["/tmp/newer.txt"]
+
+    def test_preview_breaks_equal_mtime_ties_by_path(self) -> None:
+        same_time = datetime(2024, 1, 1, tzinfo=UTC)
+        group = DedupeGroup(
+            hash_value="abc123",
+            files=[
+                DedupeFileInfo(path="/tmp/z-last.txt", size=100, modified=same_time, accessed=same_time),
+                DedupeFileInfo(path="/tmp/a-first.txt", size=100, modified=same_time, accessed=same_time),
+            ],
+            total_size=200,
+            wasted_space=100,
+        )
+
+        preview = _preview([group])
+
+        assert preview[0].keep == "/tmp/a-first.txt"
+        assert preview[0].remove == ["/tmp/z-last.txt"]
 
     @patch("file_organizer.api.routers.dedupe.DuplicateDetector")
     def test_preview_success(self, mock_detector_cls, tmp_path: Path) -> None:
