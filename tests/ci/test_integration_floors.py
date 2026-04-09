@@ -52,11 +52,16 @@ def make_pyproject_toml(floors: dict[str, int] | None = None) -> str:
 class TestGenerateScript:
     def test_creates_floors_section_from_scratch(self, tmp_path: Path) -> None:
         """generate script creates [tool.coverage.floors.integration] when absent."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 100, "branches": 20, "hit_lines": 84, "hit_branches": 17
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 100,
+                    "branches": 20,
+                    "hit_lines": 84,
+                    "hit_branches": 17,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(make_pyproject_toml())
 
@@ -82,11 +87,16 @@ class TestGenerateScript:
 
     def test_never_auto_downgrades_existing_floor(self, tmp_path: Path) -> None:
         """generate script keeps existing floor if higher than computed value."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 7, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 7,
+                    "hit_branches": 0,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         # Existing floor = 90, computed = int(70//5)*5 = 70 — should keep 90
         (tmp_path / "pyproject.toml").write_text(
@@ -112,14 +122,22 @@ class TestGenerateScript:
 
     def test_keys_are_sorted_alphabetically(self, tmp_path: Path) -> None:
         """generate script writes keys in alphabetical order."""
-        cov = make_coverage_json({
-            "src/file_organizer/zzz.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 10, "hit_branches": 0
-            },
-            "src/file_organizer/aaa.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 10, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/zzz.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 10,
+                    "hit_branches": 0,
+                },
+                "src/file_organizer/aaa.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 10,
+                    "hit_branches": 0,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(make_pyproject_toml())
 
@@ -142,18 +160,25 @@ class TestGenerateScript:
 
     def test_flags_stale_entries_to_stderr(self, tmp_path: Path) -> None:
         """generate script prints stale entry to stderr but keeps it in the table."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 8, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 8,
+                    "hit_branches": 0,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         # deleted.py is in the table but not in coverage JSON
         (tmp_path / "pyproject.toml").write_text(
-            make_pyproject_toml({
-                "src/file_organizer/api/auth.py": 75,
-                "src/file_organizer/deleted.py": 50,
-            })
+            make_pyproject_toml(
+                {
+                    "src/file_organizer/api/auth.py": 75,
+                    "src/file_organizer/deleted.py": 50,
+                }
+            )
         )
 
         result = subprocess.run(
@@ -181,11 +206,16 @@ class TestGenerateScript:
 class TestCheckScript:
     def test_passes_when_all_floors_met(self, tmp_path: Path) -> None:
         """check script exits 0 when all files meet their floors."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 100, "branches": 20, "hit_lines": 90, "hit_branches": 18
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 100,
+                    "branches": 20,
+                    "hit_lines": 90,
+                    "hit_branches": 18,
+                },
+            }
+        )
         # pct = (90+18)/(100+20)*100 = 90% → floor 90 should pass
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(
@@ -208,11 +238,16 @@ class TestCheckScript:
 
     def test_fails_when_file_below_floor(self, tmp_path: Path) -> None:
         """check script exits 1 when a file is below its floor."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 6, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 6,
+                    "hit_branches": 0,
+                },
+            }
+        )
         # pct = 60%, floor = 70 → violation
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(
@@ -237,11 +272,16 @@ class TestCheckScript:
 
     def test_fails_when_covered_file_missing_entry(self, tmp_path: Path) -> None:
         """check script exits 1 when a covered file has no floor entry."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/new_module.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 8, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/new_module.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 8,
+                    "hit_branches": 0,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(make_pyproject_toml({}))
         result = subprocess.run(
@@ -262,17 +302,24 @@ class TestCheckScript:
 
     def test_fails_when_stale_entry_in_table(self, tmp_path: Path) -> None:
         """check script exits 1 when floors table has an entry absent from coverage."""
-        cov = make_coverage_json({
-            "src/file_organizer/api/auth.py": {
-                "stmts": 10, "branches": 0, "hit_lines": 9, "hit_branches": 0
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/api/auth.py": {
+                    "stmts": 10,
+                    "branches": 0,
+                    "hit_lines": 9,
+                    "hit_branches": 0,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(
-            make_pyproject_toml({
-                "src/file_organizer/api/auth.py": 85,
-                "src/file_organizer/deleted.py": 50,
-            })
+            make_pyproject_toml(
+                {
+                    "src/file_organizer/api/auth.py": 85,
+                    "src/file_organizer/deleted.py": 50,
+                }
+            )
         )
         result = subprocess.run(
             [
@@ -292,11 +339,16 @@ class TestCheckScript:
 
     def test_floor_zero_skips_threshold_check(self, tmp_path: Path) -> None:
         """check script does not fail a file whose floor is 0."""
-        cov = make_coverage_json({
-            "src/file_organizer/tui/audio_view.py": {
-                "stmts": 50, "branches": 10, "hit_lines": 5, "hit_branches": 1
-            },
-        })
+        cov = make_coverage_json(
+            {
+                "src/file_organizer/tui/audio_view.py": {
+                    "stmts": 50,
+                    "branches": 10,
+                    "hit_lines": 5,
+                    "hit_branches": 1,
+                },
+            }
+        )
         (tmp_path / ".coverage-integration.json").write_text(json.dumps(cov))
         (tmp_path / "pyproject.toml").write_text(
             make_pyproject_toml({"src/file_organizer/tui/audio_view.py": 0})
