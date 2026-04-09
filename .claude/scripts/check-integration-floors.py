@@ -38,11 +38,23 @@ def main() -> None:
     json_path = Path(args.json_path)
     pyproject_path = Path(args.pyproject)
 
-    with open(json_path) as f:
-        coverage_data = json.load(f)
+    try:
+        with open(json_path) as f:
+            coverage_data = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: coverage JSON not found: {json_path}", file=sys.stderr)
+        print("Run: bash .claude/scripts/measure-integration-coverage.sh --cov-report=json:.coverage-integration.json", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: malformed coverage JSON {json_path}: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-    with open(pyproject_path, "rb") as f:
-        pyproject = tomllib.load(f)
+    try:
+        with open(pyproject_path, "rb") as f:
+            pyproject = tomllib.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: pyproject.toml not found: {pyproject_path}", file=sys.stderr)
+        sys.exit(1)
 
     floors: dict[str, int] = (
         pyproject.get("tool", {})
