@@ -519,4 +519,7 @@ jobs:
         # 2026-04-05: 71.9% combined (ratchet after batch3/batch4 integration coverage expansion on main).
         # 2026-04-06: floor held at 71.9% — new integration tests added (auth+service-facade+websocket); local measurement 71.76% due to missing [search] extras in local venv vs CI env with [dev,search]
         # 2026-04-06: 72.0% combined (ratchet after dedupe-hash/removal + repo integration tests; actual 72%)
-        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=72.0 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
+        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=72.0 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
+
+      - name: Check per-file integration coverage floors
+        run: python .claude/scripts/check-integration-floors.py
