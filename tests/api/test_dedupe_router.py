@@ -20,10 +20,10 @@ from file_organizer.api.routers.dedupe import _preview, router
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
     """
     Create a FastAPI test application configured with the dedupe router and test settings.
-    
+
     Parameters:
         tmp_path (Path): Filesystem path that will be allowed for scans and set in test settings.
-    
+
     Returns:
         tuple[FastAPI, TestClient, ApiSettings]: A tuple containing the FastAPI app, a TestClient for that app, and the ApiSettings used for the test app.
     """
@@ -210,8 +210,12 @@ class TestPreviewDuplicates:
         group = DedupeGroup(
             hash_value="abc123",
             files=[
-                DedupeFileInfo(path="/tmp/z-last.txt", size=100, modified=same_time, accessed=same_time),
-                DedupeFileInfo(path="/tmp/a-first.txt", size=100, modified=same_time, accessed=same_time),
+                DedupeFileInfo(
+                    path="/tmp/z-last.txt", size=100, modified=same_time, accessed=same_time
+                ),
+                DedupeFileInfo(
+                    path="/tmp/a-first.txt", size=100, modified=same_time, accessed=same_time
+                ),
             ],
             total_size=200,
             wasted_space=100,
