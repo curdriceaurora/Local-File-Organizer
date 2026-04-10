@@ -329,6 +329,54 @@ class TestCIWorkflow:
 
         assert has_test_step, "Test job should run pytest which includes documentation tests"
 
+    def test_integration_gate_emits_json_report(self, workflow: dict[str, Any]) -> None:
+        """Integration gate must emit JSON coverage for per-file floor check."""
+        jobs = workflow.get("jobs", {})
+        assert "test-integration" in jobs, "CI workflow must have a 'test-integration' job"
+        steps = jobs["test-integration"].get("steps", [])
+        run_cmds = " ".join(step.get("run", "") for step in steps if isinstance(step, dict))
+        assert "--cov-report=json:.coverage-integration.json" in run_cmds, (
+            "test-integration job must pass --cov-report=json:.coverage-integration.json "
+            "to pytest so check-integration-floors.py has data to read"
+        )
+
+    def test_integration_per_file_floor_step_exists(self, workflow: dict[str, Any]) -> None:
+        """Integration job must have a per-file floor check step after pytest."""
+        jobs = workflow.get("jobs", {})
+        assert "test-integration" in jobs, "CI workflow must have a 'test-integration' job"
+        steps = jobs["test-integration"].get("steps", [])
+        floor_steps = [
+            s
+            for s in steps
+            if isinstance(s, dict) and "check-integration-floors.py" in s.get("run", "")
+        ]
+        assert floor_steps, (
+            "test-integration job must have a step that runs check-integration-floors.py"
+        )
+        pytest_idx = next(
+            (
+                i
+                for i, s in enumerate(steps)
+                if isinstance(s, dict)
+                and "pytest" in s.get("run", "")
+                and "integration" in s.get("run", "")
+            ),
+            None,
+        )
+        floor_idx = next(
+            (
+                i
+                for i, s in enumerate(steps)
+                if isinstance(s, dict) and "check-integration-floors.py" in s.get("run", "")
+            ),
+            None,
+        )
+        assert pytest_idx is not None, "test-integration job must have a pytest step"
+        assert floor_idx is not None, "test-integration job must have a floor check step"
+        assert floor_idx > pytest_idx, (
+            f"Per-file floor step (idx {floor_idx}) must come after pytest step (idx {pytest_idx})"
+        )
+
 
 @pytest.mark.unit
 class TestCIFullWorkflow:

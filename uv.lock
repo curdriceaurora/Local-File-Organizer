@@ -207,6 +207,18 @@ wheels = [
 ]
 
 [[package]]
+name = "axe-playwright-python"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "playwright" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/90/684e8ae7e7563318d197f1bfbacd561a19716e6cdb6420e7e97ef49d427c/axe_playwright_python-0.1.7.tar.gz", hash = "sha256:f0f3d59061abbaee9990d0309f855210ec8fd6ca5bf076f39210289ac0961258", size = 189815, upload-time = "2025-12-01T05:19:31.061Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/b0/6460c11d515cb09d90993e948c730a3d4b6673cc5cd99663179bbc48a758/axe_playwright_python-0.1.7-py3-none-any.whl", hash = "sha256:8699e904466cc2206fa2fa414b4d59aab68e34ba8449c6d082896ca1950440e2", size = 156509, upload-time = "2025-12-01T05:19:29.285Z" },
+]
+
+[[package]]
 name = "babel"
 version = "2.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2104,6 +2116,7 @@ dependencies = [
 all = [
     { name = "anthropic" },
     { name = "asgi-lifespan" },
+    { name = "axe-playwright-python" },
     { name = "bcrypt" },
     { name = "beautifulsoup4" },
     { name = "black" },
@@ -2203,6 +2216,7 @@ desktop = [
 ]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "axe-playwright-python" },
     { name = "black" },
     { name = "codespell" },
     { name = "deptry" },
@@ -2284,6 +2298,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.13" },
     { name = "anthropic", marker = "extra == 'claude'", specifier = ">=0.20.0" },
     { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = "~=2.1" },
+    { name = "axe-playwright-python", marker = "extra == 'dev'", specifier = ">=0.1.7" },
     { name = "bcrypt", specifier = ">=4.0.0,<6.0.0" },
     { name = "bcrypt", marker = "extra == 'web'", specifier = ">=4.0.0,<6.0.0" },
     { name = "beautifulsoup4", marker = "extra == 'parsers'", specifier = "~=4.12" },

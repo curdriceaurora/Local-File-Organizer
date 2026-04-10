@@ -517,10 +517,14 @@ The integration suite has a dedicated CI gate that runs on every push to `main`:
 pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=<floor> --timeout=60
 ```
 
-- **Current floor**: 71.9% (ratchet — bumped with each coverage PR, target 90% per issue #856)
+- **Current floor**: 72.0% aggregate (ratchet — bumped with each coverage PR, target 90% per issue #856)
+- **Per-file floors**: 406 files tracked in `[tool.coverage.floors.integration]` in `pyproject.toml`.
+  Enforced by `.claude/scripts/check-integration-floors.py` after pytest in the `test-integration` job.
+  To update after adding coverage: run `python .claude/scripts/generate-integration-floors.py` (never auto-downgrades).
 - **Runs on**: `push` to `main` only (not PRs)
 - **PR validation**: Integration tests also carry `@pytest.mark.ci` so they run in the standard PR job (`-m "ci and not benchmark"`)
 - **Ratchet rule**: bump `--cov-fail-under` in the same PR that adds new integration tests; never lower it
+- **Floor lowering policy**: requires TOML comment `# Lowered: <reason> — tracks #NNN` and a linked issue
 
 ---
 

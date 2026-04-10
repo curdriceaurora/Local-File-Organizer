@@ -324,11 +324,16 @@ run_integration() {
     --strict-markers \
     --cov=file_organizer \
     --cov-branch \
-    --cov-fail-under=71.9 \
+    --cov-fail-under=72.0 \
     --cov-report=term-missing \
     --cov-report=xml \
+    --cov-report=json:.coverage-integration.json \
     --timeout=60 \
     --override-ini=addopts=
+  run_step \
+    "Check per-file integration coverage floors" \
+    python \
+    .claude/scripts/check-integration-floors.py
 }
 
 run_security() {
