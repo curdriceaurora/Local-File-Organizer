@@ -199,6 +199,9 @@ def execute_deduplication(
     removed: list[str] = []
     if not request.dry_run:
         for group in preview:
+            keep_target = resolve_path(group.keep, settings.allowed_paths)
+            if not keep_target.exists():
+                continue
             for file_path in group.remove:
                 target = resolve_path(file_path, settings.allowed_paths)
                 if not target.exists():

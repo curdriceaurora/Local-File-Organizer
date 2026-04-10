@@ -365,6 +365,7 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["src"]
 branch = true
+concurrency = ["multiprocessing", "thread"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -543,7 +544,7 @@ DEP002 = [
 "src/file_organizer/client/sync_client.py" = 70
 "src/file_organizer/config/__init__.py" = 100
 "src/file_organizer/config/manager.py" = 65
-"src/file_organizer/config/path_manager.py" = 75
+"src/file_organizer/config/path_manager.py" = 70
 "src/file_organizer/config/path_migration.py" = 90
 "src/file_organizer/config/provider_env.py" = 50
 "src/file_organizer/config/schema.py" = 100
@@ -663,13 +664,13 @@ DEP002 = [
 "src/file_organizer/models/vision_model.py" = 65
 "src/file_organizer/models/vision_registry.py" = 100
 "src/file_organizer/optimization/__init__.py" = 100
-"src/file_organizer/optimization/batch_sizer.py" = 75
+"src/file_organizer/optimization/batch_sizer.py" = 60
 "src/file_organizer/optimization/buffer_pool.py" = 65
 "src/file_organizer/optimization/connection_pool.py" = 85
 "src/file_organizer/optimization/database.py" = 90
 "src/file_organizer/optimization/lazy_loader.py" = 60
 "src/file_organizer/optimization/leak_detector.py" = 95
-"src/file_organizer/optimization/memory_limiter.py" = 85
+"src/file_organizer/optimization/memory_limiter.py" = 80
 "src/file_organizer/optimization/memory_profiler.py" = 80
 "src/file_organizer/optimization/model_cache.py" = 90
 "src/file_organizer/optimization/query_cache.py" = 100

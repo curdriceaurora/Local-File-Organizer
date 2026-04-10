@@ -329,9 +329,10 @@ class FeatureExtractor:
         creation_date = datetime.fromtimestamp(creation_ref, tz=UTC)
         modification_date = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
 
-        # Days calculations
-        days_since_modified = (now - stat.st_mtime) / 86400.0
-        days_since_created = (now - creation_ref) / 86400.0
+        # Days calculations — clamp to 0.0 to avoid tiny negatives from floating-point
+        # precision differences between time.time() and the stat timestamps on Windows.
+        days_since_modified = max(0.0, (now - stat.st_mtime) / 86400.0)
+        days_since_created = max(0.0, (now - creation_ref) / 86400.0)
 
         # Access frequency estimate: ratio of access recency to modification recency
         # Higher value = more frequently accessed relative to modification
