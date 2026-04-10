@@ -3,13 +3,13 @@
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-green)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.0.0--alpha.3-orange)](CHANGELOG.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
-**18k+ tests** | **408 modules** | **80+ file types**
+**840 tests** | **408 modules** | **39 file types**
 
 ![TUI overview](docs/assets/tui-overview.svg)
 
@@ -111,6 +111,7 @@ file-organizer-desktop
 ```bash
 pip install -e ".[cloud]"
 
+export FO_PROVIDER=openai
 export OPENAI_API_KEY=sk-...
 file-organizer organize ./Downloads ./Organized --dry-run
 ```
@@ -120,6 +121,7 @@ file-organizer organize ./Downloads ./Organized --dry-run
 ```bash
 pip install -e ".[claude]"
 
+export FO_PROVIDER=claude
 export ANTHROPIC_API_KEY=sk-ant-...
 file-organizer organize ./Downloads ./Organized --dry-run
 ```
@@ -217,6 +219,7 @@ src/file_organizer/
 ├── parallel/         # Parallel processing
 ├── pipeline/         # File processing pipeline
 ├── plugins/          # Plugin system (audio, video, archives, etc.)
+├── review_regressions/ # Code quality detectors
 ├── services/         # Core services (analytics, dedup, text, etc.)
 ├── tui/              # Textual terminal UI (8 views)
 ├── undo/             # Undo/redo infrastructure
@@ -244,11 +247,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 
 ## Configuration
 
-Config lives in `config/file-organizer/config.yaml` relative to your config home. Override with `FILE_ORGANIZER_CONFIG`.
+Configuration is stored in platform-appropriate locations using `platformdirs`:
+- **macOS**: `~/Library/Application Support/file-organizer/`
+- **Linux**: `~/.config/file-organizer/` (or `$XDG_CONFIG_HOME/file-organizer/`)
+- **Windows**: `%APPDATA%/file-organizer/`
+
+See [Configuration Guide](docs/CONFIGURATION.md) for details.
 
 ## License
 
-This project is dual-licensed under [MIT](LICENSE) or [Apache-2.0](LICENSE), at your option.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
