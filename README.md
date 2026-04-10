@@ -2,37 +2,92 @@
 
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.0.0--alpha.3-orange)](CHANGELOG.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
-**18k+ tests** | **407 modules** | **48+ file types** | Python 3.11+
+**18k+ tests** | **407 modules** | **48+ file types**
+
+![TUI overview](docs/assets/tui-overview.svg)
+
+## Contents
+
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Quick Start](#quick-start)
+- [Web UI](#web-ui-preview)
+- [Documentation](#documentation)
+- [Optional Feature Packs](#optional-feature-packs)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Configuration](#configuration)
+- [License](#license)
 
 ## Features
+
+### AI and Analysis
 
 - **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM) — or Anthropic Claude
 - **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
 - **Video Analysis**: Scene detection and keyframe extraction
-- **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
-- **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
+- **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
+
+### Interfaces
+
 - **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
 - **Web UI**: Browser-based interface via FastAPI and HTMX
+- **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
 - **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, profiles
-- **Auto-Update**: GitHub Releases checks with verified downloads and rollback
-- **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
+- **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
+
+### Organization
+
+- **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
+- **PARA + Johnny Decimal**: Built-in organizational methodologies
 - **Deduplication**: Hash and semantic duplicate detection
 - **Undo/Redo**: Full operation history
-- **PARA + Johnny Decimal**: Built-in organizational methodologies
-- **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
+- **Auto-Update**: GitHub Releases checks with verified downloads and rollback
 - **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
 
-## Screenshots
+## How It Works
 
-![TUI overview](docs/assets/tui-overview.svg)
+```
+ Source Directory          AI Analysis              Organized Output
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  ./Downloads │     │  Content         │     │  ./Organized     │
+│              │     │  Extraction      │     │                  │
+│  report.pdf  │────>│  (text, vision,  │────>│  Work/           │
+│  photo.jpg   │     │   audio, video)  │     │    Reports/      │
+│  meeting.mp3 │     │                  │     │  Photos/         │
+│  clip.mp4    │     │  AI Categorize   │     │    Vacation/     │
+│  notes.txt   │     │  (Ollama/OpenAI/ │     │  Audio/          │
+│              │     │   Claude)        │     │    Meetings/     │
+└──────────────┘     └──────────────────┘     └──────────────────┘
+                              │
+                     ┌────────┴────────┐
+                     │  Learn & Adapt  │
+                     │  (patterns,     │
+                     │   preferences,  │
+                     │   rules)        │
+                     └─────────────────┘
+```
+
+1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (48+ formats supported)
+2. **Analyze** — Sends extracted content to an AI model (Ollama, OpenAI, or Claude) for categorization and naming
+3. **Organize** — Moves or copies files into a structured folder hierarchy with AI-generated names
+4. **Learn** — Tracks your patterns and preferences over time for smarter future suggestions
+
+## Screenshots
 
 ![TUI demo](docs/assets/tui-demo.gif)
 
 ## Quick Start
+
+### With Ollama (local, default)
 
 ```bash
 pip install -e ".[desktop]"
@@ -51,6 +106,24 @@ file-organizer tui
 file-organizer-desktop
 ```
 
+### With OpenAI or compatible API
+
+```bash
+pip install -e ".[cloud]"
+
+export OPENAI_API_KEY=sk-...
+file-organizer organize ./Downloads ./Organized --dry-run
+```
+
+### With Anthropic Claude
+
+```bash
+pip install -e ".[claude]"
+
+export ANTHROPIC_API_KEY=sk-ant-...
+file-organizer organize ./Downloads ./Organized --dry-run
+```
+
 ## Web UI (Preview)
 
 Start the FastAPI server and open the UI:
@@ -63,12 +136,12 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Documentation
 
+- [Getting Started](docs/getting-started.md)
 - [User Guide](docs/USER_GUIDE.md)
 - [CLI Reference](docs/cli-reference.md)
 - [Desktop App Guide](docs/desktop-app.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
 - [Troubleshooting](docs/troubleshooting.md)
-- [Getting Started](docs/getting-started.md)
 
 ## Optional Feature Packs
 
@@ -119,6 +192,39 @@ python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
 
 See the [Installation Guide](docs/admin/installation.md) for troubleshooting and advanced configuration.
 
+## Project Structure
+
+<details>
+<summary>Click to expand</summary>
+
+```
+src/file_organizer/
+├── api/              # FastAPI web backend
+├── cli/              # CLI commands and entry points
+├── config/           # Configuration management
+├── core/             # Organization engine and business logic
+├── daemon/           # Background file watcher daemon
+├── desktop/          # Native desktop app (pywebview)
+├── events/           # Event system
+├── history/          # Operation history and undo/redo
+├── integrations/     # External service integrations
+├── interfaces/       # Abstract interfaces and protocols
+├── methodologies/    # PARA, Johnny Decimal implementations
+├── models/           # Data models
+├── parallel/         # Parallel processing
+├── pipeline/         # File processing pipeline
+├── plugins/          # Plugin system (audio, video, archives, etc.)
+├── services/         # Core services (analytics, dedup, text, etc.)
+├── tui/              # Textual terminal UI (8 views)
+├── undo/             # Undo/redo infrastructure
+├── updater/          # Auto-update from GitHub Releases
+├── utils/            # Shared utilities
+├── watcher/          # File system watcher
+└── web/              # HTMX web UI templates and assets
+```
+
+</details>
+
 ## Development
 
 ```bash
@@ -129,21 +235,18 @@ pytest
 ruff check src/
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit changes.
+
 ## Configuration
 
 Config lives in `config/file-organizer/config.yaml` relative to your config home. Override with `FILE_ORGANIZER_CONFIG`.
 
-## Release Status
+## License
 
-`2.0.0-alpha.3` is the current alpha milestone. Alpha 3 is a quality-and-stability release focused on hardening the existing CLI, TUI, web, desktop, deduplication, and analytics workflows rather than introducing a new surface area.
-
-Highlights of the current alpha3 status:
-
-- Integration and branch-coverage expansion across the main product areas
-- Native desktop packaging via `pywebview` and PyInstaller
-- Broader CI guardrails, diff-cover enforcement, and ratcheting coverage gates
-- Continued local-first AI support with optional cloud/Claude providers
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**Status**: Alpha 3 | **Version**: 2.0.0-alpha.3 | **Last Updated**: 2026-04-05
+**Status**: Alpha 3 | **Version**: 2.0.0-alpha.3 | **Last Updated**: 2026-04-10
