@@ -3,13 +3,13 @@
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.0.0--alpha.3-orange)](CHANGELOG.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
-**18k+ tests** | **407 modules** | **48+ file types**
+**18k+ tests** | **408 modules** | **80+ file types**
 
 ![TUI overview](docs/assets/tui-overview.svg)
 
@@ -76,7 +76,7 @@
                      └─────────────────┘
 ```
 
-1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (48+ formats supported)
+1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (80+ formats supported)
 2. **Analyze** — Sends extracted content to an AI model (Ollama, OpenAI, or Claude) for categorization and naming
 3. **Organize** — Moves or copies files into a structured folder hierarchy with AI-generated names
 4. **Learn** — Tracks your patterns and preferences over time for smarter future suggestions
@@ -201,9 +201,11 @@ See the [Installation Guide](docs/admin/installation.md) for troubleshooting and
 src/file_organizer/
 ├── api/              # FastAPI web backend
 ├── cli/              # CLI commands and entry points
+├── client/           # HTTP client utilities
 ├── config/           # Configuration management
 ├── core/             # Organization engine and business logic
 ├── daemon/           # Background file watcher daemon
+├── deploy/           # Deployment helpers
 ├── desktop/          # Native desktop app (pywebview)
 ├── events/           # Event system
 ├── history/          # Operation history and undo/redo
@@ -211,6 +213,7 @@ src/file_organizer/
 ├── interfaces/       # Abstract interfaces and protocols
 ├── methodologies/    # PARA, Johnny Decimal implementations
 ├── models/           # Data models
+├── optimization/     # Performance optimization
 ├── parallel/         # Parallel processing
 ├── pipeline/         # File processing pipeline
 ├── plugins/          # Plugin system (audio, video, archives, etc.)
@@ -245,7 +248,7 @@ Config lives in `config/file-organizer/config.yaml` relative to your config home
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is dual-licensed under [MIT](LICENSE) or [Apache-2.0](LICENSE), at your option.
 
 ---
 
