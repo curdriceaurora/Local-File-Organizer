@@ -1499,7 +1499,7 @@ left running.
 
 - `pip install "local-file-organizer[desktop]"` (installs pywebview + uvicorn)
 - Ollama running with at least one model pulled
-- Linux: `sudo apt-get install -y gir1.2-webkit2-4.1`
+- Linux: `sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1`
 
 **Examples:**
 

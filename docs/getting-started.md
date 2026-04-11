@@ -61,7 +61,7 @@ See [Installation Guide](admin/installation.md) for options.
 **Prerequisites**:
 - Python 3.11 or higher
 - Ollama installed and running
-- Linux only: `sudo apt-get install -y gir1.2-webkit2-4.1`
+- Linux only: `sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1`
 
 **Install**:
 

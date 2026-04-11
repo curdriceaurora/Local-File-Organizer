@@ -69,7 +69,7 @@ Before launching the desktop app:
 2. **Linux only** — install WebKitGTK system packages:
 
    ```bash
-   sudo apt-get install -y gir1.2-webkit2-4.1
+   sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1
    ```
 
 ## First Launch
@@ -92,7 +92,6 @@ before launching:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FO_PROVIDER` | AI provider: `ollama`, `openai`, `claude` | `ollama` |
-| `FO_OLLAMA_BASE_URL` | Ollama server URL | `http://localhost:11434` |
 | `FO_OPENAI_API_KEY` | OpenAI-compatible API key | — |
 | `FO_OPENAI_BASE_URL` | OpenAI-compatible base URL | — |
 | `FO_CLAUDE_API_KEY` | Anthropic Claude API key | — |
@@ -199,7 +198,7 @@ ollama serve
 **Fix:**
 
 ```bash
-sudo apt-get install -y gir1.2-webkit2-4.1
+sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1
 ```
 
 For older Ubuntu / Debian, use `gir1.2-webkit2-4.0` if the 4.1 package is

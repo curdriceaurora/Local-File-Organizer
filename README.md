@@ -90,7 +90,7 @@
 ### With Ollama (local, default)
 
 ```bash
-pip install -e ".[desktop]"
+pip install -e .
 
 # Pull models
 ollama pull qwen2.5:3b-instruct-q4_K_M
