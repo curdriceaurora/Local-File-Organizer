@@ -238,14 +238,20 @@ class TestDedupeExecute:
         real_file.write_text("same content")
         missing_keep = exec_dir / "ghost.txt"
 
-        def fake_scan_duplicates(_path: Path, _request: object) -> tuple[list[DedupeGroup], dict[str, int]]:
+        def fake_scan_duplicates(
+            _path: Path, _request: object
+        ) -> tuple[list[DedupeGroup], dict[str, int]]:
             return (
                 [
                     DedupeGroup(
                         hash_value="hash-1",
                         files=[
-                            DedupeFileInfo(path=str(missing_keep), size=12, modified=100.0, accessed=100.0),
-                            DedupeFileInfo(path=str(real_file), size=12, modified=100.0, accessed=100.0),
+                            DedupeFileInfo(
+                                path=str(missing_keep), size=12, modified=100.0, accessed=100.0
+                            ),
+                            DedupeFileInfo(
+                                path=str(real_file), size=12, modified=100.0, accessed=100.0
+                            ),
                         ],
                         total_size=24,
                         wasted_space=12,
