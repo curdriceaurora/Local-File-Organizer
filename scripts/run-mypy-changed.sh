@@ -21,6 +21,6 @@ if [ -z "$files" ]; then
   exit 0
 fi
 
-# Convert newline-separated files to array and run mypy
-set -f  # disable globbing
-.venv/bin/mypy $(echo "$files" | sort -u)
+# Convert newline-separated files to a deduplicated array and run mypy safely
+mapfile -t files_sorted < <(printf '%s\n' "$files" | sort -u)
+.venv/bin/mypy -- "${files_sorted[@]}"

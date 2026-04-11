@@ -30,6 +30,9 @@ def test_readme_quickstart_uses_base_install() -> None:
     text = _text(README)
     # Extract just the quickstart section (between "### With Ollama" and next "###")
     start = text.find("### With Ollama (local, default)")
+    assert (
+        start != -1
+    ), "README missing '### With Ollama (local, default)' section heading"
     end = text.find("\n### ", start + 1)
     quickstart_block = text[start:end] if end != -1 else text[start:]
     assert 'pip install -e ".[desktop]"' not in quickstart_block, (
