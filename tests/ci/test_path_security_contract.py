@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -131,4 +132,31 @@ def test_intentional_security_detector_fixtures_are_ignored_by_codeql() -> None:
     assert "tests/fixtures/review_regressions/security/**" in config_text, (
         "Intentional unsafe security-detector fixtures must stay out of CodeQL analysis.\n"
         "Update .github/codeql/codeql-config.yml paths-ignore when adding or moving them."
+    )
+
+
+_STRING_PREFIX_PATH_CONTAINMENT = re.compile(
+    r"str\([^)]*\.resolve\(\)\)\.startswith\(str\([^)]*\.resolve\(\)\)\)"
+)
+
+
+def test_no_string_prefix_path_containment_checks() -> None:
+    """Ban unsafe str(path.resolve()).startswith(str(dir.resolve())) containment checks.
+
+    This pattern breaks when two paths share a string prefix but are not
+    ancestor/descendant (e.g. /foo/bar vs /foo/baz).  Use Path.is_relative_to()
+    or check via resolved_path.parents instead.
+    """
+    violations: list[str] = []
+
+    for path in SRC_ROOT.rglob("*.py"):
+        rel = path.relative_to(SRC_ROOT).as_posix()
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if _STRING_PREFIX_PATH_CONTAINMENT.search(line):
+                violations.append(f"{rel}:{line_no}: {line.strip()}")
+
+    assert not violations, (
+        "Do not use string-prefix checks for path containment.\n"
+        "Use Path.is_relative_to(), check resolved.parents, or a shared helper.\n"
+        + "\n".join(violations)
     )
