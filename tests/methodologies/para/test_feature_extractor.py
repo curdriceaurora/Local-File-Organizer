@@ -432,6 +432,34 @@ class TestEdgeCasesAndErrorHandling:
         # access_frequency should be 1.0 when days_since_modified == 0
         assert features.access_frequency == 1.0
 
+    def test_metadata_extraction_clamps_tiny_negative_day_offsets(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Tiny future-skewed timestamps should clamp to zero days instead of going negative."""
+        import file_organizer.methodologies.para.ai.feature_extractor as fe_module
+
+        class MockStat:
+            def __init__(self, *, now: float) -> None:
+                self.st_size = 7
+                self.st_atime = now + 0.1
+                self.st_mtime = now + 0.2
+                self.st_birthtime = now + 0.3
+
+        test_file = tmp_path / "fresh-skewed.txt"
+        test_file.write_text("content")
+        now = 2_000_000_000.0
+
+        monkeypatch.setattr(fe_module.time, "time", lambda: now)
+        monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
+
+        features = extractor.extract_metadata_features(test_file)
+        assert features.days_since_modified == 0.0
+        assert features.days_since_created == 0.0
+        assert features.access_frequency == 1.0
+
     def test_structural_features_with_inaccessible_parent_dir(
         self,
         extractor: FeatureExtractor,

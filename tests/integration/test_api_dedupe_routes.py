@@ -17,9 +17,11 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
+import file_organizer.api.routers.dedupe as dedupe_module
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.models import DedupeFileInfo, DedupeGroup
 from file_organizer.api.routers.dedupe import router as dedupe_router
 
 pytestmark = pytest.mark.integration
@@ -223,6 +225,46 @@ class TestDedupeExecute:
         assert not duplicate.exists()
         assert original.exists()
         assert len(list(exec_dir.iterdir())) == 1
+
+    def test_execute_skips_group_when_preview_keep_target_is_missing(
+        self,
+        dedupe_client: TestClient,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        exec_dir = tmp_path / "missing_keep_dir"
+        exec_dir.mkdir()
+        real_file = exec_dir / "keep.txt"
+        real_file.write_text("same content")
+        missing_keep = exec_dir / "ghost.txt"
+
+        def fake_scan_duplicates(_path: Path, _request: object) -> tuple[list[DedupeGroup], dict[str, int]]:
+            return (
+                [
+                    DedupeGroup(
+                        hash_value="hash-1",
+                        files=[
+                            DedupeFileInfo(path=str(missing_keep), size=12, modified=100.0, accessed=100.0),
+                            DedupeFileInfo(path=str(real_file), size=12, modified=100.0, accessed=100.0),
+                        ],
+                        total_size=24,
+                        wasted_space=12,
+                    )
+                ],
+                {"scanned_files": 2},
+            )
+
+        monkeypatch.setattr(dedupe_module, "_scan_duplicates", fake_scan_duplicates)
+
+        r = dedupe_client.post(
+            "/dedupe/execute",
+            json={"path": str(exec_dir), "dry_run": False, "trash": False},
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["removed"] == []
+        assert real_file.exists()
 
     def test_execute_response_shape(self, dedupe_client: TestClient, tmp_path: Path) -> None:
         shape_dir = tmp_path / "shape_dir"
