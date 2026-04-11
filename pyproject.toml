@@ -272,6 +272,7 @@ select = [
     "D",   # pydocstyle (google convention)
     "RUF100",  # stale noqa comments
     "DTZ",  # datetime timezone rules (DTZ001-DTZ007, DTZ011-DTZ012)
+    "S113", # requests calls without explicit timeout
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
