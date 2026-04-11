@@ -139,6 +139,16 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
+      # Type checking on models (scoped mypy gate)
+      # ----------------------------------------------------------------
+      - id: mypy-changed
+        name: mypy (changed models files)
+        entry: bash scripts/run-mypy-changed.sh
+        language: system
+        files: ^src/file_organizer/models/.*\.py$
+        pass_filenames: true
+
+      # ----------------------------------------------------------------
       # PyPI version validation
       # ----------------------------------------------------------------
       - id: pypi-version-check
