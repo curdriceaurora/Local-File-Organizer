@@ -36,9 +36,9 @@ def test_readme_quickstart_uses_base_install() -> None:
         "README Ollama quickstart must use the base install `pip install -e .`\n"
         "Desktop users can opt in via the extras table below."
     )
-    assert "pip install -e ." in quickstart_block, (
-        "README Ollama quickstart must include `pip install -e .` (base install)"
-    )
+    assert (
+        "pip install -e ." in quickstart_block
+    ), "README Ollama quickstart must include `pip install -e .` (base install)"
 
 
 def test_provider_quickstarts_set_provider_env_var() -> None:
@@ -56,9 +56,9 @@ def test_desktop_contributor_docs_use_canonical_dev_extras() -> None:
         'pip install -e ".[desktop,web]"' in text
         or 'pip install -e ".[desktop,web,' in text
     )
-    assert has_desktop_web, (
-        "desktop/README.md must show `pip install -e \".[desktop,web]\"` (or superset)"
-    )
+    assert (
+        has_desktop_web
+    ), 'desktop/README.md must show `pip install -e ".[desktop,web]"` (or superset)'
 
 
 @pytest.mark.parametrize("doc", [DESKTOP_DOC, GETTING_STARTED, CLI_REFERENCE])
@@ -74,9 +74,9 @@ def test_docs_do_not_reference_removed_ollama_env_var(doc: Path) -> None:
 def test_linux_desktop_prereqs_are_consistent(doc: Path) -> None:
     """Linux desktop prerequisites must match desktop/README.md (the reference)."""
     text = _text(doc)
-    assert "gir1.2-webkit2" in text, (
-        f"{doc.name}: missing gir1.2-webkit2 in Linux desktop prerequisites"
-    )
+    assert (
+        "gir1.2-webkit2" in text
+    ), f"{doc.name}: missing gir1.2-webkit2 in Linux desktop prerequisites"
     assert "libgirepository1.0-dev" in text, (
         f"{doc.name}: missing libgirepository1.0-dev in Linux desktop prerequisites.\n"
         "Reference: desktop/README.md line 67."
