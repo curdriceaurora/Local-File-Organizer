@@ -23,4 +23,5 @@ fi
 
 # Convert newline-separated files to a deduplicated array and run mypy safely
 mapfile -t files_sorted < <(printf '%s\n' "$files" | sort -u)
-.venv/bin/mypy -- "${files_sorted[@]}"
+MYPY=$(.venv/bin/mypy --version >/dev/null 2>&1 && echo .venv/bin/mypy || echo mypy)
+$MYPY -- "${files_sorted[@]}"

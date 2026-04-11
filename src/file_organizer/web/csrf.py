@@ -183,4 +183,3 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             path="/",
         )
         return response
-
