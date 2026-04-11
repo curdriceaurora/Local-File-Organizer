@@ -7,6 +7,7 @@ are caught at commit time rather than in PR review.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -33,7 +34,8 @@ def test_readme_quickstart_uses_base_install() -> None:
     assert start != -1, "README missing '### With Ollama (local, default)' section heading"
     end = text.find("\n### ", start + 1)
     quickstart_block = text[start:end] if end != -1 else text[start:]
-    assert 'pip install -e ".[desktop]"' not in quickstart_block, (
+    desktop_pattern = r'pip install -e\s+[\'"]?\.\[[^\]]*desktop[^\]]*\][\'"]?'
+    assert not re.search(desktop_pattern, quickstart_block), (
         "README Ollama quickstart must use the base install `pip install -e .`\n"
         "Desktop users can opt in via the extras table below."
     )
