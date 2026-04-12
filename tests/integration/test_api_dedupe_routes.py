@@ -11,7 +11,7 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -239,3 +239,55 @@ class TestDedupeExecute:
         assert "dry_run" in body
         assert "stats" in body
         assert isinstance(body["removed"], list)
+
+    def test_execute_trash_moves_to_trash_dir(
+        self, dedupe_client: TestClient, tmp_path: Path
+    ) -> None:
+        exec_dir = tmp_path / "trash_test_dir"
+        exec_dir.mkdir()
+        content = "content to be moved to trash"
+        (exec_dir / "a.txt").write_text(content)
+        (exec_dir / "b.txt").write_text(content)
+
+        with patch("file_organizer.config.path_manager.get_data_dir", return_value=tmp_path):
+            r = dedupe_client.post(
+                "/dedupe/execute",
+                json={"path": str(exec_dir), "dry_run": False, "trash": True},
+            )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["dry_run"] is False
+        assert len(body["removed"]) == 1
+        trash_dir = tmp_path / "trash"
+        assert trash_dir.exists()
+        removed_path = Path(body["removed"][0])
+        assert removed_path.parent == trash_dir
+        assert removed_path.exists()
+
+    def test_execute_trash_collision_renames(
+        self, dedupe_client: TestClient, tmp_path: Path
+    ) -> None:
+        exec_dir = tmp_path / "trash_collision_dir"
+        exec_dir.mkdir()
+        content = "collision content for trash test"
+        (exec_dir / "a.txt").write_text(content)
+        (exec_dir / "b.txt").write_text(content)
+
+        trash_dir = tmp_path / "trash"
+        trash_dir.mkdir(parents=True)
+        (trash_dir / "b.txt").write_text("pre-existing file in trash")
+
+        with patch("file_organizer.config.path_manager.get_data_dir", return_value=tmp_path):
+            r = dedupe_client.post(
+                "/dedupe/execute",
+                json={"path": str(exec_dir), "dry_run": False, "trash": True},
+            )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["removed"]) == 1
+        assert (trash_dir / "b.txt").exists()
+        removed_path = Path(body["removed"][0])
+        assert removed_path.exists()
+        assert removed_path != trash_dir / "b.txt"
