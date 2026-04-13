@@ -91,7 +91,7 @@ parsers = [
     "python-pptx>=0.6.0",  # 0.x — unstable API, keep >=
     "ebooklib>=0.18",  # 0.x — unstable API, keep >=
     "beautifulsoup4~=4.12",
-    "lxml~=4.9",
+    "lxml~=6.0",
 ]
 
 web = [
