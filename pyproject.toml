@@ -66,7 +66,7 @@ dependencies = [
     "redis~=7.4",
     # Configuration
     "pyyaml~=6.0",  # YAML config parsing
-    "platformdirs~=3.0",  # Cross-platform config/data directory resolution
+    "platformdirs~=4.9",  # Cross-platform config/data directory resolution
 
     # Utilities
     "pydantic~=2.5",
