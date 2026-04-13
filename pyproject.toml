@@ -138,7 +138,7 @@ dev = [
 ]
 
 cloud = [
-    "openai~=1.0",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
+    "openai~=2.31",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
 ]
 
 llama = [
