@@ -15,7 +15,7 @@ import pytest
 
 from file_organizer.daemon.pid import PidFileManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.smoke]
+pytestmark = [pytest.mark.unit, pytest.mark.smoke, pytest.mark.ci]
 
 
 @pytest.fixture
@@ -179,6 +179,32 @@ class TestIsRunning:
             assert pid_manager.is_running(pid_file) is True
         mock_kill.assert_not_called()
         fake_psutil.pid_exists.assert_called_once_with(os.getpid())
+
+    def test_permission_error_means_running(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """On POSIX, an EPERM from os.kill means the process exists.
+
+        A process owned by another user raises PermissionError for signal 0,
+        which still proves the process is alive.
+        """
+        pid_file.write_text("12345")
+        with (
+            mock.patch("file_organizer.daemon.pid.sys.platform", "linux"),
+            mock.patch("file_organizer.daemon.pid.os.kill", side_effect=PermissionError),
+        ):
+            assert pid_manager.is_running(pid_file) is True
+
+    def test_generic_oserror_not_running(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """On POSIX, any other OSError from os.kill is treated as not running."""
+        pid_file.write_text("12345")
+        with (
+            mock.patch("file_organizer.daemon.pid.sys.platform", "linux"),
+            mock.patch("file_organizer.daemon.pid.os.kill", side_effect=OSError),
+        ):
+            assert pid_manager.is_running(pid_file) is False
 
     def test_is_running_on_windows_reports_dead_pid(
         self, pid_manager: PidFileManager, pid_file: Path
