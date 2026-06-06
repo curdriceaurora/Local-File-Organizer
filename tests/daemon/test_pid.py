@@ -195,9 +195,7 @@ class TestIsRunning:
         ):
             assert pid_manager.is_running(pid_file) is True
 
-    def test_generic_oserror_not_running(
-        self, pid_manager: PidFileManager, pid_file: Path
-    ) -> None:
+    def test_generic_oserror_not_running(self, pid_manager: PidFileManager, pid_file: Path) -> None:
         """On POSIX, any other OSError from os.kill is treated as not running."""
         pid_file.write_text("12345")
         with (
