@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -114,8 +115,42 @@ class PidFileManager:
         if pid is None:
             return False
 
+        # A non-positive PID is never a real process. On POSIX, os.kill(0, 0)
+        # and os.kill(-1, 0) broadcast to entire process groups rather than
+        # probing a single process, so reject them up front.
+        if pid <= 0:
+            logger.debug("PID %d is not a valid process id", pid)
+            return False
+
+        return self._pid_is_alive(pid)
+
+    @staticmethod
+    def _pid_is_alive(pid: int) -> bool:
+        """Return True if a process with the given PID currently exists.
+
+        This is a liveness probe, not a signal: it must never affect the
+        target process.
+
+        On POSIX, sending signal 0 with os.kill is the portable existence
+        check. On Windows, os.kill does **not** support signal 0 as a probe —
+        for any signal other than CTRL_C/CTRL_BREAK it calls TerminateProcess,
+        which would *kill* the target (including this very process when the
+        recorded PID is our own). psutil.pid_exists is used there instead.
+
+        Args:
+            pid: A positive process id to check.
+
+        Returns:
+            True if the process exists, False otherwise.
+        """
+        if sys.platform == "win32":
+            # Avoid os.kill on Windows: it maps signal 0 to TerminateProcess.
+            import psutil
+
+            return psutil.pid_exists(pid)
+
         try:
-            # Signal 0 checks process existence without sending a signal
+            # Signal 0 checks process existence without sending a signal.
             os.kill(pid, 0)
             return True
         except ProcessLookupError:

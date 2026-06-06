@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -142,3 +143,55 @@ class TestIsRunning:
         """is_running returns False for an empty PID file."""
         pid_file.write_text("")
         assert pid_manager.is_running(pid_file) is False
+
+    @pytest.mark.parametrize("bad_pid", ["0", "-1"])
+    def test_non_positive_pid_not_running(
+        self, pid_manager: PidFileManager, pid_file: Path, bad_pid: str
+    ) -> None:
+        """is_running rejects non-positive PIDs without probing.
+
+        os.kill(0, 0) / os.kill(-1, 0) broadcast to whole process groups on
+        POSIX, so a 0 or negative PID must short-circuit to False and must
+        never reach os.kill.
+        """
+        pid_file.write_text(bad_pid)
+        with mock.patch("file_organizer.daemon.pid.os.kill") as mock_kill:
+            assert pid_manager.is_running(pid_file) is False
+        mock_kill.assert_not_called()
+
+    def test_is_running_on_windows_uses_psutil_not_os_kill(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """On Windows, is_running must use psutil.pid_exists, never os.kill.
+
+        os.kill on Windows maps signal 0 to TerminateProcess, so probing the
+        current PID with os.kill would terminate this process. This regression
+        guards the Windows CI hang/abort caused by that behavior.
+        """
+        pid_file.write_text(str(os.getpid()))
+        fake_psutil = mock.MagicMock()
+        fake_psutil.pid_exists.return_value = True
+        with (
+            mock.patch("file_organizer.daemon.pid.sys.platform", "win32"),
+            mock.patch("file_organizer.daemon.pid.os.kill") as mock_kill,
+            mock.patch.dict("sys.modules", {"psutil": fake_psutil}),
+        ):
+            assert pid_manager.is_running(pid_file) is True
+        mock_kill.assert_not_called()
+        fake_psutil.pid_exists.assert_called_once_with(os.getpid())
+
+    def test_is_running_on_windows_reports_dead_pid(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """On Windows, a PID psutil reports as absent is not running."""
+        pid_file.write_text("4000000")
+        fake_psutil = mock.MagicMock()
+        fake_psutil.pid_exists.return_value = False
+        with (
+            mock.patch("file_organizer.daemon.pid.sys.platform", "win32"),
+            mock.patch("file_organizer.daemon.pid.os.kill") as mock_kill,
+            mock.patch.dict("sys.modules", {"psutil": fake_psutil}),
+        ):
+            assert pid_manager.is_running(pid_file) is False
+        mock_kill.assert_not_called()
+        fake_psutil.pid_exists.assert_called_once_with(4000000)
