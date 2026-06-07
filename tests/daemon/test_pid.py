@@ -204,6 +204,20 @@ class TestIsRunning:
         ):
             assert pid_manager.is_running(pid_file) is False
 
+    def test_huge_pid_not_running(self, pid_manager: PidFileManager, pid_file: Path) -> None:
+        """A corrupted PID file with an out-of-range PID is not running.
+
+        On POSIX, os.kill raises OverflowError (not OSError) for an integer
+        larger than the platform's pid_t. is_running must absorb it and return
+        False rather than letting it crash callers like `daemon status`.
+        """
+        pid_file.write_text(str(10**100))
+        with (
+            mock.patch("file_organizer.daemon.pid.sys.platform", "linux"),
+            mock.patch("file_organizer.daemon.pid.os.kill", side_effect=OverflowError),
+        ):
+            assert pid_manager.is_running(pid_file) is False
+
     def test_is_running_on_windows_reports_dead_pid(
         self, pid_manager: PidFileManager, pid_file: Path
     ) -> None:

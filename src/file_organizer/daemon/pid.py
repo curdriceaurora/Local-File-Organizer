@@ -153,6 +153,11 @@ class PidFileManager:
             # Signal 0 checks process existence without sending a signal.
             os.kill(pid, 0)
             return True
+        except OverflowError:
+            # A corrupted PID file can hold an integer too large for the
+            # platform's pid_t; such a process cannot exist.
+            logger.debug("PID %d is outside the supported range", pid)
+            return False
         except ProcessLookupError:
             # Process does not exist
             logger.debug("PID %d is not running (stale PID file)", pid)
