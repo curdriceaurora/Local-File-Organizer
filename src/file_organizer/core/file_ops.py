@@ -42,11 +42,19 @@ def collect_files(path: Path, console: Console) -> list[Path]:
     """
     files: list[Path] = []
     if path.is_file():
-        files.append(path)
+        # ``Path.is_file()`` follows symlinks, so a *directly provided* symlinked
+        # file would still be collected and then copied by ``shutil.copy2``
+        # downstream — exfiltrating its target's contents into the output tree.
+        # Reject it for parity with ``safe_walk``'s traversal-time symlink skip
+        # (fo-core#270, WP-2.2 #1227).
+        if path.is_symlink():
+            logger.warning("Skipping symlinked input file: {}", path)
+        else:
+            files.append(path)
     else:
         # safe_walk skips symlinked files/dirs and hidden entries: a symlink
         # planted in the scan tree (e.g. ``escape -> /etc/passwd``) is no longer
-        # collected, organized, or read downstream (#270, WP-2.2 #1227).
+        # collected, organized, or read downstream (fo-core#270, WP-2.2 #1227).
         files.extend(safe_walk(path, only_files=True))
 
     console.print(f"[green]✓[/green] Found {len(files)} files")
