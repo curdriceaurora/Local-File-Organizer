@@ -118,11 +118,11 @@ class TestSafedirImageOpenHelper:
                 with pytest.raises(OSError, match="synthetic fdopen failure"):
                     with safedir_image_open(target):
                         pass
-                # The raw fd from SafeDir.open_for_reader was reclaimed —
-                # SafeDir.__exit__ also closes its own dir_fd, so we get
-                # ≥1 close call. The fd that ``os.fdopen`` tried to wrap
-                # must be among the closed fds.
-                assert mock_close.call_count >= 1
+                # The raw fd from SafeDir.open_for_reader must be reclaimed when
+                # os.fdopen raises. Assert the concrete effect: the exact fd
+                # that ``os.fdopen`` tried to wrap is among the closed fds.
+                # (SafeDir.__exit__ also closes its own dir_fd, so we assert fd
+                # membership rather than a weak call-count lower bound.)
                 fdopen_fd = mock_fdopen.call_args[0][0]
                 assert isinstance(fdopen_fd, int) and fdopen_fd >= 0
                 closed_fds = {call.args[0] for call in mock_close.call_args_list}
