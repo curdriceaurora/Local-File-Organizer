@@ -222,6 +222,18 @@ class TestDocumentExtractor:
 # ---------------------------------------------------------------------------
 
 
+def _make_jpeg(path: Path, size: tuple[int, int] = (8, 8)) -> None:
+    """Write a tiny real JPEG to ``path``.
+
+    WP-2.1's ``get_image_hash`` now opens images via ``safedir_image_open``
+    and feeds a numpy array to the hasher, so fake JPEG-prefix bytes
+    (``b"\\xff\\xd8\\xff"``) no longer decode — these tests need a real image.
+    """
+    from PIL import Image as _PILImage
+
+    _PILImage.new("RGB", size, color=(100, 150, 200)).save(path, format="JPEG")
+
+
 class TestImageDeduplicator:
     """Tests for ImageDeduplicator (image_dedup.py)."""
 
@@ -325,16 +337,20 @@ class TestImageDeduplicator:
     def test_get_image_hash_supported_format_calls_hasher(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
         f = tmp_path / "img.jpg"
-        f.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(f)
         dedup.hasher.encode_image.return_value = "abcd1234"
         result = dedup.get_image_hash(f)
         assert result == "abcd1234"
-        dedup.hasher.encode_image.assert_called_once_with(str(f))
+        # PR/WP-2.1: encode_image now receives an image_array kwarg, not the
+        # path. Assert the kwarg explicitly so a regression back to path-based
+        # hashing (which would re-introduce the symlink dereference) is caught.
+        dedup.hasher.encode_image.assert_called_once()
+        assert "image_array" in dedup.hasher.encode_image.call_args.kwargs
 
     def test_get_image_hash_hasher_returns_none(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
         f = tmp_path / "img.jpg"
-        f.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(f)
         dedup.hasher.encode_image.return_value = None
         result = dedup.get_image_hash(f)
         assert result is None
@@ -351,8 +367,8 @@ class TestImageDeduplicator:
         dedup = self._make_deduplicator()
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8\xff")
-        img2.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
         dedup.hasher.encode_image.return_value = "ff00ff00ff00ff00"
         result = dedup.compute_similarity(img1, img2)
         assert result is not None
@@ -363,7 +379,7 @@ class TestImageDeduplicator:
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
         # only img1 exists
-        img1.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img1)
         dedup.hasher.encode_image.side_effect = [OSError(), OSError()]
         result = dedup.compute_similarity(img1, img2)
         assert result is None
@@ -390,8 +406,8 @@ class TestImageDeduplicator:
         dedup = self._make_deduplicator()
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8\xff")
-        img2.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
         hash_val = "ff00ff00ff00ff00"
         dedup.hasher.encode_image.return_value = hash_val
         dedup.hasher.find_duplicates.return_value = {
@@ -410,7 +426,7 @@ class TestImageDeduplicator:
     def test_batch_compute_hashes_with_images(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
         img = tmp_path / "img.jpg"
-        img.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img)
         dedup.hasher.encode_image.return_value = "aabbccdd"
         result = dedup.batch_compute_hashes([img])
         assert img in result
@@ -425,8 +441,8 @@ class TestImageDeduplicator:
         dedup = self._make_deduplicator(threshold=0)
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8\xff")
-        img2.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
         # Return very different hashes
         dedup.hasher.encode_image.side_effect = ["ff00000000000000", "00ff000000000000"]
         result = dedup.cluster_by_similarity([img1, img2])
@@ -462,7 +478,7 @@ class TestImageDeduplicator:
     def test_progress_callback_called(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
         img = tmp_path / "img.jpg"
-        img.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(img)
         dedup.hasher.encode_image.return_value = "aabb"
         calls: list[tuple[int, int]] = []
         dedup.batch_compute_hashes([img], progress_callback=lambda c, t: calls.append((c, t)))
@@ -475,8 +491,8 @@ class TestImageDeduplicator:
         sub.mkdir()
         top_img = tmp_path / "top.jpg"
         sub_img = sub / "nested.jpg"
-        top_img.write_bytes(b"\xff\xd8\xff")
-        sub_img.write_bytes(b"\xff\xd8\xff")
+        _make_jpeg(top_img)
+        _make_jpeg(sub_img)
         files = dedup._find_image_files(tmp_path, recursive=False)
         paths = [str(f) for f in files]
         assert str(top_img) in paths
