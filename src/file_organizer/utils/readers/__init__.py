@@ -49,7 +49,6 @@ from file_organizer.utils.readers.documents import (
     read_docx_file,
     read_pdf_file,
     read_presentation_file,
-    read_rtf_file,
     read_spreadsheet_file,
     read_text_file,
 )
@@ -82,7 +81,6 @@ __all__ = [
     "read_text_file",
     "read_docx_file",
     "read_pdf_file",
-    "read_rtf_file",
     "read_spreadsheet_file",
     "read_presentation_file",
     # eBook readers
@@ -143,7 +141,6 @@ def read_file(file_path: str | Path, **kwargs: object) -> str | None:
         (".txt", ".md"): read_text_file,
         (".docx",): read_docx_file,  # Note: .doc (old binary format) is NOT supported
         (".pdf",): read_pdf_file,
-        (".rtf",): read_rtf_file,
         (".csv", ".xlsx", ".xls"): read_spreadsheet_file,
         (".ppt", ".pptx"): read_presentation_file,
         (".epub",): read_ebook_file,
@@ -181,7 +178,6 @@ _SAFEDIR_READERS: dict[tuple[str, ...], object] = {
     (".txt", ".md"): read_text_file,
     (".docx",): read_docx_file,
     (".pdf",): read_pdf_file,
-    (".rtf",): read_rtf_file,
     (".csv", ".xlsx", ".xls"): read_spreadsheet_file,
     (".ppt", ".pptx"): read_presentation_file,
     (".zip",): read_zip_file,
@@ -221,9 +217,10 @@ def read_file_via_safedir(
     Returns:
         Extracted text content, or ``None`` if the file extension isn't
         currently supported via the SafeDir path (caller may choose to fall
-        back to legacy ``read_file`` or treat as unsupported). The size-limit
-        check uses ``os.fstat`` on the SafeDir-opened fd so ``FileTooLargeError``
-        is raised before the reader receives the stream.
+        back to legacy ``read_file`` or treat as unsupported). The dispatched
+        reader applies the ``os.fstat``-based ``_check_fd_size`` cap on the
+        SafeDir-opened fd, raising ``FileTooLargeError`` before it parses the
+        stream.
 
     Raises:
         file_organizer.utils.safedir.SymlinkRejected: If *name* is a symlink.

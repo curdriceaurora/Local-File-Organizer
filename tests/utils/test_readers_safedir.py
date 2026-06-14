@@ -40,7 +40,6 @@ from file_organizer.utils.readers import (
     read_pdf_file,
     read_presentation_file,
     read_rar_file,
-    read_rtf_file,
     read_spreadsheet_file,
     read_step_file,
     read_tar_file,
@@ -117,13 +116,6 @@ class TestReadPdfFileFileobj:
         kwargs = mock_fitz.open.call_args.kwargs
         assert "stream" in kwargs
         assert kwargs.get("filetype") == "pdf"
-
-
-class TestReadRtfFileFileobj:
-    @patch("file_organizer.utils.readers.documents._rtf_to_text", return_value="rtf content")
-    def test_reads_from_fileobj(self, _mock_rtf: MagicMock) -> None:
-        out = read_rtf_file(fileobj=io.BytesIO(b"{\\rtf1...}"))
-        assert "rtf content" in out
 
 
 class TestReadSpreadsheetFileFileobj:
@@ -880,14 +872,6 @@ class TestFileTooLargeErrorPropagation:
             with pytest.raises(FileTooLargeError):
                 read_pdf_file(fileobj=io.BytesIO(b"any"))
 
-    def test_rtf_reader_propagates(self, tmp_path: Path) -> None:
-        with patch(
-            "file_organizer.utils.readers.documents._check_fd_size",
-            side_effect=self._raise_too_large,
-        ):
-            with pytest.raises(FileTooLargeError):
-                read_rtf_file(fileobj=io.BytesIO(b"any"))
-
     def test_spreadsheet_reader_propagates(self, tmp_path: Path) -> None:
         with patch(
             "file_organizer.utils.readers.documents._check_fd_size",
@@ -1022,7 +1006,6 @@ class TestRequiresFilePathOrFileobj:
             read_text_file,
             read_docx_file,
             read_pdf_file,
-            read_rtf_file,
             read_presentation_file,
             read_zip_file,
             read_7z_file,

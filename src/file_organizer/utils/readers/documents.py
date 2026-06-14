@@ -33,13 +33,6 @@ except ImportError:
     DOCX_AVAILABLE = False
 
 try:
-    from striprtf.striprtf import rtf_to_text as _rtf_to_text
-
-    STRIPRTF_AVAILABLE = True
-except ImportError:
-    STRIPRTF_AVAILABLE = False
-
-try:
     import openpyxl
 
     OPENPYXL_AVAILABLE = True
@@ -59,9 +52,18 @@ from file_organizer.utils.readers._base import FileReadError, _check_fd_size, _c
 
 
 def _parse_text(fileobj: BinaryIO, max_chars: int, label: str) -> str:
-    """Decode bytes from *fileobj* as UTF-8 (errors='ignore') and truncate."""
-    data = fileobj.read(max_chars * 4)  # *4 to allow worst-case multi-byte chars
-    text = data.decode("utf-8", errors="ignore")[:max_chars]
+    """Read up to *max_chars* characters of text from *fileobj*.
+
+    Wraps the binary stream in a ``TextIOWrapper`` (UTF-8, errors='ignore') so
+    universal-newline translation and *character*-based truncation match the
+    legacy path reader (``open(..., encoding=...).read(max_chars)``), then
+    detaches so the caller keeps ownership of *fileobj*.
+    """
+    text_stream = io.TextIOWrapper(fileobj, encoding="utf-8", errors="ignore")
+    try:
+        text = text_stream.read(max_chars)
+    finally:
+        text_stream.detach()
     logger.debug(f"Read {len(text)} characters from {label}")
     return text
 
@@ -217,44 +219,6 @@ def read_pdf_file(
             return _extract_pdf_pages(doc, max_pages, path.name)
     except Exception as e:  # Intentional catch-all: PyMuPDF raises library-specific errors
         raise FileReadError(f"Failed to read PDF file {path}: {e}") from e
-
-
-def _parse_rtf(fileobj: BinaryIO, max_chars: int, label: str) -> str:
-    raw = fileobj.read().decode("latin-1", errors="ignore")
-    text: str = str(_rtf_to_text(raw))
-    out = text[:max_chars] if len(text) > max_chars else text
-    logger.debug(f"Read {len(out)} characters from RTF {label}")
-    return out
-
-
-def read_rtf_file(
-    file_path: str | Path | None = None,
-    max_chars: int = 50_000,
-    *,
-    fileobj: BinaryIO | None = None,
-) -> str:
-    """Extract plain text from an RTF file using striprtf."""
-    if not STRIPRTF_AVAILABLE:
-        raise ImportError("striprtf is required for RTF support: pip install striprtf")
-    if fileobj is not None:
-        label = Path(file_path).name if file_path is not None else "<fileobj>"
-        # Size check outside the try so ``FileTooLargeError`` propagates.
-        _check_fd_size(fileobj)
-        try:
-            return _parse_rtf(fileobj, max_chars, label)
-        except Exception as exc:
-            raise FileReadError(f"Failed to read RTF {label}: {exc}") from exc
-    if file_path is None:
-        raise ValueError("read_rtf_file requires file_path or fileobj")
-    path = Path(file_path)
-    _check_file_size(path)
-    try:
-        with path.open(
-            "rb"
-        ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
-            return _parse_rtf(f, max_chars, path.name)
-    except Exception as exc:
-        raise FileReadError(f"Failed to read RTF {path.name}: {exc}") from exc
 
 
 def _parse_csv(fileobj: BinaryIO, max_rows: int, label: str) -> str:

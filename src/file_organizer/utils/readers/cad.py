@@ -327,12 +327,14 @@ def read_step_file(
     """Read metadata from a STEP (.step, .stp) CAD file.
 
     STEP files are ISO 10303 standard format for 3D CAD data exchange.
-    This function extracts basic header information from the first ``max_lines``
-    lines, matching the line-based behaviour of ``read_iges_file``.
+    This function extracts basic header information from the first 10 KB of the
+    file (matching the legacy path reader).
 
     Args:
         file_path: Path to STEP file (legacy entry point).
-        max_lines: Maximum lines to read from the header (default 100).
+        max_lines: Accepted for backward-compatible call signatures but not
+            used for truncation in this slice; the read is bounded to 10 KB.
+            (A ``max_lines`` / byte-budget cap is a WP-3.1 concern, #351.)
         fileobj: Open binary file-like (SafeDir-friendly entry point).
             STEP is plain ASCII; the binary stream is decoded UTF-8 with
             errors ignored, matching the legacy path-branch behavior.

@@ -14,7 +14,7 @@ def _unavailable(name: str) -> str:  # pragma: no cover
     """Return the user-facing message shown when a scientific reader is unavailable."""
     return (
         f"{name}: scientific readers unavailable — "
-        "install fo-core[scientific] to enable HDF5/MAT/NetCDF support."
+        "install local-file-organizer[scientific] to enable HDF5/MAT/NetCDF support."
     )
 
 
