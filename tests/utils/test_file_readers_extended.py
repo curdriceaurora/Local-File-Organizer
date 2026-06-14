@@ -18,7 +18,7 @@ from file_organizer.utils.file_readers import (
     read_file,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------

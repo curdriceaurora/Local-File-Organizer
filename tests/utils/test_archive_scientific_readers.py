@@ -21,6 +21,10 @@ from file_organizer.utils.file_readers import (
     read_zip_file,
 )
 
+# Marked ``ci`` so archive/scientific reader path-branch coverage counts toward
+# the diff-coverage gate on the WP-2.1 reader changes (deps gated via importorskip).
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def sample_zip_file(tmp_path: Path) -> Path:
