@@ -101,7 +101,14 @@ _CRED_KEY_FULL_NAMES: tuple[str, ...] = (*_CRED_KEYS, "authorization")
 # credential-named mapping keys BEFORE formatting (codex P1
 # PRRT_kwDOR_Rkws59I2zc). Uses the wider ``_CRED_KEY_FULL_NAMES`` list
 # which includes ``authorization`` (see comment above).
-_CRED_KEY_FULL = re.compile(r"(?i)^(?:" + "|".join(_CRED_KEY_FULL_NAMES) + r")$")
+# Allow optional provider/namespace prefix segments (``AWS_``, ``GCP_``,
+# ``my_service_``) before the credential name so mapping keys like
+# ``AWS_SECRET_ACCESS_KEY`` / ``AWS_ACCESS_KEY_ID`` are matched in the
+# mapping-arg pre-scrub path (codex P1). Each prefix segment is
+# alphanumerics followed by ``_`` / ``-``; the credential name must be the
+# final segment(s). Over-redaction (e.g. ``next_token``) is acceptable for a
+# fail-closed safety net.
+_CRED_KEY_FULL = re.compile(r"(?i)^(?:[a-z0-9]+[_-])*(?:" + "|".join(_CRED_KEY_FULL_NAMES) + r")$")
 # ``key`` + optional quotes + ``=`` or ``:`` + value. The value arm has
 # five alternatives ordered so each form stops on the correct delimiter:
 #
@@ -160,14 +167,29 @@ _KV_PATTERN = re.compile(
 # token (e.g. ``, user=alice``) is preserved.
 _AUTH_HEADER_PATTERN = re.compile(
     r"(?i)(?P<prefix>authorization[\"']?\s*[:=]\s*[\"']?)"
-    r"(?P<scheme>(?:bearer|basic|digest|token|negotiate|apikey)\s+)?"
-    r"(?P<value>[^\"'\s,;}]+)"
+    r"(?:"
+    # Recognised single-token scheme: preserve the scheme word, redact just
+    # the token (stops at whitespace/delimiter so trailing log context is
+    # preserved).
+    r"(?P<scheme>(?:bearer|basic|digest|token|negotiate|apikey)\s+)(?P<token>[^\"'\s,;}]+)"
+    r"|"
+    # Unrecognised scheme (e.g. AWS SigV4 ``AWS4-HMAC-SHA256 Credential=...,
+    # Signature=...``) or opaque value: redact the whole header value up to a
+    # closing quote / end-of-line so multi-token credential material
+    # (``Signature=...``) can't leak (codex P1).
+    r"(?P<whole>[^\"'\r\n]+)"
+    r")"
 )
 
 
 def _auth_header_replace(match: re.Match[str]) -> str:
-    """Preserve the ``Authorization`` key + recognised scheme; redact the rest."""
-    return f"{match.group('prefix')}{match.group('scheme') or ''}{REDACTED}"
+    """Preserve the ``Authorization`` key + recognised scheme; redact the rest.
+
+    For an unrecognised scheme the entire value is redacted (no scheme group),
+    so multi-token signature schemes don't leak trailing credential material.
+    """
+    scheme = match.group("scheme") or ""
+    return f"{match.group('prefix')}{scheme}{REDACTED}"
 
 
 def _kv_replace(match: re.Match[str]) -> str:

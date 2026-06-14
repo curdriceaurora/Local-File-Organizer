@@ -1071,3 +1071,44 @@ class TestRedactsNonBearerAuthSchemes:
         rendered = record.getMessage()
         assert "dXNlcg==" not in rendered
         assert "user=alice" in rendered
+
+
+class TestRedactsAuthRound4:
+    """codex P1 round 4: unrecognized multi-token Authorization schemes."""
+
+    def test_aws_sigv4_full_value_redacted(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record(
+            "Authorization: AWS4-HMAC-SHA256 Credential=AKIA/2020, "
+            "SignedHeaders=host, Signature=abc123secret"
+        )
+        assert f.filter(record) is True
+        rendered = record.getMessage()
+        assert "Signature=abc123secret" not in rendered
+        assert "abc123secret" not in rendered
+        assert "AKIA/2020" not in rendered
+        assert REDACTED in rendered
+
+    def test_prefixed_mapping_key_redacted(self) -> None:
+        # logger.info("%(AWS_SECRET_ACCESS_KEY)s", {"AWS_SECRET_ACCESS_KEY": secret})
+        f = CredentialRedactingFilter()
+        record = _make_record(
+            "%(AWS_SECRET_ACCESS_KEY)s", {"AWS_SECRET_ACCESS_KEY": "wJalrXUtnFEMI"}
+        )
+        assert f.filter(record) is True
+        assert "wJalrXUtnFEMI" not in record.getMessage()
+        assert REDACTED in record.getMessage()
+
+    def test_prefixed_access_key_id_mapping_key_redacted(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("%(AWS_ACCESS_KEY_ID)s", {"AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7"})
+        assert f.filter(record) is True
+        assert "AKIAIOSFODNN7" not in record.getMessage()
+        assert REDACTED in record.getMessage()
+
+    def test_non_credential_prefixed_key_preserved(self) -> None:
+        # "request_id" must NOT be treated as a credential.
+        f = CredentialRedactingFilter()
+        record = _make_record("%(request_id)s", {"request_id": "req-12345"})
+        assert f.filter(record) is True
+        assert "req-12345" in record.getMessage()
