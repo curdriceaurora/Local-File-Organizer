@@ -96,7 +96,10 @@ class TestOpenAnchoredReader:
         inside = tmp_path / "inside"
         inside.mkdir()
         # Originally a directory; gets swapped to a symlink to `outside`
-        (inside / "a").symlink_to(outside)
+        try:
+            (inside / "a").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation not supported")
         # The "victim" leaf the caller intended to read
         (inside / "doc.txt").write_text("legitimate")
 
@@ -113,7 +116,10 @@ class TestOpenAnchoredReader:
         (outside / "secret.txt").write_text("attacker content")
         inside = tmp_path / "inside"
         inside.mkdir()
-        (inside / "doc.txt").symlink_to(outside / "secret.txt")
+        try:
+            (inside / "doc.txt").symlink_to(outside / "secret.txt")
+        except OSError:
+            pytest.skip("symlink creation not supported")
 
         with SafeDir.open_root(inside) as root:
             with pytest.raises(SymlinkRejected):
@@ -198,6 +204,19 @@ class TestReadFileViaSafedirAnchored:
 
         out = read_file_via_safedir_anchored(leaf, trusted_root=tmp_path)
         assert out is None
+
+    def test_traversal_with_unsupported_extension_rejected(self, tmp_path: Path) -> None:
+        """A ``..`` escape with an unsupported suffix must raise up front —
+        not silently return None into a caller's legacy path-read fallback
+        (Codex P2, PR #1254). ``relative_to`` is lexical and does not raise
+        on ``trusted_root / '../x'``, so the component guard must.
+        """
+        trusted = tmp_path / "trusted"
+        trusted.mkdir()
+        escaped = trusted / ".." / "secret.unknownext"
+
+        with pytest.raises(ValueError, match="reserved component name"):
+            read_file_via_safedir_anchored(escaped, trusted_root=trusted)
 
 
 # NOTE: ``TestTextProcessorScanRoot`` lives in

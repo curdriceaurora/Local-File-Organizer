@@ -324,6 +324,17 @@ def read_file_via_safedir_anchored(
     # which is itself a security violation worth surfacing — let it propagate.
     relative = file_path.relative_to(trusted_root)
 
+    # Validate every component up front — mirrors the per-component O_NOFOLLOW
+    # walk in ``open_anchored_reader``. ``relative_to`` is purely lexical, so a
+    # payload like ``trusted_root / "../secret.unknownext"`` yields a relative
+    # path that still contains ``..`` rather than raising. Without this guard an
+    # unsupported suffix would hit the ``return None`` fallback below before
+    # ``open_anchored_reader`` ever rejects the ``..``, and a caller treating
+    # ``None`` as "unsupported" could fall back to a legacy path read of the
+    # escaped target. ``_validate_name`` rejects ``..``/``.``/separators/NUL/empty.
+    for part in relative.parts:
+        _validate_name(part)
+
     name_lower = file_path.name.lower()
     if (
         name_lower.endswith(".tar.gz")

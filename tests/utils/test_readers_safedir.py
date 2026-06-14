@@ -268,10 +268,15 @@ class TestRead7zFileFileobj:
         mock_archive.password_protected = False
         mock_py7zr.SevenZipFile.return_value = mock_archive
 
-        out = read_7z_file(file_path=tmp_path / "archive.7z", fileobj=io.BytesIO(b"7z fake"))
+        fake = io.BytesIO(b"7z fake")
+        out = read_7z_file(file_path=tmp_path / "archive.7z", fileobj=fake)
         assert "7Z Archive: archive.7z" in out
         assert "Total files: 1" in out
         assert "hello.txt" in out
+        # Verify the fileobj — not a path — was handed to the library, so the
+        # test fails if the reader regresses to a path-based open.
+        mock_py7zr.SevenZipFile.assert_called_once()
+        assert mock_py7zr.SevenZipFile.call_args.args[0] is fake
 
     @patch("file_organizer.utils.readers.archives.py7zr")
     def test_fileobj_error_wraps_as_file_read_error(
@@ -307,10 +312,15 @@ class TestReadRarFileFileobj:
         mock_rarfile_mod.RarFile.return_value = mock_rf
         mock_rarfile_mod.RarCannotExec = type("RarCannotExec", (Exception,), {})
 
-        out = read_rar_file(file_path=tmp_path / "archive.rar", fileobj=io.BytesIO(b"rar fake"))
+        fake = io.BytesIO(b"rar fake")
+        out = read_rar_file(file_path=tmp_path / "archive.rar", fileobj=fake)
         assert "RAR Archive: archive.rar" in out
         assert "Total files: 1" in out
         assert "hello.txt" in out
+        # Verify the fileobj — not a path — was handed to the library, so the
+        # test fails if the reader regresses to a path-based open.
+        mock_rarfile_mod.RarFile.assert_called_once()
+        assert mock_rarfile_mod.RarFile.call_args.args[0] is fake
 
     @patch("file_organizer.utils.readers.archives.rarfile")
     def test_fileobj_error_wraps_as_file_read_error(
