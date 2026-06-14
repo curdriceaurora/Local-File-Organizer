@@ -13,6 +13,8 @@ building.
 
 from __future__ import annotations
 
+import os
+import sys
 import threading
 from pathlib import Path
 
@@ -21,6 +23,7 @@ from loguru import logger
 from file_organizer.interfaces.search import RetrieverProtocol
 from file_organizer.services.search.bm25_index import BM25Index
 from file_organizer.services.search.vector_index import VectorIndex
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 # ---------------------------------------------------------------------------
 # Corpus helpers (shared by API router and CLI)
@@ -32,27 +35,131 @@ CORPUS_TEXT_LIMIT: int = 4096
 CORPUS_BINARY_PEEK: int = 512
 
 
-def read_text_safe(path: Path, limit: int = CORPUS_TEXT_LIMIT) -> str:
+def _read_fd(fd: int, limit: int) -> bytes:
+    """Read up to *limit* bytes from a SafeDir-opened fd, owning it.
+
+    ``fdopen`` takes ownership only once it returns, so close the bare fd
+    explicitly if ``fdopen`` itself raises.
+    """
+    try:
+        fileobj = os.fdopen(fd, "rb", closefd=True)
+    except OSError:
+        os.close(fd)
+        raise
+    with fileobj:
+        return fileobj.read(limit)
+
+
+def _safedir_read_bytes(
+    path: Path,
+    limit: int,
+    scan_root: Path | None,
+    relative: Path | None,
+) -> bytes | None:
+    """Read up to *limit* bytes from *path* via SafeDir (POSIX only).
+
+    Returns the bytes on success, or ``None`` when SafeDir's POSIX primitives
+    are unavailable (``NotImplementedError``) so the caller falls back to the
+    legacy reader. Raises ``SymlinkRejected`` (refused symlink) or
+    ``OSError`` / ``ValueError`` (other refusal) for the caller to map to "".
+
+    When *scan_root* is given, anchored traversal walks every intermediate
+    component between *scan_root* and *path* with ``O_NOFOLLOW`` (#286/#325);
+    otherwise the parent-rooted ``open_root(path.parent)`` path is used.
+    """
+    try:
+        if scan_root is not None:
+            assert relative is not None  # set by caller whenever scan_root given
+            with SafeDir.open_root(scan_root) as safe_dir:
+                return _read_fd(safe_dir.open_anchored_reader(relative), limit)
+        with SafeDir.open_root(path.parent) as safe_dir:
+            return _read_fd(safe_dir.open_for_reader(path.name), limit)
+    except NotImplementedError:
+        # SafeDir's POSIX primitives unavailable; signal legacy fallback.
+        logger.debug("SafeDir unavailable; using legacy reader for {}", path.name)
+        return None
+
+
+def read_text_safe(
+    path: Path,
+    limit: int = CORPUS_TEXT_LIMIT,
+    *,
+    scan_root: Path | None = None,
+) -> str:
     """Read up to *limit* bytes from *path* as text, skipping binary files.
 
     Reads only what is needed: opens the file in binary mode, reads at most
     *limit* bytes, inspects the first :data:`CORPUS_BINARY_PEEK` bytes for
     null bytes (binary sentinel), then decodes.
 
+    The read goes through :class:`file_organizer.utils.safedir.SafeDir` on
+    POSIX so a symlink swapped in between corpus enumeration and this content
+    read is refused rather than dereferenced (closes the LLM-exfiltration
+    vector documented in #264). Windows / non-POSIX platforms fall back to the
+    legacy path-based open until the SafeDir Windows port lands.
+
+    When *scan_root* is provided, the read uses
+    :meth:`SafeDir.open_anchored_reader` to walk every intermediate path
+    component between *scan_root* and *path* with ``O_NOFOLLOW``, so a symlink
+    swapped into ANY ancestor directory is detected (closes the nested-ancestor
+    TOCTOU window documented in #286/#325). Without *scan_root* the
+    parent-rooted ``SafeDir.open_root(path.parent)`` behaviour is retained.
+
     Args:
         path: File to read.
         limit: Maximum number of bytes to read (may yield fewer characters for
             multi-byte encodings).
+        scan_root: The trusted root directory that was walked to discover
+            *path*. When provided, component-wise ``O_NOFOLLOW`` validation is
+            applied to every directory between *scan_root* and *path*. Passing
+            ``None`` (the default) retains the parent-rooted SafeDir behaviour.
 
     Returns:
-        Decoded text content, or an empty string if the file is binary or
-        unreadable.
+        Decoded text content, or an empty string if the file is binary,
+        unreadable, or a refused symlink.
     """
-    try:
-        with path.open("rb") as fh:
-            raw = fh.read(limit)
-    except OSError:
+    # Defensive clamp: a non-positive limit would make the underlying
+    # ``read(n)`` calls read the whole file, bypassing the corpus cap
+    # (search-generation-patterns S3). Callers today pass ``CORPUS_TEXT_LIMIT``
+    # or smaller, but the guard keeps the API safe against future regressions.
+    if limit <= 0:
         return ""
+    limit = min(limit, CORPUS_TEXT_LIMIT)
+    # Enforce scan_root containment on ALL platforms before any read. On the
+    # Windows / SafeDir-unavailable legacy fallback below, SafeDir's
+    # ``relative_to`` guard wouldn't otherwise run, so a caller adopting
+    # scan_root for corpus-root validation could read a file outside the root.
+    # Validate up front so out-of-root paths are refused everywhere (codex P2).
+    relative: Path | None = None
+    if scan_root is not None:
+        try:
+            relative = path.relative_to(scan_root)
+        except ValueError:
+            return ""
+        # ``relative_to`` is lexical: ``scan_root/../outside/x`` yields
+        # ``../outside/x`` without error. The POSIX anchored reader rejects a
+        # ``..`` component, but the Windows / NotImplementedError legacy
+        # fallback would otherwise dereference it and escape the root. Reject
+        # ``..`` here so containment holds on every platform (codex P2).
+        if ".." in relative.parts:
+            return ""
+    raw: bytes | None = None
+    if sys.platform != "win32":
+        try:
+            raw = _safedir_read_bytes(path, limit, scan_root, relative)
+        except SymlinkRejected as exc:
+            logger.warning("Refused to read symlinked file {}: {}", path, exc)
+            return ""
+        except (OSError, ValueError):
+            # SafeDir refusal (incl. name-validation of an intermediate
+            # component); scan_root containment is already enforced above.
+            return ""
+    if raw is None:
+        try:
+            with path.open("rb") as fh:  # safedir: ok — Windows / NotImplementedError fallback
+                raw = fh.read(limit)
+        except OSError:
+            return ""
     peek_size = min(CORPUS_BINARY_PEEK, len(raw))
     if b"\x00" in raw[:peek_size]:
         return ""  # binary file — skip content extraction

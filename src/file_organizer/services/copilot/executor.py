@@ -236,7 +236,9 @@ class CommandExecutor:
                 rel = entry.relative_to(search_root)
                 if entry.is_symlink() or not entry.is_file() or is_hidden(rel):
                     continue
-                text = read_text_safe(entry)
+                # search_root is the trusted walked root: anchor the read so a
+                # symlink swapped into any intermediate directory is refused (#286).
+                text = read_text_safe(entry, scan_root=search_root)
                 docs.append(f"{entry.stem} {' '.join(rel.parts)} {text}".strip())
                 paths.append(entry)
                 if len(docs) >= 500:  # cap corpus for interactive use

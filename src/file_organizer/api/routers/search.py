@@ -194,7 +194,9 @@ def _build_semantic_corpus(
                     continue
                 if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
-                text = read_text_safe(entry)
+                # root is the trusted walked root: anchor the read so a symlink
+                # swapped into any intermediate directory is refused (#286).
+                text = read_text_safe(entry, scan_root=root)
                 doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
                 documents.append(doc)
                 paths.append(entry)

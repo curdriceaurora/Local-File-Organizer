@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Search corpus read-path symlink hardening (WP-2.1, pull-back from fo-core)** —
+  `services.search.hybrid_retriever.read_text_safe` now reads corpus files via `SafeDir` on POSIX:
+  a symlink swapped in between corpus enumeration and the content read is refused (`SymlinkRejected`
+  → empty string) rather than dereferenced, closing the LLM-exfiltration vector (#264). A new
+  optional `scan_root` argument switches to `SafeDir.open_anchored_reader`, validating every
+  intermediate directory with `O_NOFOLLOW` to also close the nested-ancestor TOCTOU window
+  (#286/#325). A defensive `limit<=0` clamp prevents bypassing the corpus byte cap. Falls back to
+  the legacy reader on Windows.
+
 - **EPUB read-path symlink hardening (WP-2.1, pull-back from fo-core)** — `utils.epub_enhanced` now
   reads EPUBs via `SafeDir` (`_read_epub_safedir`): on POSIX the file is opened with
   `O_NOFOLLOW`/`dir_fd` and a symlink swapped in after the directory walk is refused with

@@ -268,7 +268,9 @@ def _do_semantic_search(
             continue
         if type_exts is not None and _normalized_extension(entry) not in type_exts:
             continue
-        text = read_text_safe(entry)
+        # search_dir is the trusted walked root: anchor the read so a symlink
+        # swapped into any intermediate directory under it is refused (#286).
+        text = read_text_safe(entry, scan_root=search_dir)
         doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
         documents.append(doc)
         sem_paths.append(entry)
