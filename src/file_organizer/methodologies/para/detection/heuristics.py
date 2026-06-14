@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import sys
 import threading
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -24,6 +25,8 @@ try:
 except ImportError:
     ollama = None  # type: ignore[assignment]
     OLLAMA_AVAILABLE = False
+
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 from ..categories import PARACategory
 from ..config import AIHeuristicConfig, CategoryThresholds
@@ -535,7 +538,12 @@ class AIHeuristic(Heuristic):
         """Extract text content from a file for the classification prompt.
 
         For text-readable files, reads the first ``max_content_chars``
-        characters. For binary or unreadable files, returns a summary
+        characters via :class:`file_organizer.utils.safedir.SafeDir` on POSIX so
+        a symlink swapped in between detection and this read is refused (closes
+        the LLM-exfiltration vector in #264). Windows / non-POSIX falls back to
+        the legacy path-based open until the SafeDir Windows port lands.
+
+        For binary or unreadable files (or refused symlinks), returns a summary
         built from the file path and any supplied metadata.
 
         Args:
@@ -545,25 +553,25 @@ class AIHeuristic(Heuristic):
         Returns:
             A string suitable for inclusion in the LLM prompt.
         """
-        try:
-            with file_path.open("rb") as f:
-                raw = f.read(self.config.max_content_chars)
-            # Fast path: valid UTF-8 is text regardless of byte values.
+        raw = self._read_content_bytes(file_path, self.config.max_content_chars)
+        if raw is not None:
             try:
-                content = raw.decode("utf-8")
-            except UnicodeDecodeError:
-                # Not valid UTF-8 — count low control bytes (null + non-whitespace
-                # controls) as binary indicators.  Bytes ≥ 128 are NOT counted here
-                # because they appear in Latin-1 and other single-byte encodings
-                # that may still be human-readable.
-                non_text = sum(1 for b in raw if b == 0 or (b < 32 and b not in (9, 10, 13)))
-                if raw and non_text / len(raw) > 0.30:
-                    raise ValueError("binary content") from None
-                content = raw.decode("utf-8", errors="replace")
-            if content.strip():
-                return content
-        except (OSError, ValueError):
-            pass
+                # Fast path: valid UTF-8 is text regardless of byte values.
+                try:
+                    content = raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    # Not valid UTF-8 — count low control bytes (null + non-whitespace
+                    # controls) as binary indicators.  Bytes ≥ 128 are NOT counted here
+                    # because they appear in Latin-1 and other single-byte encodings
+                    # that may still be human-readable.
+                    non_text = sum(1 for b in raw if b == 0 or (b < 32 and b not in (9, 10, 13)))
+                    if raw and non_text / len(raw) > 0.30:
+                        raise ValueError("binary content") from None
+                    content = raw.decode("utf-8", errors="replace")
+                if content.strip():
+                    return content
+            except ValueError:
+                pass
 
         # Fallback: describe the file from path and metadata
         parts = [f"[Binary or unreadable file: {file_path.name}]"]
@@ -571,6 +579,47 @@ class AIHeuristic(Heuristic):
             for key, value in metadata.items():
                 parts.append(f"{key}: {value}")
         return "\n".join(parts)
+
+    @staticmethod
+    def _read_content_bytes(file_path: Path, limit: int) -> bytes | None:
+        """Read up to *limit* bytes from *file_path* via SafeDir.
+
+        Falls back to a path-based open on Windows / when SafeDir is
+        unavailable. Returns ``None`` on any I/O error or refused symlink.
+
+        Defensive: a non-positive *limit* (from a misconfigured
+        ``max_content_chars``) would otherwise make ``read(limit)`` read the
+        whole file, defeating the preview cap. Treat it as "no content to read".
+        """
+        if limit <= 0:
+            return None
+        if sys.platform != "win32":
+            try:
+                with SafeDir.open_root(file_path.parent) as safe_dir:
+                    fd = safe_dir.open_for_reader(file_path.name)
+                    try:
+                        fileobj = os.fdopen(fd, "rb", closefd=True)
+                    except OSError:
+                        os.close(fd)
+                        raise
+                    with fileobj:
+                        return fileobj.read(limit)
+            except SymlinkRejected as exc:
+                logger.warning("Refused to read symlinked file %s: %s", file_path, exc)
+                return None
+            except NotImplementedError:
+                # SafeDir's POSIX primitives unavailable; fall through to the
+                # legacy path-based open below.
+                logger.debug("SafeDir unavailable; reading %s via legacy reader", file_path.name)
+            except (OSError, ValueError):
+                # ValueError covers SafeDir's name-validation rejection
+                # (filenames with backslash / NUL / path separators).
+                return None
+        try:
+            with file_path.open("rb") as f:  # safedir: ok — Windows / NotImplementedError fallback
+                return f.read(limit)
+        except OSError:
+            return None
 
     def _build_prompt(self, file_path: Path, content: str) -> str:
         """Build the per-file user message for PARA classification.
