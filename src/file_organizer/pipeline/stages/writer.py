@@ -98,13 +98,18 @@ def _copy_via_safedir(source: Path, destination: Path) -> None:
                 with dst_handle:
                     shutil.copyfileobj(src_handle, dst_handle)
                     dst_handle.flush()
+                    # Re-stat the source *after* the read: shutil.copy2 stats
+                    # the source post-copy, so on relatime mounts (where the
+                    # read bumps atime) copying the pre-read atime would break
+                    # parity. mtime/mode are unaffected by the read.
+                    src_meta = os.fstat(src_handle.fileno())
                     # Replicate copy2's mode + times through the open fd so a
                     # concurrent path swap can't redirect the metadata ops.
                     dst_target = dst_handle.fileno()
-                    os.fchmod(dst_target, stat.S_IMODE(src_stat.st_mode))
+                    os.fchmod(dst_target, stat.S_IMODE(src_meta.st_mode))
                     os.utime(
                         dst_target,
-                        ns=(src_stat.st_atime_ns, src_stat.st_mtime_ns),
+                        ns=(src_meta.st_atime_ns, src_meta.st_mtime_ns),
                     )
 
 
