@@ -330,7 +330,7 @@ class TestWriterStage:
         assert result.error == "prior"
 
     def test_preserves_mode_and_mtime(self, tmp_path: Path) -> None:
-        """The hardened copy replicates copy2's mode + mtime via fd ops."""
+        """The hardened copy replicates copy2's mode + atime/mtime via fd ops."""
         src = tmp_path / "src" / "file.txt"
         src.parent.mkdir()
         src.write_text("content")
@@ -342,10 +342,17 @@ class TestWriterStage:
         result = WriterStage().process(ctx)
 
         assert not result.failed
-        assert dest.read_text() == "content"
+        # Stat both before reading dest content (read_text would bump dest
+        # atime, masking the atime-parity assertion below).
+        dest_stat = dest.stat()
+        src_stat = src.stat()
         if sys.platform != "win32":
-            assert stat.S_IMODE(dest.stat().st_mode) == 0o640
-        assert dest.stat().st_mtime == src.stat().st_mtime
+            assert stat.S_IMODE(dest_stat.st_mode) == 0o640
+            # copy2 copies the source's *post-read* atime; the helper re-fstats
+            # the source after the read, so dest atime matches src atime.
+            assert dest_stat.st_atime_ns == src_stat.st_atime_ns
+        assert dest_stat.st_mtime == src_stat.st_mtime
+        assert dest.read_text() == "content"
 
     def test_overwrites_existing_regular_file(self, tmp_path: Path) -> None:
         """An existing regular destination is overwritten (copy2 parity)."""
@@ -409,6 +416,45 @@ class TestWriterStage:
         assert result.failed
         # Source content must be intact (not truncated to zero bytes).
         assert src.read_text() == "important content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_fifo_source(self, tmp_path: Path) -> None:
+        """A source swapped to a FIFO is refused (SpecialFileError) instead of
+        blocking the worker on a reader-less open (#1266 Codex P2)."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        src = src_dir / "pipe"
+        try:
+            os.mkfifo(src)
+        except (AttributeError, OSError):
+            pytest.skip("FIFOs not supported")
+
+        dest = tmp_path / "dest" / "pipe"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert not dest.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_fifo_destination(self, tmp_path: Path) -> None:
+        """An existing FIFO destination is refused instead of blocking the
+        worker on a reader-less O_WRONLY open (#1266 Codex P2)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        dest = dest_dir / "pipe"
+        try:
+            os.mkfifo(dest)
+        except (AttributeError, OSError):
+            pytest.skip("FIFOs not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
 
     @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
     def test_refuses_symlinked_source(self, tmp_path: Path) -> None:

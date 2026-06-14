@@ -59,7 +59,11 @@ def _copy_via_safedir(source: Path, destination: Path) -> None:
         return
 
     with src_root_cm as src_root:
-        src_fd = src_root.open_for_reader(source.name)
+        # O_NONBLOCK so a source swapped to a FIFO (after PreprocessorStage's
+        # is_file() check) doesn't block this open waiting for a writer; we
+        # fstat below and refuse anything that isn't a regular file. O_NONBLOCK
+        # is a no-op for reads on regular files.
+        src_fd = src_root.open_child(source.name, flags=os.O_RDONLY | os.O_NONBLOCK)
         try:
             src_handle = os.fdopen(src_fd, "rb", closefd=True)
         except OSError:
@@ -67,30 +71,52 @@ def _copy_via_safedir(source: Path, destination: Path) -> None:
             raise
         with src_handle:
             src_stat = os.fstat(src_handle.fileno())
+            # Refuse non-regular sources (FIFO, device, socket): shutil.copy2
+            # raised SpecialFileError rather than streaming them. (OSError
+            # subclass → file marked failed.)
+            if not stat.S_ISREG(src_stat.st_mode):
+                raise shutil.SpecialFileError(f"`{source}` is not a regular file")
             with SafeDir.open_root(destination.parent) as dst_root:
-                # Refuse a same-inode copy (identical path, or a hard link to
-                # the source planted after postprocessing): the O_TRUNC open
-                # below would zero the source before copyfileobj reads it,
-                # yielding a silent zero-byte "success". shutil.copy2 raises
-                # SameFileError in this case — match that (it is an OSError
-                # subclass, so the file is marked failed).
+                # Pre-open lstat (no symlink follow) ONLY to refuse an existing
+                # non-regular destination (FIFO/device/socket) *before* opening:
+                # an O_WRONLY open on a FIFO would block waiting for a reader.
+                # copy2 raised SpecialFileError. Symlinks are left to
+                # open_child's O_NOFOLLOW (→ SymlinkRejected). The same-file
+                # check is deferred to a post-open fstat below (race-free).
                 try:
-                    dst_stat = dst_root.lstat(destination.name)
+                    existing = dst_root.lstat(destination.name)
                 except FileNotFoundError:
-                    dst_stat = None
-                if dst_stat is not None and (dst_stat.st_dev, dst_stat.st_ino) == (
-                    src_stat.st_dev,
-                    src_stat.st_ino,
+                    existing = None
+                if (
+                    existing is not None
+                    and not stat.S_ISREG(existing.st_mode)
+                    and not stat.S_ISLNK(existing.st_mode)
                 ):
-                    raise shutil.SameFileError(f"{source!r} and {destination!r} are the same file")
-                # O_TRUNC overwrites an existing regular file (copy2 parity);
-                # O_NOFOLLOW (added by open_child) refuses an existing symlink.
+                    raise shutil.SpecialFileError(f"`{destination}` is not a regular file")
+                # Open WITHOUT O_TRUNC so the same-inode check runs against the
+                # fd we will actually write through: a destination swapped to a
+                # hard link of the source between an lstat and a truncating open
+                # would otherwise zero the source. O_NOFOLLOW (added by
+                # open_child) still refuses a symlinked destination.
                 dst_fd = dst_root.open_child(
                     destination.name,
-                    flags=os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+                    flags=os.O_WRONLY | os.O_CREAT,
                     mode=0o666,
                 )
                 try:
+                    dst_meta = os.fstat(dst_fd)
+                    if (dst_meta.st_dev, dst_meta.st_ino) == (
+                        src_stat.st_dev,
+                        src_stat.st_ino,
+                    ):
+                        # Same inode (identical path or hard link): copy2 raises
+                        # SameFileError. We have NOT truncated, so the source is
+                        # intact. (OSError subclass → caught below, fd closed.)
+                        raise shutil.SameFileError(
+                            f"{source!r} and {destination!r} are the same file"
+                        )
+                    # Confirmed distinct inode — now truncate for copy2 parity.
+                    os.ftruncate(dst_fd, 0)
                     dst_handle = os.fdopen(dst_fd, "wb", closefd=True)
                 except OSError:
                     os.close(dst_fd)
