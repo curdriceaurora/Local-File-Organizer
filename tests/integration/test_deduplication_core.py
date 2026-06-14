@@ -341,8 +341,11 @@ class TestImageDeduplicator:
         dedup.hasher.encode_image.return_value = "abcd1234"
         result = dedup.get_image_hash(f)
         assert result == "abcd1234"
-        # PR/WP-2.1: encode_image now receives an image_array kwarg, not the path.
+        # PR/WP-2.1: encode_image now receives an image_array kwarg, not the
+        # path. Assert the kwarg explicitly so a regression back to path-based
+        # hashing (which would re-introduce the symlink dereference) is caught.
         dedup.hasher.encode_image.assert_called_once()
+        assert "image_array" in dedup.hasher.encode_image.call_args.kwargs
 
     def test_get_image_hash_hasher_returns_none(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()

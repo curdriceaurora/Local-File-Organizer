@@ -38,7 +38,7 @@ sys.modules.setdefault("imagededup", _imagededup_mod)
 sys.modules.setdefault("imagededup.methods", _imagededup_methods_mod)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def _cleanup_imagededup_sys_modules() -> None:
     """Remove injected imagededup mocks from sys.modules after the session.
 
