@@ -208,6 +208,52 @@ class TestFileOps:
         assert "file2.jpg" in names
         assert ".hidden.txt" not in names
 
+    def test_collect_files_skips_symlinks(self, tmp_path: Path) -> None:
+        """A symlinked file in the scan tree (e.g. pointing outside the root)
+        must not be collected — closing the symlink-exfiltration surface in the
+        organize pipeline (fo-core#270, WP-2.2)."""
+        import sys
+
+        from file_organizer.core.file_ops import collect_files
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "real.txt").write_text("real")
+        outside = tmp_path / "secret.txt"
+        outside.write_text("attacker secret")
+        try:
+            (src / "link.txt").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        if sys.platform == "win32":
+            pytest.skip("symlink filtering is POSIX-focused")
+
+        files = collect_files(src, MagicMock())
+        names = {f.name for f in files}
+        assert "real.txt" in names
+        assert "link.txt" not in names
+
+    def test_collect_files_rejects_symlinked_input(self, tmp_path: Path) -> None:
+        """A symlink passed directly as the input path must not be collected:
+        ``is_file()`` follows symlinks, so without an explicit guard the leaf
+        would be copied (exfiltrating its target) downstream (fo-core#270)."""
+        import sys
+
+        from file_organizer.core.file_ops import collect_files
+
+        outside = tmp_path / "secret.txt"
+        outside.write_text("attacker secret")
+        link = tmp_path / "input_link.txt"
+        try:
+            link.symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        if sys.platform == "win32":
+            pytest.skip("symlink filtering is POSIX-focused")
+
+        files = collect_files(link, MagicMock())
+        assert files == []
+
     def test_simulate_organization(self, tmp_path: Path) -> None:
         """Test simulation builds output structure without creating files."""
         from file_organizer.core.file_ops import simulate_organization
@@ -317,6 +363,17 @@ class TestFileOps:
         assert not (tmp_path / "empty_sub").exists()
         assert (tmp_path / "non_empty_sub").exists()
         assert tmp_path.exists()  # Root preserved
+
+    def test_cleanup_empty_dirs_removes_hidden(self, tmp_path: Path) -> None:
+        """Empty dot-prefixed dirs are still removed (safe_walk include_hidden):
+        cleanup's contract is to remove *all* empty dirs below root (#1263)."""
+        from file_organizer.core.file_ops import cleanup_empty_dirs
+
+        (tmp_path / ".empty_hidden").mkdir()
+
+        cleanup_empty_dirs(tmp_path)
+
+        assert not (tmp_path / ".empty_hidden").exists()
 
 
 # ---------------------------------------------------------------------------
