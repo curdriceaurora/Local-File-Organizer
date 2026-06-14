@@ -253,6 +253,31 @@ class TestReadTextSafeAnchoredTraversal:
         assert result == ""
         assert "SHOULD_NOT_BE_EXFILTRATED" not in result
 
+    def test_scan_root_rejects_dotdot_escape_on_legacy_fallback(self, tmp_path: Path) -> None:
+        """A lexical ``..`` escape under scan_root is refused on ALL platforms.
+
+        ``path.relative_to(scan_root)`` accepts ``scan_root/../outside/x``
+        lexically; the containment guard must reject the ``..`` component so the
+        Windows / NotImplementedError legacy fallback can't read outside the
+        root (codex P2). Force the legacy fallback via NotImplementedError to
+        prove the guard fires before any read.
+        """
+        scan_root = tmp_path / "root"
+        scan_root.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        secret = outside / "secret.txt"
+        secret.write_text("TOP SECRET")
+
+        escape = scan_root / ".." / "outside" / "secret.txt"
+        with patch(
+            "file_organizer.services.search.hybrid_retriever.SafeDir.open_root",
+            side_effect=NotImplementedError,
+        ):
+            result = read_text_safe(escape, scan_root=scan_root)
+
+        assert result == ""
+
     def test_scan_root_none_uses_parent_rooted_safedir(self, tmp_path: Path) -> None:
         """Default (scan_root=None) still uses the parent-rooted SafeDir path —
         no regression on existing callers that don't supply scan_root.

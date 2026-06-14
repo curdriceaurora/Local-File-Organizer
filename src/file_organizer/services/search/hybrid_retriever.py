@@ -136,6 +136,13 @@ def read_text_safe(
             relative = path.relative_to(scan_root)
         except ValueError:
             return ""
+        # ``relative_to`` is lexical: ``scan_root/../outside/x`` yields
+        # ``../outside/x`` without error. The POSIX anchored reader rejects a
+        # ``..`` component, but the Windows / NotImplementedError legacy
+        # fallback would otherwise dereference it and escape the root. Reject
+        # ``..`` here so containment holds on every platform (codex P2).
+        if ".." in relative.parts:
+            return ""
     raw: bytes | None = None
     if sys.platform != "win32":
         try:
