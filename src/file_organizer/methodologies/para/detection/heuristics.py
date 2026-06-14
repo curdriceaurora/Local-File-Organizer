@@ -605,7 +605,9 @@ class AIHeuristic(Heuristic):
                     with fileobj:
                         return fileobj.read(limit)
             except SymlinkRejected as exc:
-                logger.warning("Refused to read symlinked file %s: %s", file_path, exc)
+                logger.warning(
+                    "Refused to read symlinked file %s: %s", file_path, exc, exc_info=True
+                )
                 return None
             except NotImplementedError:
                 # SafeDir's POSIX primitives unavailable; fall through to the
