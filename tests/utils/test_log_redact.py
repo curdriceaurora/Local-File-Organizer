@@ -1,4 +1,4 @@
-"""Tests for cli.utils.log_redact — credential-redacting logging filter (A3).
+"""Tests for file_organizer.utils.log_redact — credential-redacting logging filter (A3).
 
 A3 adds a project-wide ``logging.Filter`` that masks credential-looking
 values in log records so a future code path that naively logs
@@ -1003,3 +1003,53 @@ class TestErrorHandlingFallbacks:
             root = logging.getLogger()
             for flt in [f for f in root.filters if isinstance(f, CredentialRedactingFilter)]:
                 root.removeFilter(flt)
+
+
+class TestRedactsExtraFields:
+    """Codex P1: credential-named ``extra=`` fields are scrubbed in-place.
+
+    ``logger.info("request", extra={"api_key": key})`` stores the raw value
+    on ``record.__dict__["api_key"]``; a formatter emitting ``%(api_key)s``
+    would otherwise write the secret even though ``msg`` carries no
+    ``key=value`` shape. The filter must redact such fields too.
+    """
+
+    def _record(self, **extra: object) -> logging.LogRecord:
+        record = logging.LogRecord(
+            name="t",
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=1,
+            msg="request",
+            args=(),
+            exc_info=None,
+        )
+        for key, value in extra.items():
+            setattr(record, key, value)
+        return record
+
+    def test_credential_named_extra_is_redacted(self) -> None:
+        record = self._record(api_key="sk-super-secret-xyz123")
+        CredentialRedactingFilter().filter(record)
+        assert record.__dict__["api_key"] == REDACTED
+
+    def test_multiple_credential_fields_redacted(self) -> None:
+        record = self._record(token="t-leak", password="p-leak", authorization="Bearer abc")
+        CredentialRedactingFilter().filter(record)
+        assert record.__dict__["token"] == REDACTED
+        assert record.__dict__["password"] == REDACTED
+        assert record.__dict__["authorization"] == REDACTED
+
+    def test_non_credential_extra_preserved(self) -> None:
+        record = self._record(request_id="req-123", user="alice")
+        CredentialRedactingFilter().filter(record)
+        assert record.__dict__["request_id"] == "req-123"
+        assert record.__dict__["user"] == "alice"
+
+    def test_non_string_credential_field_left_untouched(self) -> None:
+        # Only string values are scrubbed; a non-str value is left as-is
+        # (the formatter would str() it, but there is no key=value shape).
+        sentinel = {"nested": "value"}
+        record = self._record(api_key=sentinel)
+        CredentialRedactingFilter().filter(record)
+        assert record.__dict__["api_key"] is sentinel

@@ -8,7 +8,7 @@ previously silently swallowed timing data.
 
 Usage:
 
-    from services.inference_timer import time_inference
+    from file_organizer.services.inference_timer import time_inference
 
     with time_inference("vision", file_path) as t:
         ...  # body that MAY or MAY NOT invoke the model

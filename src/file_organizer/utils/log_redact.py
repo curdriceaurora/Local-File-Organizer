@@ -19,8 +19,11 @@ Contract:
   assertions can reference the exact replacement token without duplicating
   its string form.
 
-The filter is attached to the root logger in ``cli.main`` so every
-``logging.getLogger(__name__)`` inherits the protection.
+Call ``install_on_root()`` once at process start to install the filter
+process-wide (it wraps the global ``LogRecordFactory`` and also patches
+loguru) so every ``logging.getLogger(__name__)`` inherits the protection.
+CLI wiring of ``install_on_root()`` into the entrypoint is tracked
+separately (it is not yet wired into ``cli.main``).
 """
 
 from __future__ import annotations
@@ -182,6 +185,25 @@ def _sanitize_args(args: object) -> object:
     return REDACTED
 
 
+def _redact_extra_fields(record: logging.LogRecord) -> None:
+    """Scrub credential-named string fields set via ``extra=`` (codex P1).
+
+    ``logger.info("request", extra={"api_key": key})`` stores the raw value on
+    ``record.__dict__["api_key"]``; a formatter emitting ``%(api_key)s`` would
+    then write the secret even though ``msg`` carries no ``key=value`` shape to
+    match. Scrub credential-named string attributes so this common
+    structured-logging pattern also fails closed. The standard ``LogRecord``
+    fields are not credential-named, so none are clobbered.
+    """
+    for attr_key, attr_value in list(record.__dict__.items()):
+        if (
+            isinstance(attr_key, str)
+            and isinstance(attr_value, str)
+            and _CRED_KEY_FULL.match(attr_key)
+        ):
+            record.__dict__[attr_key] = REDACTED
+
+
 class CredentialRedactingFilter(logging.Filter):
     """Redact credential-shaped substrings in log records. Never drops.
 
@@ -189,7 +211,8 @@ class CredentialRedactingFilter(logging.Filter):
     inherits the filter. Per the ``logging`` module semantics, a filter on
     a logger applies to records that *originate* at that logger; filters
     on a handler apply to records routed through it. For maximum coverage
-    the attachment point is the root logger in ``cli.main``.
+    ``install_on_root()`` wraps the global ``LogRecordFactory`` (redaction at
+    record-construction time) in addition to attaching this filter.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -296,7 +319,17 @@ class CredentialRedactingFilter(logging.Filter):
         # ``logger.error("msg: %s", value, exc_info=True)``).
         if record.exc_info:
             try:
-                exc_text = "".join(traceback.format_exception(*record.exc_info))
+                # ``record.exc_info`` is ``(type, value, tb)``. Format from the
+                # exception *value* (3.10+ single-arg form) — equivalent output
+                # and avoids passing the possibly-``None`` ``type`` element as
+                # the first positional (Pyre: format_exception expects
+                # ``BaseException``). Falls back to the legacy 3-arg form when
+                # the value is absent.
+                _exc_type, _exc_value, _exc_tb = record.exc_info
+                if _exc_value is not None:
+                    exc_text = "".join(traceback.format_exception(_exc_value))
+                else:
+                    exc_text = "".join(traceback.format_exception(_exc_type, _exc_value, _exc_tb))
             except Exception:
                 # Fail-CLOSED on traceback formatting failure (buggy
                 # ``__str__`` / ``__repr__`` on the exception itself).
@@ -321,6 +354,9 @@ class CredentialRedactingFilter(logging.Filter):
             # reach the handler unscrubbed (coderabbit Major
             # PRRT_kwDOR_Rkws59II7G).
             record.exc_text = _redact_text(record.exc_text)
+
+        # --- Structured ``extra=`` field redaction (codex P1) ---
+        _redact_extra_fields(record)
         # Mark the record so subsequent filter invocations (duplicate
         # logger-level filter attachment, factory + filter combo) skip the
         # re-redact pass. Essential because ``_KV_PATTERN`` isn't
@@ -360,7 +396,15 @@ def _install_on_loguru(instance: CredentialRedactingFilter) -> bool:
         # so a caller-supplied ``bind(_fo_redacted=True)`` can't bypass
         # redaction (coderabbit Major PRRT_kwDOR_Rkws59II7G, symmetric
         # with the stdlib filter).
-        extra = record.get("extra") or {}
+        # Normalise ``extra`` to a mutable dict stored back on the record so
+        # the idempotency write below cannot raise when a record lacks
+        # ``extra`` or supplies ``extra=None`` / a non-dict (fail-closed; the
+        # loguru patcher runs on every record, so a raise here would break
+        # logging — qodo / codex / Copilot P1).
+        extra = record.get("extra")
+        if not isinstance(extra, dict):
+            extra = {}
+            record["extra"] = extra
         if extra.get("_fo_redacted") is _RECORD_REDACTED_SENTINEL:
             return
         # Loguru record: ``{'message': str, 'exception': RecordException | None, ...}``.
@@ -378,7 +422,16 @@ def _install_on_loguru(instance: CredentialRedactingFilter) -> bool:
         # scrubbed message + exception message caught at emission.
         if exc is not None:
             try:
-                exc_text = "".join(traceback.format_exception(exc.type, exc.value, exc.traceback))
+                # Format from the exception value (3.10+ single-arg form) so
+                # the possibly-``None`` ``exc.type`` isn't passed as the first
+                # positional (Pyre: expects ``BaseException``). Symmetric with
+                # the stdlib path above.
+                if exc.value is not None:
+                    exc_text = "".join(traceback.format_exception(exc.value))
+                else:
+                    exc_text = "".join(
+                        traceback.format_exception(exc.type, exc.value, exc.traceback)
+                    )
             except Exception:
                 # Buggy ``__str__`` / ``__repr__`` on the exception itself.
                 # Can't safely format, so drop the exception payload
@@ -408,7 +461,8 @@ def _install_on_loguru(instance: CredentialRedactingFilter) -> bool:
             record["exception"] = RecordException(type(sanitized), sanitized, None)
         # Mark this record so duplicate patcher installs skip the rewrite.
         # Uses the module sentinel (see ``filter`` for the rationale).
-        record["extra"]["_fo_redacted"] = _RECORD_REDACTED_SENTINEL
+        # ``extra`` is the same dict now stored on ``record["extra"]``.
+        extra["_fo_redacted"] = _RECORD_REDACTED_SENTINEL
 
     # ``patcher`` runs on every record; installing twice would stack, so
     # configure with a single canonical patcher. ``logger.configure``
@@ -449,11 +503,20 @@ def install_on_root(extra_loggers: Iterable[str] = ()) -> CredentialRedactingFil
     Returns:
         The installed filter instance. Callers may hold it for teardown.
     """
-    instance = CredentialRedactingFilter()
     current_factory = logging.getLogRecordFactory()
-    # Detect our own wrapper by a sentinel attribute so repeated installs
-    # don't stack wrappers.
-    if not getattr(current_factory, "_fo_log_redact_installed", False):
+    # Reuse the canonical filter instance across repeated installs so we
+    # don't stack a fresh filter on the root each call and so the returned
+    # instance is the one the active factory wrapper actually uses (its
+    # ``_original_factory`` is already set). The instance is stashed on our
+    # wrapper factory; a non-wrapped factory means this is a first install
+    # (qodo / Copilot: filter accumulation + missing ``_original_factory``
+    # on idempotent calls).
+    existing = getattr(current_factory, "_fo_log_redact_filter", None)
+    if isinstance(existing, CredentialRedactingFilter):
+        instance = existing
+    else:
+        instance = CredentialRedactingFilter()
+        instance._original_factory = current_factory  # type: ignore[attr-defined]
 
         def _redacting_factory(*args: object, **kwargs: object) -> logging.LogRecord:
             record = current_factory(*args, **kwargs)
@@ -461,9 +524,11 @@ def install_on_root(extra_loggers: Iterable[str] = ()) -> CredentialRedactingFil
             return record
 
         _redacting_factory._fo_log_redact_installed = True  # type: ignore[attr-defined]
-        instance._original_factory = current_factory  # type: ignore[attr-defined]
+        _redacting_factory._fo_log_redact_filter = instance  # type: ignore[attr-defined]
         logging.setLogRecordFactory(_redacting_factory)
 
+    # ``logging.Filterer.addFilter`` is idempotent for an identical instance
+    # (it checks membership), so reusing ``instance`` avoids accumulation.
     logging.getLogger().addFilter(instance)
     for name in extra_loggers:
         logging.getLogger(name).addFilter(instance)
