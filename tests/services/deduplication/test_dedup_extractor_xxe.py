@@ -47,8 +47,10 @@ def test_extract_odt_reads_clean_document(tmp_path: Path) -> None:
 def test_extract_odt_refuses_internal_entity_expansion(tmp_path: Path) -> None:
     """An internal-entity payload is refused by defusedxml (EntitiesForbidden,
     a ValueError subclass caught by the reader) — the entity is never expanded.
+
+    defusedxml is a core dependency, so this security regression must fail loudly
+    if it's missing/mispackaged rather than silently skipping.
     """
-    pytest.importorskip("defusedxml")
     odt = tmp_path / "evil.odt"
     _write_odt(
         odt,
@@ -61,3 +63,12 @@ def test_extract_odt_refuses_internal_entity_expansion(tmp_path: Path) -> None:
     result = DocumentExtractor()._extract_odt(odt)
     # defusedxml refuses the entity → no expansion, no crash.
     assert "EXPANDED_SECRET" not in result
+
+
+def test_extract_odt_handles_malformed_xml(tmp_path: Path) -> None:
+    """A malformed ``content.xml`` raises ``ParseError`` (a SyntaxError); it must
+    be caught and degrade to "" rather than escaping and crashing the dedup flow.
+    """
+    odt = tmp_path / "malformed.odt"
+    _write_odt(odt, f"<office:document-content {_NS}><office:body><text:p>oops")
+    assert DocumentExtractor()._extract_odt(odt) == ""

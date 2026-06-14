@@ -273,11 +273,11 @@ class DocumentExtractor:
         """
         try:
             import zipfile
+            from xml.etree.ElementTree import ParseError
 
             # ``content.xml`` comes from an untrusted document; use defusedxml to
             # reject entity-expansion / external-entity (XXE) payloads that the
-            # stdlib parser would otherwise process. If defusedxml is missing,
-            # the ImportError is caught by ``extract_text`` and yields "".
+            # stdlib parser would otherwise process.
             from defusedxml.ElementTree import fromstring as _xml_fromstring
 
             # ODT files are ZIP archives
@@ -314,7 +314,10 @@ class DocumentExtractor:
 
             return full_text
 
-        except (OSError, KeyError, ValueError, zipfile.BadZipFile) as e:
+        except (OSError, KeyError, ValueError, zipfile.BadZipFile, ParseError, ImportError) as e:
+            # ParseError (malformed content.xml — a SyntaxError subclass) and
+            # ImportError (defusedxml unavailable) are handled here so a bad or
+            # untrusted ODT degrades to "" rather than crashing the dedup flow.
             logger.error(f"Error extracting ODT {file_path}: {e}")
             return ""
 
