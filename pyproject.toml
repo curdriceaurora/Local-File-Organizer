@@ -37,6 +37,10 @@ dependencies = [
     "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
+    # Security: XXE/entity-expansion-safe XML parsing (dedup ODT content.xml).
+    # Core dep — tiny, pure-Python — so the hardening is always active.
+    "defusedxml>=0.7",
+
     # CLI and UI
     "typer[all]~=0.12",
     "rich~=13.0",

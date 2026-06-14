@@ -272,16 +272,21 @@ class DocumentExtractor:
             Extracted text
         """
         try:
-            import xml.etree.ElementTree as ET
             import zipfile
+
+            # ``content.xml`` comes from an untrusted document; use defusedxml to
+            # reject entity-expansion / external-entity (XXE) payloads that the
+            # stdlib parser would otherwise process. If defusedxml is missing,
+            # the ImportError is caught by ``extract_text`` and yields "".
+            from defusedxml.ElementTree import fromstring as _xml_fromstring
 
             # ODT files are ZIP archives
             with zipfile.ZipFile(file_path, "r") as odt_zip:
                 # Extract content.xml
                 content_xml = odt_zip.read("content.xml")
 
-            # Parse XML
-            root = ET.fromstring(content_xml)
+            # Parse XML (defused against XXE / billion-laughs)
+            root = _xml_fromstring(content_xml)
 
             # Extract all text nodes
             # ODT uses OpenDocument namespace
