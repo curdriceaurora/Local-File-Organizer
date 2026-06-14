@@ -537,11 +537,12 @@ class AIHeuristic(Heuristic):
     def _extract_content(self, file_path: Path, metadata: dict[str, Any] | None) -> str:
         """Extract text content from a file for the classification prompt.
 
-        For text-readable files, reads the first ``max_content_chars``
-        characters via :class:`file_organizer.utils.safedir.SafeDir` on POSIX so
-        a symlink swapped in between detection and this read is refused (closes
-        the LLM-exfiltration vector in #264). Windows / non-POSIX falls back to
-        the legacy path-based open until the SafeDir Windows port lands.
+        For text-readable files, reads up to ``max_content_chars`` *bytes*
+        via :class:`file_organizer.utils.safedir.SafeDir` on POSIX so a symlink
+        swapped in between detection and this read is refused, closing the
+        symlink-exfiltration vector in the read-path hardening series (WP-2.1,
+        #1226). Windows / non-POSIX falls back to the legacy path-based open
+        until the SafeDir Windows port lands.
 
         For binary or unreadable files (or refused symlinks), returns a summary
         built from the file path and any supplied metadata.
