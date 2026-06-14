@@ -271,6 +271,75 @@ class TestPostprocessorStage:
 
 
 # ---------------------------------------------------------------------------
+# _copy_fd_xattrs (best-effort xattr copy error branches)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestCopyFdXattrs:
+    """Branch coverage for the best-effort xattr helper (no real FS needed)."""
+
+    def test_noop_when_listxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.delattr(w.os, "listxattr", raising=False)
+        w._copy_fd_xattrs(0, 1)  # returns early, no syscalls
+
+    def test_listxattr_unsupported_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        def _raise(_fd: int) -> list[str]:
+            raise OSError(_errno.ENOTSUP, "unsupported")
+
+        monkeypatch.setattr(w.os, "listxattr", _raise)
+        w._copy_fd_xattrs(0, 1)  # swallowed, no raise
+
+    def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        def _raise(_fd: int) -> list[str]:
+            raise OSError(_errno.EIO, "io error")
+
+        monkeypatch.setattr(w.os, "listxattr", _raise)
+        with pytest.raises(OSError, match="io error"):
+            w._copy_fd_xattrs(0, 1)
+
+    def test_setxattr_permission_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+
+        def _raise(_fd: int, _name: str, _value: bytes) -> None:
+            raise OSError(_errno.EPERM, "denied")
+
+        monkeypatch.setattr(w.os, "setxattr", _raise)
+        w._copy_fd_xattrs(0, 1)  # swallowed
+
+    def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+
+        def _raise(_fd: int, _name: str, _value: bytes) -> None:
+            raise OSError(_errno.EIO, "io error")
+
+        monkeypatch.setattr(w.os, "setxattr", _raise)
+        with pytest.raises(OSError, match="io error"):
+            w._copy_fd_xattrs(0, 1)
+
+
+# ---------------------------------------------------------------------------
 # WriterStage
 # ---------------------------------------------------------------------------
 
