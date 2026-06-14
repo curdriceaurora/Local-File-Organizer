@@ -60,8 +60,11 @@ class TestSha256ViaSafedirBranches:
         with patch(
             "file_organizer.core.organizer.SafeDir.open_root",
             side_effect=SymlinkRejected("real.bin"),
-        ):
+        ) as mock_open_root:
             assert FileOrganizer._sha256_via_safedir(target) is None
+        # Lock in SafeDir-first behavior: a regression to always-legacy
+        # Path.open would never call open_root and this would catch it.
+        mock_open_root.assert_called_once()
 
     def test_not_implemented_falls_back_to_legacy_open(self, tmp_path: Path) -> None:
         target = tmp_path / "fallback.bin"
@@ -70,8 +73,10 @@ class TestSha256ViaSafedirBranches:
         with patch(
             "file_organizer.core.organizer.SafeDir.open_root",
             side_effect=NotImplementedError("no dir_fd"),
-        ):
+        ) as mock_open_root:
             assert FileOrganizer._sha256_via_safedir(target) == hashlib.sha256(payload).hexdigest()
+        # SafeDir was attempted first, then fell back to the legacy reader.
+        mock_open_root.assert_called_once()
 
     def test_fdopen_failure_closes_bare_fd(self, tmp_path: Path) -> None:
         target = tmp_path / "real.bin"
@@ -94,11 +99,13 @@ class TestSha256ViaSafedirBranches:
 
     def test_safedir_oserror_returns_none(self, tmp_path: Path) -> None:
         target = tmp_path / "x.bin"
+        target.write_bytes(b"data")  # exists, so the SafeDir branch is reached
         with patch(
             "file_organizer.core.organizer.SafeDir.open_root",
             side_effect=OSError("no such file"),
-        ):
+        ) as mock_open_root:
             assert FileOrganizer._sha256_via_safedir(target) is None
+        mock_open_root.assert_called_once()
 
     def test_safedir_valueerror_returns_none(self, tmp_path: Path) -> None:
         """SafeDir's name validation rejects filenames containing
@@ -113,8 +120,9 @@ class TestSha256ViaSafedirBranches:
         with patch(
             "file_organizer.core.organizer.SafeDir.open_root",
             side_effect=ValueError("name 'a\\b' contains path separator"),
-        ):
+        ) as mock_open_root:
             assert FileOrganizer._sha256_via_safedir(target) is None
+        mock_open_root.assert_called_once()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
@@ -127,13 +135,14 @@ class TestSha256ViaSafedirLegacyFallback:
         with patch(
             "file_organizer.core.organizer.SafeDir.open_root",
             side_effect=NotImplementedError(),
-        ):
+        ) as mock_open_root:
             assert FileOrganizer._sha256_via_safedir(target) is None
+        mock_open_root.assert_called_once()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
 class TestSha256ViaSafedirAnchored:
-    """``scan_root`` enables anchored traversal (#286): every intermediate
+    """``scan_root`` enables anchored traversal (nested-ancestor TOCTOU): every intermediate
     component between scan_root and the file is O_NOFOLLOW-checked."""
 
     def test_nested_file_under_real_dirs_hashes(self, tmp_path: Path) -> None:

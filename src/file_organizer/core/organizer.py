@@ -313,7 +313,7 @@ class FileOrganizer:
             for pf in all_processed:
                 # input_path is the trusted walked root: anchor the hash read so
                 # a symlink swapped into any intermediate directory under it is
-                # refused, not just the leaf's parent (#286, codex P1).
+                # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
                 file_hash = self._sha256_via_safedir(pf.file_path, scan_root=input_path)
                 if file_hash is None:
                     # Unreadable or refused symlink — keep the file (handled later).
@@ -390,7 +390,7 @@ class FileOrganizer:
 
         Opens through :class:`file_organizer.utils.safedir.SafeDir` on POSIX so
         a symlink swapped in between organize-time enumeration and the hash read
-        is refused (closes the LLM-exfiltration vector in #264). Windows /
+        is refused (closes the symlink-exfiltration vector; WP-2.1, #1226). Windows /
         non-POSIX falls back to the legacy path-based open until the SafeDir
         Windows port lands.
 
@@ -399,7 +399,7 @@ class FileOrganizer:
         every intermediate component between *scan_root* and *file_path* with
         ``O_NOFOLLOW``, so a symlink swapped into ANY ancestor directory — not
         just the leaf's parent — is detected (closes the nested-ancestor TOCTOU,
-        #286). Without *scan_root* the parent-rooted ``SafeDir.open_root`` path
+        nested-ancestor TOCTOU). Without *scan_root* the parent-rooted ``SafeDir.open_root`` path
         is used (leaf protection only).
 
         Returns ``None`` when the file is unreadable or the read is refused —
