@@ -12,6 +12,9 @@ delegates to extracted modules for specific concerns:
 
 from __future__ import annotations
 
+import hashlib
+import os
+import sys
 import time
 from pathlib import Path
 from typing import ClassVar
@@ -36,6 +39,7 @@ from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor
 from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
 from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 from file_organizer.undo import UndoManager
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 
 class FileOrganizer:
@@ -304,19 +308,15 @@ class FileOrganizer:
         # Organize
         # Content‑based deduplication: remove duplicate files based on file content hash
         if all_processed:
-            import hashlib
-
             seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
-                try:
-                    hasher = hashlib.sha256()
-                    with pf.file_path.open("rb") as f:
-                        for chunk in iter(lambda: f.read(65536), b""):
-                            hasher.update(chunk)
-                    file_hash = hasher.hexdigest()
-                except OSError:
-                    # If we cannot read the file, keep it (it will be handled later)
+                # input_path is the trusted walked root: anchor the hash read so
+                # a symlink swapped into any intermediate directory under it is
+                # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
+                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=input_path)
+                if file_hash is None:
+                    # Unreadable or refused symlink — keep the file (handled later).
                     deduped_processed.append(pf)
                     continue
                 if file_hash not in seen_hashes:
@@ -383,6 +383,78 @@ class FileOrganizer:
         display.show_summary(self.console, result, output_path, dry_run=self.dry_run)
 
         return result
+
+    @staticmethod
+    def _sha256_via_safedir(file_path: Path, scan_root: Path | None = None) -> str | None:
+        """Compute the SHA-256 hex digest of *file_path*, via SafeDir.
+
+        Opens through :class:`file_organizer.utils.safedir.SafeDir` on POSIX so
+        a symlink swapped in between organize-time enumeration and the hash read
+        is refused (closes the symlink-exfiltration vector; WP-2.1, #1226). Windows /
+        non-POSIX falls back to the legacy path-based open until the SafeDir
+        Windows port lands.
+
+        When *scan_root* (the trusted directory that was walked to discover the
+        file) is supplied, the read uses ``SafeDir.open_anchored_reader`` to walk
+        every intermediate component between *scan_root* and *file_path* with
+        ``O_NOFOLLOW``, so a symlink swapped into ANY ancestor directory — not
+        just the leaf's parent — is detected (closes the nested-ancestor TOCTOU,
+        nested-ancestor TOCTOU). Without *scan_root* the parent-rooted ``SafeDir.open_root`` path
+        is used (leaf protection only).
+
+        Returns ``None`` when the file is unreadable or the read is refused —
+        the caller treats that as "unknown hash" and keeps the file in the
+        deduplicated output rather than dropping it.
+        """
+        hasher = hashlib.sha256()
+        relative: Path | None = None
+        if scan_root is not None:
+            try:
+                relative = file_path.relative_to(scan_root)
+            except ValueError:
+                # File is outside the trusted root — refuse rather than read.
+                return None
+            # ``relative_to`` is lexical: reject any ``..`` escape so the
+            # legacy fallback below can't read outside scan_root either.
+            if ".." in relative.parts:
+                return None
+        if sys.platform != "win32":
+            try:
+                root = scan_root if scan_root is not None else file_path.parent
+                with SafeDir.open_root(root) as safe_dir:
+                    if scan_root is not None:
+                        assert relative is not None  # set whenever scan_root given
+                        fd = safe_dir.open_anchored_reader(relative)
+                    else:
+                        fd = safe_dir.open_for_reader(file_path.name)
+                    try:
+                        fileobj = os.fdopen(fd, "rb", closefd=True)
+                    except OSError:
+                        os.close(fd)
+                        raise
+                    with fileobj:
+                        for chunk in iter(lambda: fileobj.read(65536), b""):
+                            hasher.update(chunk)
+                return hasher.hexdigest()
+            except SymlinkRejected as exc:
+                logger.warning("Refused to hash symlinked file {}: {}", file_path, exc)
+                return None
+            except NotImplementedError:
+                logger.debug("SafeDir unavailable; hashing {} via legacy reader", file_path.name)
+            except (OSError, ValueError):
+                # ValueError covers SafeDir's name-validation rejection
+                # (filenames with backslash / NUL / path separators); OSError
+                # covers normal I/O failures. Both are "file unreadable"
+                # outcomes — return None so the caller keeps the file.
+                return None
+        # Legacy path-based fallback (Windows / NotImplementedError).
+        try:
+            with file_path.open("rb") as f:  # safedir: ok — Windows / NotImplementedError fallback
+                for chunk in iter(lambda: f.read(65536), b""):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except OSError:
+            return None
 
     # ------------------------------------------------------------------
     # Undo / Redo
