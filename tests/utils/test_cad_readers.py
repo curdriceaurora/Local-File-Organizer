@@ -17,6 +17,10 @@ from file_organizer.utils.file_readers import (
     read_step_file,
 )
 
+# Marked ``ci`` so the CAD reader path-branch coverage counts toward the
+# diff-coverage gate on the WP-2.1 reader changes (deps gated via importorskip).
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def sample_dxf_file(tmp_path: Path) -> Path:
