@@ -185,6 +185,11 @@ class FileOrganizer:
         if not input_path.exists():
             raise ValueError(f"Input path does not exist: {input_path}")
 
+        # Trusted anchor for SafeDir reads. ``SafeDir.open_root`` requires a
+        # directory, so when the input is a single file, anchor at its parent
+        # (passing the file itself would raise ENOTDIR and error every read).
+        scan_root = input_path if input_path.is_dir() else input_path.parent
+
         self.console.print(f"\n[bold blue]Scanning:[/bold blue] {input_path}")
         files = file_ops.collect_files(input_path, self.console)
 
@@ -245,7 +250,7 @@ class FileOrganizer:
                     f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
                 )
                 if text_ready:
-                    all_processed.extend(self._process_text_files(text_files))
+                    all_processed.extend(self._process_text_files(text_files, scan_root=scan_root))
                 else:
                     all_processed.extend(self._fallback_by_extension(text_files))
 
@@ -254,7 +259,7 @@ class FileOrganizer:
                     f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]"
                 )
                 if text_ready:
-                    all_processed.extend(self._process_text_files(cad_files))
+                    all_processed.extend(self._process_text_files(cad_files, scan_root=scan_root))
                 else:
                     all_processed.extend(self._fallback_by_extension(cad_files))
 
@@ -314,7 +319,7 @@ class FileOrganizer:
                 # input_path is the trusted walked root: anchor the hash read so
                 # a symlink swapped into any intermediate directory under it is
                 # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
-                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=input_path)
+                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
                 if file_hash is None:
                     # Unreadable or refused symlink — keep the file (handled later).
                     deduped_processed.append(pf)
@@ -535,11 +540,22 @@ class FileOrganizer:
             processor_cls=VisionProcessor,
         )
 
-    def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
-        """Classify text files using the text processor and append results to the plan."""
+    def _process_text_files(
+        self, files: list[Path], scan_root: Path | None = None
+    ) -> list[ProcessedFile]:
+        """Classify text files using the text processor and append results to the plan.
+
+        *scan_root* (the trusted input directory that was walked to discover
+        *files*) is forwarded so content reads go through SafeDir anchored
+        traversal, refusing symlinks swapped in after the scan (#264/#286).
+        """
         assert self.text_processor is not None
         return dispatcher.process_text_files(
-            files, self.text_processor, self.parallel_processor, self.console
+            files,
+            self.text_processor,
+            self.parallel_processor,
+            self.console,
+            scan_root=scan_root,
         )
 
     def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:

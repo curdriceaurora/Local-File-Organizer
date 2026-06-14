@@ -116,6 +116,34 @@ class TestFileOrganizer:
         mock_collect.assert_called_once()
         assert result.total_files == 0
 
+    @patch("file_organizer.core.organizer.dispatcher.process_text_files")
+    @patch("file_organizer.core.file_ops.collect_files")
+    def test_single_file_input_anchors_scan_root_at_parent(
+        self,
+        mock_collect: MagicMock,
+        mock_dispatch: MagicMock,
+        organizer: FileOrganizer,
+        tmp_path: Path,
+    ) -> None:
+        """A single-file ``input_path`` must anchor SafeDir reads at its parent
+        directory, not the file itself (``SafeDir.open_root`` needs a directory;
+        passing the file would raise ENOTDIR). Regression for PR #1259 review.
+        """
+        doc = tmp_path / "notes.txt"
+        doc.write_text("hi")
+        mock_collect.return_value = [doc]
+        mock_dispatch.return_value = []
+
+        def _fake_init() -> None:
+            tp = MagicMock()
+            tp.text_model.is_initialized = True
+            organizer.text_processor = tp
+
+        with patch.object(organizer, "_init_text_processor", side_effect=_fake_init):
+            organizer.organize(doc, tmp_path / "out")
+
+        assert mock_dispatch.call_args.kwargs["scan_root"] == tmp_path
+
     def test_extension_classvars_are_sets(self, organizer: FileOrganizer) -> None:
         """Verify extension ClassVars are backward-compatible sets."""
         assert isinstance(FileOrganizer.TEXT_EXTENSIONS, set)

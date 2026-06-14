@@ -32,6 +32,8 @@ def process_text_files(
     text_processor: TextProcessor,
     parallel_processor: ParallelProcessor,
     console: Console,
+    *,
+    scan_root: Path | None = None,
 ) -> list[ProcessedFile]:
     """Process text files through the AI text model.
 
@@ -40,6 +42,9 @@ def process_text_files(
         text_processor: Initialized text processor.
         parallel_processor: Parallel processing engine.
         console: Rich console for progress output.
+        scan_root: Trusted directory the files were discovered under. When
+            supplied it is forwarded to ``process_file`` so content reads go
+            through SafeDir anchored traversal (symlink-swap refusal, #264/#286).
 
     Returns:
         List of processed file results.
@@ -51,7 +56,7 @@ def process_text_files(
 
         def _process_one(path: Path) -> ProcessedFile:
             """Process a single text file in the dispatcher thread pool."""
-            return text_processor.process_file(path)
+            return text_processor.process_file(path, scan_root=scan_root)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one):
             if file_result.success:
