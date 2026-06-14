@@ -104,6 +104,16 @@ def _read_epub_safedir(file_path: Path) -> epub.EpubBook:
         return _read_epub_legacy_checked(file_path)
 
     with safe_dir_cm as safe_dir:
+        # Parent-rooted open: ``O_NOFOLLOW`` protects the LEAF, closing the
+        # primary walk-to-read symlink-swap on the EPUB file itself (#264).
+        # A residual nested-ancestor window remains (#286): ``open_root`` still
+        # resolves the multi-component ``file_path.parent`` by path, so an
+        # *ancestor* directory swapped to a symlink after enumeration is
+        # followed. The full close needs ``open_anchored_reader`` anchored at
+        # the walked organize root (``scan_root``); that context is threaded by
+        # the readers-dispatch / text_processor slice of WP-2.1 (#1226), where
+        # this call site is upgraded to anchored. (Anchoring at the filesystem
+        # root here instead would over-refuse legitimate symlinked ancestors.)
         fd = safe_dir.open_for_reader(file_path.name)
         # fdopen takes ownership only once it returns; explicitly close
         # the raw fd if fdopen itself raises.
