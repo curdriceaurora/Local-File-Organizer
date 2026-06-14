@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Path-safety primitives (WP-1.1, pull-back from fo-core)** — added `file_organizer.utils.safedir`
+  (`SafeDir`, a POSIX `dir_fd`+`O_NOFOLLOW` primitive that rejects symlink traversal and path-component
+  injection, raising `SymlinkRejected`), `file_organizer.core.path_guard` (`validate_within_roots`,
+  `safe_walk`, `PathTraversalError`), and `file_organizer.cli.path_validation` (`resolve_cli_path`,
+  `validate_pair`). Foundation for the symlink/TOCTOU hardening series; not yet wired into call sites.
+
 ### Changed
 
 - **Desktop app consolidated on pywebview** — removed the Tauri v2 / Rust / sidecar architecture
