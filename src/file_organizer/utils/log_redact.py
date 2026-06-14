@@ -159,37 +159,56 @@ _KV_PATTERN = re.compile(
 # pass header dicts are a real leak path (codex P1 PRRT_kwDOR_Rkws59IB5U).
 #
 # ``Authorization`` values are credentials regardless of scheme, so this
-# matches ANY scheme, not just Bearer (codex P1): ``Basic``, ``Digest``,
-# ``token``, ``Negotiate``, ``ApiKey`` are preserved (operators can still
-# see WHICH scheme leaked) and only the credential after them is redacted;
-# a recognised-scheme-less value (``Authorization: <opaque>``) is redacted
-# whole. The token arm excludes whitespace so trailing context after the
-# token (e.g. ``, user=alice``) is preserved.
+# matches ANY scheme, not just Bearer (codex P1). Single-token schemes
+# (``Bearer``, ``Basic``, ``token``, ``Negotiate``, ``ApiKey``) preserve the
+# scheme word (operators can still see WHICH scheme leaked) and redact only
+# the credential token, preserving trailing log context. MULTI-parameter or
+# unrecognised schemes — ``Digest username="...", nonce="...", response=...``
+# (codex P1) and AWS SigV4 ``AWS4-HMAC-SHA256 Credential=..., Signature=...``
+# — fall through to the whole-value branch so credential material after the
+# first parameter can't leak. ``Digest`` is deliberately NOT a recognised
+# single-token scheme for this reason.
+_SCHEME_ALT = r"(?:bearer|basic|token|negotiate|apikey)\s+"
 _AUTH_HEADER_PATTERN = re.compile(
-    r"(?i)(?P<prefix>authorization[\"']?\s*[:=]\s*[\"']?)"
+    r"(?i)(?P<prefix>authorization[\"']?\s*[:=]\s*)"
     r"(?:"
-    # Recognised single-token scheme: preserve the scheme word, redact just
-    # the token (stops at whitespace/delimiter so trailing log context is
-    # preserved).
-    r"(?P<scheme>(?:bearer|basic|digest|token|negotiate|apikey)\s+)(?P<token>[^\"'\s,;}]+)"
+    # Quoted-wrapper value (dict-repr / JSON): redact everything up to the
+    # matching close quote so multi-parameter values that CONTAIN quotes
+    # (``Digest username="x", nonce="y"``) are fully covered without
+    # over-consuming past the wrapper. Recognised scheme word preserved.
+    r'(?P<dq>")(?P<dqscheme>' + _SCHEME_ALT + r')?(?:[^"\\]|\\.)*"'
     r"|"
-    # Unrecognised scheme (e.g. AWS SigV4 ``AWS4-HMAC-SHA256 Credential=...,
-    # Signature=...``) or opaque value: redact the whole header value up to a
-    # closing quote / end-of-line so multi-token credential material
-    # (``Signature=...``) can't leak (codex P1).
-    r"(?P<whole>[^\"'\r\n]+)"
+    r"(?P<sq>')(?P<sqscheme>" + _SCHEME_ALT + r")?(?:[^'\\]|\\.)*'"
+    r"|"
+    # Unquoted recognised single-token scheme: preserve the scheme word,
+    # redact just the token (stops at whitespace/delimiter so trailing log
+    # context is preserved).
+    r"(?P<scheme>" + _SCHEME_ALT + r")(?P<token>[^\"'\s,;}]+)"
+    r"|"
+    # Unquoted multi-parameter / unrecognised / opaque value (Digest, AWS
+    # SigV4 ``AWS4-HMAC-SHA256 Credential=..., Signature=...``): redact the
+    # whole value to end-of-line so credential material after the first
+    # parameter (``nonce=``, ``response=``, ``Signature=``) can't leak.
+    r"(?P<whole>[^\r\n]+)"
     r")"
 )
 
 
 def _auth_header_replace(match: re.Match[str]) -> str:
-    """Preserve the ``Authorization`` key + recognised scheme; redact the rest.
+    """Preserve the ``Authorization`` key + recognised scheme; redact the value.
 
-    For an unrecognised scheme the entire value is redacted (no scheme group),
-    so multi-token signature schemes don't leak trailing credential material.
+    Quoted-wrapper values keep their wrapper quotes; multi-parameter /
+    unrecognised schemes (Digest, SigV4) are redacted whole so trailing
+    credential material can't leak.
     """
-    scheme = match.group("scheme") or ""
-    return f"{match.group('prefix')}{scheme}{REDACTED}"
+    prefix = match.group("prefix")
+    if match.group("dq") is not None:
+        return f'{prefix}"{match.group("dqscheme") or ""}{REDACTED}"'
+    if match.group("sq") is not None:
+        return f"{prefix}'{match.group('sqscheme') or ''}{REDACTED}'"
+    if match.group("scheme") is not None:
+        return f"{prefix}{match.group('scheme')}{REDACTED}"
+    return f"{prefix}{REDACTED}"
 
 
 def _kv_replace(match: re.Match[str]) -> str:

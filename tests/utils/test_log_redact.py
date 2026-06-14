@@ -1112,3 +1112,20 @@ class TestRedactsAuthRound4:
         record = _make_record("%(request_id)s", {"request_id": "req-12345"})
         assert f.filter(record) is True
         assert "req-12345" in record.getMessage()
+
+
+class TestRedactsDigestAuth:
+    """codex P1 round 5: multi-parameter Digest Authorization headers."""
+
+    def test_digest_full_value_redacted(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record(
+            'Authorization: Digest username="Mufasa", nonce="abc123nonce", '
+            'response="6629fae49393a05397450978507c4ef1"'
+        )
+        assert f.filter(record) is True
+        rendered = record.getMessage()
+        assert "abc123nonce" not in rendered
+        assert "6629fae49393a05397450978507c4ef1" not in rendered
+        assert "Mufasa" not in rendered
+        assert REDACTED in rendered
