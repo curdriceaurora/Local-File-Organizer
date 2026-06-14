@@ -185,7 +185,7 @@ class TestExtractRtf:
     def test_rtf_error(self, extractor, tmp_path):
         f = tmp_path / "test.rtf"
         f.write_text("content")
-        with patch("builtins.open", side_effect=OSError("fail")):
+        with patch.object(extractor, "_open_binary", side_effect=OSError("fail")):
             result = extractor._extract_rtf(f)
         assert result == ""
 

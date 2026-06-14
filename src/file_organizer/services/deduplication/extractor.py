@@ -8,7 +8,15 @@ Supports PDF, DOCX, TXT, RTF, ODT, and Markdown document formats.
 from __future__ import annotations
 
 import logging
+import os
+import sys
+import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from typing import BinaryIO
+
+from file_organizer.utils.safedir import SafeDir
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +36,45 @@ class DocumentExtractor:
         """Initialize the document extractor."""
         self.supported_extensions = {".pdf", ".docx", ".txt", ".rtf", ".odt", ".md"}
         self._check_dependencies()
+
+    @staticmethod
+    @contextmanager
+    def _open_binary(file_path: Path) -> Iterator[BinaryIO]:
+        """Yield a binary handle for *file_path*, opened through SafeDir on POSIX.
+
+        ``SafeDir.open_root(parent).open_for_reader(name)`` opens the leaf with
+        ``O_NOFOLLOW``, so a symlink swapped in between dedup enumeration and
+        extraction is refused (``SymlinkRejected`` — an ``OSError`` subclass the
+        per-format handlers already catch → file skipped) rather than
+        dereferenced. Falls back to a plain ``open(..., "rb")`` on Windows or
+        where SafeDir is unavailable (``NotImplementedError``).
+        """
+        # Scope the NotImplementedError catch to SafeDir *construction* only
+        # (``open_root`` raises it on non-POSIX). It must NOT wrap the ``yield``:
+        # otherwise a downstream parser raising NotImplementedError while
+        # consuming the handle would be mistaken for "SafeDir unavailable" and
+        # trigger a second yield (RuntimeError: generator didn't stop).
+        sd_cm = None
+        if sys.platform != "win32":
+            try:
+                sd_cm = SafeDir.open_root(file_path.parent)
+            except NotImplementedError:
+                sd_cm = None  # SafeDir unsupported here — fall through to legacy
+        if sd_cm is not None:
+            with sd_cm as sd:
+                fd = sd.open_for_reader(file_path.name)
+                # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
+                # exhaustion); once it returns, ``with handle`` owns the close.
+                try:
+                    handle = os.fdopen(fd, "rb", closefd=True)
+                except OSError:
+                    os.close(fd)
+                    raise
+                with handle:
+                    yield handle
+            return
+        with open(file_path, "rb") as handle:
+            yield handle
 
     def extract_text(self, file_path: Path) -> str:
         """Extract text from a single document.
@@ -131,7 +178,7 @@ class DocumentExtractor:
 
             text_parts = []
 
-            with open(file_path, "rb") as f:
+            with self._open_binary(file_path) as f:
                 pdf_reader = pypdf.PdfReader(f)
 
                 # Extract text from each page
@@ -165,7 +212,8 @@ class DocumentExtractor:
         try:
             import docx
 
-            doc = docx.Document(str(file_path))
+            with self._open_binary(file_path) as f:
+                doc = docx.Document(f)
 
             # Extract text from all paragraphs
             text_parts = [paragraph.text for paragraph in doc.paragraphs]
@@ -184,7 +232,9 @@ class DocumentExtractor:
         except ImportError:
             logger.error("python-docx not installed. Install with: pip install python-docx")
             return ""
-        except (OSError, ValueError, KeyError) as e:
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile) as e:
+            # BadZipFile: python-docx raises it when handed a non-OOXML stream
+            # (the SafeDir fileobj of a corrupt/non-docx file).
             logger.error(f"Error extracting DOCX {file_path}: {e}")
             return ""
 
@@ -198,23 +248,21 @@ class DocumentExtractor:
             File contents
         """
         try:
-            # Try multiple encodings
-            encodings = ["utf-8", "latin-1", "cp1252", "ascii"]
+            # Single SafeDir-guarded read, then try multiple encodings on the
+            # raw bytes (avoids re-opening the file per encoding).
+            with self._open_binary(file_path) as f:
+                raw = f.read()
 
-            for encoding in encodings:
+            for encoding in ("utf-8", "latin-1", "cp1252", "ascii"):
                 try:
-                    with open(file_path, encoding=encoding) as f:
-                        text = f.read()
+                    text = raw.decode(encoding)
                     logger.debug(f"Read {len(text)} chars from text file: {file_path.name}")
                     return text
                 except UnicodeDecodeError:
                     continue
 
-            # If all encodings fail, read as binary and decode with errors='ignore'
-            with open(file_path, "rb") as f:
-                text = f.read().decode("utf-8", errors="ignore")
-
-            return text
+            # If all encodings fail, decode with errors='ignore'
+            return raw.decode("utf-8", errors="ignore")
 
         except OSError as e:
             logger.error(f"Error reading text file {file_path}: {e}")
@@ -234,8 +282,8 @@ class DocumentExtractor:
             try:
                 from striprtf.striprtf import rtf_to_text
 
-                with open(file_path, encoding="utf-8", errors="ignore") as f:
-                    rtf_content = f.read()
+                with self._open_binary(file_path) as f:
+                    rtf_content = f.read().decode("utf-8", errors="ignore")
 
                 text = str(rtf_to_text(rtf_content))
                 logger.debug(f"Extracted {len(text)} chars from RTF: {file_path.name}")
@@ -246,8 +294,8 @@ class DocumentExtractor:
                 # Fallback: simple RTF stripping
                 logger.warning("striprtf not installed, using basic extraction")
 
-                with open(file_path, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
+                with self._open_binary(file_path) as f:
+                    content = f.read().decode("utf-8", errors="ignore")
 
                 # Very basic RTF stripping (removes control words)
                 import re
@@ -272,7 +320,6 @@ class DocumentExtractor:
             Extracted text
         """
         try:
-            import zipfile
             from xml.etree.ElementTree import ParseError
 
             # ``content.xml`` comes from an untrusted document; use defusedxml to
@@ -280,8 +327,8 @@ class DocumentExtractor:
             # stdlib parser would otherwise process.
             from defusedxml.ElementTree import fromstring as _xml_fromstring
 
-            # ODT files are ZIP archives
-            with zipfile.ZipFile(file_path, "r") as odt_zip:
+            # ODT files are ZIP archives; open through SafeDir (symlink-safe).
+            with self._open_binary(file_path) as f, zipfile.ZipFile(f, "r") as odt_zip:
                 # Extract content.xml
                 content_xml = odt_zip.read("content.xml")
 
