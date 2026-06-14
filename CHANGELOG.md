@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   intermediate directory with `O_NOFOLLOW` to also close the nested-ancestor TOCTOU window
   (#286/#325). A defensive `limit<=0` clamp prevents bypassing the corpus byte cap. Falls back to
   the legacy reader on Windows.
+- **Image-dedup read-path symlink hardening (WP-2.1, pull-back from fo-core)** — added
+  `services.deduplication.image_utils.safedir_image_open`, a context manager that routes
+  `PIL.Image.open` through a `SafeDir`-opened fd on POSIX (refusing a symlink swapped into the
+  organize root with `SymlinkRejected`), with optional `trusted_root=` anchored traversal
+  (`open_subdir` per component) to close the nested-ancestor TOCTOU. All `image_utils` readers and
+  `ImageDeduplicator` now use it; `get_image_hash` converts the SafeDir-opened image to a numpy array
+  and calls `imagededup.encode_image(image_array=...)` to bypass imagededup's path-based open, threads
+  `trusted_root` from `find_duplicates`, and the directory walk now skips symlinked entries (#264/#286).
+  Falls back to the legacy reader on Windows.
 
 - **EPUB read-path symlink hardening (WP-2.1, pull-back from fo-core)** — `utils.epub_enhanced` now
   reads EPUBs via `SafeDir` (`_read_epub_safedir`): on POSIX the file is opened with

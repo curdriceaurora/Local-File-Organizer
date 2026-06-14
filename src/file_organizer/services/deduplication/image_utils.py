@@ -2,21 +2,146 @@
 
 Provides helper functions for image validation, metadata extraction,
 format conversion, and batch processing operations.
+
+Every image read goes through :func:`safedir_image_open`, which routes
+``PIL.Image.open`` through a SafeDir-opened file descriptor on POSIX. A
+symlink swapped into the organize root between the directory walk and the
+read is refused with ``SymlinkRejected`` (an ``OSError`` subclass) rather
+than dereferenced — closes the symlink-following surface in the image dedup
+ingestion pipeline (#264). On Windows (where SafeDir's ``dir_fd`` +
+``O_NOFOLLOW`` primitives are unavailable) the legacy path-based
+``Image.open`` is used.
+
+**Anchoring**: callers that have a trusted-root context (the directory they
+walked to find the image) should pass ``trusted_root=`` to
+:func:`safedir_image_open`. The helper then traverses every component of the
+relative path with ``open_subdir`` so each intermediate directory is checked
+for symlinks too — closes the nested-symlink-ancestor TOCTOU window. Without
+``trusted_root``, the helper falls back to parent-rooted opening (only the
+final component is protected; suitable for standalone validation calls that
+don't sit behind a directory walk).
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
+import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import DecompressionBombError
 
+from file_organizer.utils.safedir import SafeDir
+
 logger = logging.getLogger(__name__)
 
 # Supported image formats
 SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
+
+
+@contextlib.contextmanager
+def safedir_image_open(
+    image_path: Path,
+    *,
+    trusted_root: Path | None = None,
+) -> Iterator[tuple[Image.Image, int | None]]:
+    """Yield ``(PIL.Image, fd)`` opened via SafeDir; refuses symlinks.
+
+    Args:
+        image_path: Path to the image file.
+        trusted_root: Anchor directory whose contents are trusted. When given,
+            the helper opens ``trusted_root`` as a SafeDir and traverses each
+            intermediate component of ``image_path.relative_to(trusted_root)``
+            via ``open_subdir`` — each step rejects symlinks with
+            ``O_NOFOLLOW``, closing the nested-symlink-ancestor TOCTOU window.
+            When ``None``, falls back to opening ``image_path.parent`` directly
+            (only the final component is protected; OK for standalone
+            validation calls without a walk context).
+
+    Yields:
+        ``(img, fd)`` where ``fd`` is the underlying SafeDir-opened file
+        descriptor (or ``None`` on the Windows / non-SafeDir fallback path).
+        Callers that need race-free metadata reads (file size, mtime) should
+        use ``os.fstat(fd)`` rather than ``image_path.stat()`` — the latter can
+        mismatch on a post-open swap.
+
+    Raises:
+        SymlinkRejected: If ``image_path`` or any intermediate ancestor (under
+            ``trusted_root``, when supplied) is a symlink. Subclasses
+            ``OSError`` so callers' existing ``except OSError`` paths catch
+            refused symlinks too.
+        ValueError: If ``image_path`` is not under ``trusted_root``.
+        OSError: For other open failures (permission denied, etc.).
+    """
+    if sys.platform == "win32":
+        with Image.open(image_path) as img:
+            yield img, None
+        return
+
+    stack = contextlib.ExitStack()
+    img: Image.Image | None = None
+    fd: int | None = None
+    try:
+        # Construction phase — narrowly catch NotImplementedError here so a
+        # NotImplementedError raised inside the yield (by the caller's code or
+        # by a PIL operation) propagates normally rather than being mistaken
+        # for "SafeDir unavailable".
+        try:
+            stack.__enter__()
+            if trusted_root is None:
+                # Parent-rooted (legacy / standalone): only the final
+                # component is O_NOFOLLOW-protected. Documented above.
+                sd = stack.enter_context(SafeDir.open_root(image_path.parent))
+                name = image_path.name
+            else:
+                # Trusted-root traversal: every intermediate component is
+                # rejected if it's a symlink. ``relative_to`` raises ValueError
+                # if the image is outside the trusted root — itself a security
+                # violation worth surfacing.
+                relative = image_path.relative_to(trusted_root)
+                parts = relative.parts
+                if not parts:
+                    raise ValueError(
+                        f"image_path {image_path!r} equals trusted_root {trusted_root!r}; "
+                        "expected a file inside the root"
+                    )
+                sd = stack.enter_context(SafeDir.open_root(trusted_root))
+                for part in parts[:-1]:
+                    sd = stack.enter_context(sd.open_subdir(part))
+                name = parts[-1]
+            fd = sd.open_for_reader(name)
+            # fdopen takes ownership only once it returns; explicitly close the
+            # raw fd if fdopen itself raises.
+            try:
+                fileobj = os.fdopen(fd, "rb", closefd=True)
+            except OSError:
+                os.close(fd)
+                raise
+            stack.enter_context(fileobj)
+            img = stack.enter_context(Image.open(fileobj))
+        except NotImplementedError:
+            # SafeDir's POSIX primitives unavailable on this build; close any
+            # partially-entered stack frames and fall back to direct
+            # ``Image.open(path)``. Yield from inside the fallback's own
+            # ``with`` so cleanup is structured.
+            stack.close()
+            logger.debug("SafeDir unavailable; using legacy Image.open for %s", image_path.name)
+            with Image.open(image_path) as fallback_img:
+                yield fallback_img, None
+            return
+
+        # Yield from outside the construction-try so the caller's exceptions
+        # propagate cleanly — including NotImplementedError raised inside the
+        # with-block body, which used to be swallowed.
+        assert img is not None  # always set by the construction phase
+        yield img, fd
+    finally:
+        stack.close()
+
 
 # Format preference ranking (higher is better quality)
 FORMAT_QUALITY_RANK = {
@@ -93,12 +218,15 @@ def get_image_metadata(image_path: Path) -> ImageMetadata | None:
         return None
 
     try:
-        with Image.open(image_path) as img:
+        # Stat from the SafeDir-opened fd so size_bytes describes the same
+        # non-symlink file the dimensions were read from. Falls back to
+        # ``image_path.stat()`` when ``fd is None`` (Windows / SafeDir-
+        # unavailable code path).
+        with safedir_image_open(image_path) as (img, fd):
             width, height = img.size
             image_format = img.format or "unknown"
             mode = img.mode
-
-        size_bytes = image_path.stat().st_size
+            size_bytes = os.fstat(fd).st_size if fd is not None else image_path.stat().st_size
 
         return ImageMetadata(
             path=image_path,
@@ -129,8 +257,8 @@ def get_image_dimensions(image_path: Path) -> tuple[int, int] | None:
         Tuple of (width, height) in pixels, or None if image cannot be read
     """
     try:
-        with Image.open(image_path) as img:
-            return img.size
+        with safedir_image_open(image_path) as (img, _fd):
+            return img.size  # type: ignore[no-any-return]
     except (OSError, ValueError) as e:
         logger.warning(f"Could not get dimensions for {image_path}: {e}")
         return None
@@ -146,8 +274,8 @@ def get_image_format(image_path: Path) -> str | None:
         Format string (e.g., "JPEG", "PNG"), or None if cannot be determined
     """
     try:
-        with Image.open(image_path) as img:
-            return img.format
+        with safedir_image_open(image_path) as (img, _fd):
+            return img.format  # type: ignore[no-any-return]
     except (OSError, ValueError) as e:
         logger.warning(f"Could not determine format for {image_path}: {e}")
         return None
@@ -192,12 +320,12 @@ def validate_image_file(image_path: Path) -> tuple[bool, str | None]:
         return False, f"Unsupported format: {image_path.suffix}"
 
     try:
-        with Image.open(image_path) as img:
+        with safedir_image_open(image_path) as (img, _fd):
             # Verify image data is readable
             img.verify()
 
         # Reopen to get actual dimensions (verify closes the file)
-        with Image.open(image_path) as img:
+        with safedir_image_open(image_path) as (img, _fd):
             width, height = img.size
             if width <= 0 or height <= 0:
                 return False, f"Invalid dimensions: {width}x{height}"

@@ -37,6 +37,23 @@ _imagededup_methods_mod.AHash = _mock_ahash_cls  # type: ignore[attr-defined]
 sys.modules.setdefault("imagededup", _imagededup_mod)
 sys.modules.setdefault("imagededup.methods", _imagededup_methods_mod)
 
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_imagededup_sys_modules() -> None:
+    """Remove injected imagededup mocks from sys.modules after the session.
+
+    The module-level setdefault() calls above inject mock modules when imagededup
+    is not installed.  Without cleanup, the mock persists across xdist workers
+    in the same process, causing smoke-canary tests to receive mock PHash
+    instances instead of being skipped via pytest.importorskip.
+    """
+    yield  # type: ignore[misc]
+    if sys.modules.get("imagededup") is _imagededup_mod:
+        del sys.modules["imagededup"]
+    if sys.modules.get("imagededup.methods") is _imagededup_methods_mod:
+        del sys.modules["imagededup.methods"]
+
+
 # Now import the module under test – the mocked modules will satisfy the
 # ``from imagededup.methods import …`` statement.
 import file_organizer.services.deduplication.image_dedup as _image_dedup_module  # noqa: E402
@@ -62,6 +79,20 @@ def _make_dedup(hash_method: str = "phash", threshold: int = 10) -> ImageDedupli
     dedup = ImageDeduplicator(hash_method=hash_method, threshold=threshold)
     dedup.hasher = MagicMock()
     return dedup
+
+
+def _make_jpeg(path: Path, size: tuple[int, int] = (8, 8)) -> None:
+    """Write a tiny real JPEG to ``path``.
+
+    PR3f's ``get_image_hash`` opens the file via ``safedir_image_open``
+    and hands a numpy array to the hasher — fake bytes won't decode.
+    Tests that previously used ``write_bytes(b"\\xff\\xd8...")`` to fake
+    a JPEG should call this helper instead so the actual SafeDir +
+    Pillow code path runs end-to-end.
+    """
+    from PIL import Image as _PILImage
+
+    _PILImage.new("RGB", size, color=(100, 150, 200)).save(path, format="JPEG")
 
 
 # ---------------------------------------------------------------------------
@@ -131,14 +162,20 @@ class TestGetImageHash:
     def test_hash_valid_image(self, tmp_path: Path):
         """Test successful hash of a valid image file."""
         img = tmp_path / "photo.jpg"
-        img.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg-data")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "abcdef1234567890"
 
         result = dedup.get_image_hash(img)
         assert result == "abcdef1234567890"
-        dedup.hasher.encode_image.assert_called_once_with(str(img))
+        # PR3f: hasher is now called with an image_array kwarg (numpy
+        # array from SafeDir-opened PIL Image), not the string path.
+        # That bypasses imagededup's internal Image.open(path) which
+        # would re-introduce the symlink-dereference we closed.
+        dedup.hasher.encode_image.assert_called_once()
+        kwargs = dedup.hasher.encode_image.call_args.kwargs
+        assert "image_array" in kwargs
 
     def test_hash_nonexistent_file(self, tmp_path: Path):
         """Test that missing file returns None."""
@@ -173,7 +210,7 @@ class TestGetImageHash:
     def test_hash_unexpected_exception(self, tmp_path: Path):
         """Test that unexpected exception during encoding returns None."""
         img = tmp_path / "weird.jpg"
-        img.write_bytes(b"\xff\xd8\xff\xe0junk")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = RuntimeError("kaboom")
@@ -187,7 +224,11 @@ class TestGetImageHash:
 
         for ext in (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"):
             img = tmp_path / f"image{ext}"
-            img.write_bytes(b"\x00" * 10)
+            # PR3f: get_image_hash now decodes via PIL before hashing;
+            # the test exercises the extension-suffix check, not format
+            # detection, so writing JPEG bytes to every suffix works
+            # (Pillow reads the magic bytes, not the extension).
+            _make_jpeg(img)
             result = dedup.get_image_hash(img)
             assert result == "aabbccdd", f"Failed for extension {ext}"
 
@@ -252,8 +293,8 @@ class TestComputeSimilarity:
         """Test perfect similarity for images with identical hashes."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8data1")
-        img2.write_bytes(b"\xff\xd8data2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "abcdef1234567890"
@@ -265,8 +306,8 @@ class TestComputeSimilarity:
         """Test zero similarity for maximally different hashes."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8data1")
-        img2.write_bytes(b"\xff\xd8data2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = [
@@ -281,8 +322,8 @@ class TestComputeSimilarity:
         """Test partial similarity with known distance."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8data1")
-        img2.write_bytes(b"\xff\xd8data2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup()
         # 0x000000000000000f vs 0x0000000000000000 -> 4 bits differ
@@ -298,7 +339,7 @@ class TestComputeSimilarity:
         """Test None returned when first image can't be hashed."""
         img1 = tmp_path / "missing.jpg"  # does not exist
         img2 = tmp_path / "b.jpg"
-        img2.write_bytes(b"\xff\xd8data2")
+        _make_jpeg(img2)
 
         dedup = _make_dedup()
         result = dedup.compute_similarity(img1, img2)
@@ -307,7 +348,7 @@ class TestComputeSimilarity:
     def test_second_image_fails(self, tmp_path: Path):
         """Test None returned when second image can't be hashed."""
         img1 = tmp_path / "a.jpg"
-        img1.write_bytes(b"\xff\xd8data1")
+        _make_jpeg(img1)
         img2 = tmp_path / "missing.jpg"
 
         dedup = _make_dedup()
@@ -346,8 +387,8 @@ class TestFindDuplicates:
         """Test empty result when all images are unique."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.png"
-        img1.write_bytes(b"\xff\xd8data1")
-        img2.write_bytes(b"\x89PNGdata2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)  # JPEG bytes in .png — Pillow opens by magic, not suffix
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = ["hash1", "hash2"]
@@ -365,7 +406,7 @@ class TestFindDuplicates:
         img2 = tmp_path / "b.jpg"
         img3 = tmp_path / "c.png"
         for img in (img1, img2, img3):
-            img.write_bytes(b"\xff\xd8fakeimage")
+            _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = ["hash_a", "hash_b", "hash_c"]
@@ -384,7 +425,7 @@ class TestFindDuplicates:
     def test_progress_callback(self, tmp_path: Path):
         """Test that progress callback is invoked for each image."""
         img = tmp_path / "photo.jpg"
-        img.write_bytes(b"\xff\xd8data")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "somehash"
@@ -399,7 +440,7 @@ class TestFindDuplicates:
         subdir = tmp_path / "sub"
         subdir.mkdir()
         img = subdir / "nested.jpg"
-        img.write_bytes(b"\xff\xd8data")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "nested_hash"
@@ -412,38 +453,42 @@ class TestFindDuplicates:
         """Test recursive=False does NOT find images in subdirectories."""
         subdir = tmp_path / "sub"
         subdir.mkdir()
-        (subdir / "nested.jpg").write_bytes(b"\xff\xd8data")
+        _make_jpeg(subdir / "nested.jpg")
         root_img = tmp_path / "root.jpg"
-        root_img.write_bytes(b"\xff\xd8data")
+        _make_jpeg(root_img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "root_hash"
         dedup.hasher.find_duplicates.return_value = {str(root_img): []}
 
         dedup.find_duplicates(tmp_path, recursive=False)
-        dedup.hasher.encode_image.assert_called_once_with(str(root_img))
+        # PR3f: hasher receives image_array=, not path
+        dedup.hasher.encode_image.assert_called_once()
+        kwargs = dedup.hasher.encode_image.call_args.kwargs
+        assert "image_array" in kwargs
 
     def test_skips_unhashable_images(self, tmp_path: Path):
         """Test that images failing to hash are excluded."""
         good = tmp_path / "good.jpg"
         bad = tmp_path / "bad.jpg"
-        good.write_bytes(b"\xff\xd8good")
-        bad.write_bytes(b"\xff\xd8bad")
+        _make_jpeg(good)
+        _make_jpeg(bad)
 
         dedup = _make_dedup()
 
-        # encode_image should return hash for good, None for bad (order-independent)
-        def encode_image_side_effect(path: str) -> str | None:
-            if path == str(good):
+        # PR3f: encode_image is now called with image_array=<numpy array>,
+        # not str(path) — we can't dispatch by path. Patch get_image_hash
+        # directly so we can decide good vs bad by path without relying on
+        # _find_image_files' ordering.
+        def hash_side_effect(image_path: Path, *, trusted_root: Path | None = None) -> str | None:
+            if image_path == good:
                 return "good_hash"
-            elif path == str(bad):
-                return None
             return None
 
-        dedup.hasher.encode_image.side_effect = encode_image_side_effect
-        dedup.hasher.find_duplicates.return_value = {str(good): []}
+        with patch.object(dedup, "get_image_hash", side_effect=hash_side_effect):
+            dedup.hasher.find_duplicates.return_value = {str(good): []}
+            dedup.find_duplicates(tmp_path)
 
-        dedup.find_duplicates(tmp_path)
         call_kwargs = dedup.hasher.find_duplicates.call_args
         encoding_map = call_kwargs.kwargs.get("encoding_map", call_kwargs[1].get("encoding_map"))
         assert str(good) in encoding_map
@@ -465,7 +510,7 @@ class TestClusterBySimilarity:
     def test_all_hashes_fail(self, tmp_path: Path):
         """Test empty clusters when no image can be hashed."""
         img = tmp_path / "bad.jpg"
-        img.write_bytes(b"\xff\xd8corrupt")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = None
@@ -476,7 +521,7 @@ class TestClusterBySimilarity:
     def test_single_image_no_cluster(self, tmp_path: Path):
         """Test that a single image does not form a cluster."""
         img = tmp_path / "solo.jpg"
-        img.write_bytes(b"\xff\xd8solo")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "0000000000000000"
@@ -488,8 +533,8 @@ class TestClusterBySimilarity:
         """Test cluster of two identical images."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8data")
-        img2.write_bytes(b"\xff\xd8data")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup(threshold=10)
         dedup.hasher.encode_image.return_value = "abcdef1234567890"
@@ -503,8 +548,8 @@ class TestClusterBySimilarity:
         """Test no clusters for very different images."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8data1")
-        img2.write_bytes(b"\xff\xd8data2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup(threshold=0)
         dedup.hasher.encode_image.side_effect = [
@@ -519,8 +564,8 @@ class TestClusterBySimilarity:
         """Test progress callback is called during clustering."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.jpg"
-        img1.write_bytes(b"\xff\xd8d1")
-        img2.write_bytes(b"\xff\xd8d2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "aabb"
@@ -536,7 +581,7 @@ class TestClusterBySimilarity:
         imgs = []
         for name in ("a.jpg", "b.jpg", "c.jpg", "d.jpg"):
             p = tmp_path / name
-            p.write_bytes(b"\xff\xd8data")
+            _make_jpeg(p)
             imgs.append(p)
 
         dedup = _make_dedup(threshold=5)
@@ -568,8 +613,8 @@ class TestBatchComputeHashes:
         """Test all images hashed successfully."""
         img1 = tmp_path / "a.jpg"
         img2 = tmp_path / "b.png"
-        img1.write_bytes(b"\xff\xd8d1")
-        img2.write_bytes(b"\x89PNGd2")
+        _make_jpeg(img1)
+        _make_jpeg(img2)  # JPEG bytes in .png — Pillow detects by magic bytes
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = ["hash_a", "hash_b"]
@@ -581,8 +626,8 @@ class TestBatchComputeHashes:
         """Test that failed images are excluded from results."""
         good = tmp_path / "good.jpg"
         bad = tmp_path / "bad.jpg"
-        good.write_bytes(b"\xff\xd8good")
-        bad.write_bytes(b"\xff\xd8bad")
+        _make_jpeg(good)
+        _make_jpeg(bad)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.side_effect = ["good_hash", None]
@@ -595,7 +640,7 @@ class TestBatchComputeHashes:
         imgs = []
         for i in range(3):
             p = tmp_path / f"img{i}.jpg"
-            p.write_bytes(b"\xff\xd8data")
+            _make_jpeg(p)
             imgs.append(p)
 
         dedup = _make_dedup()
@@ -611,7 +656,7 @@ class TestBatchComputeHashes:
     def test_no_callback(self, tmp_path: Path):
         """Test batch works without progress callback."""
         img = tmp_path / "only.jpg"
-        img.write_bytes(b"\xff\xd8ok")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
         dedup.hasher.encode_image.return_value = "ok_hash"
@@ -702,13 +747,18 @@ class TestValidateImage:
     def test_valid_image(self, tmp_path: Path):
         """Test validation passes for a readable image."""
         img = tmp_path / "valid.jpg"
-        img.write_bytes(b"\xff\xd8\xff\xe0data")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
-        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
+        # PR3f: validate_image now opens via ``safedir_image_open`` which
+        # yields a (img, fd) tuple. Patch the helper directly so the test
+        # doesn't need a real JPEG payload or a live SafeDir.
+        with patch(
+            "file_organizer.services.deduplication.image_dedup.safedir_image_open"
+        ) as mock_open:
             mock_ctx = MagicMock()
-            mock_image.open.return_value.__enter__ = MagicMock(return_value=mock_ctx)
-            mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
+            mock_open.return_value.__enter__ = MagicMock(return_value=(mock_ctx, None))
+            mock_open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)
             assert is_valid is True
@@ -741,12 +791,14 @@ class TestValidateImage:
     def test_corrupt_image_os_error(self, tmp_path: Path):
         """Test validation fails for corrupt image (PIL raises OSError)."""
         img = tmp_path / "corrupt.jpg"
-        img.write_bytes(b"\xff\xd8\xff\xe0corrupt")
+        _make_jpeg(img)
 
         dedup = _make_dedup()
-        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
-            mock_image.open.return_value.__enter__ = MagicMock(side_effect=OSError("truncated"))
-            mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
+        with patch(
+            "file_organizer.services.deduplication.image_dedup.safedir_image_open"
+        ) as mock_open:
+            mock_open.return_value.__enter__ = MagicMock(side_effect=OSError("truncated"))
+            mock_open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)
             assert is_valid is False
@@ -758,11 +810,11 @@ class TestValidateImage:
         img.write_bytes(b"\x89PNGbaddata")
 
         dedup = _make_dedup()
-        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
-            mock_image.open.return_value.__enter__ = MagicMock(
-                side_effect=RuntimeError("weird error")
-            )
-            mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
+        with patch(
+            "file_organizer.services.deduplication.image_dedup.safedir_image_open"
+        ) as mock_open:
+            mock_open.return_value.__enter__ = MagicMock(side_effect=RuntimeError("weird error"))
+            mock_open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)
             assert is_valid is False
@@ -783,10 +835,10 @@ class TestMissingImagededupDep:
         """ImportError is raised with install hint when imagededup is absent."""
         import file_organizer.services.deduplication.image_dedup as _mod
 
-        original = _mod._IMAGEDEDUP_AVAILABLE
+        original_avail = _mod._IMAGEDEDUP_AVAILABLE
         try:
             _mod._IMAGEDEDUP_AVAILABLE = False
             with pytest.raises(ImportError, match="pip install 'local-file-organizer\\[dedup\\]'"):
                 ImageDeduplicator()
         finally:
-            _mod._IMAGEDEDUP_AVAILABLE = original
+            _mod._IMAGEDEDUP_AVAILABLE = original_avail
