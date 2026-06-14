@@ -39,7 +39,7 @@ class TestUndoTextWorkflow:
         mock_processor = MagicMock()
         mock_text_cls.return_value = mock_processor
 
-        def mock_process_file(file_path: Path) -> ProcessedFile:
+        def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
             return ProcessedFile(
                 file_path=file_path,
                 description="desc",
@@ -81,7 +81,7 @@ class TestUndoTextWorkflow:
         mock_processor = MagicMock()
         mock_text_cls.return_value = mock_processor
 
-        def mock_process_file(file_path: Path) -> ProcessedFile:
+        def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
             return ProcessedFile(
                 file_path=file_path,
                 description="desc",

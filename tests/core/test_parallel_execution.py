@@ -34,7 +34,7 @@ class TestParallelExecution:
         with patch("file_organizer.core.organizer.TextProcessor") as MockProcessorCls:
             mock_processor = MockProcessorCls.return_value
 
-            def side_effect(path: Path) -> ProcessedFile:
+            def side_effect(path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
                 threading.Event().wait(timeout=0.1)  # Simulate delay
                 return ProcessedFile(
                     file_path=path,
@@ -80,7 +80,7 @@ class TestParallelExecution:
         with patch("file_organizer.core.organizer.TextProcessor") as MockProcessorCls:
             mock_processor = MockProcessorCls.return_value
 
-            def side_effect(path: Path) -> ProcessedFile:
+            def side_effect(path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
                 if "doc_2" in path.name:
                     raise ValueError("Simulated failure")
                 return ProcessedFile(
