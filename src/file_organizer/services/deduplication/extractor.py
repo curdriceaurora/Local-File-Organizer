@@ -49,22 +49,30 @@ class DocumentExtractor:
         dereferenced. Falls back to a plain ``open(..., "rb")`` on Windows or
         where SafeDir is unavailable (``NotImplementedError``).
         """
+        # Scope the NotImplementedError catch to SafeDir *construction* only
+        # (``open_root`` raises it on non-POSIX). It must NOT wrap the ``yield``:
+        # otherwise a downstream parser raising NotImplementedError while
+        # consuming the handle would be mistaken for "SafeDir unavailable" and
+        # trigger a second yield (RuntimeError: generator didn't stop).
+        sd_cm = None
         if sys.platform != "win32":
             try:
-                with SafeDir.open_root(file_path.parent) as sd:
-                    fd = sd.open_for_reader(file_path.name)
-                    # Close the raw fd if fdopen itself fails (e.g. EMFILE under
-                    # fd exhaustion); once it returns, ``with handle`` owns close.
-                    try:
-                        handle = os.fdopen(fd, "rb", closefd=True)
-                    except OSError:
-                        os.close(fd)
-                        raise
-                    with handle:
-                        yield handle
-                return
+                sd_cm = SafeDir.open_root(file_path.parent)
             except NotImplementedError:
-                pass  # SafeDir unsupported here — fall through to legacy open
+                sd_cm = None  # SafeDir unsupported here — fall through to legacy
+        if sd_cm is not None:
+            with sd_cm as sd:
+                fd = sd.open_for_reader(file_path.name)
+                # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
+                # exhaustion); once it returns, ``with handle`` owns the close.
+                try:
+                    handle = os.fdopen(fd, "rb", closefd=True)
+                except OSError:
+                    os.close(fd)
+                    raise
+                with handle:
+                    yield handle
+            return
         with open(file_path, "rb") as handle:
             yield handle
 

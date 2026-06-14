@@ -57,6 +57,18 @@ class TestOpenBinaryFallback:
         with DocumentExtractor._open_binary(p) as f:
             assert f.read() == b"legacy bytes"
 
+    def test_downstream_not_implemented_error_propagates(self, tmp_path: Path) -> None:
+        """A NotImplementedError raised while consuming the handle must propagate
+        — the SafeDir-unavailable catch must not wrap the yield (else the
+        contextmanager would double-yield → RuntimeError). Regression for the
+        PR #1262 review.
+        """
+        p = tmp_path / "f.txt"
+        p.write_bytes(b"x")
+        with pytest.raises(NotImplementedError):
+            with DocumentExtractor._open_binary(p) as _f:
+                raise NotImplementedError("downstream parser failure")
+
 
 class TestTxtSafeDir:
     def test_reads_real_text_file(self, tmp_path: Path) -> None:
