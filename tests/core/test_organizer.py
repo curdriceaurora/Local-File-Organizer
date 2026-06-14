@@ -343,6 +343,17 @@ class TestFileOps:
         assert (tmp_path / "non_empty_sub").exists()
         assert tmp_path.exists()  # Root preserved
 
+    def test_cleanup_empty_dirs_removes_hidden(self, tmp_path: Path) -> None:
+        """Empty dot-prefixed dirs are still removed (safe_walk include_hidden):
+        cleanup's contract is to remove *all* empty dirs below root (#1263)."""
+        from file_organizer.core.file_ops import cleanup_empty_dirs
+
+        (tmp_path / ".empty_hidden").mkdir()
+
+        cleanup_empty_dirs(tmp_path)
+
+        assert not (tmp_path / ".empty_hidden").exists()
+
 
 # ---------------------------------------------------------------------------
 # display module tests

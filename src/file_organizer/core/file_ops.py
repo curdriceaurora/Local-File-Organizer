@@ -199,7 +199,11 @@ def cleanup_empty_dirs(root: Path) -> None:
     """
     # safe_walk (only_files=False) yields dirs too while skipping symlinked
     # entries, so cleanup never rmdir-walks through a directory symlink.
-    for dirpath in sorted(safe_walk(root, only_files=False), reverse=True):
+    # include_hidden=True preserves the prior rglob("*") contract of removing
+    # *all* empty dirs below root — including dot-prefixed ones (e.g. an empty
+    # ``.archives`` left by an undone organize) — which the default
+    # (include_hidden=False) would otherwise skip (#1263 Codex P2).
+    for dirpath in sorted(safe_walk(root, only_files=False, include_hidden=True), reverse=True):
         if dirpath.is_dir() and dirpath != root:
             try:
                 dirpath.rmdir()
