@@ -79,9 +79,9 @@ class TestAtomicWriteText:
 
     def test_overwrites_pre_existing_file(self, tmp_path: Path) -> None:
         target = tmp_path / "state.yaml"
-        target.write_text("old contents")
+        target.write_text("old contents", encoding="utf-8")
         atomic_write_text(target, "new contents")
-        assert target.read_text() == "new contents"
+        assert target.read_text(encoding="utf-8") == "new contents"
 
     def test_no_temp_files_remain_after_success(self, tmp_path: Path) -> None:
         target = tmp_path / "s.yaml"

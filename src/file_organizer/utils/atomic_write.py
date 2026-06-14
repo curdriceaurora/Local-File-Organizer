@@ -89,7 +89,11 @@ def _fsync_and_replace(tmp_path: Path, target: Path) -> None:
     # default because there's no pre-existing mode to inherit.
     try:
         existing_mode: int | None = target.stat().st_mode & 0o7777
-    except FileNotFoundError:
+    except OSError:
+        # Best-effort probe: mode preservation is optional, so any stat
+        # failure (missing target, permission error, broken symlink, etc.)
+        # falls back to the safe default rather than aborting the write and
+        # leaving a temp artifact behind (coderabbit Major).
         existing_mode = None
     if existing_mode is not None:
         try:
@@ -98,6 +102,22 @@ def _fsync_and_replace(tmp_path: Path, target: Path) -> None:
             # chmod failure is non-fatal — proceed with the save and
             # accept the 0o600 fallback rather than lose the write.
             pass
+        else:
+            # Make the mode change durable before the rename. The temp was
+            # fsynced at its 0o600 creation mode; without re-fsyncing the
+            # inode after chmod, a crash right after os.replace could leave
+            # the new contents with 0o600 instead of the preserved group
+            # mode, breaking readers that rely on it (codex P2).
+            try:
+                fd = os.open(tmp_path, os.O_RDONLY)
+                try:
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
+            except OSError:
+                # Best-effort: a fsync failure here doesn't justify aborting
+                # the save (the contents are already durable).
+                pass
     try:
         os.replace(tmp_path, target)
     except OSError:
@@ -328,4 +348,10 @@ def append_durable(path: Path, line: str, *, encoding: str = "utf-8") -> None:
         fh.write(terminated)
         fh.flush()
         os.fsync(fh.fileno())
-    fsync_directory(path)
+    # ``open("a")`` follows a symlink and creates/writes the real target,
+    # which may live in a different directory than the link. Fsync the
+    # resolved target's parent so a first-record-creating append is durable
+    # against crash, not the (already-durable) directory holding the symlink
+    # (codex P2).
+    durable_path = path.resolve(strict=False) if path.is_symlink() else path
+    fsync_directory(durable_path)
