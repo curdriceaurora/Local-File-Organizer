@@ -16,6 +16,7 @@ from pathlib import Path
 from loguru import logger
 from rich.console import Console
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.core.types import (
     AUDIO_EXTENSIONS,
     AUDIO_FALLBACK_FOLDER,
@@ -43,11 +44,10 @@ def collect_files(path: Path, console: Console) -> list[Path]:
     if path.is_file():
         files.append(path)
     else:
-        for root, dirnames, filenames in os.walk(path):
-            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
-            for filename in filenames:
-                if not filename.startswith("."):
-                    files.append(Path(root) / filename)
+        # safe_walk skips symlinked files/dirs and hidden entries: a symlink
+        # planted in the scan tree (e.g. ``escape -> /etc/passwd``) is no longer
+        # collected, organized, or read downstream (#270, WP-2.2 #1227).
+        files.extend(safe_walk(path, only_files=True))
 
     console.print(f"[green]✓[/green] Found {len(files)} files")
     return files
@@ -197,7 +197,9 @@ def cleanup_empty_dirs(root: Path) -> None:
     Args:
         root: The output directory used during organize.
     """
-    for dirpath in sorted(root.rglob("*"), reverse=True):
+    # safe_walk (only_files=False) yields dirs too while skipping symlinked
+    # entries, so cleanup never rmdir-walks through a directory symlink.
+    for dirpath in sorted(safe_walk(root, only_files=False), reverse=True):
         if dirpath.is_dir() and dirpath != root:
             try:
                 dirpath.rmdir()

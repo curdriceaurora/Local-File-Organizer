@@ -208,6 +208,31 @@ class TestFileOps:
         assert "file2.jpg" in names
         assert ".hidden.txt" not in names
 
+    def test_collect_files_skips_symlinks(self, tmp_path: Path) -> None:
+        """A symlinked file in the scan tree (e.g. pointing outside the root)
+        must not be collected — closing the symlink-exfiltration surface in the
+        organize pipeline (#270, WP-2.2)."""
+        import sys
+
+        from file_organizer.core.file_ops import collect_files
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "real.txt").write_text("real")
+        outside = tmp_path / "secret.txt"
+        outside.write_text("attacker secret")
+        try:
+            (src / "link.txt").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        if sys.platform == "win32":
+            pytest.skip("symlink filtering is POSIX-focused")
+
+        files = collect_files(src, MagicMock())
+        names = {f.name for f in files}
+        assert "real.txt" in names
+        assert "link.txt" not in names
+
     def test_simulate_organization(self, tmp_path: Path) -> None:
         """Test simulation builds output structure without creating files."""
         from file_organizer.core.file_ops import simulate_organization
