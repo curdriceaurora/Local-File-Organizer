@@ -68,6 +68,26 @@ EXCLUDED_DOC_DIRS: set[str] = {
 }
 
 # ---------------------------------------------------------------------------
+# Exclusion layer 1b: individual planning/evaluation files
+# ---------------------------------------------------------------------------
+# Specific docs (by basename) that are design/planning specs but don't live
+# under an excluded directory. Same rationale as EXCLUDED_DOC_DIRS: they
+# reference paths that are fork-relative or not-yet-created by design.
+#
+# To add a new excluded file:
+#   1. Add the file's basename (as it appears under docs/) to the set below.
+#   2. Include a comment explaining why its path references aren't assertable.
+EXCLUDED_DOC_FILES: set[str] = {
+    # fo-core pull-back planning/evaluation docs (epic #1221). These compare
+    # the upstream fork's layout (top-level ``core/...``, ``scripts/...``)
+    # against this repo's ``src/file_organizer/core/...`` and enumerate fork
+    # scripts/tests slated for porting — i.e. fork-relative references and
+    # files-to-be-created, exactly the category the ``plans/`` dir excludes.
+    "fo-core-fork-evaluation.md",
+    "fo-core-pullback-implementation-plan.md",
+}
+
+# ---------------------------------------------------------------------------
 # Exclusion layer 3 of 3: per-path allowlist
 # (Layer 2 is the _is_glob_pattern() filter applied in _get_doc_path_params)
 # ---------------------------------------------------------------------------
@@ -107,6 +127,11 @@ def _excluded_doc_dir(md_file: Path) -> bool:
     return any(part in EXCLUDED_DOC_DIRS for part in rel.parts)
 
 
+def _excluded_doc_file(md_file: Path) -> bool:
+    """Return True if md_file is an individually-excluded planning doc."""
+    return md_file.name in EXCLUDED_DOC_FILES
+
+
 def _get_doc_path_params() -> list[tuple[str, str]]:
     """Collect (doc_file_str, referenced_path) pairs from all docs.
 
@@ -117,7 +142,7 @@ def _get_doc_path_params() -> list[tuple[str, str]]:
     """
     params: list[tuple[str, str]] = []
     for md_file in sorted(DOCS_DIR.rglob("*.md")):
-        if _excluded_doc_dir(md_file):
+        if _excluded_doc_dir(md_file) or _excluded_doc_file(md_file):
             continue
         text = md_file.read_text(encoding="utf-8")
         doc_label = str(md_file.relative_to(REPO_ROOT))
