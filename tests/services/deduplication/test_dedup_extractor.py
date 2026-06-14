@@ -299,7 +299,7 @@ class TestExtractRtf:
         p = tmp_path / "doc.rtf"
         p.write_text("bad content", encoding="utf-8")
 
-        with patch("builtins.open", side_effect=OSError("fail")):
+        with patch.object(extractor, "_open_binary", side_effect=OSError("fail")):
             result = extractor._extract_rtf(p)
 
         assert result == ""
