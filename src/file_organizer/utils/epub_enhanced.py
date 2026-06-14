@@ -12,7 +12,9 @@ This module provides advanced EPUB processing capabilities including:
 from __future__ import annotations
 
 import io
+import os
 import re
+import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +48,85 @@ except ImportError:
     XMLParsedAsHTMLWarning = None  # type: ignore[assignment,misc]
 
 from loguru import logger
+
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+
+
+def _read_epub_legacy_checked(file_path: Path) -> epub.EpubBook:
+    """Legacy path-based ``epub.read_epub`` with a best-effort symlink refusal.
+
+    Used only when SafeDir's POSIX ``O_NOFOLLOW``/``dir_fd`` primitives are
+    unavailable (Windows / ``NotImplementedError``). SafeDir can't provide a
+    TOCTOU-safe open there, but we still **fail closed** on an obvious symlink
+    rather than blindly dereferencing it (qodo). The ``lstat``-then-read check
+    has an inherent TOCTOU window that only the SafeDir fd path closes fully.
+    """
+    if file_path.is_symlink():
+        raise SymlinkRejected(f"refused to read symlinked EPUB without SafeDir: {file_path}")
+    return epub.read_epub(file_path)
+
+
+def _read_epub_safedir(file_path: Path) -> epub.EpubBook:
+    """Open *file_path* via SafeDir and pass the fileobj to ``epub.read_epub``.
+
+    On POSIX, opens the file with ``SafeDir.open_for_reader`` so a
+    symlink swapped into the directory between the walk and this read
+    is refused with ``SymlinkRejected`` (an ``OSError`` subclass)
+    rather than dereferenced — closes the symlink-following surface
+    in the enhanced-EPUB ingestion path (#264).
+
+    On Windows (where SafeDir's POSIX primitives raise
+    ``NotImplementedError``) falls back to ``_read_epub_legacy_checked``,
+    which still refuses an obvious symlink (best-effort) before the
+    legacy path-based read.
+
+    Requires ``ebooklib>=0.20`` so the fileobj branch of
+    ``epub.read_epub`` works correctly; older versions called
+    ``os.path.isdir`` unconditionally on the input and raised
+    ``TypeError`` for file-likes.
+
+    Raises:
+        SymlinkRejected: The EPUB (or, on the fallback path, the file
+            itself) is a symlink and is refused rather than dereferenced.
+    """
+    if sys.platform == "win32":
+        return _read_epub_legacy_checked(file_path)
+
+    # Narrowly catch NotImplementedError only around the SafeDir
+    # construction step. If ``epub.read_epub(fileobj)`` (or any
+    # downstream library code) raised NotImplementedError, an outer
+    # except would silently retry the same file through the path-based
+    # reader — reopening the symlink-following surface this helper closes.
+    try:
+        safe_dir_cm = SafeDir.open_root(file_path.parent)
+    except NotImplementedError:
+        logger.debug("SafeDir unavailable; using legacy epub.read_epub for {}", file_path.name)
+        return _read_epub_legacy_checked(file_path)
+
+    with safe_dir_cm as safe_dir:
+        # Parent-rooted open: ``O_NOFOLLOW`` protects the LEAF, closing the
+        # primary walk-to-read symlink-swap on the EPUB file itself (#264).
+        # A residual nested-ancestor window remains (#286): ``open_root`` still
+        # resolves the multi-component ``file_path.parent`` by path, so an
+        # *ancestor* directory swapped to a symlink after enumeration is
+        # followed. The full close needs ``open_anchored_reader`` anchored at
+        # the walked organize root (``scan_root``); that context is threaded by
+        # the readers-dispatch / text_processor slice of WP-2.1 (#1226), where
+        # this call site is upgraded to anchored. (Anchoring at the filesystem
+        # root here instead would over-refuse legitimate symlinked ancestors.)
+        fd = safe_dir.open_for_reader(file_path.name)
+        # fdopen takes ownership only once it returns; explicitly close
+        # the raw fd if fdopen itself raises.
+        try:
+            fileobj = os.fdopen(fd, "rb", closefd=True)
+        except OSError:
+            os.close(fd)
+            raise
+        with fileobj:
+            # ebooklib reads the ZIP synchronously; the returned EpubBook
+            # holds all content in memory before this returns, so closing
+            # fileobj on context exit is safe.
+            return epub.read_epub(fileobj)
 
 
 class EPUBProcessingError(Exception):
@@ -192,6 +273,10 @@ class EnhancedEPUBReader:
         Raises:
             EPUBProcessingError: If file cannot be read or parsed
             FileNotFoundError: If file does not exist
+            SymlinkRejected: If the EPUB is a symlink — refused (and
+                surfaced unwrapped, as an ``OSError`` subclass) rather
+                than dereferenced, so callers can distinguish a refused
+                symlink from a malformed EPUB.
         """
         file_path = Path(file_path)
 
@@ -199,8 +284,13 @@ class EnhancedEPUBReader:
             raise FileNotFoundError(f"EPUB file not found: {file_path}")
 
         try:
-            book = epub.read_epub(file_path)
+            book = _read_epub_safedir(file_path)
             logger.debug(f"Successfully opened EPUB: {file_path.name}")
+        except SymlinkRejected:
+            # SafeDir refused a symlinked EPUB. Surface the security-specific
+            # OSError unchanged so callers can distinguish a refused symlink
+            # from an ordinary malformed EPUB.
+            raise
         except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
             raise EPUBProcessingError(f"Failed to read EPUB file {file_path}: {e}") from e
 
@@ -687,6 +777,8 @@ def get_epub_metadata(file_path: str | Path) -> EPUBMetadata:
 
     Raises:
         EPUBProcessingError: If file cannot be read
+        SymlinkRejected: If the EPUB is a symlink — refused (an ``OSError``
+            subclass, surfaced unwrapped) rather than dereferenced.
     """
     if not EBOOKLIB_AVAILABLE:
         raise ImportError("ebooklib is not installed. Install with: pip install ebooklib")
@@ -694,8 +786,13 @@ def get_epub_metadata(file_path: str | Path) -> EPUBMetadata:
     file_path = Path(file_path)
 
     try:
-        book = epub.read_epub(file_path)
+        book = _read_epub_safedir(file_path)
         reader = EnhancedEPUBReader()
         return reader._extract_metadata(book)
+    except SymlinkRejected:
+        # As in EnhancedEPUBReader.read_epub — let the SafeDir refusal
+        # propagate untouched so callers can distinguish symlink rejection
+        # from ordinary parsing failures.
+        raise
     except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
         raise EPUBProcessingError(f"Failed to read EPUB metadata: {e}") from e

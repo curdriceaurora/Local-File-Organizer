@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **EPUB read-path symlink hardening (WP-2.1, pull-back from fo-core)** — `utils.epub_enhanced` now
+  reads EPUBs via `SafeDir` (`_read_epub_safedir`): on POSIX the file is opened with
+  `O_NOFOLLOW`/`dir_fd` and a symlink swapped in after the directory walk is refused with
+  `SymlinkRejected` instead of being dereferenced, closing the symlink-following surface in the
+  enhanced-EPUB ingestion path (#264). Falls back to the legacy reader on Windows. Requires
+  `ebooklib>=0.20` for the fileobj branch.
+
 ### Added
 
 - **Atomic write primitive (WP-1.2, pull-back from fo-core)** — added
