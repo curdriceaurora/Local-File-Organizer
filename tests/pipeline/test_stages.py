@@ -7,6 +7,9 @@ custom pipelines.
 
 from __future__ import annotations
 
+import os
+import stat
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -268,6 +271,75 @@ class TestPostprocessorStage:
 
 
 # ---------------------------------------------------------------------------
+# _copy_fd_xattrs (best-effort xattr copy error branches)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestCopyFdXattrs:
+    """Branch coverage for the best-effort xattr helper (no real FS needed)."""
+
+    def test_noop_when_listxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.delattr(w.os, "listxattr", raising=False)
+        w._copy_fd_xattrs(0, 1)  # returns early, no syscalls
+
+    def test_listxattr_unsupported_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        def _raise(_fd: int) -> list[str]:
+            raise OSError(_errno.ENOTSUP, "unsupported")
+
+        monkeypatch.setattr(w.os, "listxattr", _raise)
+        w._copy_fd_xattrs(0, 1)  # swallowed, no raise
+
+    def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        def _raise(_fd: int) -> list[str]:
+            raise OSError(_errno.EIO, "io error")
+
+        monkeypatch.setattr(w.os, "listxattr", _raise)
+        with pytest.raises(OSError, match="io error"):
+            w._copy_fd_xattrs(0, 1)
+
+    def test_setxattr_permission_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+
+        def _raise(_fd: int, _name: str, _value: bytes) -> None:
+            raise OSError(_errno.EPERM, "denied")
+
+        monkeypatch.setattr(w.os, "setxattr", _raise)
+        w._copy_fd_xattrs(0, 1)  # swallowed
+
+    def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import errno as _errno
+
+        from file_organizer.pipeline.stages import writer as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+
+        def _raise(_fd: int, _name: str, _value: bytes) -> None:
+            raise OSError(_errno.EIO, "io error")
+
+        monkeypatch.setattr(w.os, "setxattr", _raise)
+        with pytest.raises(OSError, match="io error"):
+            w._copy_fd_xattrs(0, 1)
+
+
+# ---------------------------------------------------------------------------
 # WriterStage
 # ---------------------------------------------------------------------------
 
@@ -325,6 +397,174 @@ class TestWriterStage:
         )
         result = WriterStage().process(ctx)
         assert result.error == "prior"
+
+    def test_preserves_mode_and_mtime(self, tmp_path: Path) -> None:
+        """The hardened copy replicates copy2's mode + atime/mtime via fd ops."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        os.chmod(src, 0o640)
+        os.utime(src, (1_000_000, 1_234_567))
+
+        dest = tmp_path / "dest" / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        # Stat both before reading dest content (read_text would bump dest
+        # atime, masking the atime-parity assertion below).
+        dest_stat = dest.stat()
+        src_stat = src.stat()
+        if sys.platform != "win32":
+            assert stat.S_IMODE(dest_stat.st_mode) == 0o640
+            # copy2 copies the source's *post-read* atime; the helper re-fstats
+            # the source after the read, so dest atime matches src atime.
+            assert dest_stat.st_atime_ns == src_stat.st_atime_ns
+        assert dest_stat.st_mtime == src_stat.st_mtime
+        assert dest.read_text() == "content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
+    def test_preserves_user_xattrs(self, tmp_path: Path) -> None:
+        """Extended attributes are copied (copy2/copystat parity, #1266)."""
+        if not hasattr(os, "setxattr"):
+            pytest.skip("xattrs unavailable on this platform")
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        try:
+            os.setxattr(src, "user.fo_test", b"keepme")
+        except OSError:
+            pytest.skip("filesystem does not support user xattrs")
+
+        dest = tmp_path / "dest" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        assert os.getxattr(dest, "user.fo_test") == b"keepme"
+
+    def test_overwrites_existing_regular_file(self, tmp_path: Path) -> None:
+        """An existing regular destination is overwritten (copy2 parity)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("new content")
+        dest = tmp_path / "dest" / "file.txt"
+        dest.parent.mkdir()
+        dest.write_text("old content")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        assert dest.read_text() == "new content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_symlinked_destination(self, tmp_path: Path) -> None:
+        """A symlink pre-planted at the destination is refused, not followed:
+        the attacker's target file must be left untouched (#322)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("payload")
+
+        victim = tmp_path / "victim.txt"
+        victim.write_text("secret")
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        dest = dest_dir / "file.txt"
+        try:
+            dest.symlink_to(victim)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert result.error is not None
+        # The symlink target must NOT have been overwritten through the link.
+        assert victim.read_text() == "secret"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_same_inode_copy_is_refused(self, tmp_path: Path) -> None:
+        """A destination that is the same inode as the source (here a hard
+        link) must be refused, not truncated-then-copied into a zero-byte
+        file. Matches shutil.copy2's SameFileError (#1266 Codex P1)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("important content")
+        dest = tmp_path / "dest" / "file.txt"
+        dest.parent.mkdir()
+        try:
+            os.link(src, dest)  # hard link → same inode as source
+        except OSError:
+            pytest.skip("hard links not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # Source content must be intact (not truncated to zero bytes).
+        assert src.read_text() == "important content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_fifo_source(self, tmp_path: Path) -> None:
+        """A source swapped to a FIFO is refused (SpecialFileError) instead of
+        blocking the worker on a reader-less open (#1266 Codex P2)."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        src = src_dir / "pipe"
+        try:
+            os.mkfifo(src)
+        except (AttributeError, OSError):
+            pytest.skip("FIFOs not supported")
+
+        dest = tmp_path / "dest" / "pipe"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert not dest.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_fifo_destination(self, tmp_path: Path) -> None:
+        """An existing FIFO destination is refused instead of blocking the
+        worker on a reader-less O_WRONLY open (#1266 Codex P2)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        dest = dest_dir / "pipe"
+        try:
+            os.mkfifo(dest)
+        except (AttributeError, OSError):
+            pytest.skip("FIFOs not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_symlinked_source(self, tmp_path: Path) -> None:
+        """A symlinked source is refused rather than dereferenced into the
+        output tree (#354)."""
+        real = tmp_path / "real.txt"
+        real.write_text("attacker secret")
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        src = src_dir / "file.txt"
+        try:
+            src.symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        dest = tmp_path / "dest" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert not dest.exists()
 
 
 # ---------------------------------------------------------------------------
