@@ -1078,6 +1078,15 @@ class TestReadFileViaSafedir:
             with pytest.raises(ValueError, match="forbidden character"):
                 read_file_via_safedir(sd, "../escape.txt")
 
+    def test_rejects_bad_name_with_unsupported_extension(self, tmp_path: Path) -> None:
+        """A traversal payload with an *unsupported* suffix must still be
+        rejected up front — not silently returned as None on the
+        unsupported-extension fallback (Codex P2, PR #1254).
+        """
+        with SafeDir.open_root(tmp_path) as sd:
+            with pytest.raises(ValueError, match="forbidden character"):
+                read_file_via_safedir(sd, "../secret.unknownext")
+
     def test_reads_real_zip_archive(self, tmp_path: Path) -> None:
         """End-to-end: dispatcher resolves ``.zip`` via the new SafeDir
         archive entry and returns the metadata-list output of

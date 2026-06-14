@@ -66,7 +66,7 @@ except (ImportError, OSError):  # pragma: no cover
         read_mat_file,
         read_netcdf_file,
     )
-from file_organizer.utils.safedir import SafeDir
+from file_organizer.utils.safedir import SafeDir, _validate_name
 
 __all__ = [
     # Exceptions / constants
@@ -228,6 +228,13 @@ def read_file_via_safedir(
         FileReadError: If the reader fails on the file content.
         FileTooLargeError: If the file exceeds ``MAX_FILE_SIZE_BYTES``.
     """
+    # Reject traversal payloads (``/``, ``\``, NUL, ``.``/``..``, empty) up
+    # front — before extension dispatch. Otherwise a malicious component with
+    # an unsupported suffix (e.g. ``../secret.unknownext``) would slip past the
+    # documented component-validation contract by returning ``None`` on the
+    # unsupported-extension fallback below, never reaching ``open_for_reader``.
+    _validate_name(name)
+
     # Build a Path purely for extension parsing — never used for I/O.
     name_path = Path(name)
     name_lower = name.lower()
