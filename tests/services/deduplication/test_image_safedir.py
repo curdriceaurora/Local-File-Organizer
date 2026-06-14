@@ -1,12 +1,13 @@
 """Tests for the SafeDir-aware ``safedir_image_open`` helper and its
-integration with the image-dedup utilities.
+integration with the image-dedup utilities (WP-2.1, #264/#286).
 
-PR3f of #267 wires ``utils.safedir.SafeDir`` into the image dedup
-ingestion path. Every ``PIL.Image.open(...)`` call in
-``services/deduplication/{image_utils,image_dedup,viewer}.py`` now goes
-through ``safedir_image_open`` so a symlink swapped into the organize
-root between the directory walk and the read is refused with
-``SymlinkRejected`` rather than dereferenced.
+This slice wires ``utils.safedir.SafeDir`` into the image-dedup ingestion
+path: every ``PIL.Image.open(...)`` in
+``services/deduplication/{image_utils,image_dedup}.py`` now goes through
+``safedir_image_open`` so a symlink swapped into the organize root between
+the directory walk and the read is refused with ``SymlinkRejected`` rather
+than dereferenced. (The ``viewer.py`` / ``quality.py`` read paths are a
+separate follow-up slice and are out of scope here.)
 
 Verifies:
 
@@ -296,8 +297,9 @@ class TestGetImageHashErrorBranches:
 
         import numpy as np
 
-        # Provide a real 3-channel uint8 array so the new BGR-reverse
-        # slicing (``[:, :, ::-1]``) and ``np.ascontiguousarray`` work.
+        # Provide a real 3-channel uint8 array so the RGB conversion and
+        # ``np.ascontiguousarray`` path run (get_image_hash passes an RGB
+        # array straight to imagededup — no channel reversal).
         fake_rgb = np.zeros((4, 4, 3), dtype=np.uint8)
         with (
             patch(
@@ -318,32 +320,6 @@ class TestGetImageHashErrorBranches:
         passed_array = dedup.hasher.encode_image.call_args.kwargs["image_array"]
         assert passed_array.shape == (4, 4, 3)
         assert passed_array.flags["C_CONTIGUOUS"]
-
-
-class TestViewerMetadataFdNoneFallback:
-    """``viewer._get_image_metadata`` falls back to ``image_path.stat()``
-    when ``safedir_image_open`` yields ``fd is None`` (Windows / SafeDir
-    unavailable). Exercised by simulating the NotImplementedError
-    fallback path."""
-
-    def test_viewer_metadata_uses_path_stat_when_fd_none(self, tmp_path: Path) -> None:
-        from file_organizer.services.deduplication.viewer import ComparisonViewer
-
-        target = tmp_path / "img.jpg"
-        _make_jpeg(target, size=(12, 10))
-
-        viewer = ComparisonViewer()
-        # Force the Windows-style fallback so the helper yields fd=None.
-        with patch(
-            "file_organizer.services.deduplication.image_utils.SafeDir.open_root",
-            side_effect=NotImplementedError("simulated fallback"),
-        ):
-            meta = viewer._get_image_metadata(target)
-
-        assert meta.width == 12
-        assert meta.height == 10
-        # File size came from path.stat (not os.fstat).
-        assert meta.file_size > 0
 
 
 class TestHashEquivalenceWithPathCodepath:
@@ -396,51 +372,3 @@ class TestHashEquivalenceWithPathCodepath:
             f"SafeDir hash {safedir_hash!r} != path-based reference "
             f"{reference!r} — channel ordering or preprocessing drift"
         )
-
-
-class TestQualityFdStatBranch:
-    """Cover the new ``os.fstat(fd)`` branch in
-    ``quality.ImageQualityAnalyzer._extract_metrics_with_pil``
-    introduced by 552228c. The existing test_quality.py tests mock
-    safedir_image_open to yield ``(mock_img, None)`` — only the
-    ``fd is None`` path is exercised. Add a test that yields a real
-    integer fd so the ``os.fstat(fd)`` branch is hit.
-    """
-
-    def test_quality_uses_fstat_when_fd_is_supplied(self, tmp_path: Path) -> None:
-        from unittest.mock import MagicMock
-
-        from file_organizer.services.deduplication.quality import ImageQualityAnalyzer
-
-        analyzer = ImageQualityAnalyzer()
-        target = tmp_path / "img.jpg"
-        _make_jpeg(target, size=(40, 30))
-
-        # Open a real fd so os.fstat() can be called on it. Provide
-        # a fake PIL Image with the expected attributes; the helper
-        # mock yields (img, fd). The fd must be valid for fstat to
-        # report a sensible size.
-        real_fd = os.open(str(target), os.O_RDONLY)
-        try:
-            mock_img = MagicMock()
-            mock_img.size = (40, 30)
-            mock_img.format = "JPEG"
-            mock_img.mode = "RGB"
-            mock_img.info = {}
-
-            cm = MagicMock()
-            cm.__enter__ = MagicMock(return_value=(mock_img, real_fd))
-            cm.__exit__ = MagicMock(return_value=False)
-            with patch(
-                "file_organizer.services.deduplication.image_utils.safedir_image_open",
-                return_value=cm,
-            ):
-                metrics = analyzer._extract_metrics_with_pil(target)
-        finally:
-            os.close(real_fd)
-
-        assert metrics is not None
-        assert metrics.width == 40
-        assert metrics.height == 30
-        # os.fstat path was taken: file_size came from the fd, not path.stat().
-        assert metrics.file_size > 0
