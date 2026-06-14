@@ -25,13 +25,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# ``hybrid_retriever`` transitively imports BM25 / sklearn / numpy via
-# its ``VectorIndex`` and ``BM25Index`` siblings. The ``read_text_safe``
-# helper itself doesn't depend on them, but module import still pulls
-# them in, so we skip the file cleanly when the optional ``search`` /
-# ``dedup-text`` extras aren't installed (e.g. CI's lint env).
-pytest.importorskip("rank_bm25")
-pytest.importorskip("sklearn")
+# ``hybrid_retriever`` transitively imports BM25 / sklearn / numpy via its
+# ``VectorIndex`` and ``BM25Index`` siblings. The security regression suite
+# below must run wherever the corpus read path is exercised, so fail loudly
+# (rather than silently skipping the whole module) when the required search
+# extra is absent — the gated CI suites install ``.[dev,search]``. Per repo
+# convention, missing required test deps are a hard error, not a skip.
+try:
+    import rank_bm25  # noqa: F401
+    import sklearn  # noqa: F401
+except ImportError as exc:  # pragma: no cover - deps present in the gated CI suite
+    pytest.fail(
+        "Missing required test dependency for the read_text_safe security "
+        f"regression suite: {exc}. Install the search extra "
+        "(pip install -e '.[dev,search]') before running these tests.",
+        pytrace=False,
+    )
 
 from file_organizer.services.search.hybrid_retriever import (
     CORPUS_TEXT_LIMIT,
