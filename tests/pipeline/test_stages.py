@@ -7,6 +7,9 @@ custom pipelines.
 
 from __future__ import annotations
 
+import os
+import stat
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -325,6 +328,86 @@ class TestWriterStage:
         )
         result = WriterStage().process(ctx)
         assert result.error == "prior"
+
+    def test_preserves_mode_and_mtime(self, tmp_path: Path) -> None:
+        """The hardened copy replicates copy2's mode + mtime via fd ops."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        os.chmod(src, 0o640)
+        os.utime(src, (1_000_000, 1_234_567))
+
+        dest = tmp_path / "dest" / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        assert dest.read_text() == "content"
+        if sys.platform != "win32":
+            assert stat.S_IMODE(dest.stat().st_mode) == 0o640
+        assert dest.stat().st_mtime == src.stat().st_mtime
+
+    def test_overwrites_existing_regular_file(self, tmp_path: Path) -> None:
+        """An existing regular destination is overwritten (copy2 parity)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("new content")
+        dest = tmp_path / "dest" / "file.txt"
+        dest.parent.mkdir()
+        dest.write_text("old content")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        assert dest.read_text() == "new content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_symlinked_destination(self, tmp_path: Path) -> None:
+        """A symlink pre-planted at the destination is refused, not followed:
+        the attacker's target file must be left untouched (#322)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("payload")
+
+        victim = tmp_path / "victim.txt"
+        victim.write_text("secret")
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        dest = dest_dir / "file.txt"
+        try:
+            dest.symlink_to(victim)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert result.error is not None
+        # The symlink target must NOT have been overwritten through the link.
+        assert victim.read_text() == "secret"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_refuses_symlinked_source(self, tmp_path: Path) -> None:
+        """A symlinked source is refused rather than dereferenced into the
+        output tree (#354)."""
+        real = tmp_path / "real.txt"
+        real.write_text("attacker secret")
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        src = src_dir / "file.txt"
+        try:
+            src.symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        dest = tmp_path / "dest" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        assert not dest.exists()
 
 
 # ---------------------------------------------------------------------------
