@@ -53,7 +53,14 @@ class DocumentExtractor:
             try:
                 with SafeDir.open_root(file_path.parent) as sd:
                     fd = sd.open_for_reader(file_path.name)
-                    with os.fdopen(fd, "rb", closefd=True) as handle:
+                    # Close the raw fd if fdopen itself fails (e.g. EMFILE under
+                    # fd exhaustion); once it returns, ``with handle`` owns close.
+                    try:
+                        handle = os.fdopen(fd, "rb", closefd=True)
+                    except OSError:
+                        os.close(fd)
+                        raise
+                    with handle:
                         yield handle
                 return
             except NotImplementedError:

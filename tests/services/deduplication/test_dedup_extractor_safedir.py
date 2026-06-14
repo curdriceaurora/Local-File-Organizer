@@ -73,6 +73,22 @@ class TestTxtSafeDir:
 
 
 class TestOdtSafeDir:
+    @staticmethod
+    def _write_real_odt(path: Path, body: str) -> None:
+        with zipfile.ZipFile(path, "w") as z:
+            z.writestr(
+                "content.xml",
+                '<?xml version="1.0"?><office:document-content '
+                'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+                'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+                f"<office:body><text:p>{body}</text:p></office:body></office:document-content>",
+            )
+
+    def test_reads_real_odt(self, tmp_path: Path) -> None:
+        odt = tmp_path / "real.odt"
+        self._write_real_odt(odt, "odt safedir body")
+        assert "odt safedir body" in DocumentExtractor()._extract_odt(odt)
+
     @posix_only
     def test_symlinked_odt_is_refused(self, tmp_path: Path) -> None:
         outside = tmp_path / "outside"
@@ -104,6 +120,23 @@ class TestDocxSafeDir:
         doc.save(str(p))
         assert "docx safedir body" in DocumentExtractor()._extract_docx(p)
 
+    @posix_only
+    def test_symlinked_docx_is_refused(self, tmp_path: Path) -> None:
+        docx = pytest.importorskip("docx")
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        real = outside / "real.docx"
+        doc = docx.Document()
+        doc.add_paragraph("attacker docx")
+        doc.save(str(real))
+        inside = tmp_path / "inside"
+        inside.mkdir()
+        try:
+            (inside / "doc.docx").symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        assert DocumentExtractor()._extract_docx(inside / "doc.docx") == ""
+
 
 class TestPdfSafeDir:
     @posix_only
@@ -128,3 +161,17 @@ class TestRtfSafeDir:
         p = tmp_path / "doc.rtf"
         p.write_text(r"{\rtf1\ansi rtf safedir body}")
         assert "rtf safedir body" in DocumentExtractor()._extract_rtf(p)
+
+    @posix_only
+    def test_symlinked_rtf_is_refused(self, tmp_path: Path) -> None:
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "real.rtf").write_text(r"{\rtf1\ansi attacker rtf}")
+        inside = tmp_path / "inside"
+        inside.mkdir()
+        try:
+            (inside / "doc.rtf").symlink_to(outside / "real.rtf")
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        # SafeDir refuses the symlinked leaf before any RTF parsing.
+        assert DocumentExtractor()._extract_rtf(inside / "doc.rtf") == ""
