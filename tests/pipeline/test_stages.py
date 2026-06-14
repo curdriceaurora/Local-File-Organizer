@@ -354,6 +354,26 @@ class TestWriterStage:
         assert dest_stat.st_mtime == src_stat.st_mtime
         assert dest.read_text() == "content"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
+    def test_preserves_user_xattrs(self, tmp_path: Path) -> None:
+        """Extended attributes are copied (copy2/copystat parity, #1266)."""
+        if not hasattr(os, "setxattr"):
+            pytest.skip("xattrs unavailable on this platform")
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+        try:
+            os.setxattr(src, "user.fo_test", b"keepme")
+        except OSError:
+            pytest.skip("filesystem does not support user xattrs")
+
+        dest = tmp_path / "dest" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert not result.failed
+        assert os.getxattr(dest, "user.fo_test") == b"keepme"
+
     def test_overwrites_existing_regular_file(self, tmp_path: Path) -> None:
         """An existing regular destination is overwritten (copy2 parity)."""
         src = tmp_path / "src" / "file.txt"

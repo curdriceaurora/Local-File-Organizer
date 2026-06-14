@@ -6,6 +6,7 @@ mode (``context.dry_run is True``).
 
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import shutil
@@ -17,6 +18,36 @@ from file_organizer.interfaces.pipeline import StageContext
 from file_organizer.utils.safedir import SafeDir
 
 logger = logging.getLogger(__name__)
+
+# errno sets mirror shutil._copyxattr: unsupported filesystems, missing-attr
+# races, and protected namespaces (e.g. security.selinux for an unprivileged
+# process) are skipped rather than failing the copy — exactly what copy2 does.
+_XATTR_LIST_SKIP = frozenset({errno.ENOTSUP, errno.ENODATA, errno.EINVAL})
+_XATTR_SET_SKIP = frozenset({errno.EPERM, errno.EACCES, errno.ENOTSUP, errno.ENODATA, errno.EINVAL})
+
+
+def _copy_fd_xattrs(src_fd: int, dst_fd: int) -> None:
+    """Best-effort copy of extended attributes between two fds (Linux).
+
+    Mirrors ``shutil.copystat``'s xattr handling so ``user.*`` tags, SELinux
+    labels, etc. survive the organize copy. Unsupported filesystems and
+    protected namespaces are swallowed (the same errnos ``copy2`` ignores).
+    A no-op where ``os.listxattr`` is unavailable (non-Linux).
+    """
+    if not hasattr(os, "listxattr"):
+        return
+    try:
+        names = os.listxattr(src_fd)
+    except OSError as exc:
+        if exc.errno not in _XATTR_LIST_SKIP:
+            raise
+        return
+    for name in names:
+        try:
+            os.setxattr(dst_fd, name, os.getxattr(src_fd, name))
+        except OSError as exc:
+            if exc.errno not in _XATTR_SET_SKIP:
+                raise
 
 
 def _copy_via_safedir(source: Path, destination: Path) -> None:
@@ -137,6 +168,9 @@ def _copy_via_safedir(source: Path, destination: Path) -> None:
                         dst_target,
                         ns=(src_meta.st_atime_ns, src_meta.st_mtime_ns),
                     )
+                    # copy2 → copystat also copies extended attributes; mirror
+                    # that (best-effort) so user.*/SELinux metadata survives.
+                    _copy_fd_xattrs(src_handle.fileno(), dst_target)
 
 
 class WriterStage:
