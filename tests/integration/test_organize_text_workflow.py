@@ -58,7 +58,7 @@ class TestTextWorkflowsIntegration:
         mock_text_cls.return_value = mock_processor
 
         # When process_file is called, return a mapped ProcessedFile
-        def mock_process_file(file_path: Path) -> ProcessedFile:
+        def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
             name = file_path.stem
             return ProcessedFile(
                 file_path=file_path,
@@ -108,7 +108,7 @@ class TestTextWorkflowsIntegration:
         mock_processor = MagicMock()
         mock_text_cls.return_value = mock_processor
 
-        def mock_process_file(file_path: Path) -> ProcessedFile:
+        def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
             return ProcessedFile(
                 file_path=file_path,
                 description="desc",
@@ -142,7 +142,9 @@ class TestTextWorkflowsIntegration:
 
         # Force a collision by mapping everything to the exact same folder and filename
         # but with their original extension preserved by the organizer
-        def mock_process_file_collision(file_path: Path) -> ProcessedFile:
+        def mock_process_file_collision(
+            file_path: Path, *, scan_root: Path | None = None
+        ) -> ProcessedFile:
             return ProcessedFile(
                 file_path=file_path,
                 description="desc",

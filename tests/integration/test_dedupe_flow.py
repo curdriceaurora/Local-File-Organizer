@@ -50,7 +50,7 @@ def test_dedupe_flow_copy(mock_vision_cls, mock_text_cls, source_dir, output_dir
     mock_processor = MagicMock()
     mock_text_cls.return_value = mock_processor
 
-    def mock_process_file(file_path: Path) -> ProcessedFile:
+    def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
         # All files go to "deduped" folder; filename unchanged
         return ProcessedFile(
             file_path=file_path,
@@ -95,7 +95,7 @@ def test_dedupe_flow_hardlink(mock_vision_cls, mock_text_cls, source_dir, output
     mock_processor = MagicMock()
     mock_text_cls.return_value = mock_processor
 
-    def mock_process_file(file_path: Path) -> ProcessedFile:
+    def mock_process_file(file_path: Path, *, scan_root: Path | None = None) -> ProcessedFile:
         return ProcessedFile(
             file_path=file_path,
             description="mock desc",

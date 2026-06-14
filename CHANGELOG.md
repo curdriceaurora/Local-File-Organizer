@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Test mocks for the `scan_root` read-path contract (WP-2.1 follow-up)** — integration/parallel test doubles that replace `TextProcessor.process_file` (`test_organize_text_workflow`, `test_dedupe_flow`, `test_parallel_execution`, `test_undo_workflow`) now accept the keyword-only `scan_root` argument the dispatcher forwards since the SafeDir text-processor hardening (#1259). Previously these mocks raised `TypeError: got an unexpected keyword argument 'scan_root'`, so every file was marked failed — failing the full sharded `main` suite (and silently degrading `test_undo_workflow`, whose restore-state assertions passed trivially when nothing organized). No production-code change.
+
 ### Security
 
 - **Organize-pipeline traversal symlink hardening (WP-2.2, pull-back from fo-core)** — `core.file_ops.collect_files` now enumerates the scan tree via `core.path_guard.safe_walk` (skips symlinked files/dirs and hidden entries) instead of a raw `os.walk`: a symlink planted in the input tree (e.g. `escape -> /etc/passwd`) is no longer collected, organized, or read downstream, closing the symlink-exfiltration surface at the entry point of the organize pipeline (fo-core#270, WP-2.2 #1227). A directly provided symlinked input file is also rejected (`is_file()` follows symlinks, so it would otherwise be copied by `shutil.copy2`, exfiltrating its target). `core.file_ops.cleanup_empty_dirs` likewise switches its `rglob("*")` walk to `safe_walk(only_files=False, include_hidden=True)` so empty-directory cleanup never descends through a directory symlink while still removing empty hidden dirs. Behaviour for ordinary files is unchanged. `safe_walk` filters symlinks and hidden entries on every platform.
