@@ -85,6 +85,12 @@ class TestReadTextFileFileobj:
 
 
 class TestReadDocxFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        # The optional reader dep isn't in the lint/PR-suite CI env; patching
+        # ``documents.docx`` only works when the conditional import bound it.
+        pytest.importorskip("docx")
+
     @patch("file_organizer.utils.readers.documents.docx")
     def test_reads_from_fileobj(self, mock_docx: MagicMock, tmp_path: Path) -> None:
         para = MagicMock()
@@ -99,6 +105,10 @@ class TestReadDocxFileFileobj:
 
 
 class TestReadPdfFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        pytest.importorskip("fitz")
+
     @patch("file_organizer.utils.readers.documents.fitz")
     def test_reads_from_fileobj_via_stream(self, mock_fitz: MagicMock) -> None:
         mock_page = MagicMock()
@@ -127,18 +137,22 @@ class TestReadSpreadsheetFileFileobj:
         )
         assert out == "a,b,c\n1,2,3\n4,5,6"
 
-    @patch("file_organizer.utils.readers.documents.openpyxl")
-    def test_xlsx_from_fileobj(self, mock_openpyxl: MagicMock, tmp_path: Path) -> None:
-        mock_ws = MagicMock()
-        mock_ws.iter_rows.return_value = iter([("h1", "h2"), (1, 2)])
-        mock_wb = MagicMock()
-        mock_wb.active = mock_ws
-        mock_openpyxl.load_workbook.return_value = mock_wb
+    def test_xlsx_from_fileobj(self, tmp_path: Path) -> None:
+        # ``importorskip`` must precede the patch: a decorator-level
+        # ``@patch("documents.openpyxl")`` would fail at setup (AttributeError)
+        # when openpyxl is absent, before any skip could fire.
+        pytest.importorskip("openpyxl")
+        with patch("file_organizer.utils.readers.documents.openpyxl") as mock_openpyxl:
+            mock_ws = MagicMock()
+            mock_ws.iter_rows.return_value = iter([("h1", "h2"), (1, 2)])
+            mock_wb = MagicMock()
+            mock_wb.active = mock_ws
+            mock_openpyxl.load_workbook.return_value = mock_wb
 
-        out = read_spreadsheet_file(
-            file_path=tmp_path / "data.xlsx",
-            fileobj=io.BytesIO(b"fake xlsx"),
-        )
+            out = read_spreadsheet_file(
+                file_path=tmp_path / "data.xlsx",
+                fileobj=io.BytesIO(b"fake xlsx"),
+            )
         assert "h1,h2" in out
         assert "1,2" in out
 
@@ -148,6 +162,10 @@ class TestReadSpreadsheetFileFileobj:
 
 
 class TestReadPresentationFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        pytest.importorskip("pptx")
+
     @patch("file_organizer.utils.readers.documents.Presentation")
     def test_reads_from_fileobj(self, mock_prs_cls: MagicMock) -> None:
         shape = MagicMock()
@@ -255,6 +273,10 @@ class TestReadTarFileFileobj:
 
 
 class TestRead7zFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        pytest.importorskip("py7zr")
+
     @patch("file_organizer.utils.readers.archives.py7zr")
     def test_reads_from_fileobj(self, mock_py7zr: MagicMock, tmp_path: Path) -> None:
         mock_file_info = MagicMock()
@@ -294,6 +316,10 @@ class TestRead7zFileFileobj:
 
 
 class TestReadRarFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        pytest.importorskip("rarfile")
+
     @patch("file_organizer.utils.readers.archives.rarfile")
     def test_reads_from_fileobj(self, mock_rarfile_mod: MagicMock, tmp_path: Path) -> None:
         mock_info = MagicMock()
@@ -401,6 +427,10 @@ def _make_epub(path: Path) -> None:
 
 
 class TestReadEbookFileFileobj:
+    @pytest.fixture(autouse=True)
+    def _require_lib(self) -> None:
+        pytest.importorskip("ebooklib")
+
     def test_reads_from_fileobj(self, tmp_path: Path) -> None:
         epub_path = tmp_path / "book.epub"
         _make_epub(epub_path)
@@ -867,6 +897,7 @@ class TestFileTooLargeErrorPropagation:
                 read_text_file(fileobj=io.BytesIO(b"any"))
 
     def test_docx_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("docx")
         with patch(
             "file_organizer.utils.readers.documents._check_fd_size",
             side_effect=self._raise_too_large,
@@ -875,6 +906,7 @@ class TestFileTooLargeErrorPropagation:
                 read_docx_file(fileobj=io.BytesIO(b"any"))
 
     def test_pdf_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("fitz")
         with patch(
             "file_organizer.utils.readers.documents._check_fd_size",
             side_effect=self._raise_too_large,
@@ -891,6 +923,7 @@ class TestFileTooLargeErrorPropagation:
                 read_spreadsheet_file(file_path=tmp_path / "x.csv", fileobj=io.BytesIO(b"any"))
 
     def test_presentation_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("pptx")
         with patch(
             "file_organizer.utils.readers.documents._check_fd_size",
             side_effect=self._raise_too_large,
@@ -907,6 +940,7 @@ class TestFileTooLargeErrorPropagation:
                 read_zip_file(fileobj=io.BytesIO(b"any"))
 
     def test_7z_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("py7zr")
         with patch(
             "file_organizer.utils.readers.archives._check_fd_size",
             side_effect=self._raise_too_large,
@@ -923,6 +957,7 @@ class TestFileTooLargeErrorPropagation:
                 read_tar_file(fileobj=io.BytesIO(b"any"))
 
     def test_rar_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("rarfile")
         with patch(
             "file_organizer.utils.readers.archives._check_fd_size",
             side_effect=self._raise_too_large,
@@ -931,6 +966,7 @@ class TestFileTooLargeErrorPropagation:
                 read_rar_file(fileobj=io.BytesIO(b"any"))
 
     def test_ebook_reader_propagates(self, tmp_path: Path) -> None:
+        pytest.importorskip("ebooklib")
         with patch(
             "file_organizer.utils.readers.ebook._check_fd_size", side_effect=self._raise_too_large
         ):
@@ -1146,6 +1182,7 @@ class TestReadFileViaSafedir:
         it with the SafeDir-opened fileobj (same approach as
         ``test_dispatcher_reraises_unexpected_reader_exception``).
         """
+        pytest.importorskip("py7zr")
         (tmp_path / "data.7z").write_bytes(b"7z placeholder")
         mock_file_info = MagicMock()
         mock_file_info.filename = "inside.txt"
@@ -1170,6 +1207,7 @@ class TestReadFileViaSafedir:
 
     def test_dispatches_rar_extension(self, tmp_path: Path) -> None:
         """``.rar`` routes to ``read_rar_file`` via the SafeDir dispatcher."""
+        pytest.importorskip("rarfile")
         (tmp_path / "data.rar").write_bytes(b"rar placeholder")
         mock_info = MagicMock()
         mock_info.filename = "inside.txt"
@@ -1196,6 +1234,7 @@ class TestReadFileViaSafedir:
         """End-to-end: dispatcher resolves ``.epub`` via the new SafeDir
         ebook entry and returns ebooklib's parsed text.
         """
+        pytest.importorskip("ebooklib")
         _make_epub(tmp_path / "book.epub")
         with SafeDir.open_root(tmp_path) as sd:
             out = read_file_via_safedir(sd, "book.epub")
@@ -1489,6 +1528,7 @@ class TestReadFileViaSafedirCompoundExtension:
         is reached via the dispatcher's ``_SAFEDIR_READERS`` dict —
         patching the module-level binding wouldn't intercept that.
         """
+        pytest.importorskip("fitz")
         (tmp_path / "report.pdf").write_bytes(b"%PDF-fake")
         with SafeDir.open_root(tmp_path) as sd:
             with patch(
