@@ -129,3 +129,52 @@ class TestSha256ViaSafedirLegacyFallback:
             side_effect=NotImplementedError(),
         ):
             assert FileOrganizer._sha256_via_safedir(target) is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+class TestSha256ViaSafedirAnchored:
+    """``scan_root`` enables anchored traversal (#286): every intermediate
+    component between scan_root and the file is O_NOFOLLOW-checked."""
+
+    def test_nested_file_under_real_dirs_hashes(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        nested = root / "a" / "b"
+        nested.mkdir(parents=True)
+        target = nested / "doc.bin"
+        payload = b"nested payload"
+        target.write_bytes(payload)
+        assert (
+            FileOrganizer._sha256_via_safedir(target, scan_root=root)
+            == hashlib.sha256(payload).hexdigest()
+        )
+
+    def test_symlinked_ancestor_is_refused(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        (root / "a").mkdir(parents=True)
+        outside = tmp_path / "outside"
+        (outside / "a").mkdir(parents=True)
+        secret = outside / "a" / "doc.bin"
+        secret.write_bytes(b"TOP SECRET")
+        # Swap root/a -> outside/a after "enumeration".
+        (root / "a").rmdir()
+        try:
+            (root / "a").symlink_to(outside / "a")
+        except OSError:
+            pytest.skip("symlink creation not supported on this filesystem")
+        # The path the walk would have yielded under the trusted root.
+        target = root / "a" / "doc.bin"
+        assert FileOrganizer._sha256_via_safedir(target, scan_root=root) is None
+
+    def test_path_outside_scan_root_returns_none(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside.bin"
+        outside.write_bytes(b"data")
+        assert FileOrganizer._sha256_via_safedir(outside, scan_root=root) is None
+
+    def test_dotdot_escape_returns_none(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        root.mkdir()
+        (tmp_path / "secret.bin").write_bytes(b"data")
+        escape = root / ".." / "secret.bin"
+        assert FileOrganizer._sha256_via_safedir(escape, scan_root=root) is None

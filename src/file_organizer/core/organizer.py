@@ -311,7 +311,10 @@ class FileOrganizer:
             seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
-                file_hash = self._sha256_via_safedir(pf.file_path)
+                # input_path is the trusted walked root: anchor the hash read so
+                # a symlink swapped into any intermediate directory under it is
+                # refused, not just the leaf's parent (#286, codex P1).
+                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=input_path)
                 if file_hash is None:
                     # Unreadable or refused symlink — keep the file (handled later).
                     deduped_processed.append(pf)
@@ -382,7 +385,7 @@ class FileOrganizer:
         return result
 
     @staticmethod
-    def _sha256_via_safedir(file_path: Path) -> str | None:
+    def _sha256_via_safedir(file_path: Path, scan_root: Path | None = None) -> str | None:
         """Compute the SHA-256 hex digest of *file_path*, via SafeDir.
 
         Opens through :class:`file_organizer.utils.safedir.SafeDir` on POSIX so
@@ -391,15 +394,39 @@ class FileOrganizer:
         non-POSIX falls back to the legacy path-based open until the SafeDir
         Windows port lands.
 
+        When *scan_root* (the trusted directory that was walked to discover the
+        file) is supplied, the read uses ``SafeDir.open_anchored_reader`` to walk
+        every intermediate component between *scan_root* and *file_path* with
+        ``O_NOFOLLOW``, so a symlink swapped into ANY ancestor directory — not
+        just the leaf's parent — is detected (closes the nested-ancestor TOCTOU,
+        #286). Without *scan_root* the parent-rooted ``SafeDir.open_root`` path
+        is used (leaf protection only).
+
         Returns ``None`` when the file is unreadable or the read is refused —
         the caller treats that as "unknown hash" and keeps the file in the
         deduplicated output rather than dropping it.
         """
         hasher = hashlib.sha256()
+        relative: Path | None = None
+        if scan_root is not None:
+            try:
+                relative = file_path.relative_to(scan_root)
+            except ValueError:
+                # File is outside the trusted root — refuse rather than read.
+                return None
+            # ``relative_to`` is lexical: reject any ``..`` escape so the
+            # legacy fallback below can't read outside scan_root either.
+            if ".." in relative.parts:
+                return None
         if sys.platform != "win32":
             try:
-                with SafeDir.open_root(file_path.parent) as safe_dir:
-                    fd = safe_dir.open_for_reader(file_path.name)
+                root = scan_root if scan_root is not None else file_path.parent
+                with SafeDir.open_root(root) as safe_dir:
+                    if scan_root is not None:
+                        assert relative is not None  # set whenever scan_root given
+                        fd = safe_dir.open_anchored_reader(relative)
+                    else:
+                        fd = safe_dir.open_for_reader(file_path.name)
                     try:
                         fileobj = os.fdopen(fd, "rb", closefd=True)
                     except OSError:
