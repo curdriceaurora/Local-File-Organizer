@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sys
 import types as _t
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ from file_organizer.models import TextModel
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_text_model
 from file_organizer.utils.file_readers import FileReadError, read_file
+from file_organizer.utils.readers import read_file_via_safedir_anchored
 from file_organizer.utils.text_processing import (
     clean_text,
     ensure_nltk_data,
@@ -117,12 +119,34 @@ class TextProcessor:
             self.text_model.initialize()
             logger.info("Text model initialized")
 
+    @staticmethod
+    def _read_content(file_path: Path, scan_root: str | Path | None) -> str | None:
+        """Read *file_path*, routing through SafeDir when *scan_root* is given.
+
+        With *scan_root* — the trusted directory the caller walked to discover
+        *file_path* — the read goes through
+        :func:`file_organizer.utils.readers.read_file_via_safedir_anchored`,
+        which ``O_NOFOLLOW``-walks every component from the root so a symlink
+        swapped in after the scan is refused (``SymlinkRejected``, an
+        ``OSError`` subclass that propagates to ``process_file``'s handler)
+        rather than dereferenced. Falls back to the legacy path-based reader on
+        Windows or where SafeDir is unavailable (``NotImplementedError``).
+        """
+        if scan_root is not None and sys.platform != "win32":
+            try:
+                return read_file_via_safedir_anchored(file_path, trusted_root=Path(scan_root))
+            except NotImplementedError:
+                logger.debug("SafeDir unavailable; legacy read for {}", file_path.name)
+        return read_file(file_path)
+
     def process_file(
         self,
         file_path: str | Path,
         generate_description: bool = True,
         generate_folder: bool = True,
         generate_filename: bool = True,
+        *,
+        scan_root: str | Path | None = None,
     ) -> ProcessedFile:
         """Process a single text file.
 
@@ -131,6 +155,11 @@ class TextProcessor:
             generate_description: Whether to generate description
             generate_folder: Whether to generate folder name
             generate_filename: Whether to generate filename
+            scan_root: Trusted directory the caller walked to discover
+                *file_path*. When supplied (POSIX), content is read through
+                ``read_file_via_safedir_anchored`` so a symlink swapped in after
+                the scan is refused rather than dereferenced (#264/#286).
+                ``None`` keeps the legacy path-based read.
 
         Returns:
             ProcessedFile with metadata
@@ -143,7 +172,7 @@ class TextProcessor:
         try:
             # Read file content
             logger.debug("Reading file: {}", file_path.name)
-            content = read_file(file_path)
+            content = self._read_content(file_path, scan_root)
 
             if content is None:
                 return ProcessedFile(
