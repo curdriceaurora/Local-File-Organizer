@@ -20,9 +20,12 @@ Usage:
     # the body raised (failures during a started inference count).
 
 Pre-inference early returns that never call ``mark_invoked()`` are
-silently excluded — both from the log stream AND from the in-process
-samples — so log-based dashboards don't get biased downward by
-near-zero non-events (CodeRabbit P2 round-trip on PR #424).
+excluded from the structured log line (no log fires on ``__exit__`` unless
+``mark_invoked()`` was called or the body raised) so log-based dashboards
+don't get biased downward by near-zero non-events (CodeRabbit P2
+round-trip on PR #424). Note: ``elapsed_ms`` is still measured and
+available on the context object regardless; this timer keeps no in-process
+sample store of its own.
 """
 
 from __future__ import annotations

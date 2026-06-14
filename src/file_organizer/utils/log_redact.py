@@ -3,10 +3,11 @@
 Project-wide safety net for the common shapes in which API keys, tokens,
 passwords and bearer credentials accidentally end up in log records. The
 existing model-client code already avoids logging the key directly (see
-``models/_openai_client.py:74`` and ``models/_claude_client.py:69``, both of
-which log ``type(e).__name__`` rather than the exception message), but
-future code paths can still reach a ``logger.info("api_key=%s", ...)`` by
-accident — the filter exists so the mistake fails closed.
+``file_organizer/models/_openai_client.py`` and
+``file_organizer/models/_claude_client.py``, both of which log
+``type(e).__name__`` rather than the exception message), but future code
+paths can still reach a ``logger.info("api_key=%s", ...)`` by accident —
+the filter exists so the mistake fails closed.
 
 Contract:
 
@@ -18,6 +19,17 @@ Contract:
 - ``REDACTED`` is a module-level public constant so tests and integration
   assertions can reference the exact replacement token without duplicating
   its string form.
+
+Not covered (known limitation): credential values placed in *structured*
+fields — stdlib ``logger.info("msg", extra={"api_key": key})`` rendered via
+a ``%(api_key)s`` formatter, or loguru ``logger.bind(api_key=key)`` rendered
+via ``{extra[api_key]}``. These can't be scrubbed reliably from the filter /
+``LogRecordFactory`` hook: the factory runs inside ``Logger.makeRecord``
+*before* ``extra`` is attached, logger-level filters don't run for child
+loggers, and loguru ``extra`` is consumed directly by the sink format.
+Comprehensive structured-field redaction needs a handler/formatter-level
+design and is tracked separately. Do not put raw secrets in ``extra=`` /
+``bind()``.
 
 Call ``install_on_root()`` once at process start to install the filter
 process-wide (it wraps the global ``LogRecordFactory`` and also patches
@@ -185,25 +197,6 @@ def _sanitize_args(args: object) -> object:
     return REDACTED
 
 
-def _redact_extra_fields(record: logging.LogRecord) -> None:
-    """Scrub credential-named string fields set via ``extra=`` (codex P1).
-
-    ``logger.info("request", extra={"api_key": key})`` stores the raw value on
-    ``record.__dict__["api_key"]``; a formatter emitting ``%(api_key)s`` would
-    then write the secret even though ``msg`` carries no ``key=value`` shape to
-    match. Scrub credential-named string attributes so this common
-    structured-logging pattern also fails closed. The standard ``LogRecord``
-    fields are not credential-named, so none are clobbered.
-    """
-    for attr_key, attr_value in list(record.__dict__.items()):
-        if (
-            isinstance(attr_key, str)
-            and isinstance(attr_value, str)
-            and _CRED_KEY_FULL.match(attr_key)
-        ):
-            record.__dict__[attr_key] = REDACTED
-
-
 class CredentialRedactingFilter(logging.Filter):
     """Redact credential-shaped substrings in log records. Never drops.
 
@@ -355,8 +348,6 @@ class CredentialRedactingFilter(logging.Filter):
             # PRRT_kwDOR_Rkws59II7G).
             record.exc_text = _redact_text(record.exc_text)
 
-        # --- Structured ``extra=`` field redaction (codex P1) ---
-        _redact_extra_fields(record)
         # Mark the record so subsequent filter invocations (duplicate
         # logger-level filter attachment, factory + filter combo) skip the
         # re-redact pass. Essential because ``_KV_PATTERN`` isn't
@@ -370,8 +361,8 @@ class CredentialRedactingFilter(logging.Filter):
 def _install_on_loguru(instance: CredentialRedactingFilter) -> bool:
     """Register a patcher on the Loguru logger that redacts every record.
 
-    Parts of the codebase (``src/models/_openai_client.py``,
-    ``src/models/_claude_client.py``) use Loguru rather than the stdlib
+    Parts of the codebase (``src/file_organizer/models/_openai_client.py``,
+    ``src/file_organizer/models/_claude_client.py``) use Loguru rather than the stdlib
     ``logging`` module. Loguru records don't go through
     ``setLogRecordFactory``, so a stdlib-only install leaves Loguru paths
     unprotected. Loguru's patcher API (``logger.configure(patcher=fn)``

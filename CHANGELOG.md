@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Diagnostics primitives (WP-1.3, pull-back from fo-core)** — added
   `file_organizer.utils.log_redact` (`CredentialRedactingFilter`, `install_on_root`, fail-closed
-  credential redaction for stdlib + loguru logging, including credential-named `extra=` fields),
+  credential redaction of log messages / format args / exceptions for stdlib + loguru logging),
   `file_organizer.utils.cli_errors` (`format_validation_error` with difflib "did you mean"), and
   `file_organizer.services.inference_timer` (`time_inference` context manager). Modules only;
   process-wide install wiring deferred to the CLI wiring follow-up. (`error_taxonomy` deferred to
