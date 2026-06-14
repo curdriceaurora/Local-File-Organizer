@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Content-dedup hash read-path symlink hardening (WP-2.1, pull-back from fo-core)** — `core.organizer`'s content-based deduplication now computes the SHA-256 digest via a new `_sha256_via_safedir` helper that reads through `SafeDir` on POSIX: a symlink swapped in between organize-time enumeration and the hash read is refused (`SymlinkRejected` → `None` hash, file kept) rather than dereferenced, closing the LLM-exfiltration vector in the dedup hash path (#264). Falls back to the legacy reader on Windows.
 - **Search corpus read-path symlink hardening (WP-2.1, pull-back from fo-core)** —
   `services.search.hybrid_retriever.read_text_safe` now reads corpus files via `SafeDir` on POSIX:
   a symlink swapped in between corpus enumeration and the content read is refused (`SymlinkRejected`
