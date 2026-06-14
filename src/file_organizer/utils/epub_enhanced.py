@@ -12,7 +12,9 @@ This module provides advanced EPUB processing capabilities including:
 from __future__ import annotations
 
 import io
+import os
 import re
+import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +48,56 @@ except ImportError:
     XMLParsedAsHTMLWarning = None  # type: ignore[assignment,misc]
 
 from loguru import logger
+
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+
+
+def _read_epub_safedir(file_path: Path) -> Any:
+    """Open *file_path* via SafeDir and pass the fileobj to ``epub.read_epub``.
+
+    On POSIX, opens the file with ``SafeDir.open_for_reader`` so a
+    symlink swapped into the directory between the walk and this read
+    is refused with ``SymlinkRejected`` (an ``OSError`` subclass)
+    rather than dereferenced — closes the symlink-following surface
+    in the enhanced-EPUB ingestion path (#264).
+
+    On Windows (where SafeDir's POSIX primitives raise
+    ``NotImplementedError``) falls back to direct
+    ``epub.read_epub(file_path)`` — preserves the legacy API.
+
+    Requires ``ebooklib>=0.20`` so the fileobj branch of
+    ``epub.read_epub`` works correctly; older versions called
+    ``os.path.isdir`` unconditionally on the input and raised
+    ``TypeError`` for file-likes.
+    """
+    if sys.platform == "win32":
+        return epub.read_epub(file_path)
+
+    # Narrowly catch NotImplementedError only around the SafeDir
+    # construction step. If ``epub.read_epub(fileobj)`` (or any
+    # downstream library code) raised NotImplementedError, an outer
+    # except would silently retry the same file through the path-based
+    # reader — reopening the symlink-following surface this helper closes.
+    try:
+        safe_dir_cm = SafeDir.open_root(file_path.parent)
+    except NotImplementedError:
+        logger.debug("SafeDir unavailable; using legacy epub.read_epub for {}", file_path.name)
+        return epub.read_epub(file_path)
+
+    with safe_dir_cm as safe_dir:
+        fd = safe_dir.open_for_reader(file_path.name)
+        # fdopen takes ownership only once it returns; explicitly close
+        # the raw fd if fdopen itself raises.
+        try:
+            fileobj = os.fdopen(fd, "rb", closefd=True)
+        except OSError:
+            os.close(fd)
+            raise
+        with fileobj:
+            # ebooklib reads the ZIP synchronously; the returned EpubBook
+            # holds all content in memory before this returns, so closing
+            # fileobj on context exit is safe.
+            return epub.read_epub(fileobj)
 
 
 class EPUBProcessingError(Exception):
@@ -199,8 +251,13 @@ class EnhancedEPUBReader:
             raise FileNotFoundError(f"EPUB file not found: {file_path}")
 
         try:
-            book = epub.read_epub(file_path)
+            book = _read_epub_safedir(file_path)
             logger.debug(f"Successfully opened EPUB: {file_path.name}")
+        except SymlinkRejected:
+            # SafeDir refused a symlinked EPUB. Surface the security-specific
+            # OSError unchanged so callers can distinguish a refused symlink
+            # from an ordinary malformed EPUB.
+            raise
         except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
             raise EPUBProcessingError(f"Failed to read EPUB file {file_path}: {e}") from e
 
@@ -694,8 +751,13 @@ def get_epub_metadata(file_path: str | Path) -> EPUBMetadata:
     file_path = Path(file_path)
 
     try:
-        book = epub.read_epub(file_path)
+        book = _read_epub_safedir(file_path)
         reader = EnhancedEPUBReader()
         return reader._extract_metadata(book)
+    except SymlinkRejected:
+        # As in EnhancedEPUBReader.read_epub — let the SafeDir refusal
+        # propagate untouched so callers can distinguish symlink rejection
+        # from ordinary parsing failures.
+        raise
     except Exception as e:  # Intentional catch-all: ebooklib raises library-specific errors
         raise EPUBProcessingError(f"Failed to read EPUB metadata: {e}") from e
