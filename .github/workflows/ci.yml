@@ -149,7 +149,11 @@ jobs:
           # Install core package with dev dependencies + search (rank-bm25, scikit-learn)
           # search is required for TestBM25Index, TestVectorIndexRecall, TestHybridRetriever,
           # and related CLI/API/copilot tests — not in dev because it is an optional runtime extra.
-          pip install -e ".[dev,search]"
+          # parsers/archive/scientific/cad supply the optional reader deps (PyMuPDF, python-docx,
+          # openpyxl, python-pptx, ebooklib, py7zr, rarfile, h5py, netCDF4, scipy, ezdxf) so the
+          # SafeDir reader fileobj branches are exercised here rather than skipped — required for
+          # the diff-coverage gate on tests/utils/test_readers_safedir.py (WP-2.1).
+          pip install -e ".[dev,search,parsers,archive,scientific,cad]"
 
           # Explicitly install pytest-asyncio and faker to ensure they're available
           # This fixes installation order issues on Python 3.11 where pytest might load before pytest-asyncio

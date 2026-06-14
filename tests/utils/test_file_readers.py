@@ -33,7 +33,7 @@ from file_organizer.utils.file_readers import (
 from file_organizer.utils.readers._base import _check_file_size
 from file_organizer.utils.readers.ebook import EBOOKLIB_AVAILABLE
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.mark.unit
