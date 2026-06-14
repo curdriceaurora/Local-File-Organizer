@@ -147,3 +147,47 @@ class TestEnhancedReaderRefusesSymlink:
         reader = EnhancedEPUBReader()
         content = reader.read_epub(target)
         assert content.metadata.title == "Reg Test Book"
+
+
+class TestSafeDirUnavailableFallback:
+    """When SafeDir is unavailable (Windows / NotImplementedError), the
+    fallback still fails closed on symlinks but parses real files (Copilot)."""
+
+    def test_fallback_refuses_symlink(self, tmp_path: Path) -> None:
+        pytest.importorskip("ebooklib")
+        pytest.importorskip("bs4")
+        from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
+
+        real = tmp_path / "real.epub"
+        _make_minimal_epub(real)
+        organize = tmp_path / "organize"
+        organize.mkdir()
+        try:
+            (organize / "decoy.epub").symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported on this filesystem")
+
+        reader = EnhancedEPUBReader()
+        # Simulate a platform without SafeDir's POSIX primitives.
+        with patch(
+            "file_organizer.utils.epub_enhanced.SafeDir.open_root",
+            side_effect=NotImplementedError,
+        ):
+            with pytest.raises(SymlinkRejected):
+                reader.read_epub(organize / "decoy.epub")
+
+    def test_fallback_parses_real_file(self, tmp_path: Path) -> None:
+        pytest.importorskip("ebooklib")
+        pytest.importorskip("bs4")
+        from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
+
+        target = tmp_path / "book.epub"
+        _make_minimal_epub(target)
+
+        reader = EnhancedEPUBReader()
+        with patch(
+            "file_organizer.utils.epub_enhanced.SafeDir.open_root",
+            side_effect=NotImplementedError,
+        ):
+            content = reader.read_epub(target)
+        assert content.metadata.title == "Reg Test Book"
