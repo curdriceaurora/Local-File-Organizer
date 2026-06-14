@@ -9,14 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Crash-safety primitives (WP-1.2, pull-back from fo-core)** — added
-  `file_organizer.utils.atomic_write` (temp+fsync+`os.replace` writers: `atomic_write_text/bytes/with`,
-  `append_durable`), `file_organizer.undo.durable_move` (atomic same-device / EXDEV-durable
-  cross-device move with a crash-recoverable JSONL journal + sweep), `file_organizer.undo._journal`
-  (shared journal-path resolver), and `file_organizer.undo.trash_gc` (`TrashGC` race-safe trash
-  deletion under `LOCK_EX`). Foundation modules only; the undo/rollback/validator call-site
-  integration (and `cli/undo_recover`, `test_trash_gc_race`) are deferred to WP-2.2 — two
-  integration test classes are skipped with that reason until then.
+- **Atomic write primitive (WP-1.2, pull-back from fo-core)** — added
+  `file_organizer.utils.atomic_write` (crash-safe temp+fsync+`os.replace` writers:
+  `atomic_write_text` / `atomic_write_bytes` / `atomic_write_with`, plus `append_durable` for
+  log-style files; preserves prior file mode on overwrite and fsyncs the parent directory on POSIX
+  for rename durability). The durable-move / trash-GC crash-safety modules are split into a dedicated
+  hardening work package (they need concurrency-protocol fixes found in review before landing).
 - **Diagnostics primitives (WP-1.3, pull-back from fo-core)** — added
   `file_organizer.utils.log_redact` (`CredentialRedactingFilter`, `install_on_root`, fail-closed
   credential redaction of log messages / format args / exceptions for stdlib + loguru logging),
