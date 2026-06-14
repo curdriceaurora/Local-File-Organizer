@@ -1047,27 +1047,32 @@ class TestRequiresFilePathOrFileobj:
     """Every reader must reject calls with neither arg supplied."""
 
     @pytest.mark.parametrize(
-        "reader",
+        "reader, required_lib",
         [
-            read_text_file,
-            read_docx_file,
-            read_pdf_file,
-            read_presentation_file,
-            read_zip_file,
-            read_7z_file,
-            read_tar_file,
-            read_rar_file,
-            read_ebook_file,
-            read_hdf5_file,
-            read_netcdf_file,
-            read_mat_file,
-            read_dxf_file,
-            read_dwg_file,
-            read_step_file,
-            read_iges_file,
+            (read_text_file, None),
+            (read_docx_file, "docx"),
+            (read_pdf_file, "fitz"),
+            (read_presentation_file, "pptx"),
+            (read_zip_file, None),
+            (read_7z_file, "py7zr"),
+            (read_tar_file, None),
+            (read_rar_file, "rarfile"),
+            (read_ebook_file, "ebooklib"),
+            (read_hdf5_file, None),
+            (read_netcdf_file, None),
+            (read_mat_file, None),
+            (read_dxf_file, None),
+            (read_dwg_file, None),
+            (read_step_file, None),
+            (read_iges_file, None),
         ],
     )
-    def test_rejects_both_args_missing(self, reader) -> None:  # type: ignore[no-untyped-def]
+    def test_rejects_both_args_missing(self, reader, required_lib) -> None:  # type: ignore[no-untyped-def]
+        # Lib-gated readers check their optional dependency before the
+        # no-args guard, so the ValueError contract only holds when the lib
+        # is installed; skip those params in CI envs that lack the dep.
+        if required_lib is not None:
+            pytest.importorskip(required_lib)
         with pytest.raises(ValueError, match="file_path or fileobj"):
             reader()
 
