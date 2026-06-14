@@ -449,7 +449,7 @@ class TestReadEbookFileFileobj:
     def test_rejects_non_epub_extension(self, tmp_path: Path) -> None:
         from file_organizer.utils.readers import FileReadError as _FRE
 
-        with pytest.raises(_FRE, match="Only .epub supported"):
+        with pytest.raises(_FRE, match=r"Only \.epub supported"):
             read_ebook_file(file_path=tmp_path / "book.azw3", fileobj=io.BytesIO(b"x"))
 
     def test_fileobj_error_wraps_as_file_read_error(self, tmp_path: Path) -> None:

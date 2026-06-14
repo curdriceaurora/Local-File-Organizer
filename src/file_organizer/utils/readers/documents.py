@@ -242,25 +242,34 @@ def _parse_csv(fileobj: BinaryIO, max_rows: int, label: str) -> str:
 
 
 def _parse_xlsx(fileobj: BinaryIO, max_rows: int, label: str) -> str:
+    # ``read_only=True`` lazy-loads via an open ZipFile that openpyxl only
+    # releases on ``Workbook.close()``; close in a finally so repeated SafeDir
+    # reads don't leak archive file handles.
     wb = openpyxl.load_workbook(fileobj, data_only=True, read_only=True)
-    ws = wb.active
-    rows = []
-    for i, row in enumerate(ws.iter_rows(values_only=True)):
-        if i >= max_rows:
-            break
-        row_str = ",".join(str(cell) if cell is not None else "" for cell in row)
-        if row_str.strip(","):
-            rows.append(row_str)
-    text = "\n".join(rows)
-    logger.debug(f"Extracted {len(text)} characters from {len(rows)} rows of {label}")
-    return text
+    try:
+        ws = wb.active
+        rows = []
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            if i >= max_rows:
+                break
+            row_str = ",".join(str(cell) if cell is not None else "" for cell in row)
+            if row_str.strip(","):
+                rows.append(row_str)
+        text = "\n".join(rows)
+        logger.debug(f"Extracted {len(text)} characters from {len(rows)} rows of {label}")
+        return text
+    finally:
+        wb.close()
 
 
 def _dispatch_spreadsheet(fileobj: BinaryIO, ext: str, max_rows: int, label: str) -> str:
     """Route to ``_parse_csv`` or ``_parse_xlsx`` by extension."""
     if ext == ".csv":
         return _parse_csv(fileobj, max_rows, label)
-    if ext in (".xlsx", ".xls"):
+    # openpyxl (3.1.x) only reads OOXML (.xlsx/.xlsm/...). Routing legacy
+    # ``.xls`` here makes openpyxl raise ``InvalidFileException`` wrapped as a
+    # generic error; reject it deterministically instead.
+    if ext == ".xlsx":
         if not OPENPYXL_AVAILABLE:
             raise ImportError("openpyxl is not installed. Install with: pip install openpyxl")
         return _parse_xlsx(fileobj, max_rows, label)

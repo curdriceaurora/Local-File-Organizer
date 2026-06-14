@@ -26,9 +26,6 @@ from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 #
 # - ``ci``: included so the new SafeDir primitive + reader wrapper get
 #   diff-coverage credit in the Test PR suite (``-m "ci and not benchmark"``).
-#   The TextProcessorScanRoot class below explicitly overrides this with a
-#   per-class ``ci=False`` skipif to avoid #291 (audio-model singleton
-#   ordering flake) — see the class-level pytestmark for the rationale.
 # - ``unit``: local development sweep.
 # - ``integration``: PR integration job. The per-module floor check in
 #   pr-integration.yml drops below the baseline whenever this file's
@@ -176,7 +173,10 @@ class TestReadFileViaSafedirAnchored:
 
         inside = tmp_path / "inside"
         inside.mkdir()
-        (inside / "evil").symlink_to(outside)
+        try:
+            (inside / "evil").symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation not supported")
 
         # The leaf path the caller thinks they're reading
         victim = inside / "evil" / "secret.txt"

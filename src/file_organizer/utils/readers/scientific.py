@@ -123,6 +123,9 @@ def read_hdf5_file(
         raise ValueError("read_hdf5_file requires file_path or fileobj")
     if not H5PY_AVAILABLE:
         raise ImportError("h5py is not installed. Install with: pip install h5py")
+    # Clamp to a sane floor — a negative limit otherwise short-circuits the
+    # dataset visitor and emits "showing first -1 datasets".
+    max_datasets = max(0, int(max_datasets))
 
     if fileobj is not None:
         label = Path(file_path).name if file_path is not None else "<fileobj>"
