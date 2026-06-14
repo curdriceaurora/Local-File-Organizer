@@ -389,6 +389,28 @@ class TestWriterStage:
         assert victim.read_text() == "secret"
 
     @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+    def test_same_inode_copy_is_refused(self, tmp_path: Path) -> None:
+        """A destination that is the same inode as the source (here a hard
+        link) must be refused, not truncated-then-copied into a zero-byte
+        file. Matches shutil.copy2's SameFileError (#1266 Codex P1)."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("important content")
+        dest = tmp_path / "dest" / "file.txt"
+        dest.parent.mkdir()
+        try:
+            os.link(src, dest)  # hard link → same inode as source
+        except OSError:
+            pytest.skip("hard links not supported")
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # Source content must be intact (not truncated to zero bytes).
+        assert src.read_text() == "important content"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
     def test_refuses_symlinked_source(self, tmp_path: Path) -> None:
         """A symlinked source is refused rather than dereferenced into the
         output tree (#354)."""

@@ -68,6 +68,21 @@ def _copy_via_safedir(source: Path, destination: Path) -> None:
         with src_handle:
             src_stat = os.fstat(src_handle.fileno())
             with SafeDir.open_root(destination.parent) as dst_root:
+                # Refuse a same-inode copy (identical path, or a hard link to
+                # the source planted after postprocessing): the O_TRUNC open
+                # below would zero the source before copyfileobj reads it,
+                # yielding a silent zero-byte "success". shutil.copy2 raises
+                # SameFileError in this case — match that (it is an OSError
+                # subclass, so the file is marked failed).
+                try:
+                    dst_stat = dst_root.lstat(destination.name)
+                except FileNotFoundError:
+                    dst_stat = None
+                if dst_stat is not None and (dst_stat.st_dev, dst_stat.st_ino) == (
+                    src_stat.st_dev,
+                    src_stat.st_ino,
+                ):
+                    raise shutil.SameFileError(f"{source!r} and {destination!r} are the same file")
                 # O_TRUNC overwrites an existing regular file (copy2 parity);
                 # O_NOFOLLOW (added by open_child) refuses an existing symlink.
                 dst_fd = dst_root.open_child(
