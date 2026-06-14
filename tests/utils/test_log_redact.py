@@ -1003,3 +1003,71 @@ class TestErrorHandlingFallbacks:
             root = logging.getLogger()
             for flt in [f for f in root.filters if isinstance(f, CredentialRedactingFilter)]:
                 root.removeFilter(flt)
+
+
+class TestRedactsCompoundCloudKeys:
+    """codex P1: compound cloud-credential names (AWS et al.)."""
+
+    def _assert_redacts(self, leaked: str, secret: str) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record(leaked)
+        assert f.filter(record) is True
+        assert secret not in record.getMessage()
+        assert REDACTED in record.getMessage()
+
+    def test_aws_secret_access_key(self) -> None:
+        self._assert_redacts("AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG", "wJalrXUtnFEMI/K7MDENG")
+
+    def test_aws_access_key_id(self) -> None:
+        self._assert_redacts("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE", "AKIAIOSFODNN7EXAMPLE")
+
+    def test_access_key_colon(self) -> None:
+        self._assert_redacts("access_key: sk-aws-style-secret", "sk-aws-style-secret")
+
+    def test_secret_access_key_dict_repr(self) -> None:
+        self._assert_redacts("{'aws_secret_access_key': 'super-secret-val'}", "super-secret-val")
+
+
+class TestRedactsNonBearerAuthSchemes:
+    """codex P1: ``Authorization`` is a credential regardless of scheme."""
+
+    def test_basic_auth(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("Authorization: Basic dXNlcjpwYXNzd29yZA==")
+        assert f.filter(record) is True
+        rendered = record.getMessage()
+        assert "dXNlcjpwYXNzd29yZA==" not in rendered
+        assert REDACTED in rendered
+        # scheme is preserved so operators can see what leaked
+        assert "Basic" in rendered
+
+    def test_token_scheme(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("Authorization: token ghp_secrettokenvalue")
+        assert f.filter(record) is True
+        assert "ghp_secrettokenvalue" not in record.getMessage()
+        assert REDACTED in record.getMessage()
+
+    def test_schemeless_authorization_redacted_whole(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("Authorization: opaque-raw-credential")
+        assert f.filter(record) is True
+        assert "opaque-raw-credential" not in record.getMessage()
+        assert REDACTED in record.getMessage()
+
+    def test_bearer_still_redacted_and_scheme_preserved(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("Authorization: Bearer abc123.xyz")
+        assert f.filter(record) is True
+        rendered = record.getMessage()
+        assert "abc123.xyz" not in rendered
+        assert "Bearer" in rendered
+        assert REDACTED in rendered
+
+    def test_trailing_context_preserved(self) -> None:
+        f = CredentialRedactingFilter()
+        record = _make_record("Authorization: Basic dXNlcg==, user=alice")
+        assert f.filter(record) is True
+        rendered = record.getMessage()
+        assert "dXNlcg==" not in rendered
+        assert "user=alice" in rendered

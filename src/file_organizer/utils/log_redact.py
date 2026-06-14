@@ -66,6 +66,13 @@ _CRED_KEYS = (
     "access[_-]?token",
     "auth[_-]?token",
     "bearer[_-]?token",
+    # Compound cloud-credential names (codex P1). Listed before the bare
+    # ``secret`` / ``access`` spellings so the longer match wins on
+    # ``AWS_SECRET_ACCESS_KEY`` / ``AWS_ACCESS_KEY_ID`` (the bare ``secret``
+    # arm fails anyway — it isn't immediately followed by ``=``/``:``).
+    "secret[_-]?access[_-]?key",
+    "access[_-]?key[_-]?id",
+    "access[_-]?key",
     # Bare ``auth`` is a common shorthand (``logger.info("auth=%s", secret)``).
     # Won't false-positive on ``author=`` etc. because the pattern requires
     # the key to be immediately followed by ``=``/``:`` (optional quote).
@@ -135,19 +142,32 @@ _KV_PATTERN = re.compile(
     r")"
 )
 
-# ``Authorization: Bearer <token>`` HTTP header shape. Distinct from the
-# ``key=value`` pattern because the separator between the header name and
-# ``Bearer`` is usually whitespace rather than a closing quote — but the
-# separator between ``Authorization`` and the value can be either ``:``
-# (header style) or ``=`` (query / form style; codex P2
-# PRRT_kwDOR_Rkws59IQew). Allows optional quotes around both the key and
-# the separator so dict-repr (``{'Authorization': 'Bearer abc'}``) and
-# JSON (``"Authorization": "Bearer abc"``) forms also match — logger
-# calls that pass header dicts are a real leak path (codex P1
-# PRRT_kwDOR_Rkws59IB5U).
-_BEARER_PATTERN = re.compile(
-    r"(?i)(?P<prefix>authorization[\"']?\s*[:=]\s*[\"']?bearer\s+)(?P<value>[^\"'\s,;}]+)"
+# ``Authorization: <scheme> <token>`` HTTP header shape. Distinct from the
+# ``key=value`` pattern because the separator between the scheme and the
+# token is whitespace — but the separator between ``Authorization`` and the
+# value can be either ``:`` (header style) or ``=`` (query / form style;
+# codex P2 PRRT_kwDOR_Rkws59IQew). Allows optional quotes around the key and
+# the separator so dict-repr (``{'Authorization': 'Bearer abc'}``) and JSON
+# (``"Authorization": "Bearer abc"``) forms also match — logger calls that
+# pass header dicts are a real leak path (codex P1 PRRT_kwDOR_Rkws59IB5U).
+#
+# ``Authorization`` values are credentials regardless of scheme, so this
+# matches ANY scheme, not just Bearer (codex P1): ``Basic``, ``Digest``,
+# ``token``, ``Negotiate``, ``ApiKey`` are preserved (operators can still
+# see WHICH scheme leaked) and only the credential after them is redacted;
+# a recognised-scheme-less value (``Authorization: <opaque>``) is redacted
+# whole. The token arm excludes whitespace so trailing context after the
+# token (e.g. ``, user=alice``) is preserved.
+_AUTH_HEADER_PATTERN = re.compile(
+    r"(?i)(?P<prefix>authorization[\"']?\s*[:=]\s*[\"']?)"
+    r"(?P<scheme>(?:bearer|basic|digest|token|negotiate|apikey)\s+)?"
+    r"(?P<value>[^\"'\s,;}]+)"
 )
+
+
+def _auth_header_replace(match: re.Match[str]) -> str:
+    """Preserve the ``Authorization`` key + recognised scheme; redact the rest."""
+    return f"{match.group('prefix')}{match.group('scheme') or ''}{REDACTED}"
 
 
 def _kv_replace(match: re.Match[str]) -> str:
@@ -178,7 +198,7 @@ def _redact_text(text: str) -> str:
     doesn't matter because the patterns don't overlap.
     """
     text = _KV_PATTERN.sub(_kv_replace, text)
-    text = _BEARER_PATTERN.sub(lambda m: f"{m.group('prefix')}{REDACTED}", text)
+    text = _AUTH_HEADER_PATTERN.sub(_auth_header_replace, text)
     return text
 
 
