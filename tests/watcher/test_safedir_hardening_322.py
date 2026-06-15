@@ -394,6 +394,49 @@ def test_missing_component_ends_walk(tmp_path: Path) -> None:
     assert queue.size == 1
 
 
+def test_missing_intermediate_component_fails_closed(tmp_path: Path) -> None:
+    """A missing *intermediate* component (e.g. a symlinked ancestor removed
+    between resolve() and the lstat) fails closed — only a missing final
+    component is treated as a benign delete."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    handler, queue = _handler(root)
+
+    # 'sub' does not exist, so the walk hits FileNotFoundError on a non-final
+    # component → refused.
+    handler.on_created(FileCreatedEvent(src_path=str(root / "sub" / "doc.txt")))
+
+    assert queue.size == 0
+
+
+def test_all_roots_unresolvable_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If watch directories are configured but none resolve (e.g. a root turned
+    into a symlink loop), the guard fails closed rather than degrading to the
+    no-boundary 'allow everything' mode."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    target = root / "doc.txt"
+    target.write_text("content")
+    config = WatcherConfig(watch_directories=[root], debounce_seconds=0.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    real_resolve = Path.resolve
+
+    def _raise_for_root(self: Path, *args: object, **kwargs: object) -> Path:
+        if self.name == "watched":
+            raise OSError("simulated unresolvable root (symlink loop)")
+        return real_resolve(self, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Path, "resolve", _raise_for_root)
+
+    handler.on_created(FileCreatedEvent(src_path=str(target)))
+
+    assert queue.size == 0
+
+
 class TestAddDirectoryConfigSync:
     """``FileMonitor.add_directory`` keeps ``config.watch_directories`` in sync so
     the handler's containment guard sees dynamically-added roots (WP-2.3)."""

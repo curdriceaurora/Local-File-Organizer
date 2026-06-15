@@ -224,7 +224,9 @@ class FileEventHandler(FileSystemEventHandler):
           ``root/link/doc.txt`` with ``link -> root/real``) pass containment —
           the original symlink-bearing path would then be enqueued and a later
           downstream open could be raced by retargeting the link outside the
-          root (TOCTOU). A missing component (delete / move-away) ends the walk.
+          root (TOCTOU). A missing *final* component (delete / move-away) ends
+          the walk as safe; a missing *intermediate* component fails closed
+          (an ancestor that vanished mid-walk can't be proven symlink-free).
 
         The walk is anchored on whichever root form (original or resolved) the
         event path is expressed under, so it works for events under a symlinked
@@ -232,12 +234,20 @@ class FileEventHandler(FileSystemEventHandler):
         be aligned to either form the check **fails closed** rather than allowing
         the path unchecked (a non-canonical prefix must not bypass the walk).
 
-        When no watch roots are configured the method returns True (no boundary
-        to enforce) so a standalone handler keeps working.
+        When the handler has **no** watch directories configured the method
+        returns True (no boundary to enforce) so a standalone handler keeps
+        working. But if directories *are* configured and none of them resolve,
+        it **fails closed** — the guard must not be disablable by making a
+        configured root unresolvable.
         """
         roots = self._watch_roots()
         if not roots:
-            return True
+            # Distinguish a genuinely unconfigured handler (no watch roots → no
+            # boundary to enforce, allow) from one whose roots *all* failed to
+            # resolve (e.g. a configured root replaced by a symlink loop). The
+            # latter must fail closed, else the guard could be disabled simply by
+            # making a configured root unresolvable.
+            return not self.config.watch_directories
 
         try:
             resolved = path.resolve()
@@ -266,15 +276,19 @@ class FileEventHandler(FileSystemEventHandler):
             except ValueError:
                 continue
             current = base
-            for part in relative.parts:
+            parts = relative.parts
+            for index, part in enumerate(parts):
                 current = current / part
                 try:
                     if stat.S_ISLNK(os.lstat(current).st_mode):
                         return False
                 except FileNotFoundError:
-                    # Component absent (delete / move-away). Nothing left to
-                    # follow; the resolved-containment check already vouched.
-                    return True
+                    # Only the *final* component being absent is a benign
+                    # delete / move-away. An intermediate component vanishing
+                    # mid-walk (e.g. a symlinked ancestor removed between
+                    # resolve() and this lstat) means the path can no longer be
+                    # proven symlink-free — fail closed against that TOCTOU.
+                    return index == len(parts) - 1
                 except OSError:
                     return False  # fail closed on any other stat error
             return True
