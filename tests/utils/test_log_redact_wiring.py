@@ -44,7 +44,10 @@ def test_cli_startup_installs_and_redacts(
 
     # This invocation fails fast at path validation (exit 2) — but the Typer
     # callback (and thus install_on_root) has already run by then.
-    CliRunner().invoke(app, ["organize", str(tmp_path) + "/missing", str(tmp_path) + "/out"])
+    result = CliRunner().invoke(
+        app, ["organize", str(tmp_path) + "/missing", str(tmp_path) + "/out"]
+    )
+    assert result.exit_code == 2
 
     factory = logging.getLogRecordFactory()
     assert getattr(factory, "_fo_log_redact_installed", False) is True
@@ -68,7 +71,7 @@ def test_cli_startup_installs_and_redacts(
 
 
 def test_api_configure_logging_installs_redaction(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: object
+    restore_logging: None, monkeypatch: pytest.MonkeyPatch, tmp_path: object
 ) -> None:
     """API logging setup installs the redaction filter."""
     import file_organizer.api.main as apimain

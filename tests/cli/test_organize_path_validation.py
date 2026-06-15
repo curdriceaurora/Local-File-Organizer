@@ -21,6 +21,19 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _bypass_setup_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Treat first-time setup as complete so these tests exercise path
+    validation rather than the setup gate.
+
+    Path validation runs *before* ``_check_setup_completed`` in organize/preview,
+    so every case here already fails at validation (exit 2) regardless of setup
+    state; patching the gate makes that independence explicit and matches the
+    convention in other CLI tests.
+    """
+    monkeypatch.setattr("file_organizer.cli.organize._check_setup_completed", lambda: True)
+
+
 def test_organize_missing_input_is_bad_parameter(tmp_path: Path) -> None:
     result = runner.invoke(app, ["organize", str(tmp_path / "nope"), str(tmp_path / "out")])
     assert result.exit_code == 2
