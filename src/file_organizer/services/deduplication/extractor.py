@@ -69,8 +69,19 @@ class DocumentExtractor:
             if any(part == ".." for part in relative.parts):
                 raise ValueError(f"path escapes scan_root via '..': {file_path!r}")
             if sys.platform == "win32":  # pragma: no cover - platform skip
-                # Containment verified above; SafeDir anchored open is POSIX-only,
-                # so signal the caller to use a plain open of the in-root file.
+                # SafeDir anchored open is POSIX-only, so the caller will use a
+                # plain open() here — which follows symlinks/junctions. The
+                # lexical check above doesn't catch a symlinked *ancestor* under
+                # scan_root, so verify the *resolved* path still lives under the
+                # resolved root before signalling the legacy fallback; refuse an
+                # out-of-root reparse target. (Best-effort: resolve() is racy,
+                # but it's the only containment primitive without SafeDir.)
+                try:
+                    file_path.resolve().relative_to(scan_root.resolve())
+                except (OSError, RuntimeError, ValueError) as exc:
+                    raise ValueError(
+                        f"path escapes scan_root after resolution: {file_path!r}"
+                    ) from exc
                 return None
             try:
                 root_cm = SafeDir.open_root(scan_root)

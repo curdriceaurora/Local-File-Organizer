@@ -130,6 +130,30 @@ class TestAnchoredScanRoot:
         )
 
     @posix_only
+    def test_symlinked_ancestor_refused_on_windows_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Under the (simulated) Windows legacy fallback, a symlinked *ancestor*
+        under scan_root is still refused via resolved-path containment — the
+        lexical check alone would let open() follow the reparse point (#1270)."""
+        import file_organizer.services.deduplication.extractor as ext
+
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("attacker secret")
+        root = tmp_path / "root"
+        root.mkdir()
+        try:
+            (root / "link").symlink_to(outside)  # symlinked ancestor under root
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        monkeypatch.setattr(ext.sys, "platform", "win32")
+        victim = root / "link" / "doc.txt"
+        # Lexically victim is under root, but it resolves outside → refused ("").
+        assert DocumentExtractor().extract_text(victim, scan_root=root) == ""
+
+    @posix_only
     def test_symlinked_ancestor_is_refused(self, tmp_path: Path) -> None:
         """A symlinked *intermediate ancestor* under the scan root is refused by
         anchored traversal — the parent-rooted path would have followed it."""
