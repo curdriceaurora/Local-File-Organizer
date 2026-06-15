@@ -191,6 +191,11 @@ class PipelineOrchestrator:
         self._memory_limiter = memory_limiter
         self._batch_sizer = batch_sizer or AdaptiveBatchSizer()
         self._buffer_pool: BufferPool | None = buffer_pool
+        # Dedicated lock for lazy buffer-pool init. Must NOT be ``self._lock``:
+        # a worker initializing the pool mid-shutdown would otherwise block on
+        # the lifecycle lock that ``stop()`` holds while draining, stalling the
+        # drain until timeout and wrongly skipping stage close (#1285 review).
+        self._buffer_pool_lock = threading.Lock()
         self._resource_monitor = resource_monitor or ResourceMonitor()
         self._memory_pressure_threshold_percent = memory_pressure_threshold_percent
 
@@ -244,7 +249,7 @@ class PipelineOrchestrator:
     def buffer_pool(self) -> BufferPool:
         """Return the orchestrator's shared buffer pool."""
         if self._buffer_pool is None:
-            with self._lock:
+            with self._buffer_pool_lock:
                 if self._buffer_pool is None:
                     self._buffer_pool = BufferPool()
         return self._buffer_pool
@@ -257,6 +262,10 @@ class PipelineOrchestrator:
         """
         with self._lock:
             self._stages = list(stages)
+            # Newly installed stages may hold their own fds; allow stop() to
+            # close them even if a previous stage list was already closed
+            # (e.g. batch → set_stages → batch without start()) (#1285 review).
+            self._stages_closed = False
 
     # ------------------------------------------------------------------
     # Lifecycle

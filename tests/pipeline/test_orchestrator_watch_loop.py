@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -384,3 +385,58 @@ class TestWatchLoopExecutor:
 
         # Discarding a future that is not tracked is a safe no-op.
         orch._on_watch_future_done(MagicMock())
+
+    def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
+        """Lazy buffer-pool init must not need the lifecycle lock.
+
+        Regression for #1285 review: ``stop()`` holds ``self._lock`` while
+        draining workers; if lazy ``buffer_pool`` init also took ``self._lock``,
+        a worker initializing the pool mid-shutdown would deadlock and the drain
+        would time out, wrongly skipping stage close. Init must use its own lock.
+        """
+        orch = self._make_orchestrator()
+        orch._buffer_pool = None
+        result: dict[str, object] = {}
+
+        def init_pool() -> None:
+            result["pool"] = orch.buffer_pool
+
+        # Hold the lifecycle lock, then init the pool from another thread.
+        with orch._lock:
+            worker = threading.Thread(target=init_pool)
+            worker.start()
+            worker.join(timeout=2.0)
+            assert not worker.is_alive(), (
+                "buffer_pool init blocked on the lifecycle lock held by stop()"
+            )
+
+        assert result.get("pool") is not None
+
+    def test_set_stages_resets_close_guard(self):
+        """Replacing stages re-arms the close guard so new stages are closed.
+
+        Regression for #1285 review: after one stop() closed a stage list, a
+        batch caller can set_stages() and run another batch without start(); the
+        next stop() must close the newly installed stages rather than no-op on a
+        stale ``_stages_closed`` guard.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._stages = [_ClosableStage()]
+        orch.stop()  # batch-only close of the first stage list
+        assert closed == ["close"]
+
+        # Replace stages at runtime; the guard must reset so the new stage closes.
+        orch.set_stages([_ClosableStage()])
+        orch.stop()
+        assert closed == ["close", "close"]
