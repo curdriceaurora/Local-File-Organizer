@@ -34,7 +34,13 @@ except ImportError:
 
 from loguru import logger
 
-from file_organizer.utils.readers._base import FileReadError, _check_fd_size
+from file_organizer.utils.readers._base import (
+    FileReadError,
+    FileTooLargeError,
+    _check_decompression_bomb,
+    _check_fd_size,
+    _check_file_size,
+)
 
 
 def _parse_zip(fileobj: BinaryIO, max_files: int, label: str) -> str:
@@ -47,6 +53,9 @@ def _parse_zip(fileobj: BinaryIO, max_files: int, label: str) -> str:
         total_files = len(entries)
         total_compressed = sum(info.compress_size for info in entries)
         total_uncompressed = sum(info.file_size for info in entries)
+        # Refuse decompression bombs (tiny on disk, enormous declared expansion)
+        # before emitting metadata or letting a downstream consumer extract.
+        _check_decompression_bomb(total_uncompressed, total_compressed, label)
         compression_ratio = (
             (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
         )
@@ -108,16 +117,23 @@ def read_zip_file(
         _check_fd_size(fileobj)
         try:
             return _parse_zip(fileobj, max_files, label)
+        except FileTooLargeError:
+            raise  # size / decompression-bomb guard — propagate, don't wrap
         except Exception as e:  # Intentional catch-all: zipfile raises library-specific errors
             raise FileReadError(f"Failed to read ZIP file {label}: {e}") from e
     if file_path is None:
         raise ValueError("read_zip_file requires file_path or fileobj")
     path = Path(file_path)
+    # Size check outside the try so ``FileTooLargeError`` propagates (parity
+    # with the fileobj branch and the other readers).
+    _check_file_size(path)
     try:
         with path.open(
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_zip(f, max_files, path.name)
+    except FileTooLargeError:
+        raise  # size / decompression-bomb guard — propagate, don't wrap
     except Exception as e:  # Intentional catch-all: zipfile raises library-specific errors
         raise FileReadError(f"Failed to read ZIP file {path}: {e}") from e
 
@@ -130,6 +146,7 @@ def _parse_7z(fileobj: BinaryIO, max_files: int, label: str) -> str:
         total_files = len(all_files)
         total_compressed = sum(f.compressed or 0 for f in all_files)
         total_uncompressed = sum(f.uncompressed or 0 for f in all_files)
+        _check_decompression_bomb(total_uncompressed, total_compressed, label)
         compression_ratio = (
             (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
         )
@@ -194,16 +211,21 @@ def read_7z_file(
         _check_fd_size(fileobj)
         try:
             return _parse_7z(fileobj, max_files, label)
+        except FileTooLargeError:
+            raise  # size / decompression-bomb guard — propagate, don't wrap
         except Exception as e:  # Intentional catch-all: py7zr raises library-specific errors
             raise FileReadError(f"Failed to read 7Z file {label}: {e}") from e
     if file_path is None:
         raise ValueError("read_7z_file requires file_path or fileobj")
     path = Path(file_path)
+    _check_file_size(path)
     try:
         with path.open(
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_7z(f, max_files, path.name)
+    except FileTooLargeError:
+        raise  # size / decompression-bomb guard — propagate, don't wrap
     except Exception as e:  # Intentional catch-all: py7zr raises library-specific errors
         raise FileReadError(f"Failed to read 7Z file {path}: {e}") from e
 
@@ -234,12 +256,24 @@ def _parse_tar(fileobj: BinaryIO, max_files: int, label: str) -> str:
     # (gz / bz2 / xz / plain); requires the fileobj to be seekable, which
     # both ``path.open("rb")`` and ``os.fdopen(SafeDir fd, "rb")`` are.
     with tarfile.open(fileobj=fileobj, mode="r:*") as tf:
-        members = tf.getmembers()
-
-        # Calculate statistics
-        total_files = len([m for m in members if m.isfile()])
-        total_dirs = len([m for m in members if m.isdir()])
-        total_size = sum(m.size for m in members if m.isfile())
+        # Iterate header-by-header and accumulate declared sizes so a tar bomb is
+        # refused as soon as the cumulative size crosses the cap — before tarfile
+        # decompresses/seeks past an oversized member body to reach the next
+        # header (tar has no central directory, unlike ZIP/7Z/RAR). compressed=0
+        # → only the absolute cap applies (tar reports no per-entry compressed
+        # size).
+        members: list[tarfile.TarInfo] = []
+        total_files = 0
+        total_dirs = 0
+        total_size = 0
+        for member in tf:
+            members.append(member)
+            if member.isfile():
+                total_files += 1
+                total_size += member.size
+                _check_decompression_bomb(total_size, 0, label)
+            elif member.isdir():
+                total_dirs += 1
 
         compression_type = _detect_tar_compression(label.lower())
 
@@ -300,16 +334,21 @@ def read_tar_file(
         _check_fd_size(fileobj)
         try:
             return _parse_tar(fileobj, max_files, label)
+        except FileTooLargeError:
+            raise  # size / decompression-bomb guard — propagate, don't wrap
         except Exception as e:  # Intentional catch-all: tarfile raises library-specific errors
             raise FileReadError(f"Failed to read TAR file {label}: {e}") from e
     if file_path is None:
         raise ValueError("read_tar_file requires file_path or fileobj")
     path = Path(file_path)
+    _check_file_size(path)
     try:
         with path.open(
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_tar(f, max_files, path.name)
+    except FileTooLargeError:
+        raise  # size / decompression-bomb guard — propagate, don't wrap
     except Exception as e:  # Intentional catch-all: tarfile raises library-specific errors
         raise FileReadError(f"Failed to read TAR file {path}: {e}") from e
 
@@ -322,6 +361,7 @@ def _parse_rar(fileobj: BinaryIO, max_files: int, label: str) -> str:
         total_files = len(info_list)
         total_compressed = sum(info.compress_size for info in info_list)
         total_uncompressed = sum(info.file_size for info in info_list)
+        _check_decompression_bomb(total_uncompressed, total_compressed, label)
         compression_ratio = (
             (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
         )
@@ -389,6 +429,8 @@ def read_rar_file(
         _check_fd_size(fileobj)
         try:
             return _parse_rar(fileobj, max_files, label)
+        except FileTooLargeError:
+            raise  # size / decompression-bomb guard — propagate, don't wrap
         except rarfile.RarCannotExec as e:
             raise FileReadError(
                 f"Failed to read RAR file {label}: unrar tool not found. "
@@ -399,11 +441,14 @@ def read_rar_file(
     if file_path is None:
         raise ValueError("read_rar_file requires file_path or fileobj")
     path = Path(file_path)
+    _check_file_size(path)
     try:
         with path.open(
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_rar(f, max_files, path.name)
+    except FileTooLargeError:
+        raise  # size / decompression-bomb guard — propagate, don't wrap
     except rarfile.RarCannotExec as e:
         raise FileReadError(
             f"Failed to read RAR file {path}: unrar tool not found. "
