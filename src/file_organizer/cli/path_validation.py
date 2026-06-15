@@ -88,12 +88,13 @@ def resolve_cli_path(
     if reject_symlink:
         # lstat (no follow) on the expanduser'd path, before resolution, so a
         # symlinked root is refused rather than silently canonicalized to its
-        # target tree.
-        expanded = path.expanduser()
+        # target tree. ``expanduser`` can raise ``RuntimeError`` for an unknown
+        # ``~user`` — surface that as ``BadParameter`` (exit 2), matching
+        # ``_resolve_user_path``'s contract, instead of a raw traceback.
         try:
-            is_link = expanded.is_symlink()
-        except OSError:
-            is_link = False
+            is_link = path.expanduser().is_symlink()
+        except (OSError, RuntimeError) as exc:
+            raise typer.BadParameter(f"Unable to resolve path {path!s}: {exc}") from exc
         if is_link:
             raise typer.BadParameter(
                 f"Path is a symbolic link, which is not allowed here: {path!s}"
