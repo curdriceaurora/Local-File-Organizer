@@ -155,7 +155,9 @@ class FileEventHandler(FileSystemEventHandler):
         # path is a symlink (at any component under the watched root) or resolves
         # outside the watched roots, failing closed on any resolution error
         # (e.g. symlink loops).
-        if not self._is_event_path_allowed(path):
+        if not self._is_event_path_allowed(
+            path, allow_missing_leaf=event_type is EventType.DELETED
+        ):
             logger.warning("Skipping event for unsafe/out-of-root path: %s", path)
             return
 
@@ -207,7 +209,7 @@ class FileEventHandler(FileSystemEventHandler):
             pairs.append((original, resolved))
         return pairs
 
-    def _is_event_path_allowed(self, path: Path) -> bool:
+    def _is_event_path_allowed(self, path: Path, *, allow_missing_leaf: bool) -> bool:
         """Return True if *path* is safe to process under the watched roots.
 
         Fail-closed symlink/containment guard (WP-2.3, #1228):
@@ -224,9 +226,12 @@ class FileEventHandler(FileSystemEventHandler):
           ``root/link/doc.txt`` with ``link -> root/real``) pass containment —
           the original symlink-bearing path would then be enqueued and a later
           downstream open could be raced by retargeting the link outside the
-          root (TOCTOU). A missing *final* component (delete / move-away) ends
-          the walk as safe; a missing *intermediate* component fails closed
-          (an ancestor that vanished mid-walk can't be proven symlink-free).
+          root (TOCTOU). A missing *final* component ends the walk as safe only
+          when ``allow_missing_leaf`` is set (a DELETED event, where the leaf is
+          expected to be gone); for a live event, or for any missing
+          *intermediate* component, the walk fails closed — a vanished component
+          can't be proven symlink-free and the name could be recreated as an
+          out-of-root symlink before downstream opens it.
 
         The walk is anchored on whichever root form (original or resolved) the
         event path is expressed under, so it works for events under a symlinked
@@ -283,12 +288,14 @@ class FileEventHandler(FileSystemEventHandler):
                     if stat.S_ISLNK(os.lstat(current).st_mode):
                         return False
                 except FileNotFoundError:
-                    # Only the *final* component being absent is a benign
-                    # delete / move-away. An intermediate component vanishing
-                    # mid-walk (e.g. a symlinked ancestor removed between
-                    # resolve() and this lstat) means the path can no longer be
-                    # proven symlink-free — fail closed against that TOCTOU.
-                    return index == len(parts) - 1
+                    # A missing *final* component is benign only for a DELETED
+                    # event (the leaf is expected to be gone and nothing live is
+                    # read downstream). For a live CREATED/MODIFIED/MOVED event a
+                    # vanished leaf — or any vanished intermediate component —
+                    # can't be proven symlink-free: the pathname could be
+                    # recreated as an out-of-root symlink before the watch loop
+                    # opens it. Fail closed in those cases.
+                    return allow_missing_leaf and index == len(parts) - 1
                 except OSError:
                     return False  # fail closed on any other stat error
             return True

@@ -409,6 +409,21 @@ def test_missing_intermediate_component_fails_closed(tmp_path: Path) -> None:
     assert queue.size == 0
 
 
+def test_missing_leaf_for_live_event_fails_closed(tmp_path: Path) -> None:
+    """A live CREATED/MODIFIED event whose leaf vanished between resolve() and
+    lstat fails closed — only DELETED events tolerate a missing leaf, since a
+    live name could be recreated as an out-of-root symlink before the watch loop
+    opens it."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    handler, queue = _handler(root)
+
+    # doc.txt does not exist on disk, but this is a live CREATED event.
+    handler.on_created(FileCreatedEvent(src_path=str(root / "doc.txt")))
+
+    assert queue.size == 0
+
+
 def test_all_roots_unresolvable_fails_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
