@@ -125,3 +125,17 @@ class TestRecoverCommand:
             result = runner.invoke(app, ["recover", "--journal", str(journal)])
         assert result.exit_code == 1
         assert "disk gone" in result.output or "failed" in result.output.lower()
+
+    def test_recover_reports_dry_run_failure(self, tmp_path: Path) -> None:
+        """An OSError from dry-run journal reads surfaces as a clean
+        non-zero CLI error, matching the sweep path."""
+        journal = tmp_path / "move.journal"
+        journal.write_text("", encoding="utf-8")
+        with patch(
+            "file_organizer.cli.undo_recover.read_journal_under_shared_lock",
+            side_effect=OSError("permission denied"),
+        ):
+            result = runner.invoke(app, ["recover", "--journal", str(journal), "--dry-run"])
+        assert result.exit_code == 1
+        assert "permission denied" in result.output
+        assert "dry run failed" in result.output.lower()

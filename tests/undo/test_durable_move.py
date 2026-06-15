@@ -3108,6 +3108,42 @@ class TestStartedTmpPathDisambiguation:
         retained = _apply_planned_actions(plan)
         assert retained == [], "missing tmp must still drop entry (idempotent)"
 
+    def test_executor_drop_tmp_then_drop_removes_directory_tmp(self, tmp_path: Path) -> None:
+        """If an unexpected directory occupies ``tmp_path``, sweep removes
+        it and drops the entry instead of retaining forever on
+        ``IsADirectoryError``."""
+        from file_organizer.undo.durable_move import (
+            _apply_planned_actions,
+            _JournalEntry,
+            _PlannedAction,
+        )
+
+        tmp = tmp_path / ".dst.42.tmp"
+        tmp.mkdir()
+        (tmp / "leftover").write_text("unexpected stale tmp payload")
+        entry = _JournalEntry(
+            op="move",
+            src=str(tmp_path / "src"),
+            dst=str(tmp_path / "dst"),
+            state="started",
+            schema=2,
+            op_id="op-1",
+            tmp_path=str(tmp),
+        )
+        plan = [
+            _PlannedAction(
+                identity=("v2", "move", "op-1"),
+                entry=entry,
+                verb="drop_tmp_then_drop",
+                reason="test: directory-shaped tmp orphan",
+            )
+        ]
+
+        retained = _apply_planned_actions(plan)
+
+        assert retained == [], "directory-shaped tmp must still drop entry"
+        assert not tmp.exists(), "directory-shaped tmp must be removed recursively"
+
     def test_executor_drop_tmp_os_error_retains(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -3486,6 +3522,40 @@ class TestSweepEndToEndV2Started:
         assert not dst.exists(), "dst should still be absent"
         # Journal compacted: started entry resolved, no surviving lines.
         assert _read_journal(journal) == []
+
+    def test_cross_device_move_removes_stale_directory_tmp(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A stale directory at the reserved tmp name is removed before
+        creating the EXDEV tmp file, avoiding an already-journaled
+        ``started`` entry that sweep cannot clear."""
+        from file_organizer.undo.durable_move import durable_move
+
+        src = tmp_path / "src.txt"
+        dst = tmp_path / "dst.txt"
+        src.write_text("canonical")
+        journal = tmp_path / "move.journal"
+        stale_tmp = tmp_path / f".{dst.name}.{os.getpid()}.tmp"
+        stale_tmp.mkdir()
+        (stale_tmp / "old").write_text("unexpected stale directory")
+
+        real_replace = os.replace
+        calls = {"count": 0}
+
+        def exdev_once(src_arg, dst_arg):  # type: ignore[no-untyped-def]
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise OSError(errno.EXDEV, "simulated cross-device")
+            return real_replace(src_arg, dst_arg)
+
+        monkeypatch.setattr("file_organizer.undo.durable_move.os.replace", exdev_once)
+
+        durable_move(src, dst, journal=journal)
+
+        assert not src.exists()
+        assert dst.read_text() == "canonical"
+        assert not stale_tmp.exists(), "stale directory tmp must not survive the move"
+        assert _read_journal(journal)[-1]["state"] == "done"
 
 
 # ---------------------------------------------------------------------------

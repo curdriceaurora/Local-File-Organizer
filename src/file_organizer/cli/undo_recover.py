@@ -48,7 +48,11 @@ def recover(
         raise typer.Exit(code=0)
 
     if dry_run:
-        _render_dry_run(journal_path)
+        try:
+            _render_dry_run(journal_path)
+        except OSError as exc:
+            console.print(f"[red]Recovery dry run failed:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
         raise typer.Exit(code=0)
 
     try:

@@ -388,8 +388,9 @@ def _open_started_window(
        in-flight to any GC that subsequently acquires the lock.
     2. Materialize the tmp (empty regular file via ``O_CREAT|O_EXCL``,
        or ``os.symlink`` for the symlink branch).
-    3. ``fsync_directory(dst.parent)`` so the tmp's directory entry is
-       durable — preserves the §7.1 tmp-exists invariant under power loss.
+    3. ``fsync_directory(dst)`` so the tmp's directory entry is durable
+       (``fsync_directory`` syncs its argument's parent) — preserves the
+       §7.1 tmp-exists invariant under power loss.
 
     On non-POSIX (no ``fcntl``) the lock is a no-op and the same steps
     run unlocked per the module's single-CLI-invocation invariant; the
@@ -410,7 +411,7 @@ def _open_started_window(
         # processes have distinct PIDs); unlink it defensively so the
         # exclusive create / symlink below can't raise FileExistsError.
         if os.path.lexists(tmp_path):
-            tmp_path.unlink()
+            _remove_tmp_path(tmp_path)
         if src.is_symlink():
             # Codex P1 PRRT_kwDOR_Rkws59gnab: preserve symlink identity on
             # EXDEV moves. ``readlink`` keeps absolute-vs-relative form.
@@ -445,8 +446,9 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
     2. #1248 [P1]: :func:`_open_started_window` — under a single journal
        ``LOCK_EX`` — appends ``started`` with ``tmp_path`` populated,
        THEN creates the tmp (regular: empty file via ``O_CREAT|O_EXCL``;
-       symlink: ``os.symlink``), THEN ``fsync_directory(dst.parent)`` so
-       the tmp's directory entry is durable (§7.1 tmp-exists invariant).
+       symlink: ``os.symlink``), THEN ``fsync_directory(dst)`` so the
+       tmp's directory entry is durable (``fsync_directory`` syncs
+       its argument's parent; §7.1 tmp-exists invariant).
        The marker is journaled before the tmp exists so a concurrent
        ``TrashGC.safe_delete`` that wins the lock always observes ``src``
        in-flight before it can unlink it.
@@ -454,11 +456,11 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
        the data fsync happens before ``copystat`` (#1248 [P2]) so a
        read-only source mode can't EACCES the fsync reopen.
     4. ``os.replace(tmp, dst)`` — consumes tmp atomically into dst.
-    5. ``fsync_directory(dst.parent)`` so the new directory entry is
-       durable before we log ``copied`` (codex P1 fwMG).
+    5. ``fsync_directory(dst)`` so the new directory entry is durable
+       before we log ``copied`` (codex P1 fwMG).
     6. Append ``copied`` with the same ``op_id``.
-    7. ``os.unlink(src)`` + ``fsync_directory(src.parent)`` (codex P2
-       gnah: unlink durability before the ``done`` write).
+    7. ``os.unlink(src)`` + ``fsync_directory(src)`` (codex P2 gnah:
+       unlink durability before the ``done`` write).
     8. Append ``done`` with the same ``op_id``.
 
     §7.4: this function does NOT remove tmp on exception. If anything
@@ -1119,7 +1121,7 @@ def _apply_planned_actions(plan: list[_PlannedAction]) -> list[_JournalEntry]:
     """
     retained: list[_JournalEntry] = []
     for action in plan:
-        if action.log_level >= logging.WARNING or action.log_level >= logging.INFO:
+        if action.log_level >= logging.INFO:
             logger.log(action.log_level, "sweep: %s", action.reason)
         if action.verb == "retain":
             retained.append(action.entry)
@@ -1201,7 +1203,7 @@ def _execute_unlink_tmp(entry: _JournalEntry) -> bool:
         return False
     tmp = Path(entry.tmp_path)
     try:
-        tmp.unlink()
+        _remove_tmp_path(tmp)
     except FileNotFoundError:
         pass
     except OSError as exc:
@@ -1223,6 +1225,22 @@ def _execute_unlink_tmp(entry: _JournalEntry) -> bool:
             exc_info=True,
         )
     return True
+
+
+def _remove_tmp_path(tmp_path: Path) -> None:
+    """Remove an orphan/stale EXDEV tmp path without following symlinks.
+
+    A tmp path is normally a file or symlink, but a crash, manual repair, or
+    hostile local filesystem state can leave a directory at the reserved tmp
+    name. ``Path.unlink()`` would raise ``IsADirectoryError`` after the
+    ``started`` marker is already journaled, wedging both live move and sweep
+    recovery. Treat a real directory as a stale tmp container and remove it
+    recursively; symlinks to directories stay on the unlink path.
+    """
+    if tmp_path.is_dir() and not tmp_path.is_symlink():
+        shutil.rmtree(tmp_path)
+        return
+    tmp_path.unlink()
 
 
 def _reconcile_entries(entries: list[_JournalEntry]) -> list[_JournalEntry]:

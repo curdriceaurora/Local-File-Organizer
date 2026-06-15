@@ -314,6 +314,35 @@ class TestTrashGCInitRecovery:
         assert not good.exists(), "good orphan must still be cleaned"
         assert bad.exists(), "failing orphan must survive for next-init retry"
 
+    def test_init_treats_orphan_filenotfound_as_benign(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """If another cleanup removes an orphan before init recovery's
+        rmtree, ``FileNotFoundError`` is the desired end state and must
+        not count as a failed cleanup."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        orphan = trash / ".pending-delete-vanished"
+        orphan.mkdir()
+
+        def vanished_rmtree(*a: object, **k: object) -> None:
+            raise FileNotFoundError(2, "already cleaned")
+
+        monkeypatch.setattr("file_organizer.undo.trash_gc.shutil.rmtree", vanished_rmtree)
+
+        with caplog.at_level("DEBUG", logger="file_organizer.undo.trash_gc"):
+            TrashGC(trash)
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert any("already removed by concurrent cleanup" in msg for msg in messages)
+        assert not any(record.levelname == "WARNING" for record in caplog.records)
+        assert not any("0 orphans cleaned, 1 failed" in msg for msg in messages)
+
     def test_init_aggregated_log_line_emitted(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:

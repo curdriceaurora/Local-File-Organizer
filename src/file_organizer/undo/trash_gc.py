@@ -202,6 +202,12 @@ class TrashGC:
                 continue
             try:
                 shutil.rmtree(entry)
+            except FileNotFoundError:
+                logger.debug(
+                    "trash GC init recovery: orphan %s already removed by concurrent cleanup",
+                    entry,
+                )
+                continue
             except OSError as exc:
                 logger.warning(
                     "trash GC init recovery: failed to clean orphan %s: %s",
