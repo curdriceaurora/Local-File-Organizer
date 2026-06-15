@@ -118,7 +118,10 @@ def test_read_tar_file_max_files(mock_tar_open: MagicMock, tmp_path: Path) -> No
     mock_member.isdir.return_value = False
     mock_member.size = 1024
     mock_member.name = "test.txt"
+    # _parse_tar now iterates the TarFile header-by-header (early-abort bomb
+    # guard) rather than calling getmembers(), so the mock must be iterable.
     mock_tf.getmembers.return_value = [mock_member] * 60
+    mock_tf.__iter__.return_value = iter([mock_member] * 60)
     mock_tar_open.return_value.__enter__.return_value = mock_tf
 
     test_file = tmp_path / "test.tar"
