@@ -58,6 +58,7 @@ def config_edit(
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
+    from file_organizer.config.manager import UnsupportedConfigVersionError
 
     _VALID_DEVICES = {"auto", "cpu", "cuda", "mps", "metal"}
     _VALID_METHODOLOGIES = {"none", "para", "jd"}
@@ -94,5 +95,14 @@ def config_edit(
     if methodology is not None:
         cfg.default_methodology = methodology
 
-    mgr.save(cfg, profile=profile)
+    try:
+        mgr.save(cfg, profile=profile)
+    except UnsupportedConfigVersionError as exc:
+        console.print(
+            f"[red]Error: {exc}[/red]\n"
+            f"[yellow]Profile '{profile}' on disk uses an unsupported schema "
+            f"version; editing it would overwrite it with defaults. Migrate it "
+            f"first (or re-save deliberately) before editing.[/yellow]"
+        )
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved profile '{profile}'[/green]")

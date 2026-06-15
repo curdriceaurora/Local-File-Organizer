@@ -10,6 +10,7 @@ All Ollama/hardware calls are mocked — no external services required.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -708,7 +709,9 @@ class TestSaveConfig:
         config = AppConfig(profile_name="default")
         wizard.save_config(config)
 
-        mock_mgr.save.assert_called_once_with(config, "default")
+        # force=True so setup completion migrates/overwrites an unsupported
+        # on-disk version rather than crashing on the save guard (#1276).
+        mock_mgr.save.assert_called_once_with(config, "default", force=True)
 
     def test_sets_setup_completed_true(self) -> None:
         from file_organizer.config.schema import AppConfig
@@ -722,7 +725,9 @@ class TestSaveConfig:
         # Capture setup_completed at the moment save() is invoked — it must be True
         # already at that point, not set afterward.
         state_at_save: list[bool] = []
-        mock_mgr.save.side_effect = lambda cfg, _profile: state_at_save.append(cfg.setup_completed)
+        mock_mgr.save.side_effect = lambda cfg, _profile, force=False: state_at_save.append(
+            cfg.setup_completed
+        )
         wizard.save_config(config)
 
         assert config.setup_completed is True
@@ -739,7 +744,27 @@ class TestSaveConfig:
         config = AppConfig(profile_name="default")
         wizard.save_config(config, profile="my-custom-profile")
 
-        mock_mgr.save.assert_called_once_with(config, "my-custom-profile")
+        mock_mgr.save.assert_called_once_with(config, "my-custom-profile", force=True)
+
+    def test_migrates_unsupported_on_disk_version(self, tmp_path: Path) -> None:
+        """Setup completion migrates a profile written under an unsupported
+        schema version instead of crashing on the save guard (#1276)."""
+        from file_organizer.config.manager import ConfigManager
+        from file_organizer.config.schema import CURRENT_SCHEMA_VERSION, AppConfig
+        from file_organizer.core.setup_wizard import SetupWizard, WizardMode
+
+        cm = ConfigManager(config_dir=tmp_path)
+        (tmp_path / "config.yaml").write_text(
+            "profiles:\n  default:\n    version: '99.0'\n    default_methodology: para\n",
+            encoding="utf-8",
+        )
+        wizard = SetupWizard(mode=WizardMode.QUICK_START, config_manager=cm)
+
+        wizard.save_config(AppConfig(profile_name="default"))  # must not raise
+
+        reloaded = cm.load("default")
+        assert reloaded.version == CURRENT_SCHEMA_VERSION
+        assert reloaded.setup_completed is True
 
 
 # ---------------------------------------------------------------------------

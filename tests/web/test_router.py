@@ -79,25 +79,47 @@ class TestHomeRoute:
         assert "/ui/setup" in response.headers["location"]
 
 
+def _collect_route_paths(routes: object) -> list[str]:
+    """Recursively collect ``.path`` strings from a router's routes.
+
+    Newer FastAPI/Starlette ``include_router`` can leave nested route containers
+    (e.g. ``_IncludedRouter``) in ``router.routes`` that don't expose ``.path``;
+    a flat ``[r.path for r in router.routes]`` then raises ``AttributeError``
+    (see #1279). This descends into any nested ``.routes`` / ``.router.routes``
+    so the test works whether routes are flattened or wrapped.
+    """
+    paths: list[str] = []
+    for route in routes:  # type: ignore[attr-defined]
+        path = getattr(route, "path", None)
+        if isinstance(path, str):
+            paths.append(path)
+        nested = getattr(route, "routes", None) or getattr(
+            getattr(route, "router", None), "routes", None
+        )
+        if nested and nested is not routes:
+            paths.extend(_collect_route_paths(nested))
+    return paths
+
+
 class TestSubRouterInclusion:
     """Verify that sub-routers are included in the main router."""
 
     def test_files_router_routes_present(self):
-        paths = [r.path for r in router.routes]
+        paths = _collect_route_paths(router.routes)
         assert "/files" in paths or any("/files" in p for p in paths)
 
     def test_organize_router_routes_present(self):
-        paths = [r.path for r in router.routes]
+        paths = _collect_route_paths(router.routes)
         assert "/organize" in paths or any("/organize" in p for p in paths)
 
     def test_profile_router_routes_present(self):
-        paths = [r.path for r in router.routes]
+        paths = _collect_route_paths(router.routes)
         assert "/profile" in paths or any("/profile" in p for p in paths)
 
     def test_settings_router_routes_present(self):
-        paths = [r.path for r in router.routes]
+        paths = _collect_route_paths(router.routes)
         assert any("settings" in str(p) for p in paths)
 
     def test_marketplace_router_routes_present(self):
-        paths = [r.path for r in router.routes]
+        paths = _collect_route_paths(router.routes)
         assert any("marketplace" in str(p) for p in paths)

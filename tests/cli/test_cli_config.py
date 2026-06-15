@@ -128,6 +128,22 @@ class TestConfigEdit:
         assert "Saved" in result.output
         assert cfg.models.text_model == "llama3:8b"
 
+    @pytest.mark.ci
+    @patch("file_organizer.config.ConfigManager")
+    def test_edit_refuses_unsupported_version(self, mock_cls: MagicMock) -> None:
+        from file_organizer.config.manager import UnsupportedConfigVersionError
+
+        mock_mgr = MagicMock()
+        mock_cls.return_value = mock_mgr
+        mock_mgr.load.return_value = _make_config()
+        mock_mgr.save.side_effect = UnsupportedConfigVersionError("default", "99.0")
+
+        result = runner.invoke(app, ["config", "edit", "--methodology", "para"])
+        assert result.exit_code == 1
+        assert "unsupported" in result.output.lower()
+        mock_mgr.load.assert_called_once_with(profile="default")
+        mock_mgr.save.assert_called_once()
+
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_temperature(self, mock_cls: MagicMock) -> None:
         result = runner.invoke(app, ["config", "edit", "--temperature", "2.5"])

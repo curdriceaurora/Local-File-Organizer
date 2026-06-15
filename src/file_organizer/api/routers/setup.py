@@ -221,8 +221,10 @@ def complete_setup(
     config.setup_completed = True
     config.profile_name = request.profile
 
-    # Save configuration
-    manager.save(config, request.profile)
+    # Save configuration. force=True: setup completion is a deliberate
+    # (re)configuration that must migrate/overwrite an unsupported-version
+    # profile rather than crash on the save guard (#1276).
+    manager.save(config, request.profile, force=True)
 
     return SetupResponse(
         success=True,

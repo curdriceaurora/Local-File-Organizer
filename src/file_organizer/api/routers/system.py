@@ -32,7 +32,7 @@ from file_organizer.api.openapi_responses import (
     validation_error_response,
 )
 from file_organizer.api.utils import file_info_from_path, resolve_path
-from file_organizer.config.manager import ConfigManager
+from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 
 router = APIRouter(
@@ -123,6 +123,11 @@ def get_config(
             },
         ),
         ADMIN_403_RESPONSE,
+        api_error_response(
+            409,
+            error="unsupported_config_version",
+            message="On-disk profile schema version is unsupported for safe overwrite",
+        ),
         validation_error_response(),
     ),
 )
@@ -154,7 +159,17 @@ def update_config(
         if hasattr(config, name):
             setattr(config, name, value)
 
-    manager.save(config, request.profile)
+    try:
+        manager.save(config, request.profile)
+    except UnsupportedConfigVersionError as exc:
+        # The on-disk profile uses an unsupported schema version; editing it
+        # would overwrite it with defaults. Refuse with 409 in the project's
+        # ApiError shape ({error, message}) instead of clobbering (see #1276).
+        raise ApiError(
+            status_code=409,
+            error="unsupported_config_version",
+            message=str(exc),
+        ) from exc
     payload = manager.config_to_dict(config)
     return ConfigResponse(
         profile=request.profile,

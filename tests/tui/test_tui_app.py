@@ -306,3 +306,30 @@ async def test_update_notification() -> None:
 
         status_bar = app.query_one(StatusBar)
         assert "2.0.1" in status_bar._message
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_complete_wizard_persists_setup_completed(tmp_path) -> None:
+    """Completing the setup wizard must persist setup_completed=True (force-
+    migrating an unsupported version), so the wizard does not reappear on the
+    next launch (regression guard for #1280)."""
+    from file_organizer.config.manager import ConfigManager
+    from file_organizer.config.schema import CURRENT_SCHEMA_VERSION, AppConfig
+
+    cm = ConfigManager(config_dir=tmp_path)
+    # Pre-existing profile under an unsupported schema version.
+    (tmp_path / "config.yaml").write_text(
+        "profiles:\n  default:\n    version: '99.0'\n    default_methodology: para\n",
+        encoding="utf-8",
+    )
+    app = FileOrganizerApp()
+    app._config_manager = cm
+    async with app.run_test():
+        await app.complete_wizard_and_transition(
+            AppConfig(profile_name="default", setup_completed=False)
+        )
+
+    reloaded = cm.load("default")
+    assert reloaded.setup_completed is True
+    assert reloaded.version == CURRENT_SCHEMA_VERSION  # migrated via force=True
