@@ -62,10 +62,8 @@ class TestOfflineHermeticity:
         text = "python programming language development tools"
         keywords = extract_keywords(text, top_n=3)
 
-        # 5 non-stopword words >3 chars, top_n=3 -> exactly 3 returned.
-        assert len(keywords) == 3
-        for keyword in keywords:
-            assert keyword in text.lower()
+        # All words are equal frequency; deterministic tie-break keeps first appearance.
+        assert keywords == ["python", "programming", "language"]
 
     def test_get_unwanted_words_offline(
         self,

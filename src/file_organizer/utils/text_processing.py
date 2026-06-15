@@ -211,7 +211,7 @@ _ENGLISH_STOPWORDS: frozenset[str] = frozenset(
 
 
 @lru_cache(maxsize=1)
-def _get_stemmer() -> snowballstemmer.stemmer:
+def _get_stemmer() -> snowballstemmer.EnglishStemmer:
     """Return a cached Snowball English stemmer.
 
     The stemmer is pure-Python and deterministic; caching avoids rebuilding it
@@ -398,7 +398,7 @@ def _tokenize(text: str) -> list[str]:
 
 
 def clean_text(
-    text: str,
+    text: str | None,
     max_words: int = 5,
     remove_unwanted: bool = True,
     lemmatize: bool = True,
@@ -406,7 +406,7 @@ def clean_text(
     """Clean and process text for use as filename or folder name.
 
     Args:
-        text: Input text to clean.
+        text: Input text to clean. ``None``/empty values return ``""``.
         max_words: Maximum number of words to keep.
         remove_unwanted: Whether to remove unwanted words.
         lemmatize: Whether to stem words (Snowball English). The parameter name is
@@ -523,10 +523,15 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
     if not words:
         return []
 
-    # Counter.most_common preserves insertion order for equal counts (Python 3.7+),
-    # making the result deterministic.
+    # Make tie-breaking explicit: for equal counts, preserve first appearance order.
+    first_seen: dict[str, int] = {}
+    for index, word in enumerate(words):
+        if word not in first_seen:
+            first_seen[word] = index
+
     word_freq = Counter(words)
-    return [word for word, _ in word_freq.most_common(top_n)]
+    ranked = sorted(word_freq.items(), key=lambda item: (-item[1], first_seen[item[0]]))
+    return [word for word, _ in ranked[:top_n]]
 
 
 def truncate_text(text: str, max_chars: int = 5000) -> str:
