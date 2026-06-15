@@ -129,6 +129,6 @@ def _check_decompression_bomb(
     ):
         ratio = total_uncompressed / total_compressed
         raise FileTooLargeError(
-            f"Archive compression ratio {ratio:.0f}:1 exceeds {max_ratio:.0f}:1 "
+            f"Archive compression ratio {ratio:.1f}:1 exceeds {max_ratio:.0f}:1 "
             f"(possible decompression bomb): {label}"
         )

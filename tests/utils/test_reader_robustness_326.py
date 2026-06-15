@@ -120,6 +120,9 @@ def test_read_zip_bomb_propagates_both_branches(
 
 def _make_tar(path: Path) -> None:
     with tarfile.open(path, "w") as tf:
+        d = tarfile.TarInfo("sub/")
+        d.type = tarfile.DIRTYPE
+        tf.addfile(d)
         data = b"hello world"
         info = tarfile.TarInfo("a.txt")
         info.size = len(data)
@@ -131,6 +134,12 @@ def test_read_tar_normal_path(tmp_path: Path) -> None:
     _make_tar(p)
     out = read_tar_file(p)
     assert "TAR Archive" in out and "Total files: 1" in out
+    assert "Total directories: 1" in out
+
+
+def test_read_tar_requires_source() -> None:
+    with pytest.raises(ValueError, match="requires file_path or fileobj"):
+        read_tar_file()
 
 
 def test_read_tar_bomb_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -153,8 +162,7 @@ def test_read_tar_bomb_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
 
 def _make_7z(path: Path) -> None:
-    import py7zr
-
+    py7zr = pytest.importorskip("py7zr")  # optional [archive] extra
     with py7zr.SevenZipFile(path, "w") as archive:
         archive.writestr(b"hello world", "a.txt")
 
@@ -210,6 +218,9 @@ class _FakeRarFile:
 
 
 def _install_fake_rar(monkeypatch: pytest.MonkeyPatch, infos: list[_FakeRarInfo]) -> None:
+    # Fake rarfile so these run without the optional rarfile dep or an external
+    # unrar backend; raising=False because ``_arc.rarfile`` is unbound when
+    # rarfile isn't installed.
     monkeypatch.setattr(_arc, "RARFILE_AVAILABLE", True)
 
     class _Mod:
@@ -219,7 +230,7 @@ def _install_fake_rar(monkeypatch: pytest.MonkeyPatch, infos: list[_FakeRarInfo]
         def RarFile(_fileobj: object, _mode: str = "r") -> _FakeRarFile:
             return _FakeRarFile(infos)
 
-    monkeypatch.setattr(_arc, "rarfile", _Mod)
+    monkeypatch.setattr(_arc, "rarfile", _Mod, raising=False)
 
 
 def test_read_rar_normal_path_and_fileobj(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -243,3 +254,9 @@ def test_read_rar_bomb_trips_real_guard(tmp_path: Path, monkeypatch: pytest.Monk
         read_rar_file(p)
     with p.open("rb") as fh, pytest.raises(FileTooLargeError):
         read_rar_file(fileobj=fh, file_path=p)
+
+
+def test_read_rar_requires_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_rar(monkeypatch, [])
+    with pytest.raises(ValueError, match="requires file_path or fileobj"):
+        read_rar_file()

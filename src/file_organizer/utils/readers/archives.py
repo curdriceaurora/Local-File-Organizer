@@ -256,15 +256,24 @@ def _parse_tar(fileobj: BinaryIO, max_files: int, label: str) -> str:
     # (gz / bz2 / xz / plain); requires the fileobj to be seekable, which
     # both ``path.open("rb")`` and ``os.fdopen(SafeDir fd, "rb")`` are.
     with tarfile.open(fileobj=fileobj, mode="r:*") as tf:
-        members = tf.getmembers()
-
-        # Calculate statistics
-        total_files = len([m for m in members if m.isfile()])
-        total_dirs = len([m for m in members if m.isdir()])
-        total_size = sum(m.size for m in members if m.isfile())
-        # tar members report only uncompressed size; pass compressed=0 so just
-        # the absolute expansion cap applies (no per-entry ratio available).
-        _check_decompression_bomb(total_size, 0, label)
+        # Iterate header-by-header and accumulate declared sizes so a tar bomb is
+        # refused as soon as the cumulative size crosses the cap — before tarfile
+        # decompresses/seeks past an oversized member body to reach the next
+        # header (tar has no central directory, unlike ZIP/7Z/RAR). compressed=0
+        # → only the absolute cap applies (tar reports no per-entry compressed
+        # size).
+        members: list[tarfile.TarInfo] = []
+        total_files = 0
+        total_dirs = 0
+        total_size = 0
+        for member in tf:
+            members.append(member)
+            if member.isfile():
+                total_files += 1
+                total_size += member.size
+                _check_decompression_bomb(total_size, 0, label)
+            elif member.isdir():
+                total_dirs += 1
 
         compression_type = _detect_tar_compression(label.lower())
 
