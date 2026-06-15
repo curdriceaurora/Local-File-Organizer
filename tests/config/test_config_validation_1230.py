@@ -127,3 +127,6 @@ def test_load_float_version_normalized(tmp_path: Path) -> None:
     )
     cfg = cm.load("default")
     assert cfg.default_methodology == "jd"
+    # Normalized to a str, not left as the YAML-parsed float 1.0.
+    assert cfg.version == CURRENT_SCHEMA_VERSION
+    assert isinstance(cfg.version, str)

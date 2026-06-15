@@ -25,6 +25,7 @@ import yaml  # type: ignore[import-untyped]
 
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import (
+    CURRENT_SCHEMA_VERSION,
     SUPPORTED_SCHEMA_VERSIONS,
     AppConfig,
     ModelPreset,
@@ -432,7 +433,9 @@ class ConfigManager:
 
         return AppConfig(
             profile_name=profile,
-            version=data.get("version", "1.0"),
+            # Normalize to str so a YAML-parsed float (``version: 1.0``) does not
+            # leak through as a float despite the ``str`` annotation.
+            version=str(data.get("version", CURRENT_SCHEMA_VERSION)),
             default_methodology=data.get("default_methodology", "none"),
             setup_completed=data.get("setup_completed", False),
             models=models,

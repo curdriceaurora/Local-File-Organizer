@@ -18,10 +18,11 @@ from typing import Any
 
 # Schema-version constants. ``CURRENT_SCHEMA_VERSION`` is what new configs are
 # written as; ``SUPPORTED_SCHEMA_VERSIONS`` is the set ConfigManager will load
-# without falling back to defaults. Bump both (and add a migration) when the
-# on-disk shape changes incompatibly.
+# without falling back to defaults. It is derived from CURRENT_SCHEMA_VERSION so
+# the two cannot drift; extend it explicitly (e.g.
+# ``frozenset({CURRENT_SCHEMA_VERSION, "1.0"})``) once a migration exists.
 CURRENT_SCHEMA_VERSION = "1.0"
-SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0"})
+SUPPORTED_SCHEMA_VERSIONS = frozenset({CURRENT_SCHEMA_VERSION})
 
 
 @dataclass
