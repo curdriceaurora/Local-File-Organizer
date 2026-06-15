@@ -229,14 +229,12 @@ class TestWatchLoopExecutor:
         Regression for #1285 review: ``shutdown(wait=False)`` lets already-
         submitted ``process_file`` work keep running, so a stage's ``close()``
         must not release resources while a worker is still in ``stage.process()``.
-        A slow in-flight future must complete before any ``stage.close()`` runs.
+        An in-flight future must complete before any ``stage.close()`` runs;
+        ``futures_wait`` guarantees this ordering deterministically (no sleep).
         """
-        import time
-
         order: list[str] = []
 
-        def slow_work() -> None:
-            time.sleep(0.2)
+        def record_work() -> None:
             order.append("work_done")
 
         class _ClosableStage:
@@ -253,7 +251,7 @@ class TestWatchLoopExecutor:
         orch._watch_thread = MagicMock()
         orch._stages = [_ClosableStage()]
 
-        future = orch._executor.submit(slow_work)
+        future = orch._executor.submit(record_work)
         orch._watch_futures.add(future)
         future.add_done_callback(orch._watch_futures.discard)
 
