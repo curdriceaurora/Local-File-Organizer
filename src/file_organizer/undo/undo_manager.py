@@ -101,12 +101,30 @@ class UndoManager:
         success = self.executor.rollback_operation(operation)
 
         if success:
-            # Update operation status
-            self.history.db.execute_query(
-                "UPDATE operations SET status = ? WHERE id = ?",
-                (OperationStatus.ROLLED_BACK.value, operation_id),
+            # Transactional status flip (race B3): flip → ROLLED_BACK only if it
+            # is not already rolled back, via a single conditional UPDATE + commit.
+            # rowcount == 0 means a concurrent undo already flipped it, so we must
+            # not report a fresh success or clear the redo stack twice. (A crash
+            # between the filesystem move and this commit leaves the DB at its
+            # prior status; a re-undo then fails safely via validate_undo's
+            # file-missing check. Full journal-backed crash recovery is WP-1.2b,
+            # #1248.)
+            cursor = self.history.db.execute_query(
+                "UPDATE operations SET status = ? WHERE id = ? AND status != ?",
+                (
+                    OperationStatus.ROLLED_BACK.value,
+                    operation_id,
+                    OperationStatus.ROLLED_BACK.value,
+                ),
             )
             self.history.db.get_connection().commit()
+            if cursor.rowcount == 0:
+                logger.warning(
+                    "Operation %s was already rolled back concurrently; "
+                    "skipping duplicate status flip",
+                    operation_id,
+                )
+                return False
             logger.info(f"Successfully undid operation {operation_id}")
 
             # Clear redo stack (undo creates new timeline)
@@ -297,12 +315,24 @@ class UndoManager:
         success = self.executor.redo_operation(operation)
 
         if success:
-            # Update operation status back to completed
-            self.history.db.execute_query(
-                "UPDATE operations SET status = ? WHERE id = ?",
-                (OperationStatus.COMPLETED.value, operation_id),
+            # Transactional status flip (race B3): flip ROLLED_BACK → COMPLETED
+            # only if it is still rolled back, via a single conditional UPDATE +
+            # commit. rowcount == 0 means a concurrent redo already flipped it.
+            cursor = self.history.db.execute_query(
+                "UPDATE operations SET status = ? WHERE id = ? AND status = ?",
+                (
+                    OperationStatus.COMPLETED.value,
+                    operation_id,
+                    OperationStatus.ROLLED_BACK.value,
+                ),
             )
             self.history.db.get_connection().commit()
+            if cursor.rowcount == 0:
+                logger.warning(
+                    "Operation %s was already redone concurrently; skipping duplicate status flip",
+                    operation_id,
+                )
+                return False
             logger.info(f"Successfully redid operation {operation_id}")
         else:
             logger.error(f"Failed to redo operation {operation_id}")

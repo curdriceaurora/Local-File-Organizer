@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -21,19 +20,23 @@ def test_version_command():
 
 
 @patch("file_organizer.config.manager.ConfigManager")
-def test_organize_requires_setup_completed(mock_cm):
+def test_organize_requires_setup_completed(mock_cm, tmp_path):
     """organize exits with code 1 when setup is incomplete."""
     mock_cm.return_value.load.return_value.setup_completed = False
-    result = runner.invoke(app, ["organize", "in", "out"])
+    in_dir = tmp_path / "in"
+    in_dir.mkdir()
+    result = runner.invoke(app, ["organize", str(in_dir), str(tmp_path / "out")])
     assert result.exit_code == 1
     assert "setup" in result.stdout.lower()
 
 
 @patch("file_organizer.config.manager.ConfigManager")
-def test_preview_requires_setup_completed(mock_cm):
+def test_preview_requires_setup_completed(mock_cm, tmp_path):
     """preview exits with code 1 when setup is incomplete."""
     mock_cm.return_value.load.return_value.setup_completed = False
-    result = runner.invoke(app, ["preview", "in_dir"])
+    in_dir = tmp_path / "in_dir"
+    in_dir.mkdir()
+    result = runner.invoke(app, ["preview", str(in_dir)])
     assert result.exit_code == 1
     assert "setup" in result.stdout.lower()
 
@@ -77,6 +80,7 @@ def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
 
     in_dir = tmp_path / "in"
     out_dir = tmp_path / "out"
+    in_dir.mkdir()
 
     result = runner.invoke(app, ["organize", str(in_dir), str(out_dir), "--dry-run"])
 
@@ -89,7 +93,8 @@ def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
         enable_vision=True,
         no_prefetch=False,
     )
-    mock_instance.organize.assert_called_once_with(in_dir, out_dir)
+    # organize receives the CLI-boundary-resolved (absolute) paths.
+    mock_instance.organize.assert_called_once_with(in_dir.resolve(), out_dir.resolve())
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -100,7 +105,9 @@ def test_organize_command_error(mock_organizer_cls, _mock_setup, tmp_path):
     mock_instance.organize.side_effect = RuntimeError("Something broke")
     mock_organizer_cls.return_value = mock_instance
 
-    result = runner.invoke(app, ["organize", "in", "out"])
+    in_dir = tmp_path / "in"
+    in_dir.mkdir()
+    result = runner.invoke(app, ["organize", str(in_dir), str(tmp_path / "out")])
 
     assert result.exit_code == 1
     assert "Error: Something broke" in result.stdout
@@ -115,7 +122,9 @@ def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
     mock_instance.organize.return_value = mock_result
     mock_organizer_cls.return_value = mock_instance
 
-    result = runner.invoke(app, ["preview", "in_dir"])
+    in_dir = tmp_path / "in_dir"
+    in_dir.mkdir()
+    result = runner.invoke(app, ["preview", str(in_dir)])
 
     assert result.exit_code == 0
     assert "Previewing" in result.stdout
@@ -126,7 +135,8 @@ def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
         enable_vision=True,
         no_prefetch=False,
     )
-    mock_instance.organize.assert_called_once_with(Path("in_dir"), Path("in_dir"))
+    # preview resolves the input at the CLI boundary and uses it for in & out.
+    mock_instance.organize.assert_called_once_with(in_dir.resolve(), in_dir.resolve())
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -137,7 +147,9 @@ def test_preview_command_error(mock_organizer_cls, _mock_setup, tmp_path):
     mock_instance.organize.side_effect = ValueError("Bad input")
     mock_organizer_cls.return_value = mock_instance
 
-    result = runner.invoke(app, ["preview", "in_dir"])
+    in_dir = tmp_path / "in_dir"
+    in_dir.mkdir()
+    result = runner.invoke(app, ["preview", str(in_dir)])
 
     assert result.exit_code == 1
     assert "Error: Bad input" in result.stdout

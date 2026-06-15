@@ -43,12 +43,23 @@ class DocumentDeduplicator:
             f"threshold={similarity_threshold}, features={max_features}"
         )
 
-    def find_duplicates(self, file_paths: list[Path], min_text_length: int = 100) -> dict[str, Any]:
+    def find_duplicates(
+        self,
+        file_paths: list[Path],
+        min_text_length: int = 100,
+        *,
+        scan_root: Path | None = None,
+    ) -> dict[str, Any]:
         """Find duplicate and similar documents.
 
         Args:
             file_paths: List of document paths to analyze
             min_text_length: Minimum text length to consider
+            scan_root: Optional trusted root the documents were discovered
+                under. When supplied it is forwarded to the extractor so reads
+                use SafeDir anchored traversal — a symlinked ancestor swapped in
+                between enumeration and extraction is refused rather than
+                followed outside the tree (#1269).
 
         Returns:
             Dictionary with duplicate groups and statistics
@@ -61,7 +72,7 @@ class DocumentDeduplicator:
         logger.info(f"Analyzing {len(supported_files)} supported documents")
 
         # Extract text
-        extracted_texts = self.extractor.extract_batch(supported_files)
+        extracted_texts = self.extractor.extract_batch(supported_files, scan_root=scan_root)
 
         # Filter by minimum length
         valid_docs = {}
@@ -110,20 +121,28 @@ class DocumentDeduplicator:
 
         return results
 
-    def compare_documents(self, doc1_path: Path, doc2_path: Path) -> float | None:
+    def compare_documents(
+        self,
+        doc1_path: Path,
+        doc2_path: Path,
+        *,
+        scan_root: Path | None = None,
+    ) -> float | None:
         """Compare two documents for similarity.
 
         Args:
             doc1_path: First document path
             doc2_path: Second document path
+            scan_root: Optional trusted root forwarded to the extractor for
+                anchored (nested-ancestor-safe) reads (#1269).
 
         Returns:
             Similarity score (0-1) or None if comparison fails
         """
         try:
             # Extract text
-            text1 = self.extractor.extract_text(doc1_path)
-            text2 = self.extractor.extract_text(doc2_path)
+            text1 = self.extractor.extract_text(doc1_path, scan_root=scan_root)
+            text2 = self.extractor.extract_text(doc2_path, scan_root=scan_root)
 
             if not text1 or not text2:
                 logger.warning("One or both documents have no extractable text")

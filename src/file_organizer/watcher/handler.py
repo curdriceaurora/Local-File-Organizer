@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import stat
 import threading
 import time
 from collections.abc import Callable
@@ -133,14 +134,31 @@ class FileEventHandler(FileSystemEventHandler):
             event_type: Classified event type.
             dest_path: Destination path for move events.
         """
-        raw_src = event.src_path
-        path = Path(os.fsdecode(raw_src))
+        src_path = Path(os.fsdecode(event.src_path))
         is_directory = isinstance(event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent))
+
+        # For MOVED events the destination is the live, to-be-organized file;
+        # the source no longer exists. Use the destination as the effective path
+        # for filtering, debounce, the symlink/containment guard, and
+        # FileEvent.path so the downstream watch loop processes (and we validate)
+        # the file's new location rather than the missing source. Fall back to
+        # the source when no destination is supplied.
+        path = dest_path if dest_path is not None else src_path
 
         # Skip directory events for non-directory-aware processing
         # (still allow them through if they pass filters)
         if not is_directory and not self.config.should_include_file(path):
             logger.debug("Filtered out event for: %s", path)
+            return
+
+        # Symlink / containment hardening (WP-2.3, #1228): refuse events whose
+        # path is a symlink (at any component under the watched root) or resolves
+        # outside the watched roots, failing closed on any resolution error
+        # (e.g. symlink loops).
+        if not self._is_event_path_allowed(
+            path, allow_missing_leaf=event_type is EventType.DELETED
+        ):
+            logger.warning("Skipping event for unsafe/out-of-root path: %s", path)
             return
 
         # Apply debouncing
@@ -163,6 +181,141 @@ class FileEventHandler(FileSystemEventHandler):
 
         # Fire callbacks
         self._fire_callbacks(event_type, file_event)
+
+    def _watch_roots(self) -> list[tuple[Path, Path]]:
+        """Return ``(original, resolved)`` pairs for each configured watch dir.
+
+        ``original`` is the path as configured (which may itself be a symlinked
+        directory the user deliberately pointed the watcher at); ``resolved`` is
+        its canonical form. The per-component symlink walk in
+        :meth:`_is_event_path_allowed` aligns on whichever form the event path is
+        expressed under, so events under a symlinked watch root still flow while
+        a symlinked *ancestor below* the root is still caught.
+
+        Roots whose canonicalization *raises* (symlink loop, OS-level resolution
+        failure) are dropped rather than aborting the whole check; a merely
+        missing root is **not** dropped because ``Path.resolve()`` is non-strict.
+        An empty result means no containment boundary is configured (e.g. a
+        handler used standalone), in which case :meth:`_is_event_path_allowed`
+        does not block — there is nothing to contain the event against.
+        """
+        pairs: list[tuple[Path, Path]] = []
+        for directory in self.config.watch_directories:
+            original = Path(directory)
+            try:
+                resolved = original.resolve()
+            except (OSError, RuntimeError):  # pragma: no cover - defensive
+                continue
+            pairs.append((original, resolved))
+        return pairs
+
+    def _is_event_path_allowed(self, path: Path, *, allow_missing_leaf: bool) -> bool:
+        """Return True if *path* is safe to process under the watched roots.
+
+        Fail-closed symlink/containment guard (WP-2.3, #1228):
+
+        - **resolve-loop handling**: the path is canonicalized with
+          ``Path.resolve()``; a symlink loop or other resolution error raises
+          ``OSError``/``RuntimeError`` and is treated as unsafe (skip).
+        - **containment**: the resolved path must live inside one of the
+          resolved watch roots; anything outside is refused.
+        - **per-component symlink rejection**: every component from the matched
+          root down to the leaf is ``lstat``-ed; a symlink anywhere along the
+          way is refused. Checking only the leaf would let a symlinked
+          *ancestor* that currently resolves back under the root (e.g.
+          ``root/link/doc.txt`` with ``link -> root/real``) pass containment —
+          the original symlink-bearing path would then be enqueued and a later
+          downstream open could be raced by retargeting the link outside the
+          root (TOCTOU). A missing *final* component ends the walk as safe only
+          when ``allow_missing_leaf`` is set (a DELETED event, where the leaf is
+          expected to be gone); for a live event, or for any missing
+          *intermediate* component, the walk fails closed — a vanished component
+          can't be proven symlink-free and the name could be recreated as an
+          out-of-root symlink before downstream opens it.
+
+        The walk is anchored on whichever root form (original or resolved) the
+        event path is expressed under, so it works for events under a symlinked
+        watch root *and* watchdog's canonical-prefixed paths. **Every** configured
+        root that contains the path is tried (not just the first match): with
+        overlapping roots, a symlink that is an untrusted ancestor under a broad
+        root may itself be an explicitly-configured, trusted watch root. The check
+        **fails closed** only when no candidate root yields a symlink-free walk.
+
+        When the handler has **no** watch directories configured the method
+        returns True (no boundary to enforce) so a standalone handler keeps
+        working. But if directories *are* configured and none of them resolve,
+        it **fails closed** — the guard must not be disablable by making a
+        configured root unresolvable.
+        """
+        roots = self._watch_roots()
+        if not roots:
+            # Distinguish a genuinely unconfigured handler (no watch roots → no
+            # boundary to enforce, allow) from one whose roots *all* failed to
+            # resolve (e.g. a configured root replaced by a symlink loop). The
+            # latter must fail closed, else the guard could be disabled simply by
+            # making a configured root unresolvable.
+            return not self.config.watch_directories
+
+        try:
+            resolved = path.resolve()
+        except (OSError, RuntimeError):
+            return False  # fail closed on symlink loops / resolution failures
+
+        # Try every configured root whose resolved form contains the event path,
+        # aligning the per-component walk on whichever root form (original or
+        # resolved) the event path is expressed under. Iterating *all* matching
+        # roots — not just the first — matters for aliased/overlapping roots
+        # (e.g. two symlinked roots resolving to the same directory): the event
+        # may align with only the second one, regardless of root order. The
+        # resolved root never has symlinks in it; the original root may *be* a
+        # (trusted) symlinked directory, so the walk never lstats the root
+        # itself — only the components below it.
+        for original_root, resolved_root in roots:
+            if not (resolved == resolved_root or resolved.is_relative_to(resolved_root)):
+                continue  # this root doesn't contain the event path
+            for base in dict.fromkeys((original_root, resolved_root)):
+                try:
+                    relative = path.relative_to(base)
+                except ValueError:
+                    continue
+                if self._components_symlink_free(
+                    base, relative, allow_missing_leaf=allow_missing_leaf
+                ):
+                    return True
+                # The walk failed for this candidate, but another configured
+                # root may legitimately contain the path — e.g. a symlink that
+                # looks like an untrusted ancestor under a broad root is itself
+                # an explicitly-configured (trusted) watch root, where it is the
+                # boundary and never lstat-ed. Keep trying the remaining roots.
+
+        # No configured root both contains the path and yields a symlink-free
+        # walk — refuse rather than allow.
+        return False
+
+    def _components_symlink_free(
+        self, base: Path, relative: Path, *, allow_missing_leaf: bool
+    ) -> bool:
+        """Return True if no component of *relative* under *base* is a symlink.
+
+        Walks ``base / part`` for each component of *relative*, ``lstat``-ing it.
+        A symlink anywhere → False. A missing *final* component is tolerated only
+        when ``allow_missing_leaf`` is set (a DELETED event); a missing
+        intermediate component, or a missing leaf on a live event, fails closed
+        (the name could be recreated as an out-of-root symlink before the watch
+        loop opens it). Any other ``OSError`` fails closed.
+        """
+        current = base
+        parts = relative.parts
+        for index, part in enumerate(parts):
+            current = current / part
+            try:
+                if stat.S_ISLNK(os.lstat(current).st_mode):
+                    return False
+            except FileNotFoundError:
+                return allow_missing_leaf and index == len(parts) - 1
+            except OSError:
+                return False  # fail closed on any other stat error
+        return True
 
     def _should_process(self, path_key: str) -> bool:
         """Check if an event for this path should be processed based on debounce timing.
