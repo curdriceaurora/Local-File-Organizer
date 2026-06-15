@@ -79,47 +79,34 @@ class TestHomeRoute:
         assert "/ui/setup" in response.headers["location"]
 
 
-def _collect_route_paths(routes: object) -> list[str]:
-    """Recursively collect ``.path`` strings from a router's routes.
+def _mounted_app_paths() -> list[str]:
+    """Concrete route paths after mounting the web router as the app does.
 
-    Newer FastAPI/Starlette ``include_router`` can leave nested route containers
-    (e.g. ``_IncludedRouter``) in ``router.routes`` that don't expose ``.path``;
-    a flat ``[r.path for r in router.routes]`` then raises ``AttributeError``
-    (see #1279). This descends into any nested ``.routes`` / ``.router.routes``
-    so the test works whether routes are flattened or wrapped.
+    Starlette 1.3 (#1282) no longer surfaces included sub-router paths on a bare
+    ``APIRouter.routes`` (it only shows ``/``), so inspecting ``router.routes``
+    directly is unreliable. Mount the router into a fresh ``FastAPI`` app at
+    ``/ui`` (mirroring the real app) and read the assembled, flattened routes —
+    a runtime-faithful assertion of sub-router inclusion.
     """
-    paths: list[str] = []
-    for route in routes:  # type: ignore[attr-defined]
-        path = getattr(route, "path", None)
-        if isinstance(path, str):
-            paths.append(path)
-        nested = getattr(route, "routes", None) or getattr(
-            getattr(route, "router", None), "routes", None
-        )
-        if nested and nested is not routes:
-            paths.extend(_collect_route_paths(nested))
-    return paths
+    app = FastAPI()
+    app.include_router(router, prefix="/ui")
+    return [route.path for route in app.routes if hasattr(route, "path")]
 
 
 class TestSubRouterInclusion:
-    """Verify that sub-routers are included in the main router."""
+    """Verify that sub-routers are included (and reachable) under ``/ui``."""
 
     def test_files_router_routes_present(self):
-        paths = _collect_route_paths(router.routes)
-        assert "/files" in paths or any("/files" in p for p in paths)
+        assert any("/ui/files" in p for p in _mounted_app_paths())
 
     def test_organize_router_routes_present(self):
-        paths = _collect_route_paths(router.routes)
-        assert "/organize" in paths or any("/organize" in p for p in paths)
+        assert any("/ui/organize" in p for p in _mounted_app_paths())
 
     def test_profile_router_routes_present(self):
-        paths = _collect_route_paths(router.routes)
-        assert "/profile" in paths or any("/profile" in p for p in paths)
+        assert any("/ui/profile" in p for p in _mounted_app_paths())
 
     def test_settings_router_routes_present(self):
-        paths = _collect_route_paths(router.routes)
-        assert any("settings" in str(p) for p in paths)
+        assert any("/ui/settings" in p for p in _mounted_app_paths())
 
     def test_marketplace_router_routes_present(self):
-        paths = _collect_route_paths(router.routes)
-        assert any("marketplace" in str(p) for p in paths)
+        assert any("/ui/marketplace" in p for p in _mounted_app_paths())

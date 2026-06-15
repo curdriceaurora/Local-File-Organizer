@@ -106,13 +106,13 @@ class TestRedisCache:
             cache = RedisCache("redis://localhost:6379")
         assert cache.get("key1") is None
 
-    def test_set_calls_setex(self):
+    def test_set_calls_set_with_ex(self):
         mock_redis = MagicMock()
         with patch("file_organizer.api.cache.Redis") as mock_cls:
             mock_cls.from_url.return_value = mock_redis
             cache = RedisCache("redis://localhost:6379")
         cache.set("key1", "val1", ttl_seconds=300)
-        mock_redis.setex.assert_called_once_with("key1", 300, "val1")
+        mock_redis.set.assert_called_once_with("key1", "val1", ex=300)
 
     def test_set_minimum_ttl(self):
         mock_redis = MagicMock()
@@ -120,13 +120,13 @@ class TestRedisCache:
             mock_cls.from_url.return_value = mock_redis
             cache = RedisCache("redis://localhost:6379")
         cache.set("key1", "val1", ttl_seconds=0)
-        mock_redis.setex.assert_called_once_with("key1", 1, "val1")
+        mock_redis.set.assert_called_once_with("key1", "val1", ex=1)
 
     def test_set_handles_redis_error(self):
         mock_redis = MagicMock()
         from file_organizer.api.cache import RedisError
 
-        mock_redis.setex.side_effect = RedisError("connection lost")
+        mock_redis.set.side_effect = RedisError("connection lost")
         with patch("file_organizer.api.cache.Redis") as mock_cls:
             mock_cls.from_url.return_value = mock_redis
             cache = RedisCache("redis://localhost:6379")
