@@ -57,7 +57,7 @@ jobs:
             --timeout=30 -n=auto --override-ini="addopts="
           mv .coverage .coverage.shard-${{ matrix.shard }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: daily-coverage-${{ matrix.python-version }}-${{ matrix.shard }}
           path: .coverage.shard-${{ matrix.shard }}
