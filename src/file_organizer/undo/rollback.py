@@ -6,11 +6,15 @@ handling all operation types and transaction management.
 
 from __future__ import annotations
 
+import errno
 import logging
+import os
 import shutil
+import stat as stat_mod
 from pathlib import Path
 
 from ..history.models import Operation, OperationType
+from ..utils.atomic_io import fsync_directory
 from .models import RollbackResult
 from .validator import OperationValidator
 
@@ -32,6 +36,65 @@ class RollbackExecutor:
         """
         self.validator = validator or OperationValidator()
         self.trash_dir = self.validator.trash_dir
+
+    def _durable_move(self, src: Path, dst: Path) -> None:
+        """Move *src* → *dst* durably, refusing symlinks and inode swaps.
+
+        Hardening for the undo/rollback path (WP-2.2, #1227):
+
+        - **Symlink refusal (anti-swap):** the source is ``lstat``-ed without
+          following; if the recorded file was swapped for a symlink between the
+          operation and this rollback, the move is refused (``S_ISLNK``) instead
+          of dereferencing it into the restore location.
+        - **Atomic same-filesystem rename:** ``os.replace`` moves the inode
+          atomically; a cross-device move falls back to ``shutil.move``.
+        - **Inode-swap verification:** a same-filesystem rename preserves the
+          inode, so the file now at *dst* must carry the source's
+          ``(st_dev, st_ino)``; a mismatch means it was swapped mid-move and is
+          refused.
+        - **Durability:** the destination directory is ``fsync``-ed so the
+          rename survives a crash.
+
+        Interim durability for the rollback path; the full cross-device
+        crash-safe primitive (``undo/durable_move.py``) is WP-1.2b (#1248),
+        which this helper will adopt once it lands.
+
+        Raises:
+            OSError: source is a symlink, an inode swap is detected, or the move
+                itself fails.
+        """
+        src = Path(src)
+        dst = Path(dst)
+
+        src_stat = os.lstat(src)
+        if stat_mod.S_ISLNK(src_stat.st_mode):
+            raise OSError(f"refusing to move a symlink (possible swap): {src}")
+        src_identity = (src_stat.st_dev, src_stat.st_ino)
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+
+        cross_device = False
+        try:
+            os.replace(src, dst)
+        except OSError as exc:
+            if exc.errno == errno.EXDEV:
+                cross_device = True
+                shutil.move(str(src), str(dst))
+            else:
+                raise
+
+        dst_stat = os.lstat(dst)
+        if stat_mod.S_ISLNK(dst_stat.st_mode):
+            raise OSError(f"destination is a symlink after move: {dst}")
+        if not cross_device and (dst_stat.st_dev, dst_stat.st_ino) != src_identity:
+            raise OSError(f"inode swap detected after rename to {dst}")
+
+        fsync_directory(dst.parent)
+        if src.parent != dst.parent:
+            try:
+                fsync_directory(src.parent)
+            except OSError:  # pragma: no cover - best-effort source-dir flush
+                logger.debug("Could not fsync source directory %s", src.parent)
 
     def rollback_operation(self, operation: Operation) -> bool:
         """Rollback a single operation (undo).
@@ -99,14 +162,15 @@ class RollbackExecutor:
         source = operation.source_path
         destination = operation.destination_path
 
+        if destination is None:
+            logger.error("Cannot rollback move operation %s: no destination path", operation.id)
+            return False
+
         logger.info(f"Rolling back move: {destination} -> {source}")
 
         try:
-            # Ensure parent directory exists
-            source.parent.mkdir(parents=True, exist_ok=True)
-
-            # Move file back
-            shutil.move(str(destination), str(source))
+            # Move file back durably (symlink-refusing, inode-verified).
+            self._durable_move(destination, source)
 
             logger.info(f"Successfully rolled back move operation {operation.id}")
             return True
@@ -133,8 +197,8 @@ class RollbackExecutor:
         logger.info(f"Rolling back rename: {new_name} -> {old_name}")
 
         try:
-            # Rename back
-            new_name.rename(old_name)
+            # Rename back durably (symlink-refusing, inode-verified).
+            self._durable_move(new_name, old_name)
 
             logger.info(f"Successfully rolled back rename operation {operation.id}")
             return True
@@ -161,11 +225,8 @@ class RollbackExecutor:
         logger.info(f"Rolling back delete: restoring {original_path} from trash")
 
         try:
-            # Ensure parent directory exists
-            original_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Restore from trash
-            shutil.move(str(trash_path), str(original_path))
+            # Restore from trash durably (symlink-refusing, inode-verified).
+            self._durable_move(trash_path, original_path)
 
             # Clean up trash directory for this operation
             if trash_path.parent.name == str(operation.id):
@@ -249,11 +310,8 @@ class RollbackExecutor:
         logger.info(f"Redoing move: {source} -> {destination}")
 
         try:
-            # Ensure parent directory exists
-            destination.parent.mkdir(parents=True, exist_ok=True)
-
-            # Move file
-            shutil.move(str(source), str(destination))
+            # Move file durably (symlink-refusing, inode-verified).
+            self._durable_move(source, destination)
 
             logger.info(f"Successfully redid move operation {operation.id}")
             return True
@@ -280,8 +338,8 @@ class RollbackExecutor:
         logger.info(f"Redoing rename: {old_name} -> {new_name}")
 
         try:
-            # Rename
-            old_name.rename(new_name)
+            # Rename durably (symlink-refusing, inode-verified).
+            self._durable_move(old_name, new_name)
 
             logger.info(f"Successfully redid rename operation {operation.id}")
             return True
@@ -461,9 +519,9 @@ class RollbackExecutor:
 
         trash_dir.mkdir(parents=True, exist_ok=True)
 
-        # Move to trash
+        # Move to trash durably (symlink-refusing, inode-verified).
         trash_path = trash_dir / file_path.name
-        shutil.move(str(file_path), str(trash_path))
+        self._durable_move(file_path, trash_path)
 
         logger.debug(f"Moved {file_path} to trash: {trash_path}")
         return trash_path
