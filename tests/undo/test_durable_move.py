@@ -3240,14 +3240,22 @@ class TestWriterProtocolV2:
         )
         assert next(iter(op_ids)), "op_id must be non-empty"
 
-    def test_writer_fsyncs_dst_parent_before_started_journal(
+    def test_writer_journals_started_before_creating_tmp(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Round-2 blocking fix (§7.1 rule 2): writer must call
-        ``fsync_directory(dst.parent)`` BEFORE the started journal
-        append. Without this ordering the tmp's directory entry can
-        be lost on power-loss, breaking the §5.1 tmp-absent ⇒
-        post-replace inference."""
+        """#1248 [P1] file-loss race fix: the writer MUST journal the
+        ``started`` in-flight marker BEFORE the EXDEV tmp/copy file is
+        created, so a concurrent ``TrashGC.safe_delete`` that wins the
+        journal ``LOCK_EX`` always observes ``src`` as in-flight before
+        it can unlink it.
+
+        The §7.1 tmp-exists invariant is still upheld — the tmp's
+        directory entry is fsynced inside the same locked window after
+        the tmp is created — but the ``started`` JOURNAL append now
+        precedes tmp materialization. We assert that ordering by
+        capturing the journal-started append and the first creation of a
+        path under ``dst.parent`` whose name starts with the tmp prefix.
+        """
         from file_organizer.undo import durable_move as dm_mod
 
         self._force_exdev(monkeypatch)
@@ -3256,42 +3264,71 @@ class TestWriterProtocolV2:
         src.write_text("payload")
         journal = tmp_path / "move.journal"
 
-        # Record every fsync_directory call and every journal write
-        # (started state only). Step ordering: fsync(dst.parent) MUST
-        # appear before the first started-state journal write event.
         events: list[tuple[str, str]] = []
+        tmp_prefix = f".{dst.name}."
 
-        real_fsync = dm_mod.fsync_directory
+        real_open = dm_mod.os.open
 
-        def tracking_fsync(p: Path) -> None:
-            events.append(("fsync", str(p.parent if p.is_file() else p)))
-            real_fsync(p)
+        def tracking_open(path, flags, *a, **k):  # type: ignore[no-untyped-def]
+            name = os.path.basename(str(path))
+            if name.startswith(tmp_prefix) and name.endswith(".tmp"):
+                events.append(("create_tmp", str(path)))
+            return real_open(path, flags, *a, **k)
 
-        real_append = dm_mod._append_journal
+        real_locked_append = dm_mod._append_journal_line_locked
 
-        def tracking_append(j: Path, payload):  # type: ignore[no-untyped-def]
+        def tracking_locked_append(j, payload):  # type: ignore[no-untyped-def]
             if payload.get("state") == "started":
                 events.append(("journal_started", str(j)))
-            real_append(j, payload)
+            return real_locked_append(j, payload)
 
-        monkeypatch.setattr("file_organizer.undo.durable_move.fsync_directory", tracking_fsync)
-        monkeypatch.setattr("file_organizer.undo.durable_move._append_journal", tracking_append)
+        monkeypatch.setattr("file_organizer.undo.durable_move.os.open", tracking_open)
+        monkeypatch.setattr(
+            "file_organizer.undo.durable_move._append_journal_line_locked",
+            tracking_locked_append,
+        )
 
         dm_mod.durable_move(src, dst, journal=journal)
 
-        # Find first journal_started and confirm at least one fsync
-        # event preceded it.
-        first_started_idx = next(
-            (i for i, ev in enumerate(events) if ev[0] == "journal_started"),
-            None,
+        started_idx = next((i for i, ev in enumerate(events) if ev[0] == "journal_started"), None)
+        create_idx = next((i for i, ev in enumerate(events) if ev[0] == "create_tmp"), None)
+        assert started_idx is not None, f"no started journal write recorded; events={events!r}"
+        assert create_idx is not None, f"no tmp creation recorded; events={events!r}"
+        assert started_idx < create_idx, (
+            "#1248 [P1]: the started in-flight marker MUST be journaled "
+            f"before the tmp file is created; events={events!r}"
         )
-        assert first_started_idx is not None, (
-            f"no started-state journal write recorded; events={events!r}"
-        )
-        prior_fsyncs = [ev for ev in events[:first_started_idx] if ev[0] == "fsync"]
-        assert prior_fsyncs, (
-            "§7.1 rule 2 requires fsync_directory(dst.parent) BEFORE the "
-            f"started journal append; events={events!r}"
+
+    def test_writer_fsyncs_dst_parent_within_started_window(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """§7.1 rule 2 (preserved under #1248 reordering): the tmp's
+        directory entry is still made durable via
+        ``fsync_directory(dst.parent)`` after the tmp is created, before
+        the EXDEV copy proceeds. We assert at least one fsync of
+        ``dst.parent`` occurs during the move."""
+        from file_organizer.undo import durable_move as dm_mod
+
+        self._force_exdev(monkeypatch)
+        src = tmp_path / "s.txt"
+        dst = tmp_path / "d.txt"
+        src.write_text("payload")
+        journal = tmp_path / "move.journal"
+
+        fsynced_dirs: list[str] = []
+        real_fsync = dm_mod.fsync_directory
+
+        def tracking_fsync(p: Path) -> None:
+            fsynced_dirs.append(str(p.parent if p.is_file() else p))
+            real_fsync(p)
+
+        monkeypatch.setattr("file_organizer.undo.durable_move.fsync_directory", tracking_fsync)
+
+        dm_mod.durable_move(src, dst, journal=journal)
+
+        assert str(dst.parent) in fsynced_dirs, (
+            "§7.1 rule 2 requires fsync_directory(dst.parent) during the "
+            f"EXDEV move; fsynced dirs={fsynced_dirs!r}"
         )
 
     def test_writer_no_exception_cleanup_of_tmp(

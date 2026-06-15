@@ -82,7 +82,6 @@ import logging
 import os
 import shutil
 import sys
-import tempfile
 import time
 import uuid
 from collections.abc import Callable, Iterator, Mapping
@@ -355,6 +354,87 @@ def durable_move(src: Path, dst: Path, *, journal: Path) -> DstInode | None:
     return _capture_dst_inode(dst)
 
 
+def _compute_tmp_path(src: Path, dst: Path) -> Path:
+    """Choose the EXDEV tmp/copy path BEFORE it is created.
+
+    #1248: the ``started`` journal marker must carry ``tmp_path`` AND be
+    written before the tmp exists (so the in-flight marker precedes any
+    GC-visible window). That means the name has to be decided up front
+    rather than discovered from ``NamedTemporaryFile``. The PID suffix
+    matches the symlink branch's pre-existing naming so the stale-tmp
+    defensive cleanup contract is preserved; collisions between distinct
+    concurrent processes are impossible (distinct PIDs) and a same-PID
+    collision can only be a prior crashed attempt, which the caller
+    unlinks defensively. The tmp always lives in ``dst.parent`` so the
+    final ``os.replace`` stays same-filesystem.
+    """
+    suffix = "symlink.tmp" if src.is_symlink() else "tmp"
+    return dst.parent / f".{dst.name}.{os.getpid()}.{suffix}"
+
+
+def _open_started_window(
+    src: Path,
+    dst: Path,
+    journal: Path,
+    base_payload: dict[str, Any],
+) -> Path:
+    """Journal ``started`` then create the tmp, atomically under ``LOCK_EX``.
+
+    #1248 [P1] file-loss race fix. Returns the tmp path that the EXDEV
+    copy/symlink work will consume. Sequence while holding the journal
+    ``LOCK_EX`` (so it mutually excludes ``TrashGC.safe_delete``):
+
+    1. Append ``started`` carrying ``tmp_path`` — ``src`` is now
+       in-flight to any GC that subsequently acquires the lock.
+    2. Materialize the tmp (empty regular file via ``O_CREAT|O_EXCL``,
+       or ``os.symlink`` for the symlink branch).
+    3. ``fsync_directory(dst.parent)`` so the tmp's directory entry is
+       durable — preserves the §7.1 tmp-exists invariant under power loss.
+
+    On non-POSIX (no ``fcntl``) the lock is a no-op and the same steps
+    run unlocked per the module's single-CLI-invocation invariant; the
+    ordering (marker before tmp) is still maintained for sweep parity.
+    """
+    tmp_path = _compute_tmp_path(src, dst)
+    started_payload = {**base_payload, "state": STATE_STARTED, "tmp_path": str(tmp_path)}
+
+    def _write_marker_then_create_tmp() -> None:
+        # Step 1: in-flight marker FIRST so a GC that later wins the lock
+        # observes src as in-flight before it can unlink it.
+        if _HAS_FCNTL:
+            _append_journal_line_locked(journal, started_payload)
+        else:  # pragma: no cover - Windows / no fcntl
+            append_durable(journal, json.dumps(started_payload))
+        # Step 2: materialize the tmp. A stale tmp at this PID-suffixed
+        # path can only be a prior same-PID crashed attempt (distinct
+        # processes have distinct PIDs); unlink it defensively so the
+        # exclusive create / symlink below can't raise FileExistsError.
+        if os.path.lexists(tmp_path):
+            tmp_path.unlink()
+        if src.is_symlink():
+            # Codex P1 PRRT_kwDOR_Rkws59gnab: preserve symlink identity on
+            # EXDEV moves. ``readlink`` keeps absolute-vs-relative form.
+            target = os.readlink(src)
+            os.symlink(target, tmp_path)
+        else:
+            # Empty regular file, exclusive create. ``O_EXCL`` surfaces a
+            # collision rather than silently reusing another op's tmp.
+            fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            os.close(fd)
+        # Step 3: §7.1 — fsync the tmp's directory entry so the
+        # tmp-exists invariant is crash-durable.
+        fsync_directory(dst)
+
+    if _HAS_FCNTL:
+        journal.parent.mkdir(parents=True, exist_ok=True)
+        with _locked(journal, fcntl.LOCK_EX):
+            _write_marker_then_create_tmp()
+    else:  # pragma: no cover - Windows / no fcntl
+        journal.parent.mkdir(parents=True, exist_ok=True)
+        _write_marker_then_create_tmp()
+    return tmp_path
+
+
 def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
     """EXDEV branch: copy + fsync + os.replace + unlink, with v2 journal.
 
@@ -362,25 +442,27 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
 
     1. Allocate ``op_id``, build the v2 payload base (``schema=2``,
        ``op_id``, ``ts``, ``host_pid``).
-    2. Create tmp BEFORE the started journal write (regular: empty
-       ``NamedTemporaryFile(delete=False)``; symlink: ``os.symlink``).
-    3. ``fsync_directory(dst.parent)`` — round-2 blocking fix: makes
-       the tmp's directory entry durable before the started entry can
-       claim ``tmp_path`` exists. Without this, a crash window where
-       tmp lives only in the page cache breaks the §7.1 tmp-exists
-       invariant and sweep would misread tmp-absent as post-replace.
-    4. Append ``started`` with ``tmp_path`` populated.
-    5. Copy + fsync (regular only — symlink target lives in the inode).
-    6. ``os.replace(tmp, dst)`` — consumes tmp atomically into dst.
-    7. ``fsync_directory(dst.parent)`` so the new directory entry is
+    2. #1248 [P1]: :func:`_open_started_window` — under a single journal
+       ``LOCK_EX`` — appends ``started`` with ``tmp_path`` populated,
+       THEN creates the tmp (regular: empty file via ``O_CREAT|O_EXCL``;
+       symlink: ``os.symlink``), THEN ``fsync_directory(dst.parent)`` so
+       the tmp's directory entry is durable (§7.1 tmp-exists invariant).
+       The marker is journaled before the tmp exists so a concurrent
+       ``TrashGC.safe_delete`` that wins the lock always observes ``src``
+       in-flight before it can unlink it.
+    3. Copy + fsync (regular only — symlink target lives in the inode);
+       the data fsync happens before ``copystat`` (#1248 [P2]) so a
+       read-only source mode can't EACCES the fsync reopen.
+    4. ``os.replace(tmp, dst)`` — consumes tmp atomically into dst.
+    5. ``fsync_directory(dst.parent)`` so the new directory entry is
        durable before we log ``copied`` (codex P1 fwMG).
-    8. Append ``copied`` with the same ``op_id``.
-    9. ``os.unlink(src)`` + ``fsync_directory(src.parent)`` (codex P2
+    6. Append ``copied`` with the same ``op_id``.
+    7. ``os.unlink(src)`` + ``fsync_directory(src.parent)`` (codex P2
        gnah: unlink durability before the ``done`` write).
-    10. Append ``done`` with the same ``op_id``.
+    8. Append ``done`` with the same ``op_id``.
 
     §7.4: this function does NOT remove tmp on exception. If anything
-    after step 2 raises, tmp persists on disk and sweep observes
+    after the tmp is created raises, tmp persists on disk and sweep observes
     ``lexists(tmp_path)`` to disambiguate pre-replace (tmp present) from
     post-replace (tmp absent) crashes. The tmp-cleanup that PR #197 had
     here would have broken that invariant.
@@ -400,49 +482,25 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
         "host_pid": os.getpid(),
     }
 
-    # §7.2 step 1 / §7.3 steps 1-3: create tmp BEFORE the started entry.
-    # An exception during tmp creation propagates with NO journal entry
-    # written — that's operator debris (orphan tmp + no record), not a
-    # sweep concern (§7.2 commentary on "crash between syscall and
-    # pre-started fsync_directory").
-    if src.is_symlink():
-        # Codex P1 PRRT_kwDOR_Rkws59gnab: preserve symlink identity on
-        # EXDEV moves. ``readlink`` keeps absolute-vs-relative form.
-        target = os.readlink(src)
-        tmp_path = dst.parent / f".{dst.name}.{os.getpid()}.symlink.tmp"
-        # Clean any stale tmp from a prior crashed attempt at the exact
-        # same path. The PID suffix makes collisions between concurrent
-        # processes impossible; the only realistic way the tmp exists is
-        # that a prior invocation with the same PID crashed mid-symlink
-        # (before the ``os.replace``).
-        if os.path.lexists(tmp_path):
-            tmp_path.unlink()
-        os.symlink(target, tmp_path)
-    else:
-        # Copy target lives in dst's parent so the final rename is
-        # same-filesystem. ``NamedTemporaryFile(delete=False)`` creates
-        # + closes an empty file — fits the §7.2 step 1 contract.
-        with tempfile.NamedTemporaryFile(
-            dir=str(dst.parent),
-            prefix=f".{dst.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as tmp:
-            tmp_path = Path(tmp.name)
-
-    # §7.1 rule 2 / round-2 blocking fix: fsync_directory(dst.parent)
-    # BEFORE the started journal append makes the tmp's directory entry
-    # durable. Without this ordering, the tmp-exists invariant is not
-    # crash-durable and sweep's tmp-absent ⇒ post-replace inference is
-    # unsafe under power loss.
-    fsync_directory(dst)
-
-    # §7.2 step 3 / §7.3 step 5: started entry now carries tmp_path so
-    # sweep can disambiguate.
-    _append_journal(
-        journal,
-        {**base_payload, "state": STATE_STARTED, "tmp_path": str(tmp_path)},
-    )
+    # #1248 fix [P1] — close the pre-journal file-loss race. Previously
+    # the tmp file was created and its dir fsynced BEFORE the ``started``
+    # in-flight marker was appended. In that window a concurrent
+    # ``TrashGC.safe_delete()`` could take the journal ``LOCK_EX``, see no
+    # active entry for ``src``, and unlink it — the move then fails and
+    # sweep removes only the orphan tmp, so the user's file is lost.
+    #
+    # The marker MUST become GC-visible BEFORE any GC check can pass.
+    # ``_open_started_window`` acquires ``LOCK_EX`` ONCE and, while
+    # holding it, (a) appends ``started`` (carrying the tmp_path the §7.1
+    # invariant requires for sweep disambiguation), then (b) materializes
+    # the tmp file/symlink and fsyncs its directory. Because the marker is
+    # journaled under the same lock that GC must acquire, any GC that wins
+    # the race waits on the lock and then sees ``src`` in-flight; any GC
+    # that lost it already finished before the window opened. Crash
+    # recovery is preserved: the ``started`` row carries ``tmp_path`` and
+    # sweep keys off ``lexists(tmp_path)`` (present ⇒ orphan tmp dropped,
+    # src canonical; absent + dst absent ⇒ retained, src canonical).
+    tmp_path = _open_started_window(src, dst, journal, base_payload)
 
     if src.is_symlink():
         # No file data to fsync for a symlink — the target string lives
@@ -452,9 +510,28 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
         fsync_directory(dst)
     else:
         shutil.copyfile(src, tmp_path)
+        # #1248 fix [P2]: fsync the copied DATA before copying mode bits.
+        # The previous order ran ``copystat`` first, which can stamp a
+        # read-only mode (e.g. 0444) onto the tmp; the subsequent
+        # ``os.open(tmp_path, os.O_RDWR)`` fsync reopen then raises
+        # EACCES for a non-root caller. We open the still-writable tmp
+        # (created mode 0600 / copyfile default) for the data fsync, and
+        # only AFTER do we copy the source mode bits.
+        #
+        # O_RDWR (not O_RDONLY) is kept so FlushFileBuffers succeeds on
+        # Windows — fsync on a read-only handle raises EBADF there. On
+        # POSIX, fsync doesn't require write permission, but opening
+        # before the mode copy guarantees the handle is always writable.
+        fd = os.open(tmp_path, os.O_RDWR)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
         # Preserve mode bits so daemons that rely on chmod survive the
         # copy (matches pre-F7 ``shutil.move`` behavior on cross-device
-        # moves, which uses copy2 internally).
+        # moves, which uses copy2 internally). Done LAST so a read-only
+        # source mode can't block the data fsync above. The final dst
+        # mode equals the source mode (copystat parity).
         try:
             shutil.copystat(src, tmp_path)
         except OSError:
@@ -466,17 +543,9 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
                 tmp_path,
                 exc_info=True,
             )
-        # fsync file + parent dir before the rename so a power loss
-        # after ``os.replace`` can't leave the new directory entry
-        # pointing at an inode with unflushed pages.
-        # Use O_RDWR (not O_RDONLY) so FlushFileBuffers succeeds on Windows —
-        # fsync on a read-only handle raises EBADF there.  O_RDWR also
-        # works on POSIX (fsync doesn't require write permission on Linux/macOS).
-        fd = os.open(tmp_path, os.O_RDWR)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        # fsync parent dir before the rename so a power loss after
+        # ``os.replace`` can't leave the new directory entry pointing at
+        # an inode with unflushed pages.
         fsync_directory(dst)
         os.replace(tmp_path, dst)
         # Codex P1 PRRT_kwDOR_Rkws59fwMG: fsync ``dst.parent`` AGAIN
@@ -587,7 +656,10 @@ def sweep(journal: Path) -> None:
     if _HAS_FCNTL:
         with _locked(journal, fcntl.LOCK_EX):
             try:
-                fh = open(journal, "r+")
+                # #1248 fix: explicit UTF-8 so the locked sweep read matches
+                # the UTF-8 writers; platform-default decoding could corrupt
+                # non-ASCII journal paths during reconciliation.
+                fh = open(journal, "r+", encoding="utf-8")
             except FileNotFoundError:
                 # Journal disappeared between ``exists()`` and ``open()`` —
                 # nothing to sweep. Narrow scope: don't swallow OSError
@@ -702,7 +774,21 @@ def _write_compact_tmp(tmp: Path, payload: str) -> None:
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
     try:
         if payload:
-            os.write(fd, payload.encode("utf-8"))
+            # #1248 fix [P2]: os.write may perform a SHORT write and
+            # return fewer bytes than requested. The previous code
+            # ignored the return value, so a partial write followed by
+            # os.replace could publish a truncated journal and silently
+            # drop retained entries. Loop until every byte is flushed.
+            data = payload.encode("utf-8")
+            written = 0
+            while written < len(data):
+                n = os.write(fd, data[written:])
+                if n == 0:  # pragma: no cover - defensive: 0 implies no progress
+                    raise OSError(
+                        f"sweep: os.write made no progress writing compact tmp {tmp} "
+                        f"({written}/{len(data)} bytes)"
+                    )
+                written += n
         os.fsync(fd)
     finally:
         os.close(fd)
@@ -1468,6 +1554,13 @@ def _path_in_flight_from_entries(path: Path, entries: list[_JournalEntry]) -> bo
     The collapse rule is identical to :func:`is_path_in_flight`: §3.1
     operation identity, NOT path-keyed reduction. Any bug fix to one
     must mirror to the other — this function is the canonical predicate.
+
+    #1248 fix [P2]: ``dir_move`` entries protect their DESCENDANTS, not
+    just the exact directory path. A non-atomic ``directory_move`` of
+    ``trash/A`` to ``dst/A`` leaves every child of ``trash/A`` mid-flight;
+    a GC deleting ``trash/A/child.txt`` while the move is in progress
+    would race the ``shutil.move``. Single-file ``move`` entries keep
+    exact-match semantics (a file has no descendants).
     """
     if not entries:
         return False
@@ -1488,9 +1581,33 @@ def _path_in_flight_from_entries(path: Path, entries: list[_JournalEntry]) -> bo
         # ``_normalized_path_str``, but test helpers and old journals may
         # store the original case.  Applying normcase here makes the compare
         # case-insensitive on Windows (normcase is a no-op on POSIX).
-        if os.path.normcase(entry.src) == path_str or os.path.normcase(entry.dst) == path_str:
+        entry_src = os.path.normcase(entry.src)
+        entry_dst = os.path.normcase(entry.dst)
+        if entry_src == path_str or entry_dst == path_str:
+            return True
+        # #1248 [P2]: dir_move protects descendants of src/dst too.
+        if entry.op == OP_DIR_MOVE and (
+            _is_descendant(path_str, entry_src) or _is_descendant(path_str, entry_dst)
+        ):
             return True
     return False
+
+
+def _is_descendant(path_str: str, ancestor: str) -> bool:
+    """Return True iff *path_str* lies strictly under directory *ancestor*.
+
+    #1248 [P2]: both arguments are already normcased + absolute (the
+    caller normalizes via :func:`_normalized_path_str` / ``normcase``).
+    Comparison is on path components (``os.sep`` boundary) so a sibling
+    sharing a name prefix (``/trash/Abc`` vs ancestor ``/trash/A``) is
+    NOT treated as a descendant. ``os.path.relpath`` would be ambiguous
+    across drives on Windows, so we use an explicit separator-anchored
+    prefix check.
+    """
+    if path_str == ancestor:
+        return False
+    prefix = ancestor if ancestor.endswith(os.sep) else ancestor + os.sep
+    return path_str.startswith(prefix)
 
 
 def _append_journal(journal: Path, payload: Mapping[str, object]) -> None:
@@ -1522,18 +1639,29 @@ def _append_journal(journal: Path, payload: Mapping[str, object]) -> None:
     # this appender's lock acquisition coordinates with that
     # compaction without depending on the journal inode.
     if _HAS_FCNTL:
-        line = json.dumps(payload) + "\n"
-        with (
-            _locked(journal, fcntl.LOCK_EX),
-            # atomic-write: ok — append_durable pattern (LOCK_EX + fsync below)
-            open(journal, "a", encoding="utf-8") as fh,
-        ):
-            fh.write(line)
-            fh.flush()
-            os.fsync(fh.fileno())
-        fsync_directory(journal)
+        with _locked(journal, fcntl.LOCK_EX):
+            _append_journal_line_locked(journal, payload)
         return
     append_durable(journal, json.dumps(payload))
+
+
+def _append_journal_line_locked(journal: Path, payload: Mapping[str, object]) -> None:
+    """Append one JSON line + fsync, with the journal ``LOCK_EX`` ALREADY held.
+
+    #1248: extracted from :func:`_append_journal` so callers that must
+    perform additional work atomically with the append (the EXDEV
+    started-window in :func:`_open_started_window`) can do so without
+    releasing and re-acquiring the lock between the journal write and
+    the dependent file-system mutation. The caller is responsible for
+    holding ``_locked(journal, fcntl.LOCK_EX)`` around this call.
+    """
+    line = json.dumps(payload) + "\n"
+    # atomic-write: ok — append_durable pattern (LOCK_EX held by caller + fsync below)
+    with open(journal, "a", encoding="utf-8") as fh:
+        fh.write(line)
+        fh.flush()
+        os.fsync(fh.fileno())
+    fsync_directory(journal)
 
 
 def _read_journal(journal: Path) -> list[_JournalEntry]:
@@ -1548,4 +1676,8 @@ def _read_journal(journal: Path) -> list[_JournalEntry]:
     """
     if not journal.exists():
         return []
-    return _parse_journal_text(journal.read_text())
+    # #1248 fix: writers always encode UTF-8 (see _append_journal_line_locked
+    # / _write_compact_tmp), so the reader MUST decode UTF-8 too. Relying on
+    # the platform default could mojibake non-ASCII paths on locales whose
+    # default codec isn't UTF-8, corrupting the in-flight predicate.
+    return _parse_journal_text(journal.read_text(encoding="utf-8"))
