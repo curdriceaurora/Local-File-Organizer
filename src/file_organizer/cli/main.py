@@ -26,6 +26,7 @@ from file_organizer.cli.organize import organize, preview
 from file_organizer.cli.rules import rules_app
 from file_organizer.cli.setup import setup_app
 from file_organizer.cli.suggest import suggest_app
+from file_organizer.cli.undo_recover import recover as _recover
 from file_organizer.cli.update import update_app
 from file_organizer.cli.utilities import analyze, search
 
@@ -98,6 +99,8 @@ app.command()(preview)
 app.command()(search)
 app.command()(analyze)
 app.command()(doctor)
+# #1248 (WP-1.2b): durable_move journal recovery / sweep.
+app.command()(_recover)
 
 
 @app.command()
