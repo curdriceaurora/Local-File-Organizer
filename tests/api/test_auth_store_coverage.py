@@ -12,7 +12,7 @@ from file_organizer.api.auth_store import (
     build_token_store,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestInMemoryTokenStore:
