@@ -1,4 +1,4 @@
 [codespell]
 skip = ./.*,*.pyc,node_modules,*.egg-info,__pycache__,.git,build,dist,.venv,venv,*.min.js,htmx.min.js
-ignore-words-list = analyse,organisor,organizser,opne,wron,thier,fo,clienta,invokable,anull,didnt,doesnt,wont,cant,nam
+ignore-words-list = analyse,organisor,organizser,opne,wron,thier,fo,clienta,invokable,anull,didnt,doesnt,wont,cant,nam,couldn,wasn
 ignore-regex = .*# noqa.*

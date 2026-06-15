@@ -1,105 +1,246 @@
-"""Text processing utilities."""
+"""Text processing utilities.
+
+Deterministic, fully-offline NLP helpers (WP-4.4, #1234). This module previously
+relied on an optional NLTK runtime dependency with ``nltk.download()`` corpus
+fetching; that path was non-deterministic (network access, ``LookupError`` corpus
+misses) and is now removed. Stopwords are vendored in-module (the standard NLTK
+English list) and stemming is provided by the pure-Python ``snowballstemmer``
+package. Tokenization is a deterministic ASCII regex tokenizer.
+
+ASCII-only tokenization is an accepted trade-off for determinism and offline
+operation.
+"""
 
 from __future__ import annotations
 
 import re
+from collections import Counter
+from functools import lru_cache
 
-try:
-    import nltk
-    from nltk.corpus import stopwords
-    from nltk.stem import WordNetLemmatizer
-    from nltk.tokenize import word_tokenize
-
-    NLTK_AVAILABLE = True
-except ImportError:
-    NLTK_AVAILABLE = False
-
+import snowballstemmer
 from loguru import logger
 
-# Module-level flag to track one-time NLTK initialization (idempotent)
-_nltk_ready: bool = False
+# ---------------------------------------------------------------------------
+# Vendored English stopwords (standard NLTK English stopword list, ~179 words).
+# Kept in-module so text processing is deterministic and requires no corpus
+# download. ``get_unwanted_words`` unions this with the hand-curated set below.
+# ---------------------------------------------------------------------------
+_ENGLISH_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "i",
+        "me",
+        "my",
+        "myself",
+        "we",
+        "our",
+        "ours",
+        "ourselves",
+        "you",
+        "you're",
+        "you've",
+        "you'll",
+        "you'd",
+        "your",
+        "yours",
+        "yourself",
+        "yourselves",
+        "he",
+        "him",
+        "his",
+        "himself",
+        "she",
+        "she's",
+        "her",
+        "hers",
+        "herself",
+        "it",
+        "it's",
+        "its",
+        "itself",
+        "they",
+        "them",
+        "their",
+        "theirs",
+        "themselves",
+        "what",
+        "which",
+        "who",
+        "whom",
+        "this",
+        "that",
+        "that'll",
+        "these",
+        "those",
+        "am",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "having",
+        "do",
+        "does",
+        "did",
+        "doing",
+        "a",
+        "an",
+        "the",
+        "and",
+        "but",
+        "if",
+        "or",
+        "because",
+        "as",
+        "until",
+        "while",
+        "of",
+        "at",
+        "by",
+        "for",
+        "with",
+        "about",
+        "against",
+        "between",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "to",
+        "from",
+        "up",
+        "down",
+        "in",
+        "out",
+        "on",
+        "off",
+        "over",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "any",
+        "both",
+        "each",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "s",
+        "t",
+        "can",
+        "will",
+        "just",
+        "don",
+        "don't",
+        "should",
+        "should've",
+        "now",
+        "d",
+        "ll",
+        "m",
+        "o",
+        "re",
+        "ve",
+        "y",
+        "ain",
+        "aren",
+        "aren't",
+        "couldn",
+        "couldn't",
+        "didn",
+        "didn't",
+        "doesn",
+        "doesn't",
+        "hadn",
+        "hadn't",
+        "hasn",
+        "hasn't",
+        "haven",
+        "haven't",
+        "isn",
+        "isn't",
+        "ma",
+        "mightn",
+        "mightn't",
+        "mustn",
+        "mustn't",
+        "needn",
+        "needn't",
+        "shan",
+        "shan't",
+        "shouldn",
+        "shouldn't",
+        "wasn",
+        "wasn't",
+        "weren",
+        "weren't",
+        "won",
+        "won't",
+        "wouldn",
+        "wouldn't",
+    }
+)
 
 
-def ensure_nltk_data() -> None:  # noqa: C901
-    """Ensure required NLTK datasets are present for text processing.
+@lru_cache(maxsize=1)
+def _get_stemmer() -> snowballstemmer.EnglishStemmer:
+    """Return a cached Snowball English stemmer.
 
-    Idempotent function that initializes NLTK resources once per session. Returns immediately
-    on subsequent calls. If NLTK is not installed this function logs a warning and returns.
-    For each required dataset ('stopwords', 'punkt', 'wordnet') it verifies availability and
-    attempts download when missing, logging informational and debug messages for download
-    attempts and warnings on failure. This function does not raise; failures are reported via logs.
+    The stemmer is pure-Python and deterministic; caching avoids rebuilding it
+    on every ``clean_text`` call.
     """
-    global _nltk_ready
+    return snowballstemmer.stemmer("english")
 
-    if _nltk_ready:
-        return
 
-    if not NLTK_AVAILABLE:
-        logger.warning("NLTK not available, text processing will be limited")
-        return
+def ensure_nltk_data() -> None:
+    """No-op backward-compatibility shim (WP-4.4, #1234).
 
-    datasets = ["stopwords", "punkt", "wordnet"]
-    for dataset in datasets:
-        try:
-            # Try to load the dataset
-            if dataset == "stopwords":
-                stopwords.words("english")
-            elif dataset == "punkt":
-                # Check if punkt or punkt_tab is available (3.8+ uses punkt_tab)
-                try:
-                    word_tokenize("test")
-                except LookupError:
-                    # If punkt fails, it might be because punkt_tab is needed (NLTK 3.8+)
-                    logger.debug("punkt not available, trying punkt_tab")
-                    try:
-                        if nltk.download("punkt_tab", quiet=True):
-                            word_tokenize("test")
-                        else:
-                            raise LookupError("punkt_tab download failed")
-                    except LookupError:
-                        # If punkt_tab also fails, fall back to punkt (older NLTK versions)
-                        logger.debug("punkt_tab failed, falling back to punkt")
-                        try:
-                            if nltk.download("punkt", quiet=True):
-                                word_tokenize("test")
-                            else:
-                                raise LookupError("punkt download failed")
-                        except LookupError as e:
-                            logger.debug(f"Failed to load punkt: {e}")
-            elif dataset == "wordnet":
-                from nltk.corpus import wordnet
-
-                wordnet.synsets("test")
-        except LookupError:
-            # Dataset not found, download it
-            try:
-                logger.info(f"Downloading NLTK dataset: {dataset}")
-                if not nltk.download(dataset, quiet=True):
-                    logger.warning(f"Failed to download NLTK dataset: {dataset}")
-                    continue
-                # Verify download succeeded by attempting to load the dataset
-                if dataset == "stopwords":
-                    stopwords.words("english")
-                elif dataset == "wordnet":
-                    from nltk.corpus import wordnet
-
-                    wordnet.synsets("test")
-                logger.debug(f"NLTK dataset {dataset} downloaded and verified successfully")
-            except (OSError, LookupError, ValueError, RuntimeError) as e:
-                logger.warning(f"Failed to download NLTK {dataset}: {e}")
-        except (OSError, ValueError, RuntimeError) as e:
-            # Dataset exists but failed to load
-            logger.debug(f"NLTK dataset check failed for {dataset}: {e}")
-
-    _nltk_ready = True
-    logger.debug("NLTK data verified and ready")
+    Text processing no longer depends on NLTK or any downloadable corpus; stopwords
+    are vendored and stemming uses the pure-Python ``snowballstemmer`` package. This
+    function is retained only so existing callers (e.g.
+    ``services.text_processor.TextProcessor``) keep working without modification.
+    It performs no network access, never raises, and returns immediately.
+    """
+    logger.debug("ensure_nltk_data() is a no-op; text processing is fully offline")
 
 
 def get_unwanted_words() -> set[str]:
     """Get set of unwanted words to filter out.
 
+    Unions the hand-curated set below with the vendored English stopword list so
+    common stopwords (``the``, ``and``, ``a`` ...) are always filtered without any
+    runtime corpus download.
+
     Returns:
-        Set of unwanted words
+        Set of unwanted words.
     """
     unwanted = {
         # Generic words
@@ -234,18 +375,30 @@ def get_unwanted_words() -> set[str]:
         "md",
     }
 
-    # Add NLTK stopwords if available
-    if NLTK_AVAILABLE:
-        try:
-            unwanted.update(stopwords.words("english"))
-        except LookupError:
-            logger.warning("NLTK stopwords not available")
+    # Union with the vendored stopword list (deterministic, offline).
+    unwanted.update(_ENGLISH_STOPWORDS)
 
     return unwanted
 
 
+def _tokenize(text: str) -> list[str]:
+    """Deterministic ASCII word tokenizer.
+
+    Splits *text* into lowercase ASCII word tokens. This replaces NLTK's
+    ``word_tokenize`` with a regex tokenizer that requires no corpus and produces
+    identical output on every run. ASCII-only is an accepted trade-off.
+
+    Args:
+        text: Input text (assumed already lowercased by the caller).
+
+    Returns:
+        List of word tokens.
+    """
+    return re.findall(r"[a-z]+", text)
+
+
 def clean_text(
-    text: str,
+    text: str | None,
     max_words: int = 5,
     remove_unwanted: bool = True,
     lemmatize: bool = True,
@@ -253,13 +406,15 @@ def clean_text(
     """Clean and process text for use as filename or folder name.
 
     Args:
-        text: Input text to clean
-        max_words: Maximum number of words to keep
-        remove_unwanted: Whether to remove unwanted words
-        lemmatize: Whether to lemmatize words
+        text: Input text to clean. ``None``/empty values return ``""``.
+        max_words: Maximum number of words to keep.
+        remove_unwanted: Whether to remove unwanted words.
+        lemmatize: Whether to stem words (Snowball English). The parameter name is
+            kept for backward compatibility; it now drives deterministic stemming
+            rather than NLTK lemmatization.
 
     Returns:
-        Cleaned text with words joined by underscores
+        Cleaned text with words joined by underscores.
     """
     if not text:
         return ""
@@ -272,32 +427,22 @@ def clean_text(
     # Split concatenated words (camelCase, PascalCase)
     text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
 
-    # Tokenize
-    if NLTK_AVAILABLE:
-        try:
-            words = word_tokenize(text.lower())
-        except LookupError:
-            # Fallback if NLTK data not available
-            words = text.lower().split()
-    else:
-        words = text.lower().split()
+    # Tokenize deterministically (ASCII word tokens, lowercased)
+    words = _tokenize(text.lower())
 
-    # Filter alpha-only words
+    # Filter alpha-only words (tokenizer already yields alpha tokens; kept for parity)
     words = [word for word in words if word.isalpha()]
 
-    # Lemmatize if available
-    if lemmatize and NLTK_AVAILABLE:
-        try:
-            lemmatizer = WordNetLemmatizer()
-            words = [lemmatizer.lemmatize(word) for word in words]
-        except (LookupError, ValueError, OSError) as e:
-            logger.debug(f"Lemmatization failed: {e}")
+    # Stem deterministically via Snowball if requested
+    if lemmatize:
+        stemmer = _get_stemmer()
+        words = [stemmer.stemWord(word) for word in words]
 
     # Remove unwanted words and duplicates
     if remove_unwanted:
         unwanted = get_unwanted_words()
         filtered_words = []
-        seen = set()
+        seen: set[str] = set()
 
         for word in words:
             if word not in unwanted and word not in seen:
@@ -321,12 +466,12 @@ def sanitize_filename(
     """Sanitize a string for use as a filename.
 
     Args:
-        name: Input name
-        max_length: Maximum length of result
-        max_words: Maximum number of words
+        name: Input name.
+        max_length: Maximum length of result.
+        max_words: Maximum number of words.
 
     Returns:
-        Sanitized filename
+        Sanitized filename.
     """
     # First clean with text processing
     cleaned = clean_text(name, max_words=max_words)
@@ -354,52 +499,50 @@ def sanitize_filename(
 def extract_keywords(text: str, top_n: int = 5) -> list[str]:
     """Extract the most frequent meaningful words from input text.
 
+    Deterministic, offline implementation: tokenizes with the ASCII tokenizer,
+    drops short words (<= 3 chars) and stopwords, and returns the most frequent
+    remaining words by descending frequency (ties broken by first appearance).
+
     Parameters:
         text (str): Text to analyze for keyword extraction.
         top_n (int): Number of top keywords to return.
 
     Returns:
-        list[str]: Top `top_n` keywords ordered by frequency; returns an empty list if extraction fails or no keywords are found.
+        list[str]: Top ``top_n`` keywords ordered by frequency; an empty list if no
+        keywords are found.
     """
-    if not NLTK_AVAILABLE:
-        # Fallback: simple word frequency
-        words = text.lower().split()
-        from collections import Counter
-
-        word_freq = Counter(words)
-        return [word for word, _ in word_freq.most_common(top_n)]
-
-    try:
-        from nltk.probability import FreqDist
-
-        # Tokenize and clean
-        words = word_tokenize(text.lower())
-        words = [w for w in words if w.isalpha() and len(w) > 3]
-
-        # Remove stopwords
-        unwanted = get_unwanted_words()
-        words = [w for w in words if w not in unwanted]
-
-        # Get frequency distribution
-        freq_dist = FreqDist(words)
-
-        # Return top N
-        return [word for word, _ in freq_dist.most_common(top_n)]
-
-    except (LookupError, ValueError, OSError, RuntimeError) as e:
-        logger.debug(f"Keyword extraction failed: {e}")
+    if not text:
         return []
+
+    words = _tokenize(text.lower())
+    words = [w for w in words if len(w) > 3]
+
+    unwanted = get_unwanted_words()
+    words = [w for w in words if w not in unwanted]
+
+    if not words:
+        return []
+
+    # Make tie-breaking explicit: for equal counts, preserve first appearance order.
+    first_seen: dict[str, int] = {}
+    for index, word in enumerate(words):
+        if word not in first_seen:
+            first_seen[word] = index
+
+    word_freq = Counter(words)
+    ranked = sorted(word_freq.items(), key=lambda item: (-item[1], first_seen[item[0]]))
+    return [word for word, _ in ranked[:top_n]]
 
 
 def truncate_text(text: str, max_chars: int = 5000) -> str:
     """Truncate text to maximum characters.
 
     Args:
-        text: Input text
-        max_chars: Maximum characters
+        text: Input text.
+        max_chars: Maximum characters.
 
     Returns:
-        Truncated text
+        Truncated text.
     """
     if len(text) <= max_chars:
         return text
