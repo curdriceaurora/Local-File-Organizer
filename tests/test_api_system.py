@@ -56,6 +56,37 @@ def test_system_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert update.json()["config"]["default_methodology"] == "para"
 
 
+def test_system_config_update_refuses_unsupported_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Editing a profile written under an unsupported schema version is refused
+    with 409, and the incompatible on-disk file is left untouched (#1276)."""
+    config_dir = tmp_path / "config"
+    monkeypatch.setenv("FO_CONFIG_DIR", str(config_dir))
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    client, headers = _client(tmp_path, [str(data_dir)], admin=True)
+
+    # Write the unsupported-version profile AFTER client setup so app/auth
+    # startup can't overwrite it before the PATCH under test.
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config.yaml"
+    config_path.write_text(
+        "profiles:\n  default:\n    version: '99.0'\n    default_methodology: para\n",
+        encoding="utf-8",
+    )
+    before = config_path.read_bytes()
+
+    update = client.patch(
+        "/api/v1/system/config",
+        json={"profile": "default", "default_methodology": "jd"},
+        headers=headers,
+    )
+    assert update.status_code == 409
+    assert config_path.read_bytes() == before  # not clobbered
+
+
 def test_system_config_requires_admin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config_dir = tmp_path / "config"
     monkeypatch.setenv("FO_CONFIG_DIR", str(config_dir))

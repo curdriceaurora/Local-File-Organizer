@@ -40,6 +40,26 @@ DEFAULT_CONFIG_DIR = get_config_dir()
 CONFIG_FILENAME = "config.yaml"
 
 
+class UnsupportedConfigVersionError(RuntimeError):
+    """Raised when a save would overwrite an unsupported-version profile.
+
+    ``load()`` degrades an unsupported-version profile to defaults (read-side
+    migration safety), so a load-mutate-save would otherwise clobber the
+    incompatible file. Pass ``force=True`` to :meth:`ConfigManager.save` to
+    overwrite/migrate intentionally.
+    """
+
+    def __init__(self, profile: str, version: object) -> None:
+        """Record the offending *profile* and on-disk *version*."""
+        self.profile = profile
+        self.version = version
+        super().__init__(
+            f"Refusing to overwrite profile {profile!r}: on-disk schema version "
+            f"{version!r} is unsupported (supported: "
+            f"{sorted(SUPPORTED_SCHEMA_VERSIONS)}). Pass force=True to overwrite."
+        )
+
+
 class ConfigManager:
     """Manages application configuration profiles.
 
@@ -116,7 +136,7 @@ class ConfigManager:
 
         return self._dict_to_config(data, profile)
 
-    def save(self, config: AppConfig, profile: str | None = None) -> None:
+    def save(self, config: AppConfig, profile: str | None = None, *, force: bool = False) -> None:
         """Save a configuration profile to disk.
 
         Creates the config directory and file if they don't exist.
@@ -125,6 +145,15 @@ class ConfigManager:
             config: AppConfig instance to persist.
             profile: Profile name override.  Uses ``config.profile_name``
                 when *None*.
+            force: Overwrite even when the existing on-disk profile was written
+                under an unsupported schema version. Defaults to ``False``, which
+                refuses such an overwrite (migration-safe — ``load()`` returns
+                defaults for an unsupported version, so a load-mutate-save would
+                otherwise clobber the incompatible file).
+
+        Raises:
+            UnsupportedConfigVersionError: The on-disk profile has an unsupported
+                schema version and ``force`` is ``False``.
         """
         profile = profile or config.profile_name
         config_path = self._config_dir / CONFIG_FILENAME
@@ -146,6 +175,23 @@ class ConfigManager:
 
         if not isinstance(existing, dict):
             existing = {}
+
+        # Migration-safe write guard (F6): refuse to clobber a profile whose
+        # on-disk schema version is unsupported. load() degrades such a profile
+        # to defaults, so a load-mutate-save would otherwise overwrite the
+        # incompatible file with default/current-schema data (see #1276).
+        if not force:
+            existing_profiles = existing.get("profiles")
+            existing_profile = (
+                existing_profiles.get(profile) if isinstance(existing_profiles, dict) else None
+            )
+            if isinstance(existing_profile, dict):
+                on_disk_version = existing_profile.get("version")
+                if (
+                    on_disk_version is not None
+                    and str(on_disk_version) not in SUPPORTED_SCHEMA_VERSIONS
+                ):
+                    raise UnsupportedConfigVersionError(profile, on_disk_version)
 
         profiles = existing.setdefault("profiles", {})
         profiles[profile] = self.config_to_dict(config)
