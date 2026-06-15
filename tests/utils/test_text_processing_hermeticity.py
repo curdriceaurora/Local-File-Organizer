@@ -122,6 +122,16 @@ class TestDeterministicBehavior:
         # 'python' appears twice -> ranked first; 'testing' (>3 chars) next.
         assert first[0] == "python"
 
+    def test_extract_keywords_tie_break_is_first_appearance(self) -> None:
+        """Equal-frequency words rank by first appearance (explicit tie-break).
+
+        ``alpha`` and ``beta`` each occur twice; ``gamma``/``delta`` once. The two
+        winners must be ordered by where they first appear, not by an arbitrary
+        ``Counter`` tie order — guarding the determinism the PR introduces.
+        """
+        keywords = extract_keywords("alpha beta alpha gamma beta delta", top_n=2)
+        assert keywords == ["alpha", "beta"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
