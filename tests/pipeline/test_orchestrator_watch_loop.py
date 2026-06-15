@@ -261,3 +261,40 @@ class TestWatchLoopExecutor:
 
         # Worker drained (work_done) strictly before the stage was closed.
         assert order == ["work_done", "close"]
+
+    def test_stop_skips_stage_close_when_workers_exceed_drain_timeout(self):
+        """stop() does not close stages if a worker outlives the drain timeout.
+
+        Regression for #1285 review: a bounded drain that timed out and then
+        closed stages anyway would reintroduce the closed-fd race for slow
+        (>timeout) workers. When futures remain un-drained, the close loop is
+        skipped (the fd is reclaimed at process exit) rather than raced.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch._stages = [_ClosableStage()]
+        # Simulate a still-running worker by registering a pending future.
+        orch._watch_futures.add(MagicMock())
+
+        # Patch the drain to report the worker as not finished within timeout.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()
+
+        mock_wait.assert_called_once()
+        # Stage close was skipped because the worker did not drain in time.
+        assert closed == []

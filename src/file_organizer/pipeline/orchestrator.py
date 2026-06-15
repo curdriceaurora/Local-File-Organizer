@@ -313,19 +313,35 @@ class PipelineOrchestrator:
             # already-submitted ``process_file`` work, so a worker may still be
             # inside ``stage.process()``; closing a stage's fd underneath it
             # would race (#1285 review). Bounded wait mirrors the watch-thread
-            # join timeout.
+            # join timeout so a stuck/long worker cannot hang shutdown forever.
+            drained = True
             if self._watch_futures:
-                futures_wait(set(self._watch_futures), timeout=5.0)
+                _, not_done = futures_wait(set(self._watch_futures), timeout=5.0)
+                if not_done:
+                    # A worker is still running past the timeout. Closing a
+                    # stage's fd now could pull it out from under that worker
+                    # (#1285 review), so we skip the close loop entirely rather
+                    # than race; any held fd is reclaimed at process exit. The
+                    # alternative (unbounded wait) risks hanging stop() on a
+                    # stuck model-backed worker.
+                    drained = False
+                    logger.warning(
+                        "%d watch worker(s) still running after %.1fs drain timeout; "
+                        "skipping stage close to avoid a closed-fd race",
+                        len(not_done),
+                        5.0,
+                    )
 
             # Release resources held by stages (e.g. SafeDir file descriptors).
             # WP-4.3 (#1233): faithful port of the fork's D2 stage-close loop.
             # The ``getattr`` guard makes this a safe no-op for stages that do
             # not define ``close()`` (this repo's stages currently hold no fds).
-            for stage in self._stages:
-                close_fn = getattr(stage, "close", None)
-                if close_fn is not None:
-                    with contextlib.suppress(Exception):
-                        close_fn()
+            if drained:
+                for stage in self._stages:
+                    close_fn = getattr(stage, "close", None)
+                    if close_fn is not None:
+                        with contextlib.suppress(Exception):
+                            close_fn()
 
             logger.info("Pipeline stopped")
 
