@@ -56,7 +56,7 @@ class TestConfigManagerLoad:
         data = {
             "profiles": {
                 "custom": {
-                    "version": "2.0",
+                    "version": "1.0",
                     "default_methodology": "para",
                     "models": {"temperature": 0.5},
                 }
