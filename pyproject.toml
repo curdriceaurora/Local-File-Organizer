@@ -33,7 +33,8 @@ dependencies = [
     "Pillow~=10.0",
 
     # NLP and data science
-    "nltk~=3.8",
+    # Deterministic, offline stemming (WP-4.4, #1234) — pure-Python, no corpus download.
+    "snowballstemmer>=2.2",
     "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 

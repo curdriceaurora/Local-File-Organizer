@@ -353,19 +353,23 @@ def mock_nltk_ensure_data_no_op() -> None:
 
 
 @pytest.fixture
-def isolated_nltk_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def isolated_nltk_environment() -> None:
     """Fixture that simulates a clean container without NLTK corpus.
 
-    Sets NLTK_AVAILABLE to False to test fallback behavior in isolated
-    environments where NLTK data is not pre-installed.
+    As of WP-4.4 (#1234) text processing no longer depends on NLTK or any
+    downloadable corpus: stopwords are vendored and stemming uses the pure-Python
+    ``snowballstemmer`` package. There is therefore nothing to isolate — the module
+    is already fully offline and deterministic. This fixture is retained so the
+    hermeticity tests (which assert offline behavior) keep their intent, and now
+    pass trivially.
 
     Usage:
         def test_something_without_nltk(isolated_nltk_environment):
-            # Tests run as if NLTK is not available
+            # Text processing runs fully offline (no NLTK, no corpus).
             ...
     """
-    # Mock NLTK_AVAILABLE as False
-    monkeypatch.setattr("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    # No-op: the module is offline by construction; nothing to patch.
+    return None
 
 
 # ---------------------------------------------------------------------------
