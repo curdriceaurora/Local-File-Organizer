@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import stat
 import threading
 import time
 from collections.abc import Callable
@@ -143,6 +144,17 @@ class FileEventHandler(FileSystemEventHandler):
             logger.debug("Filtered out event for: %s", path)
             return
 
+        # Symlink / containment hardening (WP-2.3, #1228): refuse events whose
+        # path is a symlink or resolves outside the watched roots, failing
+        # closed on any resolution error (e.g. symlink loops). For MOVED events
+        # the destination is checked too — that's the path that gets organized.
+        if not self._is_event_path_allowed(path):
+            logger.warning("Skipping event for unsafe/out-of-root path: %s", path)
+            return
+        if dest_path is not None and not self._is_event_path_allowed(dest_path):
+            logger.warning("Skipping move event for unsafe/out-of-root dest: %s", dest_path)
+            return
+
         # Apply debouncing
         if not self._should_process(str(path)):
             logger.debug("Debounced event for: %s", path)
@@ -163,6 +175,62 @@ class FileEventHandler(FileSystemEventHandler):
 
         # Fire callbacks
         self._fire_callbacks(event_type, file_event)
+
+    def _resolved_watch_roots(self) -> list[Path]:
+        """Return the configured watch directories in resolved (canonical) form.
+
+        Un-resolvable roots (symlink loop, removed mid-run) are dropped rather
+        than aborting the whole check. An empty result means no containment
+        boundary is configured (e.g. a handler used standalone), in which case
+        :meth:`_is_event_path_allowed` does not block — there is nothing to
+        contain the event against.
+        """
+        roots: list[Path] = []
+        for directory in self.config.watch_directories:
+            try:
+                roots.append(Path(directory).resolve())
+            except (OSError, RuntimeError):  # pragma: no cover - defensive
+                continue
+        return roots
+
+    def _is_event_path_allowed(self, path: Path) -> bool:
+        """Return True if *path* is safe to process under the watched roots.
+
+        Fail-closed symlink/containment guard (WP-2.3, #1228):
+
+        - **lstat containment**: a path whose final component is a symlink is
+          refused (``S_ISLNK``) — the watcher must not follow a link planted in
+          the tree into (or out of) the watched root. A missing path (a delete
+          or move-away event) falls through to the lexical containment check.
+        - **resolve-loop handling**: the path is canonicalized with
+          ``Path.resolve()``; a symlink loop or other resolution error raises
+          ``OSError``/``RuntimeError`` and is treated as unsafe (skip).
+        - **containment**: the resolved path must live inside one of the
+          resolved watch roots; anything outside is refused.
+
+        When no watch roots are configured the method returns True (no boundary
+        to enforce) so a standalone handler keeps working.
+        """
+        roots = self._resolved_watch_roots()
+        if not roots:
+            return True
+
+        try:
+            if stat.S_ISLNK(os.lstat(path).st_mode):
+                return False
+        except FileNotFoundError:
+            # Deleted / moved-away path — can't lstat; rely on the lexical
+            # containment of its resolved (non-followed) form below.
+            pass
+        except OSError:
+            return False  # fail closed on any other stat error
+
+        try:
+            resolved = path.resolve()
+        except (OSError, RuntimeError):
+            return False  # fail closed on symlink loops / resolution failures
+
+        return any(resolved == root or resolved.is_relative_to(root) for root in roots)
 
     def _should_process(self, path_key: str) -> bool:
         """Check if an event for this path should be processed based on debounce timing.
