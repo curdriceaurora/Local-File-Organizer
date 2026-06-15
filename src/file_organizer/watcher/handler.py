@@ -180,24 +180,32 @@ class FileEventHandler(FileSystemEventHandler):
         # Fire callbacks
         self._fire_callbacks(event_type, file_event)
 
-    def _resolved_watch_roots(self) -> list[Path]:
-        """Return the configured watch directories in resolved (canonical) form.
+    def _watch_roots(self) -> list[tuple[Path, Path]]:
+        """Return ``(original, resolved)`` pairs for each configured watch dir.
+
+        ``original`` is the path as configured (which may itself be a symlinked
+        directory the user deliberately pointed the watcher at); ``resolved`` is
+        its canonical form. The per-component symlink walk in
+        :meth:`_is_event_path_allowed` aligns on whichever form the event path is
+        expressed under, so events under a symlinked watch root still flow while
+        a symlinked *ancestor below* the root is still caught.
 
         Roots whose canonicalization *raises* (symlink loop, OS-level resolution
         failure) are dropped rather than aborting the whole check; a merely
-        missing root is **not** dropped here because ``Path.resolve()`` is
-        non-strict and returns a path for it. An empty result means no
-        containment boundary is configured (e.g. a handler used standalone), in
-        which case :meth:`_is_event_path_allowed` does not block — there is
-        nothing to contain the event against.
+        missing root is **not** dropped because ``Path.resolve()`` is non-strict.
+        An empty result means no containment boundary is configured (e.g. a
+        handler used standalone), in which case :meth:`_is_event_path_allowed`
+        does not block — there is nothing to contain the event against.
         """
-        roots: list[Path] = []
+        pairs: list[tuple[Path, Path]] = []
         for directory in self.config.watch_directories:
+            original = Path(directory)
             try:
-                roots.append(Path(directory).resolve())
+                resolved = original.resolve()
             except (OSError, RuntimeError):  # pragma: no cover - defensive
                 continue
-        return roots
+            pairs.append((original, resolved))
+        return pairs
 
     def _is_event_path_allowed(self, path: Path) -> bool:
         """Return True if *path* is safe to process under the watched roots.
@@ -218,10 +226,16 @@ class FileEventHandler(FileSystemEventHandler):
           downstream open could be raced by retargeting the link outside the
           root (TOCTOU). A missing component (delete / move-away) ends the walk.
 
+        The walk is anchored on whichever root form (original or resolved) the
+        event path is expressed under, so it works for events under a symlinked
+        watch root *and* watchdog's canonical-prefixed paths. If the path cannot
+        be aligned to either form the check **fails closed** rather than allowing
+        the path unchecked (a non-canonical prefix must not bypass the walk).
+
         When no watch roots are configured the method returns True (no boundary
         to enforce) so a standalone handler keeps working.
         """
-        roots = self._resolved_watch_roots()
+        roots = self._watch_roots()
         if not roots:
             return True
 
@@ -230,36 +244,44 @@ class FileEventHandler(FileSystemEventHandler):
         except (OSError, RuntimeError):
             return False  # fail closed on symlink loops / resolution failures
 
-        matching_root = next(
-            (root for root in roots if resolved == root or resolved.is_relative_to(root)),
+        match = next(
+            (
+                (original_root, resolved_root)
+                for (original_root, resolved_root) in roots
+                if resolved == resolved_root or resolved.is_relative_to(resolved_root)
+            ),
             None,
         )
-        if matching_root is None:
+        if match is None:
             return False  # resolves outside every watch root
+        original_root, resolved_root = match
 
-        try:
-            relative = path.relative_to(matching_root)
-        except ValueError:  # pragma: no cover - platform-dependent (e.g. macOS /tmp symlink)
-            # The original path is not lexically under the matched (resolved)
-            # root — its safety rests on the resolved-containment check above,
-            # which passed. Watchdog emits paths under the resolved watched
-            # directory, so this only arises where the event path keeps an
-            # unresolved prefix (e.g. macOS ``/tmp`` -> ``/private/tmp``).
+        # Align the per-component walk on whichever root form prefixes the event
+        # path. The resolved root never has symlinks in it; the original root may
+        # *be* a (trusted) symlinked directory, so we never lstat the root
+        # itself — only the components below it.
+        for base in (original_root, resolved_root):
+            try:
+                relative = path.relative_to(base)
+            except ValueError:
+                continue
+            current = base
+            for part in relative.parts:
+                current = current / part
+                try:
+                    if stat.S_ISLNK(os.lstat(current).st_mode):
+                        return False
+                except FileNotFoundError:
+                    # Component absent (delete / move-away). Nothing left to
+                    # follow; the resolved-containment check already vouched.
+                    return True
+                except OSError:
+                    return False  # fail closed on any other stat error
             return True
 
-        current = matching_root
-        for part in relative.parts:
-            current = current / part
-            try:
-                if stat.S_ISLNK(os.lstat(current).st_mode):
-                    return False
-            except FileNotFoundError:
-                # Component absent (delete / move-away). Nothing left to follow;
-                # the resolved-containment check already vouched for the path.
-                return True
-            except OSError:
-                return False  # fail closed on any other stat error
-        return True
+        # The event path is under neither root form lexically — cannot prove it
+        # is symlink-free, so refuse rather than allow unchecked.
+        return False
 
     def _should_process(self, path_key: str) -> bool:
         """Check if an event for this path should be processed based on debounce timing.

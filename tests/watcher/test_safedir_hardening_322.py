@@ -233,4 +233,107 @@ def test_move_within_root_is_processed(tmp_path: Path) -> None:
 
     handler.on_moved(FileMovedEvent(src_path=str(src), dest_path=str(dest)))
 
+    events = queue.dequeue_batch(max_size=1)
+    assert len(events) == 1
+    # A MOVED event is represented downstream by its destination (the live,
+    # to-be-organized file), not the now-vacated source.
+    assert events[0].path == dest
+    assert events[0].dest_path == dest
+
+
+@posix_only
+def test_symlinked_watch_root_still_processes(tmp_path: Path) -> None:
+    """A deliberately symlinked *watch root* is trusted: events under it still
+    flow (the per-component walk anchors on the configured root form and never
+    lstat-checks the root itself)."""
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    (real_root / "doc.txt").write_text("content")
+    link_root = tmp_path / "link"
+    try:
+        link_root.symlink_to(real_root)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    config = WatcherConfig(watch_directories=[link_root], debounce_seconds=0.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    handler.on_created(FileCreatedEvent(src_path=str(link_root / "doc.txt")))
+
     assert queue.size == 1
+
+
+@posix_only
+def test_symlinked_ancestor_under_symlinked_root_is_skipped(tmp_path: Path) -> None:
+    """Even under a symlinked watch root, a symlinked *ancestor below* the root
+    is refused — the non-canonical root prefix must not bypass the walk."""
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    inner = real_root / "inner"
+    inner.mkdir()
+    (inner / "doc.txt").write_text("content")
+    # Symlinked ancestor below the root, target still under the root.
+    try:
+        (real_root / "link").symlink_to(inner)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    link_root = tmp_path / "link_root"
+    try:
+        link_root.symlink_to(real_root)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    config = WatcherConfig(watch_directories=[link_root], debounce_seconds=0.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    handler.on_created(FileCreatedEvent(src_path=str(link_root / "link" / "doc.txt")))
+
+    assert queue.size == 0
+
+
+@posix_only
+def test_resolved_prefix_event_under_symlinked_root_processes(tmp_path: Path) -> None:
+    """When the watch root is configured as a symlink but the event arrives with
+    the *resolved* prefix (as watchdog emits), the walk falls through to the
+    resolved-root alignment and still processes the event."""
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    (real_root / "doc.txt").write_text("content")
+    link_root = tmp_path / "link"
+    try:
+        link_root.symlink_to(real_root)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    config = WatcherConfig(watch_directories=[link_root], debounce_seconds=0.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    # Event path uses the resolved prefix, not the configured (link) prefix.
+    handler.on_created(FileCreatedEvent(src_path=str(real_root / "doc.txt")))
+
+    assert queue.size == 1
+
+
+@posix_only
+def test_event_via_unconfigured_symlink_fails_closed(tmp_path: Path) -> None:
+    """An event whose path reaches the root through a symlink that is *not* the
+    configured watch root aligns to neither root form and is refused — only the
+    configured root's prefix is trusted."""
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    (real_root / "doc.txt").write_text("content")
+    link_root = tmp_path / "link"
+    other_link = tmp_path / "other"
+    try:
+        link_root.symlink_to(real_root)
+        other_link.symlink_to(real_root)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    config = WatcherConfig(watch_directories=[link_root], debounce_seconds=0.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    # Resolves under the root, but via an unconfigured symlink prefix.
+    handler.on_created(FileCreatedEvent(src_path=str(other_link / "doc.txt")))
+
+    assert queue.size == 0
