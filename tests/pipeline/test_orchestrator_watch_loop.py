@@ -328,3 +328,43 @@ class TestWatchLoopExecutor:
         # Idempotent: a second stop() does not double-close.
         orch.stop()
         assert closed == ["close"]
+
+    def test_second_stop_after_drain_timeout_still_skips_close(self):
+        """A second stop() re-checks workers and won't close under a live worker.
+
+        Regression for #1285 review: the first (watch-mode) stop() times out
+        draining, leaving _running False but _watch_futures populated. A second
+        stop() takes the not-running branch — it must re-check the still-running
+        futures rather than blindly closing stage resources, which would
+        reintroduce the closed-fd race the timeout path avoids.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch._stages = [_ClosableStage()]
+        # A worker that never finishes: stays in _watch_futures across stops.
+        orch._watch_futures.add(MagicMock())
+
+        # Drain always reports the worker as still running (exceeds timeout).
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()  # watch-mode path: times out, skips close
+            assert orch._running is False
+            orch.stop()  # not-running path: must re-check, still skip
+
+        # Re-checked on both calls; never closed under the live worker.
+        assert mock_wait.call_count == 2
+        assert closed == []
