@@ -95,7 +95,7 @@ parsers = [
     "python-pptx>=0.6.0",  # 0.x — unstable API, keep >=
     "ebooklib>=0.20,<1",  # 0.x — unstable API; 0.20 added the isinstance guard around os.path.isdir required for SafeDir's fileobj read path (WP-2.1 / #264)
     "beautifulsoup4~=4.12",
-    "lxml~=4.9",
+    "lxml~=6.1",
 ]
 
 web = [
