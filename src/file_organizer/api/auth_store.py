@@ -91,7 +91,8 @@ class RedisTokenStore:
 
     def store_refresh(self, jti: str, user_id: str, ttl_seconds: int) -> None:
         """Store a refresh token with the given TTL in Redis."""
-        self.redis.setex(self._refresh_key(jti), ttl_seconds, user_id)
+        # Redis 8 deprecates setex(key, ttl, value); use set(..., ex=ttl).
+        self.redis.set(self._refresh_key(jti), user_id, ex=ttl_seconds)
 
     def is_refresh_active(self, jti: str) -> bool:
         """Return True if the refresh token is active in Redis."""
@@ -103,7 +104,8 @@ class RedisTokenStore:
 
     def revoke_access(self, jti: str, ttl_seconds: int) -> None:
         """Mark an access token as revoked in Redis."""
-        self.redis.setex(self._revoked_key(jti), ttl_seconds, "1")
+        # Redis 8 deprecates setex(key, ttl, value); use set(..., ex=ttl).
+        self.redis.set(self._revoked_key(jti), "1", ex=ttl_seconds)
 
     def is_access_revoked(self, jti: str) -> bool:
         """Return True if the access token has been revoked in Redis."""
