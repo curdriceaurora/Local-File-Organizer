@@ -129,12 +129,15 @@ def _make_tar(path: Path) -> None:
         tf.addfile(info, io.BytesIO(data))
 
 
-def test_read_tar_normal_path(tmp_path: Path) -> None:
+def test_read_tar_normal_path_and_fileobj(tmp_path: Path) -> None:
     p = tmp_path / "x.tar"
     _make_tar(p)
-    out = read_tar_file(p)
-    assert "TAR Archive" in out and "Total files: 1" in out
-    assert "Total directories: 1" in out
+    out_path = read_tar_file(p)
+    assert "TAR Archive" in out_path and "Total files: 1" in out_path
+    assert "Total directories: 1" in out_path
+    with p.open("rb") as fh:
+        out_fd = read_tar_file(fileobj=fh, file_path=p)
+    assert "TAR Archive" in out_fd and "Total files: 1" in out_fd
 
 
 def test_read_tar_requires_source() -> None:
