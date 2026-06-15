@@ -47,6 +47,7 @@ def resolve_cli_path(
     *,
     must_exist: bool = True,
     must_be_dir: bool = True,
+    reject_symlink: bool = False,
 ) -> Path:
     """Resolve a CLI path argument and validate it at the argparse boundary.
 
@@ -65,6 +66,12 @@ def resolve_cli_path(
         must_be_dir: If True (default), raise ``typer.BadParameter`` when
             the resolved path exists but is not a directory. Pass False
             for commands that take a file argument.
+        reject_symlink: If True, refuse a path whose final component is a
+            symlink *before* canonicalizing. Resolving a symlinked root would
+            replace the user-supplied directory with the link target and bypass
+            the organize walker's root-symlink rejection (``safe_walk`` only
+            skips a root when ``root.is_symlink()``). Used for the organize/
+            preview input root to preserve that hardening (#1269/#1270).
 
     Returns:
         The resolved absolute ``Path`` — downstream code can rely on
@@ -72,11 +79,25 @@ def resolve_cli_path(
 
     Raises:
         typer.BadParameter: Missing path (when ``must_exist=True``),
-            path-exists-but-not-a-directory (when ``must_be_dir=True``), or
+            path-exists-but-not-a-directory (when ``must_be_dir=True``), a
+            symlinked final component (when ``reject_symlink=True``), or
             any OS-level resolution failure (symlink loop, unknown ``~user``).
             Typer renders these as ``Usage: ... Invalid value ...`` rather
             than a Python traceback.
     """
+    if reject_symlink:
+        # lstat (no follow) on the expanduser'd path, before resolution, so a
+        # symlinked root is refused rather than silently canonicalized to its
+        # target tree.
+        expanded = path.expanduser()
+        try:
+            is_link = expanded.is_symlink()
+        except OSError:
+            is_link = False
+        if is_link:
+            raise typer.BadParameter(
+                f"Path is a symbolic link, which is not allowed here: {path!s}"
+            )
     resolved = _resolve_user_path(path)
 
     if must_exist and not resolved.exists():

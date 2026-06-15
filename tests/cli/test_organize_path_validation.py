@@ -78,12 +78,45 @@ def test_organize_input_inside_output_is_bad_parameter(tmp_path: Path) -> None:
 def test_organize_symlink_loop_is_bad_parameter(tmp_path: Path) -> None:
     loop = tmp_path / "loop"
     try:
-        loop.symlink_to(loop)  # self-referential → resolve() raises
+        loop.symlink_to(loop)  # self-referential symlink
     except OSError:
         pytest.skip("symlink creation not supported")
     result = runner.invoke(app, ["organize", str(loop), str(tmp_path / "out")])
     assert result.exit_code == 2
-    assert "unable to resolve" in result.output.lower() or "does not exist" in result.output.lower()
+    # The input root is a symlink, so it's refused by the reject_symlink guard
+    # before resolution (a loop would also fail resolution if it weren't a link).
+    out = result.output.lower()
+    assert "symbolic link" in out or "unable to resolve" in out or "does not exist" in out
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink roots are POSIX-focused")
+def test_organize_symlinked_input_root_is_bad_parameter(tmp_path: Path) -> None:
+    """A symlinked input directory is refused (not silently canonicalized to its
+    target), preserving the walker's root-symlink rejection (#1270)."""
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    result = runner.invoke(app, ["organize", str(link), str(tmp_path / "out")])
+    assert result.exit_code == 2
+    assert "symbolic link" in result.output.lower()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink roots are POSIX-focused")
+def test_preview_symlinked_input_root_is_bad_parameter(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    result = runner.invoke(app, ["preview", str(link)])
+    assert result.exit_code == 2
+    assert "symbolic link" in result.output.lower()
 
 
 def test_preview_missing_input_is_bad_parameter(tmp_path: Path) -> None:
