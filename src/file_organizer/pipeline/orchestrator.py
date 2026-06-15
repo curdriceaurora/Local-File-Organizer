@@ -13,7 +13,8 @@ import shutil
 import threading
 import time
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import wait as futures_wait
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -215,6 +216,13 @@ class PipelineOrchestrator:
         self._executor = ThreadPoolExecutor(
             max_workers=self.config.max_concurrent,
         )
+        # In-flight watch-mode ``process_file`` futures. Tracked so ``stop()``
+        # can drain workers before closing stage-owned resources (WP-4.3,
+        # #1233): ``self._executor.shutdown(wait=False)`` lets already-submitted
+        # work keep running, so closing a stage's fd while a worker is still in
+        # ``stage.process()`` would race. Draining first makes the stage-close
+        # loop safe.
+        self._watch_futures: set[Future[Any]] = set()
 
     # ------------------------------------------------------------------
     # Stage management
@@ -299,6 +307,15 @@ class PipelineOrchestrator:
 
             # Clean up processors
             self.processor_pool.cleanup()
+
+            # Drain in-flight watch-mode workers before touching stage-owned
+            # resources. ``shutdown(wait=False)`` above does not wait for
+            # already-submitted ``process_file`` work, so a worker may still be
+            # inside ``stage.process()``; closing a stage's fd underneath it
+            # would race (#1285 review). Bounded wait mirrors the watch-thread
+            # join timeout.
+            if self._watch_futures:
+                futures_wait(set(self._watch_futures), timeout=5.0)
 
             # Release resources held by stages (e.g. SafeDir file descriptors).
             # WP-4.3 (#1233): faithful port of the fork's D2 stage-close loop.
@@ -818,8 +835,12 @@ class PipelineOrchestrator:
                         continue
 
                     try:
-                        # Submit to executor to avoid blocking the watch loop
-                        self._executor.submit(self.process_file, event.path)
+                        # Submit to executor to avoid blocking the watch loop.
+                        # Track the future so stop() can drain in-flight work
+                        # before closing stage-owned resources.
+                        future = self._executor.submit(self.process_file, event.path)
+                        self._watch_futures.add(future)
+                        future.add_done_callback(self._watch_futures.discard)
                     except (RuntimeError, OSError):
                         logger.exception("Error processing %s", event.path)
 
