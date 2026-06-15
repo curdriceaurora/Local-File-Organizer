@@ -215,6 +215,20 @@ def test_rollback_copy_moves_copy_to_trash(tmp_path: Path) -> None:
     assert (tmp_path / "trash" / "7" / "copy.txt").read_text() == "copy"
 
 
+def test_move_to_trash_without_operation_id_uses_uuid(tmp_path: Path) -> None:
+    """_move_to_trash without an operation id files under a uuid subdir and
+    still routes through the hardened move."""
+    ex = _executor(tmp_path)
+    f = tmp_path / "x.txt"
+    f.write_text("data")
+
+    trash_path = ex._move_to_trash(f)
+
+    assert trash_path.read_text() == "data"
+    assert not f.exists()
+    assert trash_path.parent.parent == (tmp_path / "trash")
+
+
 def test_durable_move_cross_device_fallback(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -236,6 +250,45 @@ def test_durable_move_cross_device_fallback(
 
     assert dst.read_text() == "payload"
     assert not src.exists()
+
+
+def test_durable_move_exdev_symlink_swap_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If the source is swapped for a symlink between the initial check and the
+    EXDEV cross-device fallback, the re-check refuses it (no shutil.move deref)."""
+    import stat as stat_mod
+
+    import file_organizer.undo.rollback as rb
+
+    ex = _executor(tmp_path)
+    src = tmp_path / "a.txt"
+    src.write_text("x")
+    dst = tmp_path / "b.txt"
+
+    real_lstat = rb.os.lstat
+    calls = {"n": 0}
+
+    class _SymlinkStat:
+        st_mode = stat_mod.S_IFLNK | 0o777
+        st_dev = 1
+        st_ino = 1
+
+    def fake_lstat(path: object, *a: object, **k: object) -> object:
+        calls["n"] += 1
+        if calls["n"] == 1:  # initial source check → real (regular)
+            return real_lstat(path, *a, **k)
+        return _SymlinkStat()  # EXDEV re-check → simulated symlink swap
+
+    def fake_replace(s: object, d: object) -> None:
+        raise OSError(errno.EXDEV, "cross-device link")
+
+    monkeypatch.setattr(rb.os, "lstat", fake_lstat)
+    monkeypatch.setattr(rb.os, "replace", fake_replace)
+
+    with pytest.raises(OSError, match="symlink"):
+        ex._durable_move(src, dst)
+    assert not dst.exists()
 
 
 def test_durable_move_reraises_non_exdev_replace_error(
@@ -310,14 +363,14 @@ def test_undo_then_redo_flip_status(tmp_path: Path) -> None:
 
         assert mgr.undo_operation(op_id) is True
         assert src.exists() and not dst.exists()
-        assert mgr.get_undo_stack() == [] or all(
-            o.status == OperationStatus.ROLLED_BACK
-            for o in mgr.history.get_operations(limit=10)
-            if o.id == op_id
-        )
+        op = next(o for o in mgr.history.get_operations(limit=10) if o.id == op_id)
+        assert op.status == OperationStatus.ROLLED_BACK
+        assert op_id not in {o.id for o in mgr.get_undo_stack()}
 
         assert mgr.redo_operation(op_id) is True
         assert dst.exists() and not src.exists()
+        op = next(o for o in mgr.history.get_operations(limit=10) if o.id == op_id)
+        assert op.status == OperationStatus.COMPLETED
     finally:
         mgr.close()
 

@@ -78,6 +78,11 @@ class RollbackExecutor:
             os.replace(src, dst)
         except OSError as exc:
             if exc.errno == errno.EXDEV:
+                # Re-check the source immediately before the cross-device copy:
+                # an attacker could have swapped it for a symlink since the
+                # initial lstat, and shutil.move would dereference it.
+                if stat_mod.S_ISLNK(os.lstat(src).st_mode):
+                    raise OSError(f"refusing to move a symlink (possible swap): {src}") from exc
                 cross_device = True
                 shutil.move(str(src), str(dst))
             else:
@@ -89,10 +94,13 @@ class RollbackExecutor:
         if not cross_device and (dst_stat.st_dev, dst_stat.st_ino) != src_identity:
             raise OSError(f"inode swap detected after rename to {dst}")
 
-        fsync_directory(dst.parent)
+        # fsync the *containing* directory of each changed entry. fsync_directory
+        # fsyncs ``path.parent``, so pass the file paths (dst/src), not their
+        # parents, or we would flush the grandparent directory instead.
+        fsync_directory(dst)
         if src.parent != dst.parent:
             try:
-                fsync_directory(src.parent)
+                fsync_directory(src)
             except OSError:  # pragma: no cover - best-effort source-dir flush
                 logger.debug("Could not fsync source directory %s", src.parent)
 
