@@ -12,10 +12,16 @@ import sys
 from pathlib import Path
 
 import pytest
-from watchdog.events import FileCreatedEvent, FileMovedEvent
+from watchdog.events import (
+    FileCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent,
+)
 
 from file_organizer.watcher.config import WatcherConfig
 from file_organizer.watcher.handler import FileEventHandler
+from file_organizer.watcher.monitor import FileMonitor
 from file_organizer.watcher.queue import EventQueue
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -337,3 +343,117 @@ def test_event_via_unconfigured_symlink_fails_closed(tmp_path: Path) -> None:
     handler.on_created(FileCreatedEvent(src_path=str(other_link / "doc.txt")))
 
     assert queue.size == 0
+
+
+def test_excluded_file_is_filtered_before_guard(tmp_path: Path) -> None:
+    """A file matching an exclude pattern is dropped by the filter before the
+    containment guard runs."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    config = WatcherConfig(
+        watch_directories=[root], debounce_seconds=0.0, exclude_patterns=["*.tmp"]
+    )
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+    target = root / "scratch.tmp"
+    target.write_text("content")
+
+    handler.on_created(FileCreatedEvent(src_path=str(target)))
+
+    assert queue.size == 0
+
+
+def test_debounced_event_is_dropped(tmp_path: Path) -> None:
+    """A second event on the same path within the debounce window is dropped."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    target = root / "doc.txt"
+    target.write_text("content")
+    config = WatcherConfig(watch_directories=[root], debounce_seconds=60.0, exclude_patterns=[])
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    handler.on_created(FileCreatedEvent(src_path=str(target)))
+    handler.on_modified(FileModifiedEvent(src_path=str(target)))
+
+    # First event enqueued; second collapsed by the debounce window.
+    assert queue.size == 1
+
+
+def test_missing_component_ends_walk(tmp_path: Path) -> None:
+    """A DELETED/move-away event whose path no longer exists ends the
+    per-component walk at the missing component and is allowed through (it
+    resolved under the root; there is nothing left on disk to follow)."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    handler, queue = _handler(root)
+
+    # No such file on disk — e.g. a DELETED event arriving after removal.
+    handler.on_deleted(FileDeletedEvent(src_path=str(root / "gone.txt")))
+
+    assert queue.size == 1
+
+
+class TestAddDirectoryConfigSync:
+    """``FileMonitor.add_directory`` keeps ``config.watch_directories`` in sync so
+    the handler's containment guard sees dynamically-added roots (WP-2.3)."""
+
+    def test_add_before_start_syncs_config(self, tmp_path: Path) -> None:
+        watched = tmp_path / "watched"
+        watched.mkdir()
+        extra = tmp_path / "extra"
+        extra.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watched], debounce_seconds=0.0, exclude_patterns=[]
+        )
+        mon = FileMonitor(config)
+
+        mon.add_directory(extra)
+
+        assert extra.resolve() in config.watch_directories
+
+    def test_add_already_in_config_is_noop(self, tmp_path: Path) -> None:
+        watched = tmp_path / "watched"
+        watched.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watched.resolve()], debounce_seconds=0.0, exclude_patterns=[]
+        )
+        mon = FileMonitor(config)
+        before = list(config.watch_directories)
+
+        mon.add_directory(watched)  # resolves to an entry already present
+
+        assert config.watch_directories == before
+
+    def test_add_while_running_syncs_config(self, tmp_path: Path) -> None:
+        watched = tmp_path / "watched"
+        watched.mkdir()
+        extra = tmp_path / "extra"
+        extra.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watched], debounce_seconds=0.0, exclude_patterns=[]
+        )
+        mon = FileMonitor(config)
+        mon.start()
+        try:
+            mon.add_directory(extra)
+            assert extra.resolve() in config.watch_directories
+        finally:
+            mon.stop()
+
+    def test_add_nonexistent_while_running_rolls_back(self, tmp_path: Path) -> None:
+        watched = tmp_path / "watched"
+        watched.mkdir()
+        config = WatcherConfig(
+            watch_directories=[watched], debounce_seconds=0.0, exclude_patterns=[]
+        )
+        mon = FileMonitor(config)
+        mon.start()
+        try:
+            missing = tmp_path / "nope"
+            with pytest.raises(FileNotFoundError):
+                mon.add_directory(missing)
+            # Scheduling failed → the config append is rolled back.
+            assert missing.resolve() not in config.watch_directories
+        finally:
+            mon.stop()
