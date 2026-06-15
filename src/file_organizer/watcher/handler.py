@@ -134,9 +134,16 @@ class FileEventHandler(FileSystemEventHandler):
             event_type: Classified event type.
             dest_path: Destination path for move events.
         """
-        raw_src = event.src_path
-        path = Path(os.fsdecode(raw_src))
+        src_path = Path(os.fsdecode(event.src_path))
         is_directory = isinstance(event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent))
+
+        # For MOVED events the destination is the live, to-be-organized file;
+        # the source no longer exists. Use the destination as the effective path
+        # for filtering, debounce, the symlink/containment guard, and
+        # FileEvent.path so the downstream watch loop processes (and we validate)
+        # the file's new location rather than the missing source. Fall back to
+        # the source when no destination is supplied.
+        path = dest_path if dest_path is not None else src_path
 
         # Skip directory events for non-directory-aware processing
         # (still allow them through if they pass filters)
@@ -145,14 +152,11 @@ class FileEventHandler(FileSystemEventHandler):
             return
 
         # Symlink / containment hardening (WP-2.3, #1228): refuse events whose
-        # path is a symlink or resolves outside the watched roots, failing
-        # closed on any resolution error (e.g. symlink loops). For MOVED events
-        # the destination is checked too — that's the path that gets organized.
+        # path is a symlink (at any component under the watched root) or resolves
+        # outside the watched roots, failing closed on any resolution error
+        # (e.g. symlink loops).
         if not self._is_event_path_allowed(path):
             logger.warning("Skipping event for unsafe/out-of-root path: %s", path)
-            return
-        if dest_path is not None and not self._is_event_path_allowed(dest_path):
-            logger.warning("Skipping move event for unsafe/out-of-root dest: %s", dest_path)
             return
 
         # Apply debouncing
@@ -179,11 +183,13 @@ class FileEventHandler(FileSystemEventHandler):
     def _resolved_watch_roots(self) -> list[Path]:
         """Return the configured watch directories in resolved (canonical) form.
 
-        Un-resolvable roots (symlink loop, removed mid-run) are dropped rather
-        than aborting the whole check. An empty result means no containment
-        boundary is configured (e.g. a handler used standalone), in which case
-        :meth:`_is_event_path_allowed` does not block — there is nothing to
-        contain the event against.
+        Roots whose canonicalization *raises* (symlink loop, OS-level resolution
+        failure) are dropped rather than aborting the whole check; a merely
+        missing root is **not** dropped here because ``Path.resolve()`` is
+        non-strict and returns a path for it. An empty result means no
+        containment boundary is configured (e.g. a handler used standalone), in
+        which case :meth:`_is_event_path_allowed` does not block — there is
+        nothing to contain the event against.
         """
         roots: list[Path] = []
         for directory in self.config.watch_directories:
@@ -198,15 +204,19 @@ class FileEventHandler(FileSystemEventHandler):
 
         Fail-closed symlink/containment guard (WP-2.3, #1228):
 
-        - **lstat containment**: a path whose final component is a symlink is
-          refused (``S_ISLNK``) — the watcher must not follow a link planted in
-          the tree into (or out of) the watched root. A missing path (a delete
-          or move-away event) falls through to the lexical containment check.
         - **resolve-loop handling**: the path is canonicalized with
           ``Path.resolve()``; a symlink loop or other resolution error raises
           ``OSError``/``RuntimeError`` and is treated as unsafe (skip).
         - **containment**: the resolved path must live inside one of the
           resolved watch roots; anything outside is refused.
+        - **per-component symlink rejection**: every component from the matched
+          root down to the leaf is ``lstat``-ed; a symlink anywhere along the
+          way is refused. Checking only the leaf would let a symlinked
+          *ancestor* that currently resolves back under the root (e.g.
+          ``root/link/doc.txt`` with ``link -> root/real``) pass containment —
+          the original symlink-bearing path would then be enqueued and a later
+          downstream open could be raced by retargeting the link outside the
+          root (TOCTOU). A missing component (delete / move-away) ends the walk.
 
         When no watch roots are configured the method returns True (no boundary
         to enforce) so a standalone handler keeps working.
@@ -216,21 +226,40 @@ class FileEventHandler(FileSystemEventHandler):
             return True
 
         try:
-            if stat.S_ISLNK(os.lstat(path).st_mode):
-                return False
-        except FileNotFoundError:
-            # Deleted / moved-away path — can't lstat; rely on the lexical
-            # containment of its resolved (non-followed) form below.
-            pass
-        except OSError:
-            return False  # fail closed on any other stat error
-
-        try:
             resolved = path.resolve()
         except (OSError, RuntimeError):
             return False  # fail closed on symlink loops / resolution failures
 
-        return any(resolved == root or resolved.is_relative_to(root) for root in roots)
+        matching_root = next(
+            (root for root in roots if resolved == root or resolved.is_relative_to(root)),
+            None,
+        )
+        if matching_root is None:
+            return False  # resolves outside every watch root
+
+        try:
+            relative = path.relative_to(matching_root)
+        except ValueError:  # pragma: no cover - platform-dependent (e.g. macOS /tmp symlink)
+            # The original path is not lexically under the matched (resolved)
+            # root — its safety rests on the resolved-containment check above,
+            # which passed. Watchdog emits paths under the resolved watched
+            # directory, so this only arises where the event path keeps an
+            # unresolved prefix (e.g. macOS ``/tmp`` -> ``/private/tmp``).
+            return True
+
+        current = matching_root
+        for part in relative.parts:
+            current = current / part
+            try:
+                if stat.S_ISLNK(os.lstat(current).st_mode):
+                    return False
+            except FileNotFoundError:
+                # Component absent (delete / move-away). Nothing left to follow;
+                # the resolved-containment check already vouched for the path.
+                return True
+            except OSError:
+                return False  # fail closed on any other stat error
+        return True
 
     def _should_process(self, path_key: str) -> bool:
         """Check if an event for this path should be processed based on debounce timing.

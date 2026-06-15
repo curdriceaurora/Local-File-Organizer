@@ -114,6 +114,28 @@ def test_symlinked_ancestor_escape_is_skipped(tmp_path: Path) -> None:
 
 
 @posix_only
+def test_symlinked_ancestor_within_root_is_skipped(tmp_path: Path) -> None:
+    """A symlinked ancestor whose target is *also under* the root passes the
+    resolved-containment check, but the per-component symlink walk still refuses
+    it — the enqueued symlink-bearing path would otherwise be a TOCTOU foothold
+    (Codex review, fo-core#322)."""
+    root = tmp_path / "watched"
+    root.mkdir()
+    real = root / "real"
+    real.mkdir()
+    (real / "doc.txt").write_text("content")
+    try:
+        (root / "link").symlink_to(real)  # symlinked ancestor, target under root
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    handler, queue = _handler(root)
+
+    handler.on_created(FileCreatedEvent(src_path=str(root / "link" / "doc.txt")))
+
+    assert queue.size == 0
+
+
+@posix_only
 def test_symlink_loop_fails_closed(tmp_path: Path) -> None:
     """A symlink loop makes resolution raise; the event is refused (fail-closed)."""
     root = tmp_path / "watched"
@@ -166,6 +188,34 @@ def test_resolution_failure_fails_closed(tmp_path: Path, monkeypatch: pytest.Mon
         return real_resolve(self, *args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(Path, "resolve", _raise_for_target)
+
+    handler.on_created(FileCreatedEvent(src_path=str(target)))
+
+    assert queue.size == 0
+
+
+def test_lstat_error_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If ``lstat`` on a component raises a non-FileNotFound OS error (e.g. a
+    permission error) during the per-component symlink walk, the event is
+    refused rather than processed — fail-closed."""
+    import file_organizer.watcher.handler as handler_mod
+
+    root = tmp_path / "watched"
+    root.mkdir()
+    target = root / "doc.txt"
+    target.write_text("content")
+    handler, queue = _handler(root)
+
+    real_lstat = handler_mod.os.lstat
+
+    def _raise_for_target(p: object, *args: object, **kwargs: object) -> object:
+        if str(p).endswith("doc.txt"):
+            raise PermissionError("simulated lstat failure")
+        return real_lstat(p, *args, **kwargs)  # type: ignore[arg-type]
+
+    # Only the handler's per-component walk uses this os.lstat; Path.resolve
+    # uses pathlib's own os reference, so canonicalization is unaffected.
+    monkeypatch.setattr(handler_mod.os, "lstat", _raise_for_target)
 
     handler.on_created(FileCreatedEvent(src_path=str(target)))
 
