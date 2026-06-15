@@ -141,6 +141,8 @@ class TestConfigEdit:
         result = runner.invoke(app, ["config", "edit", "--methodology", "para"])
         assert result.exit_code == 1
         assert "unsupported" in result.output.lower()
+        mock_mgr.load.assert_called_once_with(profile="default")
+        mock_mgr.save.assert_called_once()
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_temperature(self, mock_cls: MagicMock) -> None:

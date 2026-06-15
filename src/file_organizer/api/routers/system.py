@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import (
@@ -123,6 +123,11 @@ def get_config(
             },
         ),
         ADMIN_403_RESPONSE,
+        api_error_response(
+            409,
+            error="unsupported_config_version",
+            message="On-disk profile schema version is unsupported for safe overwrite",
+        ),
         validation_error_response(),
     ),
 )
@@ -158,8 +163,13 @@ def update_config(
         manager.save(config, request.profile)
     except UnsupportedConfigVersionError as exc:
         # The on-disk profile uses an unsupported schema version; editing it
-        # would overwrite it with defaults. Refuse with 409 instead (see #1276).
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        # would overwrite it with defaults. Refuse with 409 in the project's
+        # ApiError shape ({error, message}) instead of clobbering (see #1276).
+        raise ApiError(
+            status_code=409,
+            error="unsupported_config_version",
+            message=str(exc),
+        ) from exc
     payload = manager.config_to_dict(config)
     return ConfigResponse(
         profile=request.profile,
