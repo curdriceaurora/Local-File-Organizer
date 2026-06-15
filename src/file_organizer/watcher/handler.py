@@ -259,50 +259,55 @@ class FileEventHandler(FileSystemEventHandler):
         except (OSError, RuntimeError):
             return False  # fail closed on symlink loops / resolution failures
 
-        match = next(
-            (
-                (original_root, resolved_root)
-                for (original_root, resolved_root) in roots
-                if resolved == resolved_root or resolved.is_relative_to(resolved_root)
-            ),
-            None,
-        )
-        if match is None:
-            return False  # resolves outside every watch root
-        original_root, resolved_root = match
-
-        # Align the per-component walk on whichever root form prefixes the event
-        # path. The resolved root never has symlinks in it; the original root may
-        # *be* a (trusted) symlinked directory, so we never lstat the root
+        # Try every configured root whose resolved form contains the event path,
+        # aligning the per-component walk on whichever root form (original or
+        # resolved) the event path is expressed under. Iterating *all* matching
+        # roots — not just the first — matters for aliased/overlapping roots
+        # (e.g. two symlinked roots resolving to the same directory): the event
+        # may align with only the second one, regardless of root order. The
+        # resolved root never has symlinks in it; the original root may *be* a
+        # (trusted) symlinked directory, so the walk never lstats the root
         # itself — only the components below it.
-        for base in (original_root, resolved_root):
-            try:
-                relative = path.relative_to(base)
-            except ValueError:
-                continue
-            current = base
-            parts = relative.parts
-            for index, part in enumerate(parts):
-                current = current / part
+        for original_root, resolved_root in roots:
+            if not (resolved == resolved_root or resolved.is_relative_to(resolved_root)):
+                continue  # this root doesn't contain the event path
+            for base in (original_root, resolved_root):
                 try:
-                    if stat.S_ISLNK(os.lstat(current).st_mode):
-                        return False
-                except FileNotFoundError:
-                    # A missing *final* component is benign only for a DELETED
-                    # event (the leaf is expected to be gone and nothing live is
-                    # read downstream). For a live CREATED/MODIFIED/MOVED event a
-                    # vanished leaf — or any vanished intermediate component —
-                    # can't be proven symlink-free: the pathname could be
-                    # recreated as an out-of-root symlink before the watch loop
-                    # opens it. Fail closed in those cases.
-                    return allow_missing_leaf and index == len(parts) - 1
-                except OSError:
-                    return False  # fail closed on any other stat error
-            return True
+                    relative = path.relative_to(base)
+                except ValueError:
+                    continue
+                return self._components_symlink_free(
+                    base, relative, allow_missing_leaf=allow_missing_leaf
+                )
 
-        # The event path is under neither root form lexically — cannot prove it
-        # is symlink-free, so refuse rather than allow unchecked.
+        # No configured root both contains and lexically aligns with the event
+        # path — cannot prove it is symlink-free, so refuse rather than allow.
         return False
+
+    def _components_symlink_free(
+        self, base: Path, relative: Path, *, allow_missing_leaf: bool
+    ) -> bool:
+        """Return True if no component of *relative* under *base* is a symlink.
+
+        Walks ``base / part`` for each component of *relative*, ``lstat``-ing it.
+        A symlink anywhere → False. A missing *final* component is tolerated only
+        when ``allow_missing_leaf`` is set (a DELETED event); a missing
+        intermediate component, or a missing leaf on a live event, fails closed
+        (the name could be recreated as an out-of-root symlink before the watch
+        loop opens it). Any other ``OSError`` fails closed.
+        """
+        current = base
+        parts = relative.parts
+        for index, part in enumerate(parts):
+            current = current / part
+            try:
+                if stat.S_ISLNK(os.lstat(current).st_mode):
+                    return False
+            except FileNotFoundError:
+                return allow_missing_leaf and index == len(parts) - 1
+            except OSError:
+                return False  # fail closed on any other stat error
+        return True
 
     def _should_process(self, path_key: str) -> bool:
         """Check if an event for this path should be processed based on debounce timing.

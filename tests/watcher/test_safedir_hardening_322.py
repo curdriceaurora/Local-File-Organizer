@@ -380,6 +380,32 @@ def test_debounced_event_is_dropped(tmp_path: Path) -> None:
     assert queue.size == 1
 
 
+@posix_only
+def test_aliased_roots_event_via_second_alias_processes(tmp_path: Path) -> None:
+    """Two symlinked watch roots resolving to the same real directory; an event
+    reported via the *second* alias must still align (regardless of root order),
+    not be dropped because the first matching root was selected."""
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "doc.txt").write_text("content")
+    alias1 = tmp_path / "a1"
+    alias2 = tmp_path / "a2"
+    try:
+        alias1.symlink_to(real)
+        alias2.symlink_to(real)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    config = WatcherConfig(
+        watch_directories=[alias1, alias2], debounce_seconds=0.0, exclude_patterns=[]
+    )
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    handler.on_created(FileCreatedEvent(src_path=str(alias2 / "doc.txt")))
+
+    assert queue.size == 1
+
+
 def test_missing_component_ends_walk(tmp_path: Path) -> None:
     """A DELETED/move-away event whose path no longer exists ends the
     per-component walk at the missing component and is allowed through (it
