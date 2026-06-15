@@ -148,12 +148,26 @@ class FileMonitor:
             if path_key in self._watches:
                 raise ValueError(f"Directory already watched: {path}")
 
+            # Keep config.watch_directories in sync whether running or not: the
+            # handler's symlink/containment guard (WP-2.3, #1228) derives the
+            # allowed roots from config, so a directory added mid-run must be
+            # reflected there or its events would be skipped as out-of-root. It
+            # also means a later restart re-watches the dynamically-added dir.
+            # Update config *before* scheduling so there is no race window where
+            # the observer emits events for the new directory before the guard
+            # can see it; roll back if scheduling fails.
+            added_to_config = False
+            if path not in self.config.watch_directories:
+                self.config.watch_directories.append(path)
+                added_to_config = True
+
             if self._running and self._observer is not None:
-                self._schedule_directory(path, recursive)
-            else:
-                # If not running, just add to config for when start() is called
-                if path not in self.config.watch_directories:
-                    self.config.watch_directories.append(path)
+                try:
+                    self._schedule_directory(path, recursive)
+                except (FileNotFoundError, OSError):
+                    if added_to_config:
+                        self.config.watch_directories.remove(path)
+                    raise
 
             logger.info("Added watch directory: %s (recursive=%s)", path, recursive)
 
