@@ -223,6 +223,10 @@ class PipelineOrchestrator:
         # ``stage.process()`` would race. Draining first makes the stage-close
         # loop safe.
         self._watch_futures: set[Future[Any]] = set()
+        # Done-callbacks discard futures from worker threads while stop()
+        # snapshots the set, so every add/discard/snapshot must hold this lock
+        # to avoid "set changed size during iteration" (#1285 review).
+        self._watch_futures_lock = threading.Lock()
         # Guards the stage-close loop so a repeated stop() does not double-close
         # stage resources. Reset on start() for a reused orchestrator.
         self._stages_closed = False
@@ -324,8 +328,10 @@ class PipelineOrchestrator:
             # that is genuinely still in flight. The bounded wait mirrors the
             # watch-thread join so a stuck/long worker cannot hang shutdown.
             safe_to_close = True
-            if self._watch_futures:
-                _, not_done = futures_wait(set(self._watch_futures), timeout=5.0)
+            with self._watch_futures_lock:
+                pending = set(self._watch_futures)
+            if pending:
+                _, not_done = futures_wait(pending, timeout=5.0)
                 if not_done:
                     # A worker is still running past the timeout. Closing a
                     # stage's fd now could pull it out from under that worker, so
@@ -362,6 +368,15 @@ class PipelineOrchestrator:
             if close_fn is not None:
                 with contextlib.suppress(Exception):
                     close_fn()
+
+    def _on_watch_future_done(self, future: Future[Any]) -> None:
+        """Discard a completed watch-mode future under the lock.
+
+        Runs from executor worker threads, so it must hold the same lock that
+        guards ``stop()``'s snapshot and ``_watch_loop``'s add (#1285 review).
+        """
+        with self._watch_futures_lock:
+            self._watch_futures.discard(future)
 
     # ------------------------------------------------------------------
     # Processing
@@ -873,8 +888,12 @@ class PipelineOrchestrator:
                         # Track the future so stop() can drain in-flight work
                         # before closing stage-owned resources.
                         future = self._executor.submit(self.process_file, event.path)
-                        self._watch_futures.add(future)
-                        future.add_done_callback(self._watch_futures.discard)
+                        with self._watch_futures_lock:
+                            self._watch_futures.add(future)
+                        # Register the discard outside the lock: if the future
+                        # already completed, the callback fires inline here and
+                        # would otherwise re-enter the non-reentrant lock.
+                        future.add_done_callback(self._on_watch_future_done)
                     except (RuntimeError, OSError):
                         logger.exception("Error processing %s", event.path)
 

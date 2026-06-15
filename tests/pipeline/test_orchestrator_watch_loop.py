@@ -253,7 +253,7 @@ class TestWatchLoopExecutor:
 
         future = orch._executor.submit(record_work)
         orch._watch_futures.add(future)
-        future.add_done_callback(orch._watch_futures.discard)
+        future.add_done_callback(orch._on_watch_future_done)
 
         orch.stop()
 
@@ -366,3 +366,21 @@ class TestWatchLoopExecutor:
         # Re-checked on both calls; never closed under the live worker.
         assert mock_wait.call_count == 2
         assert closed == []
+
+    def test_on_watch_future_done_discards_under_lock(self):
+        """The done-callback removes the future via the lock-guarded path.
+
+        Regression for #1285 review: _watch_futures is mutated from executor
+        threads, so add/discard/snapshot must share a lock. Verify the callback
+        discards the tracked future (and is a no-op for an unknown one).
+        """
+        orch = self._make_orchestrator()
+        tracked = MagicMock()
+        with orch._watch_futures_lock:
+            orch._watch_futures.add(tracked)
+
+        orch._on_watch_future_done(tracked)
+        assert tracked not in orch._watch_futures
+
+        # Discarding a future that is not tracked is a safe no-op.
+        orch._on_watch_future_done(MagicMock())
