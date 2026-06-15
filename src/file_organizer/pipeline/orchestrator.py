@@ -223,6 +223,9 @@ class PipelineOrchestrator:
         # ``stage.process()`` would race. Draining first makes the stage-close
         # loop safe.
         self._watch_futures: set[Future[Any]] = set()
+        # Guards the stage-close loop so a repeated stop() does not double-close
+        # stage resources. Reset on start() for a reused orchestrator.
+        self._stages_closed = False
 
     # ------------------------------------------------------------------
     # Stage management
@@ -269,6 +272,8 @@ class PipelineOrchestrator:
                 raise RuntimeError("Pipeline is already running")
 
             self._running = True
+            # Fresh lifecycle: stages may be (re)opened, so allow close again.
+            self._stages_closed = False
 
             # Start file monitor if watch config is provided
             if self.config.watch_config is not None:
@@ -287,63 +292,77 @@ class PipelineOrchestrator:
         and resets pipeline state. Safe to call even if not running.
         """
         with self._lock:
-            if not self._running:
-                return
+            if self._running:
+                self._running = False
 
-            self._running = False
+                # Stop file monitor
+                if self._monitor is not None:
+                    self._monitor.stop()
+                    self._monitor = None
 
-            # Stop file monitor
-            if self._monitor is not None:
-                self._monitor.stop()
-                self._monitor = None
+                # Wait for watch thread
+                if self._watch_thread is not None:
+                    self._watch_thread.join(timeout=5.0)
+                    self._watch_thread = None
 
-            # Wait for watch thread
-            if self._watch_thread is not None:
-                self._watch_thread.join(timeout=5.0)
-                self._watch_thread = None
+                # Clean up executor
+                self._executor.shutdown(wait=False)
 
-            # Clean up executor
-            self._executor.shutdown(wait=False)
+                # Clean up processors
+                self.processor_pool.cleanup()
 
-            # Clean up processors
-            self.processor_pool.cleanup()
+                # Drain in-flight watch-mode workers before touching stage-owned
+                # resources. ``shutdown(wait=False)`` above does not wait for
+                # already-submitted ``process_file`` work, so a worker may still
+                # be inside ``stage.process()``; closing a stage's fd underneath
+                # it would race (#1285 review). Bounded wait mirrors the
+                # watch-thread join so a stuck/long worker cannot hang shutdown.
+                drained = True
+                if self._watch_futures:
+                    _, not_done = futures_wait(set(self._watch_futures), timeout=5.0)
+                    if not_done:
+                        # A worker is still running past the timeout. Closing a
+                        # stage's fd now could pull it out from under that worker
+                        # (#1285 review), so we skip the close loop entirely
+                        # rather than race; any held fd is reclaimed at process
+                        # exit. The alternative (unbounded wait) risks hanging
+                        # stop() on a stuck model-backed worker.
+                        drained = False
+                        logger.warning(
+                            "%d watch worker(s) still running after %.1fs drain timeout; "
+                            "skipping stage close to avoid a closed-fd race",
+                            len(not_done),
+                            5.0,
+                        )
 
-            # Drain in-flight watch-mode workers before touching stage-owned
-            # resources. ``shutdown(wait=False)`` above does not wait for
-            # already-submitted ``process_file`` work, so a worker may still be
-            # inside ``stage.process()``; closing a stage's fd underneath it
-            # would race (#1285 review). Bounded wait mirrors the watch-thread
-            # join timeout so a stuck/long worker cannot hang shutdown forever.
-            drained = True
-            if self._watch_futures:
-                _, not_done = futures_wait(set(self._watch_futures), timeout=5.0)
-                if not_done:
-                    # A worker is still running past the timeout. Closing a
-                    # stage's fd now could pull it out from under that worker
-                    # (#1285 review), so we skip the close loop entirely rather
-                    # than race; any held fd is reclaimed at process exit. The
-                    # alternative (unbounded wait) risks hanging stop() on a
-                    # stuck model-backed worker.
-                    drained = False
-                    logger.warning(
-                        "%d watch worker(s) still running after %.1fs drain timeout; "
-                        "skipping stage close to avoid a closed-fd race",
-                        len(not_done),
-                        5.0,
-                    )
+                if drained:
+                    self._close_stages()
 
-            # Release resources held by stages (e.g. SafeDir file descriptors).
-            # WP-4.3 (#1233): faithful port of the fork's D2 stage-close loop.
-            # The ``getattr`` guard makes this a safe no-op for stages that do
-            # not define ``close()`` (this repo's stages currently hold no fds).
-            if drained:
-                for stage in self._stages:
-                    close_fn = getattr(stage, "close", None)
-                    if close_fn is not None:
-                        with contextlib.suppress(Exception):
-                            close_fn()
+                logger.info("Pipeline stopped")
+            else:
+                # Batch-only callers (``process_batch`` without ``start()``)
+                # never set ``_running``, but may still hold stage resources
+                # (e.g. SafeDir fds) that need releasing (#1285 review). No
+                # watch workers exist on this path, so there is nothing to
+                # drain — close stage resources directly.
+                self._close_stages()
 
-            logger.info("Pipeline stopped")
+    def _close_stages(self) -> None:
+        """Release resources held by stages (e.g. SafeDir file descriptors).
+
+        WP-4.3 (#1233): the ``getattr`` guard makes this a safe no-op for stages
+        that do not define ``close()`` (this repo's stages currently hold no
+        fds). Idempotent via ``_stages_closed`` so a repeated ``stop()`` does
+        not double-close; ``start()`` resets the guard for a reused orchestrator.
+        """
+        if self._stages_closed:
+            return
+        self._stages_closed = True
+        for stage in self._stages:
+            close_fn = getattr(stage, "close", None)
+            if close_fn is not None:
+                with contextlib.suppress(Exception):
+                    close_fn()
 
     # ------------------------------------------------------------------
     # Processing

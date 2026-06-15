@@ -298,3 +298,33 @@ class TestWatchLoopExecutor:
         mock_wait.assert_called_once()
         # Stage close was skipped because the worker did not drain in time.
         assert closed == []
+
+    def test_stop_closes_stages_for_batch_only_callers(self):
+        """stop() closes stage resources even when start() was never called.
+
+        Regression for #1285 review: batch-mode callers (process_batch without
+        start()) leave _running False, so a stop() that returned early would
+        leak stage-owned fds. The close loop must run on this path too.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        # No start(): batch-only lifecycle, _running stays False.
+        assert orch._running is False
+        orch._stages = [_ClosableStage()]
+
+        orch.stop()
+        assert closed == ["close"]
+
+        # Idempotent: a second stop() does not double-close.
+        orch.stop()
+        assert closed == ["close"]
