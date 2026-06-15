@@ -7,12 +7,13 @@ via :class:`~file_organizer.interfaces.PipelineStage`.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 import threading
 import time
 from collections.abc import Sequence
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,10 +31,11 @@ from .processor_pool import (
     ProcessorResult,
     normalize_processor_result,
 )
+from .resource_aware_executor import BUFFER_KEY as _BUFFER_KEY
+from .resource_aware_executor import ResourceAwareExecutor
 from .router import FileRouter, ProcessorType
 
 logger = logging.getLogger(__name__)
-_BUFFER_KEY = "pipeline.buffer"
 
 
 @dataclass(frozen=True)
@@ -191,6 +193,21 @@ class PipelineOrchestrator:
         self._resource_monitor = resource_monitor or ResourceMonitor()
         self._memory_pressure_threshold_percent = memory_pressure_threshold_percent
 
+        # D2 seam (WP-4.3, #1233): prefetch + I/O-compute overlap moved into
+        # ``ResourceAwareExecutor``. The orchestrator builds it from the same
+        # resource collaborators it holds so the prefetch path shares one
+        # buffer pool, memory limiter, and resource monitor with the
+        # orchestrator's own adaptive-batching helpers (which existing tests
+        # exercise directly via ``self._resource_monitor`` / ``self._buffer_pool``).
+        self._resource_executor = ResourceAwareExecutor(
+            prefetch_depth=prefetch_depth,
+            prefetch_stages=prefetch_stages,
+            memory_limiter=memory_limiter,
+            buffer_pool=buffer_pool,
+            resource_monitor=self._resource_monitor,
+            memory_pressure_threshold_percent=memory_pressure_threshold_percent,
+        )
+
         self._running = False
         self._lock = threading.Lock()
         self._monitor: Any = None
@@ -283,6 +300,16 @@ class PipelineOrchestrator:
             # Clean up processors
             self.processor_pool.cleanup()
 
+            # Release resources held by stages (e.g. SafeDir file descriptors).
+            # WP-4.3 (#1233): faithful port of the fork's D2 stage-close loop.
+            # The ``getattr`` guard makes this a safe no-op for stages that do
+            # not define ``close()`` (this repo's stages currently hold no fds).
+            for stage in self._stages:
+                close_fn = getattr(stage, "close", None)
+                if close_fn is not None:
+                    with contextlib.suppress(Exception):
+                        close_fn()
+
             logger.info("Pipeline stopped")
 
     # ------------------------------------------------------------------
@@ -341,6 +368,8 @@ class PipelineOrchestrator:
             ),
         )
 
+        results: list[ProcessingResult] = []
+
         if stages and self._prefetch_depth > 0 and self._prefetch_stages > 0 and len(files) > 1:
             # Keep prefetch behavior deterministic (Issue #713 contracts) while
             # still applying proactive memory feedback to the shared buffer pool.
@@ -348,7 +377,6 @@ class PipelineOrchestrator:
             self._rebalance_buffer_pool()
             return results
 
-        results: list[ProcessingResult] = []
         index = 0
         while index < len(files):
             upper = min(index + batch_size, len(files))
@@ -552,30 +580,19 @@ class PipelineOrchestrator:
     def _process_batch_prefetch(
         self, files: list[Path], stages: list[PipelineStage]
     ) -> list[ProcessingResult]:
-        """Process a batch with I/O-compute overlap via a prefetch queue.
+        """Process a batch with I/O-compute overlap via the resource executor.
 
-        Splits *stages* at ``effective_prefetch_stages`` (capped at 1 for
-        thread-safety — shared components such as ``ProcessorPool`` are not
-        safe for concurrent initialisation): the I/O stages are submitted to
-        a dedicated :class:`~concurrent.futures.ThreadPoolExecutor` for
-        upcoming files while the compute stages run on the calling thread for
-        the current file.
+        The prefetch + I/O-compute-overlap loop moved to
+        :meth:`ResourceAwareExecutor.run_prefetched_batch` in D2
+        (WP-4.3, #1233). This thin wrapper preserves the orchestrator's
+        historical ``process_batch`` entry point and contract while
+        delegating the actual prefetch mechanics to the executor.
 
-        At most ``self._prefetch_depth`` I/O futures are outstanding at
-        any time.  If a ``memory_limiter`` is configured, no new futures
-        are opened when ``limiter.check()`` returns *False*.
-
-        An error in a prefetched file's I/O stages does not crash the
-        batch; a failed :class:`~file_organizer.interfaces.StageContext`
-        is returned and the compute stages are still attempted (they will
-        short-circuit on ``context.failed``).
-
-        Per-file ``ProcessingResult.duration_ms`` is measured from the
-        moment the I/O future is *submitted* (not when it completes), so
-        the reported wall-clock time covers prefetched I/O latency as well
-        as compute time.  For files that fall through to the sequential
-        inline path (no outstanding future), timing starts just before
-        ``_run_io`` is called.
+        The executor is driven with the orchestrator's collaborators
+        (``_run_stages``, ``_make_context``, ``_finalize_result``) so
+        stats accounting, dry-run derivation, and error semantics are
+        unchanged. The orchestrator's resolved buffer pool is shared with
+        the executor first so both sides acquire/release from one pool.
 
         Args:
             files: Ordered list of file paths to process.
@@ -585,84 +602,17 @@ class PipelineOrchestrator:
             List of :class:`ProcessingResult` instances in the same
             order as *files*.
         """
-        # Cap at 1: stages beyond the first (e.g. AnalyzerStage) rely on
-        # shared components (ProcessorPool) that are not thread-safe for
-        # concurrent initialisation.
-        effective_prefetch_stages = min(self._prefetch_stages, 1)
-        if self._prefetch_stages > 1:
-            logger.warning(
-                "prefetch_stages=%d is not fully supported; "
-                "capping effective prefetch stages to %d for thread-safety",
-                self._prefetch_stages,
-                effective_prefetch_stages,
-            )
-        io_stages = stages[:effective_prefetch_stages]
-        compute_stages = stages[effective_prefetch_stages:]
-
-        def _run_io(idx: int) -> tuple[StageContext, bytearray | None]:
-            """Execute the I/O-bound prefetch stages for ``files[idx]`` and return (context, buffer)."""
-            file_path = files[idx]
-            buffer = self._acquire_buffer(file_path)
-            try:
-                ctx = self._make_context(file_path)
-                if buffer is not None:
-                    ctx.extra[_BUFFER_KEY] = buffer
-                io_ctx = self._run_stages(ctx, io_stages)
-                if buffer is not None:
-                    io_ctx.extra[_BUFFER_KEY] = buffer
-                return io_ctx, buffer
-            except Exception:  # Intentional catch-all: ensures buffer cleanup on any stage error
-                self._release_buffer(file_path, buffer)
-                raise
-
-        futures: dict[int, tuple[Future[tuple[StageContext, bytearray | None]], float]] = {}
-        results: list[ProcessingResult] = []
-
-        with ThreadPoolExecutor(max_workers=self._prefetch_depth) as io_exec:
-            # Prime the queue with the first prefetch_depth files.
-            for i in range(min(self._prefetch_depth, len(files))):
-                if self._memory_limiter is not None and not self._memory_limiter.check():
-                    logger.warning("Prefetch depth capped at %d due to memory limit", i)
-                    break
-                futures[i] = (io_exec.submit(_run_io, i), time.monotonic())
-
-            for i in range(len(files)):
-                # Enqueue the next lookahead file as we consume one slot.
-                next_i = i + self._prefetch_depth
-                if next_i < len(files) and next_i not in futures:
-                    if self._memory_limiter is None or self._memory_limiter.check():
-                        futures[next_i] = (io_exec.submit(_run_io, next_i), time.monotonic())
-
-                # Retrieve the prefetched I/O context (or compute inline).
-                if i in futures:
-                    future, start_time = futures.pop(i)
-                    try:
-                        ctx, buffer = future.result()
-                    except (
-                        Exception
-                    ) as exc:  # Intentional catch-all: future can raise any stage error
-                        logger.warning(
-                            "Prefetch future failed for %s: %s",
-                            files[i],
-                            exc,
-                            exc_info=True,
-                        )
-                        ctx = self._make_context(files[i])
-                        ctx.error = str(exc)
-                        buffer = None
-                else:
-                    start_time = time.monotonic()
-                    ctx, buffer = _run_io(i)
-
-                # Run compute stages on the calling thread.
-                try:
-                    ctx = self._run_stages(ctx, compute_stages)
-                    results.append(self._finalize_result(ctx, start_time))
-                finally:
-                    self._release_buffer(files[i], buffer)
-                    ctx.extra.pop(_BUFFER_KEY, None)
-
-        return results
+        # Share the orchestrator's (possibly lazily-built) buffer pool with
+        # the executor so prefetch acquire/release hits the same pool the
+        # adaptive-batching path and existing tests inspect.
+        self._resource_executor.buffer_pool = self.buffer_pool
+        return self._resource_executor.run_prefetched_batch(
+            files=files,
+            stages=stages,
+            run_stages=self._run_stages,
+            make_context=self._make_context,
+            finalize_result=self._finalize_result,
+        )
 
     # ------------------------------------------------------------------
     # Legacy processing (backward compatible)
