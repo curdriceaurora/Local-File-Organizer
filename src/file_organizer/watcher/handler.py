@@ -235,9 +235,11 @@ class FileEventHandler(FileSystemEventHandler):
 
         The walk is anchored on whichever root form (original or resolved) the
         event path is expressed under, so it works for events under a symlinked
-        watch root *and* watchdog's canonical-prefixed paths. If the path cannot
-        be aligned to either form the check **fails closed** rather than allowing
-        the path unchecked (a non-canonical prefix must not bypass the walk).
+        watch root *and* watchdog's canonical-prefixed paths. **Every** configured
+        root that contains the path is tried (not just the first match): with
+        overlapping roots, a symlink that is an untrusted ancestor under a broad
+        root may itself be an explicitly-configured, trusted watch root. The check
+        **fails closed** only when no candidate root yields a symlink-free walk.
 
         When the handler has **no** watch directories configured the method
         returns True (no boundary to enforce) so a standalone handler keeps
@@ -271,17 +273,23 @@ class FileEventHandler(FileSystemEventHandler):
         for original_root, resolved_root in roots:
             if not (resolved == resolved_root or resolved.is_relative_to(resolved_root)):
                 continue  # this root doesn't contain the event path
-            for base in (original_root, resolved_root):
+            for base in dict.fromkeys((original_root, resolved_root)):
                 try:
                     relative = path.relative_to(base)
                 except ValueError:
                     continue
-                return self._components_symlink_free(
+                if self._components_symlink_free(
                     base, relative, allow_missing_leaf=allow_missing_leaf
-                )
+                ):
+                    return True
+                # The walk failed for this candidate, but another configured
+                # root may legitimately contain the path — e.g. a symlink that
+                # looks like an untrusted ancestor under a broad root is itself
+                # an explicitly-configured (trusted) watch root, where it is the
+                # boundary and never lstat-ed. Keep trying the remaining roots.
 
-        # No configured root both contains and lexically aligns with the event
-        # path — cannot prove it is symlink-free, so refuse rather than allow.
+        # No configured root both contains the path and yields a symlink-free
+        # walk — refuse rather than allow.
         return False
 
     def _components_symlink_free(

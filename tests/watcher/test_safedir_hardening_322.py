@@ -406,6 +406,32 @@ def test_aliased_roots_event_via_second_alias_processes(tmp_path: Path) -> None:
     assert queue.size == 1
 
 
+@posix_only
+def test_overlapping_roots_symlink_is_trusted_when_configured(tmp_path: Path) -> None:
+    """With a broad root *and* a symlinked subdir both configured as watch roots,
+    an event under the symlink is allowed: the symlink is an untrusted ancestor
+    under the broad root, but it is the trusted boundary of its own configured
+    root. The walk must try every candidate root, not just the first."""
+    root = tmp_path / "root"
+    real = root / "real"
+    real.mkdir(parents=True)
+    (real / "doc.txt").write_text("content")
+    try:
+        (root / "link").symlink_to(real)
+    except OSError:
+        pytest.skip("symlink creation not supported")
+    # Broad root first, the symlinked subdir second — order must not matter.
+    config = WatcherConfig(
+        watch_directories=[root, root / "link"], debounce_seconds=0.0, exclude_patterns=[]
+    )
+    queue = EventQueue()
+    handler = FileEventHandler(config, queue)
+
+    handler.on_created(FileCreatedEvent(src_path=str(root / "link" / "doc.txt")))
+
+    assert queue.size == 1
+
+
 def test_missing_component_ends_walk(tmp_path: Path) -> None:
     """A DELETED/move-away event whose path no longer exists ends the
     per-component walk at the missing component and is allowed through (it
