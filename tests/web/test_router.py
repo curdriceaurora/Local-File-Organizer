@@ -94,19 +94,24 @@ def _mounted_app_paths() -> list[str]:
 
 
 class TestSubRouterInclusion:
-    """Verify that sub-routers are included (and reachable) under ``/ui``."""
+    """Verify that sub-routers are included (and reachable) under ``/ui``.
+
+    Asserts exact base-route membership (not substring) so an unrelated path
+    like ``/ui/files-legacy`` can't satisfy the guard (Copilot/CodeRabbit #1283).
+    Each sub-router exposes a concrete base route at ``/ui/<name>``.
+    """
 
     def test_files_router_routes_present(self):
-        assert any("/ui/files" in p for p in _mounted_app_paths())
+        assert "/ui/files" in set(_mounted_app_paths())
 
     def test_organize_router_routes_present(self):
-        assert any("/ui/organize" in p for p in _mounted_app_paths())
+        assert "/ui/organize" in set(_mounted_app_paths())
 
     def test_profile_router_routes_present(self):
-        assert any("/ui/profile" in p for p in _mounted_app_paths())
+        assert "/ui/profile" in set(_mounted_app_paths())
 
     def test_settings_router_routes_present(self):
-        assert any("/ui/settings" in p for p in _mounted_app_paths())
+        assert "/ui/settings" in set(_mounted_app_paths())
 
     def test_marketplace_router_routes_present(self):
-        assert any("/ui/marketplace" in p for p in _mounted_app_paths())
+        assert "/ui/marketplace" in set(_mounted_app_paths())
