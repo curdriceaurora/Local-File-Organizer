@@ -110,6 +110,16 @@ def organize(
     ),
 ) -> None:
     """Organize files in a directory using AI models."""
+    from file_organizer.cli.path_validation import resolve_cli_path, validate_pair
+
+    # Resolve + sanity-check the path arguments at the CLI boundary before any
+    # filesystem work: input must be an existing directory; output may not
+    # exist yet but, if it does, must be a directory. validate_pair rejects
+    # identical / nested input-output footguns (#1269).
+    input_dir = resolve_cli_path(input_dir, must_exist=True, must_be_dir=True, reject_symlink=True)
+    output_dir = resolve_cli_path(output_dir, must_exist=False, must_be_dir=True)
+    validate_pair(input_dir, output_dir)
+
     # Check if setup has been completed
     _check_setup_completed()
 
@@ -175,6 +185,13 @@ def preview(
     ),
 ) -> None:
     """Preview how files would be organized (dry-run)."""
+    from file_organizer.cli.path_validation import resolve_cli_path
+
+    # Resolve + validate the input directory at the CLI boundary. preview
+    # reads and reports only (dry-run), so input==output is intentional and
+    # validate_pair is not applied (#1269).
+    input_dir = resolve_cli_path(input_dir, must_exist=True, must_be_dir=True, reject_symlink=True)
+
     # Check if setup has been completed
     _check_setup_completed()
 

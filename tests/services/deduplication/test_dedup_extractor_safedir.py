@@ -84,6 +84,96 @@ class TestTxtSafeDir:
         assert DocumentExtractor().extract_text(victim) == ""
 
 
+class TestAnchoredScanRoot:
+    """Anchored traversal (scan_root) closes the nested-ancestor TOCTOU (#1269)."""
+
+    def test_reads_nested_file_with_scan_root(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        nested = root / "a" / "b"
+        nested.mkdir(parents=True)
+        (nested / "doc.txt").write_text("anchored body")
+        assert "anchored body" in DocumentExtractor().extract_text(
+            nested / "doc.txt", scan_root=root
+        )
+
+    def test_path_outside_scan_root_is_refused(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("outside content")
+        # relative_to(root) fails for a path outside the root → refused ("").
+        assert DocumentExtractor().extract_text(outside / "doc.txt", scan_root=root) == ""
+
+    def test_outside_root_refused_on_windows_before_legacy_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Even where SafeDir is unavailable (simulated Windows), a path outside
+        scan_root is refused before the legacy open() fallback — the boundary is
+        enforced on every platform (#1269)."""
+        import file_organizer.services.deduplication.extractor as ext
+
+        monkeypatch.setattr(ext.sys, "platform", "win32")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("outside content")
+        # Out-of-root: refused (relative_to ValueError) → "", not read via open().
+        assert DocumentExtractor().extract_text(outside / "doc.txt", scan_root=root) == ""
+
+        # In-root file is still readable via the legacy fallback on Windows.
+        (root / "doc.txt").write_text("in-root content")
+        assert "in-root content" in DocumentExtractor().extract_text(
+            root / "doc.txt", scan_root=root
+        )
+
+    @posix_only
+    def test_symlinked_ancestor_refused_on_windows_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Under the (simulated) Windows legacy fallback, a symlinked *ancestor*
+        under scan_root is still refused via resolved-path containment — the
+        lexical check alone would let open() follow the reparse point (#1270)."""
+        import file_organizer.services.deduplication.extractor as ext
+
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("attacker secret")
+        root = tmp_path / "root"
+        root.mkdir()
+        try:
+            (root / "link").symlink_to(outside)  # symlinked ancestor under root
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        monkeypatch.setattr(ext.sys, "platform", "win32")
+        victim = root / "link" / "doc.txt"
+        # Lexically victim is under root, but it resolves outside → refused ("").
+        assert DocumentExtractor().extract_text(victim, scan_root=root) == ""
+
+    @posix_only
+    def test_symlinked_ancestor_is_refused(self, tmp_path: Path) -> None:
+        """A symlinked *intermediate ancestor* under the scan root is refused by
+        anchored traversal — the parent-rooted path would have followed it."""
+        # Attacker tree the symlink points at.
+        outside = tmp_path / "outside"
+        (outside / "a" / "b").mkdir(parents=True)
+        (outside / "a" / "b" / "doc.txt").write_text("attacker secret")
+        # Trusted scan root with a symlinked ancestor 'a' -> outside/a.
+        root = tmp_path / "root"
+        root.mkdir()
+        try:
+            (root / "a").symlink_to(outside / "a")
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        victim = root / "a" / "b" / "doc.txt"
+        # Anchored traversal opens 'a' with O_NOFOLLOW → SymlinkRejected → "".
+        assert DocumentExtractor().extract_text(victim, scan_root=root) == ""
+
+
 class TestOdtSafeDir:
     @staticmethod
     def _write_real_odt(path: Path, body: str) -> None:

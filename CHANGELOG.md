@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Runtime adoption of safety primitives (WP-1.x/WP-2.1 follow-up, #1269)** — three merged-but-dormant hardening primitives are now active at production boundaries:
+  - **Credential-redaction installed at startup** — `utils.log_redact.install_on_root()` is now invoked from the CLI callback (`cli.main`), API logging setup (`api.main.configure_logging`), and the desktop launcher (`desktop.app.launch`), so stdlib + loguru output is scrubbed of token/key shapes process-wide instead of relying on each caller to install the filter. Tests assert redaction through the real CLI/API/desktop startup paths.
+  - **CLI path validation wired in** — `cli.organize.organize`/`preview` now route their path arguments through `cli.path_validation.resolve_cli_path` (missing / non-directory / symlink-loop → `typer.BadParameter`, exit 2) and `validate_pair` (identical, output-inside-input, input-inside-output rejected) before any filesystem work. The input root is resolved with `reject_symlink=True` so a symlinked input directory is refused rather than canonicalized to its target (which would bypass the `safe_walk` root-symlink rejection).
+  - **Dedup extractor anchored traversal** — `DocumentDeduplicator.find_duplicates`/`compare_documents` → `DocumentExtractor.extract_batch`/`extract_text` → `_open_binary` accept an optional trusted `scan_root`; when supplied, reads use `SafeDir.open_anchored_reader` so a symlinked *ancestor* swapped in between enumeration and extraction is refused (`..`/out-of-root paths rejected before any legacy fallback), closing the nested-ancestor TOCTOU the parent-rooted path left open (#286). `scan_root=None` preserves the existing parent-rooted leaf-safe behaviour.
+
 ### Fixed
 
 - **Test mocks for the `scan_root` read-path contract (WP-2.1 follow-up)** — integration/parallel test doubles that replace `TextProcessor.process_file` (`test_organize_text_workflow`, `test_dedupe_flow`, `test_parallel_execution`, `test_undo_workflow`) now accept the keyword-only `scan_root` argument the dispatcher forwards since the SafeDir text-processor hardening (#1259). Previously these mocks raised `TypeError: got an unexpected keyword argument 'scan_root'`, so every file was marked failed — failing the full sharded `main` suite (and silently degrading `test_undo_workflow`, whose restore-state assertions passed trivially when nothing organized). No production-code change.

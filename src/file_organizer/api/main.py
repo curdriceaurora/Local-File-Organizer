@@ -75,6 +75,12 @@ def configure_logging(settings: ApiSettings) -> None:
     if log_file is not None:
         logger.add(log_file, level=settings.log_level, rotation="10 MB", retention="14 days")
 
+    # Install the credential-redacting filter on the stdlib factory + loguru
+    # so API request/error logs can't emit token/key shapes (#1269).
+    from file_organizer.utils.log_redact import install_on_root
+
+    install_on_root()
+
     _LOGGING_CONFIGURED = True
 
 
