@@ -1555,7 +1555,7 @@ class TestConfigManager:
         mgr = ConfigManager(config_dir=tmp_path)
         cfg = AppConfig(
             profile_name="test",
-            version="2.0",
+            version="1.0",
             default_methodology="para",
             setup_completed=True,
         )
@@ -1563,7 +1563,7 @@ class TestConfigManager:
 
         loaded = mgr.load("test")
 
-        assert loaded.version == "2.0"
+        assert loaded.version == "1.0"
         assert loaded.default_methodology == "para"
         assert loaded.setup_completed is True
 
