@@ -12,7 +12,7 @@ from file_organizer.api.auth_store import (
     build_token_store,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestInMemoryTokenStore:
@@ -63,7 +63,7 @@ class TestRedisTokenStore:
         mock_redis = MagicMock()
         store = RedisTokenStore(redis=mock_redis)
         store.store_refresh("jti1", "user1", 3600)
-        mock_redis.setex.assert_called_once()
+        mock_redis.set.assert_called_once_with("auth:refresh:jti1", "user1", ex=3600)
 
     def test_is_refresh_active(self) -> None:
         mock_redis = MagicMock()
@@ -87,7 +87,7 @@ class TestRedisTokenStore:
         mock_redis = MagicMock()
         store = RedisTokenStore(redis=mock_redis)
         store.revoke_access("jti_a", 300)
-        mock_redis.setex.assert_called_once()
+        mock_redis.set.assert_called_once_with("auth:revoked:jti_a", "1", ex=300)
 
     def test_is_access_revoked(self) -> None:
         mock_redis = MagicMock()
