@@ -277,6 +277,12 @@ def launch(
         ImportError: If ``pywebview`` is not installed.  Install it with
             ``pip install 'file-organizer[desktop]'``.
     """
+    # Install the credential-redacting log filter before any desktop log
+    # output (the API server thread also installs it; the call is idempotent).
+    from file_organizer.utils.log_redact import install_on_root
+
+    install_on_root()
+
     try:
         import webview  # type: ignore[import-untyped]
     except ImportError as exc:

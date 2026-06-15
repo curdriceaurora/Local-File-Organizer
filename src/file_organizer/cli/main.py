@@ -71,6 +71,13 @@ def main_callback(
     ),
 ) -> None:
     """Global options applied to all commands."""
+    # Install the credential-redacting log filter once, at the CLI boundary,
+    # so every command's stdlib + loguru output is scrubbed of token/key
+    # shapes. Idempotent across invocations (#1269).
+    from file_organizer.utils.log_redact import install_on_root
+
+    install_on_root()
+
     CLI_GLOBALS.verbose = verbose
     CLI_GLOBALS.dry_run = dry_run
     CLI_GLOBALS.json_output = json_output

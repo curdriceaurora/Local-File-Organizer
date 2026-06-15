@@ -38,49 +38,83 @@ class DocumentExtractor:
         self._check_dependencies()
 
     @staticmethod
+    def _open_reader_fd(file_path: Path, scan_root: Path | None) -> int | None:
+        """Return an ``O_NOFOLLOW`` reader fd for *file_path*, or ``None`` for legacy.
+
+        POSIX only:
+
+        - With *scan_root*: anchored traversal —
+          ``SafeDir.open_root(scan_root).open_anchored_reader(relative)`` opens
+          every intermediate ancestor with ``O_NOFOLLOW``, so a symlink swapped
+          into an *ancestor* directory between enumeration and extraction is
+          refused (``SymlinkRejected``), closing the nested-ancestor TOCTOU
+          (#286/#1269). ``file_path`` must live under *scan_root*; otherwise
+          ``relative_to`` raises ``ValueError`` (the per-format / ``extract_text``
+          handlers catch it → ``""``), refusing the read rather than falling back.
+        - Without *scan_root*: parent-rooted —
+          ``SafeDir.open_root(parent).open_for_reader(name)`` (leaf ``O_NOFOLLOW``).
+
+        Returns ``None`` only when SafeDir is unavailable (``NotImplementedError``
+        — non-POSIX), signalling the caller to use a plain ``open``. A symlinked
+        root/leaf/ancestor (``SymlinkRejected``) or missing path propagates as
+        ``OSError`` — it is *not* downgraded to a legacy open.
+        """
+        if sys.platform == "win32":  # pragma: no cover - platform skip
+            return None
+        if scan_root is not None:
+            try:
+                root_cm = SafeDir.open_root(scan_root)
+            except NotImplementedError:  # pragma: no cover - platform skip
+                return None
+            with root_cm as sd:
+                relative = file_path.relative_to(scan_root)
+                return sd.open_anchored_reader(relative)
+        try:
+            root_cm = SafeDir.open_root(file_path.parent)
+        except NotImplementedError:  # pragma: no cover - platform skip
+            return None
+        with root_cm as sd:
+            return sd.open_for_reader(file_path.name)
+
+    @staticmethod
     @contextmanager
-    def _open_binary(file_path: Path) -> Iterator[BinaryIO]:
+    def _open_binary(file_path: Path, scan_root: Path | None = None) -> Iterator[BinaryIO]:
         """Yield a binary handle for *file_path*, opened through SafeDir on POSIX.
 
-        ``SafeDir.open_root(parent).open_for_reader(name)`` opens the leaf with
-        ``O_NOFOLLOW``, so a symlink swapped in between dedup enumeration and
-        extraction is refused (``SymlinkRejected`` — an ``OSError`` subclass the
-        per-format handlers already catch → file skipped) rather than
-        dereferenced. Falls back to a plain ``open(..., "rb")`` on Windows or
-        where SafeDir is unavailable (``NotImplementedError``).
+        When *scan_root* is supplied the read is anchored to that trusted root
+        (nested-ancestor symlink-safe); otherwise it is parent-rooted
+        (leaf symlink-safe). Falls back to a plain ``open(..., "rb")`` only
+        where SafeDir is unavailable (Windows). See :meth:`_open_reader_fd`.
         """
-        # Scope the NotImplementedError catch to SafeDir *construction* only
-        # (``open_root`` raises it on non-POSIX). It must NOT wrap the ``yield``:
-        # otherwise a downstream parser raising NotImplementedError while
-        # consuming the handle would be mistaken for "SafeDir unavailable" and
-        # trigger a second yield (RuntimeError: generator didn't stop).
-        sd_cm = None
-        if sys.platform != "win32":
-            try:
-                sd_cm = SafeDir.open_root(file_path.parent)
-            except NotImplementedError:
-                sd_cm = None  # SafeDir unsupported here — fall through to legacy
-        if sd_cm is not None:
-            with sd_cm as sd:
-                fd = sd.open_for_reader(file_path.name)
-                # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
-                # exhaustion); once it returns, ``with handle`` owns the close.
-                try:
-                    handle = os.fdopen(fd, "rb", closefd=True)
-                except OSError:
-                    os.close(fd)
-                    raise
-                with handle:
-                    yield handle
+        # ``_open_reader_fd`` is called *before* the yield so a SafeDir refusal
+        # (SymlinkRejected/OSError) or a ``..``-escape (ValueError) surfaces to
+        # the per-format handler rather than being mistaken for the
+        # SafeDir-unavailable case (which would double-yield → RuntimeError).
+        fd = DocumentExtractor._open_reader_fd(file_path, scan_root)
+        if fd is None:
+            with open(file_path, "rb") as handle:
+                yield handle
             return
-        with open(file_path, "rb") as handle:
+        # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
+        # exhaustion); once it returns, ``with handle`` owns the close.
+        try:
+            handle = os.fdopen(fd, "rb", closefd=True)
+        except OSError:
+            os.close(fd)
+            raise
+        with handle:
             yield handle
 
-    def extract_text(self, file_path: Path) -> str:
+    def extract_text(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from a single document.
 
         Args:
             file_path: Path to document file
+            scan_root: Optional trusted root the file was discovered under.
+                When supplied, the read uses SafeDir anchored traversal so a
+                symlinked ancestor between enumeration and extraction is
+                refused (nested-ancestor TOCTOU, #1269). ``None`` keeps the
+                parent-rooted leaf-safe behaviour.
 
         Returns:
             Extracted text content
@@ -99,28 +133,32 @@ class DocumentExtractor:
 
         try:
             if extension == ".pdf":
-                return self._extract_pdf(file_path)
+                return self._extract_pdf(file_path, scan_root=scan_root)
             elif extension == ".docx":
-                return self._extract_docx(file_path)
+                return self._extract_docx(file_path, scan_root=scan_root)
             elif extension == ".txt" or extension == ".md":
-                return self._extract_text(file_path)
+                return self._extract_text(file_path, scan_root=scan_root)
             elif extension == ".rtf":
-                return self._extract_rtf(file_path)
+                return self._extract_rtf(file_path, scan_root=scan_root)
             elif extension == ".odt":
-                return self._extract_odt(file_path)
+                return self._extract_odt(file_path, scan_root=scan_root)
             else:
                 logger.warning(f"No extractor for {extension}, treating as text")
-                return self._extract_text(file_path)
+                return self._extract_text(file_path, scan_root=scan_root)
 
         except (OSError, ValueError, ImportError) as e:
             logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
 
-    def extract_batch(self, file_paths: list[Path]) -> dict[Path, str]:
+    def extract_batch(
+        self, file_paths: list[Path], *, scan_root: Path | None = None
+    ) -> dict[Path, str]:
         """Extract text from multiple documents in batch.
 
         Args:
             file_paths: List of document paths
+            scan_root: Optional trusted root forwarded to :meth:`extract_text`
+                for anchored (nested-ancestor-safe) reads (#1269).
 
         Returns:
             Dictionary mapping file paths to extracted text
@@ -129,7 +167,7 @@ class DocumentExtractor:
 
         for file_path in file_paths:
             try:
-                text = self.extract_text(file_path)
+                text = self.extract_text(file_path, scan_root=scan_root)
                 results[file_path] = text
                 logger.debug(f"Extracted {len(text)} chars from {file_path.name}")
             except (OSError, ValueError, ImportError) as e:
@@ -159,11 +197,12 @@ class DocumentExtractor:
         """
         return sorted(self.supported_extensions)
 
-    def _extract_pdf(self, file_path: Path) -> str:
+    def _extract_pdf(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from PDF file.
 
         Args:
             file_path: Path to PDF file
+            scan_root: Optional trusted root for anchored reads (#1269).
 
         Returns:
             Extracted text
@@ -178,7 +217,7 @@ class DocumentExtractor:
 
             text_parts = []
 
-            with self._open_binary(file_path) as f:
+            with self._open_binary(file_path, scan_root) as f:
                 pdf_reader = pypdf.PdfReader(f)
 
                 # Extract text from each page
@@ -200,11 +239,12 @@ class DocumentExtractor:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 
-    def _extract_docx(self, file_path: Path) -> str:
+    def _extract_docx(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from DOCX file.
 
         Args:
             file_path: Path to DOCX file
+            scan_root: Optional trusted root for anchored reads (#1269).
 
         Returns:
             Extracted text
@@ -212,7 +252,7 @@ class DocumentExtractor:
         try:
             import docx
 
-            with self._open_binary(file_path) as f:
+            with self._open_binary(file_path, scan_root) as f:
                 doc = docx.Document(f)
 
             # Extract text from all paragraphs
@@ -238,11 +278,12 @@ class DocumentExtractor:
             logger.error(f"Error extracting DOCX {file_path}: {e}")
             return ""
 
-    def _extract_text(self, file_path: Path) -> str:
+    def _extract_text(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from plain text file.
 
         Args:
             file_path: Path to text file
+            scan_root: Optional trusted root for anchored reads (#1269).
 
         Returns:
             File contents
@@ -250,7 +291,7 @@ class DocumentExtractor:
         try:
             # Single SafeDir-guarded read, then try multiple encodings on the
             # raw bytes (avoids re-opening the file per encoding).
-            with self._open_binary(file_path) as f:
+            with self._open_binary(file_path, scan_root) as f:
                 raw = f.read()
 
             for encoding in ("utf-8", "latin-1", "cp1252", "ascii"):
@@ -268,11 +309,12 @@ class DocumentExtractor:
             logger.error(f"Error reading text file {file_path}: {e}")
             return ""
 
-    def _extract_rtf(self, file_path: Path) -> str:
+    def _extract_rtf(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from RTF file.
 
         Args:
             file_path: Path to RTF file
+            scan_root: Optional trusted root for anchored reads (#1269).
 
         Returns:
             Extracted text
@@ -282,7 +324,7 @@ class DocumentExtractor:
             try:
                 from striprtf.striprtf import rtf_to_text
 
-                with self._open_binary(file_path) as f:
+                with self._open_binary(file_path, scan_root) as f:
                     rtf_content = f.read().decode("utf-8", errors="ignore")
 
                 text = str(rtf_to_text(rtf_content))
@@ -294,7 +336,7 @@ class DocumentExtractor:
                 # Fallback: simple RTF stripping
                 logger.warning("striprtf not installed, using basic extraction")
 
-                with self._open_binary(file_path) as f:
+                with self._open_binary(file_path, scan_root) as f:
                     content = f.read().decode("utf-8", errors="ignore")
 
                 # Very basic RTF stripping (removes control words)
@@ -310,11 +352,12 @@ class DocumentExtractor:
             logger.error(f"Error extracting RTF {file_path}: {e}")
             return ""
 
-    def _extract_odt(self, file_path: Path) -> str:
+    def _extract_odt(self, file_path: Path, *, scan_root: Path | None = None) -> str:
         """Extract text from ODT file.
 
         Args:
             file_path: Path to ODT file
+            scan_root: Optional trusted root for anchored reads (#1269).
 
         Returns:
             Extracted text
@@ -328,7 +371,7 @@ class DocumentExtractor:
             from defusedxml.ElementTree import fromstring as _xml_fromstring
 
             # ODT files are ZIP archives; open through SafeDir (symlink-safe).
-            with self._open_binary(file_path) as f, zipfile.ZipFile(f, "r") as odt_zip:
+            with self._open_binary(file_path, scan_root) as f, zipfile.ZipFile(f, "r") as odt_zip:
                 # Extract content.xml
                 content_xml = odt_zip.read("content.xml")
 

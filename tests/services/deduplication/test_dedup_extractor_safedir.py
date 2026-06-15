@@ -84,6 +84,48 @@ class TestTxtSafeDir:
         assert DocumentExtractor().extract_text(victim) == ""
 
 
+class TestAnchoredScanRoot:
+    """Anchored traversal (scan_root) closes the nested-ancestor TOCTOU (#1269)."""
+
+    def test_reads_nested_file_with_scan_root(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        nested = root / "a" / "b"
+        nested.mkdir(parents=True)
+        (nested / "doc.txt").write_text("anchored body")
+        assert "anchored body" in DocumentExtractor().extract_text(
+            nested / "doc.txt", scan_root=root
+        )
+
+    def test_path_outside_scan_root_is_refused(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("outside content")
+        # relative_to(root) fails for a path outside the root → refused ("").
+        assert DocumentExtractor().extract_text(outside / "doc.txt", scan_root=root) == ""
+
+    @posix_only
+    def test_symlinked_ancestor_is_refused(self, tmp_path: Path) -> None:
+        """A symlinked *intermediate ancestor* under the scan root is refused by
+        anchored traversal — the parent-rooted path would have followed it."""
+        # Attacker tree the symlink points at.
+        outside = tmp_path / "outside"
+        (outside / "a" / "b").mkdir(parents=True)
+        (outside / "a" / "b" / "doc.txt").write_text("attacker secret")
+        # Trusted scan root with a symlinked ancestor 'a' -> outside/a.
+        root = tmp_path / "root"
+        root.mkdir()
+        try:
+            (root / "a").symlink_to(outside / "a")
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        victim = root / "a" / "b" / "doc.txt"
+        # Anchored traversal opens 'a' with O_NOFOLLOW → SymlinkRejected → "".
+        assert DocumentExtractor().extract_text(victim, scan_root=root) == ""
+
+
 class TestOdtSafeDir:
     @staticmethod
     def _write_real_odt(path: Path, body: str) -> None:
