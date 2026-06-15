@@ -2,12 +2,26 @@
 
 Defines the top-level AppConfig and ModelPreset dataclasses that provide
 a unified configuration interface across all modules.
+
+Field-level bounds (temperature, max_tokens, …) are validated by
+``SetupWizard.validate_config`` (construct-then-validate, returning
+user-facing error messages) rather than raising in ``__post_init__`` — see
+WP-3.2 / #1230. This module owns the schema-version constants and the plain
+dataclass shape; ``ConfigManager`` owns version-compatibility (migration-safe
+fallback) and atomic persistence.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+# Schema-version constants. ``CURRENT_SCHEMA_VERSION`` is what new configs are
+# written as; ``SUPPORTED_SCHEMA_VERSIONS`` is the set ConfigManager will load
+# without falling back to defaults. Bump both (and add a migration) when the
+# on-disk shape changes incompatibly.
+CURRENT_SCHEMA_VERSION = "1.0"
+SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0"})
 
 
 @dataclass
@@ -74,7 +88,7 @@ class AppConfig:
     """
 
     profile_name: str = "default"
-    version: str = "1.0"
+    version: str = CURRENT_SCHEMA_VERSION
     default_methodology: str = "none"
     setup_completed: bool = False
     models: ModelPreset = field(default_factory=ModelPreset)

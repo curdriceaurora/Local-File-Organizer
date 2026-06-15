@@ -24,8 +24,14 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from file_organizer.config.path_manager import get_config_dir
-from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
+from file_organizer.config.schema import (
+    SUPPORTED_SCHEMA_VERSIONS,
+    AppConfig,
+    ModelPreset,
+    UpdateSettings,
+)
 from file_organizer.models.base import DeviceType, ModelConfig, ModelType
+from file_organizer.utils.atomic_write import atomic_write_text
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +97,22 @@ class ConfigManager:
             logger.debug("Profile '%s' not found, using defaults", profile)
             return AppConfig(profile_name=profile)
 
+        # Migration-safe version gate (F6): refuse to load an unsupported schema
+        # version. Fall back to defaults and leave the file UNTOUCHED so a
+        # newer/older config can be inspected and migrated rather than silently
+        # clobbered. str() normalizes a YAML-parsed float (``version: 1.0``).
+        version = data.get("version")
+        if version is not None and str(version) not in SUPPORTED_SCHEMA_VERSIONS:
+            logger.warning(
+                "Profile '%s' in %s has unsupported schema version %r "
+                "(supported: %s); using defaults (file left untouched)",
+                profile,
+                config_path,
+                version,
+                sorted(SUPPORTED_SCHEMA_VERSIONS),
+            )
+            return AppConfig(profile_name=profile)
+
         return self._dict_to_config(data, profile)
 
     def save(self, config: AppConfig, profile: str | None = None) -> None:
@@ -127,9 +149,11 @@ class ConfigManager:
         profiles = existing.setdefault("profiles", {})
         profiles[profile] = self.config_to_dict(config)
 
-        config_path.write_text(
+        # Atomic write: a mid-write crash leaves the prior config intact rather
+        # than a truncated/corrupt file.
+        atomic_write_text(
+            config_path,
             yaml.dump(existing, default_flow_style=False, sort_keys=False),
-            encoding="utf-8",
         )
         logger.info("Saved profile '%s' to %s", profile, config_path)
 
@@ -188,9 +212,9 @@ class ConfigManager:
             return False
 
         del profiles[profile]
-        config_path.write_text(
+        atomic_write_text(
+            config_path,
             yaml.dump(raw, default_flow_style=False, sort_keys=False),
-            encoding="utf-8",
         )
         return True
 
