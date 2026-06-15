@@ -59,16 +59,27 @@ class DocumentExtractor:
         root/leaf/ancestor (``SymlinkRejected``) or missing path propagates as
         ``OSError`` — it is *not* downgraded to a legacy open.
         """
-        if sys.platform == "win32":  # pragma: no cover - platform skip
-            return None
         if scan_root is not None:
+            # Enforce the trusted-root boundary on EVERY platform, *before* any
+            # SafeDir-availability fallback: a file outside scan_root (or one
+            # whose relative path contains ``..``) is refused even on Windows,
+            # where SafeDir is unavailable and the caller would otherwise fall
+            # back to a plain open() and ingest out-of-root content (#1269).
+            relative = file_path.relative_to(scan_root)  # ValueError if outside → refuse
+            if any(part == ".." for part in relative.parts):
+                raise ValueError(f"path escapes scan_root via '..': {file_path!r}")
+            if sys.platform == "win32":  # pragma: no cover - platform skip
+                # Containment verified above; SafeDir anchored open is POSIX-only,
+                # so signal the caller to use a plain open of the in-root file.
+                return None
             try:
                 root_cm = SafeDir.open_root(scan_root)
             except NotImplementedError:  # pragma: no cover - platform skip
                 return None
             with root_cm as sd:
-                relative = file_path.relative_to(scan_root)
                 return sd.open_anchored_reader(relative)
+        if sys.platform == "win32":  # pragma: no cover - platform skip
+            return None
         try:
             root_cm = SafeDir.open_root(file_path.parent)
         except NotImplementedError:  # pragma: no cover - platform skip

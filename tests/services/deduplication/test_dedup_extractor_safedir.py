@@ -105,6 +105,30 @@ class TestAnchoredScanRoot:
         # relative_to(root) fails for a path outside the root → refused ("").
         assert DocumentExtractor().extract_text(outside / "doc.txt", scan_root=root) == ""
 
+    def test_outside_root_refused_on_windows_before_legacy_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Even where SafeDir is unavailable (simulated Windows), a path outside
+        scan_root is refused before the legacy open() fallback — the boundary is
+        enforced on every platform (#1269)."""
+        import file_organizer.services.deduplication.extractor as ext
+
+        monkeypatch.setattr(ext.sys, "platform", "win32")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "doc.txt").write_text("outside content")
+        # Out-of-root: refused (relative_to ValueError) → "", not read via open().
+        assert DocumentExtractor().extract_text(outside / "doc.txt", scan_root=root) == ""
+
+        # In-root file is still readable via the legacy fallback on Windows.
+        (root / "doc.txt").write_text("in-root content")
+        assert "in-root content" in DocumentExtractor().extract_text(
+            root / "doc.txt", scan_root=root
+        )
+
     @posix_only
     def test_symlinked_ancestor_is_refused(self, tmp_path: Path) -> None:
         """A symlinked *intermediate ancestor* under the scan root is refused by
