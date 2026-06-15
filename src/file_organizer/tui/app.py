@@ -260,9 +260,10 @@ class FileOrganizerApp(App[None]):
             if config is None:
                 config = self._config_manager.load()
 
-            # Mark setup as complete and save
-            config.setup_completed = True
-            self._config_manager.save(config)
+            # Mark setup as complete and save. force=True: setup completion is a
+            # deliberate (re)configuration that must migrate/overwrite an
+            # unsupported-version profile rather than crash on the save guard (#1276).
+            self._config_manager.save(config, force=True)
 
             # Update internal state
             self._in_wizard = False
