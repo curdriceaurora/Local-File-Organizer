@@ -374,9 +374,9 @@ Replay or sweep the durable-move journal to recover interrupted cross-device mov
 
 A crash midway through a cross-device rollback move can leave the durable-move
 JSONL journal with unfinished `started`/`copied` entries (and possibly orphan
-files on disk). This command runs the same reconciliation `sweep` performs
-automatically on the next run, exposed explicitly so an operator can trigger it
-on demand.
+files on disk). Reconciliation is **not** automatic — run this command on demand
+(for example, after a crash) to sweep the journal and complete or roll back the
+interrupted moves.
 
 **Usage:**
 
