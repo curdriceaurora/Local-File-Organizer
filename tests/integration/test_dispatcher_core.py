@@ -842,25 +842,58 @@ class TestAudioTranscription:
 
         Regression for #1287 review: the guard previously required generate(),
         rejecting the real Whisper transcriber and forcing metadata-only audio.
+
+        #1288: the full result object is returned (not just ``.text``) so the
+        classifier's segment heuristics survive.
         """
         from types import SimpleNamespace
 
         from file_organizer.core.dispatcher import _maybe_transcribe
 
         transcriber = MagicMock(spec=["transcribe"])
-        transcriber.transcribe.return_value = SimpleNamespace(text="hello from whisper")
+        whisper_result = SimpleNamespace(text="hello from whisper", segments=[object()])
+        transcriber.transcribe.return_value = whisper_result
         result = _maybe_transcribe(
             Path("/mock/a.mp3"),
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
         )
-        assert result == "hello from whisper"
+        # Returned object is the TranscriptionResult as-is, segments intact.
+        assert result is whisper_result
+        assert result.text == "hello from whisper"
+        assert result.segments == whisper_result.segments
         transcriber.transcribe.assert_called_once_with("/mock/a.mp3")
 
-    def test_maybe_transcribe_generate_duck_type_returns_text(self) -> None:
-        """A generate(path) -> str duck-type is still accepted as a fallback."""
+    def test_maybe_transcribe_transcribe_api_str_return_synthesizes_result(self) -> None:
+        """A duck-typed transcribe() returning a bare str is wrapped uniformly.
+
+        #1288: callers always get a TranscriptionResult-shaped object with
+        ``.text`` and (empty) ``.segments``, never a raw string.
+        """
         from file_organizer.core.dispatcher import _maybe_transcribe
+        from file_organizer.services.audio.transcriber import TranscriptionResult
+
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.return_value = "plain text only"
+        result = _maybe_transcribe(
+            Path("/mock/a.mp3"),
+            metadata=MagicMock(duration=10.0),
+            transcriber=transcriber,
+            max_transcribe_seconds=600.0,
+        )
+        assert isinstance(result, TranscriptionResult)
+        assert result.text == "plain text only"
+        assert result.segments == []
+
+    def test_maybe_transcribe_generate_duck_type_returns_text(self) -> None:
+        """A generate(path) -> str duck-type is still accepted as a fallback.
+
+        #1288: the text is wrapped into a segment-less TranscriptionResult so
+        the return type is uniform with the transcribe() path.
+        """
+        from file_organizer.core.dispatcher import _maybe_transcribe
+        from file_organizer.services.audio.transcriber import TranscriptionResult
 
         transcriber = MagicMock(spec=["generate"])
         transcriber.generate.return_value = "hello world"
@@ -870,7 +903,9 @@ class TestAudioTranscription:
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
         )
-        assert result == "hello world"
+        assert isinstance(result, TranscriptionResult)
+        assert result.text == "hello world"
+        assert result.segments == []
         transcriber.generate.assert_called_once_with("/mock/a.mp3")
 
     def test_maybe_transcribe_recoverable_error_degrades(self) -> None:
@@ -934,8 +969,13 @@ class TestAudioTranscription:
 
         from types import SimpleNamespace
 
+        # Real TranscriptionResult-shaped object with non-empty segments so we
+        # can prove segments survive the dispatcher → classifier handoff (#1288).
+        fake_segments = [SimpleNamespace(start=0.0, end=1.0, text="hi")]
         transcriber = MagicMock(spec=["transcribe"])
-        transcriber.transcribe.return_value = SimpleNamespace(text="episode transcript text")
+        transcriber.transcribe.return_value = SimpleNamespace(
+            text="episode transcript text", segments=fake_segments
+        )
 
         with (
             patch(_AUDIO_CLASSIFIER_TARGET, return_value=mock_classifier_instance),
@@ -949,11 +989,14 @@ class TestAudioTranscription:
             )
 
         assert len(results) == 1
+        # transcript field stays a plain str projected from result.text.
         assert results[0].transcript == "episode transcript text"
-        # The classifier received a TranscriptionResult (not None).
+        # The classifier received the full TranscriptionResult (not None) with
+        # the real segments intact — not a rebuilt empty-segment stand-in.
         _, kwargs = mock_classifier_instance.classify.call_args
         assert kwargs["transcription"] is not None
         assert kwargs["transcription"].text == "episode transcript text"
+        assert kwargs["transcription"].segments == fake_segments
 
     def test_process_audio_transcription_failure_does_not_fail_file(self) -> None:
         """A transcription failure degrades to metadata-only — file still classified."""

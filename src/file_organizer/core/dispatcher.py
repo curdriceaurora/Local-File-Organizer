@@ -38,8 +38,20 @@ def _maybe_transcribe(
     metadata: AudioMetadata,
     transcriber: Any | None,
     max_transcribe_seconds: float | None,
-) -> str | None:
-    """Return a transcript when a transcriber is set and duration is within cap.
+) -> Any | None:
+    """Return a transcription *result* when a transcriber is set and within cap.
+
+    The returned object is the classifier-ready ``TranscriptionResult`` (with
+    ``.text`` **and** ``.segments``) rather than a bare string, so the
+    classifier's segment-based heuristics (speaker count, narrative length —
+    see ``AudioClassifier._score_from_transcription``) receive the real
+    segments instead of an empty list (#1288).
+
+    - For the repo's ``AudioTranscriber.transcribe() -> TranscriptionResult``
+      path, the result is returned as-is (segments intact).
+    - For the ``generate(path) -> str`` duck-type fallback (text only), a
+      segment-less ``TranscriptionResult`` is synthesized via
+      ``_to_transcription_result`` so callers always get a uniform object.
 
     Returns ``None`` for any of:
     - No transcriber configured (the default; metadata-only categorization).
@@ -48,6 +60,7 @@ def _maybe_transcribe(
     - The transcriber raises a recoverable exception (FileNotFound,
       RuntimeError, ImportError); we degrade to metadata-only categorization
       rather than aborting the entire organize batch on a single bad file.
+    - The produced transcript is empty/missing.
     """
     if transcriber is None:
         return None
@@ -79,12 +92,23 @@ def _maybe_transcribe(
         return None
     try:
         if callable(transcribe_fn):
-            # Repo's AudioTranscriber returns a TranscriptionResult (.text);
-            # a duck-typed transcribe() may already return a str.
+            # Repo's AudioTranscriber returns a TranscriptionResult (.text +
+            # .segments). Preserve it whole so the classifier's segment
+            # heuristics run. A duck-typed transcribe() may instead return a
+            # bare str — synthesize a segment-less result for uniformity.
             result = transcribe_fn(str(audio_path))
-            text = getattr(result, "text", result)
+            if isinstance(result, str):
+                return _to_transcription_result(result, metadata)
+            text = getattr(result, "text", None)
+            if text is None or not str(text):
+                return None
+            return result
         elif callable(generate_fn):
+            # generate() yields text only; wrap into a segment-less result.
             text = generate_fn(str(audio_path))
+            if text is None:
+                return None
+            return _to_transcription_result(str(text), metadata)
         else:  # pragma: no cover - guarded above
             return None
     except (FileNotFoundError, OSError, ValueError, RuntimeError, ImportError) as exc:
@@ -97,12 +121,6 @@ def _maybe_transcribe(
         # metadata-only categorization on any recoverable failure.
         logger.warning("Audio transcription failed for {}: {}", audio_path.name, exc)
         return None
-    if text is None:
-        return None
-    # ``transcriber`` is typed as ``Any`` so mypy can't see the return type;
-    # cast to str to satisfy the no-any-return gate. AudioTranscriber yields a
-    # TranscriptionResult.text (str) and AudioModel.generate returns str.
-    return str(text)
 
 
 def _to_transcription_result(transcript: str | None, metadata: AudioMetadata) -> Any:
@@ -459,13 +477,19 @@ def process_audio_files(
             # Transcribe FIRST so the result can influence classification.
             # Otherwise the user pays transcription cost and gets the same
             # metadata-only folder routing — defeating the transcribe path.
-            transcript = _maybe_transcribe(
+            #
+            # _maybe_transcribe now returns the full TranscriptionResult (with
+            # .segments intact) so the classifier's segment-based heuristics run
+            # (#1288). The ProcessedFile.transcript field stays a plain str, so
+            # we project ``.text`` off the result for storage while passing the
+            # whole object to classify().
+            transcription = _maybe_transcribe(
                 audio_path,
                 metadata=metadata,
                 transcriber=transcriber,
                 max_transcribe_seconds=max_transcribe_seconds,
             )
-            transcription = _to_transcription_result(transcript, metadata)
+            transcript = getattr(transcription, "text", None) if transcription is not None else None
             classification = classifier.classify(metadata, transcription=transcription)
             dest_path = organizer.generate_path(classification.audio_type, metadata)
 
