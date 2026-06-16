@@ -101,7 +101,10 @@ class TestSubRouterInclusion:
     )
     def test_sub_router_base_route_reachable(self, client, base_path):
         status = client.get(base_path).status_code
-        assert status != 404, (
-            f"{base_path} returned 404 — its sub-router is not included under /ui "
-            f"(expected the route to be registered and reachable)"
+        # Require a success/redirect status (not merely "not 404"): a registered
+        # but broken route returning 500/503 should fail this reachability guard,
+        # while a missing sub-router (404) still fails as before.
+        assert 200 <= status < 400, (
+            f"{base_path} returned unexpected status {status} — expected a reachable "
+            f"GET route under /ui (404 => sub-router not included; 5xx => route broken)"
         )
