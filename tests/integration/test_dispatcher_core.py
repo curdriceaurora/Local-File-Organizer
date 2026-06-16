@@ -522,6 +522,58 @@ class TestProcessImageFiles:
         assert results[0].error == "Corrupt JPEG data: 12 extraneous bytes"
         assert results[0].confidence == 0.0
 
+    def test_retry_saturation_abort_routes_through_vision_fallback(self) -> None:
+        # #1287 review: the sequential retry reuses one single-worker
+        # processor for all retry candidates. If an earlier retry hangs, its
+        # thread occupies the lone worker and the remaining candidates get
+        # never-started saturation aborts (``non_retryable=False``). Those must
+        # degrade to the #406 metadata fallback rather than the error folder —
+        # otherwise one hung retry cascades the untried candidates into
+        # failures, reintroducing the cascade this path exists to prevent.
+        from file_organizer.core.dispatcher import process_image_files
+
+        path = Path("/mock/photos/retry_never_ran.jpg")
+        initial_abort = _make_file_result(
+            success=False,
+            path=path,
+            error="Aborted: worker pool saturated by hung tasks",
+            non_retryable=False,
+        )
+        # Retry pass: this candidate never started (collateral of a hung peer).
+        retry_saturated = _make_file_result(
+            success=False,
+            path=path,
+            error="Aborted: worker pool saturated by hung tasks",
+            non_retryable=False,
+        )
+        mock_pp = MagicMock()
+        mock_pp.config.timeout_per_file = 60.0
+        mock_pp.process_batch_iter.return_value = iter([initial_abort])
+        retry_pp = MagicMock()
+        retry_pp.process_batch_iter.return_value = iter([retry_saturated])
+        with patch("file_organizer.core.dispatcher.compute_fallback") as mock_fb:
+            fb = MagicMock()
+            fb.source = "fallback_filename"
+            fb.folder = "Images/Photos/untagged"
+            fb.filename = "retry_never_ran"
+            mock_fb.return_value = fb
+            progress_ctx = _make_progress_ctx()
+            with (
+                patch(_PROGRESS_TARGET, return_value=progress_ctx),
+                patch("file_organizer.core.dispatcher.ParallelProcessor", return_value=retry_pp),
+            ):
+                results = process_image_files(
+                    [path],
+                    vision_processor=MagicMock(),
+                    parallel_processor=mock_pp,
+                    console=MagicMock(),
+                )
+        # Degraded to metadata fallback, not the error folder — no cascade.
+        assert len(results) == 1
+        assert results[0].error is None
+        assert results[0].source == "fallback_filename"
+        assert results[0].folder_name == "Images/Photos/untagged"
+
     def test_failure_result_unknown_error(self) -> None:
         from file_organizer.core.dispatcher import process_image_files
 

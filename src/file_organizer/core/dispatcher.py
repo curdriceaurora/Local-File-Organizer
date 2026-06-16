@@ -358,7 +358,19 @@ def process_image_files(
             # Retry also failed (timeout, vision error, …). Record as a
             # genuine failure now — there's no second-level retry.
             retry_err = retry_result.error or "Unknown error"
-            if _is_timeout_error(retry_err):
+            # A timeout, OR a saturation abort on a still-never-started task
+            # (the previous retry's thread is still hung on the single worker,
+            # so this candidate never ran), both mean the vision model never
+            # classified this file. With no second-level retry, degrade to
+            # metadata fallback rather than the error folder — otherwise one
+            # hung retry would cascade the remaining never-run candidates into
+            # failures, reintroducing the very cascade this path prevents
+            # (#1287 review).
+            never_ran_saturation = (
+                retry_err.startswith("Aborted: worker pool saturated")
+                and not retry_result.non_retryable
+            )
+            if _is_timeout_error(retry_err) or never_ran_saturation:
                 fb = compute_fallback(retry_result.path)
                 _fallback_confidence = 0.5 if fb.source == "fallback_exif" else 0.3
                 processed.append(
