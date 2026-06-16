@@ -30,7 +30,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import TypeVar
+from typing import TypeAlias, TypeVar
 
 from file_organizer.interfaces.pipeline import PipelineStage, StageContext
 from file_organizer.optimization.buffer_pool import BufferPool
@@ -45,7 +45,7 @@ BUFFER_KEY = "pipeline.buffer"
 
 _ResultT = TypeVar("_ResultT")
 # ``run_prefetched_batch`` internal: index → (future, submitted_at_monotonic)
-_FutureMap = dict[int, tuple["Future[tuple[StageContext, bytearray | None]]", float]]
+_FutureMap: TypeAlias = dict[int, tuple[Future[tuple[StageContext, bytearray | None]], float]]
 
 
 class ResourceAwareExecutor:
