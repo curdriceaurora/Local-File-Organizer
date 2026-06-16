@@ -851,7 +851,11 @@ class TestAudioTranscription:
         from file_organizer.core.dispatcher import _maybe_transcribe
 
         transcriber = MagicMock(spec=["transcribe"])
-        whisper_result = SimpleNamespace(text="hello from whisper", segments=[object()])
+        # A classify-ready result (has .text, .segments AND .duration — the
+        # attributes AudioClassifier.classify() reads).
+        whisper_result = SimpleNamespace(
+            text="hello from whisper", segments=[object()], duration=10.0
+        )
         transcriber.transcribe.return_value = whisper_result
         result = _maybe_transcribe(
             Path("/mock/a.mp3"),
@@ -859,11 +863,38 @@ class TestAudioTranscription:
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
         )
-        # Returned object is the TranscriptionResult as-is, segments intact.
+        # Returned object is the result as-is, segments intact.
         assert result is whisper_result
         assert result.text == "hello from whisper"
         assert result.segments == whisper_result.segments
         transcriber.transcribe.assert_called_once_with("/mock/a.mp3")
+
+    def test_maybe_transcribe_incomplete_object_synthesizes_result(self) -> None:
+        """A text-bearing object lacking .segments/.duration is wrapped, not passed through.
+
+        Regression for #1290 review: classify() reads .segments and .duration, so
+        a partial adapter (e.g. SimpleNamespace(text=...)) must be wrapped into a
+        proper TranscriptionResult or it would raise AttributeError downstream.
+        """
+        from types import SimpleNamespace
+
+        from file_organizer.core.dispatcher import _maybe_transcribe
+        from file_organizer.services.audio.transcriber import TranscriptionResult
+
+        transcriber = MagicMock(spec=["transcribe"])
+        # Has .text but NOT .segments/.duration — not classify-ready.
+        transcriber.transcribe.return_value = SimpleNamespace(text="partial adapter")
+        result = _maybe_transcribe(
+            Path("/mock/a.mp3"),
+            metadata=MagicMock(duration=12.0),
+            transcriber=transcriber,
+            max_transcribe_seconds=600.0,
+        )
+        # Wrapped into a classify-ready TranscriptionResult (segment-less).
+        assert isinstance(result, TranscriptionResult)
+        assert result.text == "partial adapter"
+        assert result.segments == []
+        assert result.duration == 12.0
 
     def test_maybe_transcribe_transcribe_api_str_return_synthesizes_result(self) -> None:
         """A duck-typed transcribe() returning a bare str is wrapped uniformly.
@@ -973,8 +1004,10 @@ class TestAudioTranscription:
         # can prove segments survive the dispatcher → classifier handoff (#1288).
         fake_segments = [SimpleNamespace(start=0.0, end=1.0, text="hi")]
         transcriber = MagicMock(spec=["transcribe"])
+        # Classify-ready shape (.text, .segments AND .duration) so the object is
+        # passed through with segments intact rather than wrapped (#1290 review).
         transcriber.transcribe.return_value = SimpleNamespace(
-            text="episode transcript text", segments=fake_segments
+            text="episode transcript text", segments=fake_segments, duration=30.0
         )
 
         with (

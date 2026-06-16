@@ -102,7 +102,15 @@ def _maybe_transcribe(
             text = getattr(result, "text", None)
             if text is None or not str(text):
                 return None
-            return result
+            # Only pass the object straight through if it's classify-ready:
+            # AudioClassifier.classify() reads .segments and .duration. A
+            # text-bearing object lacking those (e.g. a SimpleNamespace adapter
+            # or a partial stub) would raise AttributeError downstream, so wrap
+            # its text into a proper segment-less TranscriptionResult instead
+            # (#1290 review). Genuine TranscriptionResults keep their segments.
+            if hasattr(result, "segments") and hasattr(result, "duration"):
+                return result
+            return _to_transcription_result(str(text), metadata)
         elif callable(generate_fn):
             # generate() yields text only; wrap into a segment-less result.
             text = generate_fn(str(audio_path))
