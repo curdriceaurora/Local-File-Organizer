@@ -1,6 +1,7 @@
 import threading
 import time
 import unittest
+from concurrent.futures import Future
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -361,6 +362,62 @@ class TestConcurrencyFixes(unittest.TestCase):
             lambda r: r,
         )
         self.assertIsNotNone(stale_result, "stale queue time beyond 2xtimeout must trip saturation")
+
+    def test_saturation_abort_preserves_race_completed_future(self) -> None:
+        """#1291 Codex: the saturation abort sweep must harvest the real result
+        of a future that completed in the race window before the sweep ran.
+
+        A started-then-finished future sitting in ``pending`` when the guard
+        fires would otherwise be reported as a ``non_retryable`` phantom abort,
+        discarding its actual return value and sending an already-processed
+        file to fallback/error handling. This mirrors the race-window handling
+        in ``_handle_timeouts``.
+        """
+        config = ParallelConfig(max_workers=1, timeout_per_file=0.1, retry_count=0)
+        processor = ParallelProcessor(config=config)
+
+        # A genuinely stalled never-started future trips the saturation guard.
+        stalled = MagicMock()
+        stalled.running.return_value = False
+        stalled.done.return_value = False
+        stalled.cancelled.return_value = False
+
+        # A real future that already completed successfully at the abort boundary.
+        completed: Future[FileResult] = Future()
+        completed.set_result(FileResult(path=Path("done_file"), success=True))
+
+        now = time.monotonic()
+        stale = now - (config.timeout_per_file * 2 + 1.0)
+        pending = {stalled, completed}
+        future_paths = {stalled: Path("queued"), completed: Path("done_file")}
+        future_started: dict[object, float | None] = {
+            stalled: None,  # never started → counts toward saturation
+            completed: now - 0.05,  # started then finished → excluded from stalled set
+        }
+        future_queued_at = {stalled: stale, completed: stale}
+
+        results = processor._check_pool_saturation(
+            pending,  # type: ignore[arg-type]
+            future_paths,  # type: ignore[arg-type]
+            future_started,  # type: ignore[arg-type]
+            future_queued_at,  # type: ignore[arg-type]
+            config.timeout_per_file,
+            lambda r: r,
+        )
+
+        self.assertIsNotNone(results, "stalled never-started future must trip saturation")
+        by_path = {r.path: r for r in results}  # type: ignore[union-attr]
+        # The race-completed future keeps its real success result, not an abort.
+        self.assertTrue(
+            by_path[Path("done_file")].success,
+            f"race-completed future must keep its real result, got: {by_path[Path('done_file')]}",
+        )
+        self.assertIsNone(by_path[Path("done_file")].error)
+        # The genuinely stalled file is still aborted, and stays retryable
+        # (never started) so the dispatcher can rerun it sequentially.
+        self.assertFalse(by_path[Path("queued")].success)
+        self.assertFalse(by_path[Path("queued")].non_retryable)
+        self.assertIn("saturat", str(by_path[Path("queued")].error).lower())
 
     def test_retryable_saturation_survives_non_retryable_peer(self) -> None:
         """#1287: a queued never-started saturation file (retryable) must still be

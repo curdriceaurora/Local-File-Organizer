@@ -459,6 +459,27 @@ class ParallelProcessor:
         )
         results: list[FileResult] = []
         for f in list(pending):
+            # A pending future may have completed in the race window between the
+            # poll loop's ``wait()`` returning and this abort sweep. Harvest its
+            # real result instead of discarding an already-processed file as a
+            # phantom saturation abort (mirrors the ``_handle_timeouts``
+            # race-window handling above) — otherwise a started-then-finished
+            # task is reported ``non_retryable=True`` and its return value lost.
+            if f.done() and not f.cancelled():
+                race_path = future_paths.pop(f)
+                future_started.pop(f, None)
+                future_queued_at.pop(f, None)
+                pending.discard(f)
+                try:
+                    race_result = f.result()
+                except Exception as exc:
+                    race_result = finalize_result(
+                        FileResult(path=race_path, success=False, error=str(exc))
+                    )
+                else:
+                    race_result = finalize_result(race_result)
+                results.append(race_result)
+                continue
             # #432: distinguish never-started tasks (collateral, should be
             # retryable in a degraded mode) from in-flight tasks (truly hung —
             # don't retry). The dispatcher's image path scans for
