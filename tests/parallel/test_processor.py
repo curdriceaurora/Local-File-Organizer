@@ -7,6 +7,7 @@ callbacks, error handling, and graceful shutdown.
 """
 
 import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -497,6 +498,89 @@ class TestShutdown(unittest.TestCase):
         """Test that shutdown can be called without error."""
         processor = ParallelProcessor()
         processor.shutdown()  # Should not raise
+
+
+class TestTimeoutRacePreservesResult(unittest.TestCase):
+    """When ``cancel()`` returns False and ``future.done()`` returns True, the
+    task actually completed in the race window — preserve its real result
+    instead of reporting a phantom timeout.
+    """
+
+    def test_race_window_preserves_successful_result(self) -> None:
+        from concurrent.futures import Future
+        from unittest.mock import MagicMock
+
+        from file_organizer.parallel.processor import ParallelProcessor
+        from file_organizer.parallel.result import FileResult
+
+        processor = ParallelProcessor(config=ParallelConfig(timeout_per_file=0.1))
+        # Construct a future that:
+        # 1. cancel() returns False (couldn't cancel — task already running)
+        # 2. done() returns True (the task ACTUALLY finished in the race window)
+        # 3. result() returns a real successful FileResult
+        finished_result = FileResult(path=Path("ok.txt"), success=True, result="real-output")
+        future: Future[FileResult] = MagicMock(spec=Future)
+        future.cancel.return_value = False
+        future.done.return_value = True
+        future.result.return_value = finished_result
+
+        pending = {future}
+        future_paths = {future: Path("ok.txt")}
+        # Backdate start so the timeout elapsed check fires.
+        future_started = {future: time.monotonic() - 1.0}
+        future_queued_at = {future: time.monotonic() - 1.0}
+
+        out = processor._handle_timeouts(
+            pending=pending,
+            future_paths=future_paths,
+            future_started=future_started,
+            future_queued_at=future_queued_at,
+            timeout=0.1,
+            poll_interval=0.05,
+            finalize_result=lambda r: r,
+        )
+        self.assertIsNotNone(out)
+        should_abort, needs_shutdown, results = out  # type: ignore[misc]
+        self.assertFalse(should_abort)
+        self.assertEqual(len(results), 1)
+        # The real successful result is preserved — NOT a timeout phantom.
+        self.assertTrue(results[0].success)
+        self.assertEqual(results[0].result, "real-output")
+
+    def test_race_window_preserves_exception(self) -> None:
+        from concurrent.futures import Future
+        from unittest.mock import MagicMock
+
+        from file_organizer.parallel.processor import ParallelProcessor
+        from file_organizer.parallel.result import FileResult
+
+        processor = ParallelProcessor(config=ParallelConfig(timeout_per_file=0.1))
+        future: Future[FileResult] = MagicMock(spec=Future)
+        future.cancel.return_value = False
+        future.done.return_value = True
+        # Task finished in the race window but raised — surface the
+        # actual exception text rather than a timeout phantom.
+        future.result.side_effect = RuntimeError("ollama 500")
+
+        pending = {future}
+        future_paths = {future: Path("boom.txt")}
+        future_started = {future: time.monotonic() - 1.0}
+        future_queued_at = {future: time.monotonic() - 1.0}
+
+        out = processor._handle_timeouts(
+            pending=pending,
+            future_paths=future_paths,
+            future_started=future_started,
+            future_queued_at=future_queued_at,
+            timeout=0.1,
+            poll_interval=0.05,
+            finalize_result=lambda r: r,
+        )
+        self.assertIsNotNone(out)
+        _, _, results = out  # type: ignore[misc]
+        self.assertEqual(len(results), 1)
+        self.assertFalse(results[0].success)
+        self.assertIn("ollama 500", results[0].error or "")
 
 
 if __name__ == "__main__":
