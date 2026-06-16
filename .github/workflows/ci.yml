@@ -169,15 +169,6 @@ jobs:
           print(f'pytest-asyncio {pytest_asyncio.__version__} registered as plugin')
           print(f'faker {importlib.metadata.version(\"faker\")} importable')
           "
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -216,14 +207,6 @@ jobs:
         run: |
           pip install -e ".[dev,search]"
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run test shard
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -300,16 +283,6 @@ jobs:
         run: |
           . .venv-playwright/bin/activate
           python -m playwright install --with-deps ${{ matrix.browser }}
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: |
-          . .venv-playwright/bin/activate
-          python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run Playwright suite
         # Overriding addopts is required because pyproject.toml's default
         # addopts filter out e2e/playwright-marked tests in normal runs.
@@ -387,14 +360,6 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Download benchmark baseline (PR only)
         # Finds the latest successful main CI run that stored a benchmark-baseline
         # artifact and downloads it for comparison.  Skipped silently if none exists.
@@ -503,14 +468,6 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev,search]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: "Integration coverage gate (floor: 72.0% combined line+branch)"
         # Ratchet floor — bump threshold in the PR that closes each gap.
         # 2026-03-17: 35.43% line (173 integration tests, clean CI env with [dev,search] extras).
