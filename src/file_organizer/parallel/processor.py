@@ -337,6 +337,18 @@ class ParallelProcessor:
                 path = future_paths.pop(future)
                 future_started.pop(future, None)
                 future_queued_at.pop(future, None)
+                # A healthy completion means the pool just made progress: a
+                # worker slot is now free for queued work. Reset the
+                # saturation-detection clock for every still-pending future so
+                # the 2×timeout guard only fires after *continuous* no-progress
+                # (all slots blocked by hung/abandoned work). Without this, a
+                # degraded-but-progressing pool (max_workers slowly draining a
+                # backlog) could age a queued future past 2×timeout and
+                # false-positive as saturated, mass-failing files that would
+                # have completed (#1288).
+                _progress_at = time.monotonic()
+                for _remaining in pending:
+                    future_queued_at[_remaining] = _progress_at
                 yield finalize_result(self._collect_result(future, path))
                 submit_round_of_work()
 
