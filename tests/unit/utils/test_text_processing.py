@@ -63,6 +63,15 @@ class TestCleanText:
         assert "test" in result
         assert "error" in result
 
+    def test_clean_text_removes_unwanted_after_stemming(self):
+        # #1291 Codex review: with lemmatize=True the words are stemmed
+        # (image -> imag, generated -> generat), so the unwanted set must be
+        # stemmed too or these leak past remove_unwanted. Guard both the exact
+        # form and an inflection (images -> imag) that stems to an unwanted stem.
+        assert "image" in get_unwanted_words()
+        assert clean_text("image generated picture report") == "report"
+        assert clean_text("images of a report") == "report"
+
 
 class TestSanitizeFilename:
     def test_sanitize_filename(self):

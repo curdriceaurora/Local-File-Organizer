@@ -434,13 +434,19 @@ def clean_text(
     words = [word for word in words if word.isalpha()]
 
     # Stem deterministically via Snowball if requested
-    if lemmatize:
-        stemmer = _get_stemmer()
+    stemmer = _get_stemmer() if lemmatize else None
+    if stemmer is not None:
         words = [stemmer.stemWord(word) for word in words]
 
     # Remove unwanted words and duplicates
     if remove_unwanted:
         unwanted = get_unwanted_words()
+        if stemmer is not None:
+            # ``words`` were stemmed above, so the unwanted set must be stemmed
+            # too — otherwise terms like "image" -> "imag" or "generated" ->
+            # "generat" slip past the filter and leak into filenames/folders
+            # despite remove_unwanted=True (#1291 Codex review).
+            unwanted = {stemmer.stemWord(w) for w in unwanted}
         filtered_words = []
         seen: set[str] = set()
 
