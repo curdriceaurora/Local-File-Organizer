@@ -143,6 +143,28 @@ class TestComputeFallbackExifEndToEnd:
         assert result.folder == "Images/Photos/2025/11"
         assert result.filename == "DSC_0042"
 
+    def test_exif_datetime_only_drives_year_month_folder(self, tmp_path: Path) -> None:
+        """A JPEG carrying only the standard DateTime tag (no DateTimeOriginal)
+        still lands by EXIF date rather than degrading to filename (#1287 review)."""
+        pytest.importorskip("PIL")
+        from PIL import Image
+        from PIL.ExifTags import TAGS
+
+        datetime_tag = next(k for k, v in TAGS.items() if v == "DateTime")
+        # Neutral filename (no date pattern) → filename path would be untagged,
+        # so an EXIF-dated folder unambiguously proves the DateTime tag was used.
+        img_path = tmp_path / "photo.jpg"
+        img = Image.new("RGB", (1, 1), color="blue")
+        exif = img.getexif()
+        exif[datetime_tag] = "2025:11:15 14:30:00"
+        img.save(img_path, "JPEG", exif=exif.tobytes())
+
+        result = compute_fallback(img_path)
+
+        assert result.source == "fallback_exif"
+        assert result.folder == "Images/Photos/2025/11"
+        assert result.filename == "photo"
+
     def test_image_without_exif_returns_none_from_exif(self, tmp_path: Path) -> None:
         """A bare image with no EXIF data → _from_exif returns None → filename path."""
         pytest.importorskip("PIL")

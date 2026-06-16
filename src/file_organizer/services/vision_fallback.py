@@ -105,10 +105,20 @@ def _from_exif(path: Path) -> FallbackResult | None:
 
     # Map numeric tag IDs to names so we can ask by name.
     tag_by_name: dict[str, int] = {v: k for k, v in ExifTags.TAGS.items()}
-    date_tag_id = tag_by_name.get("DateTimeOriginal") or tag_by_name.get("DateTime")
-    if date_tag_id is None:  # pragma: no cover — Pillow's TAGS always has these
-        return None
-    raw = exif.get(date_tag_id)
+    # Prefer DateTimeOriginal (capture time) but fall back to the standard
+    # DateTime tag when that's all the image carries. Each candidate must be
+    # resolved against the IMAGE's exif, not just the global tag table:
+    # DateTimeOriginal's id always exists in ``ExifTags.TAGS``, so selecting it
+    # unconditionally would mask a DateTime-only image and silently degrade to
+    # the filename path (#1287 review).
+    raw = None
+    for tag_name in ("DateTimeOriginal", "DateTime"):
+        tag_id = tag_by_name.get(tag_name)
+        if tag_id is not None:
+            value = exif.get(tag_id)
+            if value:
+                raw = value
+                break
     if not raw:
         return None
 
