@@ -99,7 +99,13 @@ class TestSubRouterInclusion:
         "base_path",
         ["/ui/files", "/ui/organize", "/ui/profile", "/ui/settings", "/ui/marketplace"],
     )
-    def test_sub_router_base_route_reachable(self, client, base_path):
+    def test_sub_router_base_route_reachable(self, client, base_path, tmp_path, monkeypatch):
+        # ``/ui/marketplace`` instantiates ``MarketplaceService``, which creates
+        # its home dir and writes ``metadata.json`` under ``FO_MARKETPLACE_HOME``
+        # (defaulting to the real user config dir). Redirect it into ``tmp_path``
+        # so this route-inclusion check stays hermetic and doesn't 500 on
+        # read-only config homes.
+        monkeypatch.setenv("FO_MARKETPLACE_HOME", str(tmp_path / "marketplace"))
         status = client.get(base_path).status_code
         # Require a success/redirect status (not merely "not 404"): a registered
         # but broken route returning 500/503 should fail this reachability guard,
