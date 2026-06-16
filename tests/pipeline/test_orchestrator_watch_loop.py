@@ -503,6 +503,37 @@ class TestWatchLoopExecutor:
         assert sorted(closed) == ["a", "b"]
         assert closed.count("a") == 1
 
+    def test_reinstalled_stage_closed_once(self):
+        """A stage dropped then reinstalled before stop() is closed only once.
+
+        Regression for #1289: set_stages([a]) -> set_stages([b]) retires `a`;
+        set_stages([a]) reinstalls it as current. Without purging it from the
+        retired list, stop() would close `a` twice (retired loop + current loop).
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        orch.set_stages([_ClosableStage("b")])  # `a` retired
+        orch.set_stages([a])  # `a` reinstalled — must be purged from retired
+
+        orch.stop()
+        # `a` closed once (current), `b` once (retired) — `a` not double-closed.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
     def test_second_stop_does_not_double_close_retired_stages(self):
         """A repeated stop() does not re-close retired stages (list cleared).
 

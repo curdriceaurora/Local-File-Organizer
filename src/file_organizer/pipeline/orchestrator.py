@@ -283,6 +283,12 @@ class PipelineOrchestrator:
                 retained_ids = {id(s) for s in stages}
                 self._retired_stages.extend(s for s in self._stages if id(s) not in retained_ids)
             self._stages = list(stages)
+            # Purge any reinstalled stage from the retired list: a stage that was
+            # dropped earlier and is now present in the new list is current
+            # again, so it must be closed via the current-stages loop only, not
+            # also via the retired loop (e.g. [a] -> [b] -> [a]) (#1289 review).
+            current_ids = {id(s) for s in self._stages}
+            self._retired_stages = [s for s in self._retired_stages if id(s) not in current_ids]
             # Newly installed stages may hold their own fds; allow stop() to
             # close them even if a previous stage list was already closed
             # (e.g. batch → set_stages → batch without start()) (#1285 review).
