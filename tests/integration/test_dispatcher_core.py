@@ -812,10 +812,10 @@ class TestAudioTranscription:
         assert result is None
 
     def test_maybe_transcribe_invalid_transcriber_degrades(self) -> None:
-        """A transcriber missing generate() degrades to metadata-only."""
+        """A transcriber exposing neither transcribe() nor generate() degrades."""
         from file_organizer.core.dispatcher import _maybe_transcribe
 
-        bad = object()  # no .generate
+        bad = object()  # no .transcribe / .generate
         result = _maybe_transcribe(
             Path("/mock/a.mp3"),
             metadata=MagicMock(duration=10.0),
@@ -827,8 +827,7 @@ class TestAudioTranscription:
     def test_maybe_transcribe_over_cap_skips(self) -> None:
         from file_organizer.core.dispatcher import _maybe_transcribe
 
-        transcriber = MagicMock()
-        transcriber.generate.return_value = "should not be called"
+        transcriber = MagicMock(spec=["transcribe"])
         result = _maybe_transcribe(
             Path("/mock/long.mp3"),
             metadata=MagicMock(duration=900.0),
@@ -836,12 +835,34 @@ class TestAudioTranscription:
             max_transcribe_seconds=600.0,
         )
         assert result is None
-        transcriber.generate.assert_not_called()
+        transcriber.transcribe.assert_not_called()
 
-    def test_maybe_transcribe_success_returns_text(self) -> None:
+    def test_maybe_transcribe_uses_transcribe_api(self) -> None:
+        """The repo's AudioTranscriber (transcribe() -> TranscriptionResult) is used.
+
+        Regression for #1287 review: the guard previously required generate(),
+        rejecting the real Whisper transcriber and forcing metadata-only audio.
+        """
+        from types import SimpleNamespace
+
         from file_organizer.core.dispatcher import _maybe_transcribe
 
-        transcriber = MagicMock()
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.return_value = SimpleNamespace(text="hello from whisper")
+        result = _maybe_transcribe(
+            Path("/mock/a.mp3"),
+            metadata=MagicMock(duration=10.0),
+            transcriber=transcriber,
+            max_transcribe_seconds=600.0,
+        )
+        assert result == "hello from whisper"
+        transcriber.transcribe.assert_called_once_with("/mock/a.mp3")
+
+    def test_maybe_transcribe_generate_duck_type_returns_text(self) -> None:
+        """A generate(path) -> str duck-type is still accepted as a fallback."""
+        from file_organizer.core.dispatcher import _maybe_transcribe
+
+        transcriber = MagicMock(spec=["generate"])
         transcriber.generate.return_value = "hello world"
         result = _maybe_transcribe(
             Path("/mock/a.mp3"),
@@ -856,8 +877,8 @@ class TestAudioTranscription:
         """A RuntimeError during transcription degrades, not aborts."""
         from file_organizer.core.dispatcher import _maybe_transcribe
 
-        transcriber = MagicMock()
-        transcriber.generate.side_effect = RuntimeError("decode failed")
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.side_effect = RuntimeError("decode failed")
         result = _maybe_transcribe(
             Path("/mock/a.mp3"),
             metadata=MagicMock(duration=10.0),
@@ -911,8 +932,10 @@ class TestAudioTranscription:
         mock_organizer_instance = MagicMock()
         mock_organizer_instance.generate_path.return_value = dest
 
-        transcriber = MagicMock()
-        transcriber.generate.return_value = "episode transcript text"
+        from types import SimpleNamespace
+
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.return_value = SimpleNamespace(text="episode transcript text")
 
         with (
             patch(_AUDIO_CLASSIFIER_TARGET, return_value=mock_classifier_instance),
@@ -961,8 +984,8 @@ class TestAudioTranscription:
         mock_organizer_instance = MagicMock()
         mock_organizer_instance.generate_path.return_value = dest
 
-        transcriber = MagicMock()
-        transcriber.generate.side_effect = RuntimeError("whisper crashed")
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.side_effect = RuntimeError("whisper crashed")
 
         with (
             patch(_AUDIO_CLASSIFIER_TARGET, return_value=mock_classifier_instance),

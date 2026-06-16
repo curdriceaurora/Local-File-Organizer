@@ -51,13 +51,16 @@ def _maybe_transcribe(
     """
     if transcriber is None:
         return None
-    # Defensive guard: a duck-typed transcriber that doesn't expose
-    # `generate(audio_path)` would otherwise raise AttributeError and abort
-    # the per-file dispatcher loop. Treat invalid transcribers the same as
-    # missing — degrade to metadata-only with a warning.
-    if not callable(getattr(transcriber, "generate", None)):
+    # Accept the repo's ``AudioTranscriber`` (``transcribe(path) ->
+    # TranscriptionResult``) as well as a ``generate(path) -> str`` duck-type
+    # (#1287 review). A transcriber exposing neither is treated as invalid —
+    # degrade to metadata-only with a warning rather than raising
+    # AttributeError and aborting the per-file dispatcher loop.
+    transcribe_fn = getattr(transcriber, "transcribe", None)
+    generate_fn = getattr(transcriber, "generate", None)
+    if not callable(transcribe_fn) and not callable(generate_fn):
         logger.warning(
-            "Invalid transcriber for {} (missing generate()); using metadata only.",
+            "Invalid transcriber for {} (no transcribe()/generate()); using metadata only.",
             audio_path.name,
         )
         return None
@@ -75,7 +78,15 @@ def _maybe_transcribe(
         )
         return None
     try:
-        result = transcriber.generate(str(audio_path))
+        if callable(transcribe_fn):
+            # Repo's AudioTranscriber returns a TranscriptionResult (.text);
+            # a duck-typed transcribe() may already return a str.
+            result = transcribe_fn(str(audio_path))
+            text = getattr(result, "text", result)
+        elif callable(generate_fn):
+            text = generate_fn(str(audio_path))
+        else:  # pragma: no cover - guarded above
+            return None
     except (FileNotFoundError, OSError, ValueError, RuntimeError, ImportError) as exc:
         # OSError + ValueError cover malformed / unsupported audio
         # (faster-whisper / ctranslate2 surface decode failures via these).
@@ -86,10 +97,12 @@ def _maybe_transcribe(
         # metadata-only categorization on any recoverable failure.
         logger.warning("Audio transcription failed for {}: {}", audio_path.name, exc)
         return None
-    # `transcriber` is typed as `Any` so mypy can't see `generate`'s return
-    # type; cast to str to satisfy the no-any-return gate. AudioModel.generate
-    # is contracted to return str (verified in `models/audio_model.py:generate`).
-    return str(result)
+    if text is None:
+        return None
+    # ``transcriber`` is typed as ``Any`` so mypy can't see the return type;
+    # cast to str to satisfy the no-any-return gate. AudioTranscriber yields a
+    # TranscriptionResult.text (str) and AudioModel.generate returns str.
+    return str(text)
 
 
 def _to_transcription_result(transcript: str | None, metadata: AudioMetadata) -> Any:
