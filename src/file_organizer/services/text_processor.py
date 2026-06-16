@@ -33,6 +33,13 @@ class ProcessedFile:
     original_content: str | None = None
     processing_time: float = 0.0
     error: str | None = None
+    # Best-effort audio transcript (#WP-4.1 anti-cascade audio path).
+    # Populated by the dispatcher's audio pipeline when a transcriber is
+    # configured and transcription succeeds within the duration cap; None
+    # for metadata-only categorization or when transcription degraded on a
+    # recoverable failure. Stored for the organizer's text-categorization
+    # path; rendering consumers are out of scope for this port.
+    transcript: str | None = None
 
 
 # Stop-words and noise words filtered from AI-generated names.

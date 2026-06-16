@@ -8,7 +8,7 @@ and handles progress display for each batch.  Extracted from
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from rich.console import Console
@@ -19,12 +19,118 @@ from file_organizer.core.types import (
     ERROR_FALLBACK_FOLDER,
     VIDEO_FALLBACK_FOLDER,
 )
+from file_organizer.parallel.config import ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
+from file_organizer.services.vision_fallback import compute_fallback
 
 if TYPE_CHECKING:
-    from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+    from file_organizer.services.audio.metadata_extractor import (
+        AudioMetadata,
+        AudioMetadataExtractor,
+    )
     from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+
+
+def _maybe_transcribe(
+    audio_path: Path,
+    *,
+    metadata: AudioMetadata,
+    transcriber: Any | None,
+    max_transcribe_seconds: float | None,
+) -> str | None:
+    """Return a transcript when a transcriber is set and duration is within cap.
+
+    Returns ``None`` for any of:
+    - No transcriber configured (the default; metadata-only categorization).
+    - Duration exceeds ``max_transcribe_seconds`` (skip and warn — long files
+      would dominate the organize wall-clock time).
+    - The transcriber raises a recoverable exception (FileNotFound,
+      RuntimeError, ImportError); we degrade to metadata-only categorization
+      rather than aborting the entire organize batch on a single bad file.
+    """
+    if transcriber is None:
+        return None
+    # Defensive guard: a duck-typed transcriber that doesn't expose
+    # `generate(audio_path)` would otherwise raise AttributeError and abort
+    # the per-file dispatcher loop. Treat invalid transcribers the same as
+    # missing — degrade to metadata-only with a warning.
+    if not callable(getattr(transcriber, "generate", None)):
+        logger.warning(
+            "Invalid transcriber for {} (missing generate()); using metadata only.",
+            audio_path.name,
+        )
+        return None
+    duration = getattr(metadata, "duration", None)
+    if (
+        max_transcribe_seconds is not None
+        and isinstance(duration, (int, float))
+        and duration > max_transcribe_seconds
+    ):
+        logger.warning(
+            "Audio {} exceeds transcribe cap ({:.1f}s > {:.1f}s); using metadata only.",
+            audio_path.name,
+            float(duration),
+            float(max_transcribe_seconds),
+        )
+        return None
+    try:
+        result = transcriber.generate(str(audio_path))
+    except (FileNotFoundError, OSError, ValueError, RuntimeError, ImportError) as exc:
+        # OSError + ValueError cover malformed / unsupported audio
+        # (faster-whisper / ctranslate2 surface decode failures via these).
+        # Without them the exception escapes to the outer per-file handler
+        # and marks the file as failed in AUDIO_FALLBACK_FOLDER, regressing
+        # a file that's otherwise classifiable from metadata alone. Treat
+        # transcription as a best-effort enhancement: degrade to
+        # metadata-only categorization on any recoverable failure.
+        logger.warning("Audio transcription failed for {}: {}", audio_path.name, exc)
+        return None
+    # `transcriber` is typed as `Any` so mypy can't see `generate`'s return
+    # type; cast to str to satisfy the no-any-return gate. AudioModel.generate
+    # is contracted to return str (verified in `models/audio_model.py:generate`).
+    return str(result)
+
+
+def _to_transcription_result(transcript: str | None, metadata: AudioMetadata) -> Any:
+    """Wrap a plain transcript string for `AudioClassifier.classify(transcription=...)`.
+
+    The classifier's keyword/speaker scoring expects a ``TranscriptionResult``
+    dataclass with ``.text``, ``.duration``, and ``.segments``. The transcriber's
+    ``generate`` returns a plain ``str``, so we construct a minimal stand-in here.
+    ``segments=[]`` disables the segment-based speaker-count heuristic; that's
+    intentional — without real word-level timestamps we'd be inventing signal.
+
+    Returns ``None`` when ``transcript`` is missing/empty so the classifier's
+    existing ``if transcription is not None`` guard skips the transcription
+    phase cleanly.
+    """
+    if not transcript:
+        return None
+    from file_organizer.services.audio.transcriber import (
+        TranscriptionOptions,
+        TranscriptionResult,
+    )
+
+    return TranscriptionResult(
+        text=transcript,
+        segments=[],
+        language="",
+        language_confidence=0.0,
+        duration=getattr(metadata, "duration", 0.0),
+        options=TranscriptionOptions(),
+    )
+
+
+def _is_timeout_error(error_msg: str) -> bool:
+    """Match the dispatcher's timeout-error sentinel.
+
+    The parallel processor emits ``"Timed out after Xs"`` (see
+    ``parallel/processor.py``) when it abandons a long-running task.
+    Other errors (read failures, corrupt files) take the regular failure
+    path. Match by prefix so the timing-suffix doesn't have to be exact.
+    """
+    return error_msg.startswith("Timed out after")
 
 
 def process_text_files(
@@ -113,6 +219,10 @@ def process_image_files(
         List of processed image results.
     """
     processed: list[ProcessedImage] = []
+    # #432: track paths whose pool-saturation abort is retryable
+    # (never-started; collateral damage) so we can run them sequentially
+    # after the parallel pass finishes.
+    retry_paths: list[Path] = []
 
     with create_progress(console) as progress:
         task = progress.add_task("Processing images...", total=len(files))
@@ -139,21 +249,141 @@ def process_image_files(
                     )
             else:
                 error_msg = file_result.error or "Unknown error"
-                logger.error("Failed to process {}: {}", file_result.path, error_msg)
+                # #406: vision timeouts go through the metadata fallback path
+                # instead of being dropped into the error bucket. Other
+                # failures (read error, corrupt image, …) still error-out.
+                if _is_timeout_error(error_msg):
+                    fb = compute_fallback(file_result.path)
+                    logger.info(
+                        "Vision timed out for {}; categorized via {} → {}",
+                        file_result.path.name,
+                        fb.source,
+                        fb.folder,
+                    )
+                    # Per-source confidence (#409). The vision model never
+                    # actually classified this file; we're going off metadata.
+                    # EXIF dates are more trustworthy than pure filename
+                    # heuristics, so they earn a slightly higher score.
+                    _fallback_confidence = 0.5 if fb.source == "fallback_exif" else 0.3
+                    processed.append(
+                        ProcessedImage(
+                            file_path=file_result.path,
+                            description="",
+                            folder_name=fb.folder,
+                            filename=fb.filename,
+                            source=fb.source,
+                            # Carry the timeout's wall-clock through so the
+                            # #410 summary's p95/p99 reflect this image's real
+                            # worst-case latency.
+                            inference_ms=file_result.duration_ms,
+                            confidence=_fallback_confidence,
+                            # NB: no `error` field — the file is not a failure
+                        )
+                    )
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"[yellow]⚠[/yellow] {file_result.path.name} (fallback)",
+                    )
+                else:
+                    # #432: pool-saturation aborts on never-started tasks
+                    # carry ``non_retryable=False``. Queue them for a
+                    # post-pass sequential retry instead of recording them as
+                    # failures — they never actually ran, so marking them
+                    # failed is collateral damage.
+                    if (
+                        error_msg.startswith("Aborted: worker pool saturated")
+                        and not file_result.non_retryable
+                    ):
+                        retry_paths.append(file_result.path)
+                        progress.update(
+                            task,
+                            advance=1,
+                            description=f"[yellow]⟳[/yellow] {file_result.path.name} (will retry)",
+                        )
+                        continue
+                    logger.error("Failed to process {}: {}", file_result.path, error_msg)
+                    processed.append(
+                        ProcessedImage(
+                            file_path=file_result.path,
+                            description="",
+                            folder_name=ERROR_FALLBACK_FOLDER,
+                            filename=file_result.path.stem,
+                            error=error_msg,
+                            # #409: dispatcher-built failures must surface in
+                            # the "Review recommended" section.
+                            confidence=0.0,
+                        )
+                    )
+                    progress.update(
+                        task,
+                        advance=1,
+                        description=f"[red]✗[/red] {file_result.path.name} (Failed)",
+                    )
+
+    # #432: Sequential retry for pool-saturation collateral. The parallel
+    # processor marked these as never-started (non_retryable=False), so rerun
+    # them one-at-a-time before reporting failure.
+    #
+    # The retry must run with ``max_workers=1`` and ``prefetch_depth=0`` —
+    # reusing the caller's parallel_processor with its original multi-worker
+    # config can re-saturate if a retried file hangs again. The single-worker
+    # config gives deterministic degraded-mode recovery: each retry runs
+    # alone, and a still-hung backend produces a clean per-file timeout
+    # instead of cascade-failing other retry candidates.
+    #
+    # We inherit the operator-tunable ``timeout_per_file`` from the caller's
+    # config so ``--timeout-per-file`` (#396) still applies.
+    if retry_paths:
+        logger.warning(
+            "Pool aborted on hung tasks; retrying {} untried image(s) sequentially.",
+            len(retry_paths),
+        )
+
+        retry_config = ParallelConfig(
+            max_workers=1,
+            prefetch_depth=0,
+            timeout_per_file=parallel_processor.config.timeout_per_file,
+            retry_count=0,  # no second-level retry
+        )
+        retry_processor = ParallelProcessor(config=retry_config)
+
+        def _retry_one_image(path: Path) -> ProcessedImage:
+            return vision_processor.process_file(path)
+
+        for retry_result in retry_processor.process_batch_iter(retry_paths, _retry_one_image):
+            if retry_result.success:
+                processed.append(retry_result.result)
+                continue
+            # Retry also failed (timeout, vision error, …). Record as a
+            # genuine failure now — there's no second-level retry.
+            retry_err = retry_result.error or "Unknown error"
+            if _is_timeout_error(retry_err):
+                fb = compute_fallback(retry_result.path)
+                _fallback_confidence = 0.5 if fb.source == "fallback_exif" else 0.3
                 processed.append(
                     ProcessedImage(
-                        file_path=file_result.path,
+                        file_path=retry_result.path,
                         description="",
-                        folder_name=ERROR_FALLBACK_FOLDER,
-                        filename=file_result.path.stem,
-                        error=error_msg,
+                        folder_name=fb.folder,
+                        filename=fb.filename,
+                        source=fb.source,
+                        inference_ms=retry_result.duration_ms,
+                        confidence=_fallback_confidence,
                     )
                 )
-                progress.update(
-                    task,
-                    advance=1,
-                    description=f"[red]✗[/red] {file_result.path.name} (Failed)",
+                continue
+            logger.error("Sequential retry failed for {}: {}", retry_result.path, retry_err)
+            processed.append(
+                ProcessedImage(
+                    file_path=retry_result.path,
+                    description="",
+                    folder_name=ERROR_FALLBACK_FOLDER,
+                    filename=retry_result.path.stem,
+                    error=retry_err,
+                    confidence=0.0,
                 )
+            )
 
     return processed
 
@@ -162,6 +392,8 @@ def process_audio_files(
     files: list[Path],
     *,
     extractor_cls: type[AudioMetadataExtractor] | None = None,
+    transcriber: Any | None = None,
+    max_transcribe_seconds: float | None = None,
 ) -> list[ProcessedFile]:
     """Process audio files using the metadata pipeline (no AI model required).
 
@@ -169,6 +401,18 @@ def process_audio_files(
         files: Audio file paths to process.
         extractor_cls: Optional extractor class override so organizer-level
             patch targets continue to intercept metadata extraction in tests.
+        transcriber: Optional transcriber object exposing
+            ``generate(audio_path: str) -> str`` (typically ``AudioModel``).
+            When provided, each file within the duration cap is transcribed
+            and the result attached to ``ProcessedFile.transcript`` for the
+            organizer's text-categorization path. ``None`` preserves the
+            metadata-only behavior. Transcription is best-effort: a recoverable
+            failure degrades to metadata-only categorization rather than
+            failing the file (anti-cascade audio path).
+        max_transcribe_seconds: Per-file duration cap; files longer than this
+            skip transcription and fall back to metadata-only categorization.
+            ``None`` (the default at this layer) means no cap — the
+            CLI/organizer layer applies its policy default and threads it down.
 
     Returns:
         List of processed file results.
@@ -186,7 +430,18 @@ def process_audio_files(
     for audio_path in files:
         try:
             metadata = extractor.extract(audio_path)
-            classification = classifier.classify(metadata)
+
+            # Transcribe FIRST so the result can influence classification.
+            # Otherwise the user pays transcription cost and gets the same
+            # metadata-only folder routing — defeating the transcribe path.
+            transcript = _maybe_transcribe(
+                audio_path,
+                metadata=metadata,
+                transcriber=transcriber,
+                max_transcribe_seconds=max_transcribe_seconds,
+            )
+            transcription = _to_transcription_result(transcript, metadata)
+            classification = classifier.classify(metadata, transcription=transcription)
             dest_path = organizer.generate_path(classification.audio_type, metadata)
 
             folder_name = dest_path.parent.as_posix()
@@ -208,6 +463,7 @@ def process_audio_files(
                     folder_name=folder_name,
                     filename=filename_stem,
                     error=None,
+                    transcript=transcript,
                 )
             )
             logger.debug("Audio processed: {} → {}/{}", audio_path.name, folder_name, filename_stem)

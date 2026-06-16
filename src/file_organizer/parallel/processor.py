@@ -7,6 +7,7 @@ retry logic, progress reporting, and graceful shutdown.
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -24,6 +25,8 @@ from typing import Any, cast
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.executor import create_executor
 from file_organizer.parallel.result import BatchResult, FileResult
+
+logger = logging.getLogger(__name__)
 
 
 def _execute_with_timing(
@@ -237,7 +240,7 @@ class ParallelProcessor:
         except Exception as exc:
             return FileResult(path=path, success=False, error=str(exc))
 
-    def _process_with_executor(
+    def _process_with_executor(  # noqa: C901 — complexity from nested state-tracking closures
         self,
         exec_instance: ThreadPoolExecutor | ProcessPoolExecutor,
         files: list[Path],
@@ -274,6 +277,10 @@ class ParallelProcessor:
         pending: set[Future[FileResult]] = set()
         future_paths: dict[Future[FileResult], Path] = {}
         future_started: dict[Future[FileResult], float | None] = {}
+        # Queue time is tracked separately: if a task never gets a worker thread
+        # within `timeout` seconds of submission, all workers are saturated by
+        # abandoned tasks and we must abort to avoid an infinite hang.
+        future_queued_at: dict[Future[FileResult], float] = {}
         iterator = iter(files)
         iterator_exhausted = False
 
@@ -288,6 +295,7 @@ class ParallelProcessor:
                 pending.add(future)
                 future_paths[future] = path
                 future_started[future] = None
+                future_queued_at[future] = time.monotonic()
                 return True
             except StopIteration:
                 iterator_exhausted = True
@@ -320,26 +328,57 @@ class ParallelProcessor:
                 pending.remove(future)
                 path = future_paths.pop(future)
                 future_started.pop(future, None)
+                future_queued_at.pop(future, None)
                 yield finalize_result(self._collect_result(future, path))
                 submit_round_of_work()
 
-            # Check for and handle timeouts
+            saturation = self._check_pool_saturation(
+                pending,
+                future_paths,
+                future_started,
+                future_queued_at,
+                timeout,
+                finalize_result,
+            )
+            if saturation is not None:
+                cleanup_state["force_nonblocking_shutdown"] = owns_executor
+                yield from saturation
+                # #432 follow-up: unsubmitted files at the iterator tail are
+                # never-started by definition; flag them retryable so the
+                # dispatcher's sequential pass picks them up. Without this, a
+                # saturation with N in-flight + M unsubmitted still mass-fails
+                # the M tail for the same reason the in-flight retry was meant
+                # to fix.
+                for remaining_path in iterator:
+                    yield finalize_result(
+                        FileResult(
+                            path=remaining_path,
+                            success=False,
+                            error="Aborted: worker pool saturated by hung tasks",
+                            non_retryable=False,
+                        )
+                    )
+                return
+
+            # Check for running-task timeouts
             timeout_handling = self._handle_timeouts(
                 pending,
                 future_paths,
                 future_started,
+                future_queued_at,
                 timeout,
                 poll_interval,
                 finalize_result,
             )
             if timeout_handling is not None:
-                should_abort, timeout_results = timeout_handling
+                should_abort, needs_nonblocking, timeout_results = timeout_handling
+                if needs_nonblocking:
+                    cleanup_state["force_nonblocking_shutdown"] = owns_executor
                 if not should_abort:
                     yield from timeout_results
                     submit_round_of_work()
                     continue
 
-                cleanup_state["force_nonblocking_shutdown"] = owns_executor
                 yield from timeout_results
                 # Abort remaining files from iterator
                 for remaining_path in iterator:
@@ -356,29 +395,111 @@ class ParallelProcessor:
 
             submit_round_of_work()
 
+    def _check_pool_saturation(
+        self,
+        pending: set[Future[FileResult]],
+        future_paths: dict[Future[FileResult], Path],
+        future_started: dict[Future[FileResult], float | None],
+        future_queued_at: dict[Future[FileResult], float],
+        timeout: float,
+        finalize_result: Callable[[FileResult], FileResult],
+    ) -> list[FileResult] | None:
+        """Detect and handle worker-pool saturation caused by abandoned tasks.
+
+        Returns a list of finalized error results for all pending tasks if the
+        pool is saturated (all pending tasks queued for > 2 × timeout without
+        starting), or None if the pool is healthy.  The 2× multiplier gives
+        temporarily-busy pools (abandoned tasks that finish in O(timeout)) time
+        to free a slot before declaring permanent saturation.
+        """
+        if not pending:
+            return None
+        now = time.monotonic()
+        # Only futures that have never started (future_started[f] is None) AND
+        # have been queued for longer than 2×timeout count as stalled. Futures
+        # already picked up by a worker have a float start time and are excluded.
+        stalled = [
+            f
+            for f in pending
+            if future_started.get(f) is None
+            and not f.running()
+            and (now - future_queued_at.get(f, now)) > timeout * 2
+        ]
+        if not stalled:
+            return None
+        logger.warning(
+            "Worker pool saturated: %d queued tasks waited > %.0fs without "
+            "starting. Aborting remaining work. "
+            "Hint: raise `--timeout-per-file` (#396) or lower `--workers` "
+            "(#408) — on low-memory hardware running large vision models, "
+            "concurrent slots often exhaust unified memory and trigger this "
+            "saturation path.",
+            len(stalled),
+            timeout * 2,
+        )
+        results: list[FileResult] = []
+        for f in list(pending):
+            # #432: distinguish never-started tasks (collateral, should be
+            # retryable in a degraded mode) from in-flight tasks (truly hung —
+            # don't retry). The dispatcher's image path scans for
+            # ``non_retryable=False`` saturation aborts and reruns them
+            # sequentially so a 2-3 hung-image case doesn't collateral-fail
+            # every untried file in the batch.
+            never_started = future_started.get(f) is None and not f.running()
+            f.cancel()
+            abort_path = future_paths.pop(f)
+            future_started.pop(f, None)
+            future_queued_at.pop(f, None)
+            pending.discard(f)
+            results.append(
+                finalize_result(
+                    FileResult(
+                        path=abort_path,
+                        success=False,
+                        error="Aborted: worker pool saturated by hung tasks",
+                        non_retryable=not never_started,
+                    )
+                )
+            )
+        return results
+
     def _handle_timeouts(
         self,
         pending: set[Future[FileResult]],
         future_paths: dict[Future[FileResult], Path],
         future_started: dict[Future[FileResult], float | None],
+        future_queued_at: dict[Future[FileResult], float],
         timeout: float,
         poll_interval: float,
         finalize_result: Callable[[FileResult], FileResult],
-    ) -> tuple[bool, list[FileResult]] | None:
+    ) -> tuple[bool, bool, list[FileResult]] | None:
         """Check for and handle timed-out tasks.
+
+        ``non_retryable=True`` is set **only** on the uncancellable-running
+        branch — where ``future.cancel()`` returned ``False`` because a thread
+        is actively executing the task. Retrying such a task would submit a
+        new future while the original thread is still running, risking resource
+        exhaustion. Futures that were cancelled successfully (task never
+        started) do *not* receive ``non_retryable=True`` and may be retried
+        by the caller.
 
         Args:
             pending: Set of pending futures.
             future_paths: Mapping of futures to file paths.
             future_started: Mapping of futures to start times.
+            future_queued_at: Mapping of futures to submission times.
             timeout: Timeout threshold in seconds.
             poll_interval: Polling interval for drift compensation.
-            owns_executor: Whether we own the executor.
             finalize_result: Function to finalize results.
 
         Returns:
-            None if no timeout was handled, or tuple of
-            (should_abort_processing, finalized_results_to_yield).
+            None if no timeout was handled, or a 3-tuple of
+            (should_abort_processing, needs_nonblocking_shutdown,
+            finalized_results_to_yield).
+
+            should_abort_processing=True means drain the iterator and stop.
+            needs_nonblocking_shutdown=True means set force_nonblocking_shutdown
+            so the executor does not hang waiting for a stuck thread.
         """
         now = time.monotonic()
 
@@ -387,7 +508,7 @@ class ParallelProcessor:
             if future_started[future] is None and future.running():
                 future_started[future] = now - poll_interval
 
-        # Check for timeouts
+        # Check for running-task timeouts
         for future in list(pending):
             start_time = future_started[future]
             if start_time is None:
@@ -400,6 +521,7 @@ class ParallelProcessor:
                     pending.remove(future)
                     del future_paths[future]
                     del future_started[future]
+                    future_queued_at.pop(future, None)
                     timed_out_result = finalize_result(
                         FileResult(
                             path=path,
@@ -407,29 +529,66 @@ class ParallelProcessor:
                             error=f"Timed out after {timeout}s",
                         )
                     )
-                    return (False, [timed_out_result])
+                    return (False, False, [timed_out_result])
 
                 if future.done():
+                    # Task completed in the narrow window between cancel() and
+                    # done() — a race that only occurs on some OS schedulers
+                    # (commonly macOS).  Preserve the actual result rather than
+                    # reporting a phantom timeout: the backdated
+                    # ``future_started[future] = now - poll_interval`` (above)
+                    # can trip the elapsed-time check up to ``poll_interval``
+                    # seconds early, so a task that genuinely finished within
+                    # the configured timeout was otherwise being reported as
+                    # ``non_retryable=True`` and discarding its actual return
+                    # value.
                     pending.remove(future)
-                    completed_path = future_paths.pop(future)
-                    future_started.pop(future, None)
+                    del future_paths[future]
+                    del future_started[future]
+                    future_queued_at.pop(future, None)
                     try:
-                        completed_result = finalize_result(future.result())
+                        race_result = future.result()
                     except Exception as exc:
-                        completed_result = finalize_result(
-                            FileResult(path=completed_path, success=False, error=str(exc))
+                        # The task completed but raised — surface the real
+                        # exception text rather than a timeout.
+                        race_result = finalize_result(
+                            FileResult(path=path, success=False, error=str(exc))
                         )
-                    return (False, [completed_result])
+                    else:
+                        race_result = finalize_result(race_result)
+                    return (False, False, [race_result])
 
-                abort_results = self._abort_remaining_work(
-                    pending,
-                    future_paths,
-                    future_started,
-                    finalize_result,
-                    timed_out_future=future,
-                    timeout=timeout,
+                # Task is running and cannot be cancelled.  Abandon it —
+                # remove from tracking so other files continue normally.
+                # The thread will finish on its own (Ollama will eventually
+                # respond); we set needs_nonblocking_shutdown so the executor
+                # doesn't hang on cleanup waiting for it.
+                logger.warning(
+                    "Task for %s timed out after %.0fs and could not be cancelled "
+                    "(thread still running in background); continuing with remaining files",
+                    path,
+                    timeout,
                 )
-                return (True, abort_results)
+                pending.remove(future)
+                del future_paths[future]
+                del future_started[future]
+                future_queued_at.pop(future, None)
+                abandoned_result = finalize_result(
+                    FileResult(
+                        path=path,
+                        success=False,
+                        error=f"Timed out after {timeout}s",
+                        non_retryable=True,
+                    )
+                )
+                # The abandoned thread still occupies the worker slot until it
+                # exits naturally.  Reset the saturation-detection clock for all
+                # remaining queued futures so the 2×timeout guard doesn't fire
+                # while that thread is still winding down.
+                _reset_time = time.monotonic()
+                for _remaining in pending:
+                    future_queued_at[_remaining] = _reset_time
+                return (False, True, [abandoned_result])
 
         return None
 
