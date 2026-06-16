@@ -274,6 +274,94 @@ class TestConcurrencyFixes(unittest.TestCase):
             f"queued_2 must report pool saturation, got: {by_path.get(Path('queued_2'))}",
         )
 
+    def test_slow_progressing_pool_does_not_trip_saturation(self) -> None:
+        """#1288: a degraded-but-progressing pool must not false-trip saturation.
+
+        With ``max_workers=1`` and several tasks that each complete just under
+        ``timeout_per_file``, later files sit queued while earlier ones drain
+        sequentially. A queued file's wall-clock age can exceed 2×timeout even
+        though the pool is making steady progress. The saturation guard must
+        measure *continuous no-progress* time — reset on every healthy
+        completion — so it does NOT fire here and ALL files complete.
+        """
+        timeout = 0.2
+        config = ParallelConfig(
+            max_workers=1,
+            timeout_per_file=timeout,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        # Six files drained one-at-a-time: total ≈ 6 × 0.1s = 0.6s. Without the
+        # per-completion reset, the last queued file would age well past
+        # 2×timeout (0.4s) and false-trip saturation before it ever runs.
+        paths = [Path(f"slow_progress_{i}") for i in range(6)]
+
+        def slow_but_completes(_path: Path) -> str:
+            # Completes in ~half the timeout, so each task is healthy.
+            threading.Event().wait(timeout=timeout * 0.5)
+            return "ok"
+
+        results = processor.process_batch(paths, slow_but_completes)
+
+        self.assertEqual(results.total, len(paths))
+        self.assertEqual(
+            results.succeeded,
+            len(paths),
+            f"all files should complete on a progressing pool, got: "
+            f"{[(str(r.path), r.success, r.error) for r in results.results]}",
+        )
+        self.assertEqual(results.failed, 0)
+        self.assertFalse(
+            any("saturated" in str(r.error) for r in results.results),
+            "a steadily-progressing pool must not report saturation",
+        )
+
+    def test_saturation_guard_keys_off_recent_queue_time(self) -> None:
+        """#1288 (unit): ``_check_pool_saturation`` keys off ``future_queued_at``.
+
+        A never-started queued future whose ``future_queued_at`` was *recently*
+        refreshed (as the main loop does on every healthy completion) must NOT
+        be flagged as saturated, even though it has technically existed for a
+        long time. This pins the contract that the reset on healthy completion
+        relies on: saturation is measured from the last refreshed queue time,
+        not absolute age.
+        """
+        config = ParallelConfig(max_workers=1, timeout_per_file=0.1, retry_count=0)
+        processor = ParallelProcessor(config=config)
+
+        never_started = MagicMock()
+        never_started.running.return_value = False
+
+        pending = {never_started}
+        future_paths = {never_started: Path("queued")}
+        future_started: dict[object, float | None] = {never_started: None}
+        now = time.monotonic()
+        # Simulate a clock that was just refreshed by a healthy completion.
+        future_queued_at = {never_started: now}
+
+        result = processor._check_pool_saturation(
+            pending,  # type: ignore[arg-type]
+            future_paths,  # type: ignore[arg-type]
+            future_started,  # type: ignore[arg-type]
+            future_queued_at,  # type: ignore[arg-type]
+            config.timeout_per_file,
+            lambda r: r,
+        )
+        self.assertIsNone(result, "recently-refreshed queue time must not trip saturation")
+
+        # Conversely, an un-refreshed clock older than 2×timeout DOES trip it,
+        # proving the reset is what prevents the false positive.
+        future_queued_at[never_started] = now - (config.timeout_per_file * 2 + 1.0)
+        stale_result = processor._check_pool_saturation(
+            pending,  # type: ignore[arg-type]
+            future_paths,  # type: ignore[arg-type]
+            future_started,  # type: ignore[arg-type]
+            future_queued_at,  # type: ignore[arg-type]
+            config.timeout_per_file,
+            lambda r: r,
+        )
+        self.assertIsNotNone(stale_result, "stale queue time beyond 2×timeout must trip saturation")
+
     def test_retryable_saturation_survives_non_retryable_peer(self) -> None:
         """#1287: a queued never-started saturation file (retryable) must still be
         retried even when a non-retryable hung peer fails in the same attempt.
