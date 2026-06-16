@@ -11,7 +11,7 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -20,6 +20,8 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.models import DedupeGroup, DedupePreviewGroup
+from file_organizer.api.routers.dedupe import _preview
 from file_organizer.api.routers.dedupe import router as dedupe_router
 
 pytestmark = pytest.mark.integration
@@ -239,3 +241,152 @@ class TestDedupeExecute:
         assert "dry_run" in body
         assert "stats" in body
         assert isinstance(body["removed"], list)
+
+    def test_execute_trash_moves_duplicate_into_trash_dir(
+        self, dedupe_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The handler calls `get_data_dir() / "trash"` from path_manager at
+        # runtime; pin the data dir under tmp_path so the trash stays isolated.
+        data_dir = tmp_path / "data"
+        monkeypatch.setattr(
+            "file_organizer.config.path_manager.get_data_dir",
+            lambda: data_dir,
+        )
+        trash_dir = data_dir / "trash"
+
+        exec_dir = tmp_path / "trash_dir_run"
+        exec_dir.mkdir()
+        content = "content moved to trash on dedupe"
+        original = exec_dir / "keep.txt"
+        duplicate = exec_dir / "remove_me.txt"
+        original.write_text(content)
+        duplicate.write_text(content)
+
+        r = dedupe_client.post(
+            "/dedupe/execute",
+            json={"path": str(exec_dir), "dry_run": False, "trash": True},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["dry_run"] is False
+        assert len(body["removed"]) == 1
+
+        removed_path = Path(body["removed"][0])
+        # The removed entry points into the trash dir, not the source dir.
+        assert removed_path.parent == trash_dir
+        assert removed_path.exists()
+        # The original duplicate is gone from the source location.
+        assert not duplicate.exists()
+        # The kept copy stays put.
+        assert original.exists()
+
+    def test_execute_trash_rename_on_name_collision(
+        self, dedupe_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Pin the trash dir and pre-seed it with a file whose name collides with
+        # the duplicate about to be removed, forcing the `while destination.exists()`
+        # rename loop to assign a `-1` suffix.
+        data_dir = tmp_path / "data"
+        monkeypatch.setattr(
+            "file_organizer.config.path_manager.get_data_dir",
+            lambda: data_dir,
+        )
+        trash_dir = data_dir / "trash"
+        trash_dir.mkdir(parents=True, exist_ok=True)
+        # Pre-existing trash entry colliding with the duplicate's name.
+        (trash_dir / "remove_me.txt").write_text("a pre-existing unrelated trash file")
+
+        exec_dir = tmp_path / "collision_run"
+        exec_dir.mkdir()
+        content = "collision content for dedupe trash rename"
+        original = exec_dir / "keep.txt"
+        duplicate = exec_dir / "remove_me.txt"
+        original.write_text(content)
+        duplicate.write_text(content)
+
+        r = dedupe_client.post(
+            "/dedupe/execute",
+            json={"path": str(exec_dir), "dry_run": False, "trash": True},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["removed"]) == 1
+
+        removed_path = Path(body["removed"][0])
+        # Collision avoided: the moved file got the `-1` suffix variant.
+        assert removed_path == trash_dir / "remove_me-1.txt"
+        assert removed_path.exists()
+        # The pre-existing trash file was left untouched.
+        assert (trash_dir / "remove_me.txt").read_text() == ("a pre-existing unrelated trash file")
+        assert not duplicate.exists()
+
+    def test_execute_skips_group_when_keep_missing(
+        self, dedupe_client: TestClient, tmp_path: Path
+    ) -> None:
+        # Exercise the TOCTOU guard at the top of the removal loop: if the file
+        # chosen to keep has vanished between scan and execute, the whole group
+        # is skipped (`continue`). We inject a stale preview whose `keep` path
+        # does not exist so the guard fires without racing the real filesystem.
+        exec_dir = tmp_path / "keep_missing_dir"
+        exec_dir.mkdir()
+        missing_keep = exec_dir / "ghost_keep.txt"  # never created
+        missing_remove = exec_dir / "ghost_remove.txt"  # never created
+        stale = [
+            DedupePreviewGroup(
+                hash_value="deadbeef",
+                keep=str(missing_keep),
+                remove=[str(missing_remove)],
+            )
+        ]
+        with patch("file_organizer.api.routers.dedupe._preview", return_value=stale):
+            r = dedupe_client.post(
+                "/dedupe/execute",
+                json={"path": str(exec_dir), "dry_run": False, "trash": False},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        # Group skipped entirely: nothing removed.
+        assert body["removed"] == []
+
+    def test_execute_skips_remove_target_when_missing(
+        self, dedupe_client: TestClient, tmp_path: Path
+    ) -> None:
+        # Exercise the inner TOCTOU guard: the kept file exists, but a file
+        # listed for removal has vanished, so that single entry is skipped
+        # (`continue`) while the rest of the group proceeds.
+        exec_dir = tmp_path / "remove_missing_dir"
+        exec_dir.mkdir()
+        keep_file = exec_dir / "real_keep.txt"
+        keep_file.write_text("real keep content")
+        missing_remove = exec_dir / "ghost_remove.txt"  # never created
+        stale = [
+            DedupePreviewGroup(
+                hash_value="cafef00d",
+                keep=str(keep_file),
+                remove=[str(missing_remove)],
+            )
+        ]
+        with patch("file_organizer.api.routers.dedupe._preview", return_value=stale):
+            r = dedupe_client.post(
+                "/dedupe/execute",
+                json={"path": str(exec_dir), "dry_run": False, "trash": False},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        # The missing remove target is skipped; nothing was deleted.
+        assert body["removed"] == []
+        assert keep_file.exists()
+
+
+class TestPreviewHelper:
+    def test_preview_skips_group_with_no_files(self) -> None:
+        # _preview must drop a group that has no files (defensive `continue`),
+        # so an empty group contributes nothing to the preview output.
+        empty_group = DedupeGroup(
+            hash_value="emptyhash",
+            files=[],
+            total_size=0,
+            wasted_space=0,
+        )
+        result = _preview([empty_group])
+        assert result == []
