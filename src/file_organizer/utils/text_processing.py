@@ -514,6 +514,12 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
     if not text:
         return []
 
+    # A non-positive ``top_n`` slices ``ranked[:top_n]`` to almost-all keywords
+    # (negative index) or an empty list (0); short-circuit to an empty list so
+    # the contract ("top N keywords") never returns more than requested.
+    if top_n <= 0:
+        return []
+
     words = _tokenize(text.lower())
     words = [w for w in words if len(w) > 3]
 

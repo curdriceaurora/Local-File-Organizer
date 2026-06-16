@@ -953,6 +953,38 @@ class TestAudioTranscription:
         )
         assert result is None
 
+    def test_maybe_transcribe_type_error_adapter_degrades(self) -> None:
+        """A malformed/incompatible transcriber adapter degrades, not aborts.
+
+        #1291 review: a TypeError (e.g. wrong-signature ``transcribe``) must
+        degrade to metadata-only (``None``) rather than escape and fail the file.
+        """
+        from file_organizer.core.dispatcher import _maybe_transcribe
+
+        transcriber = MagicMock(spec=["transcribe"])
+        transcriber.transcribe.side_effect = TypeError("transcribe() takes no arguments")
+        result = _maybe_transcribe(
+            Path("/mock/a.mp3"),
+            metadata=MagicMock(duration=10.0),
+            transcriber=transcriber,
+            max_transcribe_seconds=None,
+        )
+        assert result is None
+
+    def test_maybe_transcribe_attribute_error_adapter_degrades(self) -> None:
+        """An adapter whose generate() raises AttributeError degrades to None."""
+        from file_organizer.core.dispatcher import _maybe_transcribe
+
+        transcriber = MagicMock(spec=["generate"])
+        transcriber.generate.side_effect = AttributeError("no such attribute")
+        result = _maybe_transcribe(
+            Path("/mock/a.mp3"),
+            metadata=MagicMock(duration=10.0),
+            transcriber=transcriber,
+            max_transcribe_seconds=None,
+        )
+        assert result is None
+
     def test_to_transcription_result_empty_returns_none(self) -> None:
         from file_organizer.core.dispatcher import _to_transcription_result
 

@@ -353,7 +353,10 @@ class TestRunPrefetchedBatch:
             def process(self, context: StageContext) -> StageContext:
                 raise RuntimeError("boom")
 
-        executor = ResourceAwareExecutor(prefetch_depth=1, prefetch_stages=1)
+        # Use a real BufferPool so buffer leak-safety on stage error is pinned:
+        # a stage that explodes must still release every acquired buffer.
+        pool = BufferPool(buffer_size=64, initial_buffers=2, max_buffers=4)
+        executor = ResourceAwareExecutor(prefetch_depth=1, prefetch_stages=1, buffer_pool=pool)
         results = executor.run_prefetched_batch(
             files=files,
             stages=[_Explode()],
@@ -365,6 +368,8 @@ class TestRunPrefetchedBatch:
         # and the failing file surfaces via ``success=False``.
         assert len(results) == 1
         assert results[0].success is False
+        # No buffer leaked despite the stage error.
+        assert pool.in_use_count == 0
 
 
 # ---------------------------------------------------------------------------

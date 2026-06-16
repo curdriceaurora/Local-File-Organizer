@@ -119,12 +119,23 @@ def _maybe_transcribe(
             return _to_transcription_result(str(text), metadata)
         else:  # pragma: no cover - guarded above
             return None
-    except (FileNotFoundError, OSError, ValueError, RuntimeError, ImportError) as exc:
+    except (
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        RuntimeError,
+        ImportError,
+        TypeError,
+        AttributeError,
+    ) as exc:
         # OSError + ValueError cover malformed / unsupported audio
         # (faster-whisper / ctranslate2 surface decode failures via these).
         # Without them the exception escapes to the outer per-file handler
         # and marks the file as failed in AUDIO_FALLBACK_FOLDER, regressing
-        # a file that's otherwise classifiable from metadata alone. Treat
+        # a file that's otherwise classifiable from metadata alone. TypeError /
+        # AttributeError cover a malformed or incompatible transcriber adapter
+        # (e.g. a stub whose transcribe/generate has the wrong signature) so it
+        # degrades to metadata-only instead of aborting the per-file loop. Treat
         # transcription as a best-effort enhancement: degrade to
         # metadata-only categorization on any recoverable failure.
         logger.warning("Audio transcription failed for {}: {}", audio_path.name, exc)

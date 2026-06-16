@@ -240,6 +240,11 @@ class PipelineOrchestrator:
         # Guards the stage-close loop so a repeated stop() does not double-close
         # stage resources. Reset on start() for a reused orchestrator.
         self._stages_closed = False
+        # Set when stop() shut the executor down but the watch-worker drain timed
+        # out, so processor-pool cleanup must be deferred (a still-running legacy
+        # watch worker may hold a pool processor). A later stop() retries cleanup
+        # once the drain succeeds. ProcessorPool.cleanup() is idempotent.
+        self._pending_pool_cleanup = False
 
     # ------------------------------------------------------------------
     # Stage management
@@ -349,8 +354,11 @@ class PipelineOrchestrator:
                 # Clean up executor
                 self._executor.shutdown(wait=False)
 
-                # Clean up processors
-                self.processor_pool.cleanup()
+                # Defer processor-pool cleanup until after a successful watch-worker
+                # drain below: an in-flight legacy watch worker may still be holding
+                # a pool processor, and releasing it now reintroduces the same race
+                # the stage-close drain fixes (#1291 review).
+                self._pending_pool_cleanup = True
 
             # Close stage-owned resources (e.g. SafeDir fds) only once it is safe
             # — i.e. no watch-mode worker can still be inside ``stage.process()``.
@@ -383,6 +391,12 @@ class PipelineOrchestrator:
                     )
 
             if safe_to_close:
+                # The drain succeeded (or there was nothing in flight), so no
+                # watch worker can still be using a pool processor: run any
+                # deferred processor-pool cleanup now (idempotent if already done).
+                if self._pending_pool_cleanup:
+                    self.processor_pool.cleanup()
+                    self._pending_pool_cleanup = False
                 self._close_stages()
 
             if was_running:
@@ -429,9 +443,18 @@ class PipelineOrchestrator:
 
         Runs from executor worker threads, so it must hold the same lock that
         guards ``stop()``'s snapshot and ``_watch_loop``'s add (#1285 review).
+
+        A watch future that finished with an exception would otherwise vanish
+        silently (its ``process_file`` failure is never awaited), so observe and
+        log it. The exception is read OUTSIDE the lock to avoid holding the
+        ``stop()`` lock during logging.
         """
         with self._watch_futures_lock:
             self._watch_futures.discard(future)
+        if not future.cancelled():
+            exc = future.exception()
+            if exc is not None:
+                logger.error("Watch-mode file processing failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Processing

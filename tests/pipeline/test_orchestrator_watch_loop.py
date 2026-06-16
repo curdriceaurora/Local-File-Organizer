@@ -298,6 +298,53 @@ class TestWatchLoopExecutor:
         # Stage close was skipped because the worker did not drain in time.
         assert closed == []
 
+    def test_stop_defers_pool_cleanup_when_drain_times_out(self):
+        """processor_pool.cleanup() is deferred when the watch drain times out.
+
+        Regression for #1291 review: cleanup() previously ran BEFORE the drain,
+        so an in-flight legacy watch worker could still be using a pool processor
+        when it was released. It must be gated on a successful drain.
+        """
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch.processor_pool = MagicMock()
+        # Simulate a still-running worker.
+        orch._watch_futures.add(MagicMock())
+
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ):
+            orch.stop()
+
+        # Drain timed out -> cleanup deferred, not called.
+        orch.processor_pool.cleanup.assert_not_called()
+        assert orch._pending_pool_cleanup is True
+
+        # A later stop() with a clean drain retries the deferred cleanup.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=({object()}, set()),
+        ):
+            orch._watch_futures.clear()
+            orch.stop()
+
+        orch.processor_pool.cleanup.assert_called_once()
+        assert orch._pending_pool_cleanup is False
+
+    def test_stop_runs_pool_cleanup_after_clean_drain(self):
+        """processor_pool.cleanup() runs once the watch drain completes cleanly."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch.processor_pool = MagicMock()
+
+        orch.stop()
+
+        orch.processor_pool.cleanup.assert_called_once()
+        assert orch._pending_pool_cleanup is False
+
     def test_stop_closes_stages_for_batch_only_callers(self):
         """stop() closes stage resources even when start() was never called.
 
@@ -385,6 +432,44 @@ class TestWatchLoopExecutor:
 
         # Discarding a future that is not tracked is a safe no-op.
         orch._on_watch_future_done(MagicMock())
+
+    def test_on_watch_future_done_logs_failed_future(self, caplog):
+        """A watch future that finished with an exception is logged and discarded.
+
+        Regression for #1291 review: the done-callback discarded futures without
+        observing exceptions, so process_file() failures vanished silently.
+        """
+        from concurrent.futures import Future
+
+        orch = self._make_orchestrator()
+        future: Future = Future()
+        with orch._watch_futures_lock:
+            orch._watch_futures.add(future)
+        future.set_exception(RuntimeError("process_file boom"))
+
+        with caplog.at_level("ERROR"):
+            orch._on_watch_future_done(future)
+
+        # Discarded despite the failure ...
+        assert future not in orch._watch_futures
+        # ... and the failure was surfaced via the module logger.
+        assert any("process_file boom" in record.getMessage() for record in caplog.records)
+
+    def test_on_watch_future_done_cancelled_future_not_logged(self, caplog):
+        """A cancelled watch future is discarded without touching .exception()."""
+        from concurrent.futures import Future
+
+        orch = self._make_orchestrator()
+        future: Future = Future()
+        with orch._watch_futures_lock:
+            orch._watch_futures.add(future)
+        future.cancel()
+
+        with caplog.at_level("ERROR"):
+            orch._on_watch_future_done(future)
+
+        assert future not in orch._watch_futures
+        assert caplog.records == []
 
     def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
         """Lazy buffer-pool init must not need the lifecycle lock.

@@ -542,6 +542,7 @@ class TestTimeoutRacePreservesResult(unittest.TestCase):
         self.assertIsNotNone(out)
         should_abort, needs_shutdown, results = out  # type: ignore[misc]
         self.assertFalse(should_abort)
+        self.assertFalse(needs_shutdown)
         self.assertEqual(len(results), 1)
         # The real successful result is preserved — NOT a timeout phantom.
         self.assertTrue(results[0].success)

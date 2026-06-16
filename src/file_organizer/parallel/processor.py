@@ -340,10 +340,10 @@ class ParallelProcessor:
                 # A healthy completion means the pool just made progress: a
                 # worker slot is now free for queued work. Reset the
                 # saturation-detection clock for every still-pending future so
-                # the 2×timeout guard only fires after *continuous* no-progress
+                # the 2xtimeout guard only fires after *continuous* no-progress
                 # (all slots blocked by hung/abandoned work). Without this, a
                 # degraded-but-progressing pool (max_workers slowly draining a
-                # backlog) could age a queued future past 2×timeout and
+                # backlog) could age a queued future past 2xtimeout and
                 # false-positive as saturated, mass-failing files that would
                 # have completed (#1288).
                 _progress_at = time.monotonic()
@@ -427,8 +427,8 @@ class ParallelProcessor:
         """Detect and handle worker-pool saturation caused by abandoned tasks.
 
         Returns a list of finalized error results for all pending tasks if the
-        pool is saturated (all pending tasks queued for > 2 × timeout without
-        starting), or None if the pool is healthy.  The 2× multiplier gives
+        pool is saturated (all pending tasks queued for > 2 x timeout without
+        starting), or None if the pool is healthy.  The 2x multiplier gives
         temporarily-busy pools (abandoned tasks that finish in O(timeout)) time
         to free a slot before declaring permanent saturation.
         """
@@ -436,7 +436,7 @@ class ParallelProcessor:
             return None
         now = time.monotonic()
         # Only futures that have never started (future_started[f] is None) AND
-        # have been queued for longer than 2×timeout count as stalled. Futures
+        # have been queued for longer than 2xtimeout count as stalled. Futures
         # already picked up by a worker have a float start time and are excluded.
         stalled = [
             f
@@ -612,7 +612,7 @@ class ParallelProcessor:
                 )
                 # The abandoned thread still occupies the worker slot until it
                 # exits naturally.  Reset the saturation-detection clock for all
-                # remaining queued futures so the 2×timeout guard doesn't fire
+                # remaining queued futures so the 2xtimeout guard doesn't fire
                 # while that thread is still winding down.
                 _reset_time = time.monotonic()
                 for _remaining in pending:

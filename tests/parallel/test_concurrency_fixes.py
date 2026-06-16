@@ -173,7 +173,7 @@ class TestConcurrencyFixes(unittest.TestCase):
 
     def test_timeout_does_not_deadlock_with_queued_files(self) -> None:
         """Timed-out tasks are abandoned; remaining files continue and terminate."""
-        # timeout=0.5s → saturation threshold = 2×0.5s = 1.0s.
+        # timeout=0.5s → saturation threshold = 2x0.5s = 1.0s.
         # Task duration 0.8s keeps slow_3's max queue time (≈0.3s) well below 1.0s,
         # so the saturation guard must NOT trigger — each task times out individually.
         # Margins are deliberately wide (0.3s stuck-time vs 1.0s threshold) to
@@ -196,7 +196,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         self.assertEqual(results.failed, 3)
         self.assertEqual(len(results.results), 3)
         # Each file runs and times out individually — no cascade abort.
-        # With max_workers=1 and 3×0.5s timeouts, total is ~1.5s.
+        # With max_workers=1 and 3x0.5s timeouts, total is ~1.5s.
         self.assertLess(
             results.total_duration_ms,
             4000,
@@ -238,7 +238,7 @@ class TestConcurrencyFixes(unittest.TestCase):
 
         Uses genuinely infinite tasks (Event.wait() with no timeout) to simulate
         worker threads that never complete.  The saturation guard should fire after
-        2 × timeout_per_file and fail remaining queued tasks without hanging.
+        2 x timeout_per_file and fail remaining queued tasks without hanging.
         """
         stop_event = threading.Event()
 
@@ -279,7 +279,7 @@ class TestConcurrencyFixes(unittest.TestCase):
 
         With ``max_workers=1`` and several tasks that each complete just under
         ``timeout_per_file``, later files sit queued while earlier ones drain
-        sequentially. A queued file's wall-clock age can exceed 2×timeout even
+        sequentially. A queued file's wall-clock age can exceed 2xtimeout even
         though the pool is making steady progress. The saturation guard must
         measure *continuous no-progress* time — reset on every healthy
         completion — so it does NOT fire here and ALL files complete.
@@ -291,9 +291,9 @@ class TestConcurrencyFixes(unittest.TestCase):
             retry_count=0,
         )
         processor = ParallelProcessor(config=config)
-        # Six files drained one-at-a-time: total ≈ 6 × 0.1s = 0.6s. Without the
+        # Six files drained one-at-a-time: total ≈ 6 x 0.1s = 0.6s. Without the
         # per-completion reset, the last queued file would age well past
-        # 2×timeout (0.4s) and false-trip saturation before it ever runs.
+        # 2xtimeout (0.4s) and false-trip saturation before it ever runs.
         paths = [Path(f"slow_progress_{i}") for i in range(6)]
 
         def slow_but_completes(_path: Path) -> str:
@@ -349,7 +349,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         )
         self.assertIsNone(result, "recently-refreshed queue time must not trip saturation")
 
-        # Conversely, an un-refreshed clock older than 2×timeout DOES trip it,
+        # Conversely, an un-refreshed clock older than 2xtimeout DOES trip it,
         # proving the reset is what prevents the false positive.
         future_queued_at[never_started] = now - (config.timeout_per_file * 2 + 1.0)
         stale_result = processor._check_pool_saturation(
@@ -360,7 +360,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             config.timeout_per_file,
             lambda r: r,
         )
-        self.assertIsNotNone(stale_result, "stale queue time beyond 2×timeout must trip saturation")
+        self.assertIsNotNone(stale_result, "stale queue time beyond 2xtimeout must trip saturation")
 
     def test_retryable_saturation_survives_non_retryable_peer(self) -> None:
         """#1287: a queued never-started saturation file (retryable) must still be

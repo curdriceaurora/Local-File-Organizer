@@ -90,6 +90,13 @@ class TestExtractKeywords:
         result = extract_keywords("the cat python python", top_n=2)
         assert result == ["python"]
 
+    def test_extract_keywords_non_positive_top_n_returns_empty(self):
+        # A non-positive top_n must return [] rather than slicing ranked[:top_n]
+        # (top_n=0 -> empty slice; top_n=-1 -> almost-all keywords) (#1291 review).
+        text = "apple banana apple cherry mango"
+        assert extract_keywords(text, top_n=0) == []
+        assert extract_keywords(text, top_n=-1) == []
+
 
 class TestTruncateText:
     def test_truncate_text(self):

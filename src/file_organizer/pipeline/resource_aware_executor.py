@@ -301,16 +301,21 @@ class ResourceAwareExecutor:
                 )
 
             for i in range(len(files)):
+                # Resolve (and consume) the current index BEFORE enqueuing the
+                # lookahead, so an outstanding prefetch future for ``i`` is drained
+                # first. Enqueuing ``next_i`` first would briefly leave 3 buffers /
+                # futures outstanding at ``prefetch_depth=2``, defeating the
+                # resource cap (#1291 review).
+                ctx, buffer, start_time = self._resolve_context(
+                    i, futures, files, io_stages, run_stages, make_context
+                )
+
                 if self._prefetch_depth > 0:
                     next_i = i + self._prefetch_depth
                     if next_i < len(files) and next_i not in futures:
                         self._try_enqueue(
                             next_i, futures, io_exec, files, io_stages, run_stages, make_context
                         )
-
-                ctx, buffer, start_time = self._resolve_context(
-                    i, futures, files, io_stages, run_stages, make_context
-                )
 
                 try:
                     ctx = run_stages(ctx, compute_stages)

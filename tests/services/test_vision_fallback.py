@@ -205,10 +205,13 @@ class TestComputeFallbackExifEndToEnd:
         # reaches the parse path and returns None on ValueError.  Filename
         # heuristic then catches the Screenshot pattern.
         result = compute_fallback(img)
-        # Either EXIF succeeded (unlikely with this bogus date) or filename
-        # took over — both are acceptable; what we're guarding is "doesn't
-        # crash, returns a sane FallbackResult".
+        # PNG carries no round-trippable EXIF here, so the malformed-date EXIF
+        # path yields None and the filename Screenshot heuristic takes over
+        # deterministically — pin the concrete fallback, not just the type.
         assert isinstance(result, FallbackResult)
+        assert result.source == "fallback_filename"
+        assert result.folder == "Images/Screenshots/2024"
+        assert result.filename == "Screenshot 2024-07-04 at 09.30.00"
 
 
 class TestDispatcherTimeoutFallbackIntegration:
