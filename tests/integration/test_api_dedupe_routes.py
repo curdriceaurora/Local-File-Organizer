@@ -358,12 +358,14 @@ class TestDedupeExecute:
         exec_dir.mkdir()
         keep_file = exec_dir / "real_keep.txt"
         keep_file.write_text("real keep content")
+        real_remove = exec_dir / "real_remove.txt"
+        real_remove.write_text("real keep content")
         missing_remove = exec_dir / "ghost_remove.txt"  # never created
         stale = [
             DedupePreviewGroup(
                 hash_value="cafef00d",
                 keep=str(keep_file),
-                remove=[str(missing_remove)],
+                remove=[str(missing_remove), str(real_remove)],
             )
         ]
         with patch("file_organizer.api.routers.dedupe._preview", return_value=stale):
@@ -373,9 +375,10 @@ class TestDedupeExecute:
             )
         assert r.status_code == 200
         body = r.json()
-        # The missing remove target is skipped; nothing was deleted.
-        assert body["removed"] == []
+        # Missing remove is skipped; existing remove still proceeds.
+        assert str(real_remove) in body["removed"]
         assert keep_file.exists()
+        assert not real_remove.exists()
 
 
 class TestPreviewHelper:
