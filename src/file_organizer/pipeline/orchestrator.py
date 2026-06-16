@@ -185,6 +185,11 @@ class PipelineOrchestrator:
         self.stats = PipelineStats()
         self._stats_lock = threading.Lock()
         self._stages: list[PipelineStage] = list(stages) if stages else []
+        # Stages retired by ``set_stages()`` while still potentially holding open
+        # resources (e.g. SafeDir fds). They become unreachable from
+        # ``self._stages`` but their ``close()`` must still run, so track them
+        # here and close them in ``stop()`` alongside the current stages (#1286).
+        self._retired_stages: list[PipelineStage] = []
 
         self._prefetch_depth = max(0, prefetch_depth)
         self._prefetch_stages = max(0, prefetch_stages)
@@ -261,7 +266,29 @@ class PipelineOrchestrator:
             stages: New ordered list of pipeline stages.
         """
         with self._lock:
+            # Preserve the outgoing stages so their close() is not lost: once
+            # replaced they are unreachable from self._stages, but they may hold
+            # open fds. stop() closes them (under the same drain-safety as the
+            # current stages) and then clears the retired list (#1286).
+            # Skip retiring when the outgoing stages were already closed
+            # (``_stages_closed``): their close() already ran, so re-queuing them
+            # would double-close on the next stop().
+            if not self._stages_closed:
+                # Only retire stages actually being dropped. A stage carried
+                # over into the new list (e.g. ``[a]`` -> ``set_stages([a, b])``)
+                # stays current and must NOT also be queued for close, or its
+                # close() would run twice on stop() — once via the retired loop
+                # and once via the current-stages loop (#1289 review). Compare
+                # by identity since stages need not be hashable/comparable.
+                retained_ids = {id(s) for s in stages}
+                self._retired_stages.extend(s for s in self._stages if id(s) not in retained_ids)
             self._stages = list(stages)
+            # Purge any reinstalled stage from the retired list: a stage that was
+            # dropped earlier and is now present in the new list is current
+            # again, so it must be closed via the current-stages loop only, not
+            # also via the retired loop (e.g. [a] -> [b] -> [a]) (#1289 review).
+            current_ids = {id(s) for s in self._stages}
+            self._retired_stages = [s for s in self._retired_stages if id(s) not in current_ids]
             # Newly installed stages may hold their own fds; allow stop() to
             # close them even if a previous stage list was already closed
             # (e.g. batch → set_stages → batch without start()) (#1285 review).
@@ -368,7 +395,26 @@ class PipelineOrchestrator:
         that do not define ``close()`` (this repo's stages currently hold no
         fds). Idempotent via ``_stages_closed`` so a repeated ``stop()`` does
         not double-close; ``start()`` resets the guard for a reused orchestrator.
+
+        Retired stages (replaced via ``set_stages()`` while still holding open
+        resources) are closed here too and then cleared, so their ``close()`` is
+        not lost when they fall out of ``self._stages`` (#1286). This runs only
+        when the caller deemed it safe to close (the watch-worker drain
+        succeeded), so retired stages are never closed out from under a worker
+        that might still be using them — a timed-out drain leaves them in
+        ``_retired_stages`` for a later ``stop()``.
         """
+        # Close retired stages first, then drop them. This is gated by the same
+        # drain check as the current stages (the caller only invokes us when
+        # ``safe_to_close``), and clearing the list keeps a repeated ``stop()``
+        # from double-closing them.
+        for stage in self._retired_stages:
+            close_fn = getattr(stage, "close", None)
+            if close_fn is not None:
+                with contextlib.suppress(Exception):
+                    close_fn()
+        self._retired_stages.clear()
+
         if self._stages_closed:
             return
         self._stages_closed = True

@@ -440,3 +440,169 @@ class TestWatchLoopExecutor:
         orch.set_stages([_ClosableStage()])
         orch.stop()
         assert closed == ["close", "close"]
+
+    def test_stop_closes_retired_stages_replaced_via_set_stages(self):
+        """A stage retired by set_stages() is still closed on a later stop().
+
+        Regression for #1286: _close_stages() iterates only self._stages, so a
+        stage replaced via set_stages() before any close became unreachable and
+        leaked its fd. Retired stages must be tracked and closed by stop().
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        # Stage A is installed (and "used") but never closed before replacement.
+        orch.set_stages([_ClosableStage("a")])
+        # Replace with stage B at runtime: A is retired and must not be lost.
+        orch.set_stages([_ClosableStage("b")])
+
+        orch.stop()
+        # Both the retired (a) and the current (b) stage are closed.
+        assert sorted(closed) == ["a", "b"]
+
+    def test_set_stages_carryover_stage_closed_once(self):
+        """A stage carried over into the replacement list is closed only once.
+
+        Regression for #1289: set_stages([a]) then set_stages([a, b]) (extend /
+        reorder) must NOT retire `a` — it stays a current stage. Retiring it
+        anyway would close it twice on stop() (retired loop + current loop).
+        Only stages actually dropped from the new list are retired.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        # Extend: `a` is carried over (stays current), `b` is added.
+        orch.set_stages([a, _ClosableStage("b")])
+
+        orch.stop()
+        # `a` is closed exactly once (not double-closed); `b` once.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
+    def test_reinstalled_stage_closed_once(self):
+        """A stage dropped then reinstalled before stop() is closed only once.
+
+        Regression for #1289: set_stages([a]) -> set_stages([b]) retires `a`;
+        set_stages([a]) reinstalls it as current. Without purging it from the
+        retired list, stop() would close `a` twice (retired loop + current loop).
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        orch.set_stages([_ClosableStage("b")])  # `a` retired
+        orch.set_stages([a])  # `a` reinstalled — must be purged from retired
+
+        orch.stop()
+        # `a` closed once (current), `b` once (retired) — `a` not double-closed.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
+    def test_second_stop_does_not_double_close_retired_stages(self):
+        """A repeated stop() does not re-close retired stages (list cleared).
+
+        Regression for #1286: clearing _retired_stages after a successful close
+        is what keeps a second stop() from double-closing a retired stage.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        orch.set_stages([_ClosableStage("a")])
+        orch.set_stages([_ClosableStage("b")])
+
+        orch.stop()
+        assert sorted(closed) == ["a", "b"]
+
+        # Second stop() must not re-close the already-closed retired stage.
+        orch.stop()
+        assert sorted(closed) == ["a", "b"]
+
+    def test_stop_skips_retired_stage_close_when_drain_times_out(self):
+        """Retired stages are NOT closed while a watch worker is still live.
+
+        Regression for #1286: retired-stage closing must obey the same drain
+        safety as current-stage closing. When the drain times out (a worker is
+        still inside stage.process()), closing a retired stage's fd could race
+        the live worker, so the close loop — including retired stages — is
+        skipped and they remain queued for a later stop().
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        orch.set_stages([_ClosableStage("a")])
+        orch.set_stages([_ClosableStage("b")])  # retire "a"
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        # Simulate a still-running worker by registering a pending future.
+        orch._watch_futures.add(MagicMock())
+
+        # Patch the drain to report the worker as not finished within timeout.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()
+
+        mock_wait.assert_called_once()
+        # Neither the current nor the retired stage was closed during the race.
+        assert closed == []
+        # The retired stage stays queued for a future stop() that drains cleanly.
+        assert len(orch._retired_stages) == 1
