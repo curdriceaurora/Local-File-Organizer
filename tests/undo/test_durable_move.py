@@ -1678,9 +1678,7 @@ class TestSweepDirMoveHandling:
         # Disk state untouched.
         assert src.is_dir() and not dst.exists()
 
-    def test_sweep_drops_dir_move_started_with_warning(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_sweep_drops_dir_move_started_with_warning(self, tmp_path: Path) -> None:
         """A stranded ``dir_move`` started entry (move crashed) is
         dropped — sweep can't safely retry shutil.move. The warning
         prompts operator inspection of the on-disk state."""
@@ -1695,20 +1693,18 @@ class TestSweepDirMoveHandling:
             [{"op": "dir_move", "src": str(src), "dst": str(dst), "state": "started"}],
         )
 
-        with caplog.at_level("WARNING", logger="file_organizer.undo.durable_move"):
+        with _capture_durable_move_warnings() as records:
             sweep(journal)
         # Entry dropped (in-flight marker released).
         assert _read_journal(journal) == []
         # Disk state is whatever shutil.move left it — sweep doesn't
         # touch either path. We just verify the warning fired.
-        assert any("dir_move entry" in r.getMessage() for r in caplog.records), (
+        assert any("dir_move entry" in r.getMessage() for r in records), (
             f"warning must mention the dir_move entry; got "
-            f"{[r.getMessage() for r in caplog.records]}"
+            f"{[r.getMessage() for r in records]}"
         )
 
-    def test_sweep_drops_dir_move_done_silently(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_sweep_drops_dir_move_done_silently(self, tmp_path: Path) -> None:
         """§5.3 / §9.5 lock-in: ``dir_move done`` is dropped silently
         (no WARNING). Started entries warn so operators investigate
         the on-disk state; done entries are routine coordination
@@ -1724,7 +1720,7 @@ class TestSweepDirMoveHandling:
             [{"op": "dir_move", "src": str(src), "dst": str(dst), "state": "done"}],
         )
 
-        with caplog.at_level("WARNING", logger="file_organizer.undo.durable_move"):
+        with _capture_durable_move_warnings() as records:
             sweep(journal)
 
         assert _read_journal(journal) == []
@@ -1733,7 +1729,7 @@ class TestSweepDirMoveHandling:
         # subsystem warnings (if any) don't cause spurious failures.
         sweep_warnings = [
             r
-            for r in caplog.records
+            for r in records
             if r.levelname == "WARNING"
             and "dir_move" in r.getMessage()
             and r.name == "file_organizer.undo.durable_move"
