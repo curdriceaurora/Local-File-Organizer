@@ -127,15 +127,6 @@ ensure_matrix_venv() {
   fi
 }
 
-download_nltk_data() {
-  local python_bin="${1:-$PYTHON_BIN}"
-  run_step \
-    "Download NLTK data" \
-    "$python_bin" \
-    -c \
-    "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
-}
-
 install_python_dependencies() {
   require_cmd "$PYTHON_BIN"
   run_step "Upgrade pip" "$PYTHON_BIN" -m pip install --upgrade pip
@@ -228,7 +219,6 @@ run_test_pr_version() {
     --collect-only \
     --quiet \
     --ignore=tests/e2e
-  download_nltk_data "$venv_dir/bin/python"
   run_step \
     "Run PR CI test suite (Python $version)" \
     "$venv_dir/bin/pytest" \
@@ -255,7 +245,6 @@ run_test_full_version() {
   local venv_dir
   venv_dir="$(matrix_venv_dir "$version")"
 
-  download_nltk_data "$venv_dir/bin/python"
   run_step \
     "Run main-branch CI test suite (Python $version)" \
     "$venv_dir/bin/pytest" \
@@ -290,7 +279,6 @@ run_benchmark_version() {
   local venv_dir
   venv_dir="$(matrix_venv_dir "$version")"
 
-  download_nltk_data "$venv_dir/bin/python"
   run_step \
     "Run benchmark suite (Python $version)" \
     "$venv_dir/bin/pytest" \
@@ -314,7 +302,6 @@ run_benchmark() {
 }
 
 run_integration() {
-  download_nltk_data
   run_step \
     "Run integration coverage gate" \
     pytest \

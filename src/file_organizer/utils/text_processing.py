@@ -443,9 +443,9 @@ def clean_text(
         unwanted = get_unwanted_words()
         if stemmer is not None:
             # ``words`` were stemmed above, so the unwanted set must be stemmed
-            # too — otherwise terms like "image" -> "imag" or "generated" ->
-            # "generat" slip past the filter and leak into filenames/folders
-            # despite remove_unwanted=True (#1291 Codex review).
+            # too — otherwise a term whose stem differs from its surface form
+            # (e.g. "image" or "generated") slips past the filter and leaks into
+            # filenames/folders despite remove_unwanted=True (#1291 Codex review).
             unwanted = {stemmer.stemWord(w) for w in unwanted}
         filtered_words = []
         seen: set[str] = set()

@@ -37,14 +37,6 @@ jobs:
         run: |
           pip install -e ".[dev,search]"
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run test shard
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,14 +95,6 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         # CI Full's cross-platform contract: validate the portable ci/smoke subset on macOS.
         run: pytest tests/ --strict-markers --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"
@@ -131,14 +115,6 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         # CI Full's cross-platform contract: validate the portable ci/smoke subset on Windows.
         # -n=auto intentionally omitted: xdist worker shutdown on Windows propagates
