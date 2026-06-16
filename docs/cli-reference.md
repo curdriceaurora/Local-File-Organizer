@@ -368,6 +368,47 @@ file-organizer redo [OPTIONS]
 
 ---
 
+### `recover`
+
+Replay or sweep the durable-move journal to recover interrupted cross-device moves.
+
+A crash midway through a cross-device rollback move can leave the durable-move
+JSONL journal with unfinished `started`/`copied` entries (and possibly orphan
+files on disk). Reconciliation is **not** automatic — run this command on demand
+(for example, after a crash) to sweep the journal and complete or roll back the
+interrupted moves.
+
+**Usage:**
+
+```bash
+file-organizer recover [OPTIONS]
+```
+
+**Options:**
+- `--journal PATH` — Path to the durable-move journal. Defaults to the shared undo journal.
+- `--dry-run` — Report planned recovery actions without mutating the journal or disk.
+
+**Examples:**
+
+```bash
+# Sweep the default journal
+file-organizer recover
+
+# Preview what recovery would do, without touching disk
+file-organizer recover --dry-run
+
+# Recover from a specific journal file
+file-organizer recover --journal /path/to/durable_move.jsonl
+```
+
+**Behavior notes:**
+
+- `--dry-run` calls the same `plan_recovery_actions` planner the real sweep uses, so the preview can never drift from the actual run.
+- If the journal does not exist or has no entries, the command reports that there is nothing to recover and exits successfully.
+- Transient filesystem errors during the sweep (permissions, disk full) surface as a clean error message, not a stack trace.
+
+---
+
 ### `history`
 
 View operation history.
