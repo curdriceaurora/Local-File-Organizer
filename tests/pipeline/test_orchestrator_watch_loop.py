@@ -471,6 +471,38 @@ class TestWatchLoopExecutor:
         # Both the retired (a) and the current (b) stage are closed.
         assert sorted(closed) == ["a", "b"]
 
+    def test_set_stages_carryover_stage_closed_once(self):
+        """A stage carried over into the replacement list is closed only once.
+
+        Regression for #1289: set_stages([a]) then set_stages([a, b]) (extend /
+        reorder) must NOT retire `a` — it stays a current stage. Retiring it
+        anyway would close it twice on stop() (retired loop + current loop).
+        Only stages actually dropped from the new list are retired.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        # Extend: `a` is carried over (stays current), `b` is added.
+        orch.set_stages([a, _ClosableStage("b")])
+
+        orch.stop()
+        # `a` is closed exactly once (not double-closed); `b` once.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
     def test_second_stop_does_not_double_close_retired_stages(self):
         """A repeated stop() does not re-close retired stages (list cleared).
 

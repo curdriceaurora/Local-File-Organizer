@@ -274,7 +274,14 @@ class PipelineOrchestrator:
             # (``_stages_closed``): their close() already ran, so re-queuing them
             # would double-close on the next stop().
             if not self._stages_closed:
-                self._retired_stages.extend(self._stages)
+                # Only retire stages actually being dropped. A stage carried
+                # over into the new list (e.g. ``[a]`` -> ``set_stages([a, b])``)
+                # stays current and must NOT also be queued for close, or its
+                # close() would run twice on stop() — once via the retired loop
+                # and once via the current-stages loop (#1289 review). Compare
+                # by identity since stages need not be hashable/comparable.
+                retained_ids = {id(s) for s in stages}
+                self._retired_stages.extend(s for s in self._stages if id(s) not in retained_ids)
             self._stages = list(stages)
             # Newly installed stages may hold their own fds; allow stop() to
             # close them even if a previous stage list was already closed
