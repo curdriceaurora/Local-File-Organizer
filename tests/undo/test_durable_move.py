@@ -1700,8 +1700,7 @@ class TestSweepDirMoveHandling:
         # Disk state is whatever shutil.move left it — sweep doesn't
         # touch either path. We just verify the warning fired.
         assert any("dir_move entry" in r.getMessage() for r in records), (
-            f"warning must mention the dir_move entry; got "
-            f"{[r.getMessage() for r in records]}"
+            f"warning must mention the dir_move entry; got {[r.getMessage() for r in records]}"
         )
 
     def test_sweep_drops_dir_move_done_silently(self, tmp_path: Path) -> None:
