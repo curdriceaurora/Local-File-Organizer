@@ -10,13 +10,51 @@ from __future__ import annotations
 
 import errno
 import json
+import logging
 import os
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+
+
+@contextmanager
+def _capture_durable_move_warnings() -> Iterator[list[logging.LogRecord]]:
+    """Collect WARNING+ records from the durable_move logger, immune to global
+    logging state.
+
+    ``caplog`` installs a handler on the root logger and relies on propagation;
+    under xdist another test in the same shard can leak ``logging.disable()`` or
+    toggle this logger's level/propagation, leaving ``caplog.records`` empty even
+    though the warning fired (#1257). Attaching a handler directly to the target
+    logger and clearing any global disable makes the assertion deterministic.
+    """
+    target = logging.getLogger("file_organizer.undo.durable_move")
+    records: list[logging.LogRecord] = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Collector(level=logging.WARNING)
+    prev_disable = logging.root.manager.disable
+    prev_level = target.level
+    prev_disabled = target.disabled
+    logging.disable(logging.NOTSET)
+    target.addHandler(handler)
+    target.setLevel(logging.WARNING)
+    target.disabled = False
+    try:
+        yield records
+    finally:
+        target.removeHandler(handler)
+        target.setLevel(prev_level)
+        target.disabled = prev_disabled
+        logging.disable(prev_disable)
 
 
 # ---------------------------------------------------------------------------
@@ -919,9 +957,7 @@ class TestDurableMoveFailureModes:
         # disappears after exists() but before read_text()
         _sweep_unlocked_body(journal)  # must not raise
 
-    def test_sweep_unlocked_body_size_cap_skips_compaction(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_sweep_unlocked_body_size_cap_skips_compaction(self, tmp_path: Path) -> None:
         """``_sweep_unlocked_body`` applies the §6.6 size cap: journals
         larger than _MAX_JOURNAL_SIZE_BYTES emit a WARNING and are not
         compacted (parallel to the locked-body guard)."""
@@ -936,13 +972,13 @@ class TestDurableMoveFailureModes:
         size_before = journal.stat().st_size
         assert size_before > 16 * 1024 * 1024
 
-        with caplog.at_level("WARNING", logger="file_organizer.undo.durable_move"):
+        with _capture_durable_move_warnings() as records:
             _sweep_unlocked_body(journal)
 
         assert journal.stat().st_size == size_before, (
             "unlocked sweep must not compact oversized journal"
         )
-        assert any("exceeds size cap" in r.message for r in caplog.records), (
+        assert any("exceeds size cap" in r.getMessage() for r in records), (
             "expected size-cap WARNING in log"
         )
 
@@ -2203,9 +2239,7 @@ class TestAtomicCompaction:
         sweep(journal)
         assert not stale_tmp.exists(), "sweep must clean up stale compact-tmp"
 
-    def test_compaction_size_cap_skips_oversized_journal(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_compaction_size_cap_skips_oversized_journal(self, tmp_path: Path) -> None:
         """§6.6: journals >16 MiB trigger a WARNING and skip
         compaction (belt-and-suspenders; steady-state journals are
         bounded by in-flight count). Sweep returns early without
@@ -2230,12 +2264,12 @@ class TestAtomicCompaction:
         size_before = journal.stat().st_size
         assert size_before > 16 * 1024 * 1024
 
-        with caplog.at_level("WARNING", logger="file_organizer.undo.durable_move"):
+        with _capture_durable_move_warnings() as records:
             sweep(journal)
 
         # Journal still oversized (sweep skipped compaction).
         assert journal.stat().st_size == size_before
-        msgs = [r.getMessage() for r in caplog.records]
+        msgs = [r.getMessage() for r in records]
         assert any("size cap" in m.lower() for m in msgs), f"expected size-cap WARNING; got {msgs}"
 
     def test_compaction_empty_retained_clears_journal(self, tmp_path: Path) -> None:
