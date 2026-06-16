@@ -132,17 +132,25 @@ class ParallelProcessor:
 
             results.extend(succeeded)
 
-            if any(self._is_non_retryable_failure(result) for result in failed):
-                results.extend(failed)
-                remaining = []
-                break
+            # A single attempt can mix non-retryable failures (e.g. an
+            # uncancellable hung task) with retryable ones (e.g. a queued
+            # never-started saturation abort). Stopping on the non-retryable
+            # one before collecting the retryable ones would strand the queued
+            # file as a failure without ever running it (#1287 review).
+            non_retryable_failed = [r for r in failed if self._is_non_retryable_failure(r)]
+            retryable_failed = [r for r in failed if not self._is_non_retryable_failure(r)]
 
-            # On last attempt, include failures in results
+            # Non-retryable failures are final — retrying would submit a new
+            # future while the original thread is still running.
+            results.extend(non_retryable_failed)
+
             if attempt == self._config.retry_count:
-                results.extend(failed)
+                # No attempts left: retryable failures are final too.
+                results.extend(retryable_failed)
+                remaining = []
             else:
-                # Retry only the failures
-                remaining = [r.path for r in failed]
+                # Retry only the retryable failures.
+                remaining = [r.path for r in retryable_failed]
 
         batch_elapsed_ms = (time.perf_counter() - batch_start) * 1000
         succeeded_count = sum(1 for r in results if r.success)
@@ -527,6 +535,11 @@ class ParallelProcessor:
                             path=path,
                             success=False,
                             error=f"Timed out after {timeout}s",
+                            # The file consumed ~timeout seconds before being
+                            # cancelled; record it so the dispatcher's fallback
+                            # ``inference_ms`` reflects real worst-case latency
+                            # rather than 0ms (#1287 review).
+                            duration_ms=(now - start_time) * 1000,
                         )
                     )
                     return (False, False, [timed_out_result])
@@ -579,6 +592,10 @@ class ParallelProcessor:
                         success=False,
                         error=f"Timed out after {timeout}s",
                         non_retryable=True,
+                        # The thread ran ~timeout seconds before being abandoned;
+                        # record it so the dispatcher's fallback ``inference_ms``
+                        # reflects real worst-case latency, not 0ms (#1287 review).
+                        duration_ms=(now - start_time) * 1000,
                     )
                 )
                 # The abandoned thread still occupies the worker slot until it

@@ -274,6 +274,57 @@ class TestConcurrencyFixes(unittest.TestCase):
             f"queued_2 must report pool saturation, got: {by_path.get(Path('queued_2'))}",
         )
 
+    def test_retryable_saturation_survives_non_retryable_peer(self) -> None:
+        """#1287: a queued never-started saturation file (retryable) must still be
+        retried even when a non-retryable hung peer fails in the same attempt.
+
+        Old behaviour stopped on the first non-retryable failure before
+        collecting retryable ones, stranding the queued file as a failure
+        without ever running it — a residual cascade.
+        """
+        stop_event = threading.Event()
+        config = ParallelConfig(max_workers=1, timeout_per_file=0.1, retry_count=1)
+        processor = ParallelProcessor(config=config)
+
+        def task(path: Path) -> str:
+            if path.name == "hung_1":
+                stop_event.wait()  # never completes during the test
+            return "done"  # queued_2 succeeds once it actually runs (on retry)
+
+        try:
+            results = processor.process_batch([Path("hung_1"), Path("queued_2")], task)
+        finally:
+            stop_event.set()  # unblock the leaked thread so the pool shuts down
+
+        by_path = {r.path: r for r in results.results}
+        # The hung peer is a final failure (non-retryable)...
+        self.assertFalse(by_path[Path("hung_1")].success)
+        # ...but the queued file was retried alone and succeeded — not stranded.
+        self.assertTrue(
+            by_path[Path("queued_2")].success,
+            f"queued_2 should have been retried, got: {by_path[Path('queued_2')]}",
+        )
+
+    def test_timeout_result_records_elapsed_duration(self) -> None:
+        """#1287: a timed-out task records its elapsed duration (~timeout) rather
+        than the 0.0 default, so the dispatcher's fallback ``inference_ms`` (and
+        the p95/p99 sample) reflect the real worst-case latency of a hung call.
+        """
+        config = ParallelConfig(max_workers=1, timeout_per_file=0.2, retry_count=0)
+        processor = ParallelProcessor(config=config)
+
+        def very_slow_task(_path: Path) -> str:
+            threading.Event().wait(timeout=2.0)
+            return "done"
+
+        results = processor.process_batch([Path("slow")], very_slow_task)
+
+        self.assertEqual(results.failed, 1)
+        item = results.results[0]
+        self.assertIn("Timed out", str(item.error))
+        # Elapsed reflects the real wait (≈ timeout), not the 0.0 default.
+        self.assertGreaterEqual(item.duration_ms, config.timeout_per_file * 1000 * 0.5)
+
     def test_saturated_pool_warning_includes_tuning_hint(self) -> None:
         """#435: the saturation warning surfaces the tuning hint inline.
 
