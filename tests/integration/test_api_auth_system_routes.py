@@ -437,9 +437,10 @@ class TestSystemConfigPatch:
         assert config.updates.interval_hours == 12
         # Generic non-excluded field update applied via the hasattr/setattr loop.
         assert config.watcher == {"poll_interval": 5}
-        # Profile was loaded and the mutated config saved.
+        # Profile was loaded and the mutated config saved (handler calls
+        # manager.save(config, request.profile) positionally).
         manager.load.assert_called_once_with("default")
-        manager.save.assert_called_once()
+        manager.save.assert_called_once_with(config, "default")
 
     def test_patch_config_unsupported_version_returns_409(
         self, system_test_settings: ApiSettings

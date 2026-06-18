@@ -44,6 +44,8 @@ class TestConfigEditUnsupportedVersion:
         assert "unsupported" in result.output.lower()
         mock_mgr.load.assert_called_once_with(profile="default")
         mock_mgr.save.assert_called_once()
+        _, save_kwargs = mock_mgr.save.call_args
+        assert save_kwargs.get("profile") == "default"
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +99,8 @@ class TestConfigEditRealManager:
         assert "No profiles found" in empty.output
 
         # Create one via edit, then list should report it.
-        runner.invoke(app, ["config", "edit", "--profile", "work", "--device", "cpu"])
+        create = runner.invoke(app, ["config", "edit", "--profile", "work", "--device", "cpu"])
+        assert create.exit_code == 0
         listed = runner.invoke(app, ["config", "list"])
         assert listed.exit_code == 0
         assert "work" in listed.output

@@ -172,7 +172,7 @@ class TestRedoTransaction:
 
     def test_redo_transaction_validate_failure_returns_false(self, comps: _Components) -> None:
         # 227/231: redo validation fails because the source file is missing.
-        txn_id, src, dst = self._rolled_back_txn(comps)
+        txn_id, src, _dst = self._rolled_back_txn(comps)
         src.unlink()  # source gone -> validate_redo_move FILE_MISSING
 
         assert comps.manager.redo_transaction(txn_id) is False
@@ -181,7 +181,7 @@ class TestRedoTransaction:
         self, comps: _Components, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # 245-249: redo_operation returns False -> conn.rollback() + return False.
-        txn_id, src, dst = self._rolled_back_txn(comps)
+        txn_id, _src, _dst = self._rolled_back_txn(comps)
         monkeypatch.setattr(comps.executor, "redo_operation", lambda _op: False)
 
         assert comps.manager.redo_transaction(txn_id) is False
@@ -193,7 +193,7 @@ class TestRedoTransaction:
         self, comps: _Components, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # 250-253: redo_operation raises -> except -> conn.rollback() + False.
-        txn_id, src, dst = self._rolled_back_txn(comps)
+        txn_id, _src, _dst = self._rolled_back_txn(comps)
 
         def _boom(_op: Operation) -> bool:
             raise RuntimeError("redo blew up")
@@ -213,7 +213,7 @@ class TestUndoRedoConcurrentEdges:
         # already flipped the row to ROLLED_BACK, so the conditional UPDATE
         # matches 0 rows and undo_operation reports False. Simulate by flipping
         # the DB status inside the (wrapped) rollback call.
-        op_id, src, dst = _log_move(comps, "conc_undo")
+        op_id, _src, _dst = _log_move(comps, "conc_undo")
         real_rollback = comps.executor.rollback_operation
 
         def _rollback_then_flip(operation: Operation) -> bool:
@@ -235,7 +235,7 @@ class TestUndoRedoConcurrentEdges:
     ) -> None:
         # 331/335: redo succeeds, but a concurrent redo already flipped the row
         # to COMPLETED, so the conditional UPDATE matches 0 rows -> False.
-        op_id, src, dst = _log_move(comps, "conc_redo")
+        op_id, _src, _dst = _log_move(comps, "conc_redo")
         assert comps.manager.undo_operation(op_id) is True  # now ROLLED_BACK
 
         real_redo = comps.executor.redo_operation
