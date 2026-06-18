@@ -281,6 +281,22 @@ class TestTrashGCInitRecovery:
         for f in survivors:
             assert f.exists(), f"unrelated dotfile {f.name} must not be deleted"
 
+    def test_init_skips_exact_pending_delete_prefix_without_suffix(self, tmp_path: Path) -> None:
+        """The exact ``.pending-delete-`` prefix with no UUID suffix is
+        not a GC orphan and must survive init recovery."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        exact_prefix = trash / ".pending-delete-"
+        exact_prefix.mkdir()
+        (exact_prefix / "must_survive.txt").write_text("not a real orphan")
+
+        TrashGC(trash)
+
+        assert exact_prefix.exists()
+        assert (exact_prefix / "must_survive.txt").read_text() == "not a real orphan"
+
     def test_init_continues_when_one_orphan_rmtree_fails(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

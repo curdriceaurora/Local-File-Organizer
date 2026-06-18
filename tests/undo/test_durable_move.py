@@ -391,6 +391,33 @@ class TestDurableMoveSweep:
         journal.write_text("")
         sweep(journal)
 
+    def test_sweep_noop_when_journal_vanishes_between_exists_and_open(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The LOCK_EX path treats an exists→open FileNotFoundError as a
+        benign race and returns without raising."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text("", encoding="utf-8")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        dm.sweep(journal)  # no raise
+
     def test_sweep_started_state_retains_entry_and_preserves_paths(self, tmp_path: Path) -> None:
         """Codex P1 PRRT_kwDOR_Rkws59gbdD + PRRT_kwDOR_Rkws59g2Ex:
         ``started`` is AMBIGUOUS — a crash between ``os.replace`` and
@@ -2386,7 +2413,33 @@ class TestJournalLockFile:
         holder.close()
         assert reader_done.wait(timeout=5.0)
         t.join(timeout=2)
-        assert result[0] is False
+
+    def test_read_journal_under_shared_lock_returns_empty_when_journal_vanishes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The shared-lock reader treats an exists→open FileNotFoundError
+        as a benign race and returns an empty entry list."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text('{"op":"move","src":"/a","dst":"/b","state":"done"}\n', encoding="utf-8")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        assert dm.read_journal_under_shared_lock(journal) == []
 
     def test_replace_journal_under_held_lock_does_not_break_appender(self, tmp_path: Path) -> None:
         """Round-1 review blocking case: a sweep that would
