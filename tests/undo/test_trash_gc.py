@@ -281,10 +281,88 @@ class TestTrashGCInitRecovery:
         for f in survivors:
             assert f.exists(), f"unrelated dotfile {f.name} must not be deleted"
 
+    def test_init_skips_exact_pending_delete_prefix_without_suffix(self, tmp_path: Path) -> None:
+        """The exact ``.pending-delete-`` prefix with no UUID suffix is
+        not a GC orphan and must survive init recovery."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        exact_prefix = trash / ".pending-delete-"
+        exact_prefix.mkdir()
+        (exact_prefix / "must_survive.txt").write_text("not a real orphan")
+
+        TrashGC(trash)
+
+        assert exact_prefix.exists()
+        assert (exact_prefix / "must_survive.txt").read_text() == "not a real orphan"
+
+    def test_init_skips_exact_pending_delete_prefix_as_regular_file(
+        self, tmp_path: Path
+    ) -> None:
+        """The exact ``.pending-delete-`` name must survive even when it is
+        a plain file rather than a directory. Length-boundary check is the
+        only guard — it must not depend on the entry type."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        exact_prefix_file = trash / ".pending-delete-"
+        exact_prefix_file.write_text("edge-case plain file")
+
+        TrashGC(trash)
+
+        assert exact_prefix_file.exists(), (
+            ".pending-delete- (no UUID suffix) as a regular file must survive init recovery"
+        )
+        assert exact_prefix_file.read_text() == "edge-case plain file"
+
+    def test_init_deletes_single_char_suffix_orphan(self, tmp_path: Path) -> None:
+        """A name whose suffix is exactly one character beyond the prefix
+        (``.pending-delete-x``) is the smallest valid orphan and MUST be
+        cleaned. Boundary: ``len(name) > len(_STAGING_PREFIX)``."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        min_orphan = trash / ".pending-delete-x"
+        min_orphan.mkdir()
+        (min_orphan / "leftover").write_text("crash remnant")
+
+        TrashGC(trash)
+
+        assert not min_orphan.exists(), (
+            ".pending-delete-x must be identified as an orphan and cleaned"
+        )
+
+    def test_init_prefix_boundary_exact_survives_uuid_suffix_deleted(
+        self, tmp_path: Path
+    ) -> None:
+        """Combination: the exact ``.pending-delete-`` prefix (no suffix)
+        is preserved while a proper UUID-suffixed orphan alongside it is
+        cleaned. Both entries coexist in the same trash dir."""
+        from file_organizer.undo.trash_gc import TrashGC
+
+        trash = tmp_path / "trash"
+        trash.mkdir()
+        exact_prefix = trash / ".pending-delete-"
+        exact_prefix.mkdir()
+        (exact_prefix / "keep_me.txt").write_text("not an orphan")
+
+        uuid_orphan = trash / ".pending-delete-3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+        uuid_orphan.mkdir()
+        (uuid_orphan / "stale").write_text("stale orphan bytes")
+
+        TrashGC(trash)
+
+        assert exact_prefix.exists(), "exact prefix (no UUID) must survive"
+        assert (exact_prefix / "keep_me.txt").read_text() == "not an orphan"
+        assert not uuid_orphan.exists(), "UUID-suffixed orphan must be cleaned"
+
     def test_init_continues_when_one_orphan_rmtree_fails(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A failure on one orphan must not skip the others. The
+
         failing orphan is logged at WARNING and left for the next
         construction to retry."""
         import shutil
