@@ -1990,6 +1990,83 @@ class TestJournalSchemaV2Parser:
         assert len(entries) == 1
         assert entries[0].state == "copied"
 
+    def test_v2_metadata_validation_rejects_bad_types_and_skips_blank_lines(self) -> None:
+        """The v2 parser drops invalid optional metadata fields one row
+        at a time, while tolerating blank lines between records."""
+        from file_organizer.undo.durable_move import _parse_journal_text
+
+        valid = json.dumps(
+            {
+                "schema": 2,
+                "op": "move",
+                "op_id": "ok",
+                "src": "/ok-src",
+                "dst": "/ok-dst",
+                "state": "done",
+            }
+        )
+        invalid_lines = [
+            json.dumps({"schema": 0, "op": "move", "src": "/a", "dst": "/b", "state": "done"}),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": 123,
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "tmp-bad",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "started",
+                    "tmp_path": 7,
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "ts-bool",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "ts": True,
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "ts-str",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "ts": "later",
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "pid-bool",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "host_pid": False,
+                }
+            ),
+        ]
+
+        entries = _parse_journal_text("\n".join(["", *invalid_lines, "", valid, ""]) + "\n")
+        assert len(entries) == 1
+        assert entries[0].op_id == "ok"
+
     def test_unknown_op_preserves_raw_line(self) -> None:
         """§4.2: unknown-op records preserve the FULL raw JSON line on
         ``_raw`` so compaction re-serializes them verbatim. A future
@@ -2069,6 +2146,40 @@ class TestJournalSchemaV2Parser:
         assert _hash16(raw) == h  # deterministic
         # Different content → different hash.
         assert _hash16(raw.replace('"done"', '"started"')) != h
+
+    def test_serialize_entry_omits_none_optional_v2_fields(self) -> None:
+        """The v2 serializer keeps the envelope minimal when diagnostic
+        fields are absent."""
+        from file_organizer.undo.durable_move import _JournalEntry, _serialize_entry
+
+        payload = json.loads(
+            _serialize_entry(
+                _JournalEntry(
+                    op="move",
+                    src="/a",
+                    dst="/b",
+                    state="done",
+                    schema=2,
+                    op_id="abc",
+                )
+            )
+        )
+
+        assert payload == {
+            "schema": 2,
+            "op": "move",
+            "op_id": "abc",
+            "src": "/a",
+            "dst": "/b",
+            "state": "done",
+        }
+
+    def test_is_descendant_rejects_exact_path(self) -> None:
+        """Equal paths are not descendants; only deeper children match."""
+        from file_organizer.undo.durable_move import _is_descendant
+
+        assert _is_descendant("/trash/dir", "/trash/dir") is False
+        assert _is_descendant("/trash/dir/file.txt", "/trash/dir") is True
 
 
 # ---------------------------------------------------------------------------
