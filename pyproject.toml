@@ -349,6 +349,8 @@ markers = [
     "unit: marks tests as unit tests",
     "ci: marks tests intended for PR CI validation",
     "smoke: marks tests for fast pre-commit validation (<30s total)",
+    "security: marks security hardening / regression tests (tests/security)",
+    "extras: marks optional-dependency matrix tests (tests/extras)",
     "no_ollama: marks tests that verify fallback behavior when Ollama is unavailable",
     "regression: marks tests intended for full regression runs",
     "e2e: end-to-end tests against real file trees (no Ollama required)",
