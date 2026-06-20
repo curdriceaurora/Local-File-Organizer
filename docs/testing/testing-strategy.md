@@ -26,6 +26,8 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.regression    # Regression tests (full suite only)
 @pytest.mark.no_ollama     # Tests that verify fallback behavior when Ollama is unavailable
 @pytest.mark.playwright    # Playwright browser smoke tests (require a running server)
+@pytest.mark.security      # Security hardening / regression tests (tests/security)
+@pytest.mark.extras        # Optional-dependency matrix tests (tests/extras)
 
 def test_example():
     pass
