@@ -1,0 +1,23 @@
+# CI-rail registry — WP-0.1 scaffolding (#1222).
+#
+# Rails declared here are run by `.claude/scripts/ci_rails.py`. Each [[rail]] is:
+#
+#   name        unique rail identifier
+#   command     argv list to execute (exit 0 = pass, non-zero = fail)
+#   mode        "advisory" — warn on failure, never fail the run (default)
+#               "enforce"  — fail the run (exit 1) on failure
+#   description what the rail guards
+#
+# This registry is intentionally EMPTY at WP-0.1, so the runner is a no-op
+# (exit 0) — zero behavior change. WP-6.x authors rails as mode = "advisory"
+# and flips each to mode = "enforce" only once the code it guards has merged.
+# See docs/internal/fo-core-pullback-implementation-plan.md (Phase 6) and
+# .claude/rules/ci-rails.md.
+#
+# Example (commented — WP-6.1 "Security/path rails" will add real entries):
+#
+# [[rail]]
+# name = "safedir-required"
+# command = ["python", ".claude/scripts/check_safedir_required.py"]
+# mode = "advisory"
+# description = "Flags raw open()/Path.open() on caller-supplied paths (WP-6.1)."

@@ -216,6 +216,19 @@ repos:
         pass_filenames: false
         files: ^(src/|pyproject\.toml)
 
+      # ----------------------------------------------------------------
+      # CI-rail framework (WP-0.1, #1222) — advisory runner.
+      # Runs the rails declared in .claude/ci-rails.toml. The registry is empty
+      # until WP-6.x adds rails, so this is a no-op (exit 0) today. Advisory
+      # rails warn but never block; enforce rails block. See .claude/rules/ci-rails.md.
+      # ----------------------------------------------------------------
+      - id: ci-rails
+        name: ci rails (advisory framework)
+        entry: python .claude/scripts/ci_rails.py
+        language: system
+        always_run: true
+        pass_filenames: false
+
   # ----------------------------------------------------------------
   # Markdown linting
   # ----------------------------------------------------------------
