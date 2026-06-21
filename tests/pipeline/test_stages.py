@@ -313,7 +313,7 @@ class TestCopyFdXattrs:
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.ENOTSUP, "unsupported")
 
-        monkeypatch.setattr(w.os, "listxattr", _raise)
+        monkeypatch.setattr(w.os, "listxattr", _raise, raising=False)
         w._copy_fd_xattrs(0, 1)  # swallowed, no raise
 
     def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -324,7 +324,7 @@ class TestCopyFdXattrs:
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.EIO, "io error")
 
-        monkeypatch.setattr(w.os, "listxattr", _raise)
+        monkeypatch.setattr(w.os, "listxattr", _raise, raising=False)
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
@@ -333,13 +333,13 @@ class TestCopyFdXattrs:
 
         from file_organizer.pipeline.stages import writer as w
 
-        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
-        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
 
         def _raise(_fd: int, _name: str, _value: bytes) -> None:
             raise OSError(_errno.EPERM, "denied")
 
-        monkeypatch.setattr(w.os, "setxattr", _raise)
+        monkeypatch.setattr(w.os, "setxattr", _raise, raising=False)
         w._copy_fd_xattrs(0, 1)  # swallowed
 
     def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -347,13 +347,13 @@ class TestCopyFdXattrs:
 
         from file_organizer.pipeline.stages import writer as w
 
-        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
-        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
 
         def _raise(_fd: int, _name: str, _value: bytes) -> None:
             raise OSError(_errno.EIO, "io error")
 
-        monkeypatch.setattr(w.os, "setxattr", _raise)
+        monkeypatch.setattr(w.os, "setxattr", _raise, raising=False)
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
