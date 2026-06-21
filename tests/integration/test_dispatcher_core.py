@@ -867,7 +867,7 @@ class TestAudioTranscription:
         assert result is whisper_result
         assert result.text == "hello from whisper"
         assert result.segments == whisper_result.segments
-        transcriber.transcribe.assert_called_once_with("/mock/a.mp3")
+        transcriber.transcribe.assert_called_once_with(str(Path("/mock/a.mp3")))
 
     def test_maybe_transcribe_incomplete_object_synthesizes_result(self) -> None:
         """A text-bearing object lacking .segments/.duration is wrapped, not passed through.
@@ -937,7 +937,7 @@ class TestAudioTranscription:
         assert isinstance(result, TranscriptionResult)
         assert result.text == "hello world"
         assert result.segments == []
-        transcriber.generate.assert_called_once_with("/mock/a.mp3")
+        transcriber.generate.assert_called_once_with(str(Path("/mock/a.mp3")))
 
     def test_maybe_transcribe_recoverable_error_degrades(self) -> None:
         """A RuntimeError during transcription degrades, not aborts."""
