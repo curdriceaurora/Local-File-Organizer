@@ -365,8 +365,15 @@ class TestCopyFdXattrs:
 
 @pytest.mark.ci
 @pytest.mark.unit
+@pytest.mark.integration
 class TestWriterStage:
-    """Test WriterStage file copy operations."""
+    """Test WriterStage file copy operations.
+
+    Marked ``integration`` as well as ``unit``: these exercise the real
+    SafeDir filesystem copy path, so they carry ``writer.py``'s integration
+    coverage floor (the push-to-main Integration coverage gate measures only
+    ``-m integration``).
+    """
 
     def test_satisfies_protocol(self) -> None:
         assert isinstance(WriterStage(), PipelineStage)
@@ -425,6 +432,7 @@ class TestWriterStage:
 
 @pytest.mark.ci
 @pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir anchored write is POSIX-only")
 class TestWriterStageAnchored:
     """When ``context.output_root`` is set, the writer descends from it
