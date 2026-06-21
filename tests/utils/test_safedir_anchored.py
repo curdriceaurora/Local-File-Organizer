@@ -219,6 +219,147 @@ class TestReadFileViaSafedirAnchored:
             read_file_via_safedir_anchored(escaped, trusted_root=trusted)
 
 
+# ---------------------------------------------------------------------------
+# SafeDir.open_anchored_writer (#1268)
+# ---------------------------------------------------------------------------
+
+
+@posix_only
+class TestOpenAnchoredWriter:
+    """Write-side counterpart to ``open_anchored_reader`` (#1268).
+
+    Descends a relative destination path one component at a time from a
+    trusted root, creating intermediate directories *through the held fd*
+    (``mkdir`` + ``open_subdir`` with ``O_NOFOLLOW``), then opens the leaf
+    for writing via ``open_child`` (also ``O_NOFOLLOW``). A symlinked
+    ancestor swapped into the output tree is refused with
+    ``SymlinkRejected`` rather than traversed — closing the symlinked-
+    ancestor vector that the parent-rooted ``open_root(destination.parent)``
+    write path leaves open.
+    """
+
+    def _write(self, fd: int, payload: bytes) -> None:
+        """Consume the returned writer fd, closing it on any failure."""
+        try:
+            handle = os.fdopen(fd, "wb", closefd=True)
+        except OSError:
+            os.close(fd)
+            raise
+        with handle:
+            handle.write(payload)
+
+    def test_creates_nested_dirs_and_writes_leaf(self, tmp_path: Path) -> None:
+        """A multi-component relative path creates each intermediate dir."""
+        with SafeDir.open_root(tmp_path) as root:
+            fd = root.open_anchored_writer(Path("Docs/2026/report.txt"))
+            self._write(fd, b"nested write")
+        leaf = tmp_path / "Docs" / "2026" / "report.txt"
+        assert leaf.read_bytes() == b"nested write"
+        assert (tmp_path / "Docs").is_dir()
+        assert (tmp_path / "Docs" / "2026").is_dir()
+
+    def test_single_component_writes_leaf(self, tmp_path: Path) -> None:
+        """A single-component relative path writes directly under the root."""
+        with SafeDir.open_root(tmp_path) as root:
+            fd = root.open_anchored_writer(Path("flat.txt"))
+            self._write(fd, b"flat")
+        assert (tmp_path / "flat.txt").read_bytes() == b"flat"
+
+    def test_reuses_existing_intermediate_dirs(self, tmp_path: Path) -> None:
+        """Pre-existing real intermediate directories are reused, not rejected."""
+        (tmp_path / "Docs").mkdir()
+        with SafeDir.open_root(tmp_path) as root:
+            fd = root.open_anchored_writer(Path("Docs/report.txt"))
+            self._write(fd, b"reuse")
+        assert (tmp_path / "Docs" / "report.txt").read_bytes() == b"reuse"
+
+    def test_intermediate_symlink_refused(self, tmp_path: Path) -> None:
+        """A symlinked *ancestor* directory in the output tree is refused.
+
+        This is the core #1268 protection: ``Docs`` is swapped for a symlink
+        pointing outside the tree, so writing ``Docs/report.txt`` must refuse
+        at ``Docs`` instead of dereferencing into ``outside``.
+        """
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out_root = tmp_path / "organized"
+        out_root.mkdir()
+        (out_root / "Docs").symlink_to(outside, target_is_directory=True)
+
+        with SafeDir.open_root(out_root) as root:
+            with pytest.raises(SymlinkRejected):
+                root.open_anchored_writer(Path("Docs/report.txt"))
+        # Nothing leaked into the symlink target.
+        assert list(outside.iterdir()) == []
+
+    def test_leaf_symlink_refused(self, tmp_path: Path) -> None:
+        """A symlink pre-planted at the leaf is refused (parity with O_NOFOLLOW)."""
+        honey = tmp_path / "honey"
+        honey.write_bytes(b"secret")
+        out_root = tmp_path / "organized"
+        out_root.mkdir()
+        (out_root / "report.txt").symlink_to(honey)
+
+        with SafeDir.open_root(out_root) as root:
+            with pytest.raises(SymlinkRejected):
+                root.open_anchored_writer(Path("report.txt"))
+        # The symlink target is untouched (not truncated/overwritten).
+        assert honey.read_bytes() == b"secret"
+
+    def test_deep_intermediate_symlink_refused(self, tmp_path: Path) -> None:
+        """The guard fires on *any* intermediate component, not just the first."""
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out_root = tmp_path / "organized"
+        (out_root / "a").mkdir(parents=True)
+        (out_root / "a" / "b").symlink_to(outside, target_is_directory=True)
+
+        with SafeDir.open_root(out_root) as root:
+            with pytest.raises(SymlinkRejected):
+                root.open_anchored_writer(Path("a/b/c.txt"))
+
+    def test_absolute_path_rejected(self, tmp_path: Path) -> None:
+        with SafeDir.open_root(tmp_path) as root:
+            with pytest.raises(ValueError, match="relative"):
+                root.open_anchored_writer(Path("/etc/passwd"))
+
+    def test_parent_traversal_rejected(self, tmp_path: Path) -> None:
+        (tmp_path / "child").mkdir()
+        with SafeDir.open_root(tmp_path / "child") as root:
+            with pytest.raises(ValueError, match=r"\.\."):
+                root.open_anchored_writer(Path("../escape.txt"))
+
+    def test_empty_path_rejected(self, tmp_path: Path) -> None:
+        with SafeDir.open_root(tmp_path) as root:
+            with pytest.raises(ValueError, match="non-empty"):
+                root.open_anchored_writer(Path(""))
+
+    def test_excl_create_on_existing_leaf_raises(self, tmp_path: Path) -> None:
+        """``O_EXCL`` passed through ``flags`` still surfaces ``FileExistsError``
+        for a real existing file (no symlink shadowing)."""
+        (tmp_path / "Docs").mkdir()
+        (tmp_path / "Docs" / "report.txt").write_text("already here")
+        with SafeDir.open_root(tmp_path) as root:
+            with pytest.raises(FileExistsError):
+                root.open_anchored_writer(
+                    Path("Docs/report.txt"),
+                    flags=os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                )
+
+    def test_intermediate_fds_released(self, tmp_path: Path) -> None:
+        """Intermediate subdir fds opened during the walk must not leak."""
+        proc = Path("/proc/self/fd")
+        if not proc.is_dir():
+            pytest.skip("/proc/self/fd not available on this platform")
+        with SafeDir.open_root(tmp_path) as root:
+            before = len(list(proc.iterdir()))
+            for i in range(20):
+                fd = root.open_anchored_writer(Path(f"a/b/c/file_{i}.txt"))
+                os.close(fd)
+            after = len(list(proc.iterdir()))
+        assert after - before <= 2, f"fd leak: before={before} after={after}"
+
+
 # NOTE: ``TestTextProcessorScanRoot`` lives in
 # ``tests/services/test_text_processor_scan_root.py`` (kept off the
 # ``ci`` mark to avoid #291's audio-model singleton ordering flake —

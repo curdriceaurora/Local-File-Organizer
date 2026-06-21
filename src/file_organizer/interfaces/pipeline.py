@@ -28,6 +28,13 @@ class StageContext:
             description, suggested filename, etc.).
         destination: Final destination path computed by the
             postprocessor stage.
+        output_root: Trusted output root the destination lives under, set
+            by the postprocessor. When present, the writer stage anchors its
+            copy at this root and descends to the leaf one component at a
+            time (``O_NOFOLLOW`` per step) so a symlinked *ancestor* directory
+            in the output tree is refused rather than traversed (#1268). When
+            ``None`` (custom pipelines that set ``destination`` directly) the
+            writer falls back to parent-rooted leaf protection.
         category: Folder/category name assigned to the file.
             Validated on every assignment to reject traversal sequences.
         filename: Suggested filename (without extension).
@@ -43,6 +50,7 @@ class StageContext:
     metadata: dict[str, Any] = field(default_factory=dict)
     analysis: dict[str, Any] = field(default_factory=dict)
     destination: Path | None = None
+    output_root: Path | None = None
     category: str = ""
     filename: str = ""
     dry_run: bool = True
