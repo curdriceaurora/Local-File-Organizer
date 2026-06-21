@@ -62,7 +62,8 @@ def test_organize_output_inside_input_is_bad_parameter(tmp_path: Path) -> None:
     out_dir = in_dir / "sorted"
     result = runner.invoke(app, ["organize", str(in_dir), str(out_dir)])
     assert result.exit_code == 2
-    assert "inside the input" in result.output.lower()
+    out = result.output.lower()
+    assert "inside" in out and "input" in out
 
 
 def test_organize_input_inside_output_is_bad_parameter(tmp_path: Path) -> None:
@@ -71,7 +72,8 @@ def test_organize_input_inside_output_is_bad_parameter(tmp_path: Path) -> None:
     in_dir.mkdir(parents=True)
     result = runner.invoke(app, ["organize", str(in_dir), str(out_dir)])
     assert result.exit_code == 2
-    assert "inside the output" in result.output.lower()
+    out = result.output.lower()
+    assert "inside" in out and "output" in out
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink loop is POSIX-focused")

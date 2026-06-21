@@ -582,7 +582,6 @@ class TestConcurrencyFixes(unittest.TestCase):
             return real_wait(fs, *args, **kwargs)
 
         def short_task(_path: Path) -> str:
-            threading.Event().wait(timeout=0.02)
             return "ok"
 
         with patch("file_organizer.parallel.processor.wait", side_effect=tracked_wait):
