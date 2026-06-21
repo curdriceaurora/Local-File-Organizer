@@ -269,6 +269,25 @@ class TestPostprocessorStage:
         result = stage.process(ctx)
         assert result.destination is None
 
+    def test_sets_output_root_for_anchored_writer(self, tmp_path: Path) -> None:
+        """The postprocessor declares the trusted output root so the writer can
+        anchor its copy and refuse a symlinked ancestor (#1268). The computed
+        destination must live under that root.
+        """
+        out = tmp_path / "out"
+        stage = PostprocessorStage(output_directory=out)
+        ctx = StageContext(
+            file_path=Path("input/report.pdf"),
+            category="Documents",
+            filename="q3",
+        )
+        result = stage.process(ctx)
+
+        assert result.output_root == out
+        assert result.destination is not None
+        # destination is reachable as a relative path under output_root
+        assert result.destination.relative_to(result.output_root) == Path("Documents/q3.pdf")
+
 
 # ---------------------------------------------------------------------------
 # _copy_fd_xattrs (best-effort xattr copy error branches)
@@ -397,6 +416,118 @@ class TestWriterStage:
         )
         result = WriterStage().process(ctx)
         assert result.error == "prior"
+
+
+# ---------------------------------------------------------------------------
+# WriterStage — anchored-traversal hardening (#1268)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+@pytest.mark.skipif(sys.platform == "win32", reason="SafeDir anchored write is POSIX-only")
+class TestWriterStageAnchored:
+    """When ``context.output_root`` is set, the writer descends from it
+    component-by-component so a symlinked *ancestor* directory in the output
+    tree is refused rather than traversed (#1268).
+    """
+
+    def _src(self, tmp_path: Path, content: bytes = b"payload") -> Path:
+        src = tmp_path / "input" / "file.txt"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_bytes(content)
+        return src
+
+    def test_anchored_creates_nested_destination(self, tmp_path: Path) -> None:
+        """Normal nested destinations are created under the trusted root."""
+        src = self._src(tmp_path, b"hello")
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        dest = out_root / "Docs" / "2026" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.read_bytes() == b"hello"
+
+    def test_anchored_refuses_symlinked_ancestor(self, tmp_path: Path) -> None:
+        """The headline #1268 guard: a symlinked intermediate output directory
+        is refused (SymlinkRejected → OSError → file marked failed) instead of
+        redirecting the write outside the output tree.
+        """
+        src = self._src(tmp_path, b"do-not-leak")
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        # Attacker swaps the category dir for a symlink pointing outside.
+        (out_root / "Docs").symlink_to(outside, target_is_directory=True)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # Nothing was written through the symlink into the outside tree.
+        assert list(outside.iterdir()) == []
+
+    def test_anchored_refuses_symlinked_leaf(self, tmp_path: Path) -> None:
+        """A symlink pre-planted at the leaf is also refused (parity)."""
+        src = self._src(tmp_path, b"data")
+        honey = tmp_path / "honey"
+        honey.write_bytes(b"secret")
+        out_root = tmp_path / "out"
+        (out_root / "Docs").mkdir(parents=True)
+        (out_root / "Docs" / "file.txt").symlink_to(honey)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # The symlink target is untouched (not truncated/overwritten).
+        assert honey.read_bytes() == b"secret"
+
+    def test_falls_back_when_destination_outside_output_root(self, tmp_path: Path) -> None:
+        """If ``destination`` is not under ``output_root`` (mismatched custom
+        wiring), the writer uses the parent-rooted fallback rather than failing —
+        the copy still succeeds with leaf protection.
+        """
+        src = self._src(tmp_path, b"fallback")
+        out_root = tmp_path / "declared_root"
+        out_root.mkdir()
+        dest = tmp_path / "elsewhere" / "file.txt"  # NOT under out_root
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.read_bytes() == b"fallback"
+
+    def test_symlinked_output_root_is_honored(self, tmp_path: Path) -> None:
+        """A legitimately symlinked output *root* (e.g. ``~/Organized -> /mnt/...``)
+        must be followed, not refused: the root is the trusted, user-supplied
+        anchor. Only attacker-influenced segments *below* it are O_NOFOLLOW-walked.
+        Regression guard for the anchored path rejecting symlinked roots.
+        """
+        src = self._src(tmp_path, b"via-symlink-root")
+        real_root = tmp_path / "real_storage"
+        real_root.mkdir()
+        out_root = tmp_path / "Organized"  # symlink -> real_storage
+        out_root.symlink_to(real_root, target_is_directory=True)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        # Written through the symlinked root into the real storage tree.
+        assert (real_root / "Docs" / "file.txt").read_bytes() == b"via-symlink-root"
+
+    def test_metadata_parity_with_copy2(self, tmp_path: Path) -> None:
+        """The anchored path replicates copy2's mode bits (no execute leak)."""
+        src = self._src(tmp_path, b"x")
+        os.chmod(src, 0o600)
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert stat.S_IMODE(dest.stat().st_mode) == 0o600
 
     def test_preserves_mode_and_mtime(self, tmp_path: Path) -> None:
         """The hardened copy replicates copy2's mode + atime/mtime via fd ops."""
