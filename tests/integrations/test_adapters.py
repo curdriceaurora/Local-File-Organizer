@@ -53,6 +53,106 @@ def test_obsidian_integration_exports_file_and_note(tmp_path: Path) -> None:
     assert frontmatter["metadata"]["topic"] == "demo"
 
 
+def _obsidian_integration(vault: Path, **subdir_overrides: str) -> ObsidianIntegration:
+    settings = {
+        "vault_path": str(vault),
+        "attachments_subdir": "Attachments",
+        "notes_subdir": "Notes",
+    }
+    settings.update(subdir_overrides)
+    return ObsidianIntegration(
+        IntegrationConfig(
+            name="obsidian",
+            integration_type=IntegrationType.DESKTOP_APP,
+            settings=settings,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "subdir_overrides",
+    [
+        {"attachments_subdir": ""},
+        {"attachments_subdir": "a//b"},
+        {"attachments_subdir": "a\\\\b"},
+        {"attachments_subdir": "../escape"},
+    ],
+)
+def test_obsidian_send_file_rejects_invalid_attachments_subdir(
+    tmp_path: Path, subdir_overrides: dict[str, str]
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    source = tmp_path / "source.txt"
+    source.write_text("content", encoding="utf-8")
+
+    integration = _obsidian_integration(vault, **subdir_overrides)
+    assert asyncio.run(integration.connect()) is True
+    assert asyncio.run(integration.send_file(str(source))) is False
+
+
+def test_obsidian_send_file_rejects_attachments_dir_escaping_vault(tmp_path: Path) -> None:
+    """A symlinked attachments subdir pointing outside the vault must be rejected."""
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (vault / "Attachments").symlink_to(outside, target_is_directory=True)
+    source = tmp_path / "source.txt"
+    source.write_text("content", encoding="utf-8")
+
+    integration = _obsidian_integration(vault)
+    assert asyncio.run(integration.connect()) is True
+    assert asyncio.run(integration.send_file(str(source))) is False
+
+
+def test_obsidian_send_file_rejects_destination_escaping_vault(tmp_path: Path) -> None:
+    """An existing symlink at the destination filename must not be followed outside the vault."""
+    vault = tmp_path / "vault"
+    attachments = vault / "Attachments"
+    attachments.mkdir(parents=True)
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside-content", encoding="utf-8")
+    source = tmp_path / "source.txt"
+    source.write_text("content", encoding="utf-8")
+    (attachments / source.name).symlink_to(outside)
+
+    integration = _obsidian_integration(vault)
+    assert asyncio.run(integration.connect()) is True
+    assert asyncio.run(integration.send_file(str(source))) is False
+
+
+def test_obsidian_send_file_rejects_notes_dir_escaping_vault(tmp_path: Path) -> None:
+    """A symlinked notes subdir pointing outside the vault must be rejected."""
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (vault / "Notes").symlink_to(outside, target_is_directory=True)
+    source = tmp_path / "source.txt"
+    source.write_text("content", encoding="utf-8")
+
+    integration = _obsidian_integration(vault)
+    assert asyncio.run(integration.connect()) is True
+    assert asyncio.run(integration.send_file(str(source))) is False
+
+
+def test_obsidian_send_file_rejects_note_path_escaping_vault(tmp_path: Path) -> None:
+    """An existing symlink at the note filename must not be followed outside the vault."""
+    vault = tmp_path / "vault"
+    notes = vault / "Notes"
+    notes.mkdir(parents=True)
+    outside = tmp_path / "outside.md"
+    outside.write_text("outside-note", encoding="utf-8")
+    source = tmp_path / "source.txt"
+    source.write_text("content", encoding="utf-8")
+    (notes / f"{source.stem}.md").symlink_to(outside)
+
+    integration = _obsidian_integration(vault)
+    assert asyncio.run(integration.connect()) is True
+    assert asyncio.run(integration.send_file(str(source))) is False
+
+
 def test_vscode_integration_writes_command_payload(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
