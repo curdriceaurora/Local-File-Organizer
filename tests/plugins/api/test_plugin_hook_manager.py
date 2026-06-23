@@ -73,7 +73,7 @@ def test_webhook_register_dedupe_and_trigger() -> None:
     registration, created = manager.register_webhook(
         plugin_id="plugin-a",
         event=HookEvent.FILE_ORGANIZED,
-        callback_url="http://localhost:9000/hook",
+        callback_url="http://8.8.8.8/hook",
     )
     assert created is True
     assert registration.plugin_id == "plugin-a"
@@ -81,14 +81,14 @@ def test_webhook_register_dedupe_and_trigger() -> None:
     _, duplicate_created = manager.register_webhook(
         plugin_id="plugin-a",
         event=HookEvent.FILE_ORGANIZED,
-        callback_url="http://localhost:9000/hook",
+        callback_url="http://8.8.8.8/hook",
     )
     assert duplicate_created is False
 
     manager.register_webhook(
         plugin_id="plugin-b",
         event=HookEvent.FILE_ORGANIZED,
-        callback_url="http://localhost:9001/hook",
+        callback_url="http://1.1.1.1/hook",
     )
 
     results = manager.trigger_event(HookEvent.FILE_ORGANIZED, {"file": "sample.txt"})
@@ -106,3 +106,28 @@ def test_webhook_url_validation() -> None:
             event=HookEvent.FILE_SCANNED,
             callback_url="not-a-url",
         )
+
+    # Test SSRF block on localhost
+    with pytest.raises(ValueError, match="not allowed|Loopback"):
+        manager.register_webhook(
+            plugin_id="plugin-a",
+            event=HookEvent.FILE_SCANNED,
+            callback_url="http://localhost/hook",
+        )
+
+    # Test SSRF block on private range
+    with pytest.raises(ValueError, match="not allowed|Private"):
+        manager.register_webhook(
+            plugin_id="plugin-a",
+            event=HookEvent.FILE_SCANNED,
+            callback_url="http://192.168.1.1/hook",
+        )
+
+    # Test SSRF block on metadata IP
+    with pytest.raises(ValueError, match="not allowed|Metadata"):
+        manager.register_webhook(
+            plugin_id="plugin-a",
+            event=HookEvent.FILE_SCANNED,
+            callback_url="http://169.254.169.254/hook",
+        )
+

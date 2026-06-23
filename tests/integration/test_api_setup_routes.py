@@ -247,3 +247,41 @@ class TestBrowseFolder:
         assert body["available"] is True
         assert body["cancelled"] is True
         assert body["path"] == ""
+
+
+class TestSetupAuthEnforcement:
+    """Verify that setup endpoints enforce authentication once setup is completed."""
+
+    def test_setup_endpoints_require_auth_when_setup_completed(self, test_settings: ApiSettings) -> None:
+        from file_organizer.api.dependencies import get_config_manager
+        from file_organizer.api.routers.setup import router as setup_router
+
+        # Mock ConfigManager to return setup_completed = True
+        mock_mgr = MagicMock()
+        mock_config = MagicMock()
+        mock_config.setup_completed = True
+        mock_mgr.load.return_value = mock_config
+
+        # Copy settings from the fixture and enable auth
+        settings = test_settings.model_copy(update={"auth_enabled": True})
+
+        app = FastAPI()
+        setup_exception_handlers(app)
+        app.dependency_overrides[get_settings] = lambda: settings
+        app.dependency_overrides[get_config_manager] = lambda: mock_mgr
+        app.include_router(setup_router)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # 1. Check /setup/capabilities
+        r = client.get("/setup/capabilities")
+        assert r.status_code == 401
+
+        # 2. Check /setup/complete
+        r = client.post("/setup/complete", json={"mode": "quick_start"})
+        assert r.status_code == 401
+
+        # 3. Check /setup/browse-folder
+        r = client.get("/setup/browse-folder")
+        assert r.status_code == 401
+
+

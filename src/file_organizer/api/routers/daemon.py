@@ -8,11 +8,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from file_organizer.api.dependencies import require_admin_user
 from file_organizer.api.openapi_responses import INTERNAL_500_RESPONSE
 
-router = APIRouter(prefix="/daemon", tags=["daemon"], responses=INTERNAL_500_RESPONSE)
+router = APIRouter(
+    prefix="/daemon",
+    tags=["daemon"],
+    responses=INTERNAL_500_RESPONSE,
+    dependencies=[Depends(require_admin_user)],
+)
 
 
 @router.post("/toggle")

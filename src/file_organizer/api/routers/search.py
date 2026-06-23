@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.openapi_responses import (
     INTERNAL_500_RESPONSE,
     detail_error_response,
@@ -23,7 +23,11 @@ from file_organizer.api.utils import is_hidden, resolve_path
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["search"], responses=INTERNAL_500_RESPONSE)
+router = APIRouter(
+    tags=["search"],
+    responses=INTERNAL_500_RESPONSE,
+    dependencies=[Depends(get_current_active_user)],
+)
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000

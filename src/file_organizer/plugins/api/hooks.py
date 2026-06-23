@@ -61,13 +61,58 @@ def _default_http_client_factory() -> httpx.Client:
 
 
 def _validate_callback_url(callback_url: str) -> str:
-    """Validate callback URL has http/https scheme and a hostname, raising on invalid input."""
+    """Validate callback URL has http/https scheme and a hostname, raising on invalid input.
+
+    Also enforces SSRF protection by resolving the host and checking that it is not
+    loopback, private, link-local, reserved, multicast, or metadata IP.
+    """
+    import socket
+    import ipaddress
+
     candidate = callback_url.strip()
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("Callback URL must use http or https.")
     if not parsed.netloc:
         raise ValueError("Callback URL must include a host.")
+
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Callback URL must include a valid host.")
+
+    # Block common local hostnames statically first
+    lower_host = host.lower()
+    if lower_host in {"localhost", "localhost.localdomain"}:
+        raise ValueError("Callback URL host is not allowed.")
+
+    # Resolve IP and check
+    try:
+        addr_info = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        # Host doesn't resolve (e.g. dummy test URL). We allow registration;
+        # if it resolves later at trigger time to a private IP, it will be blocked.
+        addr_info = []
+
+    for family, _, _, _, sockaddr in addr_info:
+        ip_str = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        if ip.is_loopback:
+            raise ValueError("Loopback addresses are not allowed.")
+        if ip.is_private:
+            raise ValueError("Private network addresses are not allowed.")
+        if ip.is_link_local:
+            raise ValueError("Link-local addresses are not allowed.")
+        if ip.is_reserved:
+            raise ValueError("Reserved network addresses are not allowed.")
+        if ip.is_multicast:
+            raise ValueError("Multicast addresses are not allowed.")
+        # Check metadata IP explicitly
+        if ip_str == "169.254.169.254":
+            raise ValueError("Metadata service access is not allowed.")
+
     return candidate
 
 
@@ -207,6 +252,22 @@ class PluginHookManager:
 
         with self._http_client_factory() as client:
             for webhook in webhooks:
+                # Re-validate target URL immediately before dispatch to block SSRF / DNS-rebinding
+                try:
+                    _validate_callback_url(webhook.callback_url)
+                except ValueError as exc:
+                    results.append(
+                        WebhookDeliveryResult(
+                            plugin_id=webhook.plugin_id,
+                            event=webhook.event,
+                            callback_url=webhook.callback_url,
+                            status_code=None,
+                            delivered=False,
+                            error=f"SSRF Prevention: {exc}",
+                        )
+                    )
+                    continue
+
                 headers = {
                     "X-File-Organizer-Event": webhook.event.value,
                     "X-Plugin-Id": webhook.plugin_id,
