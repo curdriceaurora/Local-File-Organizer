@@ -130,4 +130,3 @@ def test_webhook_url_validation() -> None:
             event=HookEvent.FILE_SCANNED,
             callback_url="http://169.254.169.254/hook",
         )
-

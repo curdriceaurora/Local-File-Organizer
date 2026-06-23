@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import UserLike, get_config_manager, get_settings, get_setup_user
+from file_organizer.api.dependencies import (
+    UserLike,
+    get_config_manager,
+    get_settings,
+    get_setup_user,
+)
 from file_organizer.api.openapi_responses import (
     INTERNAL_500_RESPONSE,
     merge_responses,

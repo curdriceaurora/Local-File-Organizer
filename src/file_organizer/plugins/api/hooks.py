@@ -66,8 +66,8 @@ def _validate_callback_url(callback_url: str) -> str:
     Also enforces SSRF protection by resolving the host and checking that it is not
     loopback, private, link-local, reserved, multicast, or metadata IP.
     """
-    import socket
     import ipaddress
+    import socket
 
     candidate = callback_url.strip()
     parsed = urlparse(candidate)
@@ -93,7 +93,7 @@ def _validate_callback_url(callback_url: str) -> str:
         # if it resolves later at trigger time to a private IP, it will be blocked.
         addr_info = []
 
-    for family, _, _, _, sockaddr in addr_info:
+    for _family, _, _, _, sockaddr in addr_info:
         ip_str = sockaddr[0]
         try:
             ip = ipaddress.ip_address(ip_str)

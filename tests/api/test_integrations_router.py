@@ -476,14 +476,9 @@ class TestSubdirValidation:
         """Test that invalid subdirectory values are rejected with 400."""
         mock_manager = MagicMock()
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        
-        payload = {
-            "settings": {
-                "attachments_subdir": subdir_val
-            }
-        }
+
+        payload = {"settings": {"attachments_subdir": subdir_val}}
         resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
         assert resp.status_code == 400
         body = resp.json()
         assert body["error"] == "invalid_settings"
-

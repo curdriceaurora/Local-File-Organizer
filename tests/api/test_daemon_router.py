@@ -21,6 +21,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
     from file_organizer.api.dependencies import require_admin_user
+
     app.dependency_overrides[require_admin_user] = lambda: None
     app.include_router(router, prefix="/api/v1")
     client = TestClient(app)
@@ -323,4 +324,3 @@ class TestDaemonAuthEnforcement:
         resp = client.get("/api/v1/daemon/status")
         # Should return 401 Unauthorized
         assert resp.status_code == 401
-
