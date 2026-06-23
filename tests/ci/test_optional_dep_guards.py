@@ -26,6 +26,7 @@ violations are resolved.
 from __future__ import annotations
 
 import ast
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -174,7 +175,28 @@ def _find_unguarded_optional_imports(
 
 
 def _git_changed_test_files() -> list[Path]:
-    """Return test files modified relative to main (diff-based subset)."""
+    """Return test files modified relative to main (diff-based subset).
+
+    In CI, a shallow checkout can leave ``origin/main`` unresolvable, which
+    would otherwise silently collapse the diff to empty and skip every
+    violation. Fail loudly in that case rather than degrade to a no-op
+    guardrail. Outside CI (local dev, possibly without a configured
+    ``origin`` remote) the silent fallback below is intentional.
+    """
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        verify = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", "origin/main"],
+            capture_output=True,
+            text=True,
+            cwd=FO_ROOT,
+        )
+        if verify.returncode != 0:
+            pytest.fail(
+                "origin/main is not resolvable in CI (likely a shallow checkout) — "
+                "this guardrail would silently no-op instead of checking changed files. "
+                "Ensure the checkout step uses fetch-depth: 0."
+            )
+
     try:
         result = subprocess.run(
             ["git", "diff", "--name-only", "origin/main...HEAD"],
