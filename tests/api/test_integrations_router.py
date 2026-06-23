@@ -22,6 +22,8 @@ from file_organizer.api.routers.integrations import (
     router,
 )
 
+pytestmark = pytest.mark.ci
+
 
 def _build_app(
     tmp_path: Path,
@@ -457,3 +459,53 @@ class TestVerifyBrowserToken:
         assert resp.status_code == 200
         body = resp.json()
         assert body["valid"] is False
+
+
+@pytest.mark.unit
+class TestSubdirValidation:
+    """Verify that subdirectory settings (attachments_subdir, notes_subdir) are validated."""
+
+    @pytest.mark.parametrize(
+        "subdir_val",
+        [
+            "/tmp/outside",
+            "../outside",
+            "a//b",
+            "a\\\\b",
+            "C:/Windows",
+        ],
+    )
+    def test_invalid_subdir_rejected(self, tmp_path: Path, subdir_val: str) -> None:
+        """Test that invalid subdirectory values are rejected with 400."""
+        mock_manager = MagicMock()
+        _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
+
+        payload = {"settings": {"attachments_subdir": subdir_val}}
+        resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
+        assert resp.status_code == 400
+        body = resp.json()
+        assert body["error"] == "invalid_settings"
+
+    def test_non_string_subdir_rejected(self, tmp_path: Path) -> None:
+        """Test that a non-string subdirectory value is rejected with 400."""
+        mock_manager = MagicMock()
+        _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
+
+        payload = {"settings": {"attachments_subdir": 123}}
+        resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
+        assert resp.status_code == 400
+        body = resp.json()
+        assert body["error"] == "invalid_settings"
+        assert "must be a string" in body["message"]
+
+    def test_blank_subdir_rejected(self, tmp_path: Path) -> None:
+        """Test that a whitespace-only subdirectory value is rejected with 400."""
+        mock_manager = MagicMock()
+        _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
+
+        payload = {"settings": {"notes_subdir": "   "}}
+        resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
+        assert resp.status_code == 400
+        body = resp.json()
+        assert body["error"] == "invalid_settings"
+        assert "cannot be empty" in body["message"]

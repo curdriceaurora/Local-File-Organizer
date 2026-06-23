@@ -259,7 +259,7 @@ class TestPluginHooks:
             "/api/v1/plugins/hooks/register",
             json={
                 "event": "file.scanned",
-                "callback_url": "http://localhost:9999/hook",
+                "callback_url": "http://8.8.8.8:9999/hook",
                 "secret": None,
             },
         )
@@ -278,7 +278,7 @@ class TestPluginHooks:
     def test_register_hook_duplicate_returns_registered_false(
         self, plugin_client: TestClient
     ) -> None:
-        payload = {"event": "file.scanned", "callback_url": "http://localhost:9999/hook"}
+        payload = {"event": "file.scanned", "callback_url": "http://8.8.8.8:9999/hook"}
         plugin_client.post("/api/v1/plugins/hooks/register", json=payload)
         r = plugin_client.post("/api/v1/plugins/hooks/register", json=payload)
         assert r.status_code == 200
@@ -287,7 +287,7 @@ class TestPluginHooks:
     def test_list_hooks_returns_registered(self, plugin_client: TestClient) -> None:
         plugin_client.post(
             "/api/v1/plugins/hooks/register",
-            json={"event": "file.organized", "callback_url": "http://localhost:8888/cb"},
+            json={"event": "file.organized", "callback_url": "http://8.8.8.8:8888/cb"},
         )
         r = plugin_client.get("/api/v1/plugins/hooks")
         assert r.status_code == 200
@@ -298,11 +298,11 @@ class TestPluginHooks:
     def test_list_hooks_filter_by_event(self, plugin_client: TestClient) -> None:
         plugin_client.post(
             "/api/v1/plugins/hooks/register",
-            json={"event": "file.scanned", "callback_url": "http://localhost:8001/a"},
+            json={"event": "file.scanned", "callback_url": "http://8.8.8.8:8001/a"},
         )
         plugin_client.post(
             "/api/v1/plugins/hooks/register",
-            json={"event": "file.organized", "callback_url": "http://localhost:8002/b"},
+            json={"event": "file.organized", "callback_url": "http://8.8.8.8:8002/b"},
         )
         r = plugin_client.get("/api/v1/plugins/hooks", params={"event": "file.scanned"})
         body = r.json()
@@ -311,11 +311,11 @@ class TestPluginHooks:
     def test_unregister_hook(self, plugin_client: TestClient) -> None:
         plugin_client.post(
             "/api/v1/plugins/hooks/register",
-            json={"event": "file.deleted", "callback_url": "http://localhost:7777/del"},
+            json={"event": "file.deleted", "callback_url": "http://8.8.8.8:7777/del"},
         )
         r = plugin_client.post(
             "/api/v1/plugins/hooks/unregister",
-            json={"event": "file.deleted", "callback_url": "http://localhost:7777/del"},
+            json={"event": "file.deleted", "callback_url": "http://8.8.8.8:7777/del"},
         )
         assert r.status_code == 200
         assert r.json()["removed"] is True
@@ -323,7 +323,7 @@ class TestPluginHooks:
     def test_unregister_hook_not_registered(self, plugin_client: TestClient) -> None:
         r = plugin_client.post(
             "/api/v1/plugins/hooks/unregister",
-            json={"event": "file.deleted", "callback_url": "http://localhost:1234/gone"},
+            json={"event": "file.deleted", "callback_url": "http://8.8.8.8:1234/gone"},
         )
         assert r.status_code == 200
         assert r.json()["removed"] is False
@@ -345,7 +345,7 @@ class TestPluginHooks:
             "/api/v1/plugins/hooks/register",
             json={
                 "event": "organization.started",
-                "callback_url": "http://localhost:5555/ev",
+                "callback_url": "http://8.8.8.8:5555/ev",
             },
         )
         from file_organizer.plugins.api.hooks import HookEvent, WebhookDeliveryResult
@@ -353,7 +353,7 @@ class TestPluginHooks:
         mock_result = WebhookDeliveryResult(
             plugin_id="anonymous",
             event=HookEvent.ORGANIZATION_STARTED,
-            callback_url="http://localhost:5555/ev",
+            callback_url="http://8.8.8.8:5555/ev",
             status_code=200,
             delivered=True,
         )
@@ -461,7 +461,7 @@ class TestPluginHookManager:
         manager.register_webhook(
             plugin_id="p",
             event=HookEvent.FILE_SCANNED,
-            callback_url="http://localhost:1/fail",
+            callback_url="http://8.8.8.8:1/fail",
         )
         results = manager.trigger_event(HookEvent.FILE_SCANNED, {})
         assert len(results) == 1

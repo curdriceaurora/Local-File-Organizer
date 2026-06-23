@@ -205,3 +205,26 @@ def require_admin_user(
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return user
+
+
+async def get_setup_user(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    manager: ConfigManager = Depends(get_config_manager),
+    db: Session = Depends(get_db),
+    token_store: TokenStore = Depends(get_token_store),
+) -> UserLike | None:
+    """Resolve user if setup is completed and auth is required, else return None."""
+    config = manager.load()
+    if not config.setup_completed:
+        return None
+
+    token = await oauth2_scheme(request)
+    user = get_current_user(
+        request=request,
+        token=token,
+        settings=settings,
+        db=db,
+        token_store=token_store,
+    )
+    return get_current_active_user(user=user, settings=settings)

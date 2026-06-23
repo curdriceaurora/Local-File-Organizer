@@ -22,6 +22,9 @@ def _build_app(tmp_path: Path | None = None) -> tuple[FastAPI, TestClient]:
     app = FastAPI()
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
+    from file_organizer.api.dependencies import get_current_active_user
+
+    app.dependency_overrides[get_current_active_user] = lambda: None
     app.include_router(router, prefix="/api/v1")
     client = TestClient(app)
     return app, client
@@ -486,3 +489,21 @@ class TestNegativeOffsetClamping:
         resp_neg = client.get("/api/v1/search?q=file&offset=-5")
         assert resp_neg.status_code == 200
         assert resp_neg.json() == resp_zero.json()
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestSearchAuthEnforcement:
+    """Verify that search endpoint rejects unauthenticated requests by default."""
+
+    def test_search_unauthenticated_fails(self, tmp_path: Path) -> None:
+        """Test search endpoint without active user override fails with 401."""
+        settings = ApiSettings(environment="test", auth_enabled=True)
+        app = FastAPI()
+        setup_exception_handlers(app)
+        app.dependency_overrides[get_settings] = lambda: settings
+        app.include_router(router, prefix="/api/v1")
+        client = TestClient(app)
+
+        resp = client.get("/api/v1/search?q=test")
+        assert resp.status_code == 401

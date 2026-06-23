@@ -143,7 +143,7 @@ def test_plugin_hooks_register_list_trigger_unregister(
             "/api/v1/plugins/hooks/register",
             json={
                 "event": "file.organized",
-                "callback_url": "http://localhost:9999/plugin-hook",
+                "callback_url": "http://8.8.8.8:9999/plugin-hook",
             },
             headers=headers,
         )
@@ -172,7 +172,7 @@ def test_plugin_hooks_register_list_trigger_unregister(
             "/api/v1/plugins/hooks/unregister",
             json={
                 "event": "file.organized",
-                "callback_url": "http://localhost:9999/plugin-hook",
+                "callback_url": "http://8.8.8.8:9999/plugin-hook",
             },
             headers=headers,
         )
