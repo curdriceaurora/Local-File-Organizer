@@ -135,6 +135,7 @@ def test_obsidian_send_file_rejects_notes_dir_escaping_vault(tmp_path: Path) -> 
     integration = _obsidian_integration(vault)
     assert asyncio.run(integration.connect()) is True
     assert asyncio.run(integration.send_file(str(source))) is False
+    assert not (vault / "Attachments" / source.name).exists()
 
 
 def test_obsidian_send_file_rejects_note_path_escaping_vault(tmp_path: Path) -> None:
@@ -151,6 +152,7 @@ def test_obsidian_send_file_rejects_note_path_escaping_vault(tmp_path: Path) -> 
     integration = _obsidian_integration(vault)
     assert asyncio.run(integration.connect()) is True
     assert asyncio.run(integration.send_file(str(source))) is False
+    assert not (vault / "Attachments" / source.name).exists()
 
 
 def test_vscode_integration_writes_command_payload(tmp_path: Path) -> None:

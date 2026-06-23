@@ -22,6 +22,8 @@ from file_organizer.api.routers.integrations import (
     router,
 )
 
+pytestmark = pytest.mark.ci
+
 
 def _build_app(
     tmp_path: Path,

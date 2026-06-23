@@ -9,6 +9,8 @@ import pytest
 
 from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager, _validate_callback_url
 
+pytestmark = pytest.mark.ci
+
 
 class _FakeResponse:
     def __init__(self, status_code: int, text: str = "") -> None:
@@ -109,7 +111,7 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on localhost
-    with pytest.raises(ValueError, match="not allowed|Loopback"):
+    with pytest.raises(ValueError, match=r"not allowed|Loopback"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
@@ -117,7 +119,7 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on private range
-    with pytest.raises(ValueError, match="not allowed|Private"):
+    with pytest.raises(ValueError, match=r"not allowed|Private"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
@@ -125,7 +127,7 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on metadata IP
-    with pytest.raises(ValueError, match="not allowed|Metadata"):
+    with pytest.raises(ValueError, match=r"not allowed|Metadata"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
@@ -184,6 +186,7 @@ def test_validate_callback_url_rejects_link_local_address(
 
     class _FakeIp:
         is_loopback = False
+        is_unspecified = False
         is_private = False
         is_link_local = True
         is_reserved = False
@@ -207,6 +210,7 @@ def test_validate_callback_url_rejects_metadata_address(
 
     class _FakeIp:
         is_loopback = False
+        is_unspecified = False
         is_private = False
         is_link_local = False
         is_reserved = False

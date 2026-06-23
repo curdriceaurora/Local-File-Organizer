@@ -86,15 +86,15 @@ class ObsidianIntegration(Integration):
         if not destination.is_relative_to(vault_resolved):
             return False
 
-        target_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-
         note_dir = (vault / notes_subdir).resolve(strict=False)
         if not (note_dir == vault_resolved or note_dir.is_relative_to(vault_resolved)):
             return False
         note_path = (note_dir / f"{source.stem}.md").resolve(strict=False)
         if not note_path.is_relative_to(vault_resolved):
             return False
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
         note_dir.mkdir(parents=True, exist_ok=True)
         note_path.write_text(

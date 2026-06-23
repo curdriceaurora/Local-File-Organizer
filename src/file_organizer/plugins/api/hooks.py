@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -60,15 +62,17 @@ def _default_http_client_factory() -> httpx.Client:
     return httpx.Client(follow_redirects=False)
 
 
-def _validate_callback_url(callback_url: str) -> str:
+def _validate_callback_url(callback_url: str, *, allow_unresolved_host: bool = True) -> str:
     """Validate callback URL has http/https scheme and a hostname, raising on invalid input.
 
     Also enforces SSRF protection by resolving the host and checking that it is not
-    loopback, private, link-local, reserved, multicast, or metadata IP.
-    """
-    import ipaddress
-    import socket
+    loopback, unspecified, private, link-local, reserved, multicast, or metadata IP.
 
+    ``allow_unresolved_host`` controls registration- vs dispatch-time semantics: at
+    registration we allow hosts that don't resolve yet (fail open), but at dispatch
+    time the caller passes ``allow_unresolved_host=False`` so an unresolvable host
+    blocks delivery (fail closed) instead of silently proceeding.
+    """
     candidate = callback_url.strip()
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:
@@ -88,32 +92,41 @@ def _validate_callback_url(callback_url: str) -> str:
     # Resolve IP and check
     try:
         addr_info = socket.getaddrinfo(host, None)
-    except socket.gaierror:
+    except socket.gaierror as exc:
+        if not allow_unresolved_host:
+            raise ValueError("Callback URL host must resolve before dispatch.") from exc
         # Host doesn't resolve (e.g. dummy test URL). We allow registration;
         # if it resolves later at trigger time to a private IP, it will be blocked.
         addr_info = []
 
     for _family, _, _, _, sockaddr in addr_info:
-        ip_str = sockaddr[0]
+        ip_str = str(sockaddr[0])
         try:
             ip = ipaddress.ip_address(ip_str)
         except ValueError:
             continue
-        if ip.is_loopback:
-            raise ValueError("Loopback addresses are not allowed.")
-        if ip.is_private:
-            raise ValueError("Private network addresses are not allowed.")
-        if ip.is_link_local:
-            raise ValueError("Link-local addresses are not allowed.")
-        if ip.is_reserved:
-            raise ValueError("Reserved network addresses are not allowed.")
-        if ip.is_multicast:
-            raise ValueError("Multicast addresses are not allowed.")
-        # Check metadata IP explicitly
-        if ip_str == "169.254.169.254":
-            raise ValueError("Metadata service access is not allowed.")
+        _reject_unsafe_ip(ip, ip_str)
 
     return candidate
+
+
+def _reject_unsafe_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, ip_str: str) -> None:
+    """Raise ValueError if the resolved IP falls into an SSRF-unsafe category."""
+    if ip.is_loopback:
+        raise ValueError("Loopback addresses are not allowed.")
+    if ip.is_unspecified:
+        raise ValueError("Unspecified addresses are not allowed.")
+    if ip.is_private:
+        raise ValueError("Private network addresses are not allowed.")
+    if ip.is_link_local:
+        raise ValueError("Link-local addresses are not allowed.")
+    if ip.is_reserved:
+        raise ValueError("Reserved network addresses are not allowed.")
+    if ip.is_multicast:
+        raise ValueError("Multicast addresses are not allowed.")
+    # Check metadata IP explicitly
+    if ip_str == "169.254.169.254":
+        raise ValueError("Metadata service access is not allowed.")
 
 
 class PluginHookManager:
@@ -254,7 +267,7 @@ class PluginHookManager:
             for webhook in webhooks:
                 # Re-validate target URL immediately before dispatch to block SSRF / DNS-rebinding
                 try:
-                    _validate_callback_url(webhook.callback_url)
+                    _validate_callback_url(webhook.callback_url, allow_unresolved_host=False)
                 except ValueError as exc:
                     results.append(
                         WebhookDeliveryResult(
