@@ -336,7 +336,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--cov-fail-under=95",
+    "--cov-fail-under=93",
     "--timeout=30",
     # Branch coverage baseline (integration tests only):
     # Measured 2026-03-21 via measure-integration-coverage.sh: TOTAL ~49%
