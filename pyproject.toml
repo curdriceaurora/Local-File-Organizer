@@ -336,6 +336,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
+    # Matches the unit coverage-gate job's enforced floor (ci.yml: coverage report --fail-under=93).
     "--cov-fail-under=93",
     "--timeout=30",
     # Branch coverage baseline (integration tests only):

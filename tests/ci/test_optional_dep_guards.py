@@ -26,7 +26,9 @@ violations are resolved.
 from __future__ import annotations
 
 import ast
+import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -173,10 +175,22 @@ def _find_unguarded_optional_imports(
     return violations
 
 
+def _git_bin() -> str:
+    import shutil
+    git_path = shutil.which("git")
+    if git_path is None:
+        raise OSError("git executable not found on PATH")
+    return git_path
+
+
 def _git_ref_exists(ref: str) -> bool:
     """Return whether *ref* resolves to a commit in the local checkout."""
+    try:
+        git = _git_bin()
+    except OSError:
+        return False
     result = subprocess.run(
-        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        [git, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
         cwd=FO_ROOT,
         check=False,
         capture_output=True,
@@ -187,8 +201,9 @@ def _git_ref_exists(ref: str) -> bool:
 
 def _git_stdout(*args: str, check: bool = True) -> str:
     """Run git and return stripped stdout."""
+    git = _git_bin()
     result = subprocess.run(
-        ["git", *args],
+        [git, *args],
         cwd=FO_ROOT,
         check=check,
         capture_output=True,
@@ -265,7 +280,6 @@ def _git_changed_test_files() -> list[Path]:
     
     unstaged_diff = _git_stdout("diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py")
     changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
-
     return sorted(
         p
         for p in TESTS_ROOT.rglob("*.py")

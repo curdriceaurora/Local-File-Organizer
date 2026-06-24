@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import socket
 from typing import Any
 
 import pytest
 
-from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
+from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager, _validate_callback_url
+
+pytestmark = pytest.mark.ci
 
 
 class _FakeResponse:
@@ -108,7 +111,7 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on localhost
-    with pytest.raises(ValueError, match="not allowed|Loopback"):
+    with pytest.raises(ValueError, match=r"not allowed|Loopback"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
@@ -116,7 +119,7 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on private range
-    with pytest.raises(ValueError, match="not allowed|Private"):
+    with pytest.raises(ValueError, match=r"not allowed|Private"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
@@ -124,10 +127,132 @@ def test_webhook_url_validation() -> None:
         )
 
     # Test SSRF block on metadata IP
-    with pytest.raises(ValueError, match="not allowed|Metadata"):
+    with pytest.raises(ValueError, match=r"not allowed|Metadata"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,
             callback_url="http://169.254.169.254/hook",
         )
 
+
+def test_validate_callback_url_rejects_empty_authority_host() -> None:
+    """A netloc with no host portion (e.g. ':8080') must be rejected."""
+    with pytest.raises(ValueError, match="valid host"):
+        _validate_callback_url("http://:8080/path")
+
+
+def test_validate_callback_url_allows_unresolvable_host() -> None:
+    """A host that fails DNS resolution is allowed at registration time."""
+    result = _validate_callback_url("http://this-host-does-not-resolve.example.invalid/hook")
+    assert result == "http://this-host-does-not-resolve.example.invalid/hook"
+
+
+def test_validate_callback_url_skips_malformed_resolved_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-IP string returned by getaddrinfo is skipped rather than raising."""
+
+    def fake_getaddrinfo(host: str, port: object) -> list[tuple[object, ...]]:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("not-an-ip", 0))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    result = _validate_callback_url("http://example.com/hook")
+    assert result == "http://example.com/hook"
+
+
+def test_validate_callback_url_rejects_loopback_address() -> None:
+    """A literal loopback IP must be rejected."""
+    with pytest.raises(ValueError, match="Loopback"):
+        _validate_callback_url("http://127.0.0.1/hook")
+
+
+def test_validate_callback_url_rejects_multicast_address() -> None:
+    """A literal multicast IP must be rejected."""
+    with pytest.raises(ValueError, match="Multicast"):
+        _validate_callback_url("http://224.0.0.1/hook")
+
+
+def test_validate_callback_url_rejects_reserved_address() -> None:
+    """A literal reserved (non-private) IPv6 address must be rejected."""
+    with pytest.raises(ValueError, match="Reserved"):
+        _validate_callback_url("http://[64:ff9b::1]/hook")
+
+
+def test_validate_callback_url_rejects_link_local_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An address classified as link-local (but not private) must be rejected."""
+    import ipaddress
+
+    class _FakeIp:
+        is_loopback = False
+        is_unspecified = False
+        is_private = False
+        is_link_local = True
+        is_reserved = False
+        is_multicast = False
+
+    def fake_getaddrinfo(host: str, port: object) -> list[tuple[object, ...]]:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.5", 0))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(ipaddress, "ip_address", lambda _addr: _FakeIp())
+
+    with pytest.raises(ValueError, match="Link-local"):
+        _validate_callback_url("http://example.com/hook")
+
+
+def test_validate_callback_url_rejects_metadata_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The well-known cloud metadata IP must be rejected even if no other category matches."""
+    import ipaddress
+
+    class _FakeIp:
+        is_loopback = False
+        is_unspecified = False
+        is_private = False
+        is_link_local = False
+        is_reserved = False
+        is_multicast = False
+
+    def fake_getaddrinfo(host: str, port: object) -> list[tuple[object, ...]]:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("169.254.169.254", 0))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(ipaddress, "ip_address", lambda _addr: _FakeIp())
+
+    with pytest.raises(ValueError, match="Metadata"):
+        _validate_callback_url("http://example.com/hook")
+
+
+def test_trigger_event_blocks_dns_rebinding_at_dispatch_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A webhook valid at registration but rebound to a private IP is blocked at dispatch."""
+    fake_client = _FakeHttpClient([])
+    manager = PluginHookManager(http_client_factory=lambda: fake_client)
+
+    responses: list[list[tuple[Any, ...]]] = [
+        socket.getaddrinfo("8.8.8.8", None),
+        socket.getaddrinfo("10.0.0.5", None),
+    ]
+    response_iter = iter(responses)
+
+    def fake_getaddrinfo(host: str, port: object) -> list[tuple[Any, ...]]:
+        return next(response_iter)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    manager.register_webhook(
+        plugin_id="plugin-a",
+        event=HookEvent.FILE_DELETED,
+        callback_url="http://rebinding.example.com/hook",
+    )
+
+    results = manager.trigger_event(HookEvent.FILE_DELETED, {"file": "sample.txt"})
+    assert len(results) == 1
+    assert results[0].delivered is False
+    assert results[0].error is not None
+    assert "SSRF Prevention" in results[0].error
+    assert len(fake_client.calls) == 0

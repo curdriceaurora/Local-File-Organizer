@@ -210,21 +210,20 @@ def _validate_setting_paths(
                     error="invalid_settings",
                     message=f"{key} cannot contain empty path segments",
                 )
-            p = Path(stripped)
-            if p.is_absolute():
+            if stripped.startswith(("/", "\\")) or (len(stripped) > 1 and stripped[1] == ":"):
                 raise ApiError(
                     status_code=400,
                     error="invalid_settings",
                     message=f"{key} must be a relative path",
                 )
-            if ".." in p.parts:
+            segments = stripped.replace("\\", "/").split("/")
+            if ".." in segments:
                 raise ApiError(
                     status_code=400,
                     error="invalid_settings",
                     message=f"{key} cannot contain path traversal",
                 )
     return normalized
-
 
 
 def _require_integration(manager: IntegrationManager, integration_name: str) -> None:

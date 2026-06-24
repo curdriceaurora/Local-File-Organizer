@@ -41,7 +41,7 @@ def test_example():
 - **API Module**: 92% code coverage ✅
 - **Services**: 82% code coverage ✅
 - **Models**: 90% code coverage ✅
-- **CI Gate**: 95% minimum (coverage requirement, enforced on main pushes)
+- **CI Gate**: 93% minimum (coverage requirement, enforced on main pushes)
 
 ### Coverage Targets by Module
 

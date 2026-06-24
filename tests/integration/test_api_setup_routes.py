@@ -252,7 +252,9 @@ class TestBrowseFolder:
 class TestSetupAuthEnforcement:
     """Verify that setup endpoints enforce authentication once setup is completed."""
 
-    def test_setup_endpoints_require_auth_when_setup_completed(self, test_settings: ApiSettings) -> None:
+    def test_setup_endpoints_require_auth_when_setup_completed(
+        self, test_settings: ApiSettings
+    ) -> None:
         from file_organizer.api.dependencies import get_config_manager
         from file_organizer.api.routers.setup import router as setup_router
 
@@ -283,5 +285,3 @@ class TestSetupAuthEnforcement:
         # 3. Check /setup/browse-folder
         r = client.get("/setup/browse-folder")
         assert r.status_code == 401
-
-

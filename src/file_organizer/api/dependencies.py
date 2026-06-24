@@ -228,4 +228,3 @@ async def get_setup_user(
         token_store=token_store,
     )
     return get_current_active_user(user=user, settings=settings)
-

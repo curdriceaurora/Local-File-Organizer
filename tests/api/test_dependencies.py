@@ -18,8 +18,11 @@ from file_organizer.api.dependencies import (
     ApiKeyIdentity,
     get_current_active_user,
     get_current_user,
+    get_setup_user,
     require_admin_user,
 )
+
+pytestmark = pytest.mark.ci
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -330,6 +333,74 @@ class TestGetCurrentActiveUser:
 # ---------------------------------------------------------------------------
 # require_admin_user tests
 # ---------------------------------------------------------------------------
+
+
+def _mock_config_manager(*, setup_completed: bool) -> MagicMock:
+    """Build a mock ConfigManager whose load() reports the given completion state."""
+    manager = MagicMock()
+    config = MagicMock()
+    config.setup_completed = setup_completed
+    manager.load.return_value = config
+    return manager
+
+
+class TestGetSetupUser:
+    """Tests for the get_setup_user dependency."""
+
+    async def test_setup_not_completed_returns_none(self) -> None:
+        settings = _make_settings(auth_enabled=True)
+        manager = _mock_config_manager(setup_completed=False)
+        request = _mock_request()
+        db = _mock_db()
+        store = InMemoryTokenStore()
+
+        result = await get_setup_user(
+            request=request,
+            settings=settings,
+            manager=manager,
+            db=db,
+            token_store=store,
+        )
+
+        assert result is None
+
+    async def test_setup_completed_no_token_raises_401(self) -> None:
+        settings = _make_settings(auth_enabled=True, api_key_enabled=False)
+        manager = _mock_config_manager(setup_completed=True)
+        request = _mock_request()
+        db = _mock_db()
+        store = InMemoryTokenStore()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_setup_user(
+                request=request,
+                settings=settings,
+                manager=manager,
+                db=db,
+                token_store=store,
+            )
+
+        assert exc_info.value.status_code == 401
+
+    async def test_setup_completed_valid_token_returns_active_user(self) -> None:
+        settings = _make_settings(auth_enabled=True)
+        manager = _mock_config_manager(setup_completed=True)
+        user = _make_user(user_id="user-1", username="testuser")
+        bundle = create_token_bundle("user-1", "testuser", settings)
+        request = _mock_request(headers={"Authorization": f"Bearer {bundle.access_token}"})
+        db = _mock_db(user=user)
+        store = InMemoryTokenStore()
+
+        result = await get_setup_user(
+            request=request,
+            settings=settings,
+            manager=manager,
+            db=db,
+            token_store=store,
+        )
+
+        assert result is not None
+        assert result.username == "testuser"
 
 
 class TestRequireAdminUser:

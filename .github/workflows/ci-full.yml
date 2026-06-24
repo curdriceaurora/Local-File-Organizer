@@ -30,7 +30,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
+          # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}

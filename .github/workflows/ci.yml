@@ -56,6 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          # fetch-depth: 0 is required so origin/main is resolvable —
+          # pre-commit runs the tests/ci guardrails, which diff against it.
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
@@ -200,7 +205,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
+          # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -339,7 +347,7 @@ jobs:
       - name: Check docstring coverage
         run: interrogate -v src/ --fail-under 95
       - name: Upload to Codecov
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
         with:
           file: coverage.xml
           fail_ci_if_error: false
@@ -460,7 +468,7 @@ jobs:
   test-integration:
     name: Integration coverage gate
     needs: changes
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2

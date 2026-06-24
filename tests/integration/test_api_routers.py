@@ -51,6 +51,7 @@ def analyze_client(api_settings: ApiSettings) -> TestClient:
 
 @pytest.fixture()
 def daemon_client(api_settings: ApiSettings) -> TestClient:
+    """Build a TestClient wired to the daemon router with overridden settings."""
     app = FastAPI()
     app.dependency_overrides[get_settings] = lambda: api_settings
     setup_exception_handlers(app)
