@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import Hashable
 from functools import cache
 from pathlib import Path
 from typing import Any, cast
@@ -101,16 +102,21 @@ class AnalyzerStage:
 
     @staticmethod
     @cache
-    def _processor_accepts_scan_root(processor_type: type) -> bool:
+    def _processor_accepts_scan_root(processor_type: Hashable) -> bool:
         """Whether *processor_type*'s ``process_file`` accepts ``scan_root``.
 
         Memoized per class so the introspection cost isn't paid on every
         file processed. Returns ``False`` if ``process_file`` can't be
         introspected on the class (e.g. an unspecced test double), matching
         the pre-introspection behaviour of calling without ``scan_root``.
+
+        Takes ``Hashable`` rather than ``type`` because Pyre's stub for
+        ``functools.cache`` requires args to satisfy ``Hashable``, and
+        doesn't infer that ``Type[BaseProcessor]`` (a Protocol) qualifies.
         """
         try:
-            params = inspect.signature(processor_type.process_file).parameters
+            processor_cls = cast(type[BaseProcessor], processor_type)
+            params = inspect.signature(processor_cls.process_file).parameters
         except (AttributeError, TypeError, ValueError):
             return False
         return "scan_root" in params

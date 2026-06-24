@@ -17,6 +17,7 @@ This file exercises every branch the SafeDir migration introduced:
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -153,9 +154,22 @@ class TestReadContentBytesTrustedRoot:
         target = sub / "doc.txt"
         target.write_bytes(b"anchored content")
 
-        result = AIHeuristic._read_content_bytes(target, limit=100, trusted_root=root)
+        real_fd = os.open(target, os.O_RDONLY)
+        fake_safe_dir = MagicMock()
+        fake_safe_dir.open_anchored_reader.return_value = real_fd
+        fake_cm = MagicMock()
+        fake_cm.__enter__.return_value = fake_safe_dir
+        fake_cm.__exit__.return_value = False
+
+        with patch(
+            "file_organizer.methodologies.para.detection.heuristics.SafeDir.open_root",
+            return_value=fake_cm,
+        ) as mock_open_root:
+            result = AIHeuristic._read_content_bytes(target, limit=100, trusted_root=root)
 
         assert result == b"anchored content"
+        mock_open_root.assert_called_once_with(root)
+        fake_safe_dir.open_anchored_reader.assert_called_once_with(Path("nested/doc.txt"))
 
     def test_relative_to_falls_back_to_resolve_across_symlinked_root(self, tmp_path: Path) -> None:
         """Mirrors the macOS ``/tmp`` vs ``/private/tmp``-style mismatch: the
