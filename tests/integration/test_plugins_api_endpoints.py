@@ -503,6 +503,7 @@ class TestPluginHookManager:
             _validate_callback_url("http:///path")
 
     def test_default_http_client_factory_returns_httpx_client(self) -> None:
+        """The default HTTP client factory returns an httpx.Client with redirects disabled."""
         import httpx
 
         from file_organizer.plugins.api.hooks import _default_http_client_factory
@@ -515,6 +516,7 @@ class TestPluginHookManager:
             client.close()
 
     def test_validate_callback_url_raises_on_netloc_without_hostname(self) -> None:
+        """A callback URL with no parseable hostname is rejected."""
         from file_organizer.plugins.api.hooks import _validate_callback_url
 
         with pytest.raises(ValueError, match="valid host"):
@@ -522,6 +524,7 @@ class TestPluginHookManager:
 
     @pytest.mark.parametrize("host", ["localhost", "localhost.localdomain"])
     def test_validate_callback_url_raises_on_localhost(self, host: str) -> None:
+        """Callback URLs pointing at localhost (by name) are rejected."""
         from file_organizer.plugins.api.hooks import _validate_callback_url
 
         with pytest.raises(ValueError, match="not allowed"):
@@ -530,11 +533,13 @@ class TestPluginHookManager:
     def test_validate_callback_url_raises_when_host_unresolvable_at_dispatch(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A host that fails DNS resolution at dispatch time is rejected, not allowed through."""
         import socket
 
         from file_organizer.plugins.api import hooks as hooks_module
 
         def _raise_gaierror(*_args: object, **_kwargs: object) -> list[object]:
+            """Simulate a DNS resolution failure."""
             raise socket.gaierror("name resolution failed")
 
         monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _raise_gaierror)
@@ -547,9 +552,11 @@ class TestPluginHookManager:
     def test_validate_callback_url_skips_unparsable_resolved_address(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A resolved address that isn't a parseable IP is skipped rather than rejected."""
         from file_organizer.plugins.api import hooks as hooks_module
 
         def _fake_getaddrinfo(*_args: object, **_kwargs: object) -> list[tuple]:
+            """Return a resolved address that isn't a valid IP literal."""
             return [(2, 1, 6, "", ("not-an-ip-address", 0))]
 
         monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _fake_getaddrinfo)
@@ -568,6 +575,7 @@ class TestPluginHookManager:
         ],
     )
     def test_reject_unsafe_ip_blocks_each_category(self, ip_str: str, match: str) -> None:
+        """_reject_unsafe_ip blocks loopback, unspecified, private, reserved, and multicast IPs."""
         import ipaddress
 
         from file_organizer.plugins.api.hooks import _reject_unsafe_ip
@@ -576,6 +584,7 @@ class TestPluginHookManager:
             _reject_unsafe_ip(ipaddress.ip_address(ip_str), ip_str)
 
     def test_reject_unsafe_ip_blocks_link_local_independently_of_private_flag(self) -> None:
+        """The is_link_local branch blocks an address even when is_private is False."""
         # Real-world link-local ranges (169.254.0.0/16, fe80::/10) are also flagged
         # is_private by ipaddress, so that check always fires first. Use a double to
         # exercise the is_link_local branch on its own as defense-in-depth coverage.
@@ -590,6 +599,7 @@ class TestPluginHookManager:
             _reject_unsafe_ip(fake_ip, "169.254.1.1")
 
     def test_reject_unsafe_ip_allows_public_address(self) -> None:
+        """A genuinely public IP address passes without raising."""
         import ipaddress
 
         from file_organizer.plugins.api.hooks import _reject_unsafe_ip
@@ -597,6 +607,7 @@ class TestPluginHookManager:
         _reject_unsafe_ip(ipaddress.ip_address("8.8.8.8"), "8.8.8.8")
 
     def test_reject_unsafe_ip_blocks_metadata_ip_string_explicitly(self) -> None:
+        """The cloud metadata service IP is blocked by string match even if otherwise public."""
         import ipaddress
 
         from file_organizer.plugins.api.hooks import _reject_unsafe_ip
@@ -605,6 +616,7 @@ class TestPluginHookManager:
             _reject_unsafe_ip(ipaddress.ip_address("8.8.8.8"), "169.254.169.254")
 
     def test_unregister_local_hook_removes_callback(self) -> None:
+        """Unregistering a local hook callback stops it from receiving future events."""
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         manager = PluginHookManager()
@@ -616,6 +628,7 @@ class TestPluginHookManager:
         assert received == []
 
     def test_register_webhook_iterates_past_non_matching_entries(self) -> None:
+        """Registering a webhook scans past existing non-matching entries to add a new one."""
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         manager = PluginHookManager()
@@ -632,6 +645,7 @@ class TestPluginHookManager:
         assert len(manager.list_webhooks(event=HookEvent.FILE_SCANNED)) == 3
 
     def test_unregister_webhook_no_match_returns_false(self) -> None:
+        """Unregistering a webhook with no matching registration returns False."""
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         manager = PluginHookManager()
@@ -645,6 +659,7 @@ class TestPluginHookManager:
         assert len(manager.list_webhooks(event=HookEvent.FILE_SCANNED)) == 1
 
     def test_unregister_webhook_keeps_remaining_registrations(self) -> None:
+        """Unregistering one webhook leaves other registrations for the same event intact."""
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         manager = PluginHookManager()
@@ -665,12 +680,14 @@ class TestPluginHookManager:
     def test_trigger_event_blocks_dispatch_when_host_unresolvable(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """trigger_event reports an SSRF-prevention error when the webhook host can't resolve."""
         import socket
 
         from file_organizer.plugins.api import hooks as hooks_module
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         def _raise_gaierror(*_args: object, **_kwargs: object) -> list[object]:
+            """Simulate a DNS resolution failure."""
             raise socket.gaierror("name resolution failed")
 
         monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _raise_gaierror)
@@ -688,23 +705,31 @@ class TestPluginHookManager:
         assert results[0].error.startswith("SSRF Prevention:")
 
     def test_trigger_event_success_includes_secret_header(self) -> None:
+        """A successful webhook dispatch includes the configured secret in the request header."""
         from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 
         captured: dict[str, object] = {}
 
         class _FakeResponse:
+            """Minimal httpx.Response double reporting a successful POST."""
+
             status_code = 200
             is_success = True
             text = ""
 
         class _FakeClient:
+            """Minimal httpx.Client double that records the dispatched request."""
+
             def __enter__(self) -> _FakeClient:
+                """Support use as a context manager, matching httpx.Client."""
                 return self
 
             def __exit__(self, *_args: object) -> bool:
+                """Support use as a context manager, matching httpx.Client."""
                 return False
 
             def post(self, url: str, *, json: dict, headers: dict, timeout: float) -> _FakeResponse:
+                """Record the request URL and headers, then return a fake success response."""
                 captured["url"] = url
                 captured["headers"] = headers
                 return _FakeResponse()

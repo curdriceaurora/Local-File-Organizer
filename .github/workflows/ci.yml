@@ -60,6 +60,7 @@ jobs:
           # fetch-depth: 0 is required so origin/main is resolvable —
           # pre-commit runs the tests/ci guardrails, which diff against it.
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
@@ -207,6 +208,7 @@ jobs:
           # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
           # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}

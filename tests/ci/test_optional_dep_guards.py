@@ -28,6 +28,7 @@ from __future__ import annotations
 import ast
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -183,9 +184,15 @@ def _git_changed_test_files() -> list[Path]:
     guardrail. Outside CI (local dev, possibly without a configured
     ``origin`` remote) the silent fallback below is intentional.
     """
+    git_bin = shutil.which("git")
+    if git_bin is None:
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            pytest.fail("git executable not found on PATH in CI.")
+        return []
+
     if os.environ.get("GITHUB_ACTIONS") == "true":
         verify = subprocess.run(
-            ["git", "rev-parse", "--verify", "--quiet", "origin/main"],
+            [git_bin, "rev-parse", "--verify", "--quiet", "origin/main"],
             capture_output=True,
             text=True,
             cwd=FO_ROOT,
@@ -199,14 +206,14 @@ def _git_changed_test_files() -> list[Path]:
 
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
+            [git_bin, "diff", "--name-only", "origin/main...HEAD"],
             capture_output=True,
             text=True,
             cwd=FO_ROOT,
         )
         if not result.stdout.strip():
             result = subprocess.run(
-                ["git", "diff", "--name-only", "HEAD"],
+                [git_bin, "diff", "--name-only", "HEAD"],
                 capture_output=True,
                 text=True,
                 cwd=FO_ROOT,

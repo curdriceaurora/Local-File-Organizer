@@ -190,6 +190,7 @@ def test_integrations_reject_invalid_paths_and_names(
 def test_integrations_settings_reject_invalid_filename_in_command_output_path(
     integrations_client: TestClient, tmp_path: Path
 ) -> None:
+    """Reject a vscode command_output_path that resolves to a directory traversal."""
     invalid_filename = integrations_client.post(
         "/api/v1/integrations/vscode/settings",
         json={"settings": {"command_output_path": str(tmp_path) + "/.."}},
@@ -214,6 +215,7 @@ def test_integrations_settings_reject_invalid_subdir_values(
     subdir_value: object,
     message_fragment: str,
 ) -> None:
+    """Reject malformed obsidian attachments_subdir values with a matching error message."""
     response = integrations_client.post(
         "/api/v1/integrations/obsidian/settings",
         json={"settings": {"attachments_subdir": subdir_value}},
@@ -230,6 +232,7 @@ def test_integrations_settings_reject_invalid_subdir_values(
 
 
 def _obsidian_integration(vault: Path, **subdir_overrides: str) -> ObsidianIntegration:
+    """Build an ObsidianIntegration configured against the given vault path."""
     settings: dict[str, object] = {
         "vault_path": str(vault),
         "attachments_subdir": "Attachments",
@@ -246,38 +249,47 @@ def _obsidian_integration(vault: Path, **subdir_overrides: str) -> ObsidianInteg
 
 
 class TestObsidianIntegrationBranches:
+    """Branch coverage for ObsidianIntegration's auth, path-validation, and send_file logic."""
+
     def test_init_coerces_integration_type_to_desktop_app(self, tmp_path: Path) -> None:
+        """Constructing an Obsidian integration always coerces its type to DESKTOP_APP."""
         integration = _obsidian_integration(tmp_path / "vault")
         assert integration.config.integration_type is IntegrationType.DESKTOP_APP
 
     def test_validate_auth_none_returns_true(self, tmp_path: Path) -> None:
+        """auth_method="none" always validates successfully."""
         integration = _obsidian_integration(tmp_path / "vault")
         integration.config.auth_method = "none"
         assert asyncio.run(integration.validate_auth()) is True
 
     def test_validate_auth_api_key_present_returns_true(self, tmp_path: Path) -> None:
+        """auth_method="api_key" validates when an api_key setting is present."""
         integration = _obsidian_integration(tmp_path / "vault")
         integration.config.auth_method = "api_key"
         integration.config.settings["api_key"] = "secret-key"
         assert asyncio.run(integration.validate_auth()) is True
 
     def test_validate_auth_api_key_missing_returns_false(self, tmp_path: Path) -> None:
+        """auth_method="api_key" fails validation when no api_key setting is configured."""
         integration = _obsidian_integration(tmp_path / "vault")
         integration.config.auth_method = "api_key"
         assert asyncio.run(integration.validate_auth()) is False
 
     def test_validate_auth_unsupported_method_returns_false(self, tmp_path: Path) -> None:
+        """An unsupported auth_method fails validation."""
         integration = _obsidian_integration(tmp_path / "vault")
         integration.config.auth_method = "oauth"
         assert asyncio.run(integration.validate_auth()) is False
 
     def test_send_file_returns_false_when_vault_missing(self, tmp_path: Path) -> None:
+        """send_file fails when the configured vault directory does not exist."""
         source = tmp_path / "source.txt"
         source.write_text("content", encoding="utf-8")
         integration = _obsidian_integration(tmp_path / "missing-vault")
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_returns_false_when_auth_fails(self, tmp_path: Path) -> None:
+        """send_file fails when auth validation fails before any file is copied."""
         vault = tmp_path / "vault"
         vault.mkdir()
         source = tmp_path / "source.txt"
@@ -287,6 +299,7 @@ class TestObsidianIntegrationBranches:
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_returns_false_when_source_missing(self, tmp_path: Path) -> None:
+        """send_file fails when the source file does not exist."""
         vault = tmp_path / "vault"
         vault.mkdir()
         integration = _obsidian_integration(vault)
@@ -304,6 +317,7 @@ class TestObsidianIntegrationBranches:
     def test_send_file_rejects_invalid_attachments_subdir(
         self, tmp_path: Path, subdir_overrides: dict[str, str]
     ) -> None:
+        """send_file rejects vaults configured with a malformed attachments_subdir."""
         vault = tmp_path / "vault"
         vault.mkdir()
         source = tmp_path / "source.txt"
@@ -312,6 +326,7 @@ class TestObsidianIntegrationBranches:
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_rejects_attachments_dir_escaping_vault(self, tmp_path: Path) -> None:
+        """send_file rejects an Attachments directory that symlinks outside the vault."""
         vault = tmp_path / "vault"
         vault.mkdir()
         outside = tmp_path / "outside"
@@ -323,6 +338,7 @@ class TestObsidianIntegrationBranches:
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_rejects_destination_escaping_vault(self, tmp_path: Path) -> None:
+        """send_file rejects when the attachment destination symlinks outside the vault."""
         vault = tmp_path / "vault"
         attachments = vault / "Attachments"
         attachments.mkdir(parents=True)
@@ -335,6 +351,7 @@ class TestObsidianIntegrationBranches:
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_rejects_notes_dir_escaping_vault(self, tmp_path: Path) -> None:
+        """send_file rejects a Notes directory that symlinks outside the vault."""
         vault = tmp_path / "vault"
         vault.mkdir()
         outside = tmp_path / "outside"
@@ -346,6 +363,7 @@ class TestObsidianIntegrationBranches:
         assert asyncio.run(integration.send_file(str(source))) is False
 
     def test_send_file_rejects_note_path_escaping_vault(self, tmp_path: Path) -> None:
+        """send_file rejects when the generated note path symlinks outside the vault."""
         vault = tmp_path / "vault"
         notes = vault / "Notes"
         notes.mkdir(parents=True)
