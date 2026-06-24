@@ -17,6 +17,7 @@ import io
 import tarfile
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -132,6 +133,22 @@ class TestReadZipFile:
         assert isinstance(result, str)
         assert "f.txt" in result
 
+    def test_zip_accepts_fileobj_with_display_label(self, tmp_path: Path) -> None:
+        from file_organizer.utils.readers.archives import read_zip_file
+
+        zp = _make_zip(tmp_path, "safe-opened.zip", {"f.txt": b"hello"})
+        with zp.open("rb") as fileobj:
+            result = read_zip_file("display-name.zip", fileobj=fileobj)
+
+        assert "ZIP Archive: display-name.zip" in result
+        assert "f.txt" in result
+
+    def test_zip_requires_path_or_fileobj(self) -> None:
+        from file_organizer.utils.readers.archives import read_zip_file
+
+        with pytest.raises(ValueError, match="file_path or fileobj"):
+            read_zip_file()
+
     def test_zip_invalid_file_raises_file_read_error(self, tmp_path: Path) -> None:
         from file_organizer.utils.readers._base import FileReadError
         from file_organizer.utils.readers.archives import read_zip_file
@@ -239,6 +256,32 @@ class TestReadTarFile:
         assert isinstance(result, str)
         assert "x" in result
 
+    def test_tar_accepts_fileobj_without_path_uses_unknown_compression(
+        self, tmp_path: Path
+    ) -> None:
+        from file_organizer.utils.readers.archives import read_tar_file
+
+        tp = _make_tar(tmp_path, "stream.tar", {"f.txt": b"x"})
+        with tp.open("rb") as fileobj:
+            result = read_tar_file(fileobj=fileobj)
+
+        assert "TAR Archive: <fileobj>" in result
+        assert "Compression: Unknown" in result
+        assert "f.txt" in result
+
+    def test_tar_xz_compression_detected(self, tmp_path: Path) -> None:
+        from file_organizer.utils.readers.archives import read_tar_file
+
+        tp = _make_tar(tmp_path, "archive.tar.xz", {"f.txt": b"hello"}, mode="w:xz")
+        result = read_tar_file(tp)
+        assert "XZ" in result
+
+    def test_tar_requires_path_or_fileobj(self) -> None:
+        from file_organizer.utils.readers.archives import read_tar_file
+
+        with pytest.raises(ValueError, match="file_path or fileobj"):
+            read_tar_file()
+
     def test_tar_invalid_file_raises_file_read_error(self, tmp_path: Path) -> None:
         from file_organizer.utils.readers._base import FileReadError
         from file_organizer.utils.readers.archives import read_tar_file
@@ -295,6 +338,53 @@ class TestRead7zFile:
             with pytest.raises(ImportError, match="py7zr"):
                 read_7z_file(tmp_path / "dummy.7z")
 
+    def test_7z_metadata_uses_archive_listing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.utils.readers import archives
+
+        class FakeSevenZipFile:
+            password_protected = True
+
+            def __init__(self, fileobj: object, mode: str) -> None:
+                assert fileobj is not None
+                assert mode == "r"
+
+            def __enter__(self) -> FakeSevenZipFile:
+                return self
+
+            def __exit__(self, *exc_info: object) -> None:
+                return None
+
+            def list(self) -> list[SimpleNamespace]:
+                return [
+                    SimpleNamespace(filename="a.txt", compressed=10, uncompressed=100),
+                    SimpleNamespace(filename="b.txt", compressed=5, uncompressed=50),
+                ]
+
+        monkeypatch.setattr(archives, "PY7ZR_AVAILABLE", True)
+        monkeypatch.setattr(
+            archives,
+            "py7zr",
+            SimpleNamespace(SevenZipFile=FakeSevenZipFile),
+            raising=False,
+        )
+
+        result = archives.read_7z_file("sample.7z", max_files=1, fileobj=io.BytesIO(b"7z"))
+
+        assert "7Z Archive: sample.7z" in result
+        assert "Encrypted: Yes" in result
+        assert "a.txt" in result
+        assert "and 1 more files" in result
+
+    def test_7z_requires_path_or_fileobj_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from file_organizer.utils.readers import archives
+
+        monkeypatch.setattr(archives, "PY7ZR_AVAILABLE", True)
+
+        with pytest.raises(ValueError, match="file_path or fileobj"):
+            archives.read_7z_file()
+
 
 # ---------------------------------------------------------------------------
 # read_rar_file (ImportError path when rarfile not available)
@@ -311,3 +401,73 @@ class TestReadRarFile:
         with patch.object(archives, "RARFILE_AVAILABLE", False):
             with pytest.raises(ImportError, match="rarfile"):
                 read_rar_file(tmp_path / "dummy.rar")
+
+    def test_rar_metadata_uses_archive_listing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.utils.readers import archives
+
+        class FakeRarFile:
+            def __init__(self, fileobj: object, mode: str) -> None:
+                assert fileobj is not None
+                assert mode == "r"
+
+            def __enter__(self) -> FakeRarFile:
+                return self
+
+            def __exit__(self, *exc_info: object) -> None:
+                return None
+
+            def infolist(self) -> list[SimpleNamespace]:
+                return [
+                    SimpleNamespace(filename="a.txt", compress_size=10, file_size=100),
+                    SimpleNamespace(filename="b.txt", compress_size=5, file_size=50),
+                ]
+
+            def needs_password(self) -> bool:
+                return True
+
+        monkeypatch.setattr(archives, "RARFILE_AVAILABLE", True)
+        monkeypatch.setattr(
+            archives,
+            "rarfile",
+            SimpleNamespace(RarFile=FakeRarFile, RarCannotExec=RuntimeError),
+            raising=False,
+        )
+
+        result = archives.read_rar_file("sample.rar", max_files=1, fileobj=io.BytesIO(b"rar"))
+
+        assert "RAR Archive: sample.rar" in result
+        assert "Encrypted: Yes" in result
+        assert "a.txt" in result
+        assert "and 1 more files" in result
+
+    def test_rar_missing_unrar_error_is_wrapped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.utils.readers import archives
+        from file_organizer.utils.readers._base import FileReadError
+
+        class FakeRarCannotExec(Exception):
+            pass
+
+        class FakeRarFile:
+            def __init__(self, fileobj: object, mode: str) -> None:
+                raise FakeRarCannotExec("missing unrar")
+
+        monkeypatch.setattr(archives, "RARFILE_AVAILABLE", True)
+        monkeypatch.setattr(
+            archives,
+            "rarfile",
+            SimpleNamespace(RarFile=FakeRarFile, RarCannotExec=FakeRarCannotExec),
+            raising=False,
+        )
+
+        with pytest.raises(FileReadError, match="unrar tool not found"):
+            archives.read_rar_file("sample.rar", fileobj=io.BytesIO(b"rar"))
+
+    def test_rar_requires_path_or_fileobj_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from file_organizer.utils.readers import archives
+
+        monkeypatch.setattr(archives, "RARFILE_AVAILABLE", True)
+
+        with pytest.raises(ValueError, match="file_path or fileobj"):
+            archives.read_rar_file()

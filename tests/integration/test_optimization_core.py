@@ -10,6 +10,7 @@ All external services (nvidia-smi, subprocess, psutil) are mocked.
 
 from __future__ import annotations
 
+import sys
 import threading
 import time
 from pathlib import Path
@@ -957,6 +958,67 @@ class TestMemoryLimiter:
         limiter.enforce()
         assert limiter.violation_count == 0
 
+    def test_enforce_unmatched_action_falls_through(self) -> None:
+        """An action that matches none of the branches should be a no-op past the count."""
+        from file_organizer.optimization.memory_limiter import MemoryLimiter
+
+        limiter = MemoryLimiter(max_memory_mb=1, action="not-a-real-action")
+        with patch.object(
+            type(limiter),
+            "_get_rss",
+            staticmethod(lambda: 2 * 1024 * 1024),
+        ):
+            limiter.enforce()  # No branch matches; should not raise
+
+        assert limiter.violation_count == 1
+
+    def test_get_rss_fallback_resource_module_darwin(self) -> None:
+        """When /proc/self/status is unavailable, fall back to resource module (macOS bytes)."""
+        from file_organizer.optimization.memory_limiter import MemoryLimiter
+
+        mock_resource = MagicMock()
+        mock_resource.RUSAGE_SELF = 0
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 500_000_000
+        mock_resource.getrusage.return_value = mock_usage
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch.dict("sys.modules", {"resource": mock_resource}),
+            patch.object(sys, "platform", "darwin"),
+        ):
+            result = MemoryLimiter._get_rss()
+        assert result == 500_000_000
+
+    def test_get_rss_fallback_resource_module_linux(self) -> None:
+        """When /proc/self/status is unavailable, fall back to resource module (Linux KB)."""
+        from file_organizer.optimization.memory_limiter import MemoryLimiter
+
+        mock_resource = MagicMock()
+        mock_resource.RUSAGE_SELF = 0
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 256000
+        mock_resource.getrusage.return_value = mock_usage
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch.dict("sys.modules", {"resource": mock_resource}),
+            patch.object(sys, "platform", "linux"),
+        ):
+            result = MemoryLimiter._get_rss()
+        assert result == 256000 * 1024
+
+    def test_get_rss_returns_zero_when_no_source_available(self) -> None:
+        """When neither /proc nor the resource module is available, _get_rss returns 0."""
+        from file_organizer.optimization.memory_limiter import MemoryLimiter
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch.dict("sys.modules", {"resource": None}),
+        ):
+            result = MemoryLimiter._get_rss()
+        assert result == 0
+
 
 # ===========================================================================
 # TestLeakDetector
@@ -1404,6 +1466,82 @@ class TestAdaptiveBatchSizer:
             # All zeros → per_file_cost=0 → should take len(file_sizes) capped at max
             batch = sizer.calculate_batch_size([0] * 50, overhead_per_file=0)
         assert batch == 10  # capped at max_size
+
+    def test_adjust_from_feedback_zero_available_memory_returns_min(self) -> None:
+        """adjust_from_feedback should return min_batch_size when no memory is available."""
+        from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+
+        sizer = AdaptiveBatchSizer()
+        sizer.set_bounds(min_size=3, max_size=100)
+        with patch.object(
+            type(sizer),
+            "_get_available_memory",
+            staticmethod(lambda: 0),
+        ):
+            result = sizer.adjust_from_feedback(actual_memory=1024, batch_size=10)
+        assert result == 3
+
+    def test_adjust_from_feedback_zero_actual_per_file_returns_batch_size(self) -> None:
+        """adjust_from_feedback should return the unchanged batch_size when actual_memory is 0."""
+        from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+
+        sizer = AdaptiveBatchSizer()
+        available = 100 * 1024 * 1024
+        with patch.object(
+            type(sizer),
+            "_get_available_memory",
+            staticmethod(lambda: available),
+        ):
+            result = sizer.adjust_from_feedback(actual_memory=0, batch_size=7)
+        assert result == 7
+
+    def test_get_available_memory_full_fallback_chain(self) -> None:
+        """When /proc is unavailable, _get_available_memory falls through to
+        _get_total_memory (sysctl) and _get_rss (resource module)."""
+        from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+
+        mock_resource = MagicMock()
+        mock_resource.RUSAGE_SELF = 0
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 256000
+        mock_resource.getrusage.return_value = mock_usage
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("subprocess.run") as mock_run,
+            patch.dict("sys.modules", {"resource": mock_resource}),
+            patch.object(sys, "platform", "linux"),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="17179869184\n")
+            total = AdaptiveBatchSizer._get_total_memory()
+            rss = AdaptiveBatchSizer._get_rss()
+            available = AdaptiveBatchSizer._get_available_memory()
+
+        assert total == 17179869184
+        assert rss == 256000 * 1024
+        assert available == total - rss
+
+    def test_get_total_memory_returns_zero_when_sysctl_unavailable(self) -> None:
+        """_get_total_memory returns 0 when neither /proc nor sysctl is available."""
+        from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("subprocess.run", side_effect=FileNotFoundError),
+        ):
+            result = AdaptiveBatchSizer._get_total_memory()
+        assert result == 0
+
+    def test_get_rss_returns_zero_when_no_source_available(self) -> None:
+        """_get_rss returns 0 when neither /proc nor the resource module is available."""
+        from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch.dict("sys.modules", {"resource": None}),
+        ):
+            result = AdaptiveBatchSizer._get_rss()
+        assert result == 0
 
 
 # ===========================================================================
