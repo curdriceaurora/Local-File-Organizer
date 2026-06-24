@@ -135,3 +135,8 @@ coverage.json
 
 # Claude Code agents (auto-generated, not committed)
 .agents/
+
+# User temporary/scratch files
+pallet_inventory_estimate.py
+Pallet_Inventory_Estimate.xlsx
+.~lock.Pallet_Inventory_Estimate.xlsx#

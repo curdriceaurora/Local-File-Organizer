@@ -8,16 +8,49 @@
 #               "enforce"  — fail the run (exit 1) on failure
 #   description what the rail guards
 #
-# This registry is intentionally EMPTY at WP-0.1, so the runner is a no-op
-# (exit 0) — zero behavior change. WP-6.x authors rails as mode = "advisory"
-# and flips each to mode = "enforce" only once the code it guards has merged.
+# WP-6.x authors rails as mode = "advisory" and flips each to mode = "enforce"
+# only once the code it guards has merged.
 # See docs/internal/fo-core-pullback-implementation-plan.md (Phase 6) and
 # .claude/rules/ci-rails.md.
-#
-# Example (commented — WP-6.1 "Security/path rails" will add real entries):
-#
-# [[rail]]
-# name = "safedir-required"
-# command = ["python", ".claude/scripts/check_safedir_required.py"]
-# mode = "advisory"
-# description = "Flags raw open()/Path.open() on caller-supplied paths (WP-6.1)."
+
+[[rail]]
+name = "safedir-required"
+command = ["python", ".claude/scripts/check_safedir_required.py"]
+mode = "advisory"
+description = "Flags raw open(), Path.open(), and shutil copy/move functions on caller-supplied paths (WP-6.1)."
+
+[[rail]]
+name = "atomic-write"
+command = ["python", ".claude/scripts/check_atomic_write.py"]
+mode = "advisory"
+description = "Flags raw file write operations, enforcing the use of atomic_write (WP-6.1)."
+
+[[rail]]
+name = "cli-path-validation"
+command = ["python", ".claude/scripts/check_cli_path_validation.py"]
+mode = "advisory"
+description = "Ensures all CLI command path arguments are validated before use (WP-6.1)."
+
+[[rail]]
+name = "defusedxml-fallback"
+command = ["python", ".claude/scripts/check_defusedxml_fallback.py"]
+mode = "advisory"
+description = "Enforces using defusedxml instead of standard library xml (WP-6.1)."
+
+[[rail]]
+name = "test-hardcoded-paths"
+command = ["python", ".claude/scripts/check_test_hardcoded_paths.py"]
+mode = "advisory"
+description = "Flags hardcoded absolute system paths in tests, promoting tmp_path instead (WP-6.2)."
+
+[[rail]]
+name = "test-separator-paths"
+command = ["python", ".claude/scripts/check_test_separator_paths.py"]
+mode = "advisory"
+description = "Flags hardcoded path separators in Path() calls in tests, promoting the / operator (WP-6.2)."
+
+[[rail]]
+name = "pytest-raises-hygiene"
+command = ["python", ".claude/scripts/check_pytest_raises_hygiene.py"]
+mode = "advisory"
+description = "Ensures pytest.raises on generic/built-in exceptions specifies a match regex (WP-6.2)."

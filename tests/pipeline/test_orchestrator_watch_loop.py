@@ -426,50 +426,81 @@ class TestWatchLoopExecutor:
         tracked = MagicMock()
         with orch._watch_futures_lock:
             orch._watch_futures.add(tracked)
-
         orch._on_watch_future_done(tracked)
         assert tracked not in orch._watch_futures
 
         # Discarding a future that is not tracked is a safe no-op.
         orch._on_watch_future_done(MagicMock())
 
-    def test_on_watch_future_done_logs_failed_future(self, caplog):
+    def test_on_watch_future_done_logs_failed_future(self):
         """A watch future that finished with an exception is logged and discarded.
 
         Regression for #1291 review: the done-callback discarded futures without
         observing exceptions, so process_file() failures vanished silently.
         """
+        import logging
         from concurrent.futures import Future
 
-        orch = self._make_orchestrator()
-        future: Future = Future()
-        with orch._watch_futures_lock:
-            orch._watch_futures.add(future)
-        future.set_exception(RuntimeError("process_file boom"))
+        target = logging.getLogger("file_organizer.pipeline.orchestrator")
+        records = []
 
-        with caplog.at_level("ERROR"):
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.set_exception(RuntimeError("process_file boom"))
+
             orch._on_watch_future_done(future)
 
-        # Discarded despite the failure ...
-        assert future not in orch._watch_futures
-        # ... and the failure was surfaced via the module logger.
-        assert any("process_file boom" in record.getMessage() for record in caplog.records)
+            # Discarded despite the failure ...
+            assert future not in orch._watch_futures
+            # ... and the failure was surfaced via the module logger.
+            assert any("process_file boom" in record.getMessage() for record in records)
+        finally:
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
 
-    def test_on_watch_future_done_cancelled_future_not_logged(self, caplog):
+    def test_on_watch_future_done_cancelled_future_not_logged(self):
         """A cancelled watch future is discarded without touching .exception()."""
+        import logging
         from concurrent.futures import Future
 
-        orch = self._make_orchestrator()
-        future: Future = Future()
-        with orch._watch_futures_lock:
-            orch._watch_futures.add(future)
-        future.cancel()
+        target = logging.getLogger("file_organizer.pipeline.orchestrator")
+        records = []
 
-        with caplog.at_level("ERROR"):
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.cancel()
+
             orch._on_watch_future_done(future)
 
-        assert future not in orch._watch_futures
-        assert caplog.records == []
+            assert future not in orch._watch_futures
+            assert records == []
+        finally:
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
 
     def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
         """Lazy buffer-pool init must not need the lifecycle lock.
