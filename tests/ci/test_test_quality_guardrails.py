@@ -32,6 +32,8 @@ Guardrail 4 is diff-based until a full-suite clean-up is done.
 from __future__ import annotations
 
 import ast
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -68,17 +70,43 @@ def _git_changed_test_files() -> list[Path]:
     Used for guardrails that have known pre-existing violations in the full
     suite.  Only files touched in the current branch are checked, preventing
     failures on historical code while blocking new violations.
+
+    In CI, a shallow checkout can leave ``origin/main`` unresolvable, which
+    would otherwise silently collapse the diff to empty and skip every
+    violation. Fail loudly in that case rather than degrade to a no-op
+    guardrail. Outside CI (local dev, possibly without a configured
+    ``origin`` remote) the silent fallback below is intentional.
     """
+    git_bin = shutil.which("git")
+    if git_bin is None:
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            pytest.fail("git executable not found on PATH in CI.")
+        return []
+
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        verify = subprocess.run(
+            [git_bin, "rev-parse", "--verify", "--quiet", "origin/main"],
+            capture_output=True,
+            text=True,
+            cwd=FO_ROOT,
+        )
+        if verify.returncode != 0:
+            pytest.fail(
+                "origin/main is not resolvable in CI (likely a shallow checkout) — "
+                "this guardrail would silently no-op instead of checking changed files. "
+                "Ensure the checkout step uses fetch-depth: 0."
+            )
+
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
+            [git_bin, "diff", "--name-only", "origin/main...HEAD"],
             capture_output=True,
             text=True,
             cwd=FO_ROOT,
         )
         if not result.stdout.strip():
             result = subprocess.run(
-                ["git", "diff", "--name-only", "HEAD"],
+                [git_bin, "diff", "--name-only", "HEAD"],
                 capture_output=True,
                 text=True,
                 cwd=FO_ROOT,

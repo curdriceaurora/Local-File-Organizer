@@ -227,7 +227,7 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 **Rule**: each check lives in exactly one workflow.
 
 - `ci.yml` is the *fast-path gate*: runs on PRs and pushes to `main`.
-  - **PR test lane**: single Python 3.11 job, `ci` marker only (~2 400 tests), diff-coverage gate
+  - **PR test lane**: Python 3.11+3.12, `ci` marker only (~2 400 tests), diff-coverage gate
   - **Push to main**: 4 parallel shards × Python 3.11+3.12, each ~4 000 tests with
     `timeout-minutes: 20`; a separate `coverage-gate` job merges `.coverage` artifacts
     and enforces the 93% floor. Sharding prevents the GC-finaliser hang that occurred
@@ -369,7 +369,7 @@ pytest tests/playwright/ --override-ini='addopts='
 pytest tests/playwright/test_desktop_api_contract.py --override-ini='addopts='
 ```
 
-The `--override-ini='addopts='` flag is required to suppress the default `--cov-fail-under=95` coverage gate, which is not meaningful for a browser-driven test run targeting the UI layer.
+The `--override-ini='addopts='` flag is required to suppress the default `--cov-fail-under=93` coverage gate, which is not meaningful for a browser-driven test run targeting the UI layer.
 
 ---
 
