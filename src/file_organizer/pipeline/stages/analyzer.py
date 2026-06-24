@@ -68,7 +68,7 @@ class AnalyzerStage:
             return context
 
         try:
-            result = self._run_processor(context.file_path, processor)
+            result = self._run_processor(context.file_path, processor, scan_root=context.trusted_root)
             context.analysis = result
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
@@ -80,7 +80,15 @@ class AnalyzerStage:
         return context
 
     @staticmethod
-    def _run_processor(file_path: Path, processor: BaseProcessor) -> dict[str, str]:
+    def _run_processor(
+        file_path: Path, processor: BaseProcessor, scan_root: Path | None = None
+    ) -> dict[str, str]:
         """Invoke the processor and normalise output to a dict."""
-        raw = processor.process_file(file_path)
+        # Only pass scan_root if the processor's process_file accepts it (like TextProcessor)
+        import inspect
+        sig = inspect.signature(processor.process_file)
+        if "scan_root" in sig.parameters:
+            raw = processor.process_file(file_path, scan_root=scan_root)
+        else:
+            raw = processor.process_file(file_path)
         return cast(dict[str, str], normalize_processor_result(file_path, raw))

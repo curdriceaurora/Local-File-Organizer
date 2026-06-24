@@ -634,7 +634,7 @@ class TestStagedBatchProcessing:
             prefetch_depth=2,
             prefetch_stages=2,
         )
-        with caplog.at_level(logging.WARNING, logger="file_organizer.pipeline.orchestrator"):
+        with caplog.at_level(logging.WARNING, logger="file_organizer.pipeline"):
             results = orch.process_batch(files)
 
         # All results must be produced despite the warning

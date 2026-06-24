@@ -315,6 +315,7 @@ class PARASuggestionEngine:
         self,
         file_path: Path,
         content: str | None = None,
+        trusted_root: Path | None = None,
     ) -> PARASuggestion:
         """Generate a PARA categorization suggestion for a single file.
 
@@ -325,6 +326,7 @@ class PARASuggestionEngine:
             file_path: Path to the file to categorize.
             content: Optional text content of the file. If not provided,
                 only filename/metadata-based analysis is performed.
+            trusted_root: Optional trusted root directory for anchored reads.
 
         Returns:
             PARASuggestion with the recommended category and reasoning.
@@ -333,7 +335,7 @@ class PARASuggestionEngine:
         tags: list[str] = []
 
         # Step 1: Run heuristic engine
-        heuristic_result = self._run_heuristics(file_path)
+        heuristic_result = self._run_heuristics(file_path, trusted_root=trusted_root)
         heuristic_scores = {cat: score.score for cat, score in heuristic_result.scores.items()}
         heuristic_signals = {cat: score.signals for cat, score in heuristic_result.scores.items()}
 
@@ -478,17 +480,20 @@ class PARASuggestionEngine:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _run_heuristics(self, file_path: Path) -> HeuristicResult:
+    def _run_heuristics(
+        self, file_path: Path, trusted_root: Path | None = None
+    ) -> HeuristicResult:
         """Run the heuristic engine on a file path.
 
         Args:
             file_path: Path to the file.
+            trusted_root: Optional trusted root directory for anchored reads.
 
         Returns:
             HeuristicResult from the engine.
         """
         try:
-            return self._heuristic_engine.evaluate(file_path)
+            return self._heuristic_engine.evaluate(file_path, trusted_root=trusted_root)
         except Exception as e:
             logger.error("Heuristic evaluation failed for %s: %s", file_path, e, exc_info=True)
             from ..detection.heuristics import CategoryScore

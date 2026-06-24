@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-_SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
+_SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
 _publish_spec = importlib.util.spec_from_file_location("publish", _SCRIPTS_DIR / "publish.py")
 assert _publish_spec is not None
 assert _publish_spec.loader is not None

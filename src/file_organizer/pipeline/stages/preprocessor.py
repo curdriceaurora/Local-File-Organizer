@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import mimetypes
+import sys
 
 from file_organizer.interfaces.pipeline import StageContext
 
@@ -46,24 +47,53 @@ class PreprocessorStage:
 
         path = context.file_path
 
-        if not path.exists():
-            context.error = f"File not found: {path}"
-            return context
-
-        if not path.is_file():
-            context.error = f"Not a file: {path}"
-            return context
-
         ext = path.suffix.lower()
         if self._supported_extensions is not None and ext not in self._supported_extensions:
             context.error = f"Unsupported file extension: {ext}"
             return context
 
-        try:
-            stat = path.stat()
-        except OSError as exc:
-            context.error = f"Cannot read file metadata: {exc}"
-            return context
+        if sys.platform != "win32" and context.trusted_root is not None:
+            import os
+            import stat as stat_mod
+
+            from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+            try:
+                try:
+                    relative = path.relative_to(context.trusted_root)
+                except ValueError:
+                    relative = path.resolve().relative_to(context.trusted_root.resolve())
+                with SafeDir.open_root(context.trusted_root) as safe_dir:
+                    fd = safe_dir.open_anchored_reader(relative)
+                try:
+                    stat = os.fstat(fd)
+                    if not stat_mod.S_ISREG(stat.st_mode):
+                        context.error = f"Not a file: {path}"
+                        return context
+                finally:
+                    os.close(fd)
+            except SymlinkRejected as exc:
+                context.error = f"Refused to read symlinked file: {exc}"
+                return context
+            except ValueError as exc:
+                context.error = str(exc)
+                return context
+            except OSError as exc:
+                context.error = f"Cannot read file: {exc}"
+                return context
+        else:
+            if not path.exists():
+                context.error = f"File not found: {path}"
+                return context
+
+            if not path.is_file():
+                context.error = f"Not a file: {path}"
+                return context
+
+            try:
+                stat = path.stat()
+            except OSError as exc:
+                context.error = f"Cannot read file metadata: {exc}"
+                return context
         mime_type, _ = mimetypes.guess_type(str(path))
 
         context.metadata = {

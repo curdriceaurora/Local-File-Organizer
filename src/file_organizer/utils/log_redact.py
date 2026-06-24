@@ -258,6 +258,17 @@ def _sanitize_args(args: object) -> object:
     return REDACTED
 
 
+def _redact_extra_attributes(record: logging.LogRecord) -> None:
+    """Scrub credential keys in stdlib log record's extra attributes.
+
+    Iterates through the record's __dict__ keys and replaces any values
+    associated with credential-like keys with REDACTED.
+    """
+    for k in list(record.__dict__.keys()):
+        if isinstance(k, str) and _CRED_KEY_FULL.match(k):
+            record.__dict__[k] = REDACTED
+
+
 class CredentialRedactingFilter(logging.Filter):
     """Redact credential-shaped substrings in log records. Never drops.
 
@@ -299,6 +310,9 @@ class CredentialRedactingFilter(logging.Filter):
         # reproduced from outside this module.
         if getattr(record, "_fo_redacted", None) is _RECORD_REDACTED_SENTINEL:
             return True
+
+        # Scrub stdlib extra attributes
+        _redact_extra_attributes(record)
         # --- Message redaction (args-present and no-args paths) ---
         # ``getMessage()`` runs ``record.msg % record.args`` which invokes
         # each arg's ``__str__`` / ``__repr__``. A bug in any of those
@@ -459,6 +473,11 @@ def _install_on_loguru(instance: CredentialRedactingFilter) -> bool:
             record["extra"] = extra
         if extra.get("_fo_redacted") is _RECORD_REDACTED_SENTINEL:
             return
+
+        # Scrub loguru extra / bind() attributes
+        for k in list(extra.keys()):
+            if isinstance(k, str) and _CRED_KEY_FULL.match(k):
+                extra[k] = REDACTED
         # Loguru record: ``{'message': str, 'exception': RecordException | None, ...}``.
         # Redact the main message and the exception repr (which loguru
         # stringifies during emission just like logging's exc_info path).

@@ -450,6 +450,8 @@ class TestWatchLoopExecutor:
 
         handler = Collector()
         target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
         prev_disable = logging.root.manager.disable
         logging.root.manager.disable = logging.NOTSET
 
@@ -467,6 +469,7 @@ class TestWatchLoopExecutor:
             # ... and the failure was surfaced via the module logger.
             assert any("process_file boom" in record.getMessage() for record in records)
         finally:
+            target.setLevel(prev_level)
             target.removeHandler(handler)
             logging.root.manager.disable = prev_disable
 
@@ -484,6 +487,8 @@ class TestWatchLoopExecutor:
 
         handler = Collector()
         target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
         prev_disable = logging.root.manager.disable
         logging.root.manager.disable = logging.NOTSET
 
@@ -499,6 +504,7 @@ class TestWatchLoopExecutor:
             assert future not in orch._watch_futures
             assert records == []
         finally:
+            target.setLevel(prev_level)
             target.removeHandler(handler)
             logging.root.manager.disable = prev_disable
 
