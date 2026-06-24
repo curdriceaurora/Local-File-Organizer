@@ -653,3 +653,76 @@ def pywebview_mock(page: Page) -> PywebviewMockHandle:  # type: ignore[name-defi
     """
     page.add_init_script(_PYWEBVIEW_MOCK_SCRIPT)
     return PywebviewMockHandle(page)
+
+
+_PLAYWRIGHT_LOOP = None
+
+
+@pytest.fixture(scope="session")
+def playwright() -> Iterator[Any]:
+    """Override pytest-playwright's session-scoped playwright fixture.
+
+    We wrap it to save the active event loop at startup, and restore it
+    during teardown. This prevents the 'attached to a different loop' error
+    caused by other async tests changing the thread-local event loop state.
+    """
+    global _PLAYWRIGHT_LOOP
+    import asyncio
+    import asyncio.events
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        try:
+            _PLAYWRIGHT_LOOP = asyncio.get_event_loop()
+        except RuntimeError:
+            pass
+
+        yield p
+
+        if _PLAYWRIGHT_LOOP is not None:
+            try:
+                asyncio.events._set_running_loop(_PLAYWRIGHT_LOOP)
+            except Exception:
+                pass
+            asyncio.set_event_loop(_PLAYWRIGHT_LOOP)
+
+
+@pytest.fixture(scope="session")
+def browser(playwright: Any, launch_browser: Callable[[], Any]) -> Iterator[Any]:
+    """Override pytest-playwright's session-scoped browser fixture.
+
+    We wrap it to restore the Playwright event loop before closing the browser.
+    """
+    import asyncio
+    import asyncio.events
+
+    browser = launch_browser()
+    yield browser
+
+    if _PLAYWRIGHT_LOOP is not None:
+        try:
+            asyncio.events._set_running_loop(_PLAYWRIGHT_LOOP)
+        except Exception:
+            pass
+        asyncio.set_event_loop(_PLAYWRIGHT_LOOP)
+    browser.close()
+
+
+@pytest.fixture(autouse=True)
+def activate_playwright_loop() -> Iterator[None]:
+    """Ensure the Playwright session event loop is set as the running loop for this test.
+
+    This counters the 'clear_leaked_running_loop' autouse fixture in the root conftest,
+    which clears the running loop to prevent conflicts in other async tests.
+    """
+    import asyncio.events
+
+    if _PLAYWRIGHT_LOOP is not None:
+        try:
+            asyncio.events._set_running_loop(_PLAYWRIGHT_LOOP)
+        except Exception:
+            pass
+
+    yield
+

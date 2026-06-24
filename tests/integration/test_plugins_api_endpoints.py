@@ -728,10 +728,19 @@ class TestPluginHookManager:
                 """Support use as a context manager, matching httpx.Client."""
                 return False
 
-            def post(self, url: str, *, json: dict, headers: dict, timeout: float) -> _FakeResponse:
+            def post(
+                self,
+                url: str,
+                *,
+                json: dict,
+                headers: dict,
+                timeout: float,
+                extensions: dict | None = None,
+            ) -> _FakeResponse:
                 """Record the request URL and headers, then return a fake success response."""
                 captured["url"] = url
                 captured["headers"] = headers
+                captured["extensions"] = extensions
                 return _FakeResponse()
 
         manager = PluginHookManager(http_client_factory=lambda: _FakeClient())

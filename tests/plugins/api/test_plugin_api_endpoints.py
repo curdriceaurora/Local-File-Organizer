@@ -42,6 +42,7 @@ class _FakeHttpClient:
         json: dict[str, Any],
         headers: dict[str, str],
         timeout: float,
+        extensions: dict[str, Any] | None = None,
     ) -> _FakeResponse:
         self._sink.append(
             {
@@ -49,6 +50,7 @@ class _FakeHttpClient:
                 "json": json,
                 "headers": headers,
                 "timeout": timeout,
+                "extensions": extensions,
             }
         )
         return _FakeResponse(status_code=202)

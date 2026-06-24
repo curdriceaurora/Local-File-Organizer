@@ -40,6 +40,7 @@ class _FakeHttpClient:
         json: dict[str, Any],
         headers: dict[str, str],
         timeout: float,
+        extensions: dict[str, Any] | None = None,
     ) -> _FakeResponse:
         self.calls.append(
             (
@@ -48,6 +49,7 @@ class _FakeHttpClient:
                     "json": json,
                     "headers": headers,
                     "timeout": timeout,
+                    "extensions": extensions,
                 },
             )
         )
@@ -256,3 +258,39 @@ def test_trigger_event_blocks_dns_rebinding_at_dispatch_time(
     assert results[0].error is not None
     assert "SSRF Prevention" in results[0].error
     assert len(fake_client.calls) == 0
+
+
+def test_trigger_event_pins_ip_to_prevent_dns_rebinding_at_send_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Triggering a webhook resolves the domain, validates it, and pins the IP in the request."""
+    fake_client = _FakeHttpClient([])
+    manager = PluginHookManager(http_client_factory=lambda: fake_client)
+
+    # Mock getaddrinfo to return a safe public IP
+    def fake_getaddrinfo(host: str, port: object) -> list[tuple[Any, ...]]:
+        if host == "safe.example.com":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+        raise socket.gaierror("unknown host")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    manager.register_webhook(
+        plugin_id="plugin-a",
+        event=HookEvent.FILE_DELETED,
+        callback_url="https://safe.example.com/hook",
+    )
+
+    results = manager.trigger_event(HookEvent.FILE_DELETED, {"file": "sample.txt"})
+    assert len(results) == 1
+    assert results[0].delivered is True
+    assert results[0].error is None
+
+    # Verify that the HTTP call was pinned to the resolved IP address,
+    # and the original hostname was sent in Host header and sni_hostname
+    assert len(fake_client.calls) == 1
+    url, kwargs = fake_client.calls[0]
+    assert url == "https://93.184.216.34/hook"
+    assert kwargs["headers"]["Host"] == "safe.example.com"
+    assert kwargs["extensions"] == {"sni_hostname": "safe.example.com"}
+

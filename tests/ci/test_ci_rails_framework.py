@@ -142,6 +142,9 @@ def test_list_is_noop_exit_zero(tmp_path: Path) -> None:
     assert ci_rails.main(["--registry", str(registry), "--list"]) == 0
 
 
-def test_repo_registry_currently_registers_no_rails() -> None:
-    """The checked-in registry must stay empty at WP-0.1 (no-op framework)."""
-    assert ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY) == []
+def test_repo_registry_loads_registered_rails() -> None:
+    """The checked-in registry loads all registered rails, and they must be advisory in this phase."""
+    rails = ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY)
+    assert len(rails) == 7
+    for rail in rails:
+        assert rail.mode == "advisory"

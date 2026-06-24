@@ -45,7 +45,8 @@ Design invariants:
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+import os
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
 
@@ -111,6 +112,58 @@ def validate_within_roots(path: Path, allowed_roots: Iterable[Path]) -> Path:
     )
 
 
+def _process_walk_entry(
+    entry: os.DirEntry,
+    *,
+    pattern: str,
+    recursive: bool,
+    only_files: bool,
+    follow_symlinks: bool,
+    include_hidden: bool,
+    walk_fn: Callable[[Path], Iterator[Path]],
+) -> Iterator[Path]:
+    """Process a single directory entry during a secure walk."""
+    name = entry.name
+    if not include_hidden and name.startswith("."):
+        return
+
+    entry_path = Path(entry.path)
+
+    # Per-entry OSError (PermissionError, stale NFS handle, etc.) skips
+    # that entry instead of aborting the whole walk.
+    try:
+        is_sym = entry_path.is_symlink()
+    except OSError:
+        return
+
+    if not follow_symlinks and is_sym:
+        return
+
+    try:
+        is_dir = entry_path.is_dir()
+    except OSError:
+        is_dir = False
+
+    # Note: we do not descend into directory symlinks for recursion (secure)
+    if is_dir and not is_sym:
+        if recursive:
+            yield from walk_fn(entry_path)
+        if not only_files:
+            if entry_path.match(pattern):
+                yield entry_path
+    else:
+        try:
+            is_file = entry_path.is_file()
+        except OSError:
+            is_file = False
+
+        if only_files and not is_file:
+            return
+
+        if entry_path.match(pattern):
+            yield entry_path
+
+
 def safe_walk(
     root: Path,
     *,
@@ -160,7 +213,6 @@ def safe_walk(
         `Path` objects for each entry under `root` that matches `pattern`
         and passes the filters.
     """
-    import os
     try:
         if not root.exists():
             return
@@ -176,45 +228,15 @@ def safe_walk(
         try:
             with os.scandir(dir_path) as it:
                 for entry in it:
-                    name = entry.name
-                    if not include_hidden and name.startswith("."):
-                        continue
-                    
-                    entry_path = Path(entry.path)
-                    
-                    # Per-entry OSError (PermissionError, stale NFS handle, etc.) skips
-                    # that entry instead of aborting the whole walk.
-                    try:
-                        is_sym = entry_path.is_symlink()
-                    except OSError:
-                        continue
-                    
-                    if not follow_symlinks and is_sym:
-                        continue
-                    
-                    try:
-                        is_dir = entry_path.is_dir()
-                    except OSError:
-                        is_dir = False
-                    
-                    # Note: we do not descend into directory symlinks for recursion (secure)
-                    if is_dir and not is_sym:
-                        if recursive:
-                            yield from _walk(entry_path)
-                        if not only_files:
-                            if entry_path.match(pattern):
-                                yield entry_path
-                    else:
-                        try:
-                            is_file = entry_path.is_file()
-                        except OSError:
-                            is_file = False
-                            
-                        if only_files and not is_file:
-                            continue
-                            
-                        if entry_path.match(pattern):
-                            yield entry_path
+                    yield from _process_walk_entry(
+                        entry,
+                        pattern=pattern,
+                        recursive=recursive,
+                        only_files=only_files,
+                        follow_symlinks=follow_symlinks,
+                        include_hidden=include_hidden,
+                        walk_fn=_walk,
+                    )
         except OSError:
             return
 

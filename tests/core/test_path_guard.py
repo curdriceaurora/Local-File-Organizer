@@ -192,10 +192,10 @@ class TestSafeWalk:
 
         # Walk the directory
         result = list(safe_walk(tmp_path))
-        
+
         # Verify the file was yielded but the hidden files were not
         assert [p.name for p in result] == ["visible.txt"]
-        
+
         # Verify that we scanned tmp_path but NEVER scanned inside `.git`
         scanned_names = {p.name for p in scanned_paths}
         assert tmp_path.resolve() in scanned_paths
@@ -396,23 +396,23 @@ class TestSafeWalk:
         bad_dir.mkdir()
         bad_file = tmp_path / "bad_file.txt"
         bad_file.write_text("x")
-        
+
         original_is_dir = Path.is_dir
         original_is_file = Path.is_file
-        
+
         def mock_is_dir(self: Path) -> bool:
             if self.name == "bad_dir":
                 raise OSError("device error on is_dir")
             return original_is_dir(self)
-            
+
         def mock_is_file(self: Path) -> bool:
             if self.name == "bad_file.txt":
                 raise OSError("device error on is_file")
             return original_is_file(self)
-            
+
         monkeypatch.setattr(Path, "is_dir", mock_is_dir)
         monkeypatch.setattr(Path, "is_file", mock_is_file)
-        
+
         yielded = {p.name for p in safe_walk(tmp_path)}
         assert "good.txt" in yielded
         assert "bad_dir" not in yielded
@@ -423,11 +423,10 @@ class TestSafeWalk:
     ) -> None:
         """Verify that an OSError during os.scandir is caught and yields nothing for that subtree."""
         import os
-        original_scandir = os.scandir
-        
+
         def mock_scandir(path):
             raise OSError("scandir failed")
-            
+
         monkeypatch.setattr(os, "scandir", mock_scandir)
         assert list(safe_walk(tmp_path)) == []
 

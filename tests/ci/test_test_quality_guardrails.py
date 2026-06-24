@@ -65,7 +65,6 @@ def _changed_test_files() -> list[Path]:
 
 
 def _git_bin() -> str:
-    import shutil
     git_path = shutil.which("git")
     if git_path is None:
         raise OSError("git executable not found on PATH")
@@ -108,16 +107,16 @@ def _resolve_diff_base() -> str | None:
     but origin/base_branch cannot be resolved (indicating a shallow clone).
     """
     base_branch = os.environ.get("GITHUB_BASE_REF")
-    
+
     # Try GITHUB_BASE_REF and origin/main candidates first
     candidates = []
     if base_branch:
         candidates.extend([f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch])
     candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
-    
+
     # Drop duplicates
     candidates = list(dict.fromkeys(candidates))
-    
+
     for candidate in candidates:
         if _git_ref_exists(candidate):
             merge_base = _git_stdout("merge-base", "HEAD", candidate, check=False)
@@ -176,7 +175,7 @@ def _git_changed_test_files() -> list[Path]:
     # Add staged and unstaged local changes
     staged_diff = _git_stdout("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py")
     changed.update(line.strip() for line in staged_diff.splitlines() if line.strip())
-    
+
     unstaged_diff = _git_stdout("diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py")
     changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
     return sorted(

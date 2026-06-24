@@ -313,6 +313,8 @@ class FileOrganizer:
         # Organize
         # Content‑based deduplication: remove duplicate files based on file content hash
         if all_processed:
+            # Sort by file path to ensure deterministic deduplication order across runs
+            all_processed.sort(key=lambda x: str(x.file_path))
             seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
