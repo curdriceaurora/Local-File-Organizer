@@ -1,9 +1,8 @@
-
 #!/bin/bash
 
 # 1. Set your Repo (Owner/RepoName)
 
-REPO=“curdriceaurora/Local-File-Organizer" 
+REPO="curdriceaurora/Local-File-Organizer"
 
 # 2. MacOS (BSD) compatible date calculation
 
@@ -32,13 +31,13 @@ echo "-----------------------------------"
 # 4. Iterate through each PR and fetch review comments
 for pr in $prs; do
     echo "Processing PR #$pr..."
-    
+
     gh pr view "$pr" --repo "$REPO" --json number,title,url,reviews --jq '
         "PR #\(.number): \(.title)\nURL: \(.url)\n" +
         (.reviews | map(
             "Reviewer: \(.author.login)\n" +
             (.comments | map("- [\(.path):\(.line)] \(.body)") | join("\n"))
         ) | join("\n---\n"))'
-    
+
     echo -e "\n===================================\n"
 done

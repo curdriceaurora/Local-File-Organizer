@@ -988,9 +988,7 @@ class PipelineOrchestrator:
                                 self.process_file, event.path, trusted_root=trusted_root
                             )
                         else:
-                            future = self._executor.submit(
-                                self.process_file, event.path
-                            )
+                            future = self._executor.submit(self.process_file, event.path)
                         with self._watch_futures_lock:
                             self._watch_futures.add(future)
                         # Register the discard outside the lock: if the future

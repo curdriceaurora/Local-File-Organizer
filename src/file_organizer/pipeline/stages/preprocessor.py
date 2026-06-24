@@ -52,17 +52,19 @@ class PreprocessorStage:
             context.error = f"Unsupported file extension: {ext}"
             return context
 
-        if sys.platform != "win32" and context.trusted_root is not None:
+        trusted_root = context.trusted_root
+        if sys.platform != "win32" and trusted_root is not None:
             import os
             import stat as stat_mod
 
             from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+
             try:
                 try:
-                    relative = path.relative_to(context.trusted_root)
+                    relative = path.relative_to(trusted_root)
                 except ValueError:
-                    relative = path.resolve().relative_to(context.trusted_root.resolve())
-                with SafeDir.open_root(context.trusted_root) as safe_dir:
+                    relative = path.resolve().relative_to(trusted_root.resolve())
+                with SafeDir.open_root(trusted_root) as safe_dir:
                     fd = safe_dir.open_anchored_reader(relative)
                 try:
                     stat = os.fstat(fd)

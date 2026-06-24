@@ -480,9 +480,7 @@ class PARASuggestionEngine:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _run_heuristics(
-        self, file_path: Path, trusted_root: Path | None = None
-    ) -> HeuristicResult:
+    def _run_heuristics(self, file_path: Path, trusted_root: Path | None = None) -> HeuristicResult:
         """Run the heuristic engine on a file path.
 
         Args:

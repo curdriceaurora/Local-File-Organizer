@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from file_organizer.interfaces.pipeline import StageContext
 from file_organizer.pipeline.processor_pool import (
@@ -68,7 +68,9 @@ class AnalyzerStage:
             return context
 
         try:
-            result = self._run_processor(context.file_path, processor, scan_root=context.trusted_root)
+            result = self._run_processor(
+                context.file_path, processor, scan_root=context.trusted_root
+            )
             context.analysis = result
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
@@ -84,11 +86,16 @@ class AnalyzerStage:
         file_path: Path, processor: BaseProcessor, scan_root: Path | None = None
     ) -> dict[str, str]:
         """Invoke the processor and normalise output to a dict."""
-        # Only pass scan_root if the processor's process_file accepts it (like TextProcessor)
+        # Only pass scan_root if the processor's process_file accepts it (like
+        # TextProcessor). BaseProcessor's Protocol signature doesn't declare
+        # scan_root since not every concrete processor supports it, so the
+        # conditional call below is checked via runtime introspection rather
+        # than the static type, hence the cast.
         import inspect
+
         sig = inspect.signature(processor.process_file)
         if "scan_root" in sig.parameters:
-            raw = processor.process_file(file_path, scan_root=scan_root)
+            raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
         else:
             raw = processor.process_file(file_path)
         return cast(dict[str, str], normalize_processor_result(file_path, raw))
