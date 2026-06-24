@@ -11,7 +11,7 @@ from alembic import command
 
 
 def test_alembic_upgrade_head_creates_expected_tables(tmp_path: Path) -> None:
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = Path(__file__).resolve().parents[2]
     db_path = tmp_path / "migrated.db"
     database_url = f"sqlite+pysqlite:///{db_path}"
 

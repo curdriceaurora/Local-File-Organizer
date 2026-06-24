@@ -129,7 +129,7 @@ Priority ordered by coverage gap × file size (biggest impact first):
   - Target: ≥90% coverage
 - [ ] **3D.3** Create `tests/web/test_settings_routes.py` (expand existing)
   - Source: `settings_routes.py` (630 LOC)
-  - Existing: `tests/test_web_settings.py` (435 LOC)
+  - Existing: `tests/web/test_web_settings.py` (435 LOC)
   - Gap analysis: identify uncovered paths, add tests
   - Target: ≥90% coverage
 - [ ] **3D.4** Create `tests/web/test_profile_routes.py`

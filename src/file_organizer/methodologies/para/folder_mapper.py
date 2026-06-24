@@ -108,7 +108,7 @@ class CategoryFolderMapper:
             MappingResult with target folder and reasoning
         """
         # Get categorization from heuristics
-        heuristic_result = self.heuristic_engine.evaluate(file_path)
+        heuristic_result = self.heuristic_engine.evaluate(file_path, trusted_root=root_path)
         category = heuristic_result.recommended_category
         confidence = heuristic_result.overall_confidence
         reasoning = self._extract_reasoning(heuristic_result, category)

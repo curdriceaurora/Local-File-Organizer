@@ -79,12 +79,18 @@ class Heuristic(ABC):
         self.weight = weight
 
     @abstractmethod
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate file and return category scores.
 
         Args:
             file_path: Path to file to evaluate
             metadata: Optional pre-extracted metadata
+            trusted_root: Optional trusted root for anchored reads
 
         Returns:
             HeuristicResult with category scores
@@ -128,7 +134,12 @@ class TemporalHeuristic(Heuristic):
                 return True
         return False
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         import time
         from datetime import UTC, datetime
@@ -287,7 +298,12 @@ class ContentHeuristic(Heuristic):
         pattern = r"\b" + re.escape(keyword) + r"\b"
         return bool(re.search(pattern, text, re.IGNORECASE))
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -365,7 +381,12 @@ class StructuralHeuristic(Heuristic):
     - Archive folders → ARCHIVE
     """
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate based on file structure."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -534,7 +555,12 @@ class AIHeuristic(Heuristic):
         except OSError:
             return None
 
-    def _extract_content(self, file_path: Path, metadata: dict[str, Any] | None) -> str:
+    def _extract_content(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None,
+        trusted_root: Path | None = None,
+    ) -> str:
         """Extract text content from a file for the classification prompt.
 
         For text-readable files, reads up to ``max_content_chars`` *bytes*
@@ -550,11 +576,14 @@ class AIHeuristic(Heuristic):
         Args:
             file_path: Path to the file.
             metadata: Optional pre-extracted metadata dict.
+            trusted_root: Optional trusted root for anchored reads.
 
         Returns:
             A string suitable for inclusion in the LLM prompt.
         """
-        raw = self._read_content_bytes(file_path, self.config.max_content_chars)
+        raw = self._read_content_bytes(
+            file_path, self.config.max_content_chars, trusted_root=trusted_root
+        )
         if raw is not None:
             try:
                 # Fast path: valid UTF-8 is text regardless of byte values.
@@ -582,7 +611,9 @@ class AIHeuristic(Heuristic):
         return "\n".join(parts)
 
     @staticmethod
-    def _read_content_bytes(file_path: Path, limit: int) -> bytes | None:
+    def _read_content_bytes(
+        file_path: Path, limit: int, trusted_root: Path | None = None
+    ) -> bytes | None:
         """Read up to *limit* bytes from *file_path* via SafeDir.
 
         Falls back to a path-based open on Windows / when SafeDir is
@@ -596,15 +627,23 @@ class AIHeuristic(Heuristic):
             return None
         if sys.platform != "win32":
             try:
-                with SafeDir.open_root(file_path.parent) as safe_dir:
-                    fd = safe_dir.open_for_reader(file_path.name)
+                if trusted_root is not None:
                     try:
-                        fileobj = os.fdopen(fd, "rb", closefd=True)
-                    except OSError:
-                        os.close(fd)
-                        raise
-                    with fileobj:
-                        return fileobj.read(limit)
+                        relative = file_path.relative_to(trusted_root)
+                    except ValueError:
+                        relative = file_path.resolve().relative_to(trusted_root.resolve())
+                    with SafeDir.open_root(trusted_root) as safe_dir:
+                        fd = safe_dir.open_anchored_reader(relative)
+                else:
+                    with SafeDir.open_root(file_path.parent) as safe_dir:
+                        fd = safe_dir.open_for_reader(file_path.name)
+                try:
+                    fileobj = os.fdopen(fd, "rb", closefd=True)
+                except OSError:
+                    os.close(fd)
+                    raise
+                with fileobj:
+                    return fileobj.read(limit)
             except SymlinkRejected as exc:
                 logger.warning(
                     "Refused to read symlinked file %s: %s", file_path, exc, exc_info=True
@@ -710,7 +749,12 @@ class AIHeuristic(Heuristic):
             abstained=True,
         )
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate a file using Ollama LLM semantic analysis.
 
         Calls the configured Ollama model with the file content and a PARA
@@ -721,6 +765,7 @@ class AIHeuristic(Heuristic):
         Args:
             file_path: Path to the file to evaluate.
             metadata: Optional pre-extracted metadata.
+            trusted_root: Optional trusted root for anchored reads.
 
         Returns:
             HeuristicResult with per-category scores from the LLM.
@@ -739,7 +784,7 @@ class AIHeuristic(Heuristic):
                     self._result_cache.move_to_end(cache_key)
                     return self._result_cache[cache_key]
 
-        content = self._extract_content(file_path, metadata)
+        content = self._extract_content(file_path, metadata, trusted_root=trusted_root)
         prompt = self._build_prompt(file_path, content)
 
         try:
@@ -870,12 +915,18 @@ class HeuristicEngine:
             PARACategory.ARCHIVE: self._thresholds.archive,
         }
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+    def evaluate(
+        self,
+        file_path: Path,
+        metadata: dict[str, Any] | None = None,
+        trusted_root: Path | None = None,
+    ) -> HeuristicResult:
         """Evaluate file using all enabled heuristics.
 
         Args:
             file_path: Path to file
             metadata: Optional pre-extracted metadata
+            trusted_root: Optional trusted root for anchored reads
 
         Returns:
             Combined HeuristicResult
@@ -887,7 +938,7 @@ class HeuristicEngine:
         results = []
         for heuristic in self.heuristics:
             try:
-                result = heuristic.evaluate(file_path, metadata)
+                result = heuristic.evaluate(file_path, metadata, trusted_root=trusted_root)
                 results.append((heuristic, result))
             except Exception as e:
                 logger.error(f"Heuristic {heuristic.__class__.__name__} failed: {e}")

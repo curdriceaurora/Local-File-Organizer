@@ -17,6 +17,7 @@ This file exercises every branch the SafeDir migration introduced:
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -138,3 +139,53 @@ class TestReadContentBytesLegacyFallback:
             side_effect=NotImplementedError(),
         ):
             assert AIHeuristic._read_content_bytes(target, limit=64) is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+class TestReadContentBytesTrustedRoot:
+    """``trusted_root`` routes the read through ``open_anchored_reader`` so a
+    symlink swapped into an *intermediate* directory component (not just the
+    leaf) is also refused (#1226 nested-ancestor TOCTOU hardening)."""
+
+    def test_reads_via_anchored_reader_when_trusted_root_given(self, tmp_path: Path) -> None:
+        root = tmp_path / "watched"
+        sub = root / "nested"
+        sub.mkdir(parents=True)
+        target = sub / "doc.txt"
+        target.write_bytes(b"anchored content")
+
+        real_fd = os.open(target, os.O_RDONLY)
+        fake_safe_dir = MagicMock()
+        fake_safe_dir.open_anchored_reader.return_value = real_fd
+        fake_cm = MagicMock()
+        fake_cm.__enter__.return_value = fake_safe_dir
+        fake_cm.__exit__.return_value = False
+
+        with patch(
+            "file_organizer.methodologies.para.detection.heuristics.SafeDir.open_root",
+            return_value=fake_cm,
+        ) as mock_open_root:
+            result = AIHeuristic._read_content_bytes(target, limit=100, trusted_root=root)
+
+        assert result == b"anchored content"
+        mock_open_root.assert_called_once_with(root)
+        fake_safe_dir.open_anchored_reader.assert_called_once_with(Path("nested/doc.txt"))
+
+    def test_relative_to_falls_back_to_resolve_across_symlinked_root(self, tmp_path: Path) -> None:
+        """Mirrors the macOS ``/tmp`` vs ``/private/tmp``-style mismatch: the
+        file path threaded through the watcher is reached via a symlinked
+        ancestor, so a direct ``relative_to(trusted_root)`` raises ``ValueError``
+        even though the file is genuinely under the trusted root once both
+        sides are resolved."""
+        real_root = tmp_path / "real"
+        real_root.mkdir()
+        target_real = real_root / "doc.txt"
+        target_real.write_bytes(b"resolved content")
+
+        link_root = tmp_path / "link"
+        link_root.symlink_to(real_root)
+        target_via_link = link_root / "doc.txt"
+
+        result = AIHeuristic._read_content_bytes(target_via_link, limit=100, trusted_root=real_root)
+
+        assert result == b"resolved content"

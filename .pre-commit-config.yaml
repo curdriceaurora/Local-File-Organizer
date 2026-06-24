@@ -100,13 +100,13 @@ repos:
 
       - id: pytest-websocket
         name: pytest (websocket validations)
-        entry: bash -c "pytest tests/test_api_websocket.py -q --override-ini='addopts='"
+        entry: bash -c "pytest tests/api/test_api_websocket.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
 
       - id: pytest-web-ui
         name: pytest (web ui)
-        entry: bash -c "pytest tests/test_web_ui.py -q --override-ini='addopts='"
+        entry: bash -c "pytest tests/web/test_web_ui.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
 

@@ -162,7 +162,7 @@ class PARAMigrationManager:
 
             # Categorize file
             try:
-                result = self.heuristic_engine.evaluate(file_path)
+                result = self.heuristic_engine.evaluate(file_path, trusted_root=source_path)
                 category = result.recommended_category
                 if category is None:
                     # Default to Resource if no clear category

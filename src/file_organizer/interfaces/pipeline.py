@@ -51,6 +51,7 @@ class StageContext:
     analysis: dict[str, Any] = field(default_factory=dict)
     destination: Path | None = None
     output_root: Path | None = None
+    trusted_root: Path | None = None
     category: str = ""
     filename: str = ""
     dry_run: bool = True

@@ -460,7 +460,7 @@ class PipelineOrchestrator:
     # Processing
     # ------------------------------------------------------------------
 
-    def process_file(self, file_path: Path) -> ProcessingResult:
+    def process_file(self, file_path: Path, trusted_root: Path | None = None) -> ProcessingResult:
         """Process a single file through the pipeline.
 
         If ``stages`` were provided, each stage is executed in order.
@@ -468,13 +468,14 @@ class PipelineOrchestrator:
 
         Args:
             file_path: Path to the file to process.
+            trusted_root: Optional trusted root directory for anchored reads.
 
         Returns:
             ProcessingResult with processing outcome and metadata.
         """
         stages = self._stages  # snapshot once; set_stages() may replace list concurrently
         if stages:
-            return self._process_file_staged(file_path, stages)
+            return self._process_file_staged(file_path, stages, trusted_root=trusted_root)
         return self._process_file_legacy(file_path)
 
     def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
@@ -673,7 +674,7 @@ class PipelineOrchestrator:
             dry_run=context.dry_run,
         )
 
-    def _make_context(self, file_path: Path) -> StageContext:
+    def _make_context(self, file_path: Path, trusted_root: Path | None = None) -> StageContext:
         """Create a fresh :class:`StageContext` for *file_path*.
 
         Centralises the ``dry_run`` derivation so all three entry points
@@ -683,6 +684,7 @@ class PipelineOrchestrator:
         return StageContext(
             file_path=file_path,
             dry_run=not self.config.should_move_files,
+            trusted_root=trusted_root,
         )
 
     def _acquire_buffer(self, file_path: Path) -> bytearray | None:
@@ -707,13 +709,13 @@ class PipelineOrchestrator:
             logger.warning("Failed to release buffer for %s", file_path, exc_info=True)
 
     def _process_file_staged(
-        self, file_path: Path, stages: list[PipelineStage]
+        self, file_path: Path, stages: list[PipelineStage], trusted_root: Path | None = None
     ) -> ProcessingResult:
         """Run *file_path* through the configured stages."""
         start_time = time.monotonic()
         buffer = self._acquire_buffer(file_path)
         try:
-            context = self._make_context(file_path)
+            context = self._make_context(file_path, trusted_root=trusted_root)
             if buffer is not None:
                 context.extra[_BUFFER_KEY] = buffer
             context = self._run_stages(context, stages)
@@ -962,10 +964,36 @@ class PipelineOrchestrator:
                         continue
 
                     try:
+                        # Find which watch directory this event's path lives
+                        # under. ``trusted_root`` is resolved before use:
+                        # SafeDir.open_root() refuses a symlinked root outright,
+                        # so a configured watch directory that is itself a
+                        # symlink (e.g. macOS /tmp -> /private/tmp) must be
+                        # anchored on its real target, not the symlink path.
+                        trusted_root = None
+                        if self.config.watch_config and self.config.watch_config.watch_directories:
+                            for d in self.config.watch_config.watch_directories:
+                                try:
+                                    event.path.relative_to(d)
+                                    trusted_root = d.resolve()
+                                    break
+                                except ValueError:
+                                    try:
+                                        event.path.resolve().relative_to(d.resolve())
+                                        trusted_root = d.resolve()
+                                        break
+                                    except ValueError:
+                                        continue
+
                         # Submit to executor to avoid blocking the watch loop.
                         # Track the future so stop() can drain in-flight work
                         # before closing stage-owned resources.
-                        future = self._executor.submit(self.process_file, event.path)
+                        if trusted_root is not None:
+                            future = self._executor.submit(
+                                self.process_file, event.path, trusted_root=trusted_root
+                            )
+                        else:
+                            future = self._executor.submit(self.process_file, event.path)
                         with self._watch_futures_lock:
                             self._watch_futures.add(future)
                         # Register the discard outside the lock: if the future

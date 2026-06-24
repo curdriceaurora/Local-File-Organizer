@@ -57,13 +57,14 @@ def files(
     dry_run: bool = typer.Option(False, "--dry-run", help="Alias for preview mode."),
 ) -> None:
     """Generate organisation suggestions for files in a directory."""
-    engine = _get_engine()
-    analyzer = _get_analyzer()
     file_list = _collect_files(directory)
 
     if not file_list:
         console.print("[yellow]No files found in directory.[/yellow]")
         raise typer.Exit()
+
+    engine = _get_engine()
+    analyzer = _get_analyzer()
 
     with console.status("Analyzing patterns…"):
         analysis = analyzer.analyze_directory(directory)
