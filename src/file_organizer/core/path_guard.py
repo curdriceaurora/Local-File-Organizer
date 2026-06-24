@@ -160,43 +160,62 @@ def safe_walk(
         `Path` objects for each entry under `root` that matches `pattern`
         and passes the filters.
     """
+    import os
     try:
         if not root.exists():
             return
         # Reject a symlinked root when follow_symlinks=False. Without this,
-        # `rglob()` on a directory symlink enumerates the target tree —
-        # including paths outside the caller's allowed root — before the
-        # per-entry symlink filter ever runs (the first yielded entries
-        # are descendants, not the symlink itself).
+        # walking on a directory symlink enumerates the target tree —
+        # including paths outside the caller's allowed root.
         if not follow_symlinks and root.is_symlink():
             return
     except OSError:
         return
-    glob_iter = root.rglob(pattern) if recursive else root.glob(pattern)
-    for entry in glob_iter:
-        # Per-entry OSError (PermissionError, stale NFS handle, etc.) skips
-        # that entry instead of aborting the whole walk — walkers like the
-        # doctor scan need to continue past inaccessible siblings.
+
+    def _walk(dir_path: Path) -> Iterator[Path]:
         try:
-            if not follow_symlinks and entry.is_symlink():
-                continue
-            # Hidden filter is relative to root so an explicit scan of a
-            # hidden directory doesn't get vetoed by the root component.
-            # Lexical `relative_to` (no `resolve()`) avoids a per-entry
-            # `realpath` syscall — safe because rglob/glob on Python
-            # 3.11–3.13 doesn't descend into directory symlinks, so every
-            # yielded entry lives lexically under root.
-            if not include_hidden:
-                try:
-                    rel_parts = entry.relative_to(root).parts
-                except ValueError:
-                    # Defensive: rglob yielded something outside root
-                    # (race with a concurrent rename/delete). Skip.
-                    continue
-                if any(part.startswith(".") for part in rel_parts):
-                    continue
-            if only_files and not entry.is_file():
-                continue
+            with os.scandir(dir_path) as it:
+                for entry in it:
+                    name = entry.name
+                    if not include_hidden and name.startswith("."):
+                        continue
+                    
+                    entry_path = Path(entry.path)
+                    
+                    # Per-entry OSError (PermissionError, stale NFS handle, etc.) skips
+                    # that entry instead of aborting the whole walk.
+                    try:
+                        is_sym = entry_path.is_symlink()
+                    except OSError:
+                        continue
+                    
+                    if not follow_symlinks and is_sym:
+                        continue
+                    
+                    try:
+                        is_dir = entry_path.is_dir()
+                    except OSError:
+                        is_dir = False
+                    
+                    # Note: we do not descend into directory symlinks for recursion (secure)
+                    if is_dir and not is_sym:
+                        if recursive:
+                            yield from _walk(entry_path)
+                        if not only_files:
+                            if entry_path.match(pattern):
+                                yield entry_path
+                    else:
+                        try:
+                            is_file = entry_path.is_file()
+                        except OSError:
+                            is_file = False
+                            
+                        if only_files and not is_file:
+                            continue
+                            
+                        if entry_path.match(pattern):
+                            yield entry_path
         except OSError:
-            continue
-        yield entry
+            return
+
+    yield from _walk(root)

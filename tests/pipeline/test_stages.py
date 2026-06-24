@@ -424,6 +424,163 @@ class TestWriterStage:
         result = WriterStage().process(ctx)
         assert result.error == "prior"
 
+    def test_special_file_error_destination(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that SpecialFileError is raised and handled when the destination is not a regular file."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        dest.write_text("existing")
+        
+        # Mock stat.S_ISREG to return True on first call (source) and False on second call (destination)
+        called = []
+        def mock_s_isreg(mode):
+            called.append(mode)
+            if len(called) == 1:
+                return True
+            return False
+            
+        monkeypatch.setattr(stat, "S_ISREG", mock_s_isreg)
+        
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "not a regular file" in result.error.lower()
+
+    def test_fallback_to_shutil_copy2(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that the writer falls back to shutil.copy2 when SafeDir raises NotImplementedError."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        
+        # Mock _copy_via_safedir to raise NotImplementedError
+        from file_organizer.pipeline.stages import writer
+        def mock_copy_via_safedir(source, destination):
+            raise NotImplementedError("SafeDir not implemented on this platform")
+            
+        monkeypatch.setattr(writer, "_copy_via_safedir", mock_copy_via_safedir)
+        
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.exists()
+        assert dest.read_text() == "content"
+
+    def test_fdopen_os_error_closes_fd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that if os.fdopen raises OSError during source open, the file descriptor is closed."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        
+        original_fdopen = os.fdopen
+        def mock_fdopen(fd, *args, **kwargs):
+            if args and "rb" in args[0]:
+                raise OSError("fdopen failed")
+            return original_fdopen(fd, *args, **kwargs)
+            
+        monkeypatch.setattr(os, "fdopen", mock_fdopen)
+        
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "fdopen failed" in result.error.lower()
+
+    def test_writer_stage_windows_platform_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that when sys.platform is mocked as win32, the writer falls back to shutil.copy2."""
+        import sys
+        monkeypatch.setattr(sys, "platform", "win32")
+        
+        src = tmp_path / "src.txt"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_text("fallback-content")
+        
+        dest = tmp_path / "dest.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.exists()
+        assert dest.read_text() == "fallback-content"
+
+    def test_copyxattr_fd_success(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that _copy_fd_xattrs successfully copies extended attributes when they are present."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        
+        # Mock os.listxattr, os.getxattr, and os.setxattr
+        listxattr_calls = []
+        getxattr_calls = []
+        setxattr_calls = []
+        
+        def mock_listxattr(fd):
+            listxattr_calls.append(fd)
+            return [b"user.comment"]
+            
+        def mock_getxattr(fd, name):
+            getxattr_calls.append((fd, name))
+            return b"test-comment"
+            
+        def mock_setxattr(fd, name, value):
+            setxattr_calls.append((fd, name, value))
+            
+        monkeypatch.setattr(os, "listxattr", mock_listxattr, raising=False)
+        monkeypatch.setattr(os, "getxattr", mock_getxattr, raising=False)
+        monkeypatch.setattr(os, "setxattr", mock_setxattr, raising=False)
+        
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert len(listxattr_calls) > 0
+        assert len(getxattr_calls) > 0
+        assert len(setxattr_calls) > 0
+        assert setxattr_calls[0][1] == b"user.comment"
+        assert setxattr_calls[0][2] == b"test-comment"
+
+    def test_copyxattr_fd_skipped_errors(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that listxattr and setxattr skip expected/unsupported filesystem errors while propagating others."""
+        import errno
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        
+        # 1. Test skipped listxattr error (e.g. ENOTSUP)
+        def mock_listxattr_skipped(fd):
+            raise OSError(errno.ENOTSUP, "Operation not supported")
+            
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_skipped, raising=False)
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error  # should succeed because ENOTSUP is skipped
+        
+        # 2. Test propagated listxattr error (e.g. EACCES)
+        def mock_listxattr_propagated(fd):
+            raise OSError(errno.EACCES, "Permission denied")
+            
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_propagated, raising=False)
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "permission denied" in result.error.lower()
+        
+        # 3. Test skipped setxattr error (e.g. EACCES on setxattr is in _XATTR_SET_SKIP)
+        def mock_listxattr_ok(fd):
+            return [b"user.comment"]
+        def mock_getxattr_ok(fd, name):
+            return b"val"
+        def mock_setxattr_skipped(fd, name, value):
+            raise OSError(errno.EACCES, "Permission denied on setxattr")
+            
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_ok, raising=False)
+        monkeypatch.setattr(os, "getxattr", mock_getxattr_ok, raising=False)
+        monkeypatch.setattr(os, "setxattr", mock_setxattr_skipped, raising=False)
+        
+        # Reset dest
+        if dest.exists():
+            dest.unlink()
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error  # EACCES on setxattr is skipped!
+
 
 # ---------------------------------------------------------------------------
 # WriterStage — anchored-traversal hardening (#1268)

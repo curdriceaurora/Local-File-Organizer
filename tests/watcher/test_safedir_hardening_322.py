@@ -24,7 +24,7 @@ from file_organizer.watcher.handler import FileEventHandler
 from file_organizer.watcher.monitor import FileMonitor
 from file_organizer.watcher.queue import EventQueue
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.integration, pytest.mark.ci]
 
 posix_only = pytest.mark.skipif(
     sys.platform == "win32", reason="symlink hardening is POSIX-focused"
