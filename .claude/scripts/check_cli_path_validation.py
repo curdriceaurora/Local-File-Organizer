@@ -86,11 +86,11 @@ class CliPathValidationVisitor(ast.NodeVisitor):
                 lineno = param_lines[param]
                 line_idx = lineno - 1
                 line_content = self.lines[line_idx] if 0 <= line_idx < len(self.lines) else ""
-                
+
                 # Check for noqa override
                 if "noqa: cli-path-validation" in line_content or "noqa" in line_content:
                     continue
-                
+
                 self.violations.append(
                     (
                         lineno,

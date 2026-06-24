@@ -293,4 +293,3 @@ def test_trigger_event_pins_ip_to_prevent_dns_rebinding_at_send_time(
     assert url == "https://93.184.216.34/hook"
     assert kwargs["headers"]["Host"] == "safe.example.com"
     assert kwargs["extensions"] == {"sni_hostname": "safe.example.com"}
-
