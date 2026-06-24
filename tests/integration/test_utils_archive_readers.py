@@ -256,7 +256,9 @@ class TestReadTarFile:
         assert isinstance(result, str)
         assert "x" in result
 
-    def test_tar_accepts_fileobj_without_path_uses_unknown_compression(self, tmp_path: Path) -> None:
+    def test_tar_accepts_fileobj_without_path_uses_unknown_compression(
+        self, tmp_path: Path
+    ) -> None:
         from file_organizer.utils.readers.archives import read_tar_file
 
         tp = _make_tar(tmp_path, "stream.tar", {"f.txt": b"x"})
@@ -373,7 +375,9 @@ class TestRead7zFile:
         assert "a.txt" in result
         assert "and 1 more files" in result
 
-    def test_7z_requires_path_or_fileobj_when_available(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_7z_requires_path_or_fileobj_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from file_organizer.utils.readers import archives
 
         monkeypatch.setattr(archives, "PY7ZR_AVAILABLE", True)
@@ -458,7 +462,9 @@ class TestReadRarFile:
         with pytest.raises(FileReadError, match="unrar tool not found"):
             archives.read_rar_file("sample.rar", fileobj=io.BytesIO(b"rar"))
 
-    def test_rar_requires_path_or_fileobj_when_available(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_rar_requires_path_or_fileobj_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from file_organizer.utils.readers import archives
 
         monkeypatch.setattr(archives, "RARFILE_AVAILABLE", True)
