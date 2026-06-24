@@ -93,8 +93,11 @@ class AnalyzerStage:
         # TextProcessor). BaseProcessor's Protocol signature doesn't declare
         # scan_root since not every concrete processor supports it, so the
         # conditional call below is checked via runtime introspection rather
-        # than the static type, hence the cast.
-        if AnalyzerStage._processor_accepts_scan_root(type(processor)):
+        # than the static type, hence the cast. type(processor) is also cast
+        # to Hashable here: Pyre's stub for the @cache-wrapped callee checks
+        # the call site's argument type against Hashable directly, regardless
+        # of the callee's own declared parameter type.
+        if AnalyzerStage._processor_accepts_scan_root(cast(Hashable, type(processor))):
             raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
         else:
             raw = processor.process_file(file_path)
