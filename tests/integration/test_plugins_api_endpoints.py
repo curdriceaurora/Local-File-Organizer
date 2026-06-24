@@ -756,3 +756,194 @@ class TestPluginHookManager:
         assert results[0].status_code == 200
         assert results[0].error is None
         assert captured["headers"]["X-Plugin-Secret"] == "topsecret"
+
+    def test_trigger_event_resolves_hostname_and_pins_ip_with_sni(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Resolving a webhook hostname pins the request to the safe IP and sets SNI."""
+        import socket
+
+        from file_organizer.plugins.api import hooks as hooks_module
+        from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
+
+        def _fake_getaddrinfo(host: str, *_args: object, **_kwargs: object) -> list[tuple]:
+            assert host == "safe.example.com"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+        monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _fake_getaddrinfo)
+
+        captured: dict[str, object] = {}
+
+        class _FakeResponse:
+            status_code = 200
+            is_success = True
+            text = ""
+
+        class _FakeClient:
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_args: object) -> bool:
+                return False
+
+            def post(
+                self,
+                url: str,
+                *,
+                json: dict,
+                headers: dict,
+                timeout: float,
+                extensions: dict | None = None,
+            ) -> _FakeResponse:
+                captured["url"] = url
+                captured["headers"] = headers
+                captured["extensions"] = extensions
+                return _FakeResponse()
+
+        manager = PluginHookManager(http_client_factory=lambda: _FakeClient())
+        manager.register_webhook(
+            plugin_id="p",
+            event=HookEvent.FILE_ORGANIZED,
+            callback_url="https://safe.example.com/hook",
+        )
+        results = manager.trigger_event(HookEvent.FILE_ORGANIZED, {"k": "v"})
+
+        assert len(results) == 1
+        assert results[0].delivered is True
+        assert captured["url"] == "https://93.184.216.34/hook"
+        assert captured["headers"]["Host"] == "safe.example.com"
+        assert captured["extensions"] == {"sni_hostname": "safe.example.com"}
+
+    def test_trigger_event_pins_ipv6_resolved_address(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An IPv6 resolved address is bracketed when pinned into the rewritten URL."""
+        import socket
+
+        from file_organizer.plugins.api import hooks as hooks_module
+        from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
+
+        def _fake_getaddrinfo(host: str, *_args: object, **_kwargs: object) -> list[tuple]:
+            # 2001:4860:4860::8888 is Google's public IPv6 DNS resolver -- a real,
+            # globally routable address, unlike the 2001:db8::/32 documentation
+            # range, which Python's ipaddress module classifies as private.
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:4860:4860::8888", 0, 0, 0))]
+
+        monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _fake_getaddrinfo)
+
+        captured: dict[str, object] = {}
+
+        class _FakeResponse:
+            status_code = 200
+            is_success = True
+            text = ""
+
+        class _FakeClient:
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_args: object) -> bool:
+                return False
+
+            def post(
+                self,
+                url: str,
+                *,
+                json: dict,
+                headers: dict,
+                timeout: float,
+                extensions: dict | None = None,
+            ) -> _FakeResponse:
+                captured["url"] = url
+                return _FakeResponse()
+
+        manager = PluginHookManager(http_client_factory=lambda: _FakeClient())
+        manager.register_webhook(
+            plugin_id="p",
+            event=HookEvent.FILE_SCANNED,
+            callback_url="http://v6.example.com:8080/hook",
+        )
+        results = manager.trigger_event(HookEvent.FILE_SCANNED, {})
+
+        assert len(results) == 1
+        assert results[0].delivered is True
+        assert captured["url"] == "http://[2001:4860:4860::8888]:8080/hook"
+
+    def test_trigger_event_strips_userinfo_from_host_header(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Credentials in the callback URL reach the pinned URL but never the Host header."""
+        import socket
+
+        from file_organizer.plugins.api import hooks as hooks_module
+        from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
+
+        def _fake_getaddrinfo(host: str, *_args: object, **_kwargs: object) -> list[tuple]:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+        monkeypatch.setattr(hooks_module.socket, "getaddrinfo", _fake_getaddrinfo)
+
+        captured: dict[str, object] = {}
+
+        class _FakeResponse:
+            status_code = 200
+            is_success = True
+            text = ""
+
+        class _FakeClient:
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_args: object) -> bool:
+                return False
+
+            def post(
+                self,
+                url: str,
+                *,
+                json: dict,
+                headers: dict,
+                timeout: float,
+                extensions: dict | None = None,
+            ) -> _FakeResponse:
+                captured["url"] = url
+                captured["headers"] = headers
+                return _FakeResponse()
+
+        manager = PluginHookManager(http_client_factory=lambda: _FakeClient())
+        manager.register_webhook(
+            plugin_id="p",
+            event=HookEvent.FILE_DELETED,
+            callback_url="https://user:s3cr3t@cred.example.com:8443/hook",
+        )
+        results = manager.trigger_event(HookEvent.FILE_DELETED, {})
+
+        assert len(results) == 1
+        assert results[0].delivered is True
+        assert captured["url"] == "https://user:s3cr3t@93.184.216.34:8443/hook"
+        assert captured["headers"]["Host"] == "cred.example.com:8443"
+        assert "s3cr3t" not in captured["headers"]["Host"]
+
+    def test_resolve_and_validate_host_rejects_localhost_literal(self) -> None:
+        """_resolve_and_validate_host rejects the localhost hostname directly."""
+        from file_organizer.plugins.api.hooks import _resolve_and_validate_host
+
+        with pytest.raises(ValueError, match="not allowed"):
+            _resolve_and_validate_host("localhost")
+
+    @pytest.mark.parametrize(
+        ("url", "match"),
+        [
+            ("ftp://example.com/hook", "http or https"),
+            ("http:///hook", "include a host"),
+            ("http://:9999/hook", "valid host"),
+        ],
+    )
+    def test_prepare_secure_request_args_rejects_invalid_url_shapes(
+        self, url: str, match: str
+    ) -> None:
+        """_prepare_secure_request_args independently validates URL shape before resolving."""
+        from file_organizer.plugins.api.hooks import _prepare_secure_request_args
+
+        with pytest.raises(ValueError, match=match):
+            _prepare_secure_request_args(url, {})

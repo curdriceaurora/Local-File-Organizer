@@ -176,6 +176,7 @@ class TestSafeWalk:
         and never even scanned, avoiding O(N) filesystem work.
         """
         import os
+
         (tmp_path / "visible.txt").write_text("v")
         hidden = tmp_path / ".git"
         hidden.mkdir()

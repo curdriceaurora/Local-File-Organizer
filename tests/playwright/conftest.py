@@ -710,11 +710,13 @@ def browser(playwright: Any, launch_browser: Callable[[], Any]) -> Iterator[Any]
 
 
 @pytest.fixture(autouse=True)
-def activate_playwright_loop() -> Iterator[None]:
+def activate_playwright_loop(clear_leaked_running_loop: None) -> Iterator[None]:
     """Ensure the Playwright session event loop is set as the running loop for this test.
 
     This counters the 'clear_leaked_running_loop' autouse fixture in the root conftest,
-    which clears the running loop to prevent conflicts in other async tests.
+    which clears the running loop to prevent conflicts in other async tests. Declaring
+    that fixture as a parameter forces it to run first regardless of autouse discovery
+    order, since same-scope autouse ordering across conftest levels isn't guaranteed.
     """
     import asyncio.events
 
@@ -725,4 +727,3 @@ def activate_playwright_loop() -> Iterator[None]:
             pass
 
     yield
-

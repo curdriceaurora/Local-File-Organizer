@@ -424,7 +424,9 @@ class TestWriterStage:
         result = WriterStage().process(ctx)
         assert result.error == "prior"
 
-    def test_special_file_error_destination(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_special_file_error_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Verify that SpecialFileError is raised and handled when the destination is not a regular file."""
         src = tmp_path / "src.txt"
         src.write_text("content")
@@ -433,6 +435,7 @@ class TestWriterStage:
 
         # Mock stat.S_ISREG to return True on first call (source) and False on second call (destination)
         called = []
+
         def mock_s_isreg(mode):
             called.append(mode)
             if len(called) == 1:
@@ -446,7 +449,9 @@ class TestWriterStage:
         assert result.failed
         assert "not a regular file" in result.error.lower()
 
-    def test_fallback_to_shutil_copy2(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_fallback_to_shutil_copy2(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Verify that the writer falls back to shutil.copy2 when SafeDir raises NotImplementedError."""
         src = tmp_path / "src.txt"
         src.write_text("content")
@@ -454,6 +459,7 @@ class TestWriterStage:
 
         # Mock _copy_via_safedir to raise NotImplementedError
         from file_organizer.pipeline.stages import writer
+
         def mock_copy_via_safedir(source, destination):
             raise NotImplementedError("SafeDir not implemented on this platform")
 
@@ -465,28 +471,45 @@ class TestWriterStage:
         assert dest.exists()
         assert dest.read_text() == "content"
 
-    def test_fdopen_os_error_closes_fd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_fdopen_os_error_closes_fd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Verify that if os.fdopen raises OSError during source open, the file descriptor is closed."""
         src = tmp_path / "src.txt"
         src.write_text("content")
         dest = tmp_path / "dest.txt"
 
         original_fdopen = os.fdopen
+        original_close = os.close
+        captured_fd: dict[str, int] = {}
+        closed_fds: list[int] = []
+
         def mock_fdopen(fd, *args, **kwargs):
             if args and "rb" in args[0]:
+                captured_fd["fd"] = fd
                 raise OSError("fdopen failed")
             return original_fdopen(fd, *args, **kwargs)
 
+        def mock_close(fd):
+            closed_fds.append(fd)
+            return original_close(fd)
+
         monkeypatch.setattr(os, "fdopen", mock_fdopen)
+        monkeypatch.setattr(os, "close", mock_close)
 
         ctx = StageContext(file_path=src, destination=dest, dry_run=False)
         result = WriterStage().process(ctx)
         assert result.failed
         assert "fdopen failed" in result.error.lower()
+        assert captured_fd.get("fd") is not None
+        assert captured_fd["fd"] in closed_fds
 
-    def test_writer_stage_windows_platform_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_writer_stage_windows_platform_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Verify that when sys.platform is mocked as win32, the writer falls back to shutil.copy2."""
         import sys
+
         monkeypatch.setattr(sys, "platform", "win32")
 
         src = tmp_path / "src.txt"
@@ -536,9 +559,12 @@ class TestWriterStage:
         assert setxattr_calls[0][1] == b"user.comment"
         assert setxattr_calls[0][2] == b"test-comment"
 
-    def test_copyxattr_fd_skipped_errors(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_copyxattr_fd_skipped_errors(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Verify that listxattr and setxattr skip expected/unsupported filesystem errors while propagating others."""
         import errno
+
         src = tmp_path / "src.txt"
         src.write_text("content")
         dest = tmp_path / "dest.txt"
@@ -565,8 +591,10 @@ class TestWriterStage:
         # 3. Test skipped setxattr error (e.g. EACCES on setxattr is in _XATTR_SET_SKIP)
         def mock_listxattr_ok(fd):
             return [b"user.comment"]
+
         def mock_getxattr_ok(fd, name):
             return b"val"
+
         def mock_setxattr_skipped(fd, name, value):
             raise OSError(errno.EACCES, "Permission denied on setxattr")
 

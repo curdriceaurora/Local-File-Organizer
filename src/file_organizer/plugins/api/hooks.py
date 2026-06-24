@@ -222,9 +222,16 @@ def _prepare_secure_request_args(
 
     rewritten_url = parsed._replace(netloc=netloc_with_ip).geturl()
 
-    # Copy headers to avoid mutating the original mapping
+    # Copy headers to avoid mutating the original mapping. Build the Host header
+    # from the bare hostname/port only -- parsed.netloc would leak any userinfo
+    # (e.g. https://user:pass@host/) into the header sent on the wire.
     new_headers = dict(headers)
-    new_headers["Host"] = parsed.netloc
+    host_header = host
+    if ":" in host_header and not host_header.startswith("["):
+        host_header = f"[{host_header}]"
+    if parsed.port is not None:
+        host_header = f"{host_header}:{parsed.port}"
+    new_headers["Host"] = host_header
 
     # Set sni_hostname extension for HTTPS
     extensions = {}

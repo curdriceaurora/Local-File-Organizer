@@ -73,9 +73,6 @@ def get_app() -> FastAPI:
     return _app_cache
 
 
-
-
-
 # ---------------------------------------------------------------------------
 # Desktop-shell facade – importable without starting the HTTP server
 # ---------------------------------------------------------------------------

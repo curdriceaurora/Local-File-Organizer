@@ -111,8 +111,11 @@ def _resolve_diff_base() -> str | None:
     # Try GITHUB_BASE_REF and origin/main candidates first
     candidates = []
     if base_branch:
-        candidates.extend([f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch])
-    candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
+        candidates.extend(
+            [f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch]
+        )
+    else:
+        candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
 
     # Drop duplicates
     candidates = list(dict.fromkeys(candidates))
@@ -173,10 +176,14 @@ def _git_changed_test_files() -> list[Path]:
         changed.update(line.strip() for line in diff_output.splitlines() if line.strip())
 
     # Add staged and unstaged local changes
-    staged_diff = _git_stdout("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py")
+    staged_diff = _git_stdout(
+        "diff", "--cached", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
+    )
     changed.update(line.strip() for line in staged_diff.splitlines() if line.strip())
 
-    unstaged_diff = _git_stdout("diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py")
+    unstaged_diff = _git_stdout(
+        "diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
+    )
     changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
     return sorted(
         p
