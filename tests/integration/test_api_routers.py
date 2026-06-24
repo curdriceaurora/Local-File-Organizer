@@ -50,8 +50,9 @@ def analyze_client(api_settings: ApiSettings) -> TestClient:
 
 
 @pytest.fixture()
-def daemon_client() -> TestClient:
+def daemon_client(api_settings: ApiSettings) -> TestClient:
     app = FastAPI()
+    app.dependency_overrides[get_settings] = lambda: api_settings
     setup_exception_handlers(app)
     app.include_router(daemon_router)
     return TestClient(app, raise_server_exceptions=False)

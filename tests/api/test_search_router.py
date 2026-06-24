@@ -498,7 +498,9 @@ class TestSearchAuthEnforcement:
 
     def test_search_unauthenticated_fails(self, tmp_path: Path) -> None:
         """Test search endpoint without active user override fails with 401."""
-        settings = ApiSettings(environment="test", auth_enabled=True)
+        settings = ApiSettings(
+            environment="test", auth_enabled=True, auth_db_path=str(tmp_path / "auth.db")
+        )
         app = FastAPI()
         setup_exception_handlers(app)
         app.dependency_overrides[get_settings] = lambda: settings
