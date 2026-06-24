@@ -138,3 +138,40 @@ class TestReadContentBytesLegacyFallback:
             side_effect=NotImplementedError(),
         ):
             assert AIHeuristic._read_content_bytes(target, limit=64) is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SafeDir is POSIX-only")
+class TestReadContentBytesTrustedRoot:
+    """``trusted_root`` routes the read through ``open_anchored_reader`` so a
+    symlink swapped into an *intermediate* directory component (not just the
+    leaf) is also refused (#1226 nested-ancestor TOCTOU hardening)."""
+
+    def test_reads_via_anchored_reader_when_trusted_root_given(self, tmp_path: Path) -> None:
+        root = tmp_path / "watched"
+        sub = root / "nested"
+        sub.mkdir(parents=True)
+        target = sub / "doc.txt"
+        target.write_bytes(b"anchored content")
+
+        result = AIHeuristic._read_content_bytes(target, limit=100, trusted_root=root)
+
+        assert result == b"anchored content"
+
+    def test_relative_to_falls_back_to_resolve_across_symlinked_root(self, tmp_path: Path) -> None:
+        """Mirrors the macOS ``/tmp`` vs ``/private/tmp``-style mismatch: the
+        file path threaded through the watcher is reached via a symlinked
+        ancestor, so a direct ``relative_to(trusted_root)`` raises ``ValueError``
+        even though the file is genuinely under the trusted root once both
+        sides are resolved."""
+        real_root = tmp_path / "real"
+        real_root.mkdir()
+        target_real = real_root / "doc.txt"
+        target_real.write_bytes(b"resolved content")
+
+        link_root = tmp_path / "link"
+        link_root.symlink_to(real_root)
+        target_via_link = link_root / "doc.txt"
+
+        result = AIHeuristic._read_content_bytes(target_via_link, limit=100, trusted_root=real_root)
+
+        assert result == b"resolved content"

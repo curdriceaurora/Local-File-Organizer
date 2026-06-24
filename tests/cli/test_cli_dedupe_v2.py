@@ -59,8 +59,10 @@ class TestDedupeImports:
     def test_registered_in_main(self) -> None:
         from file_organizer.cli.main import app
 
-        # The dedupe sub-app should be registered
-        assert app is not None
+        # The dedupe sub-app should be wired into the main Typer app under
+        # the "dedupe" name, not just importable on its own.
+        registered_names = [group.name for group in app.registered_groups]
+        assert "dedupe" in registered_names
 
 
 @pytest.mark.unit
@@ -89,7 +91,8 @@ class TestDedupeScan:
         ):
             result = runner.invoke(dedupe_app, ["scan", str(tmp_path)])
         assert result.exit_code == 0
-        assert "1" in result.output  # 1 group
+        assert "Found 1" in result.output
+        assert "duplicate group" in result.output
 
     def test_scan_json_output(self, tmp_path: Path, mock_detector_with_groups: MagicMock) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app

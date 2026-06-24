@@ -964,18 +964,23 @@ class PipelineOrchestrator:
                         continue
 
                     try:
-                        # Find which watch directory this event's path lives under
+                        # Find which watch directory this event's path lives
+                        # under. ``trusted_root`` is resolved before use:
+                        # SafeDir.open_root() refuses a symlinked root outright,
+                        # so a configured watch directory that is itself a
+                        # symlink (e.g. macOS /tmp -> /private/tmp) must be
+                        # anchored on its real target, not the symlink path.
                         trusted_root = None
                         if self.config.watch_config and self.config.watch_config.watch_directories:
                             for d in self.config.watch_config.watch_directories:
                                 try:
                                     event.path.relative_to(d)
-                                    trusted_root = d
+                                    trusted_root = d.resolve()
                                     break
                                 except ValueError:
                                     try:
                                         event.path.resolve().relative_to(d.resolve())
-                                        trusted_root = d
+                                        trusted_root = d.resolve()
                                         break
                                     except ValueError:
                                         continue

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.pipeline.orchestrator import PipelineConfig, PipelineOrchestrator
+from file_organizer.watcher.config import WatcherConfig
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
@@ -59,6 +61,45 @@ class TestWatchLoop:
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
             mock_process.assert_called_once_with(Path("/tmp/test.txt"))
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="symlinks require admin on Windows")
+    def test_watch_loop_resolves_symlinked_watch_root_for_trusted_root(self, tmp_path: Path):
+        """A symlinked watch directory must be resolved before use as
+        ``trusted_root``: ``SafeDir.open_root`` refuses a symlinked root
+        outright, so passing the raw configured symlink (e.g. macOS
+        ``/tmp`` -> ``/private/tmp``) would make every file under it fail
+        with "Refused to read symlinked file" instead of processing.
+        """
+        real_root = tmp_path / "real"
+        real_root.mkdir()
+        link_root = tmp_path / "link"
+        link_root.symlink_to(real_root)
+
+        config = PipelineConfig(
+            dry_run=True, watch_config=WatcherConfig(watch_directories=[link_root])
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
+
+        call_count = 0
+
+        def fake_get_events(max_size=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return [FakeEvent(path=link_root / "f.txt")]
+            orch._running = False
+            return []
+
+        mock_monitor.get_events = fake_get_events
+
+        with patch.object(orch, "process_file") as mock_process:
+            orch._watch_loop()
+            mock_process.assert_called_once_with(
+                link_root / "f.txt", trusted_root=real_root.resolve()
+            )
 
     def test_watch_loop_skips_directory_events(self):
         """Directory events should be skipped."""

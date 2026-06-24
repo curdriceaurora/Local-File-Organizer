@@ -1,12 +1,16 @@
 #!/bin/bash
+set -euo pipefail
 
 # 1. Set your Repo (Owner/RepoName)
 
 REPO="curdriceaurora/Local-File-Organizer"
 
-# 2. MacOS (BSD) compatible date calculation
-
-SINCE=$(date -v-1m +%Y-%m-%d)
+# 2. Portable "1 month ago" date: BSD/macOS `date -v` vs GNU `date -d`
+if date -v-1m +%Y-%m-%d >/dev/null 2>&1; then
+    SINCE=$(date -v-1m +%Y-%m-%d)
+else
+    SINCE=$(date -d '1 month ago' +%Y-%m-%d)
+fi
 
 echo "Fetching PRs merged since $SINCE in $REPO..."
 

@@ -952,7 +952,9 @@ class TestWatchLoop:
         ``event.path.relative_to(d)`` fails because the event arrives via the
         real (non-symlink) path while ``d`` is the symlink configured in
         watch_directories; the ``resolve()`` comparison still matches because
-        both sides canonicalize to the same real path.
+        both sides canonicalize to the same real path. ``trusted_root`` is
+        passed as the *resolved* directory (not the symlink itself), since
+        ``SafeDir.open_root`` refuses a symlinked root outright.
         """
         real_dir = tmp_path / "real"
         real_dir.mkdir()
@@ -976,7 +978,7 @@ class TestWatchLoop:
         with patch.object(orch._executor, "submit") as mock_submit:
             orch._watch_loop()
             mock_submit.assert_called_once_with(
-                orch.process_file, event.path, trusted_root=link_dir
+                orch.process_file, event.path, trusted_root=real_dir.resolve()
             )
 
     def test_no_match_falls_through_to_none_trusted_root(self, tmp_path: Path) -> None:

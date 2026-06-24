@@ -6,7 +6,9 @@ and populates ``context.analysis`` with category and suggested filename.
 
 from __future__ import annotations
 
+import inspect
 import logging
+from functools import cache
 from pathlib import Path
 from typing import Any, cast
 
@@ -91,11 +93,24 @@ class AnalyzerStage:
         # scan_root since not every concrete processor supports it, so the
         # conditional call below is checked via runtime introspection rather
         # than the static type, hence the cast.
-        import inspect
-
-        sig = inspect.signature(processor.process_file)
-        if "scan_root" in sig.parameters:
+        if AnalyzerStage._processor_accepts_scan_root(type(processor)):
             raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
         else:
             raw = processor.process_file(file_path)
         return cast(dict[str, str], normalize_processor_result(file_path, raw))
+
+    @staticmethod
+    @cache
+    def _processor_accepts_scan_root(processor_type: type) -> bool:
+        """Whether *processor_type*'s ``process_file`` accepts ``scan_root``.
+
+        Memoized per class so the introspection cost isn't paid on every
+        file processed. Returns ``False`` if ``process_file`` can't be
+        introspected on the class (e.g. an unspecced test double), matching
+        the pre-introspection behaviour of calling without ``scan_root``.
+        """
+        try:
+            params = inspect.signature(processor_type.process_file).parameters
+        except (AttributeError, TypeError, ValueError):
+            return False
+        return "scan_root" in params
