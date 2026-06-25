@@ -2405,7 +2405,7 @@ requires-dist = [
     { name = "tinytag", marker = "extra == 'audio'", specifier = ">=1.10,<3.0" },
     { name = "torch", marker = "extra == 'audio'", specifier = "~=2.1" },
     { name = "tqdm", specifier = "~=4.66" },
-    { name = "typer", extras = ["all"], specifier = "~=0.12" },
+    { name = "typer", extras = ["all"], specifier = ">=0.12,<0.26" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = "~=6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.27" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'desktop'", specifier = "~=0.27" },

@@ -58,13 +58,10 @@ class LazyCommandProxy(click.Group):
             module = importlib.import_module(self.module_name)
             obj = getattr(module, self.attr_name)
             if isinstance(obj, typer.Typer):
-                # typer.main.get_group's declared return type tracks typer's
-                # internal click fork, not the public `click` package we
-                # annotate against here — cast bridges that nominal gap.
-                self._real_cmd = typing.cast(click.Command, typer.main.get_group(obj))
+                self._real_cmd = typer.main.get_group(obj)
             else:
                 self._real_cmd = typing.cast(click.Command, obj)
-        return typing.cast(click.Command, self._real_cmd)
+        return self._real_cmd
 
     def invoke(self, ctx: click.Context) -> typing.Any:
         """Invoke the proxied command using the provided Click context.
@@ -125,17 +122,9 @@ class LazyCommandProxy(click.Group):
 
 
 class LazyTyperGroup(typer.core.TyperGroup):
-    """A TyperGroup that integrates with LazyCommandProxy for deferred loading.
+    """A TyperGroup that integrates with LazyCommandProxy for deferred loading."""
 
-    The overrides below are annotated against the public ``click`` package for
-    consistency with the rest of the CLI, but newer typer releases resolve
-    ``TyperGroup``'s actual base-class signatures against an internal, vendored
-    click fork (``typer._click``) instead. That fork isn't a public/importable
-    type we can annotate against, so the resulting nominal mismatches are
-    suppressed inline rather than coupled to typer's private internals.
-    """
-
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:  # pyre-ignore[14]
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         """Stash help-flag presence in ctx.meta before Click consumes the args.
 
         Click's ``Group.parse_args`` calls ``resolve_command``, which removes
@@ -163,21 +152,19 @@ class LazyTyperGroup(typer.core.TyperGroup):
         # option (e.g. ``--type -h``) and must not trigger a gate bypass.
         args_before_terminator = args[: args.index("--")] if "--" in args else args
         ctx.meta["help_requested"] = "--help" in args_before_terminator
-        return super().parse_args(ctx, args)  # pyre-ignore[6]
+        return super().parse_args(ctx, args)
 
-    def list_commands(self, ctx: click.Context) -> list[str]:  # pyre-ignore[14]
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """Return a combined list of available command names including lazy-registered commands.
 
         Returns:
             list[str]: Sorted list of unique command names exposed by this group.
         """
-        rv = super().list_commands(ctx)  # pyre-ignore[6]
+        rv = super().list_commands(ctx)
         rv.extend(LAZY_COMMANDS.keys())
         return sorted(set(rv))
 
-    def get_command(  # pyre-ignore[14, 15]
-        self, ctx: click.Context, cmd_name: str
-    ) -> click.Command | None:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         """Resolve a command by name, returning a LazyCommandProxy for entries registered in LAZY_COMMANDS.
 
         If `cmd_name` is present in LAZY_COMMANDS, a LazyCommandProxy configured with the registered
@@ -193,4 +180,4 @@ class LazyTyperGroup(typer.core.TyperGroup):
         if cmd_name in LAZY_COMMANDS:
             module_name, attr_name, help_text = LAZY_COMMANDS[cmd_name]
             return LazyCommandProxy(cmd_name, module_name, attr_name, help_text)
-        return super().get_command(ctx, cmd_name)  # pyre-ignore[6, 7]
+        return super().get_command(ctx, cmd_name)
