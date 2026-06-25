@@ -59,6 +59,4 @@ EXPOSE 8000
 EXPOSE 5678
 
 # Default command: run with live reload enabled
-CMD ["python", "-m", "uvicorn", "file_organizer.api:app", \
-     "--host", "0.0.0.0", "--port", "8000", "--reload", \
-     "--reload-dir", "/app/src"]
+CMD ["fo", "serve", "--host", "0.0.0.0", "--port", "8000", "--reload"]
