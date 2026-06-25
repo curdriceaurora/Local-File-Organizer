@@ -517,7 +517,7 @@ The integration suite has a dedicated CI gate that runs on every push to `main`:
 pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=<floor> --timeout=60
 ```
 
-- **Current floor**: 72.0% aggregate (ratchet — bumped with each coverage PR, target 90% per issue #856)
+- **Current floor**: 75.7% aggregate (ratchet — bumped with each coverage PR, target 90% per issue #856)
 - **Per-file floors**: 406 files tracked in `[tool.coverage.floors.integration]` in `pyproject.toml`.
   Enforced by `.claude/scripts/check-integration-floors.py` after pytest in the `test-integration` job.
   To update after adding coverage: run `python .claude/scripts/generate-integration-floors.py` (never auto-downgrades).
