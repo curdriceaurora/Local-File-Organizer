@@ -62,6 +62,7 @@ _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
         "recover",
         "config",
         "hardware-info",
+        "serve",
         "desktop",
         "docs",
     }
@@ -333,10 +334,13 @@ def docs_command(
     else:
         console.print(f"[bold]Starting documentation server[/bold] at http://{host}:{port}/")
         try:
-            subprocess.run(
+            proc = subprocess.run(
                 [mkdocs, "serve", "--dev-addr", f"{host}:{port}"],
                 cwd=project_root,
             )
+            if proc.returncode != 0:
+                console.print("[red]Error: Documentation server failed.[/red]")
+                raise typer.Exit(code=proc.returncode)
         except KeyboardInterrupt:
             console.print("\n[yellow]Documentation server stopped.[/yellow]")
 
@@ -456,9 +460,10 @@ def history(
 
 
 @app.command()
-def recover(  # noqa: G3 (--journal is a read-only path; defaults to system state dir)
+def recover(
     journal: Path | None = typer.Option(
         None,
+        # --journal is a read-only path; defaults to system state dir.
         help="Override path to durable_move.journal (defaults to the user state dir).",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
