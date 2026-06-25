@@ -7,11 +7,15 @@ organisation rules.
 
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+from file_organizer.cli.path_validation import resolve_cli_path
 
 rules_app = typer.Typer(
     name="rules",
@@ -169,6 +173,7 @@ def rules_preview(
     """Preview what rules would do (dry-run)."""
     from file_organizer.services.copilot.rules import PreviewEngine, RuleManager
 
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     mgr = RuleManager()
     rs = mgr.load_rule_set(rule_set)
 
@@ -208,7 +213,7 @@ def rules_export(
     output: Path | None = typer.Option(None, "--output", "-o", help="Output file path."),
 ) -> None:
     """Export a rule set to YAML."""
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 
     from file_organizer.services.copilot.rules import RuleManager
 
@@ -217,7 +222,38 @@ def rules_export(
     content = yaml.dump(rs.to_dict(), default_flow_style=False, sort_keys=False)
 
     if output:
-        output.write_text(content, encoding="utf-8")
+        # A.cli: output file may not exist (we're creating it). The parent
+        # directory must exist and be a directory; if output itself already
+        # exists it must be a regular file, otherwise write_text() would
+        # raise IsADirectoryError after validation. Project F3: write via
+        # tempfile + os.replace so a mid-write crash or concurrent writer
+        # never leaves a half-written YAML export on disk.
+        output = resolve_cli_path(output, must_exist=False, must_be_dir=False)
+        if not output.parent.is_dir():
+            raise typer.BadParameter(f"Output directory does not exist: {output.parent}")
+        if output.exists() and not output.is_file():
+            raise typer.BadParameter(f"Output path is not a regular file: {output}")
+        tmp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=output.parent,
+                prefix=f".{output.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as tmp_file:
+                tmp_path = Path(tmp_file.name)
+                tmp_file.write(content)
+            os.replace(tmp_path, output)
+        except OSError as exc:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+            console.print(f"[red]Failed to write YAML: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
         console.print(f"[green]Exported '{rule_set}' to {output}[/green]")
     else:
         console.print(content)
@@ -231,11 +267,15 @@ def rules_import(
     """Import a rule set from a YAML file."""
     import yaml
 
-    from file_organizer.services.copilot.rules import RuleManager, RuleSet
+    # A.cli: YAML file must exist and be a regular file. `must_be_dir=False`
+    # on its own only rejects directories *when must_be_dir=True*; we need
+    # an explicit is_file() guard to catch the dir-passed-to-import case
+    # before yaml.safe_load tries to read_text() it.
+    file = resolve_cli_path(file, must_exist=True, must_be_dir=False)
+    if not file.is_file():
+        raise typer.BadParameter(f"Input path is not a regular file: {file}")
 
-    if not file.exists():
-        console.print(f"[red]File not found: {file}[/red]")
-        raise typer.Exit(code=1)
+    from file_organizer.services.copilot.rules import RuleManager, RuleSet
 
     try:
         raw = yaml.safe_load(file.read_text(encoding="utf-8"))

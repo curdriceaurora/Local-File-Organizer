@@ -16,7 +16,7 @@ console = Console()
 @update_app.command(name="check")
 def update_check(
     repo: str = typer.Option(
-        "curdriceaurora/Local-File-Organizer",
+        "curdriceaurora/fo-core",
         "--repo",
         help="GitHub repository to check.",
     ),
@@ -40,7 +40,7 @@ def update_check(
         console.print(f"  Release: {release.html_url}")
         if release.body:
             console.print(f"\n[dim]{release.body[:300]}[/dim]")
-        console.print("\nRun [bold]file-organizer update install[/bold] to update.")
+        console.print("\nRun [bold]fo update install[/bold] to update.")
     else:
         console.print("[green]Already up to date.[/green]")
 
@@ -49,7 +49,7 @@ def update_check(
 def update_install(
     dry_run: bool = typer.Option(False, "--dry-run", help="Download but don't install."),
     repo: str = typer.Option(
-        "curdriceaurora/Local-File-Organizer",
+        "curdriceaurora/fo-core",
         "--repo",
         help="GitHub repository.",
     ),

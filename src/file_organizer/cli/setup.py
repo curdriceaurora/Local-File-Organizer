@@ -246,7 +246,7 @@ def setup_run(  # noqa: C901
                 Panel.fit(
                     "[bold green]Setup Complete![/bold green]\n\n"
                     "You can now organize files with:\n"
-                    "  [bold]file-organizer organize <directory>[/bold]",
+                    "  [bold]fo organize <directory>[/bold]",
                     border_style="green",
                 )
             )

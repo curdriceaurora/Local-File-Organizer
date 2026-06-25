@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-import file_organizer.cli._globals as _cli_globals
 from file_organizer.cli.main import app
 
 pytestmark = [pytest.mark.integration]
@@ -188,7 +187,7 @@ class TestDoctorEmptyDirectories:
         """Doctor command handles directory with only unsupported file types."""
         # Create files that don't map to any dependency group
         (doctor_test_dir / "notes.txt").write_text("text")
-        (doctor_test_dir / "config.json").write_text("{}")
+        (doctor_test_dir / "file_organizer.config.json").write_text("{}")
         (doctor_test_dir / "script.sh").write_text("#!/bin/bash")
 
         result = runner.invoke(app, ["doctor", str(doctor_test_dir)])
@@ -343,15 +342,16 @@ class TestDoctorInstallation:
         """--install flag triggers installation flow."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
                 with patch("subprocess.run", return_value=mock_result) as mock_run:
                     result = runner.invoke(app, ["doctor", str(audio_files_dir), "--install"])
                     assert result.exit_code == 0
-                    # Should have called subprocess to install
-                    assert mock_run.called
+                    assert mock_run.call_count == 1
+                    cmd = mock_run.call_args[0][0]
+                    assert "pip" in cmd
+                    assert "install" in cmd
 
     def test_install_with_yes_flag_auto_confirms(
         self, audio_files_dir: Path, monkeypatch: pytest.MonkeyPatch
@@ -359,14 +359,16 @@ class TestDoctorInstallation:
         """Global --yes flag auto-confirms installation."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("subprocess.run", return_value=mock_result) as mock_run:
                 result = runner.invoke(app, ["--yes", "doctor", str(audio_files_dir), "--install"])
                 # Should succeed without prompting
                 assert result.exit_code == 0
-                assert mock_run.called
+                assert mock_run.call_count == 1
+                cmd = mock_run.call_args[0][0]
+                assert "pip" in cmd
+                assert "install" in cmd
 
     def test_install_with_dry_run_flag(self, audio_files_dir: Path) -> None:
         """Global --dry-run flag prevents actual installation."""
@@ -401,7 +403,6 @@ class TestDoctorInstallation:
         """Installation handles subprocess failures gracefully."""
         mock_result = MagicMock()
         mock_result.returncode = 1  # Failure
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
@@ -417,7 +418,6 @@ class TestDoctorInstallation:
         """Installation processes multiple groups sequentially."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("file_organizer.cli.doctor.confirm_action", return_value=True):
@@ -523,7 +523,6 @@ class TestDoctorGlobalFlags:
         """Global --no-interactive flag is handled properly."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
             with patch("subprocess.run", return_value=mock_result):
@@ -630,7 +629,7 @@ class TestDoctorRecommendations:
             result = runner.invoke(app, ["doctor", str(audio_files_dir)])
             assert result.exit_code == 0
             assert "pip install" in result.output.lower()
-            assert "file-organizer[audio]" in result.output
+            assert "fo-core[audio]" in result.output
 
     def test_recommendations_show_prerequisites(self, audio_files_dir: Path) -> None:
         """Recommendations display system prerequisites."""
@@ -669,7 +668,6 @@ class TestDoctorEndToEndWorkflows:
         """Simulate first-time user discovering and installing dependencies."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        monkeypatch.setattr(_cli_globals, "dry_run", False)
 
         # Step 1: Run doctor without install to see recommendations
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
@@ -683,7 +681,10 @@ class TestDoctorEndToEndWorkflows:
                 with patch("subprocess.run", return_value=mock_result) as mock_run:
                     result = runner.invoke(app, ["doctor", str(mixed_media_dir), "--install"])
                     assert result.exit_code == 0
-                    assert mock_run.called
+                    assert mock_run.call_count == 6
+                    cmd = mock_run.call_args[0][0]
+                    assert "pip" in cmd
+                    assert "install" in cmd
 
     def test_ci_automation_workflow(self, audio_files_dir: Path) -> None:
         """Simulate CI/automation usage with --dry-run and --json flags."""

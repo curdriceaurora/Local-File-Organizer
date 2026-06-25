@@ -9,6 +9,7 @@ import pytest
 
 
 @pytest.mark.unit
+@pytest.mark.integration
 class TestCompletion:
     """Tests for path completion callbacks."""
 
@@ -56,48 +57,33 @@ class TestCompletion:
 
 
 @pytest.mark.unit
-class TestInteractiveFlags:
-    """Tests for interactive module flag management."""
-
-    def test_set_flags(self) -> None:
-        from file_organizer.cli import interactive
-
-        interactive.set_flags(yes=True, no_interactive=False)
-        assert interactive._yes is True
-        assert interactive._no_interactive is False
-
-        interactive.set_flags(yes=False, no_interactive=True)
-        assert interactive._yes is False
-        assert interactive._no_interactive is True
-
-        # Reset
-        interactive.set_flags(yes=False, no_interactive=False)
-
-
-@pytest.mark.unit
+@pytest.mark.integration
 class TestConfirmAction:
     """Tests for confirm_action."""
 
     def test_auto_confirm_with_yes(self) -> None:
         from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
 
-        interactive.set_flags(yes=True)
-        assert interactive.confirm_action("Delete?") is True
-        interactive.set_flags(yes=False)
+        with patch.object(interactive, "_get_state", return_value=CLIState(yes=True)):
+            assert interactive.confirm_action("Delete?") is True
 
     def test_returns_default_when_no_interactive(self) -> None:
         from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
 
-        interactive.set_flags(no_interactive=True)
-        assert interactive.confirm_action("Do?", default=False) is False
-        assert interactive.confirm_action("Do?", default=True) is True
-        interactive.set_flags(no_interactive=False)
+        with patch.object(interactive, "_get_state", return_value=CLIState(no_interactive=True)):
+            assert interactive.confirm_action("Do?", default=False) is False
+            assert interactive.confirm_action("Do?", default=True) is True
 
     def test_prompts_user_normally(self) -> None:
         from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
 
-        interactive.set_flags(yes=False, no_interactive=False)
-        with patch.object(interactive, "Confirm") as mock_confirm:
+        with (
+            patch.object(interactive, "_get_state", return_value=CLIState()),
+            patch.object(interactive, "Confirm") as mock_confirm,
+        ):
             mock_confirm.ask.return_value = True
             result = interactive.confirm_action("Proceed?")
             assert result is True
@@ -105,19 +91,86 @@ class TestConfirmAction:
 
 
 @pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ci
 class TestPromptChoice:
     """Tests for prompt_choice."""
 
     def test_returns_default_when_no_interactive(self) -> None:
         from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
 
-        interactive.set_flags(no_interactive=True)
-        result = interactive.prompt_choice("Pick", ["a", "b", "c"], default="b")
-        assert result == "b"
-        interactive.set_flags(no_interactive=False)
+        with patch.object(interactive, "_get_state", return_value=CLIState(no_interactive=True)):
+            result = interactive.prompt_choice("Pick", ["a", "b", "c"], default="b")
+            assert result == "b"
+
+    def test_prompts_with_default_in_interactive_mode(self) -> None:
+        from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
+
+        with (
+            patch.object(interactive, "_get_state", return_value=CLIState()),
+            patch.object(interactive, "Prompt") as mock_prompt,
+        ):
+            mock_prompt.ask.return_value = "a"
+            result = interactive.prompt_choice("Pick", ["a", "b"], default="a")
+            assert result == "a"
+            mock_prompt.ask.assert_called_once()
+            # `default` arg is forwarded when provided
+            assert mock_prompt.ask.call_args.kwargs.get("default") == "a"
+
+    def test_prompts_without_default_in_interactive_mode(self) -> None:
+        from file_organizer.cli import interactive
+        from file_organizer.cli.state import CLIState
+
+        with (
+            patch.object(interactive, "_get_state", return_value=CLIState()),
+            patch.object(interactive, "Prompt") as mock_prompt,
+        ):
+            mock_prompt.ask.return_value = "b"
+            result = interactive.prompt_choice("Pick", ["a", "b"], default=None)
+            assert result == "b"
+            # default is *not* forwarded when the caller didn't supply one
+            assert "default" not in mock_prompt.ask.call_args.kwargs
 
 
 @pytest.mark.unit
+@pytest.mark.integration
+class TestPromptDirectory:
+    """Tests for prompt_directory — the loop that keeps asking until a
+    real directory is provided. D#167 removed the legacy dedupe CLI's
+    directory prompt, which was the only integration path hitting this.
+    """
+
+    def test_returns_resolved_path_on_valid_directory(self, tmp_path: Path) -> None:
+        from file_organizer.cli import interactive
+
+        with patch.object(interactive, "Prompt") as mock_prompt:
+            mock_prompt.ask.return_value = str(tmp_path)
+            result = interactive.prompt_directory("Where?")
+        assert result == tmp_path.resolve()
+
+    def test_reprompts_until_valid_directory(self, tmp_path: Path) -> None:
+        from file_organizer.cli import interactive
+
+        good = tmp_path / "exists"
+        good.mkdir()
+
+        with patch.object(interactive, "Prompt") as mock_prompt:
+            # First two answers are invalid; third is the real dir.
+            mock_prompt.ask.side_effect = [
+                str(tmp_path / "nope1"),
+                str(tmp_path / "nope2"),
+                str(good),
+            ]
+            result = interactive.prompt_directory()
+
+        assert result == good.resolve()
+        assert mock_prompt.ask.call_count == 3
+
+
+@pytest.mark.unit
+@pytest.mark.integration
 class TestCreateProgress:
     """Tests for create_progress."""
 
@@ -131,12 +184,17 @@ class TestCreateProgress:
 
 
 @pytest.mark.unit
+@pytest.mark.integration
 class TestMainCallbackFlags:
     """Test that global flags are wired into main.py."""
 
-    def test_main_module_has_yes_flag(self) -> None:
-        import importlib
+    def test_cli_state_has_yes_and_no_interactive_flags(self) -> None:
+        from file_organizer.cli.state import CLIState
 
-        g = importlib.import_module("file_organizer.cli._globals")
-        assert hasattr(g, "yes")
-        assert hasattr(g, "no_interactive")
+        state = CLIState()
+        assert state.yes is False
+        assert state.no_interactive is False
+
+        state = CLIState(yes=True, no_interactive=True)
+        assert state.yes is True
+        assert state.no_interactive is True

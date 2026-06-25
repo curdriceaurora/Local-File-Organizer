@@ -102,7 +102,7 @@ class TestScanCommand:
         assert "duplicate" in result.output.lower()
 
     def test_scan_json_output(self, tmp_path: Path) -> None:
-        """--json flag produces a JSON array of duplicate groups."""
+        """``--format json`` produces a v1 JSON envelope with the groups array."""
         src = tmp_path / "files"
         src.mkdir()
 
@@ -113,17 +113,21 @@ class TestScanCommand:
         detector = _make_detector_with_groups({hash_val: group})
 
         with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
-            result = runner.invoke(dedupe_app, ["scan", str(src), "--json"])
+            result = runner.invoke(dedupe_app, ["scan", str(src), "--format", "json"])
 
         assert result.exit_code == 0
+        # Locate the JSON envelope object in stdout (Rich status spinner output
+        # may precede it as ANSI cursor motion when running under a real
+        # terminal; CliRunner strips the spinner, but be defensive).
         output = result.output
-        start = output.find("[")
-        parsed = json.loads(output[start:])
-        assert isinstance(parsed, list)
-        assert len(parsed) == 1
-        assert parsed[0]["hash"] == hash_val
-        assert parsed[0]["count"] == 2
-        assert parsed[0]["wasted_space"] == 2048
+        start = output.find("{")
+        envelope = json.loads(output[start:])
+        assert envelope["version"] == 1
+        assert envelope["command"] == "scan"
+        assert len(envelope["groups"]) == 1
+        assert envelope["groups"][0]["hash"] == hash_val
+        assert envelope["groups"][0]["count"] == 2
+        assert envelope["groups"][0]["wasted_space"] == 2048
 
     def test_scan_no_duplicates_found(self, tmp_path: Path) -> None:
         """Empty duplicate groups exits 0 with informational message."""
@@ -140,7 +144,13 @@ class TestScanCommand:
         assert "No duplicates" in result.output
 
     def test_scan_json_no_duplicates_exits_zero(self, tmp_path: Path) -> None:
-        """No duplicates path exits 0 even with --json (early exit before JSON render)."""
+        """No duplicates path exits 0 with ``--format json``.
+
+        ``scan`` calls ``renderer.end()`` before ``typer.Exit()`` on the
+        no-duplicates branch, so ``JsonRenderer`` still flushes a v1
+        envelope (with an empty ``groups`` array, after the fix that
+        always emits the documented schema keys).
+        """
         src = tmp_path / "files"
         src.mkdir()
         (src / "solo.txt").write_text("x")
@@ -148,7 +158,7 @@ class TestScanCommand:
         detector = _make_detector_with_groups({})
 
         with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
-            result = runner.invoke(dedupe_app, ["scan", str(src), "--json"])
+            result = runner.invoke(dedupe_app, ["scan", str(src), "--format", "json"])
 
         assert result.exit_code == 0
         assert "No duplicates" in result.output
@@ -335,7 +345,7 @@ class TestReportCommand:
         assert "20" in result.output  # total files scanned
 
     def test_report_json_output(self, tmp_path: Path) -> None:
-        """--json flag produces valid JSON of statistics."""
+        """``--format json`` on ``report`` produces a v1 envelope with summary."""
         src = tmp_path / "files"
         src.mkdir()
 
@@ -351,14 +361,17 @@ class TestReportCommand:
         detector = _make_detector_with_groups({hash_val: group}, stats=stats)
 
         with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
-            result = runner.invoke(dedupe_app, ["report", str(src), "--json"])
+            result = runner.invoke(dedupe_app, ["report", str(src), "--format", "json"])
 
         assert result.exit_code == 0
         output = result.output
         start = output.find("{")
-        parsed = json.loads(output[start:])
-        assert parsed["total_files"] == 8
-        assert parsed["duplicate_files"] == 2
+        envelope = json.loads(output[start:])
+        assert envelope["version"] == 1
+        assert envelope["command"] == "report"
+        assert envelope["summary"]["total_files"] == 8
+        assert envelope["summary"]["duplicate_files"] == 2
+        assert envelope["summary"]["duplicate_groups"] == 1
 
     def test_report_wasted_space_formatted(self, tmp_path: Path) -> None:
         """Report table shows human-readable wasted space."""
@@ -395,3 +408,176 @@ class TestReportCommand:
 
         assert result.exit_code == 0
         assert "0" in result.output  # 0 duplicate groups
+
+
+# ---------------------------------------------------------------------------
+# Plain format integration smokes (D4 — push dedupe_renderer.py integration
+# coverage above the per-module floor; PlainRenderer code paths aren't
+# covered by the JSON-format and Rich-default tests above).
+# ---------------------------------------------------------------------------
+
+
+class TestPlainFormat:
+    """Smoke tests for ``--format plain`` across all three commands."""
+
+    def test_scan_plain_emits_hash_prefixed_groups(self, tmp_path: Path) -> None:
+        src = tmp_path / "files"
+        src.mkdir()
+        hash_val = "deadbeef" * 8
+        fm1 = _make_file_metadata(src / "x.txt", size=512)
+        fm2 = _make_file_metadata(src / "y.txt", size=512)
+        group = _make_group(hash_val, [fm1, fm2])
+        detector = _make_detector_with_groups({hash_val: group})
+
+        with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
+            result = runner.invoke(dedupe_app, ["scan", str(src), "--format", "plain"])
+
+        assert result.exit_code == 0
+        # Header line: "Found 1 duplicate groups."
+        assert "Found 1 duplicate groups" in result.output
+        # Hash header + indented file lines (TAB-separated)
+        assert hash_val in result.output
+        assert "x.txt" in result.output
+        assert "y.txt" in result.output
+        # No Rich table characters
+        assert "│" not in result.output
+        assert "─" not in result.output
+
+    def test_scan_plain_no_duplicates(self, tmp_path: Path) -> None:
+        src = tmp_path / "files"
+        src.mkdir()
+        detector = _make_detector_with_groups({})
+
+        with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
+            result = runner.invoke(dedupe_app, ["scan", str(src), "--format", "plain"])
+
+        assert result.exit_code == 0
+        # PlainRenderer.render_message emits "level: text" lines
+        assert "success: No duplicates found" in result.output
+
+    def test_report_plain_key_value_lines(self, tmp_path: Path) -> None:
+        src = tmp_path / "files"
+        src.mkdir()
+        hash_val = "11" * 32
+        fm1 = _make_file_metadata(src / "a.txt", size=1024)
+        fm2 = _make_file_metadata(src / "b.txt", size=1024)
+        group = _make_group(hash_val, [fm1, fm2])
+        detector = _make_detector_with_groups(
+            {hash_val: group},
+            stats={"total_files": 5, "duplicate_files": 2, "wasted_space": 1024},
+        )
+
+        with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
+            result = runner.invoke(dedupe_app, ["report", str(src), "--format", "plain"])
+
+        assert result.exit_code == 0
+        out = result.output
+        assert "total_files: 5" in out
+        assert "duplicate_files: 2" in out
+        assert "duplicate_groups: 1" in out
+        # No Rich table characters in plain output
+        assert "│" not in out
+
+    def test_resolve_plain_dry_run_emits_would_remove(self, tmp_path: Path) -> None:
+        src = tmp_path / "files"
+        src.mkdir()
+        # Real files so the resolve flow exercises the action emit path
+        a = src / "older.txt"
+        b = src / "newer.txt"
+        a.write_text("dup")
+        b.write_text("dup")
+
+        # Mock the detector to return our two files as duplicates with
+        # distinct mtimes so 'oldest' picks deterministically.
+        fm1 = _make_file_metadata(a, size=3, modified_time=datetime(2024, 1, 1, tzinfo=UTC))
+        fm2 = _make_file_metadata(b, size=3, modified_time=datetime(2024, 6, 1, tzinfo=UTC))
+        group = _make_group("dup" * 21, [fm1, fm2])
+        detector = _make_detector_with_groups({"dup" * 21: group})
+
+        with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=detector):
+            result = runner.invoke(
+                dedupe_app,
+                [
+                    "resolve",
+                    str(src),
+                    "--strategy",
+                    "oldest",
+                    "--dry-run",
+                    "--format",
+                    "plain",
+                ],
+            )
+
+        assert result.exit_code == 0
+        # Plain resolve action: "would_remove: <path>"
+        assert "would_remove" in result.output
+        # Plain summary
+        assert "removed_count:" in result.output
+        assert "dry_run: true" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Review-feedback regressions on PR #206 (Copilot)
+# ---------------------------------------------------------------------------
+
+
+class TestFormatFlagValidation:
+    """``--format`` rejects invalid values via ``typer.BadParameter``."""
+
+    def test_invalid_format_emits_typer_usage_error(self, tmp_path: Path) -> None:
+        src = tmp_path / "files"
+        src.mkdir()
+
+        result = runner.invoke(dedupe_app, ["scan", str(src), "--format", "xml"])
+
+        # Typer surfaces BadParameter as exit code 2 (usage error), with
+        # the error message naming the accepted alternatives.
+        assert result.exit_code == 2
+        # The accepted formats appear in the error message
+        out = (result.stderr or "") + (result.output or "")
+        assert "rich" in out
+        assert "json" in out
+        assert "plain" in out
+
+
+class TestResolveAbortNoEnvelope:
+    """When the hidden-file gate aborts ``resolve``, JSON envelope must NOT be emitted.
+
+    Otherwise consumers piping ``--format json | jq`` see a stub envelope
+    claiming the command ran. CodeRabbit / Copilot flagged this on PR #206.
+    """
+
+    def test_aborted_resolve_json_emits_no_envelope_on_stdout(self, tmp_path: Path) -> None:
+        # Create a hidden directory so the resolve gate fires
+        hidden = tmp_path / ".secrets"
+        hidden.mkdir()
+        (hidden / "a.txt").write_text("x")
+
+        # Decline the prompt (input "n\n")
+        result = runner.invoke(
+            dedupe_app,
+            ["resolve", str(hidden), "--strategy", "oldest", "--format", "json"],
+            input="n\n",
+        )
+
+        # Aborted with exit code 1
+        assert result.exit_code == 1
+        # No JSON envelope on stdout (the only thing on stdout/stderr is
+        # the "Aborted." message routed through render_message → stderr).
+        # CliRunner merges streams; the merged output must NOT parse as
+        # a v1 envelope tagged "resolve".
+        import json as _json
+
+        # Try to find a JSON object in output; if found, must NOT be a
+        # resolve envelope.
+        output = result.output
+        brace_idx = output.find("{")
+        if brace_idx != -1:
+            try:
+                envelope = _json.loads(output[brace_idx:])
+                assert envelope.get("command") != "resolve", (
+                    "Aborted resolve must not emit a JSON envelope"
+                )
+            except _json.JSONDecodeError:
+                # Non-JSON output is fine — it just means no envelope.
+                pass

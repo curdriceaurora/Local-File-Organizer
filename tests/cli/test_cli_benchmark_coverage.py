@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.benchmark — uncovered lines 59-60, 66-86, 117-118, 131, 138."""
+"""Coverage tests for cli.benchmark — uncovered lines 59-60, 66-86, 117-118, 131, 138."""
 
 from __future__ import annotations
 
@@ -33,10 +33,9 @@ class TestBenchmarkErrors:
 
     def test_read_error(self, tmp_path: Path) -> None:
         app = _get_app()
-        # Patching Path.rglob globally can interfere with Typer's internal
-        # path validation, so we accept either exit code 1 (our error handler)
-        # or 2 (Typer's argument validation).
-        with patch.object(Path, "rglob", side_effect=PermissionError("denied")):
+        # Patching safe_walk to raise an error to verify the CLI's read-error
+        # handling exit code.
+        with patch("file_organizer.cli.benchmark.safe_walk", side_effect=RuntimeError("denied")):
             result = runner.invoke(app, ["benchmark", "run", str(tmp_path)])
 
         assert result.exit_code in (1, 2)
@@ -46,7 +45,7 @@ class TestBenchmarkErrors:
         monkeypatch.setattr(logging, "raiseExceptions", False)
         app = _get_app()
         result = runner.invoke(app, ["benchmark", "run", str(tmp_path), "--json"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Output: {result.output!r}\nException: {result.exception!r}"
         payload = json.loads(result.output)
         assert payload["effective_suite"] == "io"
         assert payload["degraded"] is False
@@ -57,7 +56,7 @@ class TestBenchmarkErrors:
         """No files found with plain output."""
         app = _get_app()
         result = runner.invoke(app, ["benchmark", "run", str(tmp_path)])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Output: {result.output!r}\nException: {result.exception!r}"
         assert "No files found" in result.output
 
 
@@ -95,7 +94,7 @@ class TestBenchmarkEvenIterations:
                 ["benchmark", "run", str(tmp_path), "--iterations", "2", "--json"],
             )
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"Output: {result.output!r}\nException: {result.exception!r}"
         payload = json.loads(result.output)
         assert payload["effective_suite"] == "io"
         assert payload["degraded"] is False

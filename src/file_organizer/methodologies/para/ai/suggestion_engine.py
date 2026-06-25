@@ -296,8 +296,7 @@ class PARASuggestionEngine:
 
         Args:
             config: PARA configuration. Uses defaults if not provided.
-            heuristic_engine: Pre-configured heuristic engine. Created from
-                config if not provided.
+            heuristic_engine: Pre-configured heuristic engine. Created from file_organizer.config if not provided.
             feature_extractor: Feature extractor instance. Created with
                 defaults if not provided.
         """

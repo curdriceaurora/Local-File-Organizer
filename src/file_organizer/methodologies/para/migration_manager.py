@@ -108,7 +108,7 @@ class PARAMigrationManager:
         """
         self.config = config or PARAConfig()
         if heuristic_engine is None:
-            # Create heuristic engine from config settings
+            # Create heuristic engine from file_organizer.config settings
             self.heuristic_engine = HeuristicEngine(
                 enable_temporal=self.config.enable_temporal_heuristic,
                 enable_content=self.config.enable_content_heuristic,

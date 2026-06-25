@@ -6,6 +6,8 @@ Covers: config show, config list (empty / with profiles), config edit
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -156,8 +158,15 @@ class TestConfigEdit:
         assert result.exit_code == 0
         assert "saved" in result.output.lower()
 
-    def test_config_edit_persists_text_model(self) -> None:
-        """After editing, config show reflects the updated text model."""
+    def test_config_edit_persists_text_model(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """After editing, config show reflects the updated text model.
+
+        Uses an isolated config dir via monkeypatch to avoid races with other
+        tests that write to the shared default profile under xdist parallelism.
+        """
+        monkeypatch.setattr("file_organizer.config.manager.DEFAULT_CONFIG_DIR", tmp_path)
         runner.invoke(app, ["config", "edit", "--text-model", "llama3.2:3b"])
         result = runner.invoke(app, ["config", "show"])
         assert result.exit_code == 0

@@ -100,9 +100,14 @@ class DaemonScheduler:
         Processes all registered tasks, firing each one when its
         interval has elapsed. Blocks until ``stop()`` is called
         from another thread.
+
+        The caller must ensure ``_stop_event`` is clear before invoking
+        (``run_in_background`` handles this; direct foreground callers
+        are responsible). Clearing inside this method races with ``stop()``
+        set from another thread between ``thread.start()`` and the first
+        instruction of ``run``, and would silently drop the stop signal.
         """
         self._running = True
-        self._stop_event.clear()
         logger.info("Scheduler started with %d tasks", len(self._tasks))
 
         try:
@@ -126,6 +131,11 @@ class DaemonScheduler:
         if self._running:
             raise RuntimeError("Scheduler is already running")
 
+        # Clear the stop event synchronously BEFORE starting the thread.
+        # Clearing inside run() creates a missed-signal race: if stop() is
+        # called between thread.start() and run() getting CPU time, the
+        # clear wipes the stop signal and the scheduler loops forever.
+        self._stop_event.clear()
         self._thread = threading.Thread(
             target=self.run,
             name="daemon-scheduler",

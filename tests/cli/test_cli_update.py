@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 runner = CliRunner()
 
@@ -109,7 +109,7 @@ class TestUpdateCheck:
         result = runner.invoke(app, ["update", "check", "--pre"])
         assert result.exit_code == 0
         mock_cls.assert_called_once_with(
-            repo="curdriceaurora/Local-File-Organizer",
+            repo="curdriceaurora/fo-core",
             include_prereleases=True,
         )
 

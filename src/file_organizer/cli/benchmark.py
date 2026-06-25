@@ -1,6 +1,6 @@
 """Benchmark command for performance measurement and regression detection.
 
-Provides ``file-organizer benchmark run`` with statistical output
+Provides ``fo benchmark run`` with statistical output
 (median, p95, p99, stddev, throughput), hardware profile inclusion,
 warmup exclusion, suite selection, and baseline comparison with
 regression flagging.
@@ -9,6 +9,7 @@ regression flagging.
 from __future__ import annotations
 
 import contextlib
+import functools
 import io
 import json
 import logging
@@ -24,7 +25,10 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import typer
 
-from file_organizer.models.base import ModelType
+from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.core.path_guard import safe_walk
+from file_organizer.models.audio_model import AudioModel
+from file_organizer.models.base import ModelConfig, ModelType
 
 if TYPE_CHECKING:
     from file_organizer.services.audio.metadata_extractor import AudioMetadata
@@ -85,10 +89,19 @@ class _SuiteExecutionClassification:
 
 @dataclass(frozen=True, slots=True)
 class _SuiteIterationOutcome:
-    """Per-iteration suite runner outcome consumed by classification."""
+    """Per-iteration suite runner outcome consumed by classification.
+
+    The smoke pair (``transcription_smoke_requested`` /
+    ``transcription_smoke_passed``) lets ``_classify_audio_suite`` distinguish
+    "smoke not asked for" from "smoke asked for but couldn't run" — required
+    so ``--transcribe-smoke`` doesn't silently succeed when the ``[media]``
+    extra is missing.
+    """
 
     processed_count: int
     used_synthetic_audio_metadata: bool = False
+    transcription_smoke_requested: bool = False
+    transcription_smoke_passed: bool = False
 
 
 class _SuiteRunner(TypedDict):
@@ -100,6 +113,11 @@ class _SuiteRunner(TypedDict):
 
 
 _RUNNER_PROFILE_VERSION = "2026-03-14-v1"
+
+# Cap discovery so a pathologically large input tree can't exhaust memory
+# before the suite-specific cap is applied. Chosen to exceed every real
+# benchmark corpus we ship (<500 files) with comfortable headroom.
+_MAX_BENCHMARK_FILES = 10_000
 
 
 # ---------------------------------------------------------------------------
@@ -374,15 +392,12 @@ class _BenchmarkModelStub:
 
     @property
     def is_initialized(self) -> bool:
-        """Stub always reports initialized for benchmark timing."""
         return self._initialized
 
     def initialize(self) -> None:
-        """No-op initializer for the benchmark stub."""
         self._initialized = True
 
     def generate(self, prompt: str, **_: Any) -> str:
-        """Return a fixed canned response used to isolate non-model overhead."""
         lowered = prompt.lower()
         for needle, response in self._prompt_responses.items():
             if needle in lowered:
@@ -390,7 +405,6 @@ class _BenchmarkModelStub:
         return self._default_response
 
     def cleanup(self) -> None:
-        """No-op cleanup for the benchmark stub."""
         self._initialized = False
 
     def safe_cleanup(self) -> None:
@@ -494,8 +508,16 @@ def _synthesized_audio_metadata(file_path: Path) -> AudioMetadata:
     )
 
 
-def _run_audio_suite(files: list[Path]) -> _SuiteIterationOutcome:
-    """Benchmark audio metadata + classification path."""
+def _run_audio_suite(
+    files: list[Path],
+    transcribe_smoke: bool = False,
+) -> _SuiteIterationOutcome:
+    """Benchmark audio metadata + classification path.
+
+    With ``transcribe_smoke=True``, additionally runs ``AudioModel.generate()``
+    on the first candidate file to prove end-to-end transcription works.
+    Counted as a single smoke pass; not a per-file benchmark.
+    """
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         typer.echo("Warning: no audio files found; falling back to IO-only benchmark.", err=True)
@@ -516,9 +538,33 @@ def _run_audio_suite(files: list[Path]) -> _SuiteIterationOutcome:
         except Exception as exc:
             raise RuntimeError(f"Audio benchmark runner failed for {file_path}: {exc}") from exc
         _ = classifier.classify(metadata)
+
+    transcription_smoke_passed = False
+    if transcribe_smoke:
+        try:
+            config = ModelConfig(name="tiny", model_type=ModelType.AUDIO)
+            model = AudioModel(config)
+            try:
+                model.initialize()
+                _ = model.generate(str(candidates[0]))
+                transcription_smoke_passed = True
+            finally:
+                model.safe_cleanup()
+        except ImportError as exc:
+            # The smoke check was requested but couldn't run. Leave
+            # transcription_smoke_passed=False so _classify_audio_suite
+            # marks the run degraded; run() will surface a non-zero exit
+            # at the end. The warning is for the human reading stderr.
+            typer.echo(
+                f"Warning: --transcribe-smoke requires [media] extra: {exc}",
+                err=True,
+            )
+
     return _SuiteIterationOutcome(
         processed_count=len(candidates),
         used_synthetic_audio_metadata=used_synthetic_metadata,
+        transcription_smoke_requested=transcribe_smoke,
+        transcription_smoke_passed=transcription_smoke_passed,
     )
 
 
@@ -640,14 +686,12 @@ def _run_e2e_suite(files: list[Path]) -> _SuiteIterationOutcome:
 def _classify_io_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for an I/O-suite result."""
     return _SuiteExecutionClassification(effective_suite="io", degraded=False)
 
 
 def _classify_text_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for a text-processing-suite result."""
     candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -661,7 +705,6 @@ def _classify_text_suite(
 def _classify_vision_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for a vision-suite result."""
     candidates = _suite_candidates(files, _VISION_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -672,10 +715,86 @@ def _classify_vision_suite(
     return _SuiteExecutionClassification(effective_suite="vision", degraded=False)
 
 
+def _bind_transcribe_smoke(
+    runner: Callable[[list[Path]], _SuiteIterationOutcome],
+    *,
+    suite: str,
+    transcribe_smoke: bool,
+) -> Callable[[list[Path]], _SuiteIterationOutcome]:
+    """Validate ``--transcribe-smoke`` against ``suite`` and bind it to the runner.
+
+    Raises ``typer.BadParameter`` if the flag is set with a non-audio suite —
+    the flag becomes a silent no-op otherwise, which falsely reports a
+    successful "smoke check" to CI/scripts. When set with ``--suite audio``,
+    pre-binds ``transcribe_smoke=True`` to the audio runner so the dispatch
+    surface in :func:`run` doesn't need a special case.
+    """
+    if transcribe_smoke and suite != "audio":
+        raise typer.BadParameter("--transcribe-smoke is only supported with --suite audio")
+    if suite == "audio" and transcribe_smoke:
+        return functools.partial(_run_audio_suite, transcribe_smoke=True)
+    return runner
+
+
+def _validate_transcribe_smoke_preconditions(files: list[Path], *, transcribe_smoke: bool) -> None:
+    """Fail fast when ``--transcribe-smoke`` can't possibly run end-to-end.
+
+    Otherwise the empty-input and no-audio-candidates paths short-circuit
+    the benchmark before the smoke check fires, but ``run()`` still exits 0 —
+    a false-positive verification signal for CI/scripts that key off exit
+    code.
+
+    Raises ``typer.BadParameter`` when ``transcribe_smoke`` is set and either
+    ``files`` is empty (no input at all) or the input has no audio candidates.
+    """
+    if not transcribe_smoke:
+        return
+    if not files:
+        raise typer.BadParameter(
+            "--transcribe-smoke requires at least one input file; the input directory is empty."
+        )
+    audio_candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
+    if not audio_candidates:
+        raise typer.BadParameter(
+            "--transcribe-smoke requires at least one audio file in the input; none were found."
+        )
+
+
+def _exit_if_transcribe_smoke_failed(
+    console: Any,
+    degradation_reasons: Sequence[str],
+    *,
+    json_output: bool = False,
+) -> None:
+    """Exit non-zero when ``--transcribe-smoke`` ran but no smoke completed.
+
+    Requested but couldn't run end-to-end (typically because the ``[media]``
+    extra is missing). The benchmark output is already emitted by the time
+    this fires, so JSON/human consumers see the degradation classification;
+    this just propagates the failure to the shell exit code.
+
+    When ``json_output`` is true, the failure notice is routed to stderr so
+    the JSON document already on stdout stays machine-parseable.
+    """
+    if "audio-transcribe-smoke-skipped" not in degradation_reasons:
+        return
+    error_msg = (
+        "[red]Error: --transcribe-smoke was requested but could not run "
+        "end-to-end (see warnings above). Install the [media] extra "
+        '(`pip install -e ".[media]"`) and retry.[/red]'
+    )
+    if json_output:
+        from rich.console import Console
+
+        Console(stderr=True).print(error_msg)
+    else:
+        console.print(error_msg)
+    raise typer.Exit(code=1)
+
+
 def _classify_audio_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for an audio-suite result."""
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -683,11 +802,20 @@ def _classify_audio_suite(
             degraded=True,
             degradation_reasons=("audio-no-candidates-fallback-to-io",),
         )
+    reasons: list[str] = []
     if outcome.used_synthetic_audio_metadata:
+        reasons.append("audio-synthesized-metadata-fallback")
+    if outcome.transcription_smoke_requested and not outcome.transcription_smoke_passed:
+        # --transcribe-smoke was requested but couldn't run end-to-end
+        # (typically [media] extra missing). Surface the gap to the JSON
+        # consumer; run() will also exit non-zero so CI / scripts treat
+        # this as a real failure rather than a successful audio benchmark.
+        reasons.append("audio-transcribe-smoke-skipped")
+    if reasons:
         return _SuiteExecutionClassification(
             effective_suite="audio",
             degraded=True,
-            degradation_reasons=("audio-synthesized-metadata-fallback",),
+            degradation_reasons=tuple(reasons),
         )
     return _SuiteExecutionClassification(effective_suite="audio", degraded=False)
 
@@ -695,14 +823,12 @@ def _classify_audio_suite(
 def _classify_pipeline_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for a pipeline-suite result."""
     return _SuiteExecutionClassification(effective_suite="pipeline", degraded=False)
 
 
 def _classify_e2e_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
-    """Return the benchmark category for an end-to-end-suite result."""
     if files and outcome.processed_count == 0:
         return _SuiteExecutionClassification(
             effective_suite="e2e",
@@ -784,6 +910,58 @@ def _check_baseline_profile_compatibility(
         "Baseline runner profile mismatch "
         f"(baseline={baseline_profile}, current={_RUNNER_PROFILE_VERSION}, suite={suite}). "
         "Comparisons may mix non-equivalent benchmark semantics."
+    )
+    if not json_output:
+        console.print(f"[yellow]{warning}[/yellow]")
+    return warning
+
+
+def _check_baseline_smoke_compatibility(
+    baseline: dict[str, Any],
+    *,
+    transcribe_smoke: bool,
+    console: Any,
+    json_output: bool,
+) -> str | None:
+    """Validate that current and baseline runs used the same smoke mode.
+
+    A smoke run adds an ``AudioModel.generate()`` call per iteration and
+    skews the per-iteration timings. Comparing a smoke run against a
+    non-smoke baseline (or vice versa) yields misleading regression signals
+    for non-equivalent workloads.
+
+    Returns a warning string when the baseline's ``transcribe_smoke`` flag
+    differs from the current run, otherwise ``None``. Treats a missing
+    field on the baseline as ``False`` since older baselines predate the
+    flag. A non-boolean value (e.g. the string ``"false"`` from a hand-
+    edited or malformed baseline) is reported via a malformed-field warning
+    instead of being coerced — ``bool("false")`` is ``True``, which would
+    silently invert the mismatch signal.
+    """
+    raw = baseline.get("transcribe_smoke")
+    if raw is None:
+        baseline_smoke = False
+    elif isinstance(raw, bool):
+        baseline_smoke = raw
+    else:
+        warning = (
+            "Baseline transcribe_smoke field is not a boolean "
+            f"(got {type(raw).__name__}={raw!r}); treating as missing. "
+            "The baseline file may be hand-edited or corrupted; "
+            "smoke-mode mismatch detection is unreliable for this comparison."
+        )
+        if not json_output:
+            console.print(f"[yellow]{warning}[/yellow]")
+        return warning
+
+    if baseline_smoke == transcribe_smoke:
+        return None
+
+    warning = (
+        "Baseline smoke-mode mismatch "
+        f"(baseline transcribe_smoke={baseline_smoke}, current={transcribe_smoke}). "
+        "Smoke runs add an AudioModel.generate() call per iteration; the "
+        "comparison may show misleading regressions or improvements."
     )
     if not json_output:
         console.print(f"[yellow]{warning}[/yellow]")
@@ -899,6 +1077,7 @@ def _maybe_attach_comparison_output(
     output: dict[str, Any],
     compare_path: Path | None,
     suite: str,
+    transcribe_smoke: bool,
     console: Any,
     json_output: bool,
 ) -> dict[str, Any]:
@@ -917,16 +1096,41 @@ def _maybe_attach_comparison_output(
         console=console,
         json_output=json_output,
     )
+    smoke_warning = _check_baseline_smoke_compatibility(
+        baseline,
+        transcribe_smoke=transcribe_smoke,
+        console=console,
+        json_output=json_output,
+    )
     comp = compare_results(output, baseline)
     output["comparison"] = comp
     if profile_warning is not None:
         output["comparison_profile_warning"] = profile_warning
+    if smoke_warning is not None:
+        output["comparison_smoke_warning"] = smoke_warning
     return output
 
 
 # ---------------------------------------------------------------------------
 # CLI command
 # ---------------------------------------------------------------------------
+
+
+def _validate_compare_path(compare_path: Path | None) -> Path | None:
+    """Resolve ``--compare`` and reject directories at the CLI boundary.
+
+    ``resolve_cli_path(must_be_dir=False)`` accepts any existing FS object;
+    an explicit ``is_file()`` guard catches directories so they fail with
+    ``typer.BadParameter`` (exit 2) instead of later at ``read_text()``
+    with ``IsADirectoryError`` (exit 1). Extracted to keep ``run()``'s
+    cyclomatic complexity within the C901 limit.
+    """
+    if compare_path is None:
+        return None
+    resolved = resolve_cli_path(compare_path, must_exist=True, must_be_dir=False)
+    if not resolved.is_file():
+        raise typer.BadParameter(f"Baseline compare path is not a regular file: {resolved!s}")
+    return resolved
 
 
 @benchmark_app.command()
@@ -968,6 +1172,16 @@ def run(
         "--compare",
         help="Path to baseline JSON file for regression comparison.",
     ),
+    transcribe_smoke: bool = typer.Option(
+        False,
+        "--transcribe-smoke",
+        help=(
+            "Run AudioModel.generate() on one candidate file as an "
+            "end-to-end smoke test. Only meaningful with --suite audio. "
+            "Requires the [media] extra. Off by default to keep "
+            "benchmark runs fast."
+        ),
+    ),
 ) -> None:
     """Run a performance benchmark with statistical output.
 
@@ -977,15 +1191,24 @@ def run(
     from rich.console import Console
 
     console = Console()
-    input_path = input_path.resolve()
+    # A.cli: resolve + validate the input tree. `--compare` points at a
+    # JSON baseline (a file, not a dir); validate it separately via
+    # _validate_compare_path so run()'s complexity stays within C901.
+    input_path = resolve_cli_path(input_path, must_exist=True, must_be_dir=True)
+    compare_path = _validate_compare_path(compare_path)
 
-    if not input_path.exists():
-        console.print(f"[red]Error: Path does not exist: {input_path}[/red]")
-        raise typer.Exit(code=1)
-
-    # Collect files
+    # Collect files (capped to prevent OOM on pathologically large trees)
     try:
-        files = [f for f in input_path.rglob("*") if f.is_file()]
+        files: list[Path] = []
+        for f in safe_walk(input_path):
+            files.append(f)
+            if len(files) >= _MAX_BENCHMARK_FILES:
+                logger.warning(
+                    "Benchmark corpus capped at %d files for %s",
+                    _MAX_BENCHMARK_FILES,
+                    input_path,
+                )
+                break
     except Exception as e:
         console.print(f"[red]Error reading files: {e}[/red]")
         raise typer.Exit(code=1) from e
@@ -997,30 +1220,37 @@ def run(
         raise typer.Exit(code=1)
     runner = suite_spec["run"]
     classifier = suite_spec["classify"]
+    runner = _bind_transcribe_smoke(runner, suite=suite, transcribe_smoke=transcribe_smoke)
+    # Block the empty-input and no-audio-candidates paths from short-circuiting
+    # past the smoke-failure exit guard, which would otherwise cause
+    # `--transcribe-smoke` to exit 0 without verifying anything.
+    _validate_transcribe_smoke_preconditions(files, transcribe_smoke=transcribe_smoke)
 
     if not files:
         if json_output:
             empty_outcome = _SuiteIterationOutcome(processed_count=0)
             classification = classifier([], empty_outcome)
-            output: dict[str, Any] = {
+            empty_output: dict[str, Any] = {
                 "suite": suite,
                 "effective_suite": classification.effective_suite,
                 "degraded": classification.degraded,
                 "degradation_reasons": sorted(set(classification.degradation_reasons)),
                 "runner_profile_version": _RUNNER_PROFILE_VERSION,
+                "transcribe_smoke": transcribe_smoke,
                 "files_count": 0,
                 "hardware_profile": _detect_hardware_profile(),
                 "results": compute_stats([], 0),
             }
-            validate_benchmark_payload(output)
-            output = _maybe_attach_comparison_output(
-                output=output,
+            validate_benchmark_payload(empty_output)
+            empty_output = _maybe_attach_comparison_output(
+                output=empty_output,
                 compare_path=compare_path,
                 suite=suite,
+                transcribe_smoke=transcribe_smoke,
                 console=console,
                 json_output=json_output,
             )
-            console.print(json.dumps(output, indent=2))
+            console.print(json.dumps(empty_output, indent=2))
         else:
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
@@ -1071,13 +1301,17 @@ def run(
     # Statistics
     stats = compute_stats(measured, actual_processed_count)
 
-    # Build output
+    # Build output. `transcribe_smoke` is included so `--compare` can avoid
+    # mixing smoke and non-smoke baselines (which would otherwise show
+    # misleading regressions from the extra AudioModel.generate() call per
+    # iteration).
     output: dict[str, Any] = {
         "suite": suite,
         "effective_suite": effective_suite,
         "degraded": degraded,
         "degradation_reasons": degradation_reasons,
         "runner_profile_version": _RUNNER_PROFILE_VERSION,
+        "transcribe_smoke": transcribe_smoke,
         "files_count": actual_processed_count,
         "hardware_profile": _detect_hardware_profile(),
         "results": stats,
@@ -1088,12 +1322,17 @@ def run(
         output=output,
         compare_path=compare_path,
         suite=suite,
+        transcribe_smoke=transcribe_smoke,
         console=console,
         json_output=json_output,
     )
 
     if json_output:
+        # JSON consumers parse the document on stdout; the smoke-failure
+        # exit fires after so they still get the full payload (including
+        # `degraded` + `degradation_reasons`) before the non-zero exit.
         console.print(json.dumps(output, indent=2))
+        _exit_if_transcribe_smoke_failed(console, degradation_reasons, json_output=json_output)
     else:
         if degraded:
             console.print(
@@ -1105,4 +1344,9 @@ def run(
         _print_table(console, suite, warmup, stats, actual_processed_count)
         if "comparison" in output:
             _print_comparison(console, output["comparison"], json_output=False)
+        # In human mode, exit BEFORE the success banner — printing
+        # "Benchmark completed" and then exiting non-zero produces
+        # contradictory output that misleads operators and breaks any
+        # automation that scrapes the human log for completion status.
+        _exit_if_transcribe_smoke_failed(console, degradation_reasons, json_output=json_output)
         console.print("\n[bold green]Benchmark completed[/bold green]")

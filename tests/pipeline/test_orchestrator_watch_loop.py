@@ -482,7 +482,9 @@ class TestWatchLoopExecutor:
         import logging
         from concurrent.futures import Future
 
-        target = logging.getLogger("file_organizer.pipeline.orchestrator")
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
+
+        target = orch_logger
         records = []
 
         class Collector(logging.Handler):
@@ -519,7 +521,9 @@ class TestWatchLoopExecutor:
         import logging
         from concurrent.futures import Future
 
-        target = logging.getLogger("file_organizer.pipeline.orchestrator")
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
+
+        target = orch_logger
         records = []
 
         class Collector(logging.Handler):

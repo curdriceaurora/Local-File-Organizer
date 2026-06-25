@@ -1,4 +1,4 @@
-"""Tests for file_organizer.cli.rules module.
+"""Tests for cli.rules module.
 
 Tests the Typer-based rules management CLI commands including:
 - rules list, sets, add, remove, toggle
@@ -345,6 +345,52 @@ class TestRulesExport:
         assert result.exit_code == 0
         assert "Exported" in result.output
 
+    @pytest.mark.integration
+    @pytest.mark.ci
+    def test_export_output_is_existing_directory_rejected(
+        self, runner, mock_rule_manager, tmp_path
+    ):
+        """A.cli: passing an existing directory as ``--output`` must fail
+        at the CLI boundary (``typer.BadParameter``, exit 2) with a clear
+        "not a regular file" message, not crash inside ``write_text()``.
+        """
+        existing_dir = tmp_path / "subdir"
+        existing_dir.mkdir()
+        with patch(_RULE_MGR_PATH, return_value=mock_rule_manager):
+            result = runner.invoke(rules_app, ["export", "-o", str(existing_dir)])
+        assert result.exit_code == 2
+        assert "not a regular file" in result.output.lower()
+
+    @pytest.mark.integration
+    @pytest.mark.ci
+    def test_export_parent_dir_missing_rejected(self, runner, mock_rule_manager, tmp_path):
+        """A.cli: ``--output`` under a non-existent parent must fail with
+        ``typer.BadParameter`` (exit 2). ``is_dir()`` also rejects the case
+        where the parent path exists but is a file.
+        """
+        missing_parent = tmp_path / "no-such-dir" / "out.yaml"
+        with patch(_RULE_MGR_PATH, return_value=mock_rule_manager):
+            result = runner.invoke(rules_app, ["export", "-o", str(missing_parent)])
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
+
+    @pytest.mark.integration
+    @pytest.mark.ci
+    def test_export_write_oserror_surfaces_as_exit_1(self, runner, mock_rule_manager, tmp_path):
+        """A.cli: if the atomic write itself fails (e.g. permission denied
+        on ``os.replace``), surface a user-facing error (exit 1), not a
+        raw ``OSError`` traceback. Project F3: write goes through
+        tempfile + os.replace, so patch os.replace at the import site.
+        """
+        output_file = tmp_path / "rules.yaml"
+        with (
+            patch(_RULE_MGR_PATH, return_value=mock_rule_manager),
+            patch("file_organizer.cli.rules.os.replace", side_effect=OSError("permission denied")),
+        ):
+            result = runner.invoke(rules_app, ["export", "-o", str(output_file)])
+        assert result.exit_code == 1
+        assert "failed to write yaml" in result.output.lower()
+
 
 # ============================================================================
 # Import Tests
@@ -374,9 +420,27 @@ class TestRulesImport:
         assert "Imported" in result.output
 
     def test_import_file_not_found(self, runner, tmp_path):
+        """A.cli: missing file surfaces as ``typer.BadParameter`` (exit 2,
+        POSIX usage-error convention) with 'does not exist' in the usage
+        message — replacing the previous custom exit-1 'not found' path.
+        """
         result = runner.invoke(rules_app, ["import", str(tmp_path / "nonexistent.yaml")])
-        assert result.exit_code == 1
-        assert "not found" in result.output
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
+
+    @pytest.mark.integration
+    @pytest.mark.ci
+    def test_import_directory_rejected(self, runner, tmp_path):
+        """A.cli: ``must_be_dir=False`` alone allows directories through, so
+        there's an explicit ``is_file()`` guard after ``resolve_cli_path``.
+        Pointing import at a directory must fail at the CLI boundary with
+        "not a regular file" (exit 2), not a YAML parse error later.
+        """
+        d = tmp_path / "not-a-file"
+        d.mkdir()
+        result = runner.invoke(rules_app, ["import", str(d)])
+        assert result.exit_code == 2
+        assert "not a regular file" in result.output.lower()
 
     def test_import_invalid_yaml(self, runner, tmp_path):
         bad_yaml = tmp_path / "bad.yaml"

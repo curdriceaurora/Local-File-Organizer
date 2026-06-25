@@ -17,7 +17,7 @@ class TestVersionCommand:
     def test_version_output(self) -> None:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "file-organizer" in result.output
+        assert "fo" in result.output
         assert "2.0.0" in result.output
 
 

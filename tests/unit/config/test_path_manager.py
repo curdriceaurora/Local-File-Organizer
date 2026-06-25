@@ -4,7 +4,11 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from file_organizer.config.path_manager import PathManager, get_canonical_paths
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def test_get_canonical_paths_uses_xdg_when_available():

@@ -150,7 +150,7 @@ class FileMonitor:
 
             # Keep config.watch_directories in sync whether running or not: the
             # handler's symlink/containment guard (WP-2.3, #1228) derives the
-            # allowed roots from config, so a directory added mid-run must be
+            # allowed roots from file_organizer.config, so a directory added mid-run must be
             # reflected there or its events would be skipped as out-of-root. It
             # also means a later restart re-watches the dynamically-added dir.
             # Update config *before* scheduling so there is no race window where
@@ -195,7 +195,7 @@ class FileMonitor:
 
             del self._watches[path_key]
 
-            # Also remove from config
+            # Also remove from file_organizer.config
             try:
                 self.config.watch_directories.remove(path)
             except ValueError:

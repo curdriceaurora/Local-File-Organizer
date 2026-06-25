@@ -33,6 +33,7 @@ def _make_video_file(tmp_path: Path, name: str = "clip.mp4") -> Path:
 
 
 @pytest.mark.unit
+@pytest.mark.integration
 class TestProcessAudioFiles:
     def test_returns_processed_file_list(self, tmp_path: Path) -> None:
         """Audio pipeline returns ProcessedFile instances."""
@@ -99,6 +100,48 @@ class TestProcessAudioFiles:
             results = organizer._process_audio_files([audio])
 
         assert results[0].filename == "mysong"
+
+    def test_transcribe_audio_initializes_model_and_forwards_to_dispatcher(
+        self, tmp_path: Path
+    ) -> None:
+        """transcribe_audio=True lazy-inits an AudioModel and forwards it as
+        the transcriber, instead of falling back to metadata-only.
+
+        ``_FASTER_WHISPER_AVAILABLE`` is forced True so this is deterministic
+        regardless of whether the optional ``[media]`` extra is installed.
+        """
+        audio = _make_audio_file(tmp_path)
+        organizer = FileOrganizer(transcribe_audio=True)
+        mock_model = MagicMock()
+
+        with (
+            patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", True),
+            patch("file_organizer.models.audio_model.AudioModel", return_value=mock_model),
+            patch("file_organizer.core.organizer.dispatcher.process_audio_files") as mock_proc,
+        ):
+            organizer._process_audio_files([audio])
+
+        mock_model.initialize.assert_called_once()
+        assert mock_proc.call_args.kwargs["transcriber"] is mock_model
+
+    def test_transcribe_audio_falls_back_when_faster_whisper_unavailable(
+        self, tmp_path: Path
+    ) -> None:
+        """If faster_whisper isn't installed, the audio falls back to
+        metadata-only categorization (transcriber=None) instead of raising —
+        asserted via the dispatcher call args, not the result's `error` field,
+        since metadata extraction has its own independent optional deps
+        (mutagen/tinytag) that this test isn't exercising."""
+        audio = _make_audio_file(tmp_path)
+        organizer = FileOrganizer(transcribe_audio=True)
+
+        with (
+            patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", False),
+            patch("file_organizer.core.organizer.dispatcher.process_audio_files") as mock_proc,
+        ):
+            organizer._process_audio_files([audio])
+
+        assert mock_proc.call_args.kwargs["transcriber"] is None
 
 
 # ---------------------------------------------------------------------------
