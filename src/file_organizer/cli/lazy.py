@@ -60,7 +60,7 @@ class LazyCommandProxy(click.Group):
             if isinstance(obj, typer.Typer):
                 self._real_cmd = typer.main.get_group(obj)
             else:
-                self._real_cmd = typing.cast(click.Command, obj)
+                self._real_cmd = obj
         return self._real_cmd
 
     def invoke(self, ctx: click.Context) -> typing.Any:
