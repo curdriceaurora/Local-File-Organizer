@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -40,8 +41,9 @@ class TestBenchmarkErrors:
 
         assert result.exit_code in (1, 2)
 
-    def test_no_files_json(self, tmp_path: Path) -> None:
+    def test_no_files_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """No files found with JSON output."""
+        monkeypatch.setattr(logging, "raiseExceptions", False)
         app = _get_app()
         result = runner.invoke(app, ["benchmark", "run", str(tmp_path), "--json"])
         assert result.exit_code == 0
@@ -62,7 +64,8 @@ class TestBenchmarkErrors:
 class TestBenchmarkEvenIterations:
     """Covers median calculation for even number of iterations (line 138)."""
 
-    def test_even_iterations(self, tmp_path: Path) -> None:
+    def test_even_iterations(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(logging, "raiseExceptions", False)
         app = _get_app()
         (tmp_path / "a.txt").write_text("hello")
 
