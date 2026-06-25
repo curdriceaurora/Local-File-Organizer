@@ -84,6 +84,16 @@ class TestDesktopSubcommand:
         assert result.exit_code == 1
         assert "Error launching desktop: Failed to allocate window" in result.output
 
+    def test_desktop_bypasses_setup_gate(self, mock_launch: MagicMock) -> None:
+        """Verify fo desktop is reachable before first-run setup completes."""
+        with patch(
+            "file_organizer.cli.organize._check_setup_completed",
+            side_effect=AssertionError("setup gate should not run for desktop"),
+        ):
+            result = runner.invoke(app, ["desktop"])
+        assert result.exit_code == 0
+        mock_launch.assert_called_once()
+
 
 class TestDocsSubcommand:
     """Verify 'fo docs' command behavior, build/serve modes, and validations."""
@@ -181,3 +191,14 @@ class TestDocsSubcommand:
             result = runner.invoke(app, ["docs"])
             assert result.exit_code == 0
             assert "Documentation server stopped" in result.output
+
+    def test_docs_bypasses_setup_gate(self, mock_shutil_which: MagicMock) -> None:
+        """Verify fo docs is reachable before first-run setup completes."""
+        mock_shutil_which.return_value = None
+        with patch(
+            "file_organizer.cli.organize._check_setup_completed",
+            side_effect=AssertionError("setup gate should not run for docs"),
+        ):
+            result = runner.invoke(app, ["docs"])
+        assert result.exit_code == 1
+        assert "mkdocs is not installed" in result.output
