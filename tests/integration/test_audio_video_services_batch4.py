@@ -1251,12 +1251,22 @@ class TestVisionProcessor:
     def _make_mock_model(self) -> Any:
         """Build a minimal mock BaseModel."""
         from file_organizer.models.base import ModelConfig, ModelType
+        from file_organizer.models.vision_schema import VisionSchema
 
         mock_model = MagicMock()
         mock_model.config = MagicMock(spec=ModelConfig)
         mock_model.config.model_type = ModelType.VISION
         mock_model.is_initialized = True
         mock_model.generate = MagicMock(return_value="mocked response")
+        mock_model.generate_structured = MagicMock(
+            return_value=VisionSchema(
+                description="nature landscape photography",
+                folder_name="images",
+                filename="test",
+                has_text=False,
+                extracted_text=None,
+            )
+        )
         mock_model.safe_cleanup = MagicMock()
         return mock_model
 
@@ -1293,7 +1303,6 @@ class TestVisionProcessor:
         fp.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
 
         mock_model = self._make_mock_model()
-        mock_model.generate = MagicMock(return_value="A beautiful landscape with mountains")
 
         processor = VisionProcessor(vision_model=mock_model)
         result = processor.process_file(fp, perform_ocr=False)
@@ -1309,7 +1318,6 @@ class TestVisionProcessor:
         fp.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
 
         mock_model = self._make_mock_model()
-        mock_model.generate = MagicMock(return_value="nature landscape photography")
 
         processor = VisionProcessor(vision_model=mock_model)
         result = processor.process_file(fp, perform_ocr=False)
@@ -1322,7 +1330,9 @@ class TestVisionProcessor:
         fp.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
 
         mock_model = self._make_mock_model()
-        mock_model.generate = MagicMock(side_effect=RuntimeError("connection refused to backend"))
+        mock_model.generate_structured = MagicMock(
+            side_effect=RuntimeError("connection refused to backend")
+        )
 
         processor = VisionProcessor(vision_model=mock_model, backend_cooldown_seconds=9999.0)
         processor.process_file(fp, perform_ocr=False)
@@ -1332,7 +1342,7 @@ class TestVisionProcessor:
         result2 = processor.process_file(fp, perform_ocr=False)
         assert result2.error is not None
         assert "Vision backend" in result2.error
-        assert mock_model.generate.call_count == 1
+        assert mock_model.generate_structured.call_count == 1
 
     def test_process_file_non_fatal_error_does_not_open_circuit(self, tmp_path: Path) -> None:
         from file_organizer.services.vision_processor import VisionProcessor
@@ -1341,7 +1351,7 @@ class TestVisionProcessor:
         fp.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
 
         mock_model = self._make_mock_model()
-        mock_model.generate = MagicMock(side_effect=ValueError("bad prompt"))
+        mock_model.generate_structured = MagicMock(side_effect=ValueError("bad prompt"))
 
         processor = VisionProcessor(vision_model=mock_model)
         processor.process_file(fp, perform_ocr=False)
