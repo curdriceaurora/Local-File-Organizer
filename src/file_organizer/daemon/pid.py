@@ -342,25 +342,35 @@ class PidFileManager:
                 if isinstance(raw_pid, bool) or not isinstance(raw_pid, int):
                     raise TypeError(f"pid field must be int, got {type(raw_pid).__name__}")
                 pid = raw_pid
+                if pid <= 0:
+                    # F2 hardening (#1323): pid 0 signals the whole process
+                    # group via os.kill; negative values signal a process
+                    # group by id on POSIX. Either is corrupt input here.
+                    raise ValueError(f"pid must be a positive integer, got {pid}")
                 ct_raw = data.get("create_time")
                 if ct_raw is None:
-                    create_time: float | None = None
-                else:
-                    # Codex P2: reject non-finite ``create_time`` values
-                    # (NaN, +Inf, -Inf). ``float("nan")`` parses cleanly
-                    # from JSON strings like ``"nan"`` or from a
-                    # malformed numeric literal, but propagating NaN
-                    # into ``is_running`` silently defeats the F2
-                    # recycling check: ``abs(actual - NaN) > tolerance``
-                    # is ALWAYS False (any comparison with NaN is
-                    # False), so a recycled PID would be reported as
-                    # the original daemon. Inf makes the subtraction
-                    # overflow and the comparison either always True
-                    # (False-positive recycling mismatch) or NaN again.
-                    # Treat any non-finite value as corrupt.
-                    create_time = float(ct_raw)
-                    if not math.isfinite(create_time):
-                        raise ValueError(f"create_time must be finite, got {create_time!r}")
+                    # F2 hardening (#1323): a JSON record (it has a "pid"
+                    # key) without create_time is malformed/truncated, not
+                    # legacy. Only the plain-integer branch below is
+                    # allowed to produce create_time=None — silently
+                    # downgrading a JSON record to liveness-only here would
+                    # defeat the PID-recycling check it's supposed to back.
+                    raise ValueError("JSON pid record is missing the required 'create_time' field")
+                # Codex P2: reject non-finite ``create_time`` values
+                # (NaN, +Inf, -Inf). ``float("nan")`` parses cleanly
+                # from JSON strings like ``"nan"`` or from a
+                # malformed numeric literal, but propagating NaN
+                # into ``is_running`` silently defeats the F2
+                # recycling check: ``abs(actual - NaN) > tolerance``
+                # is ALWAYS False (any comparison with NaN is
+                # False), so a recycled PID would be reported as
+                # the original daemon. Inf makes the subtraction
+                # overflow and the comparison either always True
+                # (False-positive recycling mismatch) or NaN again.
+                # Treat any non-finite value as corrupt.
+                create_time = float(ct_raw)
+                if not math.isfinite(create_time):
+                    raise ValueError(f"create_time must be finite, got {create_time!r}")
                 return PidRecord(pid=pid, create_time=create_time)
         except (json.JSONDecodeError, ValueError, TypeError) as exc:
             # Distinguish "valid JSON with malformed pid field" from
@@ -375,10 +385,15 @@ class PidFileManager:
 
         # Fall through to legacy integer format.
         try:
-            return PidRecord(pid=int(content), create_time=None)
+            legacy_pid = int(content)
         except ValueError:
             logger.warning("PID file %s contains unparsable content", pid_file)
             return None
+        if legacy_pid <= 0:
+            # F2 hardening (#1323): same pid<=0 rule as the JSON branch.
+            logger.warning("PID file %s contains non-positive PID %d", pid_file, legacy_pid)
+            return None
+        return PidRecord(pid=legacy_pid, create_time=None)
 
     def is_running(self, pid_file: Path) -> bool:
         """Check whether the process recorded in a PID file is alive.

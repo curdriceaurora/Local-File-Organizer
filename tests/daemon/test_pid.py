@@ -266,6 +266,46 @@ class TestPidRecord:
         pid_file.write_text('{"pid": 12345, "create_time": -Infinity}')
         assert pid_manager.read_pid_record(pid_file) is None
 
+    def test_read_pid_record_rejects_zero_json_pid(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """pid=0 in a JSON record would make os.kill target the entire
+        process group instead of one process — must be rejected."""
+        pid_file.write_text(json.dumps({"pid": 0, "create_time": 1.0}))
+        assert pid_manager.read_pid_record(pid_file) is None
+
+    def test_read_pid_record_rejects_negative_json_pid(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """A negative pid targets a process group by id on POSIX —
+        must be rejected, not passed through to os.kill."""
+        pid_file.write_text(json.dumps({"pid": -7, "create_time": 1.0}))
+        assert pid_manager.read_pid_record(pid_file) is None
+
+    def test_read_pid_record_rejects_zero_legacy_pid(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """Same rule applies to the legacy plain-integer file format."""
+        pid_file.write_text("0")
+        assert pid_manager.read_pid_record(pid_file) is None
+
+    def test_read_pid_record_rejects_negative_legacy_pid(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        pid_file.write_text("-7")
+        assert pid_manager.read_pid_record(pid_file) is None
+
+    def test_read_pid_record_rejects_json_missing_create_time(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """A JSON record (has a 'pid' key) without 'create_time' is
+        malformed/truncated, not legacy — only the plain-integer format
+        is allowed to produce create_time=None. Falling back to
+        liveness-only mode here would silently defeat PID-recycling
+        protection for a record that claims to be in the F2 format."""
+        pid_file.write_text(json.dumps({"pid": 12345}))
+        assert pid_manager.read_pid_record(pid_file) is None
+
     def test_is_running_nan_create_time_does_not_bypass_recycling_check(
         self, pid_manager: PidFileManager, pid_file: Path
     ) -> None:
