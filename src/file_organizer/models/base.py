@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal
 
+import pydantic
+
 # ---------------------------------------------------------------------------
 # Token-exhaustion constants
 # ---------------------------------------------------------------------------
@@ -59,6 +61,53 @@ class TokenExhaustionError(RuntimeError):
 
     Callers should either increase the token budget or simplify the prompt.
     """
+
+
+class StructuredParseError(RuntimeError):
+    """Raised when structured JSON output from a model cannot be parsed or validated."""
+
+
+def parse_structured_json(json_text: str, schema: type[pydantic.BaseModel]) -> pydantic.BaseModel:
+    """Extract and parse JSON from model output, validating it against a Pydantic schema.
+
+    Args:
+        json_text: The raw response text from the model.
+        schema: The Pydantic schema class to validate against.
+
+    Returns:
+        An instance of the Pydantic schema.
+
+    Raises:
+        StructuredParseError: If parsing or validation fails.
+    """
+    import json
+    import re
+
+    cleaned = json_text.strip()
+    # Remove markdown code blocks if present
+    if cleaned.startswith("```"):
+        match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
+        if match:
+            cleaned = match.group(1).strip()
+
+    try:
+        # Try direct parse first
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        # Fallback: extract first { to last }
+        match = re.search(r"(\{[\s\S]*\})", cleaned)
+        if match:
+            try:
+                data = json.loads(match.group(1))
+            except json.JSONDecodeError:
+                raise StructuredParseError(f"Failed to parse JSON from response: {cleaned}") from e
+        else:
+            raise StructuredParseError(f"No JSON object found in response: {cleaned}") from e
+
+    try:
+        return schema.model_validate(data)
+    except Exception as e:
+        raise StructuredParseError(f"JSON data did not validate against schema: {e}") from e
 
 
 class ModelType(Enum):
@@ -245,6 +294,32 @@ class BaseModel(ABC):
     ) -> None:
         """Context manager exit — waits for in-flight generations."""
         self.safe_cleanup()
+
+    def generate_structured(
+        self,
+        prompt: str,
+        schema: type[pydantic.BaseModel],
+        **kwargs: Any,
+    ) -> pydantic.BaseModel:
+        """Generate structured output matching a Pydantic schema.
+
+        Args:
+            prompt: Text prompt
+            schema: The Pydantic schema class
+            **kwargs: Additional parameters passed to generate
+
+        Returns:
+            An instance of the schema
+        """
+        schema_instruction = (
+            f"\n\nYou MUST respond ONLY with a JSON object matching this JSON Schema:\n"
+            f"{schema.model_json_schema()}\n"
+            f"Do not include any conversational preamble, explanation, or markdown formatting other than the JSON block. "
+            f"Ensure all keys are present."
+        )
+        full_prompt = prompt + schema_instruction
+        response_text = self.generate(full_prompt, **kwargs)
+        return parse_structured_json(response_text, schema)
 
     def __repr__(self) -> str:
         """String representation."""

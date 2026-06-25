@@ -26,4 +26,4 @@ while IFS= read -r line; do
   files_sorted+=("$line")
 done < <(printf '%s\n' "$files" | sort -u)
 MYPY=$(.venv/bin/mypy --version >/dev/null 2>&1 && echo .venv/bin/mypy || echo mypy)
-$MYPY -- "${files_sorted[@]}"
+$MYPY --follow-imports=silent -- "${files_sorted[@]}"

@@ -144,7 +144,11 @@ class OpenAIVisionModel(BaseModel):
         else:
             if image_data is None:
                 raise ValueError("image_data is None after guard check; this is a caller bug")
-            image_url = _bytes_to_data_url(image_data)
+            mime_type = kwargs.get("mime_type")
+            if mime_type:
+                image_url = _bytes_to_data_url(image_data, mime_type=mime_type)
+            else:
+                image_url = _bytes_to_data_url(image_data)
 
         messages: list[dict[str, Any]] = [
             {
