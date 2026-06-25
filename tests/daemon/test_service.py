@@ -342,3 +342,91 @@ class TestSignalHandling:
             assert len(data) > 0
 
         svc._running = False
+
+
+class TestStartupFailurePropagation:
+    """F-hardening (#1323, finding 4): start_background() must surface
+    startup failures to the caller instead of returning as if the
+    daemon started successfully."""
+
+    def test_start_background_raises_when_pid_write_fails(
+        self, daemon: DaemonService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _boom(self: object, pid_file: Path, pid: int | None = None) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr("file_organizer.daemon.pid.PidFileManager.write_pid_record", _boom)
+
+        with pytest.raises(OSError, match="disk full"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+
+    def test_start_background_raises_on_later_stage_failure(
+        self, daemon: DaemonService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A failure AFTER the PID write (e.g. scheduler startup) must
+        still be captured and re-raised — proving the broad try/except
+        covers more than just the first statement in the startup block.
+        """
+
+        def _boom() -> None:
+            raise RuntimeError("scheduler exploded")
+
+        monkeypatch.setattr(daemon._scheduler, "run_in_background", _boom)
+
+        with pytest.raises(RuntimeError, match="scheduler exploded"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+
+    def test_start_background_still_raises_when_cleanup_outlives_join(
+        self, daemon: DaemonService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If _cleanup() (e.g. a slow on_stop callback) outlives the join
+        timeout, start_background() must still raise the captured startup
+        error promptly rather than blocking forever or swallowing it.
+
+        Uses a tiny monkeypatched join timeout so this test runs fast
+        instead of waiting out the real 10s timeout.
+        """
+        import file_organizer.daemon.service as service_module
+
+        monkeypatch.setattr(service_module, "_STARTUP_JOIN_TIMEOUT_S", 0.05)
+
+        cleanup_release = threading.Event()
+
+        def _slow_on_stop() -> None:
+            # Block past the shrunk join timeout, simulating a slow
+            # on_stop_callback/scheduler shutdown still in flight.
+            cleanup_release.wait(timeout=2.0)
+
+        daemon.on_stop(_slow_on_stop)
+
+        def _boom() -> None:
+            raise RuntimeError("startup exploded")
+
+        monkeypatch.setattr(daemon._scheduler, "run_in_background", _boom)
+
+        try:
+            start = time.monotonic()
+            with pytest.raises(RuntimeError, match="startup exploded"):
+                daemon.start_background()
+            elapsed = time.monotonic() - start
+
+            # Must return promptly (bounded by the shrunk timeout), not
+            # block for the real 10s default or forever.
+            assert elapsed < 2.0
+
+            # The thread handle must be preserved (not discarded) while
+            # cleanup is still in flight, so callers retain the ability
+            # to detect/wait for it later.
+            assert daemon._thread is not None
+            assert daemon._thread.is_alive()
+        finally:
+            # Unblock the stalled cleanup so the background thread can
+            # finish and the test doesn't leak a running thread.
+            cleanup_release.set()
+            if daemon._thread is not None:
+                daemon._thread.join(timeout=5.0)
+                daemon._thread = None

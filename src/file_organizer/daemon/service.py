@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 # the rest of the log. 1.0s keeps the signal actionable without flooding.
 _SIGNAL_LOG_MIN_INTERVAL_S = 1.0
 
+# Timeout for joining the background thread after a startup failure, so
+# start_background() doesn't raise while _cleanup() is still tearing the
+# daemon down (#1323, finding 4). Module-level so tests can shrink it via
+# monkeypatch instead of waiting out the real timeout.
+_STARTUP_JOIN_TIMEOUT_S = 10.0
+
 
 class DaemonService:
     """Long-running daemon that watches directories and organizes files.
@@ -82,6 +88,13 @@ class DaemonService:
         # ``_SIGNAL_LOG_MIN_INTERVAL_S`` so the log remains useful.
         self._last_signal_log_time = 0.0
         self._started_at: float | None = None
+        # Narrowly typed to Exception (not BaseException): only the
+        # ``except Exception`` clause in ``_background_run`` assigns here,
+        # so the annotation reflects what is actually captured. A
+        # BaseException subtype (SystemExit, KeyboardInterrupt) raised
+        # during startup is NOT recorded here and will NOT be re-raised by
+        # start_background() — see that method's docstring.
+        self._startup_error: Exception | None = None
         self._files_processed: int = 0
         self._on_start_callback: Callable[[], None] | None = None
         self._on_stop_callback: Callable[[], None] | None = None
@@ -145,6 +158,18 @@ class DaemonService:
 
         Raises:
             RuntimeError: If the daemon is already running.
+            Exception: Whatever the background thread raised while
+                writing the PID file, setting up tasks, or starting the
+                scheduler — startup failures are re-raised here rather
+                than left silently swallowed in the background thread
+                (#1323, finding 4). Does NOT cover the ``on_start``
+                callback: that is invoked inside its own pre-existing
+                ``try/except Exception`` that logs and swallows on
+                failure (a broken on_start callback should not abort the
+                daemon), so callback failures are never re-raised here.
+                Also does not cover BaseException subtypes (e.g.
+                ``SystemExit``, ``KeyboardInterrupt``) raised during
+                startup — only ``Exception`` subclasses are captured.
         """
         with self._lock:
             if self._running or (self._thread is not None and self._thread.is_alive()):
@@ -155,6 +180,7 @@ class DaemonService:
             self._stop_event.clear()
             self._started_event.clear()
             self._stopped_event.clear()
+            self._startup_error = None
 
             # Set _running = True while holding lock to prevent race condition
             # where two threads both pass the check above before _running is set
@@ -174,6 +200,33 @@ class DaemonService:
 
         # Wait for the daemon to fully initialize
         self._started_event.wait(timeout=5.0)
+
+        if self._startup_error is not None:
+            error = self._startup_error
+            self._startup_error = None
+            # The background thread sets _started_event from inside the
+            # inner `finally` *before* unwinding through the outer
+            # `finally` (`_cleanup()`), so cleanup may still be in flight
+            # here. Join it so `is_running` is reliably False and the PID
+            # file is gone by the time this raises — callers must not
+            # observe a half-torn-down daemon after the exception.
+            if self._thread is not None:
+                self._thread.join(timeout=_STARTUP_JOIN_TIMEOUT_S)
+                if self._thread.is_alive():
+                    # Cleanup is still running past the timeout (e.g. a
+                    # slow on_stop callback or scheduler shutdown). Do NOT
+                    # discard the thread handle — leave it set so the
+                    # is_alive() guard at the top of this method and
+                    # stop()'s own join() can still detect/wait for it.
+                    logger.warning(
+                        "Background thread still alive %.1fs after startup "
+                        "failure; cleanup is still in progress. The PID "
+                        "file or running flag may not have cleared yet.",
+                        _STARTUP_JOIN_TIMEOUT_S,
+                    )
+                else:
+                    self._thread = None
+            raise error
 
     def stop(self) -> None:
         """Request a graceful shutdown of the daemon.
@@ -254,28 +307,41 @@ class DaemonService:
         """
         logger.info("Starting daemon service (background)")
         self._started_at = time.monotonic()
+        self._startup_error = None
 
         try:
-            # Write PID file — F2 record format (pid + create_time) so
-            # ``is_running`` can detect PID recycling after crash.
-            if self.config.pid_file is not None:
-                self._pid_manager.write_pid_record(self.config.pid_file)
+            try:
+                # Write PID file — F2 record format (pid + create_time) so
+                # ``is_running`` can detect PID recycling after crash.
+                if self.config.pid_file is not None:
+                    self._pid_manager.write_pid_record(self.config.pid_file)
 
-            # Set up default periodic tasks
-            self._setup_default_tasks()
+                # Set up default periodic tasks
+                self._setup_default_tasks()
 
-            # Start the scheduler in background
-            self._scheduler.run_in_background()
+                # Start the scheduler in background
+                self._scheduler.run_in_background()
 
-            # Fire on_start callback
-            if self._on_start_callback is not None:
-                try:
-                    self._on_start_callback()
-                except Exception:
-                    logger.exception("on_start callback failed")
-
-            # Signal that startup is complete
-            self._started_event.set()
+                # Fire on_start callback
+                if self._on_start_callback is not None:
+                    try:
+                        self._on_start_callback()
+                    except Exception:
+                        logger.exception("on_start callback failed")
+            except Exception as exc:
+                # F4 hardening (#1323, finding 4): startup failed before the
+                # daemon was actually usable. Record it so start_background()
+                # re-raises instead of returning as if startup succeeded —
+                # the thread dying silently here would otherwise leave no
+                # PID file and no running daemon, with the caller none the
+                # wiser.
+                self._startup_error = exc
+                return
+            finally:
+                # Signal that startup is complete (success OR failure) —
+                # start_background() is waiting on this event and must not
+                # block for the full timeout on a fast failure.
+                self._started_event.set()
 
             # Main event loop
             self._run_loop()
