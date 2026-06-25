@@ -19,12 +19,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from services.intelligence.preference_storage import (
+
+from file_organizer.services.intelligence.preference_storage import (
     InMemoryPreferenceStorage,
     PreferenceStorage,
     SqlitePreferenceStorage,
 )
-from services.intelligence.preference_tracker import (
+from file_organizer.services.intelligence.preference_tracker import (
     Correction,
     CorrectionType,
     Preference,
@@ -412,7 +413,7 @@ class TestPreferenceTrackerInjection:
         # observable behavior (no SQLite file, find returns [] cleanly)
         # rather than poking ``tracker._storage`` (CodeRabbit on PR #207).
         tracker = PreferenceTracker()
-        from services.intelligence.preference_tracker import PreferenceType as PT
+        from file_organizer.services.intelligence.preference_tracker import PreferenceType as PT
 
         # find round-trip works without any backing file or external setup
         assert tracker.get_all_preferences(PT.FOLDER_MAPPING) == []
@@ -472,7 +473,7 @@ class TestPreferenceTrackerInjection:
         # Save through the injected storage, observe via the tracker
         pref = _make_preference()
         storage.save_preference(pref)
-        from services.intelligence.preference_tracker import PreferenceType as PT
+        from file_organizer.services.intelligence.preference_tracker import PreferenceType as PT
 
         assert len(tracker.get_all_preferences(PT.FOLDER_MAPPING)) == 1
 

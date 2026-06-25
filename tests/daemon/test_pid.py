@@ -13,7 +13,8 @@ from pathlib import Path
 
 import psutil
 import pytest
-from daemon.pid import _CREATE_TIME_TOLERANCE_S, PidFileManager
+
+from file_organizer.daemon.pid import _CREATE_TIME_TOLERANCE_S, PidFileManager
 
 pytestmark = [pytest.mark.unit, pytest.mark.smoke, pytest.mark.ci]
 
@@ -490,7 +491,7 @@ class TestWritePidRecordPermissions:
         """
         pid_file.write_text("0")
 
-        import daemon.pid as pid_mod
+        import file_organizer.daemon.pid as pid_mod
 
         # ``raising=False`` tolerates the attribute's absence if the
         # test itself runs on a platform that never had it.

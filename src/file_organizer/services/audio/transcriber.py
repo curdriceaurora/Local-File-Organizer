@@ -16,6 +16,13 @@ from file_organizer._compat import StrEnum
 
 logger = logging.getLogger(__name__)
 
+try:
+    import faster_whisper  # noqa: F401
+
+    _FASTER_WHISPER_AVAILABLE = True
+except ImportError:
+    _FASTER_WHISPER_AVAILABLE = False
+
 
 class ModelSize(StrEnum):
     """Whisper model sizes."""

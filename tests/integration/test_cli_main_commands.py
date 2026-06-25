@@ -250,7 +250,7 @@ class TestVersionFlag:
 
     def test_version_flag_prints_version(self) -> None:
         """--version flag outputs the version string."""
-        from version import __version__
+        from file_organizer.version import __version__
 
         result = runner.invoke(app, ["--version"])
         assert __version__ in result.output

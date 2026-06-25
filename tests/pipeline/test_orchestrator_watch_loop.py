@@ -481,6 +481,7 @@ class TestWatchLoopExecutor:
         """
         import logging
         from concurrent.futures import Future
+
         from file_organizer.pipeline.orchestrator import logger as orch_logger
 
         target = orch_logger
@@ -519,6 +520,7 @@ class TestWatchLoopExecutor:
         """A cancelled watch future is discarded without touching .exception()."""
         import logging
         from concurrent.futures import Future
+
         from file_organizer.pipeline.orchestrator import logger as orch_logger
 
         target = orch_logger

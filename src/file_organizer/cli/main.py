@@ -47,7 +47,7 @@ def _version_callback(value: bool) -> None:
     """Print the application version for the eager ``--version`` option."""
     if not value:
         return
-    from version import __version__
+    from file_organizer.version import __version__
 
     console.print(f"fo {__version__}")
     raise typer.Exit()

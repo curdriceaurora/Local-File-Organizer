@@ -356,6 +356,7 @@ markers = [
     "regression: marks tests intended for full regression runs",
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
+    "uses_setup_gate: opts out of the autouse setup-gate bypass to exercise the real gate",
     "asyncio: marks tests as async (requires pytest-asyncio)",
     "playwright: browser-based E2E tests (requires `playwright install <browser>` for chromium, firefox, or webkit; select with --browser=<name>; run with --override-ini='addopts=')",
 ]
