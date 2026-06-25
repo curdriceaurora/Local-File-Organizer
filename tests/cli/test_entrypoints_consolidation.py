@@ -11,6 +11,8 @@ from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
 
+pytestmark = [pytest.mark.ci, pytest.mark.unit, pytest.mark.integration]
+
 runner = CliRunner()
 
 
@@ -155,3 +157,27 @@ class TestDocsSubcommand:
             mock_subprocess_run.assert_called_once()
             args = mock_subprocess_run.call_args[0][0]
             assert args == ["/usr/local/bin/mkdocs", "serve", "--dev-addr", "0.0.0.0:9000"]
+
+    def test_docs_command_serve_error(
+        self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
+    ) -> None:
+        """Verify fo docs reports an error when the serve process exits non-zero."""
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_subprocess_run.return_value.returncode = 1
+
+        with patch("pathlib.Path.exists", return_value=True):
+            result = runner.invoke(app, ["docs"])
+            assert result.exit_code == 1
+            assert "Documentation server failed" in result.output
+
+    def test_docs_command_serve_keyboard_interrupt(
+        self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
+    ) -> None:
+        """Verify fo docs exits cleanly when the serve process is interrupted."""
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_subprocess_run.side_effect = KeyboardInterrupt
+
+        with patch("pathlib.Path.exists", return_value=True):
+            result = runner.invoke(app, ["docs"])
+            assert result.exit_code == 0
+            assert "Documentation server stopped" in result.output
