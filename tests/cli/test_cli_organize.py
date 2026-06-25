@@ -35,7 +35,7 @@ def _fake_check_setup() -> None:
             "[bold yellow]First-time setup required[/bold yellow]\n\n"
             "File Organizer needs to be configured before use.\n"
             "Run the setup wizard to get started:\n\n"
-            "  [bold cyan]file-organizer setup[/bold cyan]\n\n"
+            "  [bold cyan]fo setup[/bold cyan]\n\n"
             "This will detect your system capabilities and configure\n"
             "the optimal AI models for your hardware.",
             border_style="yellow",
@@ -87,7 +87,7 @@ class TestOrganize:
 
         assert result.exit_code == 1
         assert "First-time setup required" in result.output
-        assert "file-organizer setup" in result.output
+        assert "fo setup" in result.output
 
     @patch("file_organizer.core.organizer.FileOrganizer")
     def test_organize_basic(self, mock_cls: MagicMock, tmp_path: Path) -> None:
@@ -110,6 +110,8 @@ class TestOrganize:
             prefetch_depth=2,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -132,6 +134,8 @@ class TestOrganize:
             prefetch_depth=2,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -166,6 +170,8 @@ class TestOrganize:
             prefetch_depth=1,
             enable_vision=False,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -193,6 +199,8 @@ class TestOrganize:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -245,6 +253,8 @@ class TestOrganize:
             prefetch_depth=2,
             enable_vision=False,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -272,6 +282,8 @@ class TestOrganize:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=True,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -306,6 +318,8 @@ class TestOrganize:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -333,6 +347,8 @@ class TestOrganize:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch(
@@ -368,7 +384,7 @@ class TestPreview:
 
         assert result.exit_code == 1
         assert "First-time setup required" in result.output
-        assert "file-organizer setup" in result.output
+        assert "fo setup" in result.output
 
     @patch("file_organizer.core.organizer.FileOrganizer")
     def test_preview_basic(self, mock_cls: MagicMock, tmp_path: Path) -> None:
@@ -385,6 +401,8 @@ class TestPreview:
             prefetch_depth=2,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -401,6 +419,8 @@ class TestPreview:
             prefetch_depth=2,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -417,6 +437,8 @@ class TestPreview:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -433,6 +455,8 @@ class TestPreview:
             prefetch_depth=2,
             enable_vision=False,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -449,6 +473,8 @@ class TestPreview:
             prefetch_depth=2,
             enable_vision=False,
             no_prefetch=False,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
@@ -465,6 +491,8 @@ class TestPreview:
             prefetch_depth=0,
             enable_vision=True,
             no_prefetch=True,
+            transcribe_audio=False,
+            max_transcribe_seconds=600.0,
         )
 
     def test_preview_sequential_conflicts_with_max_workers(self, tmp_path: Path) -> None:

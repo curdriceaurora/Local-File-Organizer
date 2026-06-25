@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.update — uncovered lines 30-44, 62-83, 89-96."""
+"""Coverage tests for cli.update — uncovered lines 30-44, 62-83, 89-96."""
 
 from __future__ import annotations
 

@@ -60,7 +60,7 @@ class TestModelPull:
 
         result = runner.invoke(app, ["model", "pull", "qwen2.5:3b"])
         assert result.exit_code == 0
-        mock_mgr.pull_model.assert_called_once_with("qwen2.5:3b")
+        mock_mgr.pull_model.assert_called_once_with(name="qwen2.5:3b")
 
     @patch("file_organizer.models.model_manager.ModelManager")
     def test_pull_failure(self, mock_cls: MagicMock) -> None:
@@ -70,7 +70,7 @@ class TestModelPull:
 
         result = runner.invoke(app, ["model", "pull", "nonexistent:model"])
         assert result.exit_code == 1
-        mock_mgr.pull_model.assert_called_once_with("nonexistent:model")
+        mock_mgr.pull_model.assert_called_once_with(name="nonexistent:model")
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.__init__ — uncovered lines 60-71."""
+"""Coverage tests for cli.__init__ — uncovered lines 60-71."""
 
 from __future__ import annotations
 

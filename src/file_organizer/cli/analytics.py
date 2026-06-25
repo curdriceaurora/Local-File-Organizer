@@ -16,15 +16,15 @@ from loguru import logger
 from rich.console import Console
 from rich.table import Table
 
-from ..models.analytics import (
+from file_organizer.models.analytics import (
     DuplicateStats,
     FileDistribution,
     QualityMetrics,
     StorageStats,
     TimeSavings,
 )
-from ..services.analytics import AnalyticsService
-from ..utils.chart_generator import ChartGenerator
+from file_organizer.services.analytics import AnalyticsService
+from file_organizer.utils.chart_generator import ChartGenerator
 
 console = Console()
 
@@ -255,16 +255,16 @@ def analytics_command(args: list[str] | None = None) -> int:
         epilog="""
 Examples:
   # Show analytics for current directory
-  file-organizer analytics .
+  fo analytics .
 
   # Show analytics with depth limit
-  file-organizer analytics ~/Documents --max-depth 3
+  fo analytics ~/Documents --max-depth 3
 
   # Export analytics to JSON
-  file-organizer analytics ~/Downloads --export report.json
+  fo analytics ~/Downloads --export report.json
 
   # Export as text report
-  file-organizer analytics ~/Pictures --export report.txt --format text
+  fo analytics ~/Pictures --export report.txt --format text
         """,
     )
 

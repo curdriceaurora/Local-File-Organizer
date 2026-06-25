@@ -16,6 +16,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from file_organizer.cli.path_validation import resolve_cli_path
+
 autotag_app = typer.Typer(
     name="autotag",
     help="Auto-tagging suggestions and management.",
@@ -41,10 +43,8 @@ def suggest(
     """Suggest tags for files in a directory."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = directory.resolve()
-    if not resolved.is_dir():
-        console.print(f"[red]Error: Directory not found: {directory}[/red]")
-        raise typer.Exit(code=1)
+    # A.cli: consolidates the prior inline ``resolve() + is_dir()`` check.
+    resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 
     try:
         service = AutoTaggingService()
@@ -117,10 +117,8 @@ def apply(
     """Apply tags to a file."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = file_path.resolve()
-    if not resolved.exists():
-        console.print(f"[red]Error: File not found: {file_path}[/red]")
-        raise typer.Exit(code=1)
+    # A.cli: file arg — exists + not-dir.
+    resolved = resolve_cli_path(file_path, must_exist=True, must_be_dir=False)
 
     try:
         service = AutoTaggingService()
@@ -202,10 +200,7 @@ def batch(
     """Batch tag suggestion for directory."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = directory.resolve()
-    if not resolved.is_dir():
-        console.print(f"[red]Error: Directory not found: {directory}[/red]")
-        raise typer.Exit(code=1)
+    resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 
     try:
         service = AutoTaggingService()

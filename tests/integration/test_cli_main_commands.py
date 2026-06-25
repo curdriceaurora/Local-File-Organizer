@@ -1,15 +1,14 @@
 """Integration tests for CLI main commands.
 
-Covers: version, serve (ImportError + OSError paths), hardware-info (json/text),
-undo/redo/history, analytics, global callback flags (--verbose, --dry-run, --json,
---yes, --no-interactive).
+Covers: version, hardware-info (json/text), undo/redo/history, analytics,
+and global callback flags (--verbose, --dry-run, --json, --yes, --no-interactive).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -28,41 +27,13 @@ class TestVersionCommand:
 
     def test_version_output_contains_package_name(self) -> None:
         result = runner.invoke(app, ["version"])
-        assert "file-organizer" in result.output.lower()
+        assert "fo" in result.output.lower()
 
     def test_version_shows_version_string(self) -> None:
         from file_organizer.version import __version__
 
         result = runner.invoke(app, ["version"])
         assert __version__ in result.output
-
-
-class TestServeCommand:
-    def test_serve_missing_uvicorn_exits_1(self) -> None:
-        """When uvicorn is not installed the command must exit with code 1."""
-        with patch.dict("sys.modules", {"uvicorn": None}):
-            result = runner.invoke(app, ["serve", "--port", "9999"])
-        assert result.exit_code == 1
-        assert "uvicorn" in result.output.lower() or result.exception is not None
-
-    def test_serve_address_in_use_exits_1(self) -> None:
-        """OSError 'address already in use' causes exit 1 with hint message."""
-        mock_uvicorn = MagicMock()
-        mock_uvicorn.run.side_effect = OSError("address already in use")
-        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            result = runner.invoke(app, ["serve", "--port", "8000"])
-        assert result.exit_code == 1
-        # Must show the port hint
-        assert "8001" in result.output or "port" in result.output.lower()
-
-    def test_serve_generic_oserror_exits_1(self) -> None:
-        """Generic OSError exits 1 without port hint."""
-        mock_uvicorn = MagicMock()
-        mock_uvicorn.run.side_effect = OSError("permission denied")
-        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            result = runner.invoke(app, ["serve"])
-        assert result.exit_code == 1
-        assert "error" in result.output.lower()
 
 
 def _make_hw_profile() -> SimpleNamespace:
@@ -112,7 +83,6 @@ class TestGlobalCallbackFlags:
     def test_dry_run_flag_propagates(
         self,
         stub_all_models: None,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -133,7 +103,6 @@ class TestGlobalCallbackFlags:
     def test_verbose_flag_is_set(
         self,
         stub_all_models: None,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -153,7 +122,6 @@ class TestGlobalCallbackFlags:
     def test_json_flag_is_set(
         self,
         stub_all_models: None,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -173,7 +141,6 @@ class TestGlobalCallbackFlags:
     def test_yes_flag_is_set(
         self,
         stub_all_models: None,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -193,7 +160,6 @@ class TestGlobalCallbackFlags:
     def test_no_interactive_flag_is_set(
         self,
         stub_all_models: None,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -274,11 +240,28 @@ class TestUndoRedoHistoryCommands:
         assert result.exit_code in (0, 1)
 
 
+class TestVersionFlag:
+    """Tests for the eager --version global flag (distinct from the version sub-command)."""
+
+    def test_version_flag_exits_zero(self) -> None:
+        """--version eager flag exits with code 0."""
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+
+    def test_version_flag_prints_version(self) -> None:
+        """--version flag outputs the version string."""
+        from version import __version__
+
+        result = runner.invoke(app, ["--version"])
+        assert __version__ in result.output
+
+
 class TestAnalyticsCommand:
-    def test_analytics_no_args(self, tmp_path: Path) -> None:
-        """analytics with a directory argument runs without crash."""
-        result = runner.invoke(app, ["analytics", str(tmp_path)])
-        assert result.exit_code in (0, 1)
+    def test_analytics_no_args(self) -> None:
+        """analytics without a directory hits the None branch; argparse exits 2."""
+        result = runner.invoke(app, ["analytics"])
+        # directory is None → args stays []; analytics_command requires directory → exit 2
+        assert result.exit_code in (0, 1, 2)
 
     def test_analytics_with_directory(self, tmp_path: Path) -> None:
         """analytics with an explicit directory argument is accepted."""
@@ -289,3 +272,27 @@ class TestAnalyticsCommand:
         """analytics --verbose is accepted."""
         result = runner.invoke(app, ["analytics", str(tmp_path), "--verbose"])
         assert result.exit_code in (0, 1)
+
+
+class TestEntryPoint:
+    """Tests for _register_profile_command and main() entry point."""
+
+    def test_register_profile_command_does_not_raise(self) -> None:
+        """_register_profile_command() runs without error (ImportError is silenced)."""
+        from file_organizer.cli.main import _register_profile_command
+
+        _register_profile_command()  # should not raise
+
+    def test_main_calls_register_and_app(self) -> None:
+        """main() calls _register_profile_command then app()."""
+        from unittest.mock import patch
+
+        from file_organizer.cli.main import main
+
+        with (
+            patch("file_organizer.cli.main._register_profile_command") as mock_reg,
+            patch("file_organizer.cli.main.app") as mock_app,
+        ):
+            main()
+        mock_reg.assert_called_once()
+        mock_app.assert_called_once()

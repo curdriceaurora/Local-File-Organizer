@@ -1,4 +1,4 @@
-"""Tests for file_organizer.cli.undo_redo module.
+"""Tests for cli.undo_redo module.
 
 Tests the function-based undo/redo/history CLI commands including:
 - undo_command (dry-run, operation_id, transaction_id, actual undo)

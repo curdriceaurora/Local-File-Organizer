@@ -1,4 +1,4 @@
-"""Tests for file_organizer.cli.completion module.
+"""Tests for cli.completion module.
 
 Tests path auto-completion callbacks for Typer CLI arguments:
 - complete_directory: Yield directory completions
@@ -149,7 +149,7 @@ class TestCompleteFile:
         test_dir = tmp_path / "test"
         test_dir.mkdir()
         (test_dir / "data.json").touch()
-        (test_dir / "config.yaml").touch()
+        (test_dir / "file_organizer.config.yaml").touch()
         (test_dir / "noext").touch()
 
         import os
@@ -161,7 +161,7 @@ class TestCompleteFile:
             result_names = [r[0] for r in results]
             # Should have collected the files
             assert any("data.json" in name for name in result_names)
-            assert any("config.yaml" in name for name in result_names)
+            assert any("file_organizer.config.yaml" in name for name in result_names)
         finally:
             os.chdir(old_cwd)
 

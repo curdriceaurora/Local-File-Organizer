@@ -304,10 +304,28 @@ class TestRulesExportImport:
         assert result.exit_code == 0
         assert output_file.exists()
 
-    def test_rules_import_missing_file_exits_1(self, tmp_path: Path) -> None:
+    def test_rules_export_missing_parent_dir_exits_2(self, tmp_path: Path) -> None:
+        """A.cli: ``--output`` may point at a not-yet-created file, but the
+        parent directory must exist. Writing to ``tmp/a/b/rules.yaml`` when
+        ``tmp/a/b/`` doesn't exist is rejected with ``typer.BadParameter``.
+        """
+        from file_organizer.services.copilot.rules.models import RuleSet
+
+        mock_mgr = MagicMock()
+        mock_rs = RuleSet(name="default", rules=[])
+        mock_mgr.load_rule_set.return_value = mock_rs
+
+        missing_parent = tmp_path / "nonexistent_dir" / "rules.yaml"
+        with patch("file_organizer.services.copilot.rules.RuleManager", return_value=mock_mgr):
+            result = runner.invoke(app, ["rules", "export", "--output", str(missing_parent)])
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
+
+    def test_rules_import_missing_file_exits_2(self, tmp_path: Path) -> None:
+        """A.cli: non-existent file → ``typer.BadParameter`` (exit 2)."""
         result = runner.invoke(app, ["rules", "import", str(tmp_path / "nonexistent.yaml")])
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower() or "file" in result.output.lower()
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_rules_import_valid_yaml(self, tmp_path: Path) -> None:
         yaml_file = tmp_path / "rules.yaml"

@@ -118,7 +118,7 @@ class PARAFileMover:
         Args:
             config: PARA configuration. Uses defaults if not provided.
             suggestion_engine: Pre-configured suggestion engine. Created
-                from config if not provided.
+                from file_organizer.config if not provided.
             root_dir: Root directory for PARA organization. Defaults to
                 config.default_root or current working directory.
         """

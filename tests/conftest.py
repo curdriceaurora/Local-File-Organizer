@@ -543,3 +543,34 @@ def mock_marketplace_service() -> MagicMock:
     mock_instance.install.return_value = installed_plugin
 
     return mock_instance
+
+
+# ---------------------------------------------------------------------------
+# Step 3: global setup-gate bypass for all CLI-invoking tests.
+# ---------------------------------------------------------------------------
+# The first-run setup gate now lives in `cli.main.main_callback` and runs
+# for every non-allowlisted command. Existing CLI smoke/contract tests
+# don't pre-mark setup as complete (they assumed the command-level gate
+# they patched explicitly), so the gate would block them and break
+# dozens of pre-existing tests.
+#
+# This autouse fixture patches `cli.organize._check_setup_completed` to
+# return True for ALL tests project-wide. The gate in `cli.main` imports
+# this function LAZILY (inside the callback body via
+# `from file_organizer.cli.organize import _check_setup_completed`) rather than at
+# module level, so each invocation re-fetches the attribute from
+# `cli.organize` — patching the origin module is therefore correct.
+# Tests that specifically exercise the gate must opt out by adding
+# `@pytest.mark.uses_setup_gate`.
+# Those tests configure the on-disk `setup_completed` flag via a
+# tmp_path config dir and need the gate to actually run.
+@pytest.fixture(autouse=True)
+def _bypass_setup_gate(request: pytest.FixtureRequest) -> object:
+    """Default-bypass the global setup gate; opt-out via `uses_setup_gate` marker."""
+    if request.node.get_closest_marker("uses_setup_gate") is not None:
+        yield
+        return
+    from unittest.mock import patch
+
+    with patch("file_organizer.cli.organize._check_setup_completed", return_value=True):
+        yield

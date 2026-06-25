@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from .hasher import FileHasher, HashAlgorithm
 from .index import DuplicateIndex, FileMetadata
 
@@ -25,6 +27,12 @@ class ScanOptions:
     algorithm: HashAlgorithm = "sha256"
     recursive: bool = True
     follow_symlinks: bool = False
+    # #170: default False keeps `.env` / `.ssh/*` / `.config/*` out of the
+    # dedupe hash index. `fo dedupe resolve` can DELETE files, so including
+    # hidden entries in the index means a backup-directory duplicate could
+    # trigger deletion of a credential file. Flipping this to True is the
+    # opt-in, CLI-prompted path — see `cli.dedupe_v2`.
+    include_hidden: bool = False
     min_file_size: int = 0  # Minimum file size to consider (bytes)
     max_file_size: int | None = None  # Maximum file size (None = no limit)
     file_patterns: list[str] | None = None  # Glob patterns to include
@@ -103,21 +111,19 @@ class DuplicateDetector:
         """
         files = []
 
-        # Use rglob for recursive, glob for non-recursive
-        if options.recursive:
-            pattern = "**/*"
-        else:
-            pattern = "*"
-
-        for path in directory.rglob(pattern) if options.recursive else directory.glob(pattern):
-            # Skip if not a file
-            if not path.is_file():
-                continue
-
-            # Skip symlinks if requested
-            if path.is_symlink() and not options.follow_symlinks:
-                continue
-
+        # Secure defaults: dedupe can DELETE files (`fo dedupe resolve`),
+        # so never hash / index entries under `.env`, `.ssh/*`, etc. by
+        # default. Users who genuinely want to dedupe their `.cache/` or
+        # `.config/` trees opt in via `fo dedupe … --include-hidden`, which
+        # the CLI layer (cli.dedupe_v2) confirms with an explicit prompt
+        # for the resolve path because the hidden set may include secrets.
+        walker = safe_walk(
+            directory,
+            recursive=options.recursive,
+            follow_symlinks=options.follow_symlinks,
+            include_hidden=options.include_hidden,
+        )
+        for path in walker:
             # Check file size constraints
             try:
                 size = path.stat().st_size

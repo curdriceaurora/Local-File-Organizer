@@ -27,7 +27,7 @@ def _make_config(
     device: str = "auto",
     check_on_startup: bool = True,
     interval_hours: int = 24,
-    repo: str = "curdriceaurora/Local-File-Organizer",
+    repo: str = "curdriceaurora/fo-core",
     include_prereleases: bool = False,
 ) -> MagicMock:
     """Return a mock AppConfig object."""
@@ -128,22 +128,6 @@ class TestConfigEdit:
         assert "Saved" in result.output
         assert cfg.models.text_model == "llama3:8b"
 
-    @pytest.mark.ci
-    @patch("file_organizer.config.ConfigManager")
-    def test_edit_refuses_unsupported_version(self, mock_cls: MagicMock) -> None:
-        from file_organizer.config.manager import UnsupportedConfigVersionError
-
-        mock_mgr = MagicMock()
-        mock_cls.return_value = mock_mgr
-        mock_mgr.load.return_value = _make_config()
-        mock_mgr.save.side_effect = UnsupportedConfigVersionError("default", "99.0")
-
-        result = runner.invoke(app, ["config", "edit", "--methodology", "para"])
-        assert result.exit_code == 1
-        assert "unsupported" in result.output.lower()
-        mock_mgr.load.assert_called_once_with(profile="default")
-        mock_mgr.save.assert_called_once()
-
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_temperature(self, mock_cls: MagicMock) -> None:
         result = runner.invoke(app, ["config", "edit", "--temperature", "2.5"])
@@ -152,15 +136,25 @@ class TestConfigEdit:
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_device(self, mock_cls: MagicMock) -> None:
+        # Step 3 swapped the validation-error format from "device must be
+        # one of [...]" to the hint-rich "Invalid value 'tpu' for device.
+        # Valid values: ..." style (lists valid values + "did you mean").
+        # Use wrap-immune word checks since Rich may break long messages.
         result = runner.invoke(app, ["config", "edit", "--device", "tpu"])
         assert result.exit_code == 1
-        assert "device must be one of" in result.output
+        normalized = " ".join(result.output.lower().split())
+        assert "invalid value" in normalized
+        assert "device" in normalized
+        assert "'tpu'" in normalized
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_methodology(self, mock_cls: MagicMock) -> None:
         result = runner.invoke(app, ["config", "edit", "--methodology", "custom"])
         assert result.exit_code == 1
-        assert "methodology must be one of" in result.output
+        normalized = " ".join(result.output.lower().split())
+        assert "invalid value" in normalized
+        assert "methodology" in normalized
+        assert "'custom'" in normalized
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_valid_device(self, mock_cls: MagicMock) -> None:

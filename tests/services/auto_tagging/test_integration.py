@@ -51,7 +51,7 @@ def sample_files(temp_dir):
     files["document"] = doc_file
 
     # Configuration file
-    config_file = temp_dir / "config.json"
+    config_file = temp_dir / "file_organizer.config.json"
     config_file.write_text('{"setting": "value"}')
     files["config"] = config_file
 

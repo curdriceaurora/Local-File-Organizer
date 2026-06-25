@@ -161,7 +161,7 @@ class TestDaemonServicePidFile:
 
     def test_pid_file_written_and_removed(self, tmp_path):
         """Test pid file written and removed."""
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         config = _make_config(pid_file=pid_file)
         daemon = DaemonService(config)
         daemon.start_background()
@@ -237,7 +237,7 @@ class TestDaemonServiceForeground:
 
     def test_start_foreground_runs_loop_until_stop(self, tmp_path):
         """start() runs in foreground blocking until stop_event is set."""
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         config = _make_config(pid_file=pid_file)
         daemon = DaemonService(config)
 

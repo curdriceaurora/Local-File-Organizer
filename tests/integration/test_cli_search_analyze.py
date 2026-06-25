@@ -65,10 +65,11 @@ class TestSearchCommand:
         assert result.exit_code == 0
         assert "no files" in result.output.lower()
 
-    def test_search_nonexistent_directory_exits_1(self, tmp_path: Path) -> None:
+    def test_search_nonexistent_directory_exits_2(self, tmp_path: Path) -> None:
+        """A.cli: non-existent dir → ``typer.BadParameter`` (exit 2)."""
         result = runner.invoke(app, ["search", "anything", str(tmp_path / "gone")])
-        assert result.exit_code == 1
-        assert "error" in result.output.lower() or "does not exist" in result.output.lower()
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_search_invalid_type_filter_exits_1(self, tmp_path: Path) -> None:
         d = _make_test_dir(tmp_path)
@@ -148,10 +149,11 @@ class TestSearchCommand:
 
 
 class TestAnalyzeCommand:
-    def test_analyze_missing_file_exits_1(self, tmp_path: Path) -> None:
+    def test_analyze_missing_file_exits_2(self, tmp_path: Path) -> None:
+        """A.cli: non-existent file → ``typer.BadParameter`` (exit 2)."""
         result = runner.invoke(app, ["analyze", str(tmp_path / "nonexistent.txt")])
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower() or "error" in result.output.lower()
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_analyze_binary_file_exits_1(self, tmp_path: Path) -> None:
         binary_file = tmp_path / "binary.bin"

@@ -1,4 +1,4 @@
-"""Tests for file_organizer.cli.analytics module.
+"""Tests for cli.analytics module.
 
 Tests the argparse-based analytics CLI including:
 - analytics_command main function

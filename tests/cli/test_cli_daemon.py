@@ -1,4 +1,7 @@
-"""Tests for daemon CLI commands."""
+"""Tests for the daemon CLI sub-app (daemon.py).
+
+Tests ``daemon start``, ``stop``, ``status``, ``watch``, and ``process`` commands.
+"""
 
 from __future__ import annotations
 
@@ -8,172 +11,295 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from file_organizer.cli.daemon import daemon_app
+from file_organizer.cli.main import app
+from file_organizer.daemon.pid import PidRecord
+
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
 
-@pytest.mark.unit
+# ---------------------------------------------------------------------------
+# daemon start
+# ---------------------------------------------------------------------------
+
+
 class TestDaemonStart:
-    """Tests for 'daemon start' command."""
+    """Tests for ``daemon start``."""
 
     @patch("file_organizer.daemon.service.DaemonService")
     @patch("file_organizer.daemon.config.DaemonConfig")
-    def test_start_foreground(self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock) -> None:
+    def test_start_foreground(
+        self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock, tmp_path: Path
+    ) -> None:
         mock_svc = MagicMock()
         mock_svc_cls.return_value = mock_svc
-        mock_svc.start.side_effect = KeyboardInterrupt
+        # Simulate immediate return (no blocking)
+        mock_svc.start.return_value = None
 
-        result = runner.invoke(daemon_app, ["start", "--foreground"])
+        result = runner.invoke(
+            app,
+            [
+                "daemon",
+                "start",
+                "--watch-dir",
+                str(tmp_path),
+                "--foreground",
+            ],
+        )
         assert result.exit_code == 0
+        assert "foreground" in result.output.lower()
         mock_svc.start.assert_called_once()
 
     @patch("file_organizer.daemon.service.DaemonService")
     @patch("file_organizer.daemon.config.DaemonConfig")
-    def test_start_background(self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock) -> None:
-        mock_svc = MagicMock()
-        mock_svc_cls.return_value = mock_svc
-
-        result = runner.invoke(daemon_app, ["start"])
-        assert result.exit_code == 0
-        mock_svc.start_background.assert_called_once()
-
-    @patch("file_organizer.daemon.service.DaemonService")
-    @patch("file_organizer.daemon.config.DaemonConfig")
-    def test_start_with_dry_run(self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock) -> None:
+    def test_start_background(
+        self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock, tmp_path: Path
+    ) -> None:
         mock_svc = MagicMock()
         mock_svc_cls.return_value = mock_svc
 
         result = runner.invoke(
-            daemon_app,
-            [
-                "start",
-                "--watch-dir",
-                "/tmp/watch",
-                "--output-dir",
-                "/tmp/out",
-                "--poll-interval",
-                "2.0",
-                "--dry-run",
-            ],
+            app,
+            ["daemon", "start", "--watch-dir", str(tmp_path)],
         )
         assert result.exit_code == 0
-        assert "Dry-run" in result.output
+        assert "background" in result.output.lower()
+        mock_svc.start_background.assert_called_once()
+
+    @patch("file_organizer.daemon.service.DaemonService")
+    @patch("file_organizer.daemon.config.DaemonConfig")
+    def test_start_dry_run(
+        self, mock_config_cls: MagicMock, mock_svc_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_svc = MagicMock()
+        mock_svc_cls.return_value = mock_svc
+
+        result = runner.invoke(
+            app,
+            ["daemon", "start", "--watch-dir", str(tmp_path), "--dry-run"],
+        )
+        assert result.exit_code == 0
+        assert "dry-run" in result.output.lower() or "Dry-run" in result.output
 
 
-@pytest.mark.unit
+# ---------------------------------------------------------------------------
+# daemon stop
+# ---------------------------------------------------------------------------
+
+
 class TestDaemonStop:
-    """Tests for 'daemon stop' command."""
+    """Tests for ``daemon stop``."""
 
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
     @patch("file_organizer.daemon.pid.PidFileManager")
-    def test_stop_no_pid_file(self, mock_mgr_cls: MagicMock, tmp_path: Path) -> None:
-        # Use a non-existent PID file
-        with patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", tmp_path / "nopid"):
-            result = runner.invoke(daemon_app, ["stop"])
+    def test_stop_no_pid_file(self, mock_pid_cls: MagicMock, mock_pid_file: MagicMock) -> None:
+        mock_pid_file.exists.return_value = False
+
+        result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 1
+        assert "No PID file" in result.output or "not be running" in result.output
 
     @patch("file_organizer.cli.daemon.os.kill")
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
     @patch("file_organizer.daemon.pid.PidFileManager")
     def test_stop_success(
-        self, mock_mgr_cls: MagicMock, mock_kill: MagicMock, tmp_path: Path
+        self,
+        mock_pid_cls: MagicMock,
+        mock_pid_file: MagicMock,
+        mock_kill: MagicMock,
     ) -> None:
-        pid_file = tmp_path / "daemon.pid"
-        pid_file.write_text("12345")
+        mock_pid_file.exists.return_value = True
         mock_mgr = MagicMock()
-        mock_mgr_cls.return_value = mock_mgr
-        mock_mgr.read_pid.return_value = 12345
+        mock_pid_cls.return_value = mock_mgr
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
-        with patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file):
-            result = runner.invoke(daemon_app, ["stop"])
+        result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
         assert "stopped" in result.output.lower()
 
-
-@pytest.mark.unit
-class TestDaemonStatus:
-    """Tests for 'daemon status' command."""
-
+    @patch("file_organizer.cli.daemon.os.kill", side_effect=ProcessLookupError)
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
     @patch("file_organizer.daemon.pid.PidFileManager")
-    def test_status_not_running(self, mock_mgr_cls: MagicMock, tmp_path: Path) -> None:
+    def test_stop_process_not_found(
+        self,
+        mock_pid_cls: MagicMock,
+        mock_pid_file: MagicMock,
+        mock_kill: MagicMock,
+    ) -> None:
+        mock_pid_file.exists.return_value = True
         mock_mgr = MagicMock()
-        mock_mgr_cls.return_value = mock_mgr
-        mock_mgr.is_running.return_value = False
+        mock_pid_cls.return_value = mock_mgr
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=99999, create_time=None)
 
-        with patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", tmp_path / "nopid"):
-            result = runner.invoke(daemon_app, ["status"])
+        result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
-        assert "Stopped" in result.output
+        assert "not found" in result.output.lower()
 
+
+# ---------------------------------------------------------------------------
+# daemon status
+# ---------------------------------------------------------------------------
+
+
+class TestDaemonStatus:
+    """Tests for ``daemon status``."""
+
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
     @patch("file_organizer.daemon.pid.PidFileManager")
-    def test_status_running(self, mock_mgr_cls: MagicMock, tmp_path: Path) -> None:
-        pid_file = tmp_path / "daemon.pid"
-        pid_file.write_text("99999")
+    def test_status_running(self, mock_pid_cls: MagicMock, mock_pid_file: MagicMock) -> None:
+        mock_pid_file.exists.return_value = True
         mock_mgr = MagicMock()
-        mock_mgr_cls.return_value = mock_mgr
+        mock_pid_cls.return_value = mock_mgr
         mock_mgr.is_running.return_value = True
-        mock_mgr.read_pid.return_value = 99999
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
-        with patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file):
-            result = runner.invoke(daemon_app, ["status"])
+        result = runner.invoke(app, ["daemon", "status"])
         assert result.exit_code == 0
         assert "Running" in result.output
 
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
+    @patch("file_organizer.daemon.pid.PidFileManager")
+    def test_status_stopped(self, mock_pid_cls: MagicMock, mock_pid_file: MagicMock) -> None:
+        mock_pid_file.exists.return_value = False
+        mock_mgr = MagicMock()
+        mock_pid_cls.return_value = mock_mgr
+        mock_mgr.is_running.return_value = False
 
-@pytest.mark.unit
+        result = runner.invoke(app, ["daemon", "status"])
+        assert result.exit_code == 0
+        assert "Stopped" in result.output
+
+
+# ---------------------------------------------------------------------------
+# daemon process
+# ---------------------------------------------------------------------------
+
+
 class TestDaemonProcess:
-    """Tests for 'daemon process' command."""
+    """Tests for ``daemon process``."""
 
     @patch("file_organizer.core.organizer.FileOrganizer")
-    def test_process_success(self, mock_org_cls: MagicMock) -> None:
+    def test_process_success(self, mock_org_cls: MagicMock, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+
         mock_org = MagicMock()
         mock_org_cls.return_value = mock_org
-
         mock_result = MagicMock()
         mock_result.total_files = 10
         mock_result.processed_files = 8
         mock_result.skipped_files = 1
         mock_result.failed_files = 1
-        mock_result.organized_structure = {"Docs": ["a.pdf"], "Imgs": ["b.jpg"]}
-        mock_result.errors = [("bad.txt", "Cannot read")]
-        mock_org.organize.return_value = mock_result
-
-        result = runner.invoke(daemon_app, ["process", "/tmp/in", "/tmp/out"])
-        assert result.exit_code == 0
-        assert "10" in result.output
-
-    @patch("file_organizer.core.organizer.FileOrganizer")
-    def test_process_dry_run(self, mock_org_cls: MagicMock) -> None:
-        mock_org = MagicMock()
-        mock_org_cls.return_value = mock_org
-
-        mock_result = MagicMock()
-        mock_result.total_files = 5
-        mock_result.processed_files = 5
-        mock_result.skipped_files = 0
-        mock_result.failed_files = 0
-        mock_result.organized_structure = {}
+        mock_result.organized_structure = {"docs": [], "images": []}
         mock_result.errors = []
         mock_org.organize.return_value = mock_result
 
-        result = runner.invoke(daemon_app, ["process", "/tmp/in", "/tmp/out", "--dry-run"])
+        result = runner.invoke(app, ["daemon", "process", str(input_dir), str(output_dir)])
         assert result.exit_code == 0
-        assert "Dry-run" in result.output
+        assert "10" in result.output
+        assert "8" in result.output
 
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_process_with_errors(self, mock_org_cls: MagicMock, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
 
-@pytest.mark.unit
-class TestDaemonHelp:
-    """Verify help text renders."""
+        mock_org = MagicMock()
+        mock_org_cls.return_value = mock_org
+        mock_result = MagicMock()
+        mock_result.total_files = 5
+        mock_result.processed_files = 3
+        mock_result.skipped_files = 0
+        mock_result.failed_files = 2
+        mock_result.organized_structure = {}
+        mock_result.errors = [("file1.txt", "read error"), ("file2.pdf", "corrupt")]
+        mock_org.organize.return_value = mock_result
 
-    def test_daemon_help(self) -> None:
-        result = runner.invoke(daemon_app, ["--help"])
+        result = runner.invoke(app, ["daemon", "process", str(input_dir), str(output_dir)])
         assert result.exit_code == 0
-        assert "daemon" in result.output.lower() or "background" in result.output.lower()
+        assert "Errors" in result.output
+        assert "file1.txt" in result.output
 
-    def test_start_help(self) -> None:
-        result = runner.invoke(daemon_app, ["start", "--help"])
-        assert result.exit_code == 0
-        assert "watch-dir" in result.output or "foreground" in result.output
+    @patch(
+        "file_organizer.core.organizer.FileOrganizer",
+        side_effect=RuntimeError("Model unavailable"),
+    )
+    def test_process_exception(self, mock_org_cls: MagicMock, tmp_path: Path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
 
-    def test_process_help(self) -> None:
-        result = runner.invoke(daemon_app, ["process", "--help"])
+        result = runner.invoke(app, ["daemon", "process", str(input_dir), str(output_dir)])
+        assert result.exit_code == 1
+        assert "Model unavailable" in result.output
+
+
+class TestDaemonWatch:
+    """Tests for ``fo daemon watch`` — the polling loop that D#167 left
+    uncovered when the legacy watch entry point was removed.
+    """
+
+    @patch("file_organizer.watcher.monitor.FileMonitor")
+    @patch("file_organizer.watcher.config.WatcherConfig")
+    def test_watch_prints_events_then_exits_on_ctrl_c(
+        self, mock_config_cls: MagicMock, mock_monitor_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        evt = MagicMock()
+        evt.event_type = "created"
+        evt.path = str(watch_dir / "new.txt")
+        # First poll yields an event; second poll raises KeyboardInterrupt
+        # so the command exits cleanly (that's the documented stop mechanism).
+        mock_monitor.get_events_blocking.side_effect = [[evt], KeyboardInterrupt()]
+
+        result = runner.invoke(app, ["daemon", "watch", str(watch_dir)])
         assert result.exit_code == 0
+        # Rich wraps long paths at the CliRunner terminal width — normalize
+        # line breaks before asserting file-name substrings so the test
+        # passes regardless of the platform's reported width.
+        normalized_output = result.output.replace("\n", "")
+        assert "Watching" in result.output
+        assert "new.txt" in normalized_output
+        assert "Stopped watching" in result.output
+        mock_monitor.start.assert_called_once()
+        mock_monitor.stop.assert_called_once()
+
+    @patch("file_organizer.watcher.monitor.FileMonitor")
+    @patch("file_organizer.watcher.config.WatcherConfig")
+    def test_watch_uses_event_src_path_fallback_when_path_missing(
+        self, mock_config_cls: MagicMock, mock_monitor_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        class _EventNoPath:
+            event_type = "modified"
+            src_path = str(watch_dir / "fallback.txt")
+
+        mock_monitor.get_events_blocking.side_effect = [
+            [_EventNoPath()],
+            KeyboardInterrupt(),
+        ]
+
+        result = runner.invoke(app, ["daemon", "watch", str(watch_dir)])
+        assert result.exit_code == 0
+        # Rich wraps long paths at the terminal width that CliRunner exposes,
+        # which can split "fallback.txt" across a newline on narrow Linux CI
+        # runners. Normalize line breaks before matching so the assertion is
+        # about *content*, not Rich's layout.
+        normalized_output = result.output.replace("\n", "")
+        assert "fallback.txt" in normalized_output

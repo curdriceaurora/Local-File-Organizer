@@ -1,7 +1,8 @@
-"""Coverage tests for file_organizer.cli.copilot — uncovered lines 43-79, 85-100."""
+"""Coverage tests for cli.copilot — uncovered lines 43-79, 85-100."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -99,19 +100,20 @@ class TestCopilotChat:
         # Should exit cleanly
         assert result.exit_code == 0
 
-    def test_with_directory_option(self) -> None:
+    def test_with_directory_option(self, tmp_path: Path) -> None:
         from file_organizer.cli.copilot import copilot_app
 
         mock_engine = MagicMock()
         mock_engine.chat.return_value = "ok"
+        work_dir = str(tmp_path / "test")
 
         with patch(
             "file_organizer.services.copilot.engine.CopilotEngine", return_value=mock_engine
         ) as mock_cls:
-            result = runner.invoke(copilot_app, ["chat", "--dir", "/tmp/test", "hello"])
+            result = runner.invoke(copilot_app, ["chat", "--dir", work_dir, "hello"])
 
         assert result.exit_code == 0
-        mock_cls.assert_called_once_with(working_directory="/tmp/test")
+        mock_cls.assert_called_once_with(working_directory=work_dir)
 
 
 class TestCopilotStatus:

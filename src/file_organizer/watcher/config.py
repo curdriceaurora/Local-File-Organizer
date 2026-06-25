@@ -117,7 +117,7 @@ def _matches_pattern(path_str: str, pattern: str) -> bool:
     # forward slashes — required for PurePosixPath and fnmatch to work correctly
     # on Windows where str(Path(...)) uses backslashes.
     normalized = path_str.replace("\\", "/")
-    # Also normalize the pattern so Windows-style patterns (e.g. from config
+    # Also normalize the pattern so Windows-style patterns (e.g. from file_organizer.config
     # files edited on Windows) match the normalized path string.
     normalized_pattern = pattern.replace("\\", "/")
 

@@ -11,8 +11,9 @@ import logging
 import sys
 from pathlib import Path
 
-from ..undo.undo_manager import UndoManager
-from ..undo.viewer import HistoryViewer
+from file_organizer.undo.undo_manager import UndoManager
+from file_organizer.undo.viewer import HistoryViewer
+
 from . import undo_history
 
 logger = logging.getLogger(__name__)
