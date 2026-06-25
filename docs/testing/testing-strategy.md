@@ -28,6 +28,7 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.playwright    # Playwright browser smoke tests (require a running server)
 @pytest.mark.security      # Security hardening / regression tests (tests/security)
 @pytest.mark.extras        # Optional-dependency matrix tests (tests/extras)
+@pytest.mark.uses_setup_gate # Opts out of the autouse setup-gate bypass to exercise the real gate
 
 def test_example():
     pass

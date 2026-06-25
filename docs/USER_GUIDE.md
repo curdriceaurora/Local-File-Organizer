@@ -75,6 +75,8 @@ File Organizer provides two equivalent entrypoints: `file-organizer` and the sho
 | `analyze` | Analyze a file and display AI-generated metadata |
 | `tui` | Launch the Terminal User Interface |
 | `serve` | Start the web UI server |
+| `desktop` | Launch the native desktop window application |
+| `docs` | Build or serve the project documentation |
 | `undo` | Undo the last file operation |
 | `redo` | Redo a previously undone operation |
 | `history` | Show operation history |
@@ -430,6 +432,40 @@ file-organizer serve --host 0.0.0.0 --port 9000
 ```
 
 Then open `http://localhost:8000/ui/` in your browser.
+
+## Desktop UI
+
+File Organizer includes a native desktop window application for managing files.
+
+### Launching the Desktop Application
+
+```bash
+# Launch with default settings
+file-organizer desktop
+
+# Specify custom window properties
+file-organizer desktop --title "My File Organizer" --width 1024 --height 768
+```
+
+## Project Documentation
+
+You can build or serve the local project documentation using the `docs` subcommand.
+
+### Serving Documentation Locally
+
+```bash
+# Start the local documentation server (localhost:8001)
+file-organizer docs
+
+# Specify custom host and port
+file-organizer docs --host 0.0.0.0 --port 9000
+```
+
+### Compiling Documentation to HTML
+
+```bash
+file-organizer docs --build
+```
 
 ## Configuration
 

@@ -43,7 +43,7 @@ chmod +x file-organizer-desktop-*
 
 ```bash
 pip install "local-file-organizer[desktop]"
-file-organizer-desktop
+file-organizer desktop  # Or the short alias: fo desktop
 ```
 
 ### Option C — Install from source
@@ -52,7 +52,7 @@ file-organizer-desktop
 git clone https://github.com/curdriceaurora/Local-File-Organizer.git
 cd Local-File-Organizer
 pip install -e ".[desktop]"
-file-organizer-desktop
+file-organizer desktop  # Or the short alias: fo desktop
 ```
 
 ## Prerequisites
@@ -74,7 +74,10 @@ Before launching the desktop app:
 
 ## First Launch
 
-When you run `file-organizer-desktop` for the first time:
+When you run `file-organizer desktop` (or `fo desktop`) for the first time:
+
+!!! note
+    The legacy standalone `file-organizer-desktop` command is retained as a backward-compatibility alias, but using the unified `fo desktop` subcommand is recommended.
 
 1. The app allocates a free local port (e.g. `http://127.0.0.1:54321`).
 2. The uvicorn server starts in the background (takes 1–3 seconds on first

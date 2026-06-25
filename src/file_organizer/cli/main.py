@@ -62,6 +62,9 @@ _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
         "recover",
         "config",
         "hardware-info",
+        "serve",
+        "desktop",
+        "docs",
     }
 )
 """Commands that work pre-setup. They're either bootstrap (`setup`,
@@ -263,6 +266,85 @@ def launch_tui() -> None:
     run_tui()
 
 
+@app.command(name="desktop")
+def launch_desktop(
+    title: str = typer.Option("File Organizer", help="Window title bar text."),
+    width: int = typer.Option(1280, help="Initial window width in logical pixels."),
+    height: int = typer.Option(800, help="Initial window height in logical pixels."),
+) -> None:
+    """Launch the native desktop window application."""
+    try:
+        from file_organizer.desktop.app import launch
+    except ImportError as exc:
+        console.print(
+            "[red]Error: pywebview is not installed.[/red]\n"
+            "Install it with: [bold]pip install 'file-organizer\\[desktop]'[/bold]"
+        )
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[bold]Launching Desktop UI[/bold] ({title})...")
+    try:
+        launch(title=title, width=width, height=height)
+    except Exception as exc:
+        console.print(f"[red]Error launching desktop: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+
+@app.command(name="docs")
+def docs_command(
+    build: bool = typer.Option(
+        False, "--build", "-b", help="Compile documentation to HTML instead of serving."
+    ),
+    host: str = typer.Option("127.0.0.1", help="Bind address for the docs server."),
+    port: int = typer.Option(8001, help="Port number for the docs server."),
+) -> None:
+    """Build or serve the project documentation."""
+    import shutil
+    import subprocess
+
+    mkdocs = shutil.which("mkdocs")
+    if not mkdocs:
+        console.print(
+            "[red]Error: mkdocs is not installed.[/red]\n"
+            "Install it with: [bold]pip install 'file-organizer\\[docs]'[/bold]"
+        )
+        raise typer.Exit(code=1)
+
+    # Resolve project root where mkdocs.yml is located
+    # src/file_organizer/cli/main.py is 3 levels deep in src/
+    project_root = Path(__file__).parents[3]
+    mkdocs_yml = project_root / "mkdocs.yml"
+    if not mkdocs_yml.exists():
+        # Fallback to current working directory
+        project_root = Path.cwd()
+        mkdocs_yml = project_root / "mkdocs.yml"
+        if not mkdocs_yml.exists():
+            console.print(
+                "[red]Error: mkdocs.yml not found. Please run this command from the project repository root.[/red]"
+            )
+            raise typer.Exit(code=1)
+
+    if build:
+        console.print("[bold]Building documentation to HTML...[/bold]")
+        proc = subprocess.run([mkdocs, "build"], cwd=project_root)
+        if proc.returncode != 0:
+            console.print("[red]Error: Failed to build documentation.[/red]")
+            raise typer.Exit(code=1)
+        console.print(f"[green]Documentation built successfully in {project_root / 'site'}[/green]")
+    else:
+        console.print(f"[bold]Starting documentation server[/bold] at http://{host}:{port}/")
+        try:
+            proc = subprocess.run(
+                [mkdocs, "serve", "--dev-addr", f"{host}:{port}"],
+                cwd=project_root,
+            )
+            if proc.returncode != 0:
+                console.print("[red]Error: Documentation server failed.[/red]")
+                raise typer.Exit(code=proc.returncode)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Documentation server stopped.[/yellow]")
+
+
 @app.command(name="hardware-info")
 def hardware_info(
     json_out: bool = typer.Option(False, "--json", help="Output as JSON."),
@@ -378,9 +460,10 @@ def history(
 
 
 @app.command()
-def recover(  # noqa: G3 (--journal is a read-only path; defaults to system state dir)
+def recover(
     journal: Path | None = typer.Option(
         None,
+        # --journal is a read-only path; defaults to system state dir.
         help="Override path to durable_move.journal (defaults to the user state dir).",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
