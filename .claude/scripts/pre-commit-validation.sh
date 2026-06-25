@@ -49,7 +49,16 @@ collect_changed_files() {
       untracked_files+=("$line")
     done < <(git ls-files --others --exclude-standard)
 
-    changed_files=("${tracked_files[@]}" "${untracked_files[@]}")
+    # Guard against bash <4.4 "unbound variable" on "${arr[@]}" when arr is
+    # empty under `set -u` (e.g. macOS system bash 3.2). ${#arr[@]} is always
+    # safe to read, even for an empty/unset array.
+    changed_files=()
+    if ((${#tracked_files[@]})); then
+      changed_files+=("${tracked_files[@]}")
+    fi
+    if ((${#untracked_files[@]})); then
+      changed_files+=("${untracked_files[@]}")
+    fi
     changed_mode="working tree vs HEAD + untracked"
   else
     changed_files=()
@@ -66,7 +75,11 @@ echo "Pre-PR Guardrail Validation"
 echo "==========================="
 echo "Branch: $(git branch --show-current)"
 echo ""
-print_files "$changed_mode" "${changed_files[@]}"
+if ((${#changed_files[@]})); then
+  print_files "$changed_mode" "${changed_files[@]}"
+else
+  print_files "$changed_mode"
+fi
 echo ""
 
 run_step "Validate pre-commit configuration" pre-commit validate-config
