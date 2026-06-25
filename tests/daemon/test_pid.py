@@ -16,7 +16,7 @@ import pytest
 
 from file_organizer.daemon.pid import _CREATE_TIME_TOLERANCE_S, PidFileManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.smoke, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.smoke, pytest.mark.ci, pytest.mark.integration]
 
 
 @pytest.fixture

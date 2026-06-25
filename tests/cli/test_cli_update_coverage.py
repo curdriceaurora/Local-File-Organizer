@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 runner = CliRunner()
 

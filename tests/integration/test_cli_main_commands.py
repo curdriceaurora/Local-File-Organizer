@@ -296,3 +296,115 @@ class TestEntryPoint:
             main()
         mock_reg.assert_called_once()
         mock_app.assert_called_once()
+
+    def test_main_keyboard_interrupt_exits_130(self) -> None:
+        """A bare KeyboardInterrupt from app() exits with code 130."""
+        from file_organizer.cli.main import main
+
+        with (
+            patch("file_organizer.cli.main._register_profile_command"),
+            patch("file_organizer.cli.main.app", side_effect=KeyboardInterrupt),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        assert exc_info.value.code == 130
+
+    def test_main_click_abort_exits_130(self) -> None:
+        """click.Abort (Click's standalone_mode=False translation of Ctrl+C) exits 130."""
+        import click
+
+        from file_organizer.cli.main import main
+
+        with (
+            patch("file_organizer.cli.main._register_profile_command"),
+            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Abort),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        assert exc_info.value.code == 130
+
+    def test_main_usage_error_shows_and_exits_with_its_code(self) -> None:
+        """click.UsageError prints the usage message and exits with its own code."""
+        import click
+
+        from file_organizer.cli.main import main
+
+        usage_error = click.exceptions.UsageError("bad usage")
+        with (
+            patch("file_organizer.cli.main._register_profile_command"),
+            patch("file_organizer.cli.main.app", side_effect=usage_error),
+            patch.object(usage_error, "show") as mock_show,
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        mock_show.assert_called_once()
+        assert exc_info.value.code == usage_error.exit_code
+
+    def test_main_click_exit_propagates_its_code(self) -> None:
+        """typer.Exit(code=N) round-trips through click.exceptions.Exit to sys.exit(N)."""
+        import click
+
+        from file_organizer.cli.main import main
+
+        with (
+            patch("file_organizer.cli.main._register_profile_command"),
+            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Exit(code=3)),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        assert exc_info.value.code == 3
+
+    def test_main_broken_pipe_redirects_fds_and_exits_zero(self) -> None:
+        """BrokenPipeError (e.g. `fo ... | head`) redirects stdout/stderr to
+        devnull and exits 0 — os.open/dup2/close are mocked so the test
+        doesn't repoint this pytest worker's real file descriptors."""
+        from file_organizer.cli.main import main
+
+        with (
+            patch("file_organizer.cli.main._register_profile_command"),
+            patch("file_organizer.cli.main.app", side_effect=BrokenPipeError),
+            patch("os.open", return_value=99) as mock_open,
+            patch("os.dup2") as mock_dup2,
+            patch("os.close") as mock_close,
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+        mock_open.assert_called_once()
+        assert mock_dup2.call_count == 2
+        mock_close.assert_called_once_with(99)
+        assert exc_info.value.code == 0
+
+    def test_register_profile_command_swallows_import_error(self) -> None:
+        """A missing intelligence-service chain (ImportError) is silenced,
+        not propagated — profile registration degrades gracefully. Setting
+        the module to None in sys.modules forces the `import` statement
+        itself to raise ImportError (mocking the attribute wouldn't: the
+        `from X import Y` binding doesn't invoke anything to intercept)."""
+        from file_organizer.cli.main import _register_profile_command
+
+        with patch.dict("sys.modules", {"file_organizer.cli.profile": None}):
+            _register_profile_command()  # must not raise
+
+    def test_tui_command_launches_run_tui(self) -> None:
+        """`fo tui` delegates to file_organizer.tui.run_tui()."""
+        with patch("file_organizer.tui.run_tui") as mock_run_tui:
+            result = runner.invoke(app, ["tui"])
+        assert result.exit_code == 0
+        mock_run_tui.assert_called_once()
+
+    def test_durable_move_sweep_failure_is_logged_not_raised(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A failing startup durable_move sweep is logged at WARNING and the
+        CLI invocation still completes (F7: sweep errors are never worth
+        crashing the CLI over)."""
+        with patch(
+            "file_organizer.cli.main._durable_move_sweep",
+            side_effect=RuntimeError("journal unreadable"),
+        ):
+            result = runner.invoke(app, ["version"])
+        assert result.exit_code == 0
+        assert any(
+            record.levelname == "WARNING" and "durable_move sweep" in record.message
+            for record in caplog.records
+        )

@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 runner = CliRunner()
 
