@@ -103,6 +103,30 @@ class TestDaemonStop:
     @patch("file_organizer.cli.daemon.os.kill")
     @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
     @patch("file_organizer.daemon.pid.PidFileManager")
+    def test_stop_stale_pid_file_does_not_signal(
+        self,
+        mock_pid_cls: MagicMock,
+        mock_pid_file: MagicMock,
+        mock_kill: MagicMock,
+    ) -> None:
+        """If the daemon already exited and the OS recycled its PID for
+        an unrelated process, stop must not signal that process."""
+        mock_pid_file.exists.return_value = True
+        mock_mgr = MagicMock()
+        mock_pid_cls.return_value = mock_mgr
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=1700000000.0)
+        mock_mgr.is_running.return_value = False
+
+        result = runner.invoke(app, ["daemon", "stop"])
+
+        assert result.exit_code == 0
+        assert "not running" in result.output.lower() or "stale" in result.output.lower()
+        mock_kill.assert_not_called()
+        mock_mgr.remove_pid.assert_called_once()
+
+    @patch("file_organizer.cli.daemon.os.kill")
+    @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
+    @patch("file_organizer.daemon.pid.PidFileManager")
     def test_stop_success(
         self,
         mock_pid_cls: MagicMock,

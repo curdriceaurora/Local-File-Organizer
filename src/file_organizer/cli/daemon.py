@@ -115,6 +115,16 @@ def stop() -> None:
         console.print("[yellow]Could not read PID from file.[/yellow]")
         mgr.remove_pid(_DEFAULT_PID_FILE)
         raise typer.Exit(code=1)
+
+    if not mgr.is_running(_DEFAULT_PID_FILE):
+        # F2 (#1323, finding 1): is_running() already detects PID
+        # recycling via create_time comparison. Without this check, a
+        # stale PID file whose PID was reused by an unrelated process
+        # would cause SIGTERM to land on that unrelated process.
+        console.print("[yellow]Stale PID file — daemon is not running.[/yellow]")
+        mgr.remove_pid(_DEFAULT_PID_FILE)
+        raise typer.Exit(code=0)
+
     pid = record.pid
 
     console.print(f"Sending SIGTERM to PID {pid}...")
