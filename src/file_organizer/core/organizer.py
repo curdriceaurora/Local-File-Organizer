@@ -616,7 +616,7 @@ class FileOrganizer:
                 transcriber = self._audio_model
             except ImportError as exc:
                 self.console.print(
-                    f"[yellow]--transcribe-audio requires the [media] extra: {exc}. "
+                    f"[yellow]--transcribe-audio requires the \\[media] extra: {exc}. "
                     "Falling back to metadata-only categorization.[/yellow]"
                 )
 

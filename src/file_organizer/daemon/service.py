@@ -152,6 +152,18 @@ class DaemonService:
             if self._thread is not None and not self._thread.is_alive():
                 self._thread = None
 
+            # PID-reuse guard (F2): if the in-process state looks clean but the
+            # on-disk PID file shows a live process (including a recycled PID
+            # matched by create_time), refuse to start rather than creating a
+            # second daemon writing to the same PID file.
+            if self.config.pid_file is not None and self._pid_manager.is_running(
+                self.config.pid_file
+            ):
+                raise RuntimeError(
+                    "Daemon is already running (stale PID file indicates a live process). "
+                    "Stop the existing daemon or remove the PID file and retry."
+                )
+
             self._stop_event.clear()
             self._started_event.clear()
             self._stopped_event.clear()
@@ -172,7 +184,9 @@ class DaemonService:
                 self._thread = None
                 raise
 
-        # Wait for the daemon to fully initialize
+        # Wait for the daemon to fully initialize.  _started_event is set by
+        # _background_run whether startup succeeded or failed, so this never
+        # blocks for the full timeout on early startup failures.
         self._started_event.wait(timeout=5.0)
 
     def stop(self) -> None:
@@ -280,6 +294,14 @@ class DaemonService:
             # Main event loop
             self._run_loop()
 
+        except Exception:
+            # Startup-failure safety: ensure start_background()'s wait() is
+            # unblocked even when initialization raises before _started_event
+            # is set.  Without this the caller blocks for the full 5-second
+            # timeout and has no indication that startup failed.
+            self._started_event.set()
+            logger.exception("Daemon startup failed")
+            raise
         finally:
             self._cleanup()
 

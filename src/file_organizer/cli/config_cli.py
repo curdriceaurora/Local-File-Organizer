@@ -85,7 +85,19 @@ def config_edit(
         raise typer.Exit(code=1)
 
     mgr = ConfigManager()
-    cfg = mgr.load(profile=profile)
+    try:
+        cfg = mgr.load(profile=profile)
+    except Exception as exc:
+        from file_organizer.config.manager import UnsupportedConfigVersionError
+
+        if isinstance(exc, UnsupportedConfigVersionError):
+            console.print(
+                f"[red]Error: profile '{profile}' uses an unsupported config version "
+                f"and cannot be edited. Delete or migrate it first.[/red]\n"
+                f"[dim]Details: {exc}[/dim]"
+            )
+            raise typer.Exit(code=1) from exc
+        raise
 
     if text_model is not None:
         cfg.models.text_model = text_model

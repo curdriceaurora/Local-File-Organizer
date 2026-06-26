@@ -519,10 +519,16 @@ def _register_profile_command() -> None:
 
         typer_click_object = typer.main.get_group(app)
         typer_click_object.add_command(_profile_click_group, "profile")
-    except ImportError:
+    except ImportError as exc:
         # Profile module may fail to import if intelligence services
-        # are not installed; we degrade gracefully.
-        pass
+        # are not installed; degrade gracefully but log so operators can
+        # diagnose why `fo profile` is missing from the help output.
+        _logger = logging.getLogger(__name__)
+        _logger.warning(
+            "Could not register 'fo profile' command: %s. "
+            "The 'profile' sub-command will not be available.",
+            exc,
+        )
 
 
 # ---------------------------------------------------------------------------
