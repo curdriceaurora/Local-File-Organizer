@@ -503,16 +503,16 @@ class SetupWizardView(Vertical):
         lines.append(f"    • {alt_desc}")
         lines.append("")
 
-        # Option 3: First installed model (if different from above)
         if self._capabilities.installed_models:
-            first_installed = self._capabilities.installed_models[0].name
+            first_installed_model = self._capabilities.installed_models[0]
+            first_installed = first_installed_model.name
             if first_installed not in {recommended_model, alternative_model}:
                 selected_3 = (
                     " [cyan]← Selected[/cyan]" if self._selected_model == first_installed else ""
                 )
                 size_text = (
-                    f"{first_installed.size / (1024**3):.1f}GB"
-                    if first_installed.size
+                    f"{first_installed_model.size / (1024**3):.1f}GB"
+                    if getattr(first_installed_model, "size", None)
                     else "Unknown size"
                 )
 
