@@ -58,6 +58,7 @@ def config_edit(
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
+    from file_organizer.config.manager import UnsupportedConfigVersionError
     from file_organizer.utils.cli_errors import format_validation_error
 
     _VALID_DEVICES = {"auto", "cpu", "cuda", "mps", "metal"}
@@ -98,5 +99,13 @@ def config_edit(
     if methodology is not None:
         cfg.default_methodology = methodology
 
-    mgr.save(cfg, profile=profile)
+    try:
+        mgr.save(cfg, profile=profile)
+    except UnsupportedConfigVersionError as exc:
+        # The on-disk profile uses an unsupported schema version; saving
+        # would overwrite it with defaults. Refuse with a clean message
+        # instead of a raw traceback (#1324) — mirrors the same exception
+        # being handled the same way in api/routers/system.py.
+        console.print(f"[red]Error: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved profile '{profile}'[/green]")
