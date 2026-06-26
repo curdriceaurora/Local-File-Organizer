@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -275,35 +275,33 @@ class TestAnalyticsCommand:
 
 
 class TestEntryPoint:
-    """Tests for _register_profile_command and main() entry point."""
+    """Tests for _build_click_app and main() entry point."""
 
-    def test_register_profile_command_does_not_raise(self) -> None:
-        """_register_profile_command() runs without error (ImportError is silenced)."""
-        from file_organizer.cli.main import _register_profile_command
+    def test_build_click_app_does_not_raise(self) -> None:
+        """_build_click_app() runs without error (ImportError is silenced)."""
+        from file_organizer.cli.main import _build_click_app
 
-        _register_profile_command()  # should not raise
+        _build_click_app()  # should not raise
 
-    def test_main_calls_register_and_app(self) -> None:
-        """main() calls _register_profile_command then app()."""
-        from unittest.mock import patch
-
+    def test_main_calls_build_click_app_and_invokes_it(self) -> None:
+        """main() builds the click app once and invokes that exact object."""
         from file_organizer.cli.main import main
 
-        with (
-            patch("file_organizer.cli.main._register_profile_command") as mock_reg,
-            patch("file_organizer.cli.main.app") as mock_app,
-        ):
+        mock_click_app = MagicMock()
+        with patch(
+            "file_organizer.cli.main._build_click_app", return_value=mock_click_app
+        ) as mock_build:
             main()
-        mock_reg.assert_called_once()
-        mock_app.assert_called_once()
+        mock_build.assert_called_once()
+        mock_click_app.assert_called_once_with(standalone_mode=False)
 
     def test_main_keyboard_interrupt_exits_130(self) -> None:
-        """A bare KeyboardInterrupt from app() exits with code 130."""
+        """A bare KeyboardInterrupt from the click app exits with code 130."""
         from file_organizer.cli.main import main
 
+        mock_click_app = MagicMock(side_effect=KeyboardInterrupt)
         with (
-            patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=KeyboardInterrupt),
+            patch("file_organizer.cli.main._build_click_app", return_value=mock_click_app),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
@@ -315,9 +313,9 @@ class TestEntryPoint:
 
         from file_organizer.cli.main import main
 
+        mock_click_app = MagicMock(side_effect=click.exceptions.Abort)
         with (
-            patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Abort),
+            patch("file_organizer.cli.main._build_click_app", return_value=mock_click_app),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
@@ -330,9 +328,9 @@ class TestEntryPoint:
         from file_organizer.cli.main import main
 
         usage_error = click.exceptions.UsageError("bad usage")
+        mock_click_app = MagicMock(side_effect=usage_error)
         with (
-            patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=usage_error),
+            patch("file_organizer.cli.main._build_click_app", return_value=mock_click_app),
             patch.object(usage_error, "show") as mock_show,
             pytest.raises(SystemExit) as exc_info,
         ):
@@ -346,9 +344,9 @@ class TestEntryPoint:
 
         from file_organizer.cli.main import main
 
+        mock_click_app = MagicMock(side_effect=click.exceptions.Exit(code=3))
         with (
-            patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Exit(code=3)),
+            patch("file_organizer.cli.main._build_click_app", return_value=mock_click_app),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
@@ -360,9 +358,9 @@ class TestEntryPoint:
         doesn't repoint this pytest worker's real file descriptors."""
         from file_organizer.cli.main import main
 
+        mock_click_app = MagicMock(side_effect=BrokenPipeError)
         with (
-            patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=BrokenPipeError),
+            patch("file_organizer.cli.main._build_click_app", return_value=mock_click_app),
             patch("os.open", return_value=99) as mock_open,
             patch("os.dup2") as mock_dup2,
             patch("os.close") as mock_close,
@@ -374,16 +372,16 @@ class TestEntryPoint:
         mock_close.assert_called_once_with(99)
         assert exc_info.value.code == 0
 
-    def test_register_profile_command_swallows_import_error(self) -> None:
+    def test_build_click_app_swallows_import_error(self) -> None:
         """A missing intelligence-service chain (ImportError) is silenced,
         not propagated — profile registration degrades gracefully. Setting
         the module to None in sys.modules forces the `import` statement
         itself to raise ImportError (mocking the attribute wouldn't: the
         `from X import Y` binding doesn't invoke anything to intercept)."""
-        from file_organizer.cli.main import _register_profile_command
+        from file_organizer.cli.main import _build_click_app
 
         with patch.dict("sys.modules", {"file_organizer.cli.profile": None}):
-            _register_profile_command()  # must not raise
+            _build_click_app()  # must not raise
 
     def test_tui_command_launches_run_tui(self) -> None:
         """`fo tui` delegates to file_organizer.tui.run_tui()."""

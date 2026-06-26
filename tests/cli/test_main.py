@@ -163,3 +163,44 @@ def test_preview_command_error(mock_organizer_cls, _mock_setup, tmp_path):
 
     assert result.exit_code == 1
     assert "Error: Bad input" in result.stdout
+
+
+def test_profile_command_registered_on_built_click_app():
+    """Regression test for #1328: `typer.main.get_command(app)` rebuilds a
+    fresh Click group from app's own registrations on every call and will
+    NEVER include `profile` — it's intentionally lazy-attached only by
+    `_build_click_app`, not registered globally on `app`, to avoid loading
+    the heavy intelligence-service import chain at module import time.
+    Asserting against a bare `get_command(app)` call would test the wrong
+    object; the real contract is that `_build_click_app()` — the function
+    `main()` actually invokes — returns a tree with `profile` attached.
+    """
+    from file_organizer.cli.main import _build_click_app
+
+    click_app = _build_click_app()
+    assert "profile" in click_app.commands
+
+
+def test_profile_reachable_via_cli_runner():
+    """End-to-end: invoking `profile --help` through the same object
+    main() calls must succeed, not fail with "No such command".
+
+    `_build_click_app()` returns a raw `click.Group` (the exact object
+    `main()` invokes), not a `Typer` instance. `typer.testing.CliRunner`
+    (the module-level `runner` used elsewhere in this file) always routes
+    its argument through `typer.main.get_command()` internally, which
+    expects `Typer`-only attributes (e.g. `_add_completion`) and raises
+    `AttributeError` on a bare `click.Group`. Use the plain
+    `click.testing.CliRunner` instead, matching the existing pattern in
+    `tests/cli/test_cli_profile.py` for invoking `profile_command`
+    directly.
+    """
+    from click.testing import CliRunner as ClickCliRunner
+
+    from file_organizer.cli.main import _build_click_app
+
+    click_app = _build_click_app()
+    click_runner = ClickCliRunner()
+    result = click_runner.invoke(click_app, ["profile", "--help"])
+    assert result.exit_code == 0
+    assert "profile" in result.output.lower()

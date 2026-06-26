@@ -512,17 +512,39 @@ def analytics(
 # module import time.  Typer wraps Click, so we register it just before app().
 
 
-def _register_profile_command() -> None:
-    """Lazily register the Click-based profile sub-command."""
+def _build_click_app() -> click.Group:
+    """Build the Click command tree exactly once, with ``profile`` attached.
+
+    ``typer.main.get_command(app)`` builds a brand-new Click group from
+    ``app``'s current registrations every time it's called — it never
+    mutates or caches anything on ``app`` itself. The previous
+    implementation called the lower-level ``get_group`` once just to
+    attach ``profile``, then discarded that instance; ``main()`` then
+    called ``app(standalone_mode=False)``, which calls ``get_command(app)``
+    again internally and builds a *second*, separate group that never saw
+    ``profile`` (#1328). Building the command tree exactly once here, and
+    having ``main()`` invoke this same returned object directly instead of
+    calling ``app(...)``, is what makes ``profile`` actually reachable.
+
+    Uses ``get_command`` rather than ``get_group`` so the
+    ``--install-completion`` / ``--show-completion`` options that
+    ``Typer.__call__`` normally adds via ``get_command`` are preserved.
+
+    Note: because ``main()`` invokes this returned ``click.Group`` directly
+    instead of going through ``Typer.__call__``, Typer's Rich-formatted
+    traceback handler is never armed — see the trade-off documented in
+    ``main()``'s docstring.
+    """
+    click_command = cast(click.Group, typer.main.get_command(app))
     try:
         from file_organizer.cli.profile import profile_command as _profile_click_group
 
-        typer_click_object = typer.main.get_group(app)
-        typer_click_object.add_command(_profile_click_group, "profile")
+        click_command.add_command(_profile_click_group, "profile")
     except ImportError:
         # Profile module may fail to import if intelligence services
         # are not installed; we degrade gracefully.
         pass
+    return click_command
 
 
 # ---------------------------------------------------------------------------
@@ -533,21 +555,36 @@ def _register_profile_command() -> None:
 def main() -> None:
     """Run the fo command-line application.
 
-    Registers the deferred profile command and invokes the Typer app with
-    ``standalone_mode=False`` so that ``KeyboardInterrupt`` and
-    ``BrokenPipeError`` propagate out of Click for our handlers to see — under
-    Click's default standalone mode the framework catches both internally and
-    our outer ``except`` clauses would never fire (codex review on PR #230).
+    Builds the Click command tree once (registering the deferred
+    ``profile`` command onto that exact instance — see
+    ``_build_click_app``) and invokes it with ``standalone_mode=False`` so
+    that ``KeyboardInterrupt`` and ``BrokenPipeError`` propagate out of
+    Click for our handlers to see — under Click's default standalone mode
+    the framework catches both internally and our outer ``except`` clauses
+    would never fire (codex review on PR #230).
 
     Exit codes:
         130 — user pressed Ctrl+C (POSIX SIGINT).
           0 — stdout consumer closed the pipe (e.g. ``fo ... | head``).
         Other typer/click exits propagate their own ``exit_code``.
+
+    Note: invoking the built ``click.Group`` directly — rather than calling
+    ``app(standalone_mode=False)`` as this used to do — means an exception
+    that escapes a command body uncaught (i.e. not one of the cases the
+    ``except`` clauses below already handle) renders as a plain Python
+    traceback instead of Typer's Rich-formatted one. ``Typer.__call__``
+    normally arms that formatting by installing ``sys.excepthook`` and
+    tagging the exception with a private ``DeveloperExceptionConfig``
+    attribute that ``typer.main.except_hook`` checks for; replicating it
+    here would mean depending on those private, version-coupled internals
+    for a purely cosmetic improvement on a "should never happen" path.
+    That trade-off was judged not worth it: this function's documented
+    contract is the exit-code behavior above, not traceback formatting.
     """
-    _register_profile_command()
+    click_app = _build_click_app()
 
     try:
-        app(standalone_mode=False)
+        click_app(standalone_mode=False)
     except (KeyboardInterrupt, click.exceptions.Abort):
         # Click converts KeyboardInterrupt → click.Abort under
         # standalone_mode=False; the bare KeyboardInterrupt branch covers
