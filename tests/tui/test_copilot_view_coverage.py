@@ -125,13 +125,15 @@ def test_copilot_view_on_input_submitted_empty() -> None:
     """Verify on_input_submitted returns immediately for empty inputs."""
     view, mock_log, mock_input, _ = _create_view_with_mocks()
 
+    mock_input.value = "original value"
+
     # Setup mock event with empty value
     mock_event = MagicMock(spec=Input.Submitted)
     mock_event.value = "   "
 
     with patch.object(view, "_process_message") as mock_process:
         view.on_input_submitted(mock_event)
-        mock_input.value = ""  # should not be touched
+        assert mock_input.value == "original value"
         mock_log.add_message.assert_not_called()
         mock_process.assert_not_called()
 

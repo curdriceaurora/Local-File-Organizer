@@ -535,10 +535,11 @@ class TestFilePreviewStaticMethods:
         path = tmp_path / "data.zip"
         path.write_bytes(b"PK")
         with patch(
-            "file_organizer.tui.file_preview.FilePreviewPanel._preview_archive",
+            "file_organizer.utils.file_readers.read_file",
             return_value="Archive Contents\n\nfile.txt",
         ):
             result = FilePreviewPanel._preview_archive(path)
+        assert "file.txt" in result
         assert "Archive" in result
 
     def test_preview_archive_exception(self, tmp_path):

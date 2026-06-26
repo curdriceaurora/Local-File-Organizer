@@ -127,29 +127,29 @@ class TestRecordNonSequentialSnapshotGuard:
 
 
 class TestFileSelectionManagerRemainingBranches:
-    def test_toggle_deselects_already_selected(self):
+    def test_toggle_deselects_already_selected(self, tmp_path):
         from file_organizer.tui.file_preview import FileSelectionManager
 
         mgr = FileSelectionManager()
-        p = Path("/tmp/file.txt")
+        p = tmp_path / "file.txt"
         mgr._selected.add(p)
         result = mgr.toggle(p)
         assert result is False
         assert p not in mgr._selected
 
-    def test_select_all_adds_paths(self):
+    def test_select_all_adds_paths(self, tmp_path):
         from file_organizer.tui.file_preview import FileSelectionManager
 
         mgr = FileSelectionManager()
-        paths = {Path("/tmp/a.txt"), Path("/tmp/b.txt")}
+        paths = {tmp_path / "a.txt", tmp_path / "b.txt"}
         mgr.select_all(paths)
         assert mgr.count == 2
 
-    def test_selected_files_returns_copy(self):
+    def test_selected_files_returns_copy(self, tmp_path):
         from file_organizer.tui.file_preview import FileSelectionManager
 
         mgr = FileSelectionManager()
-        p = Path("/tmp/x.txt")
+        p = tmp_path / "x.txt"
         mgr._selected.add(p)
         result = mgr.selected_files
         assert p in result

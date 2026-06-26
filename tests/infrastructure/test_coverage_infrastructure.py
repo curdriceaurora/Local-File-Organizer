@@ -83,7 +83,7 @@ class TestDeploymentConfig:
     def test_data_directory_str_converts_to_path(self):
         from file_organizer.deploy.config import DeploymentConfig
 
-        cfg = DeploymentConfig(data_directory="/tmp/data")  # type: ignore[arg-type]
+        cfg = DeploymentConfig(data_directory="data")  # type: ignore[arg-type]
         assert isinstance(cfg.data_directory, Path)
 
     def test_redis_host_parsing(self):
@@ -1053,12 +1053,13 @@ class TestEventConsumer:
 
         from file_organizer.events.consumer import EventConsumer
         from file_organizer.events.stream import Event
+        from file_organizer.events.types import EventType
 
         manager = MagicMock()
         manager.is_connected = True
         manager.config.consumer_group = "test-group"
 
-        event = Event(id="msg1", stream="test", data={"event_type": "unknown"})
+        event = Event(id="msg1", stream="test", data={"event_type": EventType.FILE_CREATED.value})
         # First call returns events, second call consumer is stopped
         call_count = 0
 
@@ -1074,8 +1075,14 @@ class TestEventConsumer:
         manager.read_group.side_effect = read_group_side_effect
 
         consumer = EventConsumer(stream_manager=manager)
+        mock_handler = MagicMock()
+        consumer.register_handler(EventType.FILE_CREATED, mock_handler)
+
         await consumer.start_consuming("test-stream", group_name="test-group")
         assert call_count >= 1
+        mock_handler.assert_called_once_with(event)
+        assert consumer.events_processed == 1
+        manager.acknowledge.assert_called_once_with("test-stream", "test-group", "msg1")
 
 
 # ===========================================================================
@@ -2323,7 +2330,7 @@ class TestBackgroundUpdater:
 class TestAnalyzerStage:
     """Tests for AnalyzerStage routing and processing."""
 
-    def _make_context(self, file_path="/tmp/test.txt", failed=False):
+    def _make_context(self, file_path="test.txt", failed=False):
         from file_organizer.interfaces.pipeline import StageContext
 
         ctx = MagicMock(spec=StageContext)
@@ -2611,13 +2618,13 @@ class TestPARARulesEngine:
         assert ctx.file_age_days is None
 
     def test_evaluation_context_naive_datetime(self):
-        from datetime import UTC, datetime
+        from datetime import datetime
 
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
         ctx = EvaluationContext(
-            file_path=Path("/tmp/x.pdf"),
-            file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},  # naive
+            file_path=Path("x.pdf"),
+            file_stat={"created": datetime(2020, 1, 1)},  # naive
         )
         assert ctx.file_age_days is not None
 
@@ -2664,7 +2671,7 @@ class TestPARARulesEngine:
             scorer=MagicMock(),
         )
         engine.rules = [self._make_rule()]
-        ctx = EvaluationContext(file_path=Path("/tmp/test.txt"))
+        ctx = EvaluationContext(file_path=Path("test.txt"))
         result = engine.evaluate_file(ctx)
         assert result is None
 
@@ -2681,7 +2688,7 @@ class TestPARARulesEngine:
             scorer=MagicMock(),
         )
         engine.rules = [self._make_rule()]
-        ctx = EvaluationContext(file_path=Path("/tmp/test.pdf"))
+        ctx = EvaluationContext(file_path=Path("test.pdf"))
         result = engine.evaluate_file(ctx)
         assert result is not None
         assert result.matched is True
@@ -2699,7 +2706,7 @@ class TestPARARulesEngine:
             scorer=MagicMock(),
         )
         engine.rules = [self._make_rule(enabled=False)]
-        ctx = EvaluationContext(file_path=Path("/tmp/test.pdf"))
+        ctx = EvaluationContext(file_path=Path("test.pdf"))
         result = engine.evaluate_file(ctx)
         assert result is None
 
@@ -2719,7 +2726,7 @@ class TestPARARulesEngine:
             scorer=MagicMock(),
         )
         engine.rules = [self._make_rule("r1"), self._make_rule("r2")]
-        ctx = EvaluationContext(file_path=Path("/tmp/test.pdf"))
+        ctx = EvaluationContext(file_path=Path("test.pdf"))
         result = engine.evaluate_file(ctx)
         assert result is expected_match
 
@@ -2738,7 +2745,7 @@ class TestPARARulesEngine:
             scorer=scorer,
         )
         engine.rules = [self._make_rule()]
-        ctx = EvaluationContext(file_path=Path("/tmp/test.pdf"))
+        ctx = EvaluationContext(file_path=Path("test.pdf"))
         scores = engine.get_category_scores(ctx)
         assert "project" in scores
 
@@ -2773,7 +2780,7 @@ class TestJohnnyDecimalMigrator:
         mock_plan.rules = []
         migrator.transformer.create_transformation_plan.return_value = mock_plan
 
-        plan, scan = migrator.create_migration_plan(Path("/tmp/test"))
+        plan, scan = migrator.create_migration_plan(Path("test"))
         assert scan is mock_scan
         assert plan is mock_plan
 
@@ -2951,7 +2958,7 @@ class TestJohnnyDecimalMigrator:
             failed_count=0,
             skipped_count=1,
             duration_seconds=2.5,
-            skipped_paths=[Path("/tmp/x")],
+            skipped_paths=[Path("x")],
         )
         report = migrator.generate_report(result)
         assert "SUCCESS" in report
@@ -2967,7 +2974,7 @@ class TestJohnnyDecimalMigrator:
             failed_count=1,
             skipped_count=0,
             duration_seconds=1.0,
-            failed_paths=[(Path("/tmp/bad"), "permission denied")],
+            failed_paths=[(Path("bad"), "permission denied")],
             backup_path=tmp_path,
         )
         report = migrator.generate_report(result)
@@ -3004,7 +3011,7 @@ class TestJohnnyDecimalMigrator:
             failed_count=0,
             skipped_count=15,
             duration_seconds=1.0,
-            skipped_paths=[Path(f"/tmp/dir{i}") for i in range(15)],
+            skipped_paths=[Path(f"dir{i}") for i in range(15)],
         )
         report = migrator.generate_report(result)
         assert "more" in report

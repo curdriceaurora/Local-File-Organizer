@@ -130,10 +130,21 @@ class TestOpenAIClientGaps:
         with (
             patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
             patch("file_organizer.models._openai_client.OpenAI", create=True) as mock_openai,
+            patch("file_organizer.models._openai_client.logger") as mock_logger,
         ):
             mock_openai.side_effect = ValueError("invalid client arguments")
             with pytest.raises(ValueError):
                 create_openai_client(config, "text")
+
+            mock_logger.error.assert_called_once()
+            log_args = mock_logger.error.call_args[0]
+            assert log_args[1] == "text"
+            assert log_args[2] == "gpt-4o"
+            assert log_args[3] == "ValueError"
+
+            for arg in log_args:
+                assert "invalid client arguments" not in str(arg)
+                assert "sk-test-key" not in str(arg)
 
 
 # ===========================================================================
@@ -517,21 +528,17 @@ class TestVisionProcessorGaps:
 # ===========================================================================
 
 
-class BadStream(io.BytesIO):
-    def read(self, *args: Any, **kwargs: Any) -> bytes:
-        raise OSError("simulate disk read failure")
-
-    def test_read_dwg_non_existent_file_raises(self) -> None:
-        # A non-existent file path raises FileReadError
-        mock_ezdxf = MagicMock()
-        mock_ezdxf.readfile.side_effect = OSError("no such file")
-        with (
-            patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
-            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
-            pytest.raises(FileReadError) as exc_info,
-        ):
-            read_dwg_file(file_path="non_existent_file_xyz_123.dwg")
-        assert "File not found" in str(exc_info.value)
+def test_read_dwg_non_existent_file_raises() -> None:
+    # A non-existent file path raises FileReadError
+    mock_ezdxf = MagicMock()
+    mock_ezdxf.readfile.side_effect = OSError("no such file")
+    with (
+        patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
+        patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
+        pytest.raises(FileReadError) as exc_info,
+    ):
+        read_dwg_file(file_path="non_existent_file_xyz_123.dwg")
+    assert "File not found" in str(exc_info.value)
 
 
 # ===========================================================================
@@ -970,17 +977,26 @@ class TestEpubEnhancedGaps:
 
         mock_item = MagicMock()
         mock_item.get_type.return_value = 9
-        mock_item.get_content.return_value = b"<html><head><title>Chapter 1</title></head><body><h1>Chapter One</h1><p>This is the first chapter paragraph.</p></body></html>"
+        mock_item.get_content.return_value = b"<html><head><title>Chapter 1</title></head><body><h1>Chapter One</h1><p>This is the first chapter paragraph. It needs to have a length of more than fifty characters to be extracted.</p></body></html>"
         mock_item.file_name = "chapter_1.xhtml"
         mock_book.get_items.return_value = [mock_item]
 
         mock_ebooklib = MagicMock()
         mock_ebooklib.ITEM_DOCUMENT = 9
 
+        mock_soup = MagicMock()
+        mock_heading = MagicMock()
+        mock_heading.get_text.return_value = "Chapter One"
+        mock_soup.find.return_value = mock_heading
+        mock_soup.return_value = []
+        mock_soup.get_text.return_value = "This is the first chapter paragraph. It needs to have a length of more than fifty characters to be extracted."
+
         with (
             patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", True),
             patch("file_organizer.utils.epub_enhanced.ebooklib", mock_ebooklib, create=True),
             patch("file_organizer.utils.epub_enhanced.BS4_AVAILABLE", True),
+            patch("file_organizer.utils.epub_enhanced.BeautifulSoup", return_value=mock_soup, create=True),
+            patch("file_organizer.utils.epub_enhanced.XMLParsedAsHTMLWarning", UserWarning, create=True),
             patch("file_organizer.utils.epub_enhanced._read_epub_safedir", return_value=mock_book),
         ):
             reader = EnhancedEPUBReader()
@@ -1138,9 +1154,12 @@ class TestDocumentReadersGaps:
 
         mock_open.return_value.__enter__.return_value = io.BytesIO(b"docx content")
 
+        mock_docx_module = MagicMock()
+        mock_docx_module.Document.return_value = mock_doc
+
         with (
             patch("file_organizer.utils.readers.documents.DOCX_AVAILABLE", True),
-            patch("file_organizer.utils.readers.documents.docx.Document", return_value=mock_doc),
+            patch("file_organizer.utils.readers.documents.docx", mock_docx_module, create=True),
         ):
             text = read_docx_file("dummy.docx")
             assert text == "Docx text line"
@@ -1165,9 +1184,12 @@ class TestDocumentReadersGaps:
         mock_page.get_text.return_value = "PDF text content"
         mock_doc.load_page.return_value = mock_page
 
+        mock_fitz_module = MagicMock()
+        mock_fitz_module.open.return_value = mock_doc
+
         with (
             patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", True),
-            patch("file_organizer.utils.readers.documents.fitz.open", return_value=mock_doc),
+            patch("file_organizer.utils.readers.documents.fitz", mock_fitz_module, create=True),
         ):
             text = read_pdf_file("dummy.pdf")
             assert text == "PDF text content"
@@ -1206,11 +1228,15 @@ class TestDocumentReadersGaps:
 
         mock_open.return_value.__enter__.return_value = io.BytesIO(b"spreadsheet content")
 
+        mock_openpyxl_module = MagicMock()
+        mock_openpyxl_module.load_workbook.return_value = mock_wb
+
         with (
             patch("file_organizer.utils.readers.documents.OPENPYXL_AVAILABLE", True),
             patch(
-                "file_organizer.utils.readers.documents.openpyxl.load_workbook",
-                return_value=mock_wb,
+                "file_organizer.utils.readers.documents.openpyxl",
+                mock_openpyxl_module,
+                create=True,
             ),
         ):
             text = read_spreadsheet_file("dummy.xlsx")
@@ -1246,7 +1272,11 @@ class TestDocumentReadersGaps:
 
         with (
             patch("file_organizer.utils.readers.documents.PPTX_AVAILABLE", True),
-            patch("file_organizer.utils.readers.documents.Presentation", return_value=mock_prs),
+            patch(
+                "file_organizer.utils.readers.documents.Presentation",
+                return_value=mock_prs,
+                create=True,
+            ),
         ):
             text = read_presentation_file("dummy.pptx")
             assert "Slide 1: Slide text content" in text
@@ -1265,7 +1295,7 @@ class TestBufferPoolGaps:
             BufferPool(buffer_size=0)
         with pytest.raises(ValueError, match="initial_buffers must be > 0"):
             BufferPool(initial_buffers=0)
-        with pytest.raises(ValueError, match="max_buffers .* must be >= initial_buffers"):
+        with pytest.raises(ValueError, match=r"max_buffers .* must be >= initial_buffers"):
             BufferPool(initial_buffers=5, max_buffers=3)
 
     def test_buffer_pool_utilization_zero(self) -> None:
@@ -1393,9 +1423,12 @@ class TestCADReaderGaps:
 
         mock_doc.header.get.side_effect = mock_header_get
 
+        mock_ezdxf = MagicMock()
+        mock_ezdxf.readfile.return_value = mock_doc
+
         with (
             patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
-            patch("file_organizer.utils.readers.cad.ezdxf.readfile", return_value=mock_doc),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
         ):
             res = read_dxf_file("dummy.dxf", max_layers=2)
             assert "Author: SavedByAuthor" in res
@@ -1405,7 +1438,7 @@ class TestCADReaderGaps:
         mock_doc.header.get.side_effect = Exception("Header read error")
         with (
             patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
-            patch("file_organizer.utils.readers.cad.ezdxf.readfile", return_value=mock_doc),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
         ):
             res = read_dxf_file("dummy.dxf")
             assert "DXF Version: AC1015" in res
@@ -1428,12 +1461,11 @@ class TestCADReaderGaps:
         mock_stat.return_value.st_size = 2048
 
         # Test ezdxf fails on DWG, falls back to basic file info
+        mock_ezdxf = MagicMock()
+        mock_ezdxf.readfile.side_effect = Exception("DWG read error")
         with (
             patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
-            patch(
-                "file_organizer.utils.readers.cad.ezdxf.readfile",
-                side_effect=Exception("DWG read error"),
-            ),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
         ):
             res = read_dwg_file("dummy.dwg")
             assert "=== DWG File Information ===" in res
