@@ -13,7 +13,6 @@ from __future__ import annotations
 import io
 import time
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pydantic
@@ -995,8 +994,16 @@ class TestEpubEnhancedGaps:
             patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", True),
             patch("file_organizer.utils.epub_enhanced.ebooklib", mock_ebooklib, create=True),
             patch("file_organizer.utils.epub_enhanced.BS4_AVAILABLE", True),
-            patch("file_organizer.utils.epub_enhanced.BeautifulSoup", return_value=mock_soup, create=True),
-            patch("file_organizer.utils.epub_enhanced.XMLParsedAsHTMLWarning", UserWarning, create=True),
+            patch(
+                "file_organizer.utils.epub_enhanced.BeautifulSoup",
+                return_value=mock_soup,
+                create=True,
+            ),
+            patch(
+                "file_organizer.utils.epub_enhanced.XMLParsedAsHTMLWarning",
+                UserWarning,
+                create=True,
+            ),
             patch("file_organizer.utils.epub_enhanced._read_epub_safedir", return_value=mock_book),
         ):
             reader = EnhancedEPUBReader()

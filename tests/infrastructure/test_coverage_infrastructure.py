@@ -2624,7 +2624,7 @@ class TestPARARulesEngine:
 
         ctx = EvaluationContext(
             file_path=Path("x.pdf"),
-            file_stat={"created": datetime(2020, 1, 1)},  # naive
+            file_stat={"created": datetime(2020, 1, 1)},  # noqa: DTZ001 – intentionally naive to exercise the non-tz path
         )
         assert ctx.file_age_days is not None
 
