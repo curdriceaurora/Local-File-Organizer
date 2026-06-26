@@ -179,6 +179,41 @@ class TestFileOrganizer:
         assert mock_fallback.call_args.args[0] == [image]
 
 
+@pytest.mark.unit
+@pytest.mark.ci
+def test_transcribe_audio_import_error_renders_media_extra_literally(
+    text_config: ModelConfig, vision_config: ModelConfig
+) -> None:
+    """#1325: the [media] extra name (both the hard-coded literal and the
+    one inside the ImportError text) must render as literal text in the
+    fallback message, not be silently swallowed as unparseable Rich markup
+    style.
+    """
+    from rich.console import Console
+
+    organizer = FileOrganizer(
+        text_model_config=text_config,
+        vision_model_config=vision_config,
+        dry_run=True,
+        use_hardlinks=False,
+        transcribe_audio=True,
+    )
+    # width=200: comfortably wider than the ~145-char rendered message so it
+    # stays on one line under Rich's normal word-wrapping (no soft_wrap
+    # needed in production code; see #1325 follow-up).
+    organizer.console = Console(record=True, width=200)
+
+    with (
+        patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", False),
+        patch("file_organizer.core.dispatcher.process_audio_files", return_value=[]),
+    ):
+        organizer._process_audio_files([])
+
+    output = organizer.console.export_text()
+    assert output.count("[media]") == 2
+    assert "Falling back to metadata-only categorization" in output
+
+
 # ---------------------------------------------------------------------------
 # file_ops module tests
 # ---------------------------------------------------------------------------

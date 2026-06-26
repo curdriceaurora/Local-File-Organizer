@@ -21,6 +21,7 @@ from typing import Any, ClassVar
 
 from loguru import logger
 from rich.console import Console
+from rich.markup import escape
 
 from file_organizer.core import dispatcher, display, file_ops, initializer
 from file_organizer.core.types import (
@@ -616,8 +617,9 @@ class FileOrganizer:
                 transcriber = self._audio_model
             except ImportError as exc:
                 self.console.print(
-                    f"[yellow]--transcribe-audio requires the [media] extra: {exc}. "
-                    "Falling back to metadata-only categorization.[/yellow]"
+                    rf"[yellow]--transcribe-audio requires the \[media] extra: "
+                    f"{escape(str(exc))}. Falling back to metadata-only "
+                    "categorization.[/yellow]"
                 )
 
         return dispatcher.process_audio_files(
