@@ -5,10 +5,9 @@ Targets 100% statement and branch coverage for Deduplication CLI commands.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
-import sys
 from unittest.mock import ANY, MagicMock, patch
+
 import pytest
 
 from file_organizer.cli.dedupe import DedupeConfig, dedupe_command, main
@@ -19,7 +18,7 @@ pytestmark = pytest.mark.unit
 def test_dedupe_config_initialization() -> None:
     """Verify DedupeConfig properties and defaults."""
     dir_path = Path("/mock/path")
-    
+
     # Test default values
     config = DedupeConfig(directory=dir_path)
     assert config.directory == dir_path
@@ -88,14 +87,14 @@ def test_dedupe_command_no_duplicates_found(tmp_path: Path) -> None:
     # Setup mocks
     mock_detector = MagicMock()
     mock_tracker = MagicMock(has_tqdm=True, callback=MagicMock())
-    
+
     with (
         patch("file_organizer.cli.dedupe_display.display_banner"),
         patch("file_organizer.cli.dedupe_display.display_config"),
         patch("file_organizer.cli.dedupe.initialize_hash_detector", return_value=mock_detector),
         patch("file_organizer.services.deduplication.backup.BackupManager") as mock_backup_class,
         patch("file_organizer.cli.dedupe.ProgressTracker", return_value=mock_tracker),
-        patch("file_organizer.cli.dedupe.create_scan_options") as mock_options,
+        patch("file_organizer.cli.dedupe.create_scan_options"),
         patch("file_organizer.cli.dedupe.scan_for_duplicates", return_value={}) as mock_scan,
     ):
         exit_code = dedupe_command([str(tmp_path)])
@@ -110,7 +109,7 @@ def test_dedupe_command_with_duplicates(tmp_path: Path) -> None:
     mock_group = MagicMock()
     mock_group.count = 2
     mock_duplicates = {"hash123": mock_group}
-    
+
     mock_detector = MagicMock()
     mock_tracker = MagicMock(has_tqdm=False)
 
@@ -122,7 +121,9 @@ def test_dedupe_command_with_duplicates(tmp_path: Path) -> None:
         patch("file_organizer.cli.dedupe.ProgressTracker", return_value=mock_tracker),
         patch("file_organizer.cli.dedupe.create_scan_options"),
         patch("file_organizer.cli.dedupe.scan_for_duplicates", return_value=mock_duplicates),
-        patch("file_organizer.cli.dedupe_removal.process_duplicate_group", return_value=(1, 1024)) as mock_process,
+        patch(
+            "file_organizer.cli.dedupe_removal.process_duplicate_group", return_value=(1, 1024)
+        ) as mock_process,
         patch("file_organizer.cli.dedupe_display.display_summary") as mock_summary,
         patch("file_organizer.cli.dedupe_display.display_backup_info") as mock_backup_info,
     ):
@@ -130,9 +131,7 @@ def test_dedupe_command_with_duplicates(tmp_path: Path) -> None:
         exit_code = dedupe_command([str(tmp_path), "--strategy", "oldest"])
         assert exit_code == 0
         mock_process.assert_called_once()
-        mock_summary.assert_called_once_with(
-            ANY, 1, 2, 1, 1024, False
-        )
+        mock_summary.assert_called_once_with(ANY, 1, 2, 1, 1024, False)
         mock_backup_info.assert_called_once()
 
         # Reset mocks
@@ -144,9 +143,7 @@ def test_dedupe_command_with_duplicates(tmp_path: Path) -> None:
         exit_code = dedupe_command([str(tmp_path), "--dry-run"])
         assert exit_code == 0
         mock_process.assert_called_once()
-        mock_summary.assert_called_once_with(
-            ANY, 1, 2, 1, 1024, True
-        )
+        mock_summary.assert_called_once_with(ANY, 1, 2, 1, 1024, True)
         mock_backup_info.assert_not_called()
 
 
@@ -166,7 +163,10 @@ def test_dedupe_command_general_exception(tmp_path: Path) -> None:
     with (
         patch("file_organizer.cli.dedupe_display.display_banner"),
         patch("file_organizer.cli.dedupe_display.display_config"),
-        patch("file_organizer.cli.dedupe.initialize_hash_detector", side_effect=RuntimeError("IO Failure")),
+        patch(
+            "file_organizer.cli.dedupe.initialize_hash_detector",
+            side_effect=RuntimeError("IO Failure"),
+        ),
         patch("file_organizer.cli.dedupe.logger") as mock_logger,
     ):
         exit_code = dedupe_command([str(tmp_path)])
@@ -184,20 +184,27 @@ def test_dedupe_command_verbose_logging(tmp_path: Path) -> None:
         patch("file_organizer.cli.dedupe.scan_for_duplicates", return_value={}),
         patch("file_organizer.cli.dedupe.logger") as mock_logger,
     ):
-        exit_code = dedupe_command([
-            str(tmp_path),
-            "--verbose",
-            "--no-safe-mode",
-            "--no-recursive",
-            "--min-size", "50",
-            "--max-size", "500",
-            "--include", "*.jpg",
-            "--include", "*.png",
-            "--exclude", "*.tmp",
-        ])
+        exit_code = dedupe_command(
+            [
+                str(tmp_path),
+                "--verbose",
+                "--no-safe-mode",
+                "--no-recursive",
+                "--min-size",
+                "50",
+                "--max-size",
+                "500",
+                "--include",
+                "*.jpg",
+                "--include",
+                "*.png",
+                "--exclude",
+                "*.tmp",
+            ]
+        )
         assert exit_code == 0
         # Check logger configurations were updated (verbose branch calls remove() once)
-        assert mock_logger.remove.call_count >= 1
+        mock_logger.remove.assert_called_once()
 
 
 def test_cli_main_execution() -> None:

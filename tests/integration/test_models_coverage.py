@@ -14,21 +14,27 @@ Files covered:
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from file_organizer.models.base import ModelConfig, ModelType, DeviceType, TokenExhaustionError
-from file_organizer.models._llama_cpp_helpers import is_llama_cpp_token_exhausted, extract_llama_cpp_text
-from file_organizer.models._vision_helpers import image_to_data_url, bytes_to_data_url, split_data_url
 from file_organizer.models._claude_client import create_claude_client
-from file_organizer.models._claude_response import is_claude_token_exhausted, extract_claude_text
-from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
-from file_organizer.models.mlx_text_model import MLXTextModel
+from file_organizer.models._claude_response import extract_claude_text, is_claude_token_exhausted
+from file_organizer.models._llama_cpp_helpers import (
+    extract_llama_cpp_text,
+    is_llama_cpp_token_exhausted,
+)
+from file_organizer.models._vision_helpers import (
+    bytes_to_data_url,
+    image_to_data_url,
+    split_data_url,
+)
+from file_organizer.models.base import DeviceType, ModelConfig, ModelType, TokenExhaustionError
 from file_organizer.models.claude_text_model import ClaudeTextModel
 from file_organizer.models.claude_vision_model import ClaudeVisionModel
+from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
+from file_organizer.models.mlx_text_model import MLXTextModel
 from file_organizer.models.openai_text_model import OpenAITextModel
 
 pytestmark = pytest.mark.integration
@@ -37,6 +43,7 @@ pytestmark = pytest.mark.integration
 # ===========================================================================
 # 1. _llama_cpp_helpers.py Tests
 # ===========================================================================
+
 
 def test_llama_cpp_helpers_variations() -> None:
     # 1. is_llama_cpp_token_exhausted
@@ -65,6 +72,7 @@ def test_llama_cpp_helpers_variations() -> None:
 # ===========================================================================
 # 2. _vision_helpers.py Tests
 # ===========================================================================
+
 
 def test_vision_helpers_variations(tmp_path: Path) -> None:
     # 1. image_to_data_url
@@ -104,6 +112,7 @@ def test_vision_helpers_variations(tmp_path: Path) -> None:
 # ===========================================================================
 # 3. _claude_client.py & _claude_response.py Tests
 # ===========================================================================
+
 
 class TestClaudeClientAndResponse:
     @patch("file_organizer.models._claude_client.Anthropic")
@@ -171,6 +180,7 @@ class TestClaudeClientAndResponse:
 # 4. llama_cpp_text_model.py Tests
 # ===========================================================================
 
+
 class TestLlamaCppTextModel:
     def test_llama_cpp_constructor_validations(self) -> None:
         # 1. Missing package ImportError
@@ -189,7 +199,9 @@ class TestLlamaCppTextModel:
 
         # 3. Missing model_path
         with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
-            config = ModelConfig(name="m", model_type=ModelType.TEXT, provider="llama_cpp", model_path="")
+            config = ModelConfig(
+                name="m", model_type=ModelType.TEXT, provider="llama_cpp", model_path=""
+            )
             with pytest.raises(ValueError) as exc:
                 LlamaCppTextModel(config)
             assert "model_path must be a non-empty path" in str(exc.value)
@@ -315,6 +327,7 @@ class TestLlamaCppTextModel:
 # 5. mlx_text_model.py Tests
 # ===========================================================================
 
+
 class TestMLXTextModel:
     def test_mlx_constructor_validations(self) -> None:
         # 1. Missing package ImportError
@@ -369,7 +382,9 @@ class TestMLXTextModel:
 
     @patch("file_organizer.models.mlx_text_model.mlx_generate")
     @patch("file_organizer.models.mlx_text_model.mlx_load")
-    def test_mlx_generation_and_signature_fallbacks(self, mock_load: MagicMock, mock_generate: MagicMock) -> None:
+    def test_mlx_generation_and_signature_fallbacks(
+        self, mock_load: MagicMock, mock_generate: MagicMock
+    ) -> None:
         mock_load.return_value = ("mock_model", "mock_tokenizer")
         config = ModelConfig(
             name="m",
@@ -386,7 +401,7 @@ class TestMLXTextModel:
         # Variant 2 succeeds.
         mock_generate.side_effect = [
             TypeError("got an unexpected keyword argument 'temp'"),
-            " Generated Text "
+            " Generated Text ",
         ]
 
         res = model.generate("hello")
@@ -431,6 +446,7 @@ class TestMLXTextModel:
 # ===========================================================================
 # 6. ClaudeTextModel & ClaudeVisionModel Tests
 # ===========================================================================
+
 
 class TestClaudeModels:
     @patch("file_organizer.models.claude_text_model.create_claude_client")
@@ -480,7 +496,9 @@ class TestClaudeModels:
         assert model._initialized is False
 
     @patch("file_organizer.models.claude_vision_model.create_claude_client")
-    def test_claude_vision_image_payload_and_errors(self, mock_create: MagicMock, tmp_path: Path) -> None:
+    def test_claude_vision_image_payload_and_errors(
+        self, mock_create: MagicMock, tmp_path: Path
+    ) -> None:
         mock_client = MagicMock()
         mock_create.return_value = mock_client
 
@@ -537,9 +555,12 @@ class TestClaudeModels:
 # 7. openai_text_model.py Tests
 # ===========================================================================
 
+
 class TestOpenAITextModel:
     @patch("file_organizer.models.openai_text_model.create_openai_client")
-    def test_openai_text_generation_exhaustion_and_empty_choices(self, mock_create: MagicMock) -> None:
+    def test_openai_text_generation_exhaustion_and_empty_choices(
+        self, mock_create: MagicMock
+    ) -> None:
         mock_client = MagicMock()
         mock_create.return_value = mock_client
 
@@ -548,38 +569,40 @@ class TestOpenAITextModel:
             model_type=ModelType.TEXT,
             provider="openai",
         )
-        model = OpenAITextModel(config)
-        model.initialize()
+        with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
+            model = OpenAITextModel(config)
+            model.initialize()
 
-        # Case 1: Empty choices response handling
-        mock_resp_empty = MagicMock()
-        mock_resp_empty.choices = []
-        mock_client.chat.completions.create.return_value = mock_resp_empty
+            # Case 1: Empty choices response handling
+            mock_resp_empty = MagicMock()
+            mock_resp_empty.choices = []
+            mock_client.chat.completions.create.return_value = mock_resp_empty
 
-        res_empty = model.generate("prompt")
-        assert res_empty == ""
+            res_empty = model.generate("prompt")
+            assert res_empty == ""
 
-        # Case 2: Token exhaustion and API errors raising
-        mock_choice = MagicMock()
-        mock_choice.finish_reason = "length"
-        mock_choice.message.content = "short"
-        mock_resp_exhausted = MagicMock()
-        mock_resp_exhausted.choices = [mock_choice]
+            # Case 2: Token exhaustion and API errors raising
+            mock_choice = MagicMock()
+            mock_choice.finish_reason = "length"
+            mock_choice.message.content = "short"
+            mock_resp_exhausted = MagicMock()
+            mock_resp_exhausted.choices = [mock_choice]
 
-        mock_client.chat.completions.create.return_value = mock_resp_exhausted
+            mock_client.chat.completions.create.return_value = mock_resp_exhausted
 
-        with pytest.raises(TokenExhaustionError):
-            model.generate("prompt")
+            with pytest.raises(TokenExhaustionError):
+                model.generate("prompt")
 
-        # Cleanup
-        model.cleanup()
-        assert model.client is None
-        assert model._initialized is False
+            # Cleanup
+            model.cleanup()
+            assert model.client is None
+            assert model._initialized is False
 
 
 # ===========================================================================
 # 8. audio_transcriber.py Tests
 # ===========================================================================
+
 
 class TestAudioTranscriber:
     def test_audio_transcriber_constructor_validations(self) -> None:
@@ -645,8 +668,8 @@ class TestAudioTranscriber:
     ) -> None:
         from file_organizer.models.audio_transcriber import (
             AudioTranscriber,
-            ModelSize,
             ComputeType,
+            ModelSize,
             TranscriptionOptions,
         )
 

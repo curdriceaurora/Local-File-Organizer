@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.setup_wizard_view.
 
 Targets 100% statement and branch coverage for SetupWizardView.
@@ -5,9 +6,10 @@ Targets 100% statement and branch coverage for SetupWizardView.
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
+
 
 # 1. Mock textual.work decorator BEFORE importing SetupWizardView
 def mock_work_decorator(*args, **kwargs):
@@ -15,12 +17,14 @@ def mock_work_decorator(*args, **kwargs):
         return args[0]
     return lambda f: f
 
+
 import textual
+
 textual.work = mock_work_decorator
 
 from textual.widgets import Static
+
 from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen
-from file_organizer.core.setup_wizard import WizardMode
 
 pytestmark = pytest.mark.unit
 
@@ -28,19 +32,19 @@ pytestmark = pytest.mark.unit
 def _create_view_with_mocks() -> tuple[SetupWizardView, MagicMock, MagicMock]:
     """Helper to create a SetupWizardView with query_one and app mocked."""
     view = SetupWizardView()
-    
+
     # Mock query_one to return a mock body widget
     mock_body = MagicMock(spec=Static)
     view.query_one = MagicMock(return_value=mock_body)
-    
+
     # Mock app property
     mock_app = MagicMock()
     app_prop = PropertyMock(return_value=mock_app)
     type(view).app = app_prop
-    
+
     # Force call_from_thread to execute synchronously in tests
     mock_app.call_from_thread = lambda func, *args, **kwargs: func(*args, **kwargs)
-    
+
     return view, mock_body, mock_app
 
 
@@ -72,18 +76,20 @@ def test_setup_wizard_view_on_mount() -> None:
 def test_setup_wizard_view_compose() -> None:
     """Verify compose yields a Static body widget with the rendered welcome screen."""
     view, _, _ = _create_view_with_mocks()
-    with patch.object(view, "_render_screen", return_value="welcome_markup"):
+    with patch.object(view, "_render_screen", return_value="welcome_markup") as mock_render:
         widgets = list(view.compose())
         assert len(widgets) == 1
         static_widget = widgets[0]
         assert isinstance(static_widget, Static)
         assert static_widget.id == "wizard-body"
+        assert static_widget.renderable == "welcome_markup"
+        mock_render.assert_called_once()
 
 
 def test_setup_wizard_view_action_select_option_1() -> None:
     """Verify Option 1 selection behaviour across different screens."""
     view, _, _ = _create_view_with_mocks()
-    
+
     # 1. On WELCOME screen -> Select Quick Start, trigger detection
     view._current_screen = WizardScreen.WELCOME
     with (
@@ -116,7 +122,7 @@ def test_setup_wizard_view_action_select_option_1() -> None:
     # 3. On MODEL_SELECT screen -> Select recommended model from hardware capabilities
     view._current_screen = WizardScreen.MODEL_SELECT
     view._selected_model = None
-    
+
     # Setup mock capabilities
     mock_hw = MagicMock()
     mock_hw.recommended_text_model.return_value = "recommended_model"
@@ -137,7 +143,7 @@ def test_setup_wizard_view_action_select_option_1() -> None:
 def test_setup_wizard_view_action_select_option_2() -> None:
     """Verify Option 2 selection behaviour across different screens."""
     view, _, _ = _create_view_with_mocks()
-    
+
     # 1. On WELCOME screen -> Select Power User, trigger detection
     view._current_screen = WizardScreen.WELCOME
     with (
@@ -170,7 +176,7 @@ def test_setup_wizard_view_action_select_option_2() -> None:
     # 3. On MODEL_SELECT screen -> Select alternative model (Qwen 3b if 7b is recommended)
     view._current_screen = WizardScreen.MODEL_SELECT
     view._selected_model = None
-    
+
     mock_hw = MagicMock()
     mock_hw.recommended_text_model.return_value = "qwen2.5:7b-instruct-q4_K_M"
     mock_caps = MagicMock()
@@ -199,15 +205,15 @@ def test_setup_wizard_view_action_select_option_2() -> None:
 def test_setup_wizard_view_action_select_option_3() -> None:
     """Verify Option 3 selection behaviour on MODEL_SELECT screen."""
     view, _, _ = _create_view_with_mocks()
-    
+
     # 1. On MODEL_SELECT screen -> Select first installed model if available
     view._current_screen = WizardScreen.MODEL_SELECT
     view._selected_model = None
-    
+
     mock_model = MagicMock()
     mock_model.name = "installed_model_1"
     mock_model.size = 3 * 1024**3
-    
+
     mock_caps = MagicMock()
     mock_caps.installed_models = [mock_model]
     view._capabilities = mock_caps
@@ -225,7 +231,7 @@ def test_setup_wizard_view_action_select_option_3() -> None:
 def test_setup_wizard_view_action_download_model() -> None:
     """Verify model download action boundaries and validations."""
     view, _, _ = _create_view_with_mocks()
-    
+
     # 1. Wrong screen -> Ignore
     view._current_screen = WizardScreen.WELCOME
     with patch.object(view, "_run_model_download") as mock_download:
@@ -282,7 +288,7 @@ def test_setup_wizard_view_action_skip_setup() -> None:
 def test_setup_wizard_view_action_continue_wizard() -> None:
     """Verify Continue action flows correctly between screens."""
     view, _, _ = _create_view_with_mocks()
-    
+
     # 1. On WELCOME screen -> Transition to MODE_SELECT
     view._current_screen = WizardScreen.WELCOME
     with patch.object(view, "_set_status") as mock_status:
@@ -362,7 +368,10 @@ def test_setup_wizard_view_action_continue_wizard() -> None:
 def test_setup_wizard_view_action_go_back() -> None:
     """Verify Back action flows correctly backwards between screens."""
     view, _, _ = _create_view_with_mocks()
-    with patch.object(view, "_refresh_screen") as mock_refresh, patch.object(view, "_set_status") as mock_status:
+    with (
+        patch.object(view, "_refresh_screen") as mock_refresh,
+        patch.object(view, "_set_status") as mock_status,
+    ):
         # 1. MODE_SELECT -> WELCOME
         view._current_screen = WizardScreen.MODE_SELECT
         view.action_go_back()
@@ -390,14 +399,14 @@ def test_setup_wizard_view_action_go_back() -> None:
         view.action_go_back()
         assert view._current_screen == WizardScreen.MODEL_SELECT
         mock_status.assert_any_call("Model selection. Press 1, 2, or 3 to choose.")
-        
+
         assert mock_refresh.call_count == 4
 
 
 def test_setup_wizard_view_screen_rendering() -> None:
     """Verify all screen rendering functions produce non-empty strings and handle capability bounds."""
     view = SetupWizardView()
-    
+
     # 1. Welcome screen
     view._current_screen = WizardScreen.WELCOME
     markup = view._render_screen()
@@ -424,7 +433,7 @@ def test_setup_wizard_view_screen_rendering() -> None:
     markup = view._render_screen()
     assert "Detecting system" in markup
     assert "Reading memory..." in markup
-    
+
     # 5. Hardware Detect screen - Error
     view._detection_status = "error"
     view._detection_message = "No controller found"
@@ -448,16 +457,21 @@ def test_setup_wizard_view_screen_rendering() -> None:
     mock_ollama.installed = True
     mock_ollama.version = "0.1.15"
     mock_ollama.models_count = 3
-    
+
     mock_model = MagicMock()
     mock_model.name = "qwen2.5:7b-instruct-q4_K_M"
     mock_model.size = int(4.5 * 1024**3)
 
+    # Model double lacking .size attribute for regression testing
+    mock_model_no_size = MagicMock()
+    mock_model_no_size.name = "custom-local-model"
+    del mock_model_no_size.size
+
     mock_caps = MagicMock()
     mock_caps.hardware = mock_hw
     mock_caps.ollama_status = mock_ollama
-    mock_caps.installed_models = [mock_model]
-    
+    mock_caps.installed_models = [mock_model_no_size, mock_model]
+
     view._capabilities = mock_caps
     view._detection_status = "complete"
     markup = view._render_screen()
@@ -506,6 +520,7 @@ def test_setup_wizard_view_screen_rendering() -> None:
     markup = view._render_screen()
     assert "Model Selection" in markup
     assert "qwen2.5:7b-instruct-q4_K_M" in markup
+    assert "Unknown size" in markup
 
     # Test 3b recommended alternative sizing descriptions
     mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
@@ -526,7 +541,7 @@ def test_setup_wizard_view_screen_rendering() -> None:
 def test_setup_wizard_view_status_bar_update() -> None:
     """Verify _set_status safely handles absence of StatusBar or application mount."""
     view = SetupWizardView()
-    
+
     # Should not raise exception when not mounted in an app
     view._set_status("test message")
 
@@ -534,7 +549,7 @@ def test_setup_wizard_view_status_bar_update() -> None:
     mock_status_bar = MagicMock()
     mock_app = MagicMock()
     mock_app.query_one.return_value = mock_status_bar
-    
+
     with patch.object(SetupWizardView, "app", new_callable=PropertyMock, return_value=mock_app):
         view._set_status("success message")
         mock_status_bar.set_status.assert_called_once_with("success message")
@@ -551,7 +566,7 @@ def test_setup_wizard_view_run_hardware_detection_success() -> None:
     mock_hw.ram_gb = 16
     mock_caps = MagicMock()
     mock_caps.hardware = mock_hw
-    
+
     mock_wizard = MagicMock()
     mock_wizard.detect_capabilities.return_value = mock_caps
 
@@ -561,7 +576,7 @@ def test_setup_wizard_view_run_hardware_detection_success() -> None:
         patch.object(view, "_set_status") as mock_status,
     ):
         view._run_hardware_detection()
-        
+
         assert view._detection_status == "complete"
         assert view._capabilities == mock_caps
         assert view._detection_progress == 100
@@ -575,12 +590,14 @@ def test_setup_wizard_view_run_hardware_detection_failure() -> None:
     view._selected_mode = "power_user"
 
     with (
-        patch("file_organizer.core.setup_wizard.SetupWizard", side_effect=ValueError("Hardware error")),
+        patch(
+            "file_organizer.core.setup_wizard.SetupWizard", side_effect=ValueError("Hardware error")
+        ),
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
         view._run_hardware_detection()
-        
+
         assert view._detection_status == "error"
         assert view._detection_message == "Hardware error"
         assert view._detection_progress == 0
@@ -609,7 +626,7 @@ def test_setup_wizard_view_run_model_download_missing_ollama_package() -> None:
         patch.object(view, "_set_status") as mock_status,
     ):
         view._run_model_download()
-        
+
         assert view._download_status == "error"
         assert "Ollama Python package not installed" in view._download_message
         mock_refresh.assert_called()
@@ -638,12 +655,15 @@ def test_setup_wizard_view_run_model_download_success() -> None:
 
     with (
         patch.dict("sys.modules", {"ollama": mock_ollama}),
-        patch("file_organizer.core.backend_detector.list_installed_models", return_value=[mock_installed_model]),
+        patch(
+            "file_organizer.core.backend_detector.list_installed_models",
+            return_value=[mock_installed_model],
+        ),
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
         view._run_model_download()
-        
+
         assert view._download_status == "complete"
         assert view._download_progress == 100
         mock_ollama_client.pull.assert_called_once_with("my_selected_model")
@@ -667,7 +687,7 @@ def test_setup_wizard_view_run_model_download_failure() -> None:
         patch.object(view, "_set_status") as mock_status,
     ):
         view._run_model_download()
-        
+
         assert view._download_status == "error"
         assert view._download_message == "network timeout"
         assert view._download_progress == 0

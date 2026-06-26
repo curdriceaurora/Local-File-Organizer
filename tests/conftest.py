@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """
 Shared test fixtures and configuration for the file_organizer test suite.
 
@@ -7,13 +8,16 @@ Requires Python 3.11+.
 
 from __future__ import annotations
 
+
 # Mock textual.work decorator globally for all tests before TUI imports occur
 def mock_work_decorator(*args, **kwargs):
     if len(args) == 1 and callable(args[0]):
         return args[0]
     return lambda f: f
 
+
 import textual
+
 textual.work = mock_work_decorator
 
 import asyncio

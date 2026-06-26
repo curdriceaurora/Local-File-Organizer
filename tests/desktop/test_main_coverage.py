@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import runpy
 from unittest.mock import patch
+
 import pytest
 
 pytestmark = pytest.mark.unit

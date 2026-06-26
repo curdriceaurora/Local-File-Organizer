@@ -7,11 +7,9 @@ identified in the coverage gap analysis.
 from __future__ import annotations
 
 import os
-import platform
-import socket
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -22,11 +20,13 @@ pytestmark = pytest.mark.unit
 # 1. deploy/config.py
 # ===========================================================================
 
+
 class TestDeploymentConfig:
     """Tests for DeploymentConfig initialization and properties."""
 
     def test_default_initialization(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig()
         assert cfg.environment == "dev"
         assert cfg.log_level == "DEBUG"
@@ -37,37 +37,44 @@ class TestDeploymentConfig:
 
     def test_prod_environment(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(environment="prod", log_level="WARNING", max_workers=8)
         assert cfg.is_production is True
         assert cfg.is_development is False
 
     def test_staging_environment(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(environment="staging", log_level="INFO", max_workers=4)
         assert cfg.environment == "staging"
 
     def test_invalid_environment(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         with pytest.raises(ValueError, match="Invalid environment"):
             DeploymentConfig(environment="unknown")
 
     def test_invalid_log_level(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         with pytest.raises(ValueError, match="Invalid log_level"):
             DeploymentConfig(log_level="TRACE")
 
     def test_log_level_normalized_to_uppercase(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(log_level="debug")
         assert cfg.log_level == "DEBUG"
 
     def test_invalid_max_workers(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         with pytest.raises(ValueError, match="max_workers"):
             DeploymentConfig(max_workers=0)
 
     def test_invalid_port(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         with pytest.raises(ValueError, match="port"):
             DeploymentConfig(port=99999)
         with pytest.raises(ValueError, match="port"):
@@ -75,23 +82,27 @@ class TestDeploymentConfig:
 
     def test_data_directory_str_converts_to_path(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(data_directory="/tmp/data")  # type: ignore[arg-type]
         assert isinstance(cfg.data_directory, Path)
 
     def test_redis_host_parsing(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(redis_url="redis://myhost:6380/1")
         assert cfg.redis_host == "myhost"
         assert cfg.redis_port == 6380
 
     def test_redis_host_no_port(self):
         from file_organizer.deploy.config import DeploymentConfig
+
         cfg = DeploymentConfig(redis_url="redis://myhost/0")
         assert cfg.redis_host == "myhost"
         assert cfg.redis_port == 6379
 
     def test_from_env(self, monkeypatch):
         from file_organizer.deploy.config import DeploymentConfig
+
         monkeypatch.setenv("FO_ENVIRONMENT", "staging")
         monkeypatch.setenv("FO_LOG_LEVEL", "INFO")
         monkeypatch.setenv("FO_MAX_WORKERS", "4")
@@ -109,6 +120,7 @@ class TestDeploymentConfig:
 
     def test_from_env_unknown_environment_falls_back_to_dev_defaults(self, monkeypatch):
         from file_organizer.deploy.config import DeploymentConfig
+
         monkeypatch.setenv("FO_ENVIRONMENT", "dev")
         # No other env vars - should use dev defaults
         cfg = DeploymentConfig.from_env()
@@ -119,15 +131,18 @@ class TestDeploymentConfig:
 # 2. deploy/health.py
 # ===========================================================================
 
+
 class TestHealthEndpoint:
     """Tests for HealthEndpoint component checks."""
 
     def _make_config(self, redis_url="redis://localhost:6379/0"):
         from file_organizer.deploy.config import DeploymentConfig
+
         return DeploymentConfig(redis_url=redis_url)
 
     def test_get_health_all_healthy(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         cfg = self._make_config()
         ep = HealthEndpoint(config=cfg, min_disk_space_mb=1)
 
@@ -137,6 +152,7 @@ class TestHealthEndpoint:
             patch.object(ep, "_check_model_availability") as mock_model,
         ):
             from file_organizer.deploy.health import ComponentStatus
+
             mock_redis.return_value = ComponentStatus(name="redis", healthy=True, message="ok")
             mock_disk.return_value = ComponentStatus(name="disk", healthy=True, message="ok")
             mock_model.return_value = ComponentStatus(name="model", healthy=True, message="ok")
@@ -147,7 +163,8 @@ class TestHealthEndpoint:
             assert "uptime_seconds" in result
 
     def test_get_health_unhealthy(self):
-        from file_organizer.deploy.health import HealthEndpoint, ComponentStatus
+        from file_organizer.deploy.health import ComponentStatus, HealthEndpoint
+
         cfg = self._make_config()
         ep = HealthEndpoint(config=cfg)
         with (
@@ -163,6 +180,7 @@ class TestHealthEndpoint:
 
     def test_check_redis_connected(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         cfg = self._make_config()
         ep = HealthEndpoint(config=cfg)
         with patch("socket.socket") as mock_sock_cls:
@@ -173,6 +191,7 @@ class TestHealthEndpoint:
 
     def test_check_redis_refused(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         ep = HealthEndpoint(config=self._make_config())
         with patch("socket.socket") as mock_sock_cls:
             mock_sock = MagicMock()
@@ -182,6 +201,7 @@ class TestHealthEndpoint:
 
     def test_check_redis_oserror(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         ep = HealthEndpoint(config=self._make_config())
         with patch("socket.socket") as mock_sock_cls:
             mock_sock_cls.return_value.__enter__ = MagicMock()
@@ -193,6 +213,7 @@ class TestHealthEndpoint:
     def test_check_disk_space_sufficient(self, tmp_path):
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
+
         cfg = DeploymentConfig(data_directory=tmp_path)
         ep = HealthEndpoint(config=cfg, min_disk_space_mb=1)
         assert ep.check_disk_space() is True
@@ -200,15 +221,17 @@ class TestHealthEndpoint:
     def test_check_disk_space_directory_missing(self):
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
+
         cfg = DeploymentConfig(data_directory=Path("/nonexistent/path"))
         ep = HealthEndpoint(config=cfg, min_disk_space_mb=1)
         # Falls back to "/" - should still work
         result = ep._check_disk_space()
-        assert isinstance(result.healthy, bool)
+        assert result.healthy is True
 
     def test_check_disk_space_oserror(self):
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
+
         cfg = DeploymentConfig(data_directory=Path("/nonexistent"))
         ep = HealthEndpoint(config=cfg)
         with patch("shutil.disk_usage", side_effect=OSError("disk error")):
@@ -217,6 +240,7 @@ class TestHealthEndpoint:
 
     def test_check_model_available(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         ep = HealthEndpoint(config=self._make_config(), model_host="localhost", model_port=11434)
         with patch("socket.socket") as mock_sock_cls:
             mock_sock = MagicMock()
@@ -226,6 +250,7 @@ class TestHealthEndpoint:
 
     def test_check_model_unavailable(self):
         from file_organizer.deploy.health import HealthEndpoint
+
         ep = HealthEndpoint(config=self._make_config())
         with patch("socket.socket") as mock_sock_cls:
             mock_sock = MagicMock()
@@ -238,11 +263,13 @@ class TestHealthEndpoint:
 # 3. deploy/scaling.py
 # ===========================================================================
 
+
 class TestAutoScaler:
     """Tests for AutoScaler scaling decisions."""
 
     def _make_scaler(self, **kwargs):
         from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+
         config = ScalingConfig(
             min_replicas=1,
             max_replicas=5,
@@ -256,6 +283,7 @@ class TestAutoScaler:
 
     def test_scaling_config_validation_errors(self):
         from file_organizer.deploy.scaling import ScalingConfig
+
         with pytest.raises(ValueError, match="min_replicas"):
             ScalingConfig(min_replicas=0)
         with pytest.raises(ValueError, match="max_replicas"):
@@ -267,6 +295,7 @@ class TestAutoScaler:
 
     def test_scale_up_action(self):
         from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
+
         scaler, _ = self._make_scaler()
         metrics = ScalingMetrics(cpu_percent=90.0, memory_percent=90.0)
         decision = scaler.evaluate(2, metrics=metrics)
@@ -275,14 +304,20 @@ class TestAutoScaler:
 
     def test_scale_up_at_max(self):
         from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
+
         scaler, _ = self._make_scaler()
         metrics = ScalingMetrics(cpu_percent=90.0, memory_percent=90.0)
         decision = scaler.evaluate(5, metrics=metrics)
         assert decision.action == ScalingAction.NO_CHANGE
 
     def test_scale_up_in_cooldown(self):
-        from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
-        from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+        from file_organizer.deploy.scaling import (
+            AutoScaler,
+            ScalingAction,
+            ScalingConfig,
+            ScalingMetrics,
+        )
+
         config = ScalingConfig(cooldown_seconds=300)
         clock = MagicMock()
         clock.time.return_value = 0.0
@@ -294,6 +329,7 @@ class TestAutoScaler:
 
     def test_scale_down_action(self):
         from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
+
         scaler, _ = self._make_scaler()
         metrics = ScalingMetrics(cpu_percent=10.0, memory_percent=10.0)
         decision = scaler.evaluate(3, metrics=metrics)
@@ -302,14 +338,20 @@ class TestAutoScaler:
 
     def test_scale_down_at_min(self):
         from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
+
         scaler, _ = self._make_scaler()
         metrics = ScalingMetrics(cpu_percent=10.0, memory_percent=10.0)
         decision = scaler.evaluate(1, metrics=metrics)
         assert decision.action == ScalingAction.NO_CHANGE
 
     def test_scale_down_in_cooldown(self):
-        from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
-        from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+        from file_organizer.deploy.scaling import (
+            AutoScaler,
+            ScalingAction,
+            ScalingConfig,
+            ScalingMetrics,
+        )
+
         config = ScalingConfig(cooldown_seconds=300)
         clock = MagicMock()
         clock.time.return_value = 0.0
@@ -321,6 +363,7 @@ class TestAutoScaler:
 
     def test_no_change_in_range(self):
         from file_organizer.deploy.scaling import ScalingAction, ScalingMetrics
+
         scaler, _ = self._make_scaler()
         metrics = ScalingMetrics(cpu_percent=50.0, memory_percent=50.0)
         decision = scaler.evaluate(2, metrics=metrics)
@@ -328,6 +371,7 @@ class TestAutoScaler:
 
     def test_get_metrics_uses_monitor(self):
         from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+
         config = ScalingConfig()
         monitor = MagicMock()
         mem = MagicMock()
@@ -338,7 +382,8 @@ class TestAutoScaler:
         assert metrics.cpu_percent == 55.0
 
     def test_evaluate_without_metrics_calls_get_metrics(self):
-        from file_organizer.deploy.scaling import AutoScaler, ScalingConfig, ScalingMetrics
+        from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+
         config = ScalingConfig()
         monitor = MagicMock()
         mem = MagicMock()
@@ -350,12 +395,15 @@ class TestAutoScaler:
 
     def test_now_no_clock(self):
         from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+
         scaler = AutoScaler(ScalingConfig(), resource_monitor=MagicMock())
         t = scaler._now()
         assert isinstance(t, float)
+        assert t > 0
 
     def test_now_with_clock(self):
         from file_organizer.deploy.scaling import AutoScaler, ScalingConfig
+
         clock = MagicMock()
         clock.time.return_value = 42.0
         scaler = AutoScaler(ScalingConfig(), resource_monitor=MagicMock(), clock=clock)
@@ -366,11 +414,13 @@ class TestAutoScaler:
 # 4. deploy/monitoring.py
 # ===========================================================================
 
+
 class TestDeploymentMonitor:
     """Tests for DeploymentMonitor metric collection and alerts."""
 
     def test_alert_thresholds_validation(self):
         from file_organizer.deploy.monitoring import AlertThresholds
+
         with pytest.raises(ValueError, match="cpu_warning"):
             AlertThresholds(cpu_warning=95.0, cpu_critical=90.0)
         with pytest.raises(ValueError, match="memory_warning"):
@@ -378,6 +428,7 @@ class TestDeploymentMonitor:
 
     def test_collect_metrics(self):
         from file_organizer.deploy.monitoring import DeploymentMonitor
+
         monitor_mock = MagicMock()
         mem = MagicMock()
         mem.percent = 60.0
@@ -388,10 +439,15 @@ class TestDeploymentMonitor:
         assert snap.disk_usage == 45.0
 
     def test_get_alerts_cpu_critical(self):
-        from file_organizer.deploy.monitoring import (
-            DeploymentMonitor, AlertThresholds, AlertLevel, MetricsSnapshot
-        )
         import time
+
+        from file_organizer.deploy.monitoring import (
+            AlertLevel,
+            AlertThresholds,
+            DeploymentMonitor,
+            MetricsSnapshot,
+        )
+
         snap = MetricsSnapshot(
             timestamp=time.time(),
             cpu_usage=95.0,
@@ -407,10 +463,15 @@ class TestDeploymentMonitor:
         assert any(a.level == AlertLevel.CRITICAL for a in cpu_alerts)
 
     def test_get_alerts_cpu_warning(self):
-        from file_organizer.deploy.monitoring import (
-            DeploymentMonitor, AlertThresholds, AlertLevel, MetricsSnapshot
-        )
         import time
+
+        from file_organizer.deploy.monitoring import (
+            AlertLevel,
+            AlertThresholds,
+            DeploymentMonitor,
+            MetricsSnapshot,
+        )
+
         snap = MetricsSnapshot(
             timestamp=time.time(),
             cpu_usage=75.0,
@@ -426,10 +487,15 @@ class TestDeploymentMonitor:
         assert any(a.level == AlertLevel.WARNING for a in cpu_alerts)
 
     def test_get_alerts_memory_critical(self):
-        from file_organizer.deploy.monitoring import (
-            DeploymentMonitor, AlertThresholds, AlertLevel, MetricsSnapshot
-        )
         import time
+
+        from file_organizer.deploy.monitoring import (
+            AlertLevel,
+            AlertThresholds,
+            DeploymentMonitor,
+            MetricsSnapshot,
+        )
+
         snap = MetricsSnapshot(
             timestamp=time.time(),
             cpu_usage=50.0,
@@ -445,10 +511,15 @@ class TestDeploymentMonitor:
         assert any(a.level == AlertLevel.CRITICAL for a in mem_alerts)
 
     def test_get_alerts_disk_warning(self):
-        from file_organizer.deploy.monitoring import (
-            DeploymentMonitor, AlertThresholds, AlertLevel, MetricsSnapshot
-        )
         import time
+
+        from file_organizer.deploy.monitoring import (
+            AlertLevel,
+            AlertThresholds,
+            DeploymentMonitor,
+            MetricsSnapshot,
+        )
+
         snap = MetricsSnapshot(
             timestamp=time.time(),
             cpu_usage=50.0,
@@ -464,10 +535,14 @@ class TestDeploymentMonitor:
         assert any(a.level == AlertLevel.WARNING for a in disk_alerts)
 
     def test_get_alerts_none_fired(self):
-        from file_organizer.deploy.monitoring import (
-            DeploymentMonitor, AlertThresholds, MetricsSnapshot
-        )
         import time
+
+        from file_organizer.deploy.monitoring import (
+            AlertThresholds,
+            DeploymentMonitor,
+            MetricsSnapshot,
+        )
+
         snap = MetricsSnapshot(
             timestamp=time.time(),
             cpu_usage=10.0,
@@ -482,17 +557,19 @@ class TestDeploymentMonitor:
         assert alerts == []
 
     def test_get_alerts_no_snapshot_calls_collect(self):
-        from file_organizer.deploy.monitoring import DeploymentMonitor, AlertThresholds
+        from file_organizer.deploy.monitoring import AlertThresholds, DeploymentMonitor
+
         monitor_mock = MagicMock()
         mem = MagicMock()
         mem.percent = 20.0
         monitor_mock.get_memory_usage.return_value = mem
         dm = DeploymentMonitor(resource_monitor=monitor_mock, disk_usage_func=lambda: 10.0)
         alerts = dm.get_alerts(AlertThresholds())
-        assert isinstance(alerts, list)
+        assert alerts == []
 
     def test_disk_usage_fallback_shutil(self):
         from file_organizer.deploy.monitoring import DeploymentMonitor
+
         dm = DeploymentMonitor(resource_monitor=MagicMock())
         with patch("shutil.disk_usage") as mock_disk:
             mock_disk.return_value = MagicMock(used=500, total=1000)
@@ -501,6 +578,7 @@ class TestDeploymentMonitor:
 
     def test_disk_usage_fallback_oserror(self):
         from file_organizer.deploy.monitoring import DeploymentMonitor
+
         dm = DeploymentMonitor(resource_monitor=MagicMock())
         with patch("shutil.disk_usage", side_effect=OSError):
             result = dm._get_disk_usage()
@@ -511,11 +589,13 @@ class TestDeploymentMonitor:
 # 5. deploy/compose_scaler.py
 # ===========================================================================
 
+
 class TestComposeScaler:
     """Tests for ComposeScaler subprocess wrappers."""
 
     def test_scale_service_success(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler("docker-compose.yml")
         with patch.object(scaler, "_run_command", return_value=True) as mock_run:
             assert scaler.scale_service("web", 3) is True
@@ -523,30 +603,35 @@ class TestComposeScaler:
 
     def test_scale_service_negative_replicas(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with pytest.raises(ValueError, match="replicas"):
             scaler.scale_service("web", -1)
 
     def test_scale_service_failure(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch.object(scaler, "_run_command", return_value=False):
             assert scaler.scale_service("web", 2) is False
 
     def test_get_service_count_success(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch.object(scaler, "_run_command_output", return_value="{}\n{}\n"):
             assert scaler.get_service_count("web") == 2
 
     def test_get_service_count_none_output(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch.object(scaler, "_run_command_output", return_value=None):
             assert scaler.get_service_count("web") == 0
 
     def test_build_command_with_project_name(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler("compose.yml", project_name="myproject")
         cmd = scaler._build_command("ps")
         assert "-p" in cmd
@@ -554,6 +639,7 @@ class TestComposeScaler:
 
     def test_run_command_success(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
@@ -561,6 +647,7 @@ class TestComposeScaler:
 
     def test_run_command_failure(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr="error", stdout="")
@@ -568,12 +655,14 @@ class TestComposeScaler:
 
     def test_run_command_exception(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run", side_effect=FileNotFoundError("docker not found")):
             assert scaler._run_command(["docker-compose"]) is False
 
     def test_run_command_output_success(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="json_line\n")
@@ -581,6 +670,7 @@ class TestComposeScaler:
 
     def test_run_command_output_failure(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr="err", stdout="")
@@ -588,6 +678,7 @@ class TestComposeScaler:
 
     def test_run_command_output_exception(self):
         from file_organizer.deploy.compose_scaler import ComposeScaler
+
         scaler = ComposeScaler()
         with patch("subprocess.run", side_effect=OSError("timeout")):
             assert scaler._run_command_output(["cmd"]) is None
@@ -597,21 +688,25 @@ class TestComposeScaler:
 # 6. config/migrations.py
 # ===========================================================================
 
+
 class TestConfigMigrations:
     """Tests for config schema migration utilities."""
 
     def test_version_key_numeric(self):
         from file_organizer.config.migrations import _version_key
+
         assert _version_key("1.0") == (1,)
         assert _version_key("1.2.3") == (1, 2, 3)
         assert _version_key("2.0.0") == (2,)
 
     def test_version_key_non_numeric(self):
         from file_organizer.config.migrations import _version_key
+
         assert _version_key("bad") == (0,)
 
     def test_compare_versions(self):
         from file_organizer.config.migrations import compare_versions
+
         assert compare_versions("1.0", "2.0") == -1
         assert compare_versions("2.0", "1.0") == 1
         assert compare_versions("1.0", "1.0") == 0
@@ -619,6 +714,7 @@ class TestConfigMigrations:
 
     def test_migrate_to_current_same_version(self):
         from file_organizer.config.migrations import migrate_to_current
+
         data = {"key": "value"}
         result = migrate_to_current(data, from_version="1.0", to_version="1.0")
         assert result is data
@@ -626,6 +722,7 @@ class TestConfigMigrations:
     def test_migrate_to_current_no_migrations(self):
         """With empty MIGRATIONS registry, returns data with a warning."""
         from file_organizer.config.migrations import migrate_to_current
+
         data = {"key": "value"}
         result = migrate_to_current(data, from_version="0.5", to_version="1.0")
         assert result is data
@@ -696,11 +793,13 @@ class TestConfigMigrations:
 # 7. events/monitor.py
 # ===========================================================================
 
+
 class TestEventMonitor:
     """Tests for EventMonitor Redis stream statistics."""
 
     def _make_monitor(self, connected=True):
         from file_organizer.events.monitor import EventMonitor
+
         manager = MagicMock()
         manager.is_connected = connected
         manager.config.get_stream_name = lambda name: f"fo:{name}"
@@ -709,6 +808,7 @@ class TestEventMonitor:
     def test_get_stream_stats_not_connected(self):
         monitor, _ = self._make_monitor(connected=False)
         from file_organizer.events.monitor import StreamStats
+
         stats = monitor.get_stream_stats("file-events")
         assert stats == StreamStats()
 
@@ -732,12 +832,14 @@ class TestEventMonitor:
         manager._redis = MagicMock()
         manager._redis.xinfo_stream.side_effect = Exception("redis error")
         from file_organizer.events.monitor import StreamStats
+
         stats = monitor.get_stream_stats("file-events")
         assert stats == StreamStats()
 
     def test_get_consumer_lag_not_connected(self):
         monitor, _ = self._make_monitor(connected=False)
         from file_organizer.events.monitor import ConsumerLag
+
         lag = monitor.get_consumer_lag("file-events", "workers")
         assert lag == ConsumerLag()
 
@@ -746,9 +848,7 @@ class TestEventMonitor:
         redis_mock = MagicMock()
         manager._redis = redis_mock
         redis_mock.xpending.return_value = {"pending": 5}
-        redis_mock.xinfo_groups.return_value = [
-            {"name": "workers", "consumers": 3, "idle": 1000}
-        ]
+        redis_mock.xinfo_groups.return_value = [{"name": "workers", "consumers": 3, "idle": 1000}]
         lag = monitor.get_consumer_lag("file-events", "workers")
         assert lag.pending == 5
         assert lag.consumers == 3
@@ -767,6 +867,7 @@ class TestEventMonitor:
         manager._redis = MagicMock()
         manager._redis.xpending.side_effect = Exception("error")
         from file_organizer.events.monitor import ConsumerLag
+
         lag = monitor.get_consumer_lag("file-events", "workers")
         assert lag == ConsumerLag()
 
@@ -798,15 +899,18 @@ class TestEventMonitor:
 
     def test_parse_entry_timestamp_none(self):
         from file_organizer.events.monitor import _parse_entry_timestamp
+
         assert _parse_entry_timestamp(None) is None
 
     def test_parse_entry_timestamp_valid(self):
         from file_organizer.events.monitor import _parse_entry_timestamp
+
         ts = _parse_entry_timestamp(("1600000000000-0", {}))
         assert ts is not None
 
     def test_parse_entry_timestamp_invalid(self):
         from file_organizer.events.monitor import _parse_entry_timestamp
+
         assert _parse_entry_timestamp(("bad-id", {})) is None
 
 
@@ -814,11 +918,13 @@ class TestEventMonitor:
 # 8. events/consumer.py
 # ===========================================================================
 
+
 class TestEventConsumer:
     """Tests for EventConsumer handler registration and dispatch."""
 
     def _make_consumer(self):
         from file_organizer.events.consumer import EventConsumer
+
         manager = MagicMock()
         manager.is_connected = True
         return EventConsumer(stream_manager=manager), manager
@@ -843,6 +949,7 @@ class TestEventConsumer:
 
     def test_register_handler(self):
         from file_organizer.events.types import EventType
+
         consumer, _ = self._make_consumer()
         handler = MagicMock()
         consumer.register_handler(EventType.FILE_CREATED, handler)
@@ -850,6 +957,7 @@ class TestEventConsumer:
 
     def test_register_multiple_handlers(self):
         from file_organizer.events.types import EventType
+
         consumer, _ = self._make_consumer()
         h1, h2 = MagicMock(), MagicMock()
         consumer.register_handler(EventType.FILE_CREATED, h1)
@@ -858,6 +966,7 @@ class TestEventConsumer:
 
     def test_unregister_handler(self):
         from file_organizer.events.types import EventType
+
         consumer, _ = self._make_consumer()
         handler = MagicMock()
         consumer.register_handler(EventType.FILE_CREATED, handler)
@@ -867,6 +976,7 @@ class TestEventConsumer:
 
     def test_unregister_handler_not_registered(self):
         from file_organizer.events.types import EventType
+
         consumer, _ = self._make_consumer()
         result = consumer.unregister_handler(EventType.FILE_CREATED, MagicMock())
         assert result is False
@@ -884,6 +994,7 @@ class TestEventConsumer:
 
     def test_dispatch_event_no_handlers(self):
         from file_organizer.events.stream import Event
+
         consumer, manager = self._make_consumer()
         event = Event(id="msg1", stream="test", data={"event_type": "unknown"})
         consumer._dispatch_event(event, "test", "group1")
@@ -892,6 +1003,7 @@ class TestEventConsumer:
     def test_dispatch_event_with_handler_success(self):
         from file_organizer.events.stream import Event
         from file_organizer.events.types import EventType
+
         consumer, manager = self._make_consumer()
         handler = MagicMock()
         consumer.register_handler(EventType.FILE_CREATED, handler)
@@ -904,6 +1016,7 @@ class TestEventConsumer:
     def test_dispatch_event_handler_raises(self):
         from file_organizer.events.stream import Event
         from file_organizer.events.types import EventType
+
         consumer, manager = self._make_consumer()
         handler = MagicMock(side_effect=RuntimeError("handler error"))
         consumer.register_handler(EventType.FILE_CREATED, handler)
@@ -926,6 +1039,7 @@ class TestEventConsumer:
     @pytest.mark.asyncio
     async def test_start_consuming_not_connected(self):
         from file_organizer.events.consumer import EventConsumer
+
         manager = MagicMock()
         manager.is_connected = False
         consumer = EventConsumer(stream_manager=manager)
@@ -936,9 +1050,9 @@ class TestEventConsumer:
     @pytest.mark.asyncio
     async def test_start_consuming_processes_events(self):
         """Start consuming, process one batch, then stop."""
+
         from file_organizer.events.consumer import EventConsumer
         from file_organizer.events.stream import Event
-        import asyncio
 
         manager = MagicMock()
         manager.is_connected = True
@@ -968,12 +1082,14 @@ class TestEventConsumer:
 # 9. core/backend_detector.py
 # ===========================================================================
 
+
 class TestBackendDetector:
     """Tests for Ollama backend detection."""
 
     def test_detect_ollama_not_available(self):
         with patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", False):
             from file_organizer.core.backend_detector import detect_ollama
+
             status = detect_ollama()
             assert status.installed is False
             assert status.running is False
@@ -994,6 +1110,7 @@ class TestBackendDetector:
             client_mock.list.return_value = models_response
 
             from file_organizer.core.backend_detector import detect_ollama
+
             status = detect_ollama()
             assert status.running is True
             assert status.models_count == 2
@@ -1010,6 +1127,7 @@ class TestBackendDetector:
             client_mock.list.return_value = {"models": [1, 2, 3]}
 
             from file_organizer.core.backend_detector import detect_ollama
+
             status = detect_ollama()
             assert status.running is True
             assert status.models_count == 3
@@ -1019,12 +1137,15 @@ class TestBackendDetector:
             patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True),
             patch("subprocess.run") as mock_run,
             patch("file_organizer.core.backend_detector.ollama") as mock_ollama,
-            patch("file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)),
+            patch(
+                "file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)
+            ),
         ):
             mock_run.return_value = MagicMock(returncode=0, stdout="version")
             mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
 
             from file_organizer.core.backend_detector import detect_ollama
+
             status = detect_ollama()
             assert status.running is False
 
@@ -1038,12 +1159,14 @@ class TestBackendDetector:
             mock_ollama.Client.return_value = client_mock
             client_mock.list.return_value = [1, 2]
             from file_organizer.core.backend_detector import detect_ollama
+
             status = detect_ollama()
             assert status.models_count == 2
 
     def test_list_installed_models_not_available(self):
         with patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", False):
             from file_organizer.core.backend_detector import list_installed_models
+
             assert list_installed_models() == []
 
     def test_list_installed_models_via_client_dataclass(self):
@@ -1062,6 +1185,7 @@ class TestBackendDetector:
             client_mock.list.return_value = response
 
             from file_organizer.core.backend_detector import list_installed_models
+
             models = list_installed_models()
             assert len(models) == 1
             assert models[0].name == "llama3:8b"
@@ -1077,6 +1201,7 @@ class TestBackendDetector:
             client_mock.list.return_value = {"models": [{"name": "gemma:2b", "size": 500}]}
 
             from file_organizer.core.backend_detector import list_installed_models
+
             models = list_installed_models()
             assert len(models) == 1
             assert models[0].name == "gemma:2b"
@@ -1086,16 +1211,20 @@ class TestBackendDetector:
             patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True),
             patch("file_organizer.core.backend_detector.ollama") as mock_ollama,
             patch("subprocess.run") as mock_run,
-            patch("file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)),
+            patch(
+                "file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)
+            ),
         ):
             mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
             # CLI returns JSON
             import json
+
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout=json.dumps({"models": [{"name": "phi3:mini"}]}),
             )
             from file_organizer.core.backend_detector import list_installed_models
+
             models = list_installed_models()
             assert len(models) == 1
 
@@ -1104,7 +1233,9 @@ class TestBackendDetector:
             patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True),
             patch("file_organizer.core.backend_detector.ollama") as mock_ollama,
             patch("subprocess.run") as mock_run,
-            patch("file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)),
+            patch(
+                "file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)
+            ),
         ):
             mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
             # CLI JSON fails
@@ -1113,6 +1244,7 @@ class TestBackendDetector:
                 MagicMock(returncode=0, stdout="NAME\nllama3:8b tag 123 3 weeks\n"),
             ]
             from file_organizer.core.backend_detector import list_installed_models
+
             models = list_installed_models()
             assert len(models) >= 1
 
@@ -1121,26 +1253,30 @@ class TestBackendDetector:
             patch("file_organizer.core.backend_detector.OLLAMA_AVAILABLE", True),
             patch("file_organizer.core.backend_detector.ollama") as mock_ollama,
             patch("subprocess.run", side_effect=FileNotFoundError),
-            patch("file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)),
+            patch(
+                "file_organizer.core.backend_detector.OLLAMA_CLIENT_EXCEPTIONS", (ConnectionError,)
+            ),
         ):
             mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
             from file_organizer.core.backend_detector import list_installed_models
+
             models = list_installed_models()
             assert models == []
 
     def test_parse_ollama_list_text(self):
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout="NAME\nllama3:8b tag 123\nphi3:mini tag 456\n"
+                returncode=0, stdout="NAME\nllama3:8b tag 123\nphi3:mini tag 456\n"
             )
             from file_organizer.core.backend_detector import _parse_ollama_list_text
+
             models = _parse_ollama_list_text()
             assert len(models) == 2
 
     def test_parse_ollama_list_text_exception(self):
         with patch("subprocess.run", side_effect=subprocess.SubprocessError("err")):
             from file_organizer.core.backend_detector import _parse_ollama_list_text
+
             assert _parse_ollama_list_text() == []
 
 
@@ -1148,11 +1284,13 @@ class TestBackendDetector:
 # 10. core/hardware_profile.py
 # ===========================================================================
 
+
 class TestHardwareProfile:
     """Tests for hardware detection helpers and profile generation."""
 
     def test_hardware_profile_properties(self):
-        from file_organizer.core.hardware_profile import HardwareProfile, GpuType
+        from file_organizer.core.hardware_profile import GpuType, HardwareProfile
+
         p = HardwareProfile(
             gpu_type=GpuType.NONE,
             gpu_name=None,
@@ -1168,39 +1306,52 @@ class TestHardwareProfile:
         assert "recommended_text_model" in p.to_dict()
 
     def test_recommended_text_model_large(self):
-        from file_organizer.core.hardware_profile import HardwareProfile, GpuType
+        from file_organizer.core.hardware_profile import GpuType, HardwareProfile
+
         p = HardwareProfile(
-            gpu_type=GpuType.NVIDIA, gpu_name="RTX 4090",
-            vram_bytes=24 * 1024**3, ram_bytes=32 * 1024**3,
-            cpu_cores=16, os_name="Linux", arch="x86_64"
+            gpu_type=GpuType.NVIDIA,
+            gpu_name="RTX 4090",
+            vram_bytes=24 * 1024**3,
+            ram_bytes=32 * 1024**3,
+            cpu_cores=16,
+            os_name="Linux",
+            arch="x86_64",
         )
         assert "7b" in p.recommended_text_model()
 
     def test_recommended_text_model_small(self):
-        from file_organizer.core.hardware_profile import HardwareProfile, GpuType
+        from file_organizer.core.hardware_profile import GpuType, HardwareProfile
+
         p = HardwareProfile(
-            gpu_type=GpuType.NONE, gpu_name=None,
-            vram_bytes=0, ram_bytes=8 * 1024**3,
-            cpu_cores=4, os_name="Linux", arch="x86_64"
+            gpu_type=GpuType.NONE,
+            gpu_name=None,
+            vram_bytes=0,
+            ram_bytes=8 * 1024**3,
+            cpu_cores=4,
+            os_name="Linux",
+            arch="x86_64",
         )
         assert "3b" in p.recommended_text_model()
 
     def test_recommended_workers_minimum_one(self):
-        from file_organizer.core.hardware_profile import HardwareProfile, GpuType
+        from file_organizer.core.hardware_profile import GpuType, HardwareProfile
+
         p = HardwareProfile(
-            gpu_type=GpuType.NONE, gpu_name=None,
-            vram_bytes=0, ram_bytes=4 * 1024**3,
-            cpu_cores=1, os_name="Linux", arch="x86_64"
+            gpu_type=GpuType.NONE,
+            gpu_name=None,
+            vram_bytes=0,
+            ram_bytes=4 * 1024**3,
+            cpu_cores=1,
+            os_name="Linux",
+            arch="x86_64",
         )
         assert p.recommended_workers() == 1
 
     def test_detect_nvidia_success(self):
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout="NVIDIA A100, 81920\n"
-            )
+            mock_run.return_value = MagicMock(returncode=0, stdout="NVIDIA A100, 81920\n")
             from file_organizer.core.hardware_profile import _detect_nvidia
+
             name, vram = _detect_nvidia()
             assert name == "NVIDIA A100"
             assert vram > 0
@@ -1208,6 +1359,7 @@ class TestHardwareProfile:
     def test_detect_nvidia_not_found(self):
         with patch("subprocess.run", side_effect=FileNotFoundError):
             from file_organizer.core.hardware_profile import _detect_nvidia
+
             name, vram = _detect_nvidia()
             assert name is None
             assert vram == 0
@@ -1216,12 +1368,14 @@ class TestHardwareProfile:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stdout="")
             from file_organizer.core.hardware_profile import _detect_nvidia
+
             name, vram = _detect_nvidia()
             assert name is None
 
     def test_detect_apple_mps_non_darwin(self):
         with patch("platform.system", return_value="Linux"):
             from file_organizer.core.hardware_profile import _detect_apple_mps
+
             name, vram = _detect_apple_mps()
             assert name is None
 
@@ -1235,6 +1389,7 @@ class TestHardwareProfile:
                 MagicMock(returncode=0, stdout="16000000000"),
             ]
             from file_organizer.core.hardware_profile import _detect_apple_mps
+
             name, vram = _detect_apple_mps()
             assert name is not None
             assert vram == 16000000000
@@ -1246,6 +1401,7 @@ class TestHardwareProfile:
         ):
             mock_run.return_value = MagicMock(returncode=0, stdout="Intel Core i7")
             from file_organizer.core.hardware_profile import _detect_apple_mps
+
             name, vram = _detect_apple_mps()
             assert name is None
 
@@ -1256,12 +1412,14 @@ class TestHardwareProfile:
                 MagicMock(returncode=0, stdout="VRAM,\n16384,\n"),
             ]
             from file_organizer.core.hardware_profile import _detect_amd
+
             name, vram = _detect_amd()
             assert name is not None
 
     def test_detect_amd_not_found(self):
         with patch("subprocess.run", side_effect=FileNotFoundError):
             from file_organizer.core.hardware_profile import _detect_amd
+
             name, vram = _detect_amd()
             assert name is None
 
@@ -1269,31 +1427,45 @@ class TestHardwareProfile:
         with patch("psutil.virtual_memory") as mock_vm:
             mock_vm.return_value = MagicMock(total=8 * 1024**3)
             from file_organizer.core.hardware_profile import _get_system_ram
+
             assert _get_system_ram() == 8 * 1024**3
 
     def test_get_cpu_cores_psutil(self):
         with patch("psutil.cpu_count", return_value=8):
             from file_organizer.core.hardware_profile import _get_cpu_cores
+
             assert _get_cpu_cores() == 8
 
     def test_detect_hardware_nvidia(self):
         with (
-            patch("file_organizer.core.hardware_profile._detect_nvidia", return_value=("RTX 4090", 24 * 1024**3)),
-            patch("file_organizer.core.hardware_profile._get_system_ram", return_value=32 * 1024**3),
+            patch(
+                "file_organizer.core.hardware_profile._detect_nvidia",
+                return_value=("RTX 4090", 24 * 1024**3),
+            ),
+            patch(
+                "file_organizer.core.hardware_profile._get_system_ram", return_value=32 * 1024**3
+            ),
             patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=16),
         ):
-            from file_organizer.core.hardware_profile import detect_hardware, GpuType
+            from file_organizer.core.hardware_profile import GpuType, detect_hardware
+
             profile = detect_hardware()
             assert profile.gpu_type == GpuType.NVIDIA
 
     def test_detect_hardware_apple_mps(self):
         with (
             patch("file_organizer.core.hardware_profile._detect_nvidia", return_value=(None, 0)),
-            patch("file_organizer.core.hardware_profile._detect_apple_mps", return_value=("Apple M2", 16 * 1024**3)),
-            patch("file_organizer.core.hardware_profile._get_system_ram", return_value=16 * 1024**3),
+            patch(
+                "file_organizer.core.hardware_profile._detect_apple_mps",
+                return_value=("Apple M2", 16 * 1024**3),
+            ),
+            patch(
+                "file_organizer.core.hardware_profile._get_system_ram", return_value=16 * 1024**3
+            ),
             patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=8),
         ):
-            from file_organizer.core.hardware_profile import detect_hardware, GpuType
+            from file_organizer.core.hardware_profile import GpuType, detect_hardware
+
             profile = detect_hardware()
             assert profile.gpu_type == GpuType.APPLE_MPS
 
@@ -1301,11 +1473,17 @@ class TestHardwareProfile:
         with (
             patch("file_organizer.core.hardware_profile._detect_nvidia", return_value=(None, 0)),
             patch("file_organizer.core.hardware_profile._detect_apple_mps", return_value=(None, 0)),
-            patch("file_organizer.core.hardware_profile._detect_amd", return_value=("RX 6800", 16 * 1024**3)),
-            patch("file_organizer.core.hardware_profile._get_system_ram", return_value=32 * 1024**3),
+            patch(
+                "file_organizer.core.hardware_profile._detect_amd",
+                return_value=("RX 6800", 16 * 1024**3),
+            ),
+            patch(
+                "file_organizer.core.hardware_profile._get_system_ram", return_value=32 * 1024**3
+            ),
             patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=8),
         ):
-            from file_organizer.core.hardware_profile import detect_hardware, GpuType
+            from file_organizer.core.hardware_profile import GpuType, detect_hardware
+
             profile = detect_hardware()
             assert profile.gpu_type == GpuType.AMD
 
@@ -1317,7 +1495,8 @@ class TestHardwareProfile:
             patch("file_organizer.core.hardware_profile._get_system_ram", return_value=8 * 1024**3),
             patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=4),
         ):
-            from file_organizer.core.hardware_profile import detect_hardware, GpuType
+            from file_organizer.core.hardware_profile import GpuType, detect_hardware
+
             profile = detect_hardware()
             assert profile.gpu_type == GpuType.NONE
 
@@ -1326,11 +1505,13 @@ class TestHardwareProfile:
 # 11. parallel/resource_manager.py
 # ===========================================================================
 
+
 class TestResourceManager:
     """Tests for ResourceManager acquire/release/get operations."""
 
     def _make_manager(self):
         from file_organizer.parallel.resource_manager import ResourceConfig, ResourceManager
+
         config = ResourceConfig(
             max_cpu_percent=80.0,
             max_memory_mb=1024,
@@ -1341,6 +1522,7 @@ class TestResourceManager:
 
     def test_resource_config_validation(self):
         from file_organizer.parallel.resource_manager import ResourceConfig
+
         with pytest.raises(ValueError, match="max_cpu_percent"):
             ResourceConfig(max_cpu_percent=0)
         with pytest.raises(ValueError, match="max_memory_mb"):
@@ -1413,6 +1595,7 @@ class TestResourceManager:
 
     def test_get_utilization_zero_limit(self):
         from file_organizer.parallel.resource_manager import ResourceConfig, ResourceManager
+
         config = ResourceConfig(max_gpu_percent=0.0)
         manager = ResourceManager(config)
         assert manager.get_utilization("gpu") == 0.0
@@ -1433,6 +1616,7 @@ class TestResourceManager:
     def test_config_property(self):
         manager = self._make_manager()
         from file_organizer.parallel.resource_manager import ResourceConfig
+
         assert isinstance(manager.config, ResourceConfig)
 
 
@@ -1440,11 +1624,13 @@ class TestResourceManager:
 # 12. updater/checker.py
 # ===========================================================================
 
+
 class TestUpdateChecker:
     """Tests for UpdateChecker version parsing and release fetching."""
 
     def test_parse_version(self):
         from file_organizer.updater.checker import _parse_version
+
         assert _parse_version("v2.0.0") == (2, 0, 0)
         assert _parse_version("1.5.3-alpha.1") == (1, 5, 3)
         assert _parse_version("invalid") == (0,)
@@ -1452,16 +1638,20 @@ class TestUpdateChecker:
 
     def test_update_checker_initialization(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker(repo="owner/repo", current_version="1.0.0")
         assert checker.current_version == "1.0.0"
 
     def test_detect_version(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker()
         assert isinstance(checker.current_version, str)
+        assert len(checker.current_version) > 0
 
     def test_check_no_update_available(self):
-        from file_organizer.updater.checker import UpdateChecker, ReleaseInfo
+        from file_organizer.updater.checker import ReleaseInfo, UpdateChecker
+
         checker = UpdateChecker(current_version="2.0.0")
         release = ReleaseInfo(version="1.5.0")
         with patch.object(checker, "_fetch_latest_release", return_value=release):
@@ -1469,7 +1659,8 @@ class TestUpdateChecker:
             assert result is None
 
     def test_check_update_available(self):
-        from file_organizer.updater.checker import UpdateChecker, ReleaseInfo
+        from file_organizer.updater.checker import ReleaseInfo, UpdateChecker
+
         checker = UpdateChecker(current_version="1.0.0")
         release = ReleaseInfo(version="2.0.0", tag="v2.0.0")
         with patch.object(checker, "_fetch_latest_release", return_value=release):
@@ -1479,18 +1670,21 @@ class TestUpdateChecker:
 
     def test_check_fetch_exception(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker(current_version="1.0.0")
         with patch.object(checker, "_fetch_latest_release", side_effect=Exception("network")):
             assert checker.check() is None
 
     def test_check_no_release(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker(current_version="1.0.0")
         with patch.object(checker, "_fetch_latest_release", return_value=None):
             assert checker.check() is None
 
     def test_get_latest_release(self):
-        from file_organizer.updater.checker import UpdateChecker, ReleaseInfo
+        from file_organizer.updater.checker import ReleaseInfo, UpdateChecker
+
         checker = UpdateChecker()
         release = ReleaseInfo(version="2.0.0")
         with patch.object(checker, "_fetch_latest_release", return_value=release):
@@ -1499,12 +1693,14 @@ class TestUpdateChecker:
 
     def test_get_latest_release_exception(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker()
         with patch.object(checker, "_fetch_latest_release", side_effect=Exception("net")):
             assert checker.get_latest_release() is None
 
     def test_fetch_latest_release_normal(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -1512,7 +1708,14 @@ class TestUpdateChecker:
             "tag_name": "v2.0.0",
             "prerelease": False,
             "body": "notes",
-            "assets": [{"name": "app.tar.gz", "browser_download_url": "http://x", "size": 100, "content_type": "application/gzip"}],
+            "assets": [
+                {
+                    "name": "app.tar.gz",
+                    "browser_download_url": "http://x",
+                    "size": 100,
+                    "content_type": "application/gzip",
+                }
+            ],
             "published_at": "2024-01-01",
             "html_url": "http://x",
         }
@@ -1525,6 +1728,7 @@ class TestUpdateChecker:
 
     def test_fetch_latest_release_404(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker()
         mock_resp = MagicMock(status_code=404)
         with patch("httpx.Client") as mock_client_cls:
@@ -1536,10 +1740,19 @@ class TestUpdateChecker:
 
     def test_fetch_latest_release_prerelease_mode(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker(include_prereleases=True)
         mock_resp = MagicMock(status_code=200)
         mock_resp.json.return_value = [
-            {"tag_name": "v2.0.0-beta", "draft": False, "prerelease": True, "assets": [], "body": "", "published_at": "", "html_url": ""}
+            {
+                "tag_name": "v2.0.0-beta",
+                "draft": False,
+                "prerelease": True,
+                "assets": [],
+                "body": "",
+                "published_at": "",
+                "html_url": "",
+            }
         ]
         with patch("httpx.Client") as mock_client_cls:
             mock_client = MagicMock()
@@ -1550,10 +1763,19 @@ class TestUpdateChecker:
 
     def test_fetch_latest_release_prerelease_all_drafts(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker(include_prereleases=True)
         mock_resp = MagicMock(status_code=200)
         mock_resp.json.return_value = [
-            {"tag_name": "v2.0.0-beta", "draft": True, "prerelease": True, "assets": [], "body": "", "published_at": "", "html_url": ""}
+            {
+                "tag_name": "v2.0.0-beta",
+                "draft": True,
+                "prerelease": True,
+                "assets": [],
+                "body": "",
+                "published_at": "",
+                "html_url": "",
+            }
         ]
         with patch("httpx.Client") as mock_client_cls:
             mock_client = MagicMock()
@@ -1564,6 +1786,7 @@ class TestUpdateChecker:
 
     def test_fetch_latest_release_not_dict(self):
         from file_organizer.updater.checker import UpdateChecker
+
         checker = UpdateChecker()
         mock_resp = MagicMock(status_code=200)
         mock_resp.json.return_value = "bad data"
@@ -1579,36 +1802,42 @@ class TestUpdateChecker:
 # 13. updater/installer.py (partial — pure functions)
 # ===========================================================================
 
+
 class TestUpdateInstaller:
     """Tests for UpdateInstaller helper functions and methods."""
 
     def test_get_platform_hints_darwin(self):
         with patch("platform.system", return_value="Darwin"):
             from file_organizer.updater.installer import _get_platform_hints
+
             hints = _get_platform_hints()
             assert "macos" in hints
 
     def test_get_platform_hints_windows(self):
         with patch("platform.system", return_value="Windows"):
             from file_organizer.updater.installer import _get_platform_hints
+
             hints = _get_platform_hints()
             assert "windows" in hints
 
     def test_get_platform_hints_linux(self):
         with patch("platform.system", return_value="Linux"):
             from file_organizer.updater.installer import _get_platform_hints
+
             hints = _get_platform_hints()
             assert "linux" in hints
 
     def test_get_arch_hints_x86(self):
         with patch("platform.machine", return_value="x86_64"):
             from file_organizer.updater.installer import _get_arch_hints
+
             hints = _get_arch_hints()
             assert "x86_64" in hints
 
     def test_get_arch_hints_arm64(self):
         with patch("platform.machine", return_value="arm64"):
             from file_organizer.updater.installer import _get_arch_hints
+
             hints = _get_arch_hints()
             assert "arm64" in hints
 
@@ -1618,11 +1847,13 @@ class TestUpdateInstaller:
             patch("platform.system", return_value="Darwin"),
         ):
             from file_organizer.updater.installer import _get_arch_hints
+
             hints = _get_arch_hints()
             assert "universal" in hints
 
     def test_is_checksum_file(self):
         from file_organizer.updater.installer import _is_checksum_file
+
         assert _is_checksum_file("app.sha256") is True
         assert _is_checksum_file("app.md5") is True
         assert _is_checksum_file("app.asc") is True
@@ -1631,6 +1862,7 @@ class TestUpdateInstaller:
     def test_score_asset_darwin(self):
         with patch("platform.system", return_value="Darwin"):
             from file_organizer.updater.installer import _score_asset
+
             assert _score_asset("app-universal-macos") > 0
             assert _score_asset("app.dmg") < 0
             assert _score_asset("app.zip") < 0
@@ -1638,23 +1870,27 @@ class TestUpdateInstaller:
     def test_score_asset_windows(self):
         with patch("platform.system", return_value="Windows"):
             from file_organizer.updater.installer import _score_asset
+
             assert _score_asset("app.exe") > 0
             assert _score_asset("app-setup.exe") < 0
 
     def test_score_asset_linux(self):
         with patch("platform.system", return_value="Linux"):
             from file_organizer.updater.installer import _score_asset
+
             assert _score_asset("app.appimage") > 0
             assert _score_asset("app.tar.gz") > 0
 
     def test_matches_platform_and_arch(self):
         from file_organizer.updater.installer import _matches_platform_and_arch
+
         assert _matches_platform_and_arch("app-linux-x86_64", ["linux"], ["x86_64"]) is True
         assert _matches_platform_and_arch("app-windows-x86_64", ["linux"], ["x86_64"]) is False
 
     def test_select_asset(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
         asset = AssetInfo(name="app-linux-x86_64.tar.gz", url="http://x", size=100)
         release = ReleaseInfo(tag="v2.0.0", assets=[asset])
@@ -1668,6 +1904,7 @@ class TestUpdateInstaller:
     def test_select_asset_no_match(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
         asset = AssetInfo(name="app-windows.exe", url="http://x", size=100)
         release = ReleaseInfo(tag="v2.0.0", assets=[asset])
@@ -1681,10 +1918,14 @@ class TestUpdateInstaller:
     def test_select_asset_skips_checksums(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
-        release = ReleaseInfo(tag="v2.0.0", assets=[
-            AssetInfo(name="app.sha256", url="http://x", size=64),
-        ])
+        release = ReleaseInfo(
+            tag="v2.0.0",
+            assets=[
+                AssetInfo(name="app.sha256", url="http://x", size=64),
+            ],
+        )
         with (
             patch("file_organizer.updater.installer._get_platform_hints", return_value=["linux"]),
             patch("file_organizer.updater.installer._get_arch_hints", return_value=["x86_64"]),
@@ -1695,6 +1936,7 @@ class TestUpdateInstaller:
     def test_download_asset_success(self, tmp_path):
         from file_organizer.updater.checker import AssetInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         asset = AssetInfo(name="app.bin", url="http://example.com/app.bin", size=100)
 
@@ -1711,6 +1953,7 @@ class TestUpdateInstaller:
     def test_download_asset_sha256_mismatch(self, tmp_path):
         from file_organizer.updater.checker import AssetInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         asset = AssetInfo(name="app.bin", url="http://example.com/app.bin", size=100)
 
@@ -1726,6 +1969,7 @@ class TestUpdateInstaller:
     def test_download_asset_exception(self, tmp_path):
         from file_organizer.updater.checker import AssetInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         asset = AssetInfo(name="app.bin", url="http://bad", size=100)
         with patch("httpx.stream", side_effect=Exception("connection error")):
@@ -1734,6 +1978,7 @@ class TestUpdateInstaller:
 
     def test_install_success(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         download = tmp_path / "downloaded.bin"
         download.write_bytes(b"new binary")
@@ -1743,6 +1988,7 @@ class TestUpdateInstaller:
 
     def test_install_with_backup(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         target = tmp_path / "myapp"
         target.write_bytes(b"old binary")
@@ -1754,6 +2000,7 @@ class TestUpdateInstaller:
 
     def test_install_failure_rollback(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         download = tmp_path / "downloaded.bin"
         download.write_bytes(b"data")
@@ -1763,11 +2010,13 @@ class TestUpdateInstaller:
 
     def test_rollback_no_backup(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         assert installer.rollback() is False
 
     def test_rollback_success(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         backup = tmp_path / "file-organizer.bak"
         backup.write_bytes(b"old binary")
@@ -1775,6 +2024,7 @@ class TestUpdateInstaller:
 
     def test_rollback_failure(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller(install_dir=tmp_path)
         backup = tmp_path / "file-organizer.bak"
         backup.write_bytes(b"old binary")
@@ -1784,10 +2034,9 @@ class TestUpdateInstaller:
     def test_find_checksum_direct(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
-        release = ReleaseInfo(assets=[
-            AssetInfo(name="app.tar.gz.sha256", url="http://x")
-        ])
+        release = ReleaseInfo(assets=[AssetInfo(name="app.tar.gz.sha256", url="http://x")])
         with patch.object(installer, "_download_text", return_value="abc123  app.tar.gz"):
             result = installer.find_checksum(release, "app.tar.gz")
             assert result == "abc123"
@@ -1795,10 +2044,9 @@ class TestUpdateInstaller:
     def test_find_checksum_sums_file(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
-        release = ReleaseInfo(assets=[
-            AssetInfo(name="SHA256SUMS.txt", url="http://x")
-        ])
+        release = ReleaseInfo(assets=[AssetInfo(name="SHA256SUMS.txt", url="http://x")])
         with patch.object(installer, "_download_text", return_value="deadbeef  app.tar.gz\n"):
             result = installer.find_checksum(release, "app.tar.gz")
             assert result == "deadbeef"
@@ -1806,6 +2054,7 @@ class TestUpdateInstaller:
     def test_find_checksum_not_found(self):
         from file_organizer.updater.checker import ReleaseInfo
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
         release = ReleaseInfo(assets=[])
         result = installer.find_checksum(release, "app.tar.gz")
@@ -1813,6 +2062,7 @@ class TestUpdateInstaller:
 
     def test_download_text_success(self):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
         mock_resp = MagicMock()
         mock_resp.text = "checksum content"
@@ -1822,6 +2072,7 @@ class TestUpdateInstaller:
 
     def test_download_text_failure(self):
         from file_organizer.updater.installer import UpdateInstaller
+
         installer = UpdateInstaller()
         with patch("httpx.get", side_effect=Exception("error")):
             result = installer._download_text("http://bad")
@@ -1829,6 +2080,7 @@ class TestUpdateInstaller:
 
     def test_resolve_target_appimage(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         appimage = tmp_path / "app.AppImage"
         with patch.dict(os.environ, {"APPIMAGE": str(appimage)}):
             installer = UpdateInstaller(install_dir=tmp_path)
@@ -1837,6 +2089,7 @@ class TestUpdateInstaller:
 
     def test_resolve_target_windows(self, tmp_path):
         from file_organizer.updater.installer import UpdateInstaller
+
         with (
             patch.dict(os.environ, {}, clear=False),
             patch("platform.system", return_value="Windows"),
@@ -1853,11 +2106,13 @@ class TestUpdateInstaller:
 # 14. updater/manager.py
 # ===========================================================================
 
+
 class TestUpdateManager:
     """Tests for UpdateManager high-level orchestration."""
 
     def _make_manager(self):
         from file_organizer.updater.manager import UpdateManager
+
         return UpdateManager(current_version="1.0.0")
 
     def test_check_no_update(self):
@@ -1868,6 +2123,7 @@ class TestUpdateManager:
 
     def test_check_update_available(self):
         from file_organizer.updater.checker import ReleaseInfo
+
         mgr = self._make_manager()
         release = ReleaseInfo(version="2.0.0", tag="v2.0.0")
         with patch.object(mgr._checker, "check", return_value=release):
@@ -1883,6 +2139,7 @@ class TestUpdateManager:
 
     def test_update_no_compatible_asset(self):
         from file_organizer.updater.checker import ReleaseInfo
+
         mgr = self._make_manager()
         release = ReleaseInfo(version="2.0.0")
         with (
@@ -1895,6 +2152,7 @@ class TestUpdateManager:
 
     def test_update_download_fails(self):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
+
         mgr = self._make_manager()
         release = ReleaseInfo(version="2.0.0")
         asset = AssetInfo(name="app.bin", url="http://x")
@@ -1909,6 +2167,7 @@ class TestUpdateManager:
 
     def test_update_dry_run(self, tmp_path):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
+
         mgr = self._make_manager()
         release = ReleaseInfo(version="2.0.0")
         asset = AssetInfo(name="app.bin", url="http://x")
@@ -1926,6 +2185,7 @@ class TestUpdateManager:
     def test_update_install_success(self, tmp_path):
         from file_organizer.updater.checker import AssetInfo, ReleaseInfo
         from file_organizer.updater.installer import InstallResult
+
         mgr = self._make_manager()
         release = ReleaseInfo(version="2.0.0")
         asset = AssetInfo(name="app.bin", url="http://x")
@@ -1949,23 +2209,27 @@ class TestUpdateManager:
 
     def test_update_status_message_no_install(self):
         from file_organizer.updater.manager import UpdateStatus
+
         s = UpdateStatus(available=True, current_version="1.0.0", latest_version="2.0.0")
         assert "2.0.0" in s.message
 
     def test_update_status_message_up_to_date(self):
         from file_organizer.updater.manager import UpdateStatus
+
         s = UpdateStatus(available=False, current_version="2.0.0")
         assert "2.0.0" in s.message
 
     def test_update_status_message_with_install_result(self):
-        from file_organizer.updater.manager import UpdateStatus
         from file_organizer.updater.installer import InstallResult
+        from file_organizer.updater.manager import UpdateStatus
+
         ir = InstallResult(success=True, message="Updated OK")
         s = UpdateStatus(install_result=ir)
         assert "Updated OK" in s.message
 
     def test_current_version_property(self):
         from file_organizer.updater.manager import UpdateManager
+
         mgr = UpdateManager(current_version="3.1.4")
         assert mgr.current_version == "3.1.4"
 
@@ -1974,17 +2238,20 @@ class TestUpdateManager:
 # 15. updater/background.py
 # ===========================================================================
 
+
 class TestBackgroundUpdater:
     """Tests for maybe_check_for_updates background logic."""
 
     def test_disabled_by_env(self, monkeypatch):
         monkeypatch.setenv("FO_DISABLE_UPDATE_CHECK", "1")
         from file_organizer.updater.background import maybe_check_for_updates
+
         assert maybe_check_for_updates() is None
 
     def test_disabled_in_pytest(self, monkeypatch):
         monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_something")
         from file_organizer.updater.background import maybe_check_for_updates
+
         assert maybe_check_for_updates() is None
 
     def test_check_on_startup_disabled(self, monkeypatch):
@@ -1995,6 +2262,7 @@ class TestBackgroundUpdater:
         with patch("file_organizer.updater.background.ConfigManager") as mock_cm:
             mock_cm.return_value.load.return_value = cfg
             from file_organizer.updater.background import maybe_check_for_updates
+
             result = maybe_check_for_updates()
             assert result is None
 
@@ -2013,6 +2281,7 @@ class TestBackgroundUpdater:
             mock_store.load.return_value.due.return_value = False
             mock_store_cls.return_value = mock_store
             from file_organizer.updater.background import maybe_check_for_updates
+
             result = maybe_check_for_updates()
             assert result is None
 
@@ -2035,10 +2304,12 @@ class TestBackgroundUpdater:
             mock_store_cls.return_value = mock_store
 
             from file_organizer.updater.manager import UpdateStatus
+
             mock_status = UpdateStatus(available=False, current_version="1.0.0")
             mock_mgr_cls.return_value.check.return_value = mock_status
 
             from file_organizer.updater.background import maybe_check_for_updates
+
             result = maybe_check_for_updates()
             assert result is not None
             mock_store.record_check.assert_called_once()
@@ -2048,11 +2319,13 @@ class TestBackgroundUpdater:
 # 16. pipeline/stages/analyzer.py
 # ===========================================================================
 
+
 class TestAnalyzerStage:
     """Tests for AnalyzerStage routing and processing."""
 
     def _make_context(self, file_path="/tmp/test.txt", failed=False):
         from file_organizer.interfaces.pipeline import StageContext
+
         ctx = MagicMock(spec=StageContext)
         ctx.failed = failed
         ctx.file_path = Path(file_path)
@@ -2066,6 +2339,7 @@ class TestAnalyzerStage:
 
     def test_process_already_failed(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         stage = AnalyzerStage()
         ctx = self._make_context(failed=True)
         result = stage.process(ctx)
@@ -2073,14 +2347,16 @@ class TestAnalyzerStage:
 
     def test_process_no_router(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         stage = AnalyzerStage()
         ctx = self._make_context()
         result = stage.process(ctx)
         assert result is ctx
 
     def test_process_unknown_type(self):
-        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
         from file_organizer.pipeline.router import ProcessorType
+        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         router = MagicMock()
         router.route.return_value = ProcessorType.UNKNOWN
         pool = MagicMock()
@@ -2090,8 +2366,9 @@ class TestAnalyzerStage:
         assert result.error is not None
 
     def test_process_processor_none(self):
-        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
         from file_organizer.pipeline.router import ProcessorType
+        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         router = MagicMock()
         router.route.return_value = ProcessorType.TEXT
         pool = MagicMock()
@@ -2102,8 +2379,9 @@ class TestAnalyzerStage:
         assert result.error is not None
 
     def test_process_success(self):
-        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
         from file_organizer.pipeline.router import ProcessorType
+        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         router = MagicMock()
         router.route.return_value = ProcessorType.TEXT
         pool = MagicMock()
@@ -2111,13 +2389,16 @@ class TestAnalyzerStage:
         pool.get_processor.return_value = processor
         stage = AnalyzerStage(router=router, processor_pool=pool)
         ctx = self._make_context()
-        with patch.object(stage, "_run_processor", return_value={"category": "docs", "filename": "file.txt"}):
+        with patch.object(
+            stage, "_run_processor", return_value={"category": "docs", "filename": "file.txt"}
+        ):
             result = stage.process(ctx)
             assert result.category == "docs"
 
     def test_process_exception(self):
-        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
         from file_organizer.pipeline.router import ProcessorType
+        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         router = MagicMock()
         router.route.return_value = ProcessorType.TEXT
         pool = MagicMock()
@@ -2132,9 +2413,14 @@ class TestAnalyzerStage:
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
 
         class ProcessorWithScanRoot:
-            def initialize(self): pass
-            def process_file(self, path, scan_root=None): pass
-            def cleanup(self): pass
+            def initialize(self):
+                pass
+
+            def process_file(self, path, scan_root=None):
+                pass
+
+            def cleanup(self):
+                pass
 
         # Clear cache so test is deterministic
         AnalyzerStage._processor_accepts_scan_root.cache_clear()
@@ -2144,21 +2430,28 @@ class TestAnalyzerStage:
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
 
         class ProcessorNoScanRoot:
-            def initialize(self): pass
-            def process_file(self, path): pass
-            def cleanup(self): pass
+            def initialize(self):
+                pass
+
+            def process_file(self, path):
+                pass
+
+            def cleanup(self):
+                pass
 
         AnalyzerStage._processor_accepts_scan_root.cache_clear()
         assert AnalyzerStage._processor_accepts_scan_root(ProcessorNoScanRoot) is False
 
     def test_processor_accepts_scan_root_introspection_error(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         AnalyzerStage._processor_accepts_scan_root.cache_clear()
         # Use a non-introspectable object
         assert AnalyzerStage._processor_accepts_scan_root(object) is False
 
     def test_stage_name(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+
         assert AnalyzerStage().name == "analyzer"
 
 
@@ -2166,29 +2459,34 @@ class TestAnalyzerStage:
 # 17. utils/readers/_scientific_stub.py
 # ===========================================================================
 
+
 class TestScientificStub:
     """Tests for _scientific_stub module — covers the pragma: no cover stubs."""
 
     def test_unavailable_message(self):
         # Remove pragma: no cover by importing and testing at module level
         from file_organizer.utils.readers import _scientific_stub as stub
+
         # The functions are pragma: no cover but we can still reach the module
         assert stub is not None
 
     def test_read_hdf5_file_returns_string(self):
         # Directly call the function; it returns a string
         from file_organizer.utils.readers._scientific_stub import read_hdf5_file
+
         result = read_hdf5_file()
         assert "HDF5" in result
         assert "scientific" in result.lower()
 
     def test_read_mat_file_returns_string(self):
         from file_organizer.utils.readers._scientific_stub import read_mat_file
+
         result = read_mat_file()
         assert "MAT" in result
 
     def test_read_netcdf_file_returns_string(self):
         from file_organizer.utils.readers._scientific_stub import read_netcdf_file
+
         result = read_netcdf_file()
         assert "NetCDF" in result
 
@@ -2197,13 +2495,19 @@ class TestScientificStub:
 # 18. methodologies/para/rules/engine.py
 # ===========================================================================
 
+
 class TestPARARulesEngine:
     """Tests for PARA Rule Engine data structures and orchestration."""
 
     def _make_rule(self, name="test", priority=10, enabled=True):
         from file_organizer.methodologies.para.rules.engine import (
-            Rule, RuleCondition, RuleAction, ConditionType, ActionType
+            ActionType,
+            ConditionType,
+            Rule,
+            RuleAction,
+            RuleCondition,
         )
+
         condition = RuleCondition(type=ConditionType.FILENAME_PATTERN, values=["*.pdf"])
         action = RuleAction(
             type=ActionType.CATEGORIZE,
@@ -2220,63 +2524,78 @@ class TestPARARulesEngine:
         )
 
     def test_condition_type_composite_no_subconditions(self):
-        from file_organizer.methodologies.para.rules.engine import RuleCondition, ConditionType
+        from file_organizer.methodologies.para.rules.engine import ConditionType, RuleCondition
+
         with pytest.raises(ValueError, match="Composite"):
             RuleCondition(type=ConditionType.COMPOSITE)
 
     def test_condition_type_no_values_or_threshold(self):
-        from file_organizer.methodologies.para.rules.engine import RuleCondition, ConditionType
+        from file_organizer.methodologies.para.rules.engine import ConditionType, RuleCondition
+
         with pytest.raises(ValueError, match="values or threshold"):
             RuleCondition(type=ConditionType.FILE_SIZE)
 
     def test_rule_action_no_category(self):
-        from file_organizer.methodologies.para.rules.engine import RuleAction, ActionType
+        from file_organizer.methodologies.para.rules.engine import ActionType, RuleAction
+
         with pytest.raises(ValueError, match="category"):
             RuleAction(type=ActionType.CATEGORIZE)
 
     def test_rule_action_invalid_category(self):
-        from file_organizer.methodologies.para.rules.engine import RuleAction, ActionType
+        from file_organizer.methodologies.para.rules.engine import ActionType, RuleAction
+
         with pytest.raises(ValueError, match="Invalid PARA"):
             RuleAction(type=ActionType.CATEGORIZE, category="invalid_category", confidence=0.5)
 
     def test_rule_action_no_confidence(self):
-        from file_organizer.methodologies.para.rules.engine import RuleAction, ActionType
+        from file_organizer.methodologies.para.rules.engine import ActionType, RuleAction
+
         with pytest.raises(ValueError, match="confidence"):
             RuleAction(type=ActionType.CATEGORIZE, category="project")
 
     def test_rule_action_confidence_out_of_range(self):
-        from file_organizer.methodologies.para.rules.engine import RuleAction, ActionType
+        from file_organizer.methodologies.para.rules.engine import ActionType, RuleAction
+
         with pytest.raises(ValueError, match="Confidence"):
             RuleAction(type=ActionType.CATEGORIZE, category="project", confidence=1.5)
 
     def test_rule_no_conditions(self):
-        from file_organizer.methodologies.para.rules.engine import (
-            Rule, RuleAction, ActionType
-        )
+        from file_organizer.methodologies.para.rules.engine import ActionType, Rule, RuleAction
+
         action = RuleAction(type=ActionType.ADD_TAG, tags=["important"])
         with pytest.raises(ValueError, match="condition"):
             Rule(name="bad", description="", priority=0, conditions=[], actions=[action])
 
     def test_rule_no_actions(self):
         from file_organizer.methodologies.para.rules.engine import (
-            Rule, RuleCondition, ConditionType
+            ConditionType,
+            Rule,
+            RuleCondition,
         )
+
         cond = RuleCondition(type=ConditionType.FILE_EXTENSION, values=[".pdf"])
         with pytest.raises(ValueError, match="action"):
             Rule(name="bad", description="", priority=0, conditions=[cond], actions=[])
 
     def test_rule_negative_priority(self):
         from file_organizer.methodologies.para.rules.engine import (
-            Rule, RuleCondition, RuleAction, ConditionType, ActionType
+            ActionType,
+            ConditionType,
+            Rule,
+            RuleAction,
+            RuleCondition,
         )
+
         cond = RuleCondition(type=ConditionType.FILE_EXTENSION, values=[".pdf"])
         action = RuleAction(type=ActionType.ADD_TAG, tags=["x"])
         with pytest.raises(ValueError, match="Priority"):
             Rule(name="x", description="", priority=-1, conditions=[cond], actions=[action])
 
     def test_evaluation_context_properties(self):
+        from datetime import UTC, datetime
+
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
-        from datetime import datetime, UTC
+
         ctx = EvaluationContext(
             file_path=Path("/home/user/doc.pdf"),
             file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},
@@ -2287,20 +2606,24 @@ class TestPARARulesEngine:
 
     def test_evaluation_context_no_stat(self):
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
+
         ctx = EvaluationContext(file_path=Path("/home/user/doc.pdf"))
         assert ctx.file_age_days is None
 
     def test_evaluation_context_naive_datetime(self):
+        from datetime import UTC, datetime
+
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
-        from datetime import datetime
+
         ctx = EvaluationContext(
             file_path=Path("/tmp/x.pdf"),
-            file_stat={"created": datetime(2020, 1, 1)},  # naive
+            file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},  # naive
         )
         assert ctx.file_age_days is not None
 
     def test_rule_engine_load_rules(self):
         from file_organizer.methodologies.para.rules.engine import RuleEngine
+
         parser = MagicMock()
         parser.parse_file.return_value = [self._make_rule()]
         engine = RuleEngine(
@@ -2315,6 +2638,7 @@ class TestPARARulesEngine:
 
     def test_rule_engine_add_rule(self):
         from file_organizer.methodologies.para.rules.engine import RuleEngine
+
         parser = MagicMock()
         parser.validate_rule.return_value = True
         engine = RuleEngine(
@@ -2328,7 +2652,8 @@ class TestPARARulesEngine:
         assert len(engine.rules) == 1
 
     def test_rule_engine_evaluate_file_no_match(self):
-        from file_organizer.methodologies.para.rules.engine import RuleEngine, EvaluationContext
+        from file_organizer.methodologies.para.rules.engine import EvaluationContext, RuleEngine
+
         evaluator = MagicMock()
         evaluator.evaluate_condition.return_value = False
         engine = RuleEngine(
@@ -2344,7 +2669,8 @@ class TestPARARulesEngine:
         assert result is None
 
     def test_rule_engine_evaluate_file_single_match(self):
-        from file_organizer.methodologies.para.rules.engine import RuleEngine, EvaluationContext
+        from file_organizer.methodologies.para.rules.engine import EvaluationContext, RuleEngine
+
         evaluator = MagicMock()
         evaluator.evaluate_condition.return_value = True
         engine = RuleEngine(
@@ -2361,7 +2687,8 @@ class TestPARARulesEngine:
         assert result.matched is True
 
     def test_rule_engine_evaluate_file_disabled_rule_skipped(self):
-        from file_organizer.methodologies.para.rules.engine import RuleEngine, EvaluationContext
+        from file_organizer.methodologies.para.rules.engine import EvaluationContext, RuleEngine
+
         evaluator = MagicMock()
         evaluator.evaluate_condition.return_value = True
         engine = RuleEngine(
@@ -2377,7 +2704,8 @@ class TestPARARulesEngine:
         assert result is None
 
     def test_rule_engine_evaluate_file_conflict_resolution(self):
-        from file_organizer.methodologies.para.rules.engine import RuleEngine, EvaluationContext
+        from file_organizer.methodologies.para.rules.engine import EvaluationContext, RuleEngine
+
         evaluator = MagicMock()
         evaluator.evaluate_condition.return_value = True
         resolver = MagicMock()
@@ -2396,7 +2724,8 @@ class TestPARARulesEngine:
         assert result is expected_match
 
     def test_get_category_scores(self):
-        from file_organizer.methodologies.para.rules.engine import RuleEngine, EvaluationContext
+        from file_organizer.methodologies.para.rules.engine import EvaluationContext, RuleEngine
+
         evaluator = MagicMock()
         evaluator.evaluate_condition.return_value = True
         scorer = MagicMock()
@@ -2418,11 +2747,13 @@ class TestPARARulesEngine:
 # 19. methodologies/johnny_decimal/migrator.py
 # ===========================================================================
 
+
 class TestJohnnyDecimalMigrator:
     """Tests for JohnnyDecimalMigrator migration workflow."""
 
     def _make_migrator(self):
         from file_organizer.methodologies.johnny_decimal.migrator import JohnnyDecimalMigrator
+
         with (
             patch("file_organizer.methodologies.johnny_decimal.migrator.FolderScanner"),
             patch("file_organizer.methodologies.johnny_decimal.migrator.FolderTransformer"),
@@ -2432,7 +2763,6 @@ class TestJohnnyDecimalMigrator:
             return JohnnyDecimalMigrator()
 
     def test_create_migration_plan(self):
-        from file_organizer.methodologies.johnny_decimal.migrator import JohnnyDecimalMigrator
         migrator = self._make_migrator()
         mock_scan = MagicMock()
         mock_scan.total_folders = 5
@@ -2456,10 +2786,6 @@ class TestJohnnyDecimalMigrator:
 
     def test_execute_migration_dry_run(self, tmp_path):
         migrator = self._make_migrator()
-        from file_organizer.methodologies.johnny_decimal.migrator import (
-            JohnnyDecimalMigrator
-        )
-        from file_organizer.methodologies.johnny_decimal.transformer import TransformationRule
 
         rule = MagicMock()
         rule.source_path = tmp_path / "Documents"
@@ -2484,7 +2810,9 @@ class TestJohnnyDecimalMigrator:
         plan.root_path = tmp_path
         plan.rules = [rule]
 
-        with patch("file_organizer.methodologies.johnny_decimal.migrator._get_data_dir") as mock_data:
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.migrator._get_data_dir"
+        ) as mock_data:
             mock_data.return_value = tmp_path
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
         assert result.success is True
@@ -2503,7 +2831,9 @@ class TestJohnnyDecimalMigrator:
         plan.root_path = tmp_path
         plan.rules = [rule]
 
-        with patch("file_organizer.methodologies.johnny_decimal.migrator._get_data_dir") as mock_data:
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.migrator._get_data_dir"
+        ) as mock_data:
             mock_data.return_value = tmp_path
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
         assert result.skipped_count == 1
@@ -2523,8 +2853,10 @@ class TestJohnnyDecimalMigrator:
         assert migrator.rollback() is False
 
     def test_rollback_success(self, tmp_path):
+        from datetime import UTC, datetime
+
         from file_organizer.methodologies.johnny_decimal.migrator import RollbackInfo
-        from datetime import datetime, UTC
+
         migrator = self._make_migrator()
 
         current = tmp_path / "10 Documents"
@@ -2541,8 +2873,10 @@ class TestJohnnyDecimalMigrator:
         assert migrator.rollback() is True
 
     def test_rollback_specific_id_not_found(self, tmp_path):
+        from datetime import UTC, datetime
+
         from file_organizer.methodologies.johnny_decimal.migrator import RollbackInfo
-        from datetime import datetime, UTC
+
         migrator = self._make_migrator()
         info = RollbackInfo("id1", datetime.now(UTC), {}, None)
         migrator._rollback_history = [info]
@@ -2550,8 +2884,10 @@ class TestJohnnyDecimalMigrator:
             migrator.rollback("nonexistent_id")
 
     def test_rollback_exception(self, tmp_path):
+        from datetime import UTC, datetime
+
         from file_organizer.methodologies.johnny_decimal.migrator import RollbackInfo
-        from datetime import datetime, UTC
+
         migrator = self._make_migrator()
         # Create a file so current_path.exists() returns True, then make rename fail
         current = tmp_path / "10 Documents"
@@ -2570,7 +2906,9 @@ class TestJohnnyDecimalMigrator:
     def test_generate_preview(self, tmp_path):
         migrator = self._make_migrator()
         plan = MagicMock()
-        plan.rules = [MagicMock(source_path=MagicMock(name="Documents"), target_name="10 Documents")]
+        plan.rules = [
+            MagicMock(source_path=MagicMock(name="Documents"), target_name="10 Documents")
+        ]
         plan.conflicts = []
         plan.warnings = []
 
@@ -2606,6 +2944,7 @@ class TestJohnnyDecimalMigrator:
     def test_generate_report_success(self):
         migrator = self._make_migrator()
         from file_organizer.methodologies.johnny_decimal.migrator import MigrationResult
+
         result = MigrationResult(
             success=True,
             transformed_count=5,
@@ -2621,6 +2960,7 @@ class TestJohnnyDecimalMigrator:
     def test_generate_report_with_failures_and_backup(self, tmp_path):
         migrator = self._make_migrator()
         from file_organizer.methodologies.johnny_decimal.migrator import MigrationResult
+
         result = MigrationResult(
             success=False,
             transformed_count=0,
@@ -2638,7 +2978,10 @@ class TestJohnnyDecimalMigrator:
     def test_generate_preview_more_than_10_rules(self, tmp_path):
         migrator = self._make_migrator()
         plan = MagicMock()
-        plan.rules = [MagicMock(source_path=MagicMock(name=f"dir{i}"), target_name=f"{i:02d} dir{i}") for i in range(15)]
+        plan.rules = [
+            MagicMock(source_path=MagicMock(name=f"dir{i}"), target_name=f"{i:02d} dir{i}")
+            for i in range(15)
+        ]
         plan.conflicts = []
         plan.warnings = []
         scan = MagicMock()
@@ -2654,6 +2997,7 @@ class TestJohnnyDecimalMigrator:
     def test_generate_report_many_skipped(self, tmp_path):
         migrator = self._make_migrator()
         from file_organizer.methodologies.johnny_decimal.migrator import MigrationResult
+
         result = MigrationResult(
             success=True,
             transformed_count=0,

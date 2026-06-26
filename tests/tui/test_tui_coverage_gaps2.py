@@ -27,55 +27,68 @@ pytestmark = pytest.mark.unit
 class TestCoercePositiveIntBranches:
     def test_bool_input_returns_none(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int(True) is None
         assert _coerce_positive_int(False) is None
 
     def test_unparseable_returns_none(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int("abc") is None
         assert _coerce_positive_int([]) is None
 
     def test_negative_int_returns_none(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int(-5) is None
 
     def test_zero_returns_none(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int(0) is None
 
     def test_no_max_value(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int(99, max_value=None) == 99
 
     def test_with_max_value_clamps(self):
         from file_organizer.tui.settings_view import _coerce_positive_int
+
         assert _coerce_positive_int(100, max_value=10) == 10
 
 
 class TestCoerceNonNegativeIntBranches:
     def test_bool_returns_default(self):
         from file_organizer.tui.settings_view import _coerce_non_negative_int
+
         assert _coerce_non_negative_int(True, default=5) == 5
         assert _coerce_non_negative_int(False, default=3) == 3
 
     def test_unparseable_returns_default(self):
         from file_organizer.tui.settings_view import _coerce_non_negative_int
+
         assert _coerce_non_negative_int("bad", default=2) == 2
 
     def test_negative_returns_default(self):
         from file_organizer.tui.settings_view import _coerce_non_negative_int
+
         assert _coerce_non_negative_int(-1, default=4) == 4
 
     def test_zero_is_valid(self):
         from file_organizer.tui.settings_view import _coerce_non_negative_int
+
         assert _coerce_non_negative_int(0, default=5) == 0
 
 
 class TestSaveParallelRuntimeSettingsBranches:
     def test_save_with_invalid_coerced_workers_clears_key(self):
         """When max_workers is present but coerces to None, key should be removed."""
-        from file_organizer.tui.settings_view import ParallelRuntimeSettings, save_parallel_runtime_settings
         from file_organizer.config.schema import AppConfig
+        from file_organizer.tui.settings_view import (
+            ParallelRuntimeSettings,
+            save_parallel_runtime_settings,
+        )
 
         mock_manager = MagicMock()
         config = AppConfig()
@@ -96,6 +109,7 @@ class TestRecordNonSequentialSnapshotGuard:
     def test_no_snapshot_when_already_sequential(self):
         """_record_non_sequential_snapshot should not update snapshot if currently sequential."""
         from file_organizer.tui.settings_view import SettingsView
+
         view = SettingsView()
         view._max_workers = 1
         view._prefetch_depth = 0
@@ -115,6 +129,7 @@ class TestRecordNonSequentialSnapshotGuard:
 class TestFileSelectionManagerRemainingBranches:
     def test_toggle_deselects_already_selected(self):
         from file_organizer.tui.file_preview import FileSelectionManager
+
         mgr = FileSelectionManager()
         p = Path("/tmp/file.txt")
         mgr._selected.add(p)
@@ -124,6 +139,7 @@ class TestFileSelectionManagerRemainingBranches:
 
     def test_select_all_adds_paths(self):
         from file_organizer.tui.file_preview import FileSelectionManager
+
         mgr = FileSelectionManager()
         paths = {Path("/tmp/a.txt"), Path("/tmp/b.txt")}
         mgr.select_all(paths)
@@ -131,6 +147,7 @@ class TestFileSelectionManagerRemainingBranches:
 
     def test_selected_files_returns_copy(self):
         from file_organizer.tui.file_preview import FileSelectionManager
+
         mgr = FileSelectionManager()
         p = Path("/tmp/x.txt")
         mgr._selected.add(p)
@@ -149,6 +166,7 @@ class TestShowPreviewExceptionPath:
     def test_show_preview_swallows_attribute_error(self, tmp_path):
         """When app.call_from_thread raises AttributeError, show_preview should not raise."""
         from file_organizer.tui.file_preview import FilePreviewPanel
+
         panel = FilePreviewPanel()
         panel.update = MagicMock()
         txt = tmp_path / "hello.txt"
@@ -168,12 +186,14 @@ class TestShowPreviewExceptionPath:
 class TestFilePreviewViewActions:
     def _make_view(self, tmp_path):
         from file_organizer.tui.file_preview import FilePreviewView
+
         view = FilePreviewView(tmp_path)
         view._root_path = tmp_path
         return view
 
     def test_compose_yields_two_widgets(self, tmp_path):
         from file_organizer.tui.file_preview import FilePreviewView
+
         view = FilePreviewView(tmp_path)
         result = list(view.compose())
         assert len(result) == 2
@@ -239,7 +259,8 @@ class TestFilePreviewViewActions:
 
 class TestFilePreviewViewOnFileHighlighted:
     def test_on_file_highlighted_sets_path_and_calls_preview(self, tmp_path):
-        from file_organizer.tui.file_preview import FilePreviewView, FileBrowserView
+        from file_organizer.tui.file_preview import FileBrowserView, FilePreviewView
+
         view = FilePreviewView(tmp_path)
         view._root_path = tmp_path
         f = tmp_path / "f.txt"
@@ -265,6 +286,7 @@ class TestFilePreviewViewOnFileHighlighted:
 class TestMethodologySelectorPanel:
     def test_on_mount_calls_render(self):
         from file_organizer.tui.methodology_view import MethodologySelectorPanel
+
         panel = MethodologySelectorPanel()
         panel.update = MagicMock()
         panel.on_mount()
@@ -272,6 +294,7 @@ class TestMethodologySelectorPanel:
 
     def test_set_methodology_updates_current(self):
         from file_organizer.tui.methodology_view import MethodologySelectorPanel
+
         panel = MethodologySelectorPanel()
         panel.update = MagicMock()
         panel.set_methodology("para")
@@ -280,6 +303,7 @@ class TestMethodologySelectorPanel:
 
     def test_current_methodology_property(self):
         from file_organizer.tui.methodology_view import MethodologySelectorPanel
+
         panel = MethodologySelectorPanel()
         assert panel.current_methodology == "none"
         panel._current = "jd"
@@ -287,6 +311,7 @@ class TestMethodologySelectorPanel:
 
     def test_render_selector_highlights_active(self):
         from file_organizer.tui.methodology_view import MethodologySelectorPanel
+
         panel = MethodologySelectorPanel()
         panel.update = MagicMock()
         panel._current = "jd"

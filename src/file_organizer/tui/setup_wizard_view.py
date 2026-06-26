@@ -547,7 +547,9 @@ class SetupWizardView(Vertical):
                 f"[b]Installed Models:[/b] {len(self._capabilities.installed_models)} available"
             )
             for _i, model in enumerate(self._capabilities.installed_models[:3]):
-                size_text = f"{model.size / (1024**3):.1f}GB" if model.size else "Unknown"
+                size_text = (
+                    f"{model.size / (1024**3):.1f}GB" if getattr(model, "size", None) else "Unknown"
+                )
                 lines.append(f"  • {model.name} ({size_text})")
             if len(self._capabilities.installed_models) > 3:
                 remaining = len(self._capabilities.installed_models) - 3

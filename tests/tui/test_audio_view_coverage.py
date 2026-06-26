@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.audio_view.
 
 Targets 100% statement and branch coverage for AudioView and its panels.
@@ -5,10 +6,11 @@ Targets 100% statement and branch coverage for AudioView and its panels.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
+
 
 # 1. Mock textual.work decorator BEFORE importing AudioView
 def mock_work_decorator(*args, **kwargs):
@@ -16,15 +18,18 @@ def mock_work_decorator(*args, **kwargs):
         return args[0]
     return lambda f: f
 
+
 import textual
+
 textual.work = mock_work_decorator
 
 from textual.widgets import Static
+
 from file_organizer.tui.audio_view import (
-    AudioView,
+    AudioClassificationPanel,
     AudioFileListPanel,
     AudioMetadataPanel,
-    AudioClassificationPanel,
+    AudioView,
     _truncate,
 )
 
@@ -34,42 +39,45 @@ pytestmark = pytest.mark.unit
 def _create_view_with_mocks() -> tuple[AudioView, dict[type[Static], MagicMock], MagicMock]:
     """Helper to create an AudioView with panels and app mocked."""
     view = AudioView(scan_dir="/mock/dir")
-    
+
     # Mock panels
     mock_list_panel = MagicMock(spec=AudioFileListPanel)
     mock_meta_panel = MagicMock(spec=AudioMetadataPanel)
     mock_class_panel = MagicMock(spec=AudioClassificationPanel)
-    
+
     panels = {
         AudioFileListPanel: mock_list_panel,
         AudioMetadataPanel: mock_meta_panel,
         AudioClassificationPanel: mock_class_panel,
     }
-    
+
     def mock_query_one(panel_type):
         return panels.get(panel_type, MagicMock())
-        
+
     view.query_one = MagicMock(side_effect=mock_query_one)
-    
+
     # Mock app property
     mock_app = MagicMock()
     app_prop = PropertyMock(return_value=mock_app)
     type(view).app = app_prop
-    
+
     # Force call_from_thread to execute synchronously in tests
     mock_app.call_from_thread = lambda func, *args, **kwargs: func(*args, **kwargs)
-    
+
     return view, panels, mock_app
 
 
 # --- Panel Tests ---
+
 
 def test_audio_file_list_panel_empty() -> None:
     """Verify AudioFileListPanel behavior with no files."""
     panel = AudioFileListPanel()
     with patch.object(panel, "update") as mock_update:
         panel.set_files([])
-        mock_update.assert_called_once_with("[b]Audio Files[/b]\n\n  [dim]No audio files found.[/dim]")
+        mock_update.assert_called_once_with(
+            "[b]Audio Files[/b]\n\n  [dim]No audio files found.[/dim]"
+        )
 
 
 def test_audio_file_list_panel_with_files() -> None:
@@ -95,7 +103,9 @@ def test_audio_metadata_panel_none() -> None:
     panel = AudioMetadataPanel()
     with patch.object(panel, "update") as mock_update:
         panel.set_metadata(None)
-        mock_update.assert_called_once_with("[b]Metadata[/b]\n\n  [dim]Select a file to view metadata.[/dim]")
+        mock_update.assert_called_once_with(
+            "[b]Metadata[/b]\n\n  [dim]Select a file to view metadata.[/dim]"
+        )
 
 
 def test_audio_metadata_panel_valid() -> None:
@@ -140,7 +150,9 @@ def test_audio_metadata_panel_format_exception() -> None:
 
     # Mock the extractor formatting to raise Exception
     with (
-        patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor") as mock_ext_class,
+        patch(
+            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"
+        ) as mock_ext_class,
         patch.object(panel, "update") as mock_update,
     ):
         mock_ext_class.format_duration.side_effect = Exception("Format error")
@@ -157,20 +169,22 @@ def test_audio_classification_panel_none() -> None:
     panel = AudioClassificationPanel()
     with patch.object(panel, "update") as mock_update:
         panel.set_classification(None)
-        mock_update.assert_called_once_with("[b]Classification[/b]\n\n  [dim]No classification available.[/dim]")
+        mock_update.assert_called_once_with(
+            "[b]Classification[/b]\n\n  [dim]No classification available.[/dim]"
+        )
 
 
 def test_audio_classification_panel_valid() -> None:
     """Verify AudioClassificationPanel with different confidence thresholds and alternatives."""
     panel = AudioClassificationPanel()
-    
+
     # 1. High confidence, alternatives with value attributes
     mock_result = MagicMock()
     mock_result.audio_type = MagicMock()
     mock_result.audio_type.value = "music"
     mock_result.confidence = 0.95
     mock_result.reasoning = "Clear melodic patterns."
-    
+
     mock_alt = MagicMock()
     mock_alt.audio_type = MagicMock()
     mock_alt.audio_type.value = "speech"
@@ -214,6 +228,7 @@ def test_audio_classification_panel_valid() -> None:
 
 # --- AudioView Tests ---
 
+
 def test_audio_view_initialization() -> None:
     """Verify AudioView fields on creation."""
     view = AudioView(scan_dir="/some/path")
@@ -251,7 +266,7 @@ def test_audio_view_action_refresh_audio() -> None:
         view.action_refresh_audio()
         assert view._files == []
         assert view._current_index == 0
-        
+
         panels[AudioFileListPanel].update.assert_called_once_with("[dim]Scanning...[/dim]")
         panels[AudioMetadataPanel].update.assert_called_once_with("[dim]Loading...[/dim]")
         panels[AudioClassificationPanel].update.assert_called_once_with("[dim]Loading...[/dim]")
@@ -261,7 +276,7 @@ def test_audio_view_action_refresh_audio() -> None:
 def test_audio_view_action_next_prev_navigation() -> None:
     """Verify next/prev navigation handles boundary cases and updates panels."""
     view, panels, _ = _create_view_with_mocks()
-    
+
     # 1. Navigation with empty files list
     view._files = []
     view.action_next_file()
@@ -306,7 +321,7 @@ def test_audio_view_action_next_prev_navigation() -> None:
 def test_audio_view_scan_no_audio_files() -> None:
     """Verify scanning directory with no audio files updates panels correctly."""
     view, panels, _ = _create_view_with_mocks()
-    
+
     # Mock Path methods
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
@@ -319,7 +334,7 @@ def test_audio_view_scan_no_audio_files() -> None:
         patch.object(view, "_set_status") as mock_status,
     ):
         view._scan_audio_files()
-        
+
         panels[AudioFileListPanel].set_files.assert_called_once_with([])
         panels[AudioMetadataPanel].set_metadata.assert_called_once_with(None)
         panels[AudioClassificationPanel].set_classification.assert_called_once_with(None)
@@ -329,10 +344,10 @@ def test_audio_view_scan_no_audio_files() -> None:
 def test_audio_view_scan_success() -> None:
     """Verify scanning directory with audio files extracts, classifies, and updates panels."""
     view, panels, _ = _create_view_with_mocks()
-    
+
     p1 = Path("track1.mp3")
     p2 = Path("track2.wav")
-    
+
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
     mock_dir.rglob.return_value = [p1, p2]
@@ -351,27 +366,35 @@ def test_audio_view_scan_success() -> None:
 
     with (
         patch.object(Path, "is_file", return_value=True),
-        patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor") as mock_extractor_class,
-        patch("file_organizer.services.audio.classifier.AudioClassifier", return_value=mock_classifier),
+        patch(
+            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"
+        ) as mock_extractor_class,
+        patch(
+            "file_organizer.services.audio.classifier.AudioClassifier", return_value=mock_classifier
+        ),
         patch.object(view, "_set_status") as mock_status,
     ):
         mock_extractor_class.return_value = mock_extractor
-        mock_extractor_class.format_duration.side_effect = lambda d: "02:00" if d == 120.0 else "01:30"
+        mock_extractor_class.format_duration.side_effect = lambda d: (
+            "02:00" if d == 120.0 else "01:30"
+        )
         view._scan_audio_files()
-        
+
         # Verify extractor/classifier calls
         assert mock_extractor.extract.call_count == 2
         assert mock_classifier.classify.call_count == 2
-        
+
         # Verify files stored
         assert len(view._files) == 2
         assert view._files[0] == (p1, mock_meta1, mock_class1)
-        
+
         # Verify panel updates
-        panels[AudioFileListPanel].set_files.assert_called_once_with([
-            ("track1.mp3", "MP3", "02:00"),
-            ("track2.wav", "WAV", "01:30"),
-        ])
+        panels[AudioFileListPanel].set_files.assert_called_once_with(
+            [
+                ("track1.mp3", "MP3", "02:00"),
+                ("track2.wav", "WAV", "01:30"),
+            ]
+        )
         panels[AudioMetadataPanel].set_metadata.assert_called_once_with(mock_meta1)
         panels[AudioClassificationPanel].set_classification.assert_called_once_with(mock_class1)
         mock_status.assert_called_once_with("Audio: 2 files loaded")
@@ -380,7 +403,7 @@ def test_audio_view_scan_success() -> None:
 def test_audio_view_scan_extraction_exception() -> None:
     """Verify scan handles exceptions during single file metadata extraction gracefully."""
     view, panels, _ = _create_view_with_mocks()
-    
+
     p1 = Path("track1.mp3")
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
@@ -392,28 +415,36 @@ def test_audio_view_scan_extraction_exception() -> None:
 
     with (
         patch.object(Path, "is_file", return_value=True),
-        patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor", return_value=mock_extractor),
+        patch(
+            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+            return_value=mock_extractor,
+        ),
         patch("file_organizer.services.audio.classifier.AudioClassifier"),
-        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "_set_status"),
     ):
         view._scan_audio_files()
-        
+
         # Verify it falls back and marks metadata/classification as None
         assert len(view._files) == 1
         assert view._files[0] == (p1, None, None)
-        
-        panels[AudioFileListPanel].set_files.assert_called_once_with([
-            ("track1.mp3", "mp3", "?"),
-        ])
+
+        panels[AudioFileListPanel].set_files.assert_called_once_with(
+            [
+                ("track1.mp3", "mp3", "?"),
+            ]
+        )
 
 
 def test_audio_view_scan_import_error() -> None:
     """Verify scan catches ImportError and shows warning on all panels."""
     view, panels, _ = _create_view_with_mocks()
-    
-    with patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor", side_effect=ImportError("mutagen missing")):
+
+    with patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+        side_effect=ImportError("mutagen missing"),
+    ):
         view._scan_audio_files()
-        
+
         for panel in panels.values():
             panel.update.assert_called_once()
             assert "mutagen" in panel.update.call_args[0][0]
@@ -422,10 +453,13 @@ def test_audio_view_scan_import_error() -> None:
 def test_audio_view_scan_general_exception() -> None:
     """Verify scan catches general exceptions and shows warning on all panels."""
     view, panels, _ = _create_view_with_mocks()
-    
-    with patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor", side_effect=ValueError("Global crash")):
+
+    with patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+        side_effect=ValueError("Global crash"),
+    ):
         view._scan_audio_files()
-        
+
         for panel in panels.values():
             panel.update.assert_called_once()
             assert "Global crash" in panel.update.call_args[0][0]
@@ -434,7 +468,7 @@ def test_audio_view_scan_general_exception() -> None:
 def test_audio_view_status_bar_updates() -> None:
     """Verify _set_status updates application StatusBar or logs on failure."""
     view, _, mock_app = _create_view_with_mocks()
-    
+
     # 1. Success path
     mock_status_bar = MagicMock()
     mock_app.query_one.return_value = mock_status_bar

@@ -11,40 +11,42 @@ Files covered:
 
 from __future__ import annotations
 
-import io
-import pickle
-import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-# Enums and configs
-from file_organizer.services.audio.preprocessor import AudioFormat, AudioConfig, AudioPreprocessor
-from file_organizer.services.video.scene_detector import DetectionMethod, Scene, SceneDetectionResult, SceneDetector
-from file_organizer.services.audio.content_analyzer import ContentAnalysis, AudioContentAnalyzer
-from file_organizer.services.audio.transcriber import (
-    ModelSize as ServiceModelSize,
-    ComputeType as ServiceComputeType,
-    TranscriptionOptions as ServiceTranscriptionOptions,
-    WordTiming as ServiceWordTiming,
-    Segment as ServiceSegment,
-    TranscriptionResult as ServiceTranscriptionResult,
-    AudioTranscriber as ServiceAudioTranscriber,
-)
-from file_organizer.services.deduplication.embedder import DocumentEmbedder
+from file_organizer.services.audio.classifier import AudioType
+from file_organizer.services.audio.content_analyzer import AudioContentAnalyzer, ContentAnalysis
+from file_organizer.services.audio.metadata_extractor import AudioMetadata
 from file_organizer.services.audio.organizer import (
-    OrganizationRules,
-    FileMove,
-    OrganizationPlan,
-    OrganizationResult,
     AudioOrganizer,
+    OrganizationRules,
     sanitize_path_component,
 )
-from file_organizer.services.audio.classifier import AudioType
-from file_organizer.services.audio.metadata_extractor import AudioMetadata
+
+# Enums and configs
+from file_organizer.services.audio.preprocessor import AudioConfig, AudioFormat, AudioPreprocessor
+from file_organizer.services.audio.transcriber import (
+    AudioTranscriber as ServiceAudioTranscriber,
+)
+from file_organizer.services.audio.transcriber import (
+    ComputeType as ServiceComputeType,
+)
+from file_organizer.services.audio.transcriber import (
+    ModelSize as ServiceModelSize,
+)
+from file_organizer.services.audio.transcriber import (
+    TranscriptionOptions as ServiceTranscriptionOptions,
+)
+from file_organizer.services.deduplication.embedder import DocumentEmbedder
+from file_organizer.services.video.scene_detector import (
+    DetectionMethod,
+    Scene,
+    SceneDetectionResult,
+    SceneDetector,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -52,6 +54,7 @@ pytestmark = pytest.mark.integration
 # ===========================================================================
 # 1. services/audio/preprocessor.py Tests
 # ===========================================================================
+
 
 class TestAudioPreprocessor:
     def test_audio_format_and_config(self) -> None:
@@ -66,7 +69,9 @@ class TestAudioPreprocessor:
         mock_run.return_value = MagicMock(returncode=0, stdout="ffmpeg version 4.4")
         preprocessor = AudioPreprocessor()
         assert preprocessor.config.sample_rate == 16000
-        mock_run.assert_called_once_with(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
+        mock_run.assert_called_once_with(
+            ["ffmpeg", "-version"], capture_output=True, text=True, timeout=5
+        )
 
         # Ffmpeg not found / timeout
         mock_run.reset_mock()
@@ -82,7 +87,7 @@ class TestAudioPreprocessor:
 
         mock_run.return_value = MagicMock(returncode=0)
         preprocessor = AudioPreprocessor()
-        
+
         out_path = preprocessor.convert_to_wav(dummy_input, output_path=dummy_output)
         assert out_path == dummy_output
         mock_run.assert_called_with(
@@ -109,7 +114,9 @@ class TestAudioPreprocessor:
             preprocessor.convert_to_wav(tmp_path / "missing.mp3")
 
     @patch("subprocess.run")
-    def test_convert_to_wav_ffmpeg_failure_and_pydub_fallback(self, mock_run: MagicMock, tmp_path: Path) -> None:
+    def test_convert_to_wav_ffmpeg_failure_and_pydub_fallback(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
         dummy_input = tmp_path / "input.mp3"
         dummy_input.write_bytes(b"dummy mp3 data")
 
@@ -122,12 +129,14 @@ class TestAudioPreprocessor:
 
         # 2. Ffmpeg executable not found -> Fallback to pydub
         mock_run.side_effect = FileNotFoundError()
-        
+
+        mock_pydub = MagicMock()
         mock_pydub_seg = MagicMock()
+        mock_pydub.AudioSegment.from_file.return_value = mock_pydub_seg
         mock_pydub_seg.set_frame_rate.return_value = mock_pydub_seg
         mock_pydub_seg.set_channels.return_value = mock_pydub_seg
-        
-        with patch("pydub.AudioSegment.from_file", return_value=mock_pydub_seg):
+
+        with patch.dict("sys.modules", {"pydub": mock_pydub}):
             out_path = preprocessor.convert_to_wav(dummy_input)
             assert out_path.name.endswith("_converted.wav")
             mock_pydub_seg.export.assert_called_once()
@@ -136,7 +145,7 @@ class TestAudioPreprocessor:
         dummy_input = tmp_path / "input.mp3"
         dummy_input.write_bytes(b"dummy")
         preprocessor = AudioPreprocessor()
-        
+
         with patch("subprocess.run", side_effect=FileNotFoundError()):
             with patch.dict("sys.modules", {"pydub": None}):
                 with pytest.raises(ImportError) as exc:
@@ -146,32 +155,47 @@ class TestAudioPreprocessor:
     def test_normalize_and_silence_removal_pydub(self, tmp_path: Path) -> None:
         dummy_audio = tmp_path / "input.wav"
         dummy_audio.write_bytes(b"dummy")
-        
+
         preprocessor = AudioPreprocessor()
 
+        mock_pydub = MagicMock()
         mock_pydub_seg = MagicMock()
         mock_pydub_seg.suffix = ".wav"
-        
-        # 1. Normalize success
-        with patch("pydub.AudioSegment.from_file", return_value=mock_pydub_seg):
-            with patch("pydub.effects.normalize", return_value=mock_pydub_seg) as mock_norm:
-                out_norm = preprocessor.normalize_audio(dummy_audio)
-                assert out_norm == dummy_audio
-                mock_norm.assert_called_once()
+        mock_pydub.AudioSegment.from_file.return_value = mock_pydub_seg
 
-            # 2. Silence removal success
-            with patch("pydub.silence.detect_nonsilent", return_value=[(0, 1000)]) as mock_sil:
-                mock_pydub_seg.__getitem__.return_value = mock_pydub_seg
-                mock_pydub_seg.__add__.return_value = mock_pydub_seg
-                
-                out_sil = preprocessor.remove_silence(dummy_audio, silence_thresh=-45)
-                assert out_sil == dummy_audio
-                mock_sil.assert_called_once()
+        # 1. Normalize success
+        mock_norm = MagicMock(return_value=mock_pydub_seg)
+        mock_pydub.effects.normalize = mock_norm
+
+        # 2. Silence removal success
+        mock_sil = MagicMock(return_value=[(0, 1000)])
+        mock_pydub.silence.detect_nonsilent = mock_sil
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "pydub": mock_pydub,
+                "pydub.effects": mock_pydub.effects,
+                "pydub.silence": mock_pydub.silence,
+            },
+        ):
+            out_norm = preprocessor.normalize_audio(dummy_audio)
+            assert out_norm == dummy_audio
+            mock_norm.assert_called_once()
+
+            mock_pydub_seg.__getitem__.return_value = mock_pydub_seg
+            mock_pydub_seg.__add__.return_value = mock_pydub_seg
+
+            out_sil = preprocessor.remove_silence(dummy_audio, silence_thresh=-45)
+            assert out_sil == dummy_audio
+            mock_sil.assert_called_once()
 
             # Silence removal, no non-silent ranges found
-            with patch("pydub.silence.detect_nonsilent", return_value=[]):
-                out_sil_none = preprocessor.remove_silence(dummy_audio)
-                assert out_sil_none == dummy_audio
+            mock_sil.reset_mock()
+            mock_sil.return_value = []
+            out_sil_none = preprocessor.remove_silence(dummy_audio)
+            assert out_sil_none == dummy_audio
+            mock_sil.assert_called_once()
 
         # 3. pydub not available ImportErrors -> returns input path as fallback
         with patch.dict("sys.modules", {"pydub": None}):
@@ -217,15 +241,17 @@ class TestAudioPreprocessor:
         dummy_audio = tmp_path / "song.mp3"
         dummy_audio.write_bytes(b"dummy")
 
+        mock_pydub = MagicMock()
         mock_pydub_seg = MagicMock()
         mock_pydub_seg.channels = 2
         mock_pydub_seg.frame_rate = 44100
         mock_pydub_seg.sample_width = 2
         mock_pydub_seg.frame_count.return_value = 100000
         mock_pydub_seg.__len__.return_value = 5000  # 5 seconds
+        mock_pydub.AudioSegment.from_file.return_value = mock_pydub_seg
 
         # 1. pydub available
-        with patch("pydub.AudioSegment.from_file", return_value=mock_pydub_seg):
+        with patch.dict("sys.modules", {"pydub": mock_pydub}):
             info = AudioPreprocessor.get_audio_info(dummy_audio)
             assert info["duration_seconds"] == 5.0
             assert info["channels"] == 2
@@ -246,6 +272,7 @@ class TestAudioPreprocessor:
 # ===========================================================================
 # 2. services/video/scene_detector.py Tests
 # ===========================================================================
+
 
 class TestSceneDetector:
     def test_detector_structs(self) -> None:
@@ -271,24 +298,27 @@ class TestSceneDetector:
         with pytest.raises(FileNotFoundError):
             detector.detect_scenes("missing_video.mp4")
 
-    @patch("scenedetect.VideoManager")
-    @patch("scenedetect.SceneManager")
-    def test_detect_with_scenedetect(self, mock_scene_mgr_cls: MagicMock, mock_video_mgr_cls: MagicMock, tmp_path: Path) -> None:
+    def test_detect_with_scenedetect(self, tmp_path: Path) -> None:
         dummy_video = tmp_path / "video.mp4"
         dummy_video.write_bytes(b"dummy")
+
+        mock_scenedetect = MagicMock()
+        mock_detectors = MagicMock()
+        mock_video_mgr_cls = mock_scenedetect.VideoManager
+        mock_scene_mgr_cls = mock_scenedetect.SceneManager
 
         mock_video_mgr = MagicMock()
         mock_video_mgr_cls.return_value = mock_video_mgr
         mock_video_mgr.get_framerate.return_value = 30.0
         mock_video_mgr.get_frame_number.return_value = 300
-        
+
         mock_time_start = MagicMock()
         mock_time_start.get_seconds.return_value = 0.0
         mock_time_start.get_frames.return_value = 0
         mock_time_end = MagicMock()
         mock_time_end.get_seconds.return_value = 5.0
         mock_time_end.get_frames.return_value = 150
-        
+
         mock_video_mgr.get_duration.return_value = (mock_time_end,)
 
         mock_scene_mgr = MagicMock()
@@ -296,43 +326,57 @@ class TestSceneDetector:
         mock_scene_mgr.get_scene_list.return_value = [(mock_time_start, mock_time_end)]
 
         detector = SceneDetector(method=DetectionMethod.THRESHOLD, threshold=15.0)
-        
-        # Test content/threshold/adaptive branches
-        with patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies"):
-            res = detector.detect_scenes(dummy_video, method=DetectionMethod.THRESHOLD)
-            assert res.fps == 30.0
-            assert len(res.scenes) == 1
-            assert res.scenes[0].duration == 5.0
-            mock_video_mgr.release.assert_called_once()
 
-    @patch("cv2.VideoCapture")
-    def test_detect_with_opencv_fallback(self, mock_video_capture: MagicMock, tmp_path: Path) -> None:
+        # Test content/threshold/adaptive branches
+        with patch(
+            "file_organizer.services.video.scene_detector.SceneDetector._check_dependencies"
+        ):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "scenedetect": mock_scenedetect,
+                    "scenedetect.detectors": mock_detectors,
+                    "cv2": MagicMock(),
+                },
+            ):
+                res = detector.detect_scenes(dummy_video, method=DetectionMethod.THRESHOLD)
+                assert res.fps == 30.0
+                assert len(res.scenes) == 1
+                assert res.scenes[0].duration == 5.0
+                mock_video_mgr.release.assert_called_once()
+
+    def test_detect_with_opencv_fallback(self, tmp_path: Path) -> None:
         dummy_video = tmp_path / "video.mp4"
         dummy_video.write_bytes(b"dummy")
 
-        import cv2
+        mock_cv2 = MagicMock()
+        mock_cv2.CAP_PROP_FPS = 1
+        mock_cv2.CAP_PROP_FRAME_COUNT = 2
+        mock_cv2.COLOR_BGR2GRAY = 3
+        mock_cv2.cvtColor.return_value = np.zeros((100, 100), dtype=np.uint8)
+        mock_cv2.absdiff.side_effect = [
+            np.zeros((100, 100), dtype=np.uint8),
+            np.ones((100, 100), dtype=np.uint8) * 100,
+        ]
+
         mock_cap = MagicMock()
-        mock_video_capture.return_value = mock_cap
+        mock_cv2.VideoCapture.return_value = mock_cap
         mock_cap.isOpened.return_value = True
         mock_cap.get.side_effect = lambda prop: {
-            cv2.CAP_PROP_FPS: 30.0,
-            cv2.CAP_PROP_FRAME_COUNT: 100,
+            mock_cv2.CAP_PROP_FPS: 30.0,
+            mock_cv2.CAP_PROP_FRAME_COUNT: 100,
         }.get(prop, 0.0)
 
         # Mock cap.read returning 3 frames (2 reads return frame, 3rd returns False)
         frame_mock = np.zeros((100, 100, 3), dtype=np.uint8)
         # Create a frame change at frame index 1 to trigger scene boundary
         frame_mock_diff = np.ones((100, 100, 3), dtype=np.uint8) * 255
-        
-        mock_cap.read.side_effect = [
-            (True, frame_mock),
-            (True, frame_mock_diff),
-            (False, None)
-        ]
+
+        mock_cap.read.side_effect = [(True, frame_mock), (True, frame_mock_diff), (False, None)]
 
         # Trigger ImportError on scenedetect to force opencv fallback
         detector = SceneDetector(min_scene_length=0.01)
-        with patch.dict("sys.modules", {"scenedetect": None}):
+        with patch.dict("sys.modules", {"scenedetect": None, "cv2": mock_cv2}):
             res = detector.detect_scenes(dummy_video, method=DetectionMethod.THRESHOLD)
             assert res.fps == 30.0
             assert len(res.scenes) >= 1
@@ -349,12 +393,14 @@ class TestSceneDetector:
         dummy_video.write_bytes(b"dummy")
 
         detector = SceneDetector()
+
         def mock_detect(video_path, method=None):
             if "missing" in str(video_path):
                 raise FileNotFoundError()
             return "mock_result"
+
         detector.detect_scenes = MagicMock(side_effect=mock_detect)
-        
+
         # Succeeds for valid file, skips/errors for missing file
         results = detector.detect_scenes_batch([dummy_video, tmp_path / "missing.mp4"])
         assert results == ["mock_result"]
@@ -386,11 +432,12 @@ class TestSceneDetector:
         assert "Scene,Start Time,End Time" in csv_content
         assert "1,0.00,5.00" in csv_content
 
-    @patch("cv2.VideoCapture")
-    @patch("cv2.imwrite")
-    def test_extract_scene_thumbnails(self, mock_imwrite: MagicMock, mock_video_capture: MagicMock, tmp_path: Path) -> None:
+    def test_extract_scene_thumbnails(self, tmp_path: Path) -> None:
+        mock_cv2 = MagicMock()
+        mock_cv2.CAP_PROP_FPS = 1
+        mock_cv2.CAP_PROP_POS_FRAMES = 1
         mock_cap = MagicMock()
-        mock_video_capture.return_value = mock_cap
+        mock_cv2.VideoCapture.return_value = mock_cap
         mock_cap.get.return_value = 30.0  # fps
         mock_cap.read.return_value = (True, "mock_frame")
 
@@ -414,17 +461,19 @@ class TestSceneDetector:
         )
 
         thumb_dir = tmp_path / "thumbs"
-        SceneDetector.extract_scene_thumbnails("vid.mp4", result, thumb_dir)
-        
-        # Seek to frame: start_time (1.0) + frame_offset (0.5) = 1.5s -> 1.5 * 30 = 45 frame
-        mock_cap.set.assert_called_once_with(1, 45)  # CAP_PROP_POS_FRAMES is 1
-        mock_imwrite.assert_called_once_with(str(thumb_dir / "scene_001.jpg"), "mock_frame")
-        mock_cap.release.assert_called_once()
+        with patch.dict("sys.modules", {"cv2": mock_cv2}):
+            SceneDetector.extract_scene_thumbnails("vid.mp4", result, thumb_dir)
+
+            # Seek to frame: start_time (1.0) + frame_offset (0.5) = 1.5s -> 1.5 * 30 = 45 frame
+            mock_cap.set.assert_called_once_with(1, 45)  # CAP_PROP_POS_FRAMES is 1
+            mock_cv2.imwrite.assert_called_once_with(str(thumb_dir / "scene_001.jpg"), "mock_frame")
+            mock_cap.release.assert_called_once()
 
 
 # ===========================================================================
 # 3. services/audio/content_analyzer.py Tests
 # ===========================================================================
+
 
 class TestAudioContentAnalyzer:
     def test_content_analysis_struct(self) -> None:
@@ -440,9 +489,9 @@ class TestAudioContentAnalyzer:
 
     def test_content_analyzer_keyword_and_topic_extraction(self) -> None:
         analyzer = AudioContentAnalyzer(max_keywords=5, min_keyword_freq=1)
-        
+
         text = "This is an audio file about coding and software programming. Coding is great. software is programming."
-        
+
         topics = analyzer.extract_topics(text)
         # matches topic keywords in lexicons.json default dictionaries
         assert isinstance(topics, list)
@@ -460,7 +509,9 @@ class TestAudioContentAnalyzer:
         # Construct segments to trigger speaker switch heuristics
         seg1 = MagicMock(start=0.0, end=2.0)
         seg2 = MagicMock(start=4.0, end=6.0)  # Gap of 2.0s (> 1.5s turn threshold) -> switch
-        seg3 = MagicMock(start=6.0, end=6.5)  # Duration ratio 2.0 / 0.5 = 4.0 (> 3.0 duration ratio) -> switch
+        seg3 = MagicMock(
+            start=6.0, end=6.5
+        )  # Duration ratio 2.0 / 0.5 = 4.0 (> 3.0 duration ratio) -> switch
 
         speakers = analyzer.extract_speakers([seg1, seg2, seg3])
         # Speaker 1 -> Speaker 2 -> Speaker 3
@@ -471,7 +522,7 @@ class TestAudioContentAnalyzer:
 
     def test_full_analyze_metadata_and_transcription(self) -> None:
         analyzer = AudioContentAnalyzer()
-        
+
         metadata = AudioMetadata(
             file_path=Path("song.mp3"),
             file_size=1024,
@@ -510,19 +561,19 @@ class TestAudioContentAnalyzer:
 # 4. services/audio/transcriber.py Tests
 # ===========================================================================
 
+
 class TestServiceAudioTranscriber:
     def test_transcriber_constructor_import_error(self, tmp_path: Path) -> None:
         # Check constructor validations when faster-whisper not installed
         dummy_file = tmp_path / "song.wav"
         dummy_file.write_bytes(b"dummy")
         with patch.dict("sys.modules", {"faster_whisper": None}):
-             transcriber = ServiceAudioTranscriber(device="cpu")
-             with pytest.raises(ImportError) as exc:
-                 transcriber.transcribe(dummy_file)
-             assert "faster-whisper is required" in str(exc.value)
+            transcriber = ServiceAudioTranscriber(device="cpu")
+            with pytest.raises(ImportError) as exc:
+                transcriber.transcribe(dummy_file)
+            assert "faster-whisper is required" in str(exc.value)
 
-    @patch("file_organizer.services.audio.transcriber.faster_whisper")
-    def test_device_auto_detection_mps_cuda(self, mock_fw: MagicMock) -> None:
+    def test_device_auto_detection_mps_cuda(self) -> None:
         # MPS / CUDA mock
         mock_torch = MagicMock()
         mock_torch.cuda.is_available.return_value = False
@@ -545,7 +596,7 @@ class TestServiceAudioTranscriber:
                 compute_type=ServiceComputeType.FLOAT32,
                 device="cpu",
             )
-            
+
             # First load
             model1 = transcriber._load_model()
             assert model1 == mock_whisper
@@ -567,7 +618,9 @@ class TestServiceAudioTranscriber:
             assert transcriber._model is None
 
     @patch("faster_whisper.WhisperModel")
-    def test_transcribe_options_payloads_and_segments(self, mock_whisper_cls: MagicMock, tmp_path: Path) -> None:
+    def test_transcribe_options_payloads_and_segments(
+        self, mock_whisper_cls: MagicMock, tmp_path: Path
+    ) -> None:
         dummy_audio = tmp_path / "audio.wav"
         dummy_audio.write_bytes(b"dummy wav data")
 
@@ -594,7 +647,7 @@ class TestServiceAudioTranscriber:
 
         with patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", True):
             transcriber = ServiceAudioTranscriber(device="cpu")
-            
+
             # File not found
             with pytest.raises(FileNotFoundError):
                 transcriber.transcribe(tmp_path / "missing.wav")
@@ -608,7 +661,7 @@ class TestServiceAudioTranscriber:
             )
 
             res = transcriber.transcribe(dummy_audio, options=options)
-            
+
             assert res.text == "Hello world"
             assert res.language == "en"
             assert res.language_confidence == 0.98
@@ -638,6 +691,7 @@ class TestServiceAudioTranscriber:
                 if "missing" in str(audio_path):
                     raise FileNotFoundError()
                 return "mock_result"
+
             transcriber.transcribe = MagicMock(side_effect=mock_transcribe)
             results = transcriber.transcribe_batch([dummy_audio, tmp_path / "missing.wav"])
             assert results == ["mock_result"]
@@ -661,7 +715,7 @@ class TestServiceAudioTranscriber:
         dummy_audio = tmp_path / "audio.wav"
         dummy_audio.write_bytes(b"dummy")
         transcriber = ServiceAudioTranscriber(device="cpu")
-        
+
         # Force ValueError inside transcribe
         transcriber._load_model = MagicMock()
         mock_model = MagicMock()
@@ -680,7 +734,7 @@ class TestServiceAudioTranscriber:
     def test_transcribe_options_variations(self, tmp_path: Path) -> None:
         dummy_audio = tmp_path / "audio.wav"
         dummy_audio.write_bytes(b"dummy")
-        
+
         # Set up WhisperModel mock to return simple segment
         mock_seg = MagicMock()
         mock_seg.id = 1
@@ -689,7 +743,7 @@ class TestServiceAudioTranscriber:
         mock_seg.end = 1.0
         mock_seg.avg_logprob = -0.1
         mock_seg.no_speech_prob = 0.1
-        del mock_seg.words # No word level timing
+        del mock_seg.words  # No word level timing
 
         mock_info = MagicMock()
         mock_info.language = "en"
@@ -710,7 +764,7 @@ class TestServiceAudioTranscriber:
             )
             res = transcriber.transcribe(dummy_audio, options=options)
             assert res.text == "Hello"
-            
+
             # Verify transcribe parameters
             mock_model.transcribe.assert_called_once()
             _, kwargs = mock_model.transcribe.call_args
@@ -723,6 +777,7 @@ class TestServiceAudioTranscriber:
 # ===========================================================================
 # 5. services/deduplication/embedder.py Tests
 # ===========================================================================
+
 
 class TestDocumentEmbedder:
     def test_document_embedder_constructor_import_error(self) -> None:
@@ -745,14 +800,17 @@ class TestDocumentEmbedder:
         # 2. Fit transform small corpus
         docs = ["apple banana cherry", "banana cherry date", "cherry date elderberry"]
         embeddings = embedder.fit_transform(docs)
-        
+
         assert embedder.is_fitted is True
-        assert embeddings.shape == (3, 5)  # 5 unique vocabulary words (apple, banana, cherry, date, elderberry)
+        assert embeddings.shape == (
+            3,
+            5,
+        )  # 5 unique vocabulary words (apple, banana, cherry, date, elderberry)
         assert isinstance(embeddings, np.ndarray)
 
         # 3. Transform single document (checks fit state and caching)
         doc = "apple banana"
-        
+
         # Test NotFittedError trigger
         unfitted_embedder = DocumentEmbedder(max_features=10)
         with pytest.raises(RuntimeError) as exc:
@@ -773,7 +831,9 @@ class TestDocumentEmbedder:
             assert np.array_equal(emb1, emb2)
             # Verify cache hit log message
             # Logger debug calls vary, check call args
-            has_cache_log = any("Cache hit for document" in str(call) for call in mock_debug.call_args_list)
+            has_cache_log = any(
+                "Cache hit for document" in str(call) for call in mock_debug.call_args_list
+            )
             assert has_cache_log or len(embedder.embedding_cache) == 1
 
         # Transform batch
@@ -782,7 +842,7 @@ class TestDocumentEmbedder:
 
     def test_vocabulary_features_and_top_terms(self) -> None:
         embedder = DocumentEmbedder(max_features=10, max_df=1.0, ngram_range=(1, 1))
-        
+
         # Fit fitted checks
         with pytest.raises(RuntimeError):
             embedder.get_feature_names()
@@ -808,17 +868,19 @@ class TestDocumentEmbedder:
         # get_top_terms
         emb = embedder.transform("apple banana")
         top = embedder.get_top_terms(emb, top_n=2)
-        assert len(top) <= 2
+        assert len(top) == 2
         assert top[0][0] in ["apple", "banana"]
 
     def test_save_load_model_and_cache_persistency(self, tmp_path: Path) -> None:
         model_file = tmp_path / "tfidf.pkl"
         cache_file = tmp_path / "cache.pkl"
 
-        embedder = DocumentEmbedder(max_features=5, max_df=1.0, ngram_range=(1, 1), cache_path=cache_file)
+        embedder = DocumentEmbedder(
+            max_features=5, max_df=1.0, ngram_range=(1, 1), cache_path=cache_file
+        )
         docs = ["apple banana", "cherry date"]
         embedder.fit_transform(docs)
-        
+
         # Generate some cache entries
         embedder.transform("apple banana")
         embedder.transform("cherry date")
@@ -905,6 +967,7 @@ class TestDocumentEmbedder:
 # ===========================================================================
 # 6. services/audio/organizer.py Tests
 # ===========================================================================
+
 
 class TestAudioOrganizer:
     def test_rules_templates_and_helpers(self) -> None:
@@ -1030,7 +1093,7 @@ class TestAudioOrganizer:
         res = organizer.organize(files, base_path=base_dest, dry_run=False)
         assert res.total_moved == 1
         assert res.total_failed == 0
-        
+
         # Conflict should be resolved by appending (1) to filename
         final_dest = res.moved_files[0].destination
         assert final_dest.name == "00 - Track Title (1).mp3"
@@ -1039,7 +1102,10 @@ class TestAudioOrganizer:
 
         # 3. Conflict capacity exhaustion trigger
         # Mock conflict resolver to fail (force loop to run > 9999 times)
-        with patch("file_organizer.services.audio.organizer._resolve_conflict", side_effect=RuntimeError("Too many conflicting files")):
+        with patch(
+            "file_organizer.services.audio.organizer._resolve_conflict",
+            side_effect=RuntimeError("Too many conflicting files"),
+        ):
             source_file2 = tmp_path / "song2.mp3"
             source_file2.write_bytes(b"audio2")
             res_fail = organizer.organize(
