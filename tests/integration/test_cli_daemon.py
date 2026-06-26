@@ -410,6 +410,7 @@ class TestJSONPidFileCLIBoundary:
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
             patch("os.kill", side_effect=ProcessLookupError()),
+            patch("file_organizer.daemon.pid.PidFileManager.is_running", return_value=True),
         ):
             result = runner.invoke(app, ["daemon", "stop"])
 
@@ -432,6 +433,7 @@ class TestJSONPidFileCLIBoundary:
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
             patch("os.kill", side_effect=ProcessLookupError()),
+            patch("file_organizer.daemon.pid.PidFileManager.is_running", return_value=True),
         ):
             result = runner.invoke(app, ["daemon", "stop"])
 
