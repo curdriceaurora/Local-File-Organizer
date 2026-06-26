@@ -134,7 +134,7 @@ class TestOrganizationPreviewViewLoadPreview:
             ) as mock_org_cls,
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            OrganizationPreviewView._load_preview(view)
+            OrganizationPreviewView._load_preview.__wrapped__(view)
 
         mock_org_cls.assert_called_once_with(
             dry_run=True,
@@ -186,7 +186,7 @@ class TestOrganizationPreviewViewLoadPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            OrganizationPreviewView._load_preview(view)
+            OrganizationPreviewView._load_preview.__wrapped__(view)
 
         assert mock_app.call_from_thread.call_count == 2
         before_after_panel.update.assert_called_once_with(

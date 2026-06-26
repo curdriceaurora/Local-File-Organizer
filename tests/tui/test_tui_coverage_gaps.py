@@ -388,7 +388,7 @@ class TestFilePreviewPanelShowPreview:
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         missing = tmp_path / "ghost.txt"
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, missing)
+            FilePreviewPanel.show_preview.__wrapped__(panel, missing)
         panel.update.assert_called_once_with("[dim]File not found[/dim]")
 
     def test_show_preview_text_file(self, tmp_path):
@@ -401,7 +401,7 @@ class TestFilePreviewPanelShowPreview:
         txt = tmp_path / "hello.txt"
         txt.write_text("line1\nline2\n")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, txt)
+            FilePreviewPanel.show_preview.__wrapped__(panel, txt)
         panel.update.assert_called_once()
         assert "line1" in panel.update.call_args[0][0]
 
@@ -416,7 +416,7 @@ class TestFilePreviewPanelShowPreview:
         subdir.mkdir()
         (subdir / "a.txt").write_text("x")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, subdir)
+            FilePreviewPanel.show_preview.__wrapped__(panel, subdir)
         panel.update.assert_called_once()
         assert "mydir" in panel.update.call_args[0][0]
 
@@ -430,7 +430,7 @@ class TestFilePreviewPanelShowPreview:
         img_path = tmp_path / "photo.jpg"
         img_path.write_bytes(b"\x00")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, img_path)
+            FilePreviewPanel.show_preview.__wrapped__(panel, img_path)
         panel.update.assert_called_once()
 
     def test_show_preview_pdf_file(self, tmp_path):
@@ -443,7 +443,7 @@ class TestFilePreviewPanelShowPreview:
         pdf = tmp_path / "doc.pdf"
         pdf.write_bytes(b"%PDF")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, pdf)
+            FilePreviewPanel.show_preview.__wrapped__(panel, pdf)
         panel.update.assert_called_once()
 
     def test_show_preview_archive_file(self, tmp_path):
@@ -456,7 +456,7 @@ class TestFilePreviewPanelShowPreview:
         arc = tmp_path / "data.zip"
         arc.write_bytes(b"PK")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, arc)
+            FilePreviewPanel.show_preview.__wrapped__(panel, arc)
         panel.update.assert_called_once()
 
     def test_show_preview_generic_file(self, tmp_path):
@@ -469,7 +469,7 @@ class TestFilePreviewPanelShowPreview:
         unknown = tmp_path / "data.bin"
         unknown.write_bytes(b"\xde\xad\xbe\xef")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
-            FilePreviewPanel.show_preview(panel, unknown)
+            FilePreviewPanel.show_preview.__wrapped__(panel, unknown)
         panel.update.assert_called_once()
 
 

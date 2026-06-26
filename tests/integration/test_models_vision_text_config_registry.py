@@ -1173,7 +1173,7 @@ class TestPathManagerFunctions:
 
         monkeypatch.delenv("XDG_DATA_HOME", raising=False)
         result = get_data_dir()
-        assert "fo" in str(result)
+        assert result.name == "file-organizer"
 
     def test_get_state_dir_uses_xdg_state_home(self, tmp_path: Path, monkeypatch) -> None:
         from file_organizer.config.path_manager import get_state_dir
@@ -1187,14 +1187,14 @@ class TestPathManagerFunctions:
 
         monkeypatch.delenv("XDG_STATE_HOME", raising=False)
         result = get_state_dir()
-        assert "fo" in str(result)
+        assert result.name == "file-organizer"
 
     def test_get_cache_dir_returns_path(self) -> None:
         from file_organizer.config.path_manager import get_cache_dir
 
         result = get_cache_dir()
         assert isinstance(result, Path)
-        assert "fo" in str(result)
+        assert result.name == "file-organizer"
 
     def test_get_canonical_paths_returns_expected_keys(self) -> None:
         from file_organizer.config.path_manager import get_canonical_paths

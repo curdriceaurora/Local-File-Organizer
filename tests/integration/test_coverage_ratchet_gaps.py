@@ -105,8 +105,7 @@ class TestBaseModelGaps:
 
 
 class TestOpenAIClientGaps:
-    @patch("file_organizer.models._openai_client.OpenAI")
-    def test_create_openai_client_custom_params(self, mock_openai: MagicMock) -> None:
+    def test_create_openai_client_custom_params(self) -> None:
         config = ModelConfig(
             name="gpt-4o",
             model_type=ModelType.TEXT,
@@ -114,20 +113,27 @@ class TestOpenAIClientGaps:
             api_key="sk-test-key",
             api_base_url="https://custom.openai.com/v1",
         )
-        client = create_openai_client(config, "text")
-        assert client is not None
-        mock_openai.assert_called_once_with(
-            api_key="sk-test-key", base_url="https://custom.openai.com/v1"
-        )
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch("file_organizer.models._openai_client.OpenAI", create=True) as mock_openai,
+        ):
+            client = create_openai_client(config, "text")
+            assert client is not None
+            mock_openai.assert_called_once_with(
+                api_key="sk-test-key", base_url="https://custom.openai.com/v1"
+            )
 
-    @patch("file_organizer.models._openai_client.OpenAI")
-    def test_create_openai_client_error_logging(self, mock_openai: MagicMock) -> None:
-        mock_openai.side_effect = ValueError("invalid client arguments")
+    def test_create_openai_client_error_logging(self) -> None:
         config = ModelConfig(
             name="gpt-4o", model_type=ModelType.TEXT, provider="openai", api_key="sk-test-key"
         )
-        with pytest.raises(ValueError):
-            create_openai_client(config, "text")
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch("file_organizer.models._openai_client.OpenAI", create=True) as mock_openai,
+        ):
+            mock_openai.side_effect = ValueError("invalid client arguments")
+            with pytest.raises(ValueError):
+                create_openai_client(config, "text")
 
 
 # ===========================================================================
@@ -138,14 +144,18 @@ class TestOpenAIClientGaps:
 class TestOpenAIVisionModelGaps:
     def test_invalid_type_raises(self) -> None:
         config = ModelConfig(name="gpt-4o", model_type=ModelType.TEXT, provider="openai")
-        with pytest.raises(ValueError) as exc_info:
+        with (
+            patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True),
+            pytest.raises(ValueError) as exc_info,
+        ):
             OpenAIVisionModel(config)
         assert "Expected VISION or VIDEO" in str(exc_info.value)
 
     @patch("file_organizer.models.openai_vision_model.create_openai_client")
     def test_initialize_twice_noop(self, mock_create: MagicMock) -> None:
         config = ModelConfig(name="gpt-4o", model_type=ModelType.VISION, provider="openai")
-        model = OpenAIVisionModel(config)
+        with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
+            model = OpenAIVisionModel(config)
         model.initialize()
         model.initialize()
         mock_create.assert_called_once()
@@ -158,7 +168,8 @@ class TestOpenAIVisionModelGaps:
         mock_create.return_value = mock_client
 
         config = ModelConfig(name="gpt-4o", model_type=ModelType.VISION, provider="openai")
-        model = OpenAIVisionModel(config)
+        with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
+            model = OpenAIVisionModel(config)
         model.initialize()
 
         # Generate with neither path nor bytes
@@ -193,7 +204,8 @@ class TestOpenAIVisionModelGaps:
         config = ModelConfig(
             name="gpt-4o", model_type=ModelType.VISION, provider="openai", max_tokens=100
         )
-        model = OpenAIVisionModel(config)
+        with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
+            model = OpenAIVisionModel(config)
         model.initialize()
 
         # Mock token exhausted response
@@ -514,19 +526,37 @@ class TestCADReadersGaps:
     def test_read_dxf_corrupt_stream_raises(self) -> None:
         # Use BadStream to trigger the OSError on read(), which gets caught and raised as FileReadError
         corrupt_stream = BadStream(b"dxf")
-        with pytest.raises(FileReadError) as exc_info:
+        mock_ezdxf = MagicMock()
+        mock_ezdxf.read.side_effect = OSError("simulate disk read failure")
+        with (
+            patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
+            pytest.raises(FileReadError) as exc_info,
+        ):
             read_dxf_file(fileobj=corrupt_stream)
         assert "Failed to read DXF file" in str(exc_info.value)
 
     def test_read_dwg_corrupt_stream_returns_fallback(self) -> None:
         # Use BadStream to trigger the OSError on read() inside ezdxf, which is caught and returned as a fallback
         corrupt_stream = BadStream(b"dwg")
-        result = read_dwg_file(fileobj=corrupt_stream)
+        mock_ezdxf = MagicMock()
+        mock_ezdxf.read.side_effect = OSError("simulate disk read failure")
+        with (
+            patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
+        ):
+            result = read_dwg_file(fileobj=corrupt_stream)
         assert "=== DWG File Information ===" in result
         assert "Note: Full DWG parsing requires additional tools." in result
 
     def test_read_dwg_non_existent_file_raises(self) -> None:
         # A non-existent file path raises FileReadError
-        with pytest.raises(FileReadError) as exc_info:
+        mock_ezdxf = MagicMock()
+        mock_ezdxf.readfile.side_effect = OSError("no such file")
+        with (
+            patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True),
+            patch("file_organizer.utils.readers.cad.ezdxf", mock_ezdxf, create=True),
+            pytest.raises(FileReadError) as exc_info,
+        ):
             read_dwg_file(file_path="non_existent_file_xyz_123.dwg")
         assert "File not found" in str(exc_info.value)

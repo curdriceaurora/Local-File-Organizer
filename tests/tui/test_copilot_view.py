@@ -277,7 +277,7 @@ class TestCopilotViewProcessMessage:
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
             # Call the underlying function (skip @work decorator)
-            CopilotView._process_message(view, "test message")
+            CopilotView._process_message.__wrapped__(view, "test message")
 
         mock_engine.chat.assert_called_once_with("test message")
         mock_log.add_message.assert_called_once()
@@ -295,7 +295,7 @@ class TestCopilotViewProcessMessage:
         mock_app = MagicMock()
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
-            CopilotView._process_message(view, "test")
+            CopilotView._process_message.__wrapped__(view, "test")
 
         mock_log.add_system_note.assert_called_once()
         assert "model failed" in mock_log.add_system_note.call_args[0][0]
@@ -312,7 +312,7 @@ class TestCopilotViewProcessMessage:
         mock_app = MagicMock()
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
-            CopilotView._process_message(view, "test")
+            CopilotView._process_message.__wrapped__(view, "test")
 
         view._set_status.assert_called_with("Copilot: ready")
 

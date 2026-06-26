@@ -175,7 +175,7 @@ class TestShowPreviewExceptionPath:
         mock_app.call_from_thread.side_effect = AttributeError("not mounted")
         with patch.object(type(panel), "app", new_callable=PropertyMock, return_value=mock_app):
             # Should not raise
-            FilePreviewPanel.show_preview(panel, txt)
+            FilePreviewPanel.show_preview.__wrapped__(panel, txt)
 
 
 # ===========================================================================

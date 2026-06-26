@@ -115,35 +115,41 @@ def test_vision_helpers_variations(tmp_path: Path) -> None:
 
 
 class TestClaudeClientAndResponse:
-    @patch("file_organizer.models._claude_client.Anthropic")
-    def test_create_claude_client_success(self, mock_anthropic: MagicMock) -> None:
+    def test_create_claude_client_success(self) -> None:
         config = ModelConfig(
             name="claude-3-5-sonnet",
             model_type=ModelType.TEXT,
             provider="claude",
             api_key="sk-ant-test",
         )
-        client = create_claude_client(config, "text")
-        assert client is not None
-        mock_anthropic.assert_called_once_with(api_key="sk-ant-test")
+        with (
+            patch("file_organizer.models._claude_client.ANTHROPIC_AVAILABLE", True, create=True),
+            patch("file_organizer.models._claude_client.Anthropic", create=True) as mock_anthropic,
+        ):
+            client = create_claude_client(config, "text")
+            assert client is not None
+            mock_anthropic.assert_called_once_with(api_key="sk-ant-test")
 
-    @patch("file_organizer.models._claude_client.Anthropic")
-    def test_create_claude_client_warnings_and_errors(self, mock_anthropic: MagicMock) -> None:
+    def test_create_claude_client_warnings_and_errors(self) -> None:
         config = ModelConfig(
             name="claude-3",
             model_type=ModelType.TEXT,
             provider="claude",
             api_base_url="https://ignored.api",
         )
-        # Should log a warning and proceed without base_url
-        client = create_claude_client(config, "text")
-        assert client is not None
-        mock_anthropic.assert_called_once_with()
+        with (
+            patch("file_organizer.models._claude_client.ANTHROPIC_AVAILABLE", True, create=True),
+            patch("file_organizer.models._claude_client.Anthropic", create=True) as mock_anthropic,
+        ):
+            # Should log a warning and proceed without base_url
+            client = create_claude_client(config, "text")
+            assert client is not None
+            mock_anthropic.assert_called_once_with()
 
-        # Constructor error handling
-        mock_anthropic.side_effect = ValueError("invalid client setup")
-        with pytest.raises(ValueError):
-            create_claude_client(config, "text")
+            # Constructor error handling
+            mock_anthropic.side_effect = ValueError("invalid client setup")
+            with pytest.raises(ValueError):
+                create_claude_client(config, "text")
 
     def test_create_claude_client_import_error(self) -> None:
         config = ModelConfig(name="claude", model_type=ModelType.TEXT, provider="claude")
@@ -208,48 +214,49 @@ class TestLlamaCppTextModel:
 
     @patch("file_organizer.models.llama_cpp_text_model.Llama")
     def test_llama_cpp_initialize_and_device_mappings(self, mock_llama: MagicMock) -> None:
-        # MPS GPU Device offloading mapping
-        c_mps = ModelConfig(
-            name="m",
-            model_type=ModelType.TEXT,
-            provider="llama_cpp",
-            model_path="model.gguf",
-            device=DeviceType.MPS,
-        )
-        m_mps = LlamaCppTextModel(c_mps)
-        m_mps.initialize()
-        mock_llama.assert_called_once_with(
-            model_path="model.gguf",
-            n_ctx=4096,
-            n_gpu_layers=-1,
-            verbose=False,
-        )
+        with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
+            # MPS GPU Device offloading mapping
+            c_mps = ModelConfig(
+                name="m",
+                model_type=ModelType.TEXT,
+                provider="llama_cpp",
+                model_path="model.gguf",
+                device=DeviceType.MPS,
+            )
+            m_mps = LlamaCppTextModel(c_mps)
+            m_mps.initialize()
+            mock_llama.assert_called_once_with(
+                model_path="model.gguf",
+                n_ctx=4096,
+                n_gpu_layers=-1,
+                verbose=False,
+            )
 
-        # CPU / AUTO mappings with extra_params override
-        mock_llama.reset_mock()
-        c_cpu = ModelConfig(
-            name="m",
-            model_type=ModelType.TEXT,
-            provider="llama_cpp",
-            model_path="model.gguf",
-            device=DeviceType.CPU,
-            extra_params={"n_gpu_layers": 12},
-        )
-        m_cpu = LlamaCppTextModel(c_cpu)
-        m_cpu.initialize()
-        mock_llama.assert_called_once_with(
-            model_path="model.gguf",
-            n_ctx=4096,
-            n_gpu_layers=12,
-            verbose=False,
-        )
+            # CPU / AUTO mappings with extra_params override
+            mock_llama.reset_mock()
+            c_cpu = ModelConfig(
+                name="m",
+                model_type=ModelType.TEXT,
+                provider="llama_cpp",
+                model_path="model.gguf",
+                device=DeviceType.CPU,
+                extra_params={"n_gpu_layers": 12},
+            )
+            m_cpu = LlamaCppTextModel(c_cpu)
+            m_cpu.initialize()
+            mock_llama.assert_called_once_with(
+                model_path="model.gguf",
+                n_ctx=4096,
+                n_gpu_layers=12,
+                verbose=False,
+            )
 
-        # Load exception handling
-        mock_llama.side_effect = RuntimeError("binary load error")
-        m_err = LlamaCppTextModel(c_mps)
-        with pytest.raises(RuntimeError) as exc:
-            m_err.initialize()
-        assert "Could not load GGUF model" in str(exc.value)
+            # Load exception handling
+            mock_llama.side_effect = RuntimeError("binary load error")
+            m_err = LlamaCppTextModel(c_mps)
+            with pytest.raises(RuntimeError) as exc:
+                m_err.initialize()
+            assert "Could not load GGUF model" in str(exc.value)
 
     @patch("file_organizer.models.llama_cpp_text_model.Llama")
     def test_llama_cpp_generation_and_retries(self, mock_llama: MagicMock) -> None:
@@ -265,7 +272,8 @@ class TestLlamaCppTextModel:
             top_k=40,
             top_p=0.9,
         )
-        model = LlamaCppTextModel(config)
+        with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
+            model = LlamaCppTextModel(config)
 
         # Guard check before init
         with pytest.raises(RuntimeError) as exc_init:
@@ -360,25 +368,26 @@ class TestMLXTextModel:
             provider="mlx",
             model_path="mlx-community/Llama-3",
         )
-        model = MLXTextModel(config)
+        with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
+            model = MLXTextModel(config)
 
-        # Initialize
-        model.initialize()
-        assert model._initialized is True
-        assert model._model == "mock_model"
-        assert model._tokenizer == "mock_tokenizer"
-        mock_load.assert_called_once_with("mlx-community/Llama-3")
+            # Initialize
+            model.initialize()
+            assert model._initialized is True
+            assert model._model == "mock_model"
+            assert model._tokenizer == "mock_tokenizer"
+            mock_load.assert_called_once_with("mlx-community/Llama-3")
 
-        # Double initialization is a noop
-        model.initialize()
-        assert mock_load.call_count == 1
+            # Double initialization is a noop
+            model.initialize()
+            assert mock_load.call_count == 1
 
-        # Load returning bad tuple shape
-        mock_load.return_value = "not-a-tuple"
-        model_bad = MLXTextModel(config)
-        with pytest.raises(RuntimeError) as exc:
-            model_bad.initialize()
-        assert "expected (model, tokenizer)" in str(exc.value)
+            # Load returning bad tuple shape
+            mock_load.return_value = "not-a-tuple"
+            model_bad = MLXTextModel(config)
+            with pytest.raises(RuntimeError) as exc:
+                model_bad.initialize()
+            assert "expected (model, tokenizer)" in str(exc.value)
 
     @patch("file_organizer.models.mlx_text_model.mlx_generate")
     @patch("file_organizer.models.mlx_text_model.mlx_load")
@@ -394,8 +403,9 @@ class TestMLXTextModel:
             top_k=40,
             top_p=0.9,
         )
-        model = MLXTextModel(config)
-        model.initialize()
+        with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
+            model = MLXTextModel(config)
+            model.initialize()
 
         # Variant 1 (most expressive) fails with unexpected keyword TypeError,
         # Variant 2 succeeds.
@@ -460,7 +470,8 @@ class TestClaudeModels:
             provider="claude",
             max_tokens=150,
         )
-        model = ClaudeTextModel(config)
+        with patch("file_organizer.models.claude_text_model.ANTHROPIC_AVAILABLE", True):
+            model = ClaudeTextModel(config)
         model.initialize()
 
         # Mock token exhausted response, then success response on retry
@@ -507,48 +518,49 @@ class TestClaudeModels:
             model_type=ModelType.VISION,
             provider="claude",
         )
-        model = ClaudeVisionModel(config)
-        model.initialize()
+        with patch("file_organizer.models.claude_vision_model.ANTHROPIC_AVAILABLE", True):
+            model = ClaudeVisionModel(config)
+            model.initialize()
 
-        # Mock successful message response
-        mock_resp = MagicMock()
-        mock_resp.stop_reason = "end_turn"
-        mock_content = MagicMock()
-        mock_content.text = "A descriptive image analysis response."
-        mock_resp.content = [mock_content]
-        mock_client.messages.create.return_value = mock_resp
+            # Mock successful message response
+            mock_resp = MagicMock()
+            mock_resp.stop_reason = "end_turn"
+            mock_content = MagicMock()
+            mock_content.text = "A descriptive image analysis response."
+            mock_resp.content = [mock_content]
+            mock_client.messages.create.return_value = mock_resp
 
-        # Create dummy image
-        img_file = tmp_path / "vision.png"
-        img_file.write_bytes(b"dummy-png-data")
+            # Create dummy image
+            img_file = tmp_path / "vision.png"
+            img_file.write_bytes(b"dummy-png-data")
 
-        res = model.analyze_image(img_file, task="describe")
-        assert res == "A descriptive image analysis response."
+            res = model.analyze_image(img_file, task="describe")
+            assert res == "A descriptive image analysis response."
 
-        # Verify client messages payload structure matches Claude requirements (base64 image block + text block)
-        mock_client.messages.create.assert_called_once()
-        call_kwargs = mock_client.messages.create.call_args[1]
-        assert call_kwargs["model"] == "claude-3-5-sonnet"
-        messages = call_kwargs["messages"]
-        assert len(messages) == 1
-        assert messages[0]["role"] == "user"
-        content_blocks = messages[0]["content"]
-        assert len(content_blocks) == 2
-        assert content_blocks[0]["type"] == "image"
-        assert content_blocks[0]["source"]["type"] == "base64"
-        assert content_blocks[0]["source"]["media_type"] == "image/png"
-        assert content_blocks[1]["type"] == "text"
+            # Verify client messages payload structure matches Claude requirements (base64 image block + text block)
+            mock_client.messages.create.assert_called_once()
+            call_kwargs = mock_client.messages.create.call_args[1]
+            assert call_kwargs["model"] == "claude-3-5-sonnet"
+            messages = call_kwargs["messages"]
+            assert len(messages) == 1
+            assert messages[0]["role"] == "user"
+            content_blocks = messages[0]["content"]
+            assert len(content_blocks) == 2
+            assert content_blocks[0]["type"] == "image"
+            assert content_blocks[0]["source"]["type"] == "base64"
+            assert content_blocks[0]["source"]["media_type"] == "image/png"
+            assert content_blocks[1]["type"] == "text"
 
-        # Mutually exclusive paths validation
-        with pytest.raises(ValueError) as exc_excl:
-            model.generate("prompt", image_path=img_file, image_data=b"bytes")
-        assert "Provide exactly one of image_path or image_data" in str(exc_excl.value)
+            # Mutually exclusive paths validation
+            with pytest.raises(ValueError) as exc_excl:
+                model.generate("prompt", image_path=img_file, image_data=b"bytes")
+            assert "Provide exactly one of image_path or image_data" in str(exc_excl.value)
 
-        # Vision constructor type validation
-        config_text = ModelConfig(name="claude-3", model_type=ModelType.TEXT, provider="claude")
-        with pytest.raises(ValueError) as exc_type:
-            ClaudeVisionModel(config_text)
-        assert "Expected VISION or VIDEO" in str(exc_type.value)
+            # Vision constructor type validation
+            config_text = ModelConfig(name="claude-3", model_type=ModelType.TEXT, provider="claude")
+            with pytest.raises(ValueError) as exc_type:
+                ClaudeVisionModel(config_text)
+            assert "Expected VISION or VIDEO" in str(exc_type.value)
 
 
 # ===========================================================================

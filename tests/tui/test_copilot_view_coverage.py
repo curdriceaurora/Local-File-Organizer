@@ -1,4 +1,3 @@
-# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.copilot_view.
 
 Targets 100% statement and branch coverage for CopilotView and its sub-widgets.
@@ -9,19 +8,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
-
-# 1. Mock textual.work decorator BEFORE importing CopilotView
-def mock_work_decorator(*args, **kwargs):
-    if len(args) == 1 and callable(args[0]):
-        return args[0]
-    return lambda f: f
-
-
-import textual
-
-textual.work = mock_work_decorator
-
 from textual.widgets import Input
 
 from file_organizer.services.copilot.models import MessageRole
@@ -187,7 +173,7 @@ def test_copilot_view_process_message_success() -> None:
     view._engine = mock_engine
 
     with patch.object(view, "_set_status") as mock_status:
-        view._process_message("do something")
+        view._process_message.__wrapped__(view, "do something")
 
         mock_engine.chat.assert_called_once_with("do something")
         mock_log.add_message.assert_called_once_with(MessageRole.ASSISTANT, "Done organizing.")
@@ -203,7 +189,7 @@ def test_copilot_view_process_message_failure() -> None:
     view._engine = mock_engine
 
     with patch.object(view, "_set_status") as mock_status:
-        view._process_message("hello")
+        view._process_message.__wrapped__(view, "hello")
 
         mock_log.add_system_note.assert_called_once_with("Error: API key invalid")
         mock_status.assert_called_once_with("Copilot: ready")

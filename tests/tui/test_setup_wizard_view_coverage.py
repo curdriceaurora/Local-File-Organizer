@@ -1,4 +1,3 @@
-# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.setup_wizard_view.
 
 Targets 100% statement and branch coverage for SetupWizardView.
@@ -9,24 +8,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
-
-# 1. Mock textual.work decorator BEFORE importing SetupWizardView
-def mock_work_decorator(*args, **kwargs):
-    if len(args) == 1 and callable(args[0]):
-        return args[0]
-    return lambda f: f
-
-
-import textual
-
-textual.work = mock_work_decorator
-
 from textual.widgets import Static
 
 from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _create_view_with_mocks() -> tuple[SetupWizardView, MagicMock, MagicMock]:
@@ -575,7 +561,7 @@ def test_setup_wizard_view_run_hardware_detection_success() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_hardware_detection()
+        view._run_hardware_detection.__wrapped__(view)
 
         assert view._detection_status == "complete"
         assert view._capabilities == mock_caps
@@ -596,7 +582,7 @@ def test_setup_wizard_view_run_hardware_detection_failure() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_hardware_detection()
+        view._run_hardware_detection.__wrapped__(view)
 
         assert view._detection_status == "error"
         assert view._detection_message == "Hardware error"
@@ -610,7 +596,7 @@ def test_setup_wizard_view_run_model_download_no_model() -> None:
     view, _, _ = _create_view_with_mocks()
     view._selected_model = None
     with patch("sys.modules") as mock_modules:
-        view._run_model_download()
+        view._run_model_download.__wrapped__(view)
         # Should not attempt to import or query packages
         assert "ollama" not in mock_modules
 
@@ -625,7 +611,7 @@ def test_setup_wizard_view_run_model_download_missing_ollama_package() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download()
+        view._run_model_download.__wrapped__(view)
 
         assert view._download_status == "error"
         assert "Ollama Python package not installed" in view._download_message
@@ -662,7 +648,7 @@ def test_setup_wizard_view_run_model_download_success() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download()
+        view._run_model_download.__wrapped__(view)
 
         assert view._download_status == "complete"
         assert view._download_progress == 100
@@ -686,7 +672,7 @@ def test_setup_wizard_view_run_model_download_failure() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download()
+        view._run_model_download.__wrapped__(view)
 
         assert view._download_status == "error"
         assert view._download_message == "network timeout"

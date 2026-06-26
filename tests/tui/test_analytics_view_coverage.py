@@ -102,7 +102,7 @@ class TestAnalyticsViewLoadAnalytics:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            AnalyticsView._load_analytics(view)
+            AnalyticsView._load_analytics.__wrapped__(view)
 
         storage_panel.set_stats.assert_called_once_with(
             total_size="10 GB",
@@ -157,7 +157,7 @@ class TestAnalyticsViewLoadAnalytics:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            AnalyticsView._load_analytics(view)
+            AnalyticsView._load_analytics.__wrapped__(view)
 
         assert mock_app.call_from_thread.call_count == 4
         for panel in (storage_panel, distribution_panel, quality_panel, duplicate_panel):

@@ -431,11 +431,10 @@ class TestAudioViewRefresh:
 class TestScanAudioFiles:
     """Test _scan_audio_files worker method."""
 
-    # Store reference to the unwrapped function before any patching.
+    # Store reference to the unwrapped function, bypassing the real @work(thread=True)
+    # decorator so the worker body runs synchronously in the test.
     # Use staticmethod so Python doesn't bind 'self' when accessed via instance.
-    # Note: conftest mocks textual.work as a no-op, so __wrapped__ is not set;
-    # we reference the method directly.
-    _scan_unwrapped = staticmethod(AudioView._scan_audio_files)
+    _scan_unwrapped = staticmethod(AudioView._scan_audio_files.__wrapped__)
 
     def test_scan_no_audio_files(self, tmp_path):
         """When dir has no audio files, panels are cleared."""

@@ -1,4 +1,3 @@
-# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.audio_view.
 
 Targets 100% statement and branch coverage for AudioView and its panels.
@@ -10,19 +9,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
-
-# 1. Mock textual.work decorator BEFORE importing AudioView
-def mock_work_decorator(*args, **kwargs):
-    if len(args) == 1 and callable(args[0]):
-        return args[0]
-    return lambda f: f
-
-
-import textual
-
-textual.work = mock_work_decorator
-
 from textual.widgets import Static
 
 from file_organizer.tui.audio_view import (
@@ -333,7 +319,7 @@ def test_audio_view_scan_no_audio_files() -> None:
         patch("file_organizer.services.audio.classifier.AudioClassifier"),
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._scan_audio_files()
+        view._scan_audio_files.__wrapped__(view)
 
         panels[AudioFileListPanel].set_files.assert_called_once_with([])
         panels[AudioMetadataPanel].set_metadata.assert_called_once_with(None)
@@ -378,7 +364,7 @@ def test_audio_view_scan_success() -> None:
         mock_extractor_class.format_duration.side_effect = lambda d: (
             "02:00" if d == 120.0 else "01:30"
         )
-        view._scan_audio_files()
+        view._scan_audio_files.__wrapped__(view)
 
         # Verify extractor/classifier calls
         assert mock_extractor.extract.call_count == 2
@@ -422,7 +408,7 @@ def test_audio_view_scan_extraction_exception() -> None:
         patch("file_organizer.services.audio.classifier.AudioClassifier"),
         patch.object(view, "_set_status"),
     ):
-        view._scan_audio_files()
+        view._scan_audio_files.__wrapped__(view)
 
         # Verify it falls back and marks metadata/classification as None
         assert len(view._files) == 1
@@ -443,7 +429,7 @@ def test_audio_view_scan_import_error() -> None:
         "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
         side_effect=ImportError("mutagen missing"),
     ):
-        view._scan_audio_files()
+        view._scan_audio_files.__wrapped__(view)
 
         for panel in panels.values():
             panel.update.assert_called_once()
@@ -458,7 +444,7 @@ def test_audio_view_scan_general_exception() -> None:
         "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
         side_effect=ValueError("Global crash"),
     ):
-        view._scan_audio_files()
+        view._scan_audio_files.__wrapped__(view)
 
         for panel in panels.values():
             panel.update.assert_called_once()

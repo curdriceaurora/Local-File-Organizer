@@ -1,4 +1,3 @@
-# ruff: noqa: E402
 """Unit and integration coverage tests for file_organizer.tui.undo_history_view.
 
 Targets 100% statement and branch coverage for UndoHistoryView and its panels.
@@ -10,19 +9,6 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
-
-# 1. Mock textual.work decorator BEFORE importing UndoHistoryView
-def mock_work_decorator(*args, **kwargs):
-    if len(args) == 1 and callable(args[0]):
-        return args[0]
-    return lambda f: f
-
-
-import textual
-
-textual.work = mock_work_decorator
-
 from textual.widgets import Static
 
 from file_organizer.tui.undo_history_view import (
@@ -278,7 +264,7 @@ def test_undo_history_view_load_history_success() -> None:
         patch("file_organizer.undo.viewer.HistoryViewer", return_value=mock_viewer),
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._load_history()
+        view._load_history.__wrapped__(view)
 
         mock_history.close.assert_called_once()
         panels[OperationHistoryPanel].set_operations.assert_called_once_with(["op1"])
@@ -294,7 +280,7 @@ def test_undo_history_view_load_history_failure() -> None:
     with patch(
         "file_organizer.history.tracker.OperationHistory", side_effect=ValueError("DB locked")
     ):
-        view._load_history()
+        view._load_history.__wrapped__(view)
 
         for panel in panels.values():
             panel.update.assert_called_once()
@@ -315,7 +301,7 @@ def test_undo_history_view_run_undo_success_with_op() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_undo()
+        view._run_undo.__wrapped__(view)
 
         mock_history.close.assert_called_once()
         mock_status.assert_called_once_with("Undo successful")
@@ -336,7 +322,7 @@ def test_undo_history_view_run_undo_success_no_op() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_undo()
+        view._run_undo.__wrapped__(view)
 
         mock_status.assert_called_once_with("Nothing to undo")
         mock_refresh.assert_called_once()
@@ -353,7 +339,7 @@ def test_undo_history_view_run_undo_failure() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_undo()
+        view._run_undo.__wrapped__(view)
 
         mock_status.assert_called_once_with("Undo failed: disk full")
         mock_refresh.assert_called_once()
@@ -373,7 +359,7 @@ def test_undo_history_view_run_redo_success_with_op() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_redo()
+        view._run_redo.__wrapped__(view)
 
         mock_history.close.assert_called_once()
         mock_status.assert_called_once_with("Redo successful")
@@ -394,7 +380,7 @@ def test_undo_history_view_run_redo_success_no_op() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_redo()
+        view._run_redo.__wrapped__(view)
 
         mock_status.assert_called_once_with("Nothing to redo")
         mock_refresh.assert_called_once()
@@ -412,7 +398,7 @@ def test_undo_history_view_run_redo_failure() -> None:
         patch.object(view, "_set_status") as mock_status,
         patch.object(view, "action_refresh_history") as mock_refresh,
     ):
-        view._run_redo()
+        view._run_redo.__wrapped__(view)
 
         mock_status.assert_called_once_with("Redo failed: connection dropped")
         mock_refresh.assert_called_once()
