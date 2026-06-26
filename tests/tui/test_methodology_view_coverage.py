@@ -135,7 +135,7 @@ class TestLoadParaPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_para_preview.__wrapped__(view)
+            MethodologyView._load_para_preview(view)
 
         # Should call show_para_preview with None (no files)
         mock_preview.show_para_preview.assert_called_once_with(None)
@@ -163,7 +163,7 @@ class TestLoadParaPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_para_preview.__wrapped__(view)
+            MethodologyView._load_para_preview(view)
 
         mock_preview.show_para_preview.assert_called_once_with({"Resources": 2})
 
@@ -189,7 +189,7 @@ class TestLoadParaPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_para_preview.__wrapped__(view)
+            MethodologyView._load_para_preview(view)
 
         mock_preview.show_para_preview.assert_called_once_with({"Projects": 1})
 
@@ -207,7 +207,7 @@ class TestLoadParaPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_para_preview.__wrapped__(view)
+            MethodologyView._load_para_preview(view)
 
         # Should call show_error
         mock_preview.show_error.assert_called_once_with("import error")
@@ -239,7 +239,7 @@ class TestLoadJdPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_jd_preview.__wrapped__(view)
+            MethodologyView._load_jd_preview(view)
 
         mock_preview.show_jd_preview.assert_called_once_with(
             {10: "Finance"},
@@ -264,7 +264,7 @@ class TestLoadJdPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_jd_preview.__wrapped__(view)
+            MethodologyView._load_jd_preview(view)
 
         mock_preview.show_jd_preview.assert_called_once_with({}, {})
 
@@ -282,7 +282,7 @@ class TestLoadJdPreview:
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
-            MethodologyView._load_jd_preview.__wrapped__(view)
+            MethodologyView._load_jd_preview(view)
 
         mock_preview.show_error.assert_called_once_with("no jd module")
 

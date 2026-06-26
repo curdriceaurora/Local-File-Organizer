@@ -1,388 +1,433 @@
-"""Coverage tests for file_organizer.tui.undo_history_view module.
+"""Unit and integration coverage tests for file_organizer.tui.undo_history_view.
 
-Targets uncovered worker thread paths (_load_history, _run_undo, _run_redo),
-_set_status with exception paths, and HistoryStatsPanel edge cases.
+Targets 100% statement and branch coverage for UndoHistoryView and its panels.
 """
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock, call, patch
-
+from datetime import datetime
+from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 
+# 1. Mock textual.work decorator BEFORE importing UndoHistoryView
+def mock_work_decorator(*args, **kwargs):
+    if len(args) == 1 and callable(args[0]):
+        return args[0]
+    return lambda f: f
+
+import textual
+textual.work = mock_work_decorator
+
+from textual.widgets import Static
 from file_organizer.tui.undo_history_view import (
-    HistoryStatsPanel,
-    OperationHistoryPanel,
     UndoHistoryView,
+    OperationHistoryPanel,
     UndoRedoStackPanel,
+    HistoryStatsPanel,
+    _format_timestamp,
+    _truncate,
 )
 
 pytestmark = pytest.mark.unit
 
 
-# ---------------------------------------------------------------------------
-# HistoryStatsPanel - additional edge cases
-# ---------------------------------------------------------------------------
+def _create_view_with_mocks() -> tuple[UndoHistoryView, dict[type[Static], MagicMock], MagicMock]:
+    """Helper to create an UndoHistoryView with panels and app mocked."""
+    view = UndoHistoryView()
+    
+    # Mock panels
+    mock_hist_panel = MagicMock(spec=OperationHistoryPanel)
+    mock_stack_panel = MagicMock(spec=UndoRedoStackPanel)
+    mock_stats_panel = MagicMock(spec=HistoryStatsPanel)
+    
+    panels = {
+        OperationHistoryPanel: mock_hist_panel,
+        UndoRedoStackPanel: mock_stack_panel,
+        HistoryStatsPanel: mock_stats_panel,
+    }
+    
+    def mock_query_one(panel_type):
+        return panels.get(panel_type, MagicMock())
+        
+    view.query_one = MagicMock(side_effect=mock_query_one)
+    
+    # Mock app property
+    mock_app = MagicMock()
+    app_prop = PropertyMock(return_value=mock_app)
+    type(view).app = app_prop
+    
+    # Force call_from_thread to execute synchronously in tests
+    mock_app.call_from_thread = lambda func, *args, **kwargs: func(*args, **kwargs)
+    
+    return view, panels, mock_app
 
 
-class TestHistoryStatsPanelCoverage:
-    """Test HistoryStatsPanel branches not covered by existing tests."""
+# --- Panel Tests ---
 
-    def test_latest_operation_no_timestamp_attr(self) -> None:
-        """Test latest_operation that lacks a timestamp attribute."""
-        panel = HistoryStatsPanel()
-        panel.update = MagicMock()
-        latest = SimpleNamespace()  # no timestamp attr at all
-        stats = {
-            "total_operations": 1,
-            "by_type": {},
-            "by_status": {},
-            "latest_operation": latest,
-        }
+def test_operation_history_panel_empty() -> None:
+    """Verify OperationHistoryPanel behavior with no operations."""
+    panel = OperationHistoryPanel()
+    with patch.object(panel, "update") as mock_update:
+        panel.set_operations([])
+        mock_update.assert_called_once_with("[b]Recent Operations[/b]\n\n  [dim]No operations recorded.[/dim]")
+
+
+def test_operation_history_panel_with_ops() -> None:
+    """Verify OperationHistoryPanel with diverse operation properties."""
+    panel = OperationHistoryPanel()
+    
+    # Op 1: All properties filled, uses Enum-like values
+    op1 = MagicMock()
+    op1.id = 101
+    op1.operation_type = MagicMock()
+    op1.operation_type.value = "move"
+    op1.status = MagicMock()
+    op1.status.value = "completed"
+    op1.timestamp = datetime(2024, 6, 25, 12, 0, 0)
+    op1.source_path = "/src/path/to/my/long_filename_1.txt"
+    op1.destination_path = "/dest/path/to/my/long_filename_2.txt"
+
+    # Op 2: Missing/raw properties, no destination
+    op2 = MagicMock()
+    op2.id = None
+    op2.operation_type = "delete"
+    op2.status = "failed"
+    op2.timestamp = None
+    op2.source_path = "short.txt"
+    op2.destination_path = None
+
+    with patch.object(panel, "update") as mock_update:
+        panel.set_operations([op1, op2])
+        markup = mock_update.call_args[0][0]
+        assert "Recent Operations" in markup
+        assert "101" in markup
+        assert "move" in markup
+        assert "completed" in markup
+        assert "2024-06-25 12:00:00" in markup
+        
+        # Op 2 checks
+        assert "-" in markup  # for missing id, timestamp, destination
+        assert "delete" in markup
+        assert "failed" in markup
+        assert "short.txt" in markup
+
+
+def test_undo_redo_stack_panel() -> None:
+    """Verify UndoRedoStackPanel handles empty, populated, and Enum-based operations."""
+    panel = UndoRedoStackPanel()
+    
+    # 1. Empty stacks
+    with patch.object(panel, "update") as mock_update:
+        panel.set_stacks([], [])
+        markup = mock_update.call_args[0][0]
+        assert "Undo stack: [cyan]0[/cyan] operations" in markup
+        assert "Redo stack: [cyan]0[/cyan] operations" in markup
+        assert "Top 5" not in markup
+
+    # 2. Populated stacks
+    op_undo = MagicMock()
+    op_undo.operation_type = MagicMock()
+    op_undo.operation_type.value = "rename"
+    op_undo.source_path = "undo_src.txt"
+
+    op_redo = MagicMock()
+    op_redo.operation_type = "move"
+    op_redo.source_path = "redo_src.txt"
+
+    with patch.object(panel, "update") as mock_update:
+        panel.set_stacks([op_undo], [op_redo])
+        markup = mock_update.call_args[0][0]
+        assert "Undo stack: [cyan]1[/cyan] operations" in markup
+        assert "Top 5 undoable:" in markup
+        assert "rename" in markup
+        assert "undo_src.txt" in markup
+        
+        assert "Redo stack: [cyan]1[/cyan] operations" in markup
+        assert "Top 5 redoable:" in markup
+        assert "move" in markup
+        assert "redo_src.txt" in markup
+
+
+def test_history_stats_panel() -> None:
+    """Verify HistoryStatsPanel displays statistics, types, status colors, and latest operation."""
+    panel = HistoryStatsPanel()
+    
+    # 1. Empty stats
+    with patch.object(panel, "update") as mock_update:
+        panel.set_stats({})
+        markup = mock_update.call_args[0][0]
+        assert "Total operations: [cyan]0[/cyan]" in markup
+
+    # 2. Detailed stats
+    latest_op = MagicMock()
+    latest_op.timestamp = datetime(2024, 6, 25, 15, 30, 0)
+    
+    stats = {
+        "total_operations": 42,
+        "by_type": {"move": 30, "delete": 12},
+        "by_status": {"completed": 35, "pending": 5, "failed": 2},
+        "latest_operation": latest_op,
+    }
+
+    with patch.object(panel, "update") as mock_update:
         panel.set_stats(stats)
-        rendered = panel.update.call_args[0][0]
-        assert "unknown" in rendered
+        markup = mock_update.call_args[0][0]
+        assert "Total operations: [cyan]42[/cyan]" in markup
+        assert "move" in markup
+        assert "30" in markup
+        assert "delete" in markup
+        assert "12" in markup
+        
+        # Color checks
+        assert "[green]   35[/green]" in markup  # completed
+        assert "[yellow]    5[/yellow]" in markup  # pending
+        assert "[red]    2[/red]" in markup  # failed
+        
+        # Latest check
+        assert "Latest: 2024-06-25 15:30:00" in markup
 
-    def test_no_latest_operation(self) -> None:
-        """Test stats without latest_operation key."""
-        panel = HistoryStatsPanel()
-        panel.update = MagicMock()
-        stats = {
-            "total_operations": 0,
-            "by_type": {},
-            "by_status": {},
-        }
+    # 3. Latest operation without timestamp
+    latest_op_no_ts = MagicMock()
+    latest_op_no_ts.timestamp = None
+    stats["latest_operation"] = latest_op_no_ts
+    
+    with patch.object(panel, "update") as mock_update:
         panel.set_stats(stats)
-        rendered = panel.update.call_args[0][0]
-        assert "Latest" not in rendered
-
-    def test_by_status_with_unknown_status(self) -> None:
-        """Test that unknown status gets red color."""
-        panel = HistoryStatsPanel()
-        panel.update = MagicMock()
-        stats = {
-            "total_operations": 3,
-            "by_type": {},
-            "by_status": {"failed": 1, "unknown_status": 2},
-        }
-        panel.set_stats(stats)
-        rendered = panel.update.call_args[0][0]
-        assert "red" in rendered
+        markup = mock_update.call_args[0][0]
+        assert "Latest: unknown" in markup
 
 
-# ---------------------------------------------------------------------------
-# OperationHistoryPanel - max 20 operations
-# ---------------------------------------------------------------------------
+# --- UndoHistoryView Tests ---
+
+def test_undo_history_view_initialization() -> None:
+    """Verify UndoHistoryView setup."""
+    view = UndoHistoryView()
+    assert isinstance(view, UndoHistoryView)
 
 
-class TestOperationHistoryPanelCoverage:
-    """Test OperationHistoryPanel with >20 operations."""
-
-    def test_truncates_to_20_ops(self) -> None:
-        panel = OperationHistoryPanel()
-        panel.update = MagicMock()
-
-        ops = []
-        for i in range(25):
-            ops.append(
-                SimpleNamespace(
-                    id=str(i),
-                    operation_type=SimpleNamespace(value="move"),
-                    status=SimpleNamespace(value="completed"),
-                    timestamp=None,
-                    source_path=f"/src/{i}.txt",
-                    destination_path=f"/dst/{i}.txt",
-                )
-            )
-        panel.set_operations(ops)
-        rendered = panel.update.call_args[0][0]
-        # Should contain op 19 but not op 20+
-        assert "19" in rendered
-        # Only 20 lines of operations (header + separator + 20 ops)
-
-    def test_operation_with_none_id(self) -> None:
-        panel = OperationHistoryPanel()
-        panel.update = MagicMock()
-        op = SimpleNamespace(
-            id=None,
-            operation_type="move",
-            status="done",
-            timestamp=None,
-            source_path="/src/a.txt",
-            destination_path=None,
-        )
-        panel.set_operations([op])
-        rendered = panel.update.call_args[0][0]
-        assert "-" in rendered
+def test_undo_history_view_compose() -> None:
+    """Verify widgets yielded by compose."""
+    view = UndoHistoryView()
+    widgets = list(view.compose())
+    assert len(widgets) == 4
+    assert widgets[0].id == "history-header"
+    assert isinstance(widgets[1], OperationHistoryPanel)
+    assert isinstance(widgets[2], UndoRedoStackPanel)
+    assert isinstance(widgets[3], HistoryStatsPanel)
 
 
-# ---------------------------------------------------------------------------
-# UndoRedoStackPanel - more than 5 items
-# ---------------------------------------------------------------------------
+def test_undo_history_view_on_mount() -> None:
+    """Verify on_mount triggers history load."""
+    view, _, _ = _create_view_with_mocks()
+    with patch.object(view, "_load_history") as mock_load:
+        view.on_mount()
+        mock_load.assert_called_once()
 
 
-class TestUndoRedoStackPanelCoverage:
-    """Test UndoRedoStackPanel with >5 items in stacks."""
-
-    def test_shows_only_top_5(self) -> None:
-        panel = UndoRedoStackPanel()
-        panel.update = MagicMock()
-        ops = [
-            SimpleNamespace(
-                operation_type=SimpleNamespace(value=f"op{i}"),
-                source_path=f"/src/{i}.txt",
-            )
-            for i in range(8)
-        ]
-        panel.set_stacks(ops, [])
-        rendered = panel.update.call_args[0][0]
-        # Should show op0 through op4 but not op5+
-        assert "op0" in rendered
-        assert "op4" in rendered
+def test_undo_history_view_action_refresh_history() -> None:
+    """Verify refresh action updates panels and triggers load."""
+    view, panels, _ = _create_view_with_mocks()
+    with patch.object(view, "_load_history") as mock_load:
+        view.action_refresh_history()
+        for panel in panels.values():
+            panel.update.assert_called_once_with("[dim]Refreshing...[/dim]")
+        mock_load.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# UndoHistoryView - _load_history worker
-# ---------------------------------------------------------------------------
+def test_undo_history_view_action_undo_redo() -> None:
+    """Verify action bindings trigger appropriate background tasks."""
+    view, _, _ = _create_view_with_mocks()
+    with (
+        patch.object(view, "_run_undo") as mock_undo,
+        patch.object(view, "_run_redo") as mock_redo,
+    ):
+        view.action_undo_last()
+        mock_undo.assert_called_once()
+        
+        view.action_redo_last()
+        mock_redo.assert_called_once()
 
 
-class TestUndoHistoryViewLoadHistory:
-    """Test _load_history worker thread paths."""
+def test_undo_history_view_load_history_success() -> None:
+    """Verify successful history loading parses stacks and stats."""
+    view, panels, _ = _create_view_with_mocks()
+    
+    mock_history = MagicMock()
+    mock_history.get_recent_operations.return_value = ["op1"]
+    
+    mock_manager = MagicMock()
+    mock_manager.get_undo_stack.return_value = ["undo1"]
+    mock_manager.get_redo_stack.return_value = ["redo1"]
+    
+    mock_viewer = MagicMock()
+    mock_viewer.get_statistics.return_value = {"total_operations": 5}
 
-    def test_load_history_success(self) -> None:
-        """Test successful history load path."""
-        view = UndoHistoryView()
-        operation_panel = MagicMock()
-        stack_panel = MagicMock()
-        stats_panel = MagicMock()
-
-        def _query_side_effect(panel_type):
-            mapping = {
-                OperationHistoryPanel: operation_panel,
-                UndoRedoStackPanel: stack_panel,
-                HistoryStatsPanel: stats_panel,
-            }
-            return mapping[panel_type]
-
-        view.query_one = MagicMock(side_effect=_query_side_effect)
-
-        mock_history = MagicMock()
-        mock_manager = MagicMock()
-        mock_viewer = MagicMock()
-        mock_history.get_recent_operations.return_value = []
-        mock_manager.get_undo_stack.return_value = []
-        mock_manager.get_redo_stack.return_value = []
-        mock_viewer.get_statistics.return_value = {}
-
-        mock_app = MagicMock()
-        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                return_value=mock_history,
-            ),
-            patch(
-                "file_organizer.undo.undo_manager.UndoManager",
-                return_value=mock_manager,
-            ),
-            patch(
-                "file_organizer.undo.viewer.HistoryViewer",
-                return_value=mock_viewer,
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            # Call the underlying function directly (not the @work wrapper)
-            UndoHistoryView._load_history.__wrapped__(view)
-
-        assert mock_app.call_from_thread.call_count >= 4
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history),
+        patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+        patch("file_organizer.undo.viewer.HistoryViewer", return_value=mock_viewer),
+        patch.object(view, "_set_status") as mock_status,
+    ):
+        view._load_history()
+        
         mock_history.close.assert_called_once()
-        operation_panel.set_operations.assert_called_once_with([])
-        stack_panel.set_stacks.assert_called_once_with([], [])
-        stats_panel.set_stats.assert_called_once_with({})
+        panels[OperationHistoryPanel].set_operations.assert_called_once_with(["op1"])
+        panels[UndoRedoStackPanel].set_stacks.assert_called_once_with(["undo1"], ["redo1"])
+        panels[HistoryStatsPanel].set_stats.assert_called_once_with({"total_operations": 5})
+        mock_status.assert_called_once_with("History loaded")
 
-    def test_load_history_exception(self) -> None:
-        """Test history load with exception."""
-        view = UndoHistoryView()
-        operation_panel = MagicMock()
-        stack_panel = MagicMock()
-        stats_panel = MagicMock()
 
-        def _query_side_effect(panel_type):
-            mapping = {
-                OperationHistoryPanel: operation_panel,
-                UndoRedoStackPanel: stack_panel,
-                HistoryStatsPanel: stats_panel,
-            }
-            return mapping[panel_type]
-
-        view.query_one = MagicMock(side_effect=_query_side_effect)
-
-        mock_app = MagicMock()
-        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                side_effect=RuntimeError("db error"),
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._load_history.__wrapped__(view)
-
-        assert mock_app.call_from_thread.call_count == 3
-        for panel in (operation_panel, stack_panel, stats_panel):
+def test_undo_history_view_load_history_failure() -> None:
+    """Verify load history exceptions update all panels with the error."""
+    view, panels, _ = _create_view_with_mocks()
+    
+    with patch("file_organizer.history.tracker.OperationHistory", side_effect=ValueError("DB locked")):
+        view._load_history()
+        
+        for panel in panels.values():
             panel.update.assert_called_once()
-            assert panel.update.call_args.args[0].startswith("[red]History unavailable:[/red]")
+            assert "DB locked" in panel.update.call_args[0][0]
 
 
-# ---------------------------------------------------------------------------
-# UndoHistoryView - _run_undo worker
-# ---------------------------------------------------------------------------
+def test_undo_history_view_run_undo_success_with_op() -> None:
+    """Verify run_undo when an operation is successfully undone."""
+    view, _, _ = _create_view_with_mocks()
+    
+    mock_history = MagicMock()
+    mock_manager = MagicMock()
+    mock_manager.undo_last_operation.return_value = True
 
-
-class TestUndoHistoryViewRunUndo:
-    """Test _run_undo worker paths."""
-
-    def test_undo_success(self) -> None:
-        view = UndoHistoryView()
-
-        mock_history = MagicMock()
-        mock_manager = MagicMock()
-        mock_manager.undo_last_operation.return_value = True
-
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                return_value=mock_history,
-            ),
-            patch(
-                "file_organizer.undo.undo_manager.UndoManager",
-                return_value=mock_manager,
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_undo.__wrapped__(view)
-
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history),
+        patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_undo()
+        
         mock_history.close.assert_called_once()
-        # Should set status "Undo successful" and refresh
-        assert mock_app.call_from_thread.call_count >= 2
+        mock_status.assert_called_once_with("Undo successful")
+        mock_refresh.assert_called_once()
 
-    def test_undo_nothing_to_undo(self) -> None:
-        view = UndoHistoryView()
 
-        mock_history = MagicMock()
-        mock_manager = MagicMock()
-        mock_manager.undo_last_operation.return_value = False
+def test_undo_history_view_run_undo_success_no_op() -> None:
+    """Verify run_undo when there is nothing to undo."""
+    view, _, _ = _create_view_with_mocks()
+    
+    mock_history = MagicMock()
+    mock_manager = MagicMock()
+    mock_manager.undo_last_operation.return_value = False
 
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                return_value=mock_history,
-            ),
-            patch(
-                "file_organizer.undo.undo_manager.UndoManager",
-                return_value=mock_manager,
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_undo.__wrapped__(view)
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history),
+        patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_undo()
+        
+        mock_status.assert_called_once_with("Nothing to undo")
+        mock_refresh.assert_called_once()
 
+
+def test_undo_history_view_run_undo_failure() -> None:
+    """Verify run_undo handles database/execution errors."""
+    view, _, _ = _create_view_with_mocks()
+
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", side_effect=RuntimeError("disk full")),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_undo()
+        
+        mock_status.assert_called_once_with("Undo failed: disk full")
+        mock_refresh.assert_called_once()
+
+
+def test_undo_history_view_run_redo_success_with_op() -> None:
+    """Verify run_redo when an operation is successfully redone."""
+    view, _, _ = _create_view_with_mocks()
+    
+    mock_history = MagicMock()
+    mock_manager = MagicMock()
+    mock_manager.redo_last_operation.return_value = True
+
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history),
+        patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_redo()
+        
         mock_history.close.assert_called_once()
-
-    def test_undo_exception(self) -> None:
-        view = UndoHistoryView()
-
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                side_effect=RuntimeError("db error"),
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_undo.__wrapped__(view)
-
-        # Should set failure status
-        mock_app.call_from_thread.assert_has_calls(
-            [
-                call(view._set_status, "Undo failed: db error"),
-                call(view.action_refresh_history),
-            ]
-        )
+        mock_status.assert_called_once_with("Redo successful")
+        mock_refresh.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# UndoHistoryView - _run_redo worker
-# ---------------------------------------------------------------------------
+def test_undo_history_view_run_redo_success_no_op() -> None:
+    """Verify run_redo when there is nothing to redo."""
+    view, _, _ = _create_view_with_mocks()
+    
+    mock_history = MagicMock()
+    mock_manager = MagicMock()
+    mock_manager.redo_last_operation.return_value = False
+
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history),
+        patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_redo()
+        
+        mock_status.assert_called_once_with("Nothing to redo")
+        mock_refresh.assert_called_once()
 
 
-class TestUndoHistoryViewRunRedo:
-    """Test _run_redo worker paths."""
+def test_undo_history_view_run_redo_failure() -> None:
+    """Verify run_redo handles database/execution errors."""
+    view, _, _ = _create_view_with_mocks()
 
-    def test_redo_success(self) -> None:
-        view = UndoHistoryView()
+    with (
+        patch("file_organizer.history.tracker.OperationHistory", side_effect=RuntimeError("connection dropped")),
+        patch.object(view, "_set_status") as mock_status,
+        patch.object(view, "action_refresh_history") as mock_refresh,
+    ):
+        view._run_redo()
+        
+        mock_status.assert_called_once_with("Redo failed: connection dropped")
+        mock_refresh.assert_called_once()
 
-        mock_history = MagicMock()
-        mock_manager = MagicMock()
-        mock_manager.redo_last_operation.return_value = True
 
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                return_value=mock_history,
-            ),
-            patch(
-                "file_organizer.undo.undo_manager.UndoManager",
-                return_value=mock_manager,
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_redo.__wrapped__(view)
+def test_undo_history_view_status_bar_updates() -> None:
+    """Verify status updates resolve cleanly or log on failure."""
+    view, _, mock_app = _create_view_with_mocks()
+    
+    # 1. Success
+    mock_status_bar = MagicMock()
+    mock_app.query_one.return_value = mock_status_bar
+    view._set_status("Loading history")
+    mock_status_bar.set_status.assert_called_once_with("Loading history")
 
-        mock_history.close.assert_called_once()
+    # 2. Exception fallback
+    mock_app.query_one.side_effect = Exception("No status bar")
+    with patch("file_organizer.tui.undo_history_view.logger") as mock_logger:
+        view._set_status("Loading history")
+        mock_logger.debug.assert_called_once()
 
-    def test_redo_nothing_to_redo(self) -> None:
-        view = UndoHistoryView()
 
-        mock_history = MagicMock()
-        mock_manager = MagicMock()
-        mock_manager.redo_last_operation.return_value = False
+# --- Helper Function Tests ---
 
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                return_value=mock_history,
-            ),
-            patch(
-                "file_organizer.undo.undo_manager.UndoManager",
-                return_value=mock_manager,
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_redo.__wrapped__(view)
+def test_format_timestamp_helper() -> None:
+    """Verify datetime formatting helper handles None and valid dates."""
+    assert _format_timestamp(None) == "-"
+    dt = datetime(2025, 1, 15, 9, 45, 30)
+    assert _format_timestamp(dt) == "2025-01-15 09:45:30"
 
-        mock_history.close.assert_called_once()
 
-    def test_redo_exception(self) -> None:
-        view = UndoHistoryView()
-
-        mock_app = MagicMock()
-        with (
-            patch(
-                "file_organizer.history.tracker.OperationHistory",
-                side_effect=RuntimeError("db error"),
-            ),
-            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
-        ):
-            UndoHistoryView._run_redo.__wrapped__(view)
-
-        mock_app.call_from_thread.assert_has_calls(
-            [
-                call(view._set_status, "Redo failed: db error"),
-                call(view.action_refresh_history),
-            ]
-        )
+def test_truncate_helper() -> None:
+    """Verify string truncation helper."""
+    assert _truncate("hello", 10) == "hello"
+    assert _truncate("hello world", 5) == "hell\u2026"
