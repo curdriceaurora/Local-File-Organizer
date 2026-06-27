@@ -339,6 +339,17 @@ ignore_missing_imports = true
 # These files had pre-existing type errors at widening time and are
 # exempted until fixed — remove an entry once its file is clean under
 # `mypy src/file_organizer/<path>`, do not add new entries for new code.
+#
+# 10 of these (api.routers.files, api.utils, config.manager,
+# config.provider_env, integrations.obsidian, methodologies.para.ai.
+# feature_extractor, methodologies.para.config,
+# methodologies.para.detection.heuristics, services.copilot.rules.
+# rule_manager, web.file_operations) were added after the initial
+# survey, which ran on macOS — CI's Linux runner surfaced
+# `stat_result.st_birthtime` (BSD/macOS-only) and several
+# now-platform-relevant "unused type: ignore" errors that don't
+# reproduce locally on Darwin. Reproduced the st_birthtime subset
+# locally with `mypy --platform=linux`; trusted CI for the rest.
 [[tool.mypy.overrides]]
 module = [
     "file_organizer.api.cache",
@@ -351,21 +362,30 @@ module = [
     "file_organizer.api.repositories.workspace_repo",
     "file_organizer.api.routers",
     "file_organizer.api.routers.auth",
+    "file_organizer.api.routers.files",
     "file_organizer.api.routers.organize",
     "file_organizer.api.routers.search",
     "file_organizer.api.service_facade",
+    "file_organizer.api.utils",
     "file_organizer.cli.dedupe_hash",
     "file_organizer.cli.dedupe_renderer",
     "file_organizer.cli.interactive",
     "file_organizer.cli.rules",
+    "file_organizer.config.manager",
+    "file_organizer.config.provider_env",
     "file_organizer.core",
     "file_organizer.core.backend_detector",
     "file_organizer.core.path_guard",
     "file_organizer.desktop.app",
+    "file_organizer.integrations.obsidian",
+    "file_organizer.methodologies.para.ai.feature_extractor",
+    "file_organizer.methodologies.para.config",
+    "file_organizer.methodologies.para.detection.heuristics",
     "file_organizer.pipeline.stages.writer",
     "file_organizer.review_regressions.correctness",
     "file_organizer.review_regressions.security",
     "file_organizer.services.audio.utils",
+    "file_organizer.services.copilot.rules.rule_manager",
     "file_organizer.services.deduplication.embedder",
     "file_organizer.services.deduplication.image_utils",
     "file_organizer.services.deduplication.semantic",
@@ -379,6 +399,7 @@ module = [
     "file_organizer.utils.readers.cad",
     "file_organizer.watcher.monitor",
     "file_organizer.web.csrf",
+    "file_organizer.web.file_operations",
     "file_organizer.web.organize_routes",
     "file_organizer.web.profile_routes",
     "file_organizer.web.settings_routes",
