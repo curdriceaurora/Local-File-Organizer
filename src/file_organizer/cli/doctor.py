@@ -11,15 +11,15 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-import file_organizer.cli._globals as _g
 from file_organizer.cli.interactive import confirm_action
-from file_organizer.utils import is_hidden
+from file_organizer.cli.state import _get_state
+from file_organizer.core.path_guard import safe_walk
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -167,35 +167,16 @@ def scan_directory(directory: Path) -> dict[str, int]:
         Dictionary mapping file extensions to counts
     """
     extension_counts: dict[str, int] = {}
-    skipped = 0
 
-    try:
-        entries = directory.rglob("*")
-    except (OSError, PermissionError) as exc:
-        logger.error("Cannot scan directory %s: %s", directory, exc, exc_info=True)
-        return extension_counts
-
-    for item in entries:
-        try:
-            if item.is_symlink():
-                continue
-            if is_hidden(item):
-                continue
-            if not item.is_file():
-                continue
-        except (OSError, PermissionError) as exc:
-            logger.debug("Skipping %s: %s", item, exc)
-            skipped += 1
-            continue
-
+    # safe_walk already skips symlinks, hidden entries, and per-entry OSError
+    # (PermissionError, stale handles). No additional try/except needed —
+    # every yielded path is a readable, regular file.
+    for item in safe_walk(directory):
         ext = _normalized_extension(item)
         if ext:
             extension_counts[ext] = extension_counts.get(ext, 0) + 1
         else:
             extension_counts[""] = extension_counts.get("", 0) + 1
-
-    if skipped:
-        logger.warning("Skipped %d entries due to filesystem errors", skipped)
 
     return extension_counts
 
@@ -228,7 +209,7 @@ def display_recommendations(
     for group in sorted(detected_groups):
         file_count = group_file_counts.get(group, 0)
         # Escape square brackets for Rich markup
-        install_cmd = f"pip install file-organizer\\[{group}]"
+        install_cmd = f"pip install fo-core\\[{group}]"
         prerequisites = ", ".join(SYSTEM_PREREQUISITES.get(group, ["-"]))
 
         # Check if group is already installed
@@ -259,7 +240,7 @@ def _install_single_group(group: str) -> bool:
 
     Returns True on success, False on failure.
     """
-    install_cmd = [sys.executable, "-m", "pip", "install", f"file-organizer[{group}]"]
+    install_cmd = [sys.executable, "-m", "pip", "install", f"fo-core[{group}]"]
     console.print(f"\n[bold]Installing {group}...[/bold]")
 
     try:
@@ -290,7 +271,7 @@ def install_groups(groups: set[str]) -> None:
     """Interactively install optional dependency groups using pip.
 
     Prompts the user for confirmation before installing.
-    Respects the global ``_g.dry_run`` flag to skip actual installation.
+    Respects the global dry-run flag (via ``_get_state().dry_run``) to skip actual installation.
     Handles subprocess failures and timeouts gracefully and continues with
     remaining groups.  Each install has a timeout (see ``_INSTALL_TIMEOUT_SECONDS``).
 
@@ -327,10 +308,10 @@ def install_groups(groups: set[str]) -> None:
         return
 
     # Dry-run mode: skip actual installation
-    if _g.dry_run:
+    if _get_state().dry_run:
         console.print("[yellow]Dry-run mode: skipping actual installation.[/yellow]")
         for group in groups_list:
-            console.print(f"  [dim]Would install: file-organizer[{group}][/dim]")
+            console.print(f"  [dim]Would install: fo-core[{group}][/dim]")
         return
 
     # Install each group
@@ -348,30 +329,30 @@ def install_groups(groups: set[str]) -> None:
         )
         console.print("\n[dim]You can retry failed installations manually:[/dim]")
         for group in failed_groups:
-            console.print(f"  [dim]pip install file-organizer[{group}][/dim]")
+            console.print(f"  [dim]pip install fo-core[{group}][/dim]")
     else:
         console.print(f"[green]✓ All {len(groups_list)} group(s) installed successfully![/green]")
 
 
 def doctor(
-    path: Path = typer.Argument(
-        ...,
-        help="Directory path to scan for file types.",
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        resolve_path=True,
-    ),
-    install: bool = typer.Option(
-        False,
-        "--install",
-        help="Automatically install recommended dependency groups.",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Output as JSON.",
-    ),
+    path: Annotated[
+        Path,
+        typer.Argument(
+            help="Directory path to scan for file types.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ],
+    install: Annotated[
+        bool,
+        typer.Option("--install", help="Automatically install recommended dependency groups."),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON."),
+    ] = False,
 ) -> None:
     """Scan directory for file types and recommend optional dependencies.
 
@@ -379,7 +360,7 @@ def doctor(
     dependency groups should be installed to support those file types.
     """
     # Respect global --json flag if command-level --json not given
-    if not json_output and _g.json_output:
+    if not json_output and _get_state().json_output:
         json_output = True
 
     # Scan the directory
@@ -443,7 +424,7 @@ def doctor(
                 "group": group,
                 "files_found": file_count,
                 "installed": is_installed,
-                "install_command": f"pip install file-organizer[{group}]",
+                "install_command": f"pip install fo-core[{group}]",
                 "prerequisites": prerequisites,
             }
         )

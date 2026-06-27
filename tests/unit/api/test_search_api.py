@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from file_organizer.api.dependencies import get_current_active_user
 from file_organizer.api.main import create_app
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -12,6 +13,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 def client():
     """Create TestClient for search endpoint tests."""
     app = create_app()
+    app.dependency_overrides[get_current_active_user] = lambda: None
     return TestClient(app)
 
 

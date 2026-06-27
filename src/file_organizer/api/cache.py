@@ -112,7 +112,9 @@ class RedisCache:
     def set(self, key: str, value: str, *, ttl_seconds: int) -> None:
         """Store value for key with the given TTL in Redis."""
         try:
-            self._redis.setex(key, max(1, ttl_seconds), value)
+            # Redis 8 deprecates setex(key, ttl, value); use set(..., ex=ttl).
+            # Keep the >=1s clamp (Redis rejects a 0/negative expiry).
+            self._redis.set(key, value, ex=max(1, ttl_seconds))
         except RedisError as exc:
             logger.warning("Redis cache set failed for {}: {}", key, exc)
 

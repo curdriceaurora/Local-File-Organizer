@@ -180,6 +180,49 @@ def _validate_setting_paths(
         else:
             validated_root = resolve_path(raw_path, settings.allowed_paths)
             normalized[key] = str(validated_root)
+
+    # Validate subdirectories to prevent escaping the vault/workspace root
+    for key in {"attachments_subdir", "notes_subdir"}:
+        value = normalized.get(key)
+        if value is not None:
+            if not isinstance(value, str):
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} must be a string",
+                )
+            stripped = value.strip()
+            if not stripped:
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} cannot be empty",
+                )
+            if "/" in stripped and any(not part for part in stripped.split("/")):
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} cannot contain empty path segments",
+                )
+            if "\\" in stripped and any(not part for part in stripped.split("\\")):
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} cannot contain empty path segments",
+                )
+            if stripped.startswith(("/", "\\")) or (len(stripped) > 1 and stripped[1] == ":"):
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} must be a relative path",
+                )
+            segments = stripped.replace("\\", "/").split("/")
+            if ".." in segments:
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_settings",
+                    message=f"{key} cannot contain path traversal",
+                )
     return normalized
 
 

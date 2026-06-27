@@ -51,9 +51,14 @@ def _make_app(allowed_paths: list[str]) -> TestClient:
         """Override dependency to return test settings."""
         return settings
 
-    from file_organizer.api.dependencies import get_settings
+    from file_organizer.api.dependencies import AnonymousUser, get_current_active_user, get_settings
 
     app.dependency_overrides[get_settings] = override_settings
+    # search's router depends on get_current_active_user, which (via
+    # get_current_user) resolves a real get_db session even when
+    # auth_enabled=False. Override it directly so these tests don't touch
+    # the default auth.db location (flaky if its parent dir doesn't exist).
+    app.dependency_overrides[get_current_active_user] = lambda: AnonymousUser()
     return TestClient(app)
 
 

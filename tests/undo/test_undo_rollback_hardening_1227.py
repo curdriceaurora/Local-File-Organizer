@@ -121,19 +121,31 @@ def test_durable_move_detects_inode_swap(tmp_path: Path, monkeypatch: pytest.Mon
     dst = tmp_path / "b.txt"
 
     real_lstat = rb.os.lstat
-    regular_mode = src.lstat().st_mode
-    calls = {"n": 0}
 
     class _FakeStat:
-        st_mode = regular_mode  # regular file (not a symlink)
-        st_dev = 4242
-        st_ino = 999999  # differs from the real source identity → "swap"
+        def __init__(self, wrapped: object) -> None:
+            self._wrapped = wrapped
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(self._wrapped, name)
+
+        @property
+        def st_dev(self) -> int:
+            return 4242
+
+        @property
+        def st_ino(self) -> int:
+            return 999999  # differs from the real source identity -> "swap"
 
     def fake_lstat(path: object, *a: object, **k: object) -> object:
-        calls["n"] += 1
-        if calls["n"] == 1:  # the source lstat → real identity
-            return real_lstat(path, *a, **k)
-        return _FakeStat()  # post-move dst lstat → mismatched identity
+        stat_result = real_lstat(path, *a, **k)
+        try:
+            is_post_move_dst = Path(path) == dst and not src.exists()
+        except TypeError:
+            is_post_move_dst = False
+        if is_post_move_dst:
+            return _FakeStat(stat_result)  # post-move dst lstat -> mismatched identity
+        return stat_result
 
     monkeypatch.setattr(rb.os, "lstat", fake_lstat)
 

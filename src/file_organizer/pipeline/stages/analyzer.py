@@ -6,9 +6,12 @@ and populates ``context.analysis`` with category and suggested filename.
 
 from __future__ import annotations
 
+import inspect
 import logging
+from collections.abc import Hashable
+from functools import cache
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from file_organizer.interfaces.pipeline import StageContext
 from file_organizer.pipeline.processor_pool import (
@@ -68,7 +71,9 @@ class AnalyzerStage:
             return context
 
         try:
-            result = self._run_processor(context.file_path, processor)
+            result = self._run_processor(
+                context.file_path, processor, scan_root=context.trusted_root
+            )
             context.analysis = result
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
@@ -80,7 +85,41 @@ class AnalyzerStage:
         return context
 
     @staticmethod
-    def _run_processor(file_path: Path, processor: BaseProcessor) -> dict[str, str]:
+    def _run_processor(
+        file_path: Path, processor: BaseProcessor, scan_root: Path | None = None
+    ) -> dict[str, str]:
         """Invoke the processor and normalise output to a dict."""
-        raw = processor.process_file(file_path)
+        # Only pass scan_root if the processor's process_file accepts it (like
+        # TextProcessor). BaseProcessor's Protocol signature doesn't declare
+        # scan_root since not every concrete processor supports it, so the
+        # conditional call below is checked via runtime introspection rather
+        # than the static type, hence the cast. type(processor) is also cast
+        # to Hashable here: Pyre's stub for the @cache-wrapped callee checks
+        # the call site's argument type against Hashable directly, regardless
+        # of the callee's own declared parameter type.
+        if AnalyzerStage._processor_accepts_scan_root(cast(Hashable, type(processor))):
+            raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
+        else:
+            raw = processor.process_file(file_path)
         return cast(dict[str, str], normalize_processor_result(file_path, raw))
+
+    @staticmethod
+    @cache
+    def _processor_accepts_scan_root(processor_type: Hashable) -> bool:
+        """Whether *processor_type*'s ``process_file`` accepts ``scan_root``.
+
+        Memoized per class so the introspection cost isn't paid on every
+        file processed. Returns ``False`` if ``process_file`` can't be
+        introspected on the class (e.g. an unspecced test double), matching
+        the pre-introspection behaviour of calling without ``scan_root``.
+
+        Takes ``Hashable`` rather than ``type`` because Pyre's stub for
+        ``functools.cache`` requires args to satisfy ``Hashable``, and
+        doesn't infer that ``Type[BaseProcessor]`` (a Protocol) qualifies.
+        """
+        try:
+            processor_cls = cast(type[BaseProcessor], processor_type)
+            params = inspect.signature(processor_cls.process_file).parameters
+        except (AttributeError, TypeError, ValueError):
+            return False
+        return "scan_root" in params

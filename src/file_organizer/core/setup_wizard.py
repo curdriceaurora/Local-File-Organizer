@@ -291,7 +291,11 @@ class SetupWizard:
         """
         profile = profile or config.profile_name
         config.setup_completed = True
-        self.config_manager.save(config, profile)
+        # force=True: setup completion is a deliberate (re)configuration, so it
+        # must migrate/overwrite an existing profile even if its on-disk schema
+        # version is unsupported — otherwise the save guard (#1276) would make
+        # the very flow meant to repair an incompatible config crash.
+        self.config_manager.save(config, profile, force=True)
         logger.info("Saved configuration profile: {}", profile)
 
     def run(

@@ -10,11 +10,13 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+from file_organizer.cli.path_validation import resolve_cli_path
 
 autotag_app = typer.Typer(
     name="autotag",
@@ -33,18 +35,18 @@ logger = logging.getLogger(__name__)
 
 @autotag_app.command()
 def suggest(
-    directory: Path = typer.Argument(..., help="Directory containing files to tag."),
-    top_n: int = typer.Option(10, "--top-n", "-n", help="Max suggestions per file."),
-    min_confidence: float = typer.Option(40.0, "--min-confidence", help="Minimum confidence %."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    directory: Annotated[Path, typer.Argument(help="Directory containing files to tag.")],
+    top_n: Annotated[int, typer.Option("--top-n", "-n", help="Max suggestions per file.")] = 10,
+    min_confidence: Annotated[
+        float, typer.Option("--min-confidence", help="Minimum confidence %.")
+    ] = 40.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Suggest tags for files in a directory."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = directory.resolve()
-    if not resolved.is_dir():
-        console.print(f"[red]Error: Directory not found: {directory}[/red]")
-        raise typer.Exit(code=1)
+    # A.cli: consolidates the prior inline ``resolve() + is_dir()`` check.
+    resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 
     try:
         service = AutoTaggingService()
@@ -111,16 +113,14 @@ def suggest(
 
 @autotag_app.command()
 def apply(
-    file_path: Path = typer.Argument(..., help="File to tag."),
-    tags: list[str] = typer.Argument(..., help="Tags to apply."),
+    file_path: Annotated[Path, typer.Argument(help="File to tag.")],
+    tags: Annotated[list[str], typer.Argument(help="Tags to apply.")],
 ) -> None:
     """Apply tags to a file."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = file_path.resolve()
-    if not resolved.exists():
-        console.print(f"[red]Error: File not found: {file_path}[/red]")
-        raise typer.Exit(code=1)
+    # A.cli: file arg — exists + not-dir.
+    resolved = resolve_cli_path(file_path, must_exist=True, must_be_dir=False)
 
     try:
         service = AutoTaggingService()
@@ -136,7 +136,7 @@ def apply(
 
 @autotag_app.command()
 def popular(
-    limit: int = typer.Option(20, "--limit", "-n", help="Number of tags to show."),
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Number of tags to show.")] = 20,
 ) -> None:
     """Show most popular tags."""
     from file_organizer.services.auto_tagging import AutoTaggingService
@@ -165,8 +165,8 @@ def popular(
 
 @autotag_app.command()
 def recent(
-    days: int = typer.Option(30, "--days", help="Days to look back."),
-    limit: int = typer.Option(20, "--limit", "-n", help="Number of tags to show."),
+    days: Annotated[int, typer.Option("--days", help="Days to look back.")] = 30,
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Number of tags to show.")] = 20,
 ) -> None:
     """Show recently used tags."""
     from file_organizer.services.auto_tagging import AutoTaggingService
@@ -194,18 +194,15 @@ def recent(
 
 @autotag_app.command()
 def batch(
-    directory: Path = typer.Argument(..., help="Directory to process."),
-    pattern: str = typer.Option("*", help="File pattern."),
-    recursive: bool = typer.Option(True, "--recursive/--no-recursive"),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    directory: Annotated[Path, typer.Argument(help="Directory to process.")],
+    pattern: Annotated[str, typer.Option(help="File pattern.")] = "*",
+    recursive: Annotated[bool, typer.Option("--recursive/--no-recursive")] = True,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Batch tag suggestion for directory."""
     from file_organizer.services.auto_tagging import AutoTaggingService
 
-    resolved = directory.resolve()
-    if not resolved.is_dir():
-        console.print(f"[red]Error: Directory not found: {directory}[/red]")
-        raise typer.Exit(code=1)
+    resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 
     try:
         service = AutoTaggingService()

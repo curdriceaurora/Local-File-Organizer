@@ -352,6 +352,115 @@ class TestSystemStats:
         r = system_client.get("/system/stats", params={"path": str(f)})
         assert r.status_code == 400
 
+    def test_system_stats_with_largest_files(
+        self, system_client: TestClient, tmp_path: Path
+    ) -> None:
+        # Drive the `largest_files` loop: the analyzer reports one largest file
+        # whose path is a real file under tmp_path, so resolve_path +
+        # file_info_from_path both succeed and produce a populated response.
+        real_file = tmp_path / "biggest.bin"
+        real_file.write_bytes(b"x" * 2048)
+
+        mock_analyzer = MagicMock()
+        mock_stats = MagicMock()
+        mock_stats.total_size = 2048
+        mock_stats.organized_size = 0
+        mock_stats.saved_size = 0
+        mock_stats.file_count = 1
+        mock_stats.directory_count = 1
+        mock_stats.size_by_type = {"bin": 2048}
+        largest_entry = MagicMock()
+        largest_entry.path = str(real_file)
+        mock_stats.largest_files = [largest_entry]
+        mock_analyzer.analyze_directory.return_value = mock_stats
+        with patch(
+            "file_organizer.api.routers.system.StorageAnalyzer",
+            return_value=mock_analyzer,
+        ):
+            r = system_client.get("/system/stats", params={"path": str(tmp_path)})
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["largest_files"]) == 1
+        assert body["largest_files"][0]["path"] == str(real_file)
+
+
+# ---------------------------------------------------------------------------
+# System router — PATCH /system/config
+# ---------------------------------------------------------------------------
+
+
+class TestSystemConfigPatch:
+    """Tests for the admin-only PATCH /system/config handler.
+
+    The shared ``system_client`` fixture does not override admin auth, so these
+    tests build a dedicated client that overrides ``require_admin_user`` (to a
+    benign object) and ``get_config_manager`` (to a MagicMock manager).
+    """
+
+    def _make_admin_client(self, settings: ApiSettings, manager: MagicMock) -> TestClient:
+        from file_organizer.api.dependencies import require_admin_user
+
+        app = FastAPI()
+        app.dependency_overrides[get_settings] = lambda: settings
+        app.dependency_overrides[get_config_manager] = lambda: manager
+        app.dependency_overrides[require_admin_user] = lambda: MagicMock()
+        setup_exception_handlers(app)
+        app.include_router(system_router)
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_patch_config_applies_all_update_groups(
+        self, system_test_settings: ApiSettings
+    ) -> None:
+        manager = MagicMock()
+        config = MagicMock()
+        manager.load.return_value = config
+        manager.config_to_dict.return_value = {"default_methodology": "PARA"}
+        manager.list_profiles.return_value = ["default"]
+
+        client = self._make_admin_client(system_test_settings, manager)
+        resp = client.patch(
+            "/system/config",
+            json={
+                "profile": "default",
+                "default_methodology": "PARA",
+                "models": {"text_model": "x-text"},
+                "updates": {"interval_hours": 12},
+                "watcher": {"poll_interval": 5},
+            },
+        )
+        assert resp.status_code == 200
+        # Top-level scalar update applied.
+        assert config.default_methodology == "PARA"
+        # Nested models update applied via setattr loop.
+        assert config.models.text_model == "x-text"
+        # Nested updates update applied via setattr loop.
+        assert config.updates.interval_hours == 12
+        # Generic non-excluded field update applied via the hasattr/setattr loop.
+        assert config.watcher == {"poll_interval": 5}
+        # Profile was loaded and the mutated config saved (handler calls
+        # manager.save(config, request.profile) positionally).
+        manager.load.assert_called_once_with("default")
+        manager.save.assert_called_once_with(config, "default")
+
+    def test_patch_config_unsupported_version_returns_409(
+        self, system_test_settings: ApiSettings
+    ) -> None:
+        from file_organizer.config.manager import UnsupportedConfigVersionError
+
+        manager = MagicMock()
+        manager.load.return_value = MagicMock()
+        manager.list_profiles.return_value = ["default"]
+        manager.save.side_effect = UnsupportedConfigVersionError("default", "99.0")
+
+        client = self._make_admin_client(system_test_settings, manager)
+        resp = client.patch(
+            "/system/config",
+            json={"profile": "default", "default_methodology": "PARA"},
+        )
+        assert resp.status_code == 409
+        body = resp.json()
+        assert body["error"] == "unsupported_config_version"
+
 
 # ---------------------------------------------------------------------------
 # Auth router — duplicate email registration

@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_config_manager, get_settings
+from file_organizer.api.dependencies import (
+    UserLike,
+    get_config_manager,
+    get_settings,
+    get_setup_user,
+)
 from file_organizer.api.openapi_responses import (
     INTERNAL_500_RESPONSE,
     merge_responses,
@@ -135,6 +140,7 @@ def get_setup_status(
 )
 def detect_capabilities(
     settings: ApiSettings = Depends(get_settings),
+    _user: UserLike | None = Depends(get_setup_user),
 ) -> CapabilitiesResponse:
     """Detect system hardware and AI backend capabilities."""
     wizard = SetupWizard(mode=WizardMode.QUICK_START)
@@ -193,6 +199,7 @@ def complete_setup(
     request: SetupRequest,
     settings: ApiSettings = Depends(get_settings),
     manager: ConfigManager = Depends(get_config_manager),
+    _user: UserLike | None = Depends(get_setup_user),
 ) -> SetupResponse:
     """Execute the setup wizard and save configuration."""
     # Parse wizard mode
@@ -221,8 +228,10 @@ def complete_setup(
     config.setup_completed = True
     config.profile_name = request.profile
 
-    # Save configuration
-    manager.save(config, request.profile)
+    # Save configuration. force=True: setup completion is a deliberate
+    # (re)configuration that must migrate/overwrite an unsupported-version
+    # profile rather than crash on the save guard (#1276).
+    manager.save(config, request.profile, force=True)
 
     return SetupResponse(
         success=True,
@@ -255,7 +264,9 @@ class BrowseFolderResponse(BaseModel):
         ),
     ),
 )
-def browse_folder() -> BrowseFolderResponse:
+def browse_folder(
+    _user: UserLike | None = Depends(get_setup_user),
+) -> BrowseFolderResponse:
     """Open a native OS folder-picker dialog on the server host.
 
     Works when the API server is running directly on the user's desktop (macOS).

@@ -429,10 +429,12 @@ class TestGetPreference:
             destination=Path("/a/new.txt"),
             correction_type=CorrectionType.FILE_RENAME,
         )
-        # Same parent + same extension → same pattern key
+        # Same parent + same extension → same pattern key, so lookup must hit
+        # and must return the naming pattern recorded from the prior correction.
         result = tracker.get_preference(Path("/a/another.txt"), PreferenceType.NAMING_PATTERN)
-        # The key includes parent name — so must match
-        assert result is not None or result is None  # just exercising the path
+        assert result is not None
+        assert result.preference_type == PreferenceType.NAMING_PATTERN
+        assert result.value == "new.txt"
 
     def test_get_category_override_no_match(self) -> None:
         """CATEGORY_OVERRIDE with nothing tracked → None."""
@@ -748,7 +750,7 @@ class TestClearPreferences:
         assert remaining[0].preference_type == PreferenceType.NAMING_PATTERN
 
     def test_clear_by_type_when_storage_key_becomes_empty(self) -> None:
-        """When all prefs in a storage key are removed, the key is deleted."""
+        """When all prefs of a type are removed, querying returns an empty list."""
         from file_organizer.services.intelligence.preference_tracker import (
             CorrectionType,
             PreferenceType,
@@ -760,10 +762,13 @@ class TestClearPreferences:
             destination=Path("/docs/x.pdf"),
             correction_type=CorrectionType.FILE_MOVE,
         )
-        # Clear the only preference type → storage key should be removed
+        # Clear the only preference type → no preferences remain
+        # (Pre-D5 this asserted on tracker._preferences directly; with the
+        # PreferenceStorage Protocol the public ``get_all_preferences`` is
+        # the right surface — issue #157.)
         cleared = tracker.clear_preferences(PreferenceType.FOLDER_MAPPING)
         assert cleared == 1
-        assert len(tracker._preferences) == 0
+        assert tracker.get_all_preferences() == []
 
     def test_clear_returns_zero_when_nothing_to_clear(self) -> None:
         """Clearing a type with no preferences returns 0."""
@@ -888,23 +893,41 @@ class TestExportImportData:
         folder_prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
         assert len(folder_prefs) == 1
 
-    def test_import_data_updates_statistics(self) -> None:
-        """import_data merges statistics from the payload."""
+    def test_import_data_restores_corrections_count(self) -> None:
+        """``import_data`` round-trips ``total_corrections`` via the corrections list.
+
+        After D5 (#157) the tracker derives ``total_corrections`` from the
+        actual corrections list rather than maintaining an independent
+        counter, so stats reflect the data even if the imported payload's
+        ``statistics`` block disagrees with the corrections array.
+        """
+        from datetime import UTC, datetime
+
         tracker = _tracker()
+        # Build a correction payload of length 3 — that's what stats should report
+        ts = datetime(2026, 1, 15, 10, 30, tzinfo=UTC).isoformat()
         tracker.import_data(
             {
                 "preferences": {},
-                "corrections": [],
+                "corrections": [
+                    {
+                        "correction_type": "file_move",
+                        "source": f"/a/{i}.txt",
+                        "destination": f"/b/{i}.txt",
+                        "timestamp": ts,
+                        "context": {},
+                    }
+                    for i in range(3)
+                ],
                 "statistics": {
-                    "total_corrections": 99,
-                    "total_preferences": 42,
+                    "total_preferences": 0,
                     "successful_applications": 10,
                     "failed_applications": 5,
                 },
             }
         )
         stats = tracker.get_statistics()
-        assert stats["total_corrections"] == 99
+        assert stats["total_corrections"] == 3
 
     def test_import_data_without_statistics_key(self) -> None:
         """import_data with no 'statistics' key in payload → no error."""

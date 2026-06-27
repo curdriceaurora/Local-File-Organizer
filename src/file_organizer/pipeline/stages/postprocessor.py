@@ -51,5 +51,11 @@ class PostprocessorStage:
             counter += 1
 
         context.destination = final
+        # Declare the trusted output root so the writer stage can anchor its
+        # copy here and refuse a symlinked ancestor in the output tree (#1268).
+        # ``destination`` is always ``output_directory / category / name`` with
+        # ``category`` traversal-validated by ``StageContext``, so the leaf is
+        # guaranteed to live under this root.
+        context.output_root = self._output_directory
         logger.debug("Postprocessed %s -> %s", context.file_path.name, final)
         return context

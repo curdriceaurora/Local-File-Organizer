@@ -1,4 +1,4 @@
-"""Tests for file_organizer.cli.profile module.
+"""Tests for cli.profile module.
 
 Tests the Click-based profile management CLI commands including:
 - Profile CRUD operations (list, create, activate, delete, current)

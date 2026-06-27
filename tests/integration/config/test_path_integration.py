@@ -7,6 +7,8 @@ import pytest
 
 from file_organizer.config.path_manager import PathManager
 
+pytestmark = pytest.mark.integration
+
 
 def test_path_manager_initialization():
     """PathManager should initialize with canonical paths"""
@@ -99,3 +101,13 @@ def test_path_manager_invalid_category(tmp_path):
 
         with pytest.raises(ValueError, match="Unknown path category"):
             path_manager.get_path("invalid-category")
+
+
+def test_path_manager_file_paths(tmp_path):
+    """PathManager should expose preferences, history, and undo/redo db paths"""
+    with patch.dict("os.environ", {"HOME": str(tmp_path)}):
+        path_manager = PathManager()
+
+        assert path_manager.preferences_file.name == "preferences.json"
+        assert path_manager.history_db.name == "operations.db"
+        assert path_manager.undo_redo_db.name == "undo-redo.db"

@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.core.path_guard import safe_walk
 
 console = Console()
 
@@ -39,8 +42,8 @@ def _get_analyzer() -> Any:
 
 
 def _collect_files(directory: Path) -> list[Path]:
-    """Recursively collect files under *directory*."""
-    return [p for p in directory.rglob("*") if p.is_file()]
+    """Recursively collect files under *directory* with symlink + hidden filters."""
+    return list(safe_walk(directory))
 
 
 # -----------------------------------------------------------------------
@@ -50,13 +53,16 @@ def _collect_files(directory: Path) -> list[Path]:
 
 @suggest_app.command()
 def files(
-    directory: Path = typer.Argument(..., help="Directory to generate suggestions for."),
-    min_confidence: float = typer.Option(40.0, help="Minimum confidence threshold (0-100)."),
-    max_results: int = typer.Option(50, help="Maximum number of suggestions."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Alias for preview mode."),
+    directory: Annotated[Path, typer.Argument(help="Directory to generate suggestions for.")],
+    min_confidence: Annotated[
+        float, typer.Option(help="Minimum confidence threshold (0-100).")
+    ] = 40.0,
+    max_results: Annotated[int, typer.Option(help="Maximum number of suggestions.")] = 50,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Alias for preview mode.")] = False,
 ) -> None:
     """Generate organisation suggestions for files in a directory."""
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     engine = _get_engine()
     analyzer = _get_analyzer()
     file_list = _collect_files(directory)
@@ -115,14 +121,17 @@ def files(
 
 @suggest_app.command()
 def apply(
-    directory: Path = typer.Argument(..., help="Directory to organise."),
-    min_confidence: float = typer.Option(60.0, help="Minimum confidence for auto-apply."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without changes."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    directory: Annotated[Path, typer.Argument(help="Directory to organise.")],
+    min_confidence: Annotated[
+        float, typer.Option(help="Minimum confidence for auto-apply.")
+    ] = 60.0,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without changes.")] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Generate suggestions and apply them (with confirmation)."""
     from file_organizer.cli.interactive import confirm_action
 
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     engine = _get_engine()
     analyzer = _get_analyzer()
     file_list = _collect_files(directory)
@@ -176,10 +185,11 @@ def apply(
 
 @suggest_app.command()
 def patterns(
-    directory: Path = typer.Argument(..., help="Directory to analyze."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    directory: Annotated[Path, typer.Argument(help="Directory to analyze.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Detect and display naming/structure patterns in a directory."""
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     analyzer = _get_analyzer()
 
     with console.status("Detecting patterns…"):

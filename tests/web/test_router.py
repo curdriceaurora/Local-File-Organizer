@@ -80,24 +80,37 @@ class TestHomeRoute:
 
 
 class TestSubRouterInclusion:
-    """Verify that sub-routers are included in the main router."""
+    """Verify that sub-routers are included (and reachable) under ``/ui``.
 
-    def test_files_router_routes_present(self):
-        paths = [r.path for r in router.routes]
-        assert "/files" in paths or any("/files" in p for p in paths)
+    Asserts each sub-router's concrete base route at ``/ui/<name>`` is reachable
+    by issuing a real request through a mounted ``TestClient`` — the same runtime
+    mechanism ``TestHomeRoute`` uses (and which passes in CI). A registered route
+    responds (here ``200``); an *unincluded* sub-router would yield ``404``.
 
-    def test_organize_router_routes_present(self):
-        paths = [r.path for r in router.routes]
-        assert "/organize" in paths or any("/organize" in p for p in paths)
+    This replaces the earlier ``app.routes`` introspection, which was fragile
+    across FastAPI/Starlette versions (included sub-router paths are not reliably
+    surfaced on a flattened ``app.routes`` under Starlette 1.3+, #1282) and broke
+    nondeterministically under xdist. Targeting the *exact* base path keeps the
+    guard precise: an unrelated path like ``/ui/files-legacy`` still 404s, so it
+    can't satisfy the check (Copilot/CodeRabbit #1283).
+    """
 
-    def test_profile_router_routes_present(self):
-        paths = [r.path for r in router.routes]
-        assert "/profile" in paths or any("/profile" in p for p in paths)
-
-    def test_settings_router_routes_present(self):
-        paths = [r.path for r in router.routes]
-        assert any("settings" in str(p) for p in paths)
-
-    def test_marketplace_router_routes_present(self):
-        paths = [r.path for r in router.routes]
-        assert any("marketplace" in str(p) for p in paths)
+    @pytest.mark.parametrize(
+        "base_path",
+        ["/ui/files", "/ui/organize", "/ui/profile", "/ui/settings", "/ui/marketplace"],
+    )
+    def test_sub_router_base_route_reachable(self, client, base_path, tmp_path, monkeypatch):
+        # ``/ui/marketplace`` instantiates ``MarketplaceService``, which creates
+        # its home dir and writes ``metadata.json`` under ``FO_MARKETPLACE_HOME``
+        # (defaulting to the real user config dir). Redirect it into ``tmp_path``
+        # so this route-inclusion check stays hermetic and doesn't 500 on
+        # read-only config homes.
+        monkeypatch.setenv("FO_MARKETPLACE_HOME", str(tmp_path / "marketplace"))
+        status = client.get(base_path).status_code
+        # Require a success/redirect status (not merely "not 404"): a registered
+        # but broken route returning 500/503 should fail this reachability guard,
+        # while a missing sub-router (404) still fails as before.
+        assert 200 <= status < 400, (
+            f"{base_path} returned unexpected status {status} — expected a reachable "
+            f"GET route under /ui (404 => sub-router not included; 5xx => route broken)"
+        )

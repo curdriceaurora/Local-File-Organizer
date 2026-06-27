@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from file_organizer.api.config import ApiSettings
 
-__all__ = ["ServiceFacade", "app", "create_app", "get_app"]
+__all__ = ["ServiceFacade", "create_app", "get_app"]
 
 # Module-level cache for lazy initialization with thread safety
 _app_cache: FastAPI | None = None
@@ -71,18 +71,6 @@ def get_app() -> FastAPI:
 
     assert _app_cache is not None, "App cache must be set after initialization"
     return _app_cache
-
-
-# Keep __getattr__ for backwards compatibility with attribute access
-def __getattr__(name: str) -> object:
-    """Fallback for attribute access patterns.
-
-    Provided for backwards compatibility with code that uses attribute
-    access instead of function calls.
-    """
-    if name == "app":
-        return get_app()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # ---------------------------------------------------------------------------

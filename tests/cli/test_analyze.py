@@ -6,9 +6,12 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+
+pytestmark = [pytest.mark.ci, pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
@@ -89,11 +92,35 @@ def test_analyze_verbose_mode(tmp_path: Path):
     assert "Content length:" in output
 
 
-def test_analyze_nonexistent_file():
-    """Analyzing a file that doesn't exist exits with code 1."""
-    result = runner.invoke(app, ["analyze", "/nonexistent/file.txt"])
+def test_analyze_nonexistent_file(tmp_path: Path):
+    """A.cli: analyzing a missing file → ``typer.BadParameter`` (exit 2)
+    with a 'does not exist' usage message. T13: use tmp_path, not a
+    hardcoded absolute literal."""
+    missing = tmp_path / "missing.txt"
+    result = runner.invoke(app, ["analyze", str(missing)])
+    assert result.exit_code == 2
+    assert "does not exist" in result.output.lower()
+
+
+def test_analyze_directory_not_regular_file(tmp_path: Path):
+    """Pointing ``fo analyze`` at an *existing* directory must not reach
+    the binary/text detection path — surface a clear "not a regular file"
+    error (exit 1 from the inline is_file guard, distinct from A.cli's
+    usage-error exit 2 for non-existent paths).
+
+    Whitespace is collapsed before matching: Click's error formatter
+    wraps long paths at ~80 columns, which on CI runners splits the
+    phrase across ``"is not\\na regular file"`` so a naive substring
+    check fails on long ``tmp_path`` values. Real users see the message
+    rendered by their terminal regardless of the line break — the test
+    should pin the semantic, not the byte-for-byte wrapping.
+    """
+    d = tmp_path / "some_dir"
+    d.mkdir()
+    result = runner.invoke(app, ["analyze", str(d)])
     assert result.exit_code == 1
-    assert "not found" in result.stdout.lower()
+    collapsed = " ".join(result.stdout.lower().split())
+    assert "not a regular file" in collapsed
 
 
 def test_analyze_empty_file(tmp_path: Path):

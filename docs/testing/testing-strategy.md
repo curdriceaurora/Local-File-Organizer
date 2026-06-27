@@ -26,6 +26,9 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.regression    # Regression tests (full suite only)
 @pytest.mark.no_ollama     # Tests that verify fallback behavior when Ollama is unavailable
 @pytest.mark.playwright    # Playwright browser smoke tests (require a running server)
+@pytest.mark.security      # Security hardening / regression tests (tests/security)
+@pytest.mark.extras        # Optional-dependency matrix tests (tests/extras)
+@pytest.mark.uses_setup_gate # Opts out of the autouse setup-gate bypass to exercise the real gate
 
 def test_example():
     pass
@@ -39,7 +42,7 @@ def test_example():
 - **API Module**: 92% code coverage ✅
 - **Services**: 82% code coverage ✅
 - **Models**: 90% code coverage ✅
-- **CI Gate**: 95% minimum (coverage requirement, enforced on main pushes)
+- **CI Gate**: 93% minimum (coverage requirement, enforced on main pushes)
 
 ### Coverage Targets by Module
 

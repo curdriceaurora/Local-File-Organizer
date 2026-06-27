@@ -431,7 +431,8 @@ class TestAudioViewRefresh:
 class TestScanAudioFiles:
     """Test _scan_audio_files worker method."""
 
-    # Store reference to the unwrapped function before any patching.
+    # Store reference to the unwrapped function, bypassing the real @work(thread=True)
+    # decorator so the worker body runs synchronously in the test.
     # Use staticmethod so Python doesn't bind 'self' when accessed via instance.
     _scan_unwrapped = staticmethod(AudioView._scan_audio_files.__wrapped__)
 

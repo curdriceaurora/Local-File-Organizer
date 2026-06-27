@@ -61,20 +61,42 @@ class ObsidianIntegration(Integration):
             return False
 
         vault = self._vault_path()
+        vault_resolved = vault.resolve(strict=False)
         attachments_subdir = str(
             self.config.settings.get("attachments_subdir", "Attachments")
         ).strip()
         notes_subdir = str(self.config.settings.get("notes_subdir", "Notes")).strip()
 
-        target_dir = (vault / attachments_subdir).resolve(strict=False)
-        target_dir.mkdir(parents=True, exist_ok=True)
-        destination = target_dir / source.name
+        # Reject absolute paths, path traversal, or empty path segments in subdirectories
+        for subdir_val in (attachments_subdir, notes_subdir):
+            if not subdir_val:
+                return False
+            if "/" in subdir_val and any(not part for part in subdir_val.split("/")):
+                return False
+            if "\\" in subdir_val and any(not part for part in subdir_val.split("\\")):
+                return False
+            p = Path(subdir_val)
+            if p.is_absolute() or ".." in p.parts:
+                return False
 
-        shutil.copy2(source, destination)
+        target_dir = (vault / attachments_subdir).resolve(strict=False)
+        if not (target_dir == vault_resolved or target_dir.is_relative_to(vault_resolved)):
+            return False
+        destination = (target_dir / source.name).resolve(strict=False)
+        if not destination.is_relative_to(vault_resolved):
+            return False
 
         note_dir = (vault / notes_subdir).resolve(strict=False)
+        if not (note_dir == vault_resolved or note_dir.is_relative_to(vault_resolved)):
+            return False
+        note_path = (note_dir / f"{source.stem}.md").resolve(strict=False)
+        if not note_path.is_relative_to(vault_resolved):
+            return False
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
         note_dir.mkdir(parents=True, exist_ok=True)
-        note_path = note_dir / f"{source.stem}.md"
         note_path.write_text(
             self._build_note_content(source, destination, metadata), encoding="utf-8"
         )

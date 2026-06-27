@@ -269,6 +269,25 @@ class TestPostprocessorStage:
         result = stage.process(ctx)
         assert result.destination is None
 
+    def test_sets_output_root_for_anchored_writer(self, tmp_path: Path) -> None:
+        """The postprocessor declares the trusted output root so the writer can
+        anchor its copy and refuse a symlinked ancestor (#1268). The computed
+        destination must live under that root.
+        """
+        out = tmp_path / "out"
+        stage = PostprocessorStage(output_directory=out)
+        ctx = StageContext(
+            file_path=Path("input/report.pdf"),
+            category="Documents",
+            filename="q3",
+        )
+        result = stage.process(ctx)
+
+        assert result.output_root == out
+        assert result.destination is not None
+        # destination is reachable as a relative path under output_root
+        assert result.destination.relative_to(result.output_root) == Path("Documents/q3.pdf")
+
 
 # ---------------------------------------------------------------------------
 # _copy_fd_xattrs (best-effort xattr copy error branches)
@@ -294,7 +313,7 @@ class TestCopyFdXattrs:
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.ENOTSUP, "unsupported")
 
-        monkeypatch.setattr(w.os, "listxattr", _raise)
+        monkeypatch.setattr(w.os, "listxattr", _raise, raising=False)
         w._copy_fd_xattrs(0, 1)  # swallowed, no raise
 
     def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -305,7 +324,7 @@ class TestCopyFdXattrs:
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.EIO, "io error")
 
-        monkeypatch.setattr(w.os, "listxattr", _raise)
+        monkeypatch.setattr(w.os, "listxattr", _raise, raising=False)
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
@@ -314,13 +333,13 @@ class TestCopyFdXattrs:
 
         from file_organizer.pipeline.stages import writer as w
 
-        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
-        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
 
         def _raise(_fd: int, _name: str, _value: bytes) -> None:
             raise OSError(_errno.EPERM, "denied")
 
-        monkeypatch.setattr(w.os, "setxattr", _raise)
+        monkeypatch.setattr(w.os, "setxattr", _raise, raising=False)
         w._copy_fd_xattrs(0, 1)  # swallowed
 
     def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -328,13 +347,13 @@ class TestCopyFdXattrs:
 
         from file_organizer.pipeline.stages import writer as w
 
-        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"])
-        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v")
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
 
         def _raise(_fd: int, _name: str, _value: bytes) -> None:
             raise OSError(_errno.EIO, "io error")
 
-        monkeypatch.setattr(w.os, "setxattr", _raise)
+        monkeypatch.setattr(w.os, "setxattr", _raise, raising=False)
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
@@ -346,8 +365,15 @@ class TestCopyFdXattrs:
 
 @pytest.mark.ci
 @pytest.mark.unit
+@pytest.mark.integration
 class TestWriterStage:
-    """Test WriterStage file copy operations."""
+    """Test WriterStage file copy operations.
+
+    Marked ``integration`` as well as ``unit``: these exercise the real
+    SafeDir filesystem copy path, so they carry ``writer.py``'s integration
+    coverage floor (the push-to-main Integration coverage gate measures only
+    ``-m integration``).
+    """
 
     def test_satisfies_protocol(self) -> None:
         assert isinstance(WriterStage(), PipelineStage)
@@ -397,6 +423,304 @@ class TestWriterStage:
         )
         result = WriterStage().process(ctx)
         assert result.error == "prior"
+
+    def test_special_file_error_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that SpecialFileError is raised and handled when the destination is not a regular file."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+        dest.write_text("existing")
+
+        # Mock stat.S_ISREG to return True on first call (source) and False on second call (destination)
+        called = []
+
+        def mock_s_isreg(mode):
+            called.append(mode)
+            if len(called) == 1:
+                return True
+            return False
+
+        monkeypatch.setattr(stat, "S_ISREG", mock_s_isreg)
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "not a regular file" in result.error.lower()
+
+    def test_fallback_to_shutil_copy2(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that the writer falls back to shutil.copy2 when SafeDir raises NotImplementedError."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+
+        # Mock _copy_via_safedir to raise NotImplementedError
+        from file_organizer.pipeline.stages import writer
+
+        def mock_copy_via_safedir(source, destination):
+            raise NotImplementedError("SafeDir not implemented on this platform")
+
+        monkeypatch.setattr(writer, "_copy_via_safedir", mock_copy_via_safedir)
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.exists()
+        assert dest.read_text() == "content"
+
+    def test_fdopen_os_error_closes_fd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that if os.fdopen raises OSError during source open, the file descriptor is closed."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+
+        original_fdopen = os.fdopen
+        original_close = os.close
+        captured_fd: dict[str, int] = {}
+        closed_fds: list[int] = []
+
+        def mock_fdopen(fd, *args, **kwargs):
+            if args and "rb" in args[0]:
+                captured_fd["fd"] = fd
+                raise OSError("fdopen failed")
+            return original_fdopen(fd, *args, **kwargs)
+
+        def mock_close(fd):
+            closed_fds.append(fd)
+            return original_close(fd)
+
+        monkeypatch.setattr(os, "fdopen", mock_fdopen)
+        monkeypatch.setattr(os, "close", mock_close)
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "fdopen failed" in result.error.lower()
+        assert captured_fd.get("fd") is not None
+        assert captured_fd["fd"] in closed_fds
+
+    def test_writer_stage_windows_platform_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that when sys.platform is mocked as win32, the writer falls back to shutil.copy2."""
+        import sys
+
+        monkeypatch.setattr(sys, "platform", "win32")
+
+        src = tmp_path / "src.txt"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_text("fallback-content")
+
+        dest = tmp_path / "dest.txt"
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.exists()
+        assert dest.read_text() == "fallback-content"
+
+    def test_copyxattr_fd_success(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify that _copy_fd_xattrs successfully copies extended attributes when they are present."""
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+
+        # Mock os.listxattr, os.getxattr, and os.setxattr
+        listxattr_calls = []
+        getxattr_calls = []
+        setxattr_calls = []
+
+        def mock_listxattr(fd):
+            listxattr_calls.append(fd)
+            return [b"user.comment"]
+
+        def mock_getxattr(fd, name):
+            getxattr_calls.append((fd, name))
+            return b"test-comment"
+
+        def mock_setxattr(fd, name, value):
+            setxattr_calls.append((fd, name, value))
+
+        monkeypatch.setattr(os, "listxattr", mock_listxattr, raising=False)
+        monkeypatch.setattr(os, "getxattr", mock_getxattr, raising=False)
+        monkeypatch.setattr(os, "setxattr", mock_setxattr, raising=False)
+
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert len(listxattr_calls) > 0
+        assert len(getxattr_calls) > 0
+        assert len(setxattr_calls) > 0
+        assert setxattr_calls[0][1] == b"user.comment"
+        assert setxattr_calls[0][2] == b"test-comment"
+
+    def test_copyxattr_fd_skipped_errors(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that listxattr and setxattr skip expected/unsupported filesystem errors while propagating others."""
+        import errno
+
+        src = tmp_path / "src.txt"
+        src.write_text("content")
+        dest = tmp_path / "dest.txt"
+
+        # 1. Test skipped listxattr error (e.g. ENOTSUP)
+        def mock_listxattr_skipped(fd):
+            raise OSError(errno.ENOTSUP, "Operation not supported")
+
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_skipped, raising=False)
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error  # should succeed because ENOTSUP is skipped
+
+        # 2. Test propagated listxattr error (e.g. EACCES)
+        def mock_listxattr_propagated(fd):
+            raise OSError(errno.EACCES, "Permission denied")
+
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_propagated, raising=False)
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert result.failed
+        assert "permission denied" in result.error.lower()
+
+        # 3. Test skipped setxattr error (e.g. EACCES on setxattr is in _XATTR_SET_SKIP)
+        def mock_listxattr_ok(fd):
+            return [b"user.comment"]
+
+        def mock_getxattr_ok(fd, name):
+            return b"val"
+
+        def mock_setxattr_skipped(fd, name, value):
+            raise OSError(errno.EACCES, "Permission denied on setxattr")
+
+        monkeypatch.setattr(os, "listxattr", mock_listxattr_ok, raising=False)
+        monkeypatch.setattr(os, "getxattr", mock_getxattr_ok, raising=False)
+        monkeypatch.setattr(os, "setxattr", mock_setxattr_skipped, raising=False)
+
+        # Reset dest
+        if dest.exists():
+            dest.unlink()
+        ctx = StageContext(file_path=src, destination=dest, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error  # EACCES on setxattr is skipped!
+
+
+# ---------------------------------------------------------------------------
+# WriterStage — anchored-traversal hardening (#1268)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.skipif(sys.platform == "win32", reason="SafeDir anchored write is POSIX-only")
+class TestWriterStageAnchored:
+    """When ``context.output_root`` is set, the writer descends from it
+    component-by-component so a symlinked *ancestor* directory in the output
+    tree is refused rather than traversed (#1268).
+    """
+
+    def _src(self, tmp_path: Path, content: bytes = b"payload") -> Path:
+        src = tmp_path / "input" / "file.txt"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_bytes(content)
+        return src
+
+    def test_anchored_creates_nested_destination(self, tmp_path: Path) -> None:
+        """Normal nested destinations are created under the trusted root."""
+        src = self._src(tmp_path, b"hello")
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        dest = out_root / "Docs" / "2026" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.read_bytes() == b"hello"
+
+    def test_anchored_refuses_symlinked_ancestor(self, tmp_path: Path) -> None:
+        """The headline #1268 guard: a symlinked intermediate output directory
+        is refused (SymlinkRejected → OSError → file marked failed) instead of
+        redirecting the write outside the output tree.
+        """
+        src = self._src(tmp_path, b"do-not-leak")
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        # Attacker swaps the category dir for a symlink pointing outside.
+        (out_root / "Docs").symlink_to(outside, target_is_directory=True)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # Nothing was written through the symlink into the outside tree.
+        assert list(outside.iterdir()) == []
+
+    def test_anchored_refuses_symlinked_leaf(self, tmp_path: Path) -> None:
+        """A symlink pre-planted at the leaf is also refused (parity)."""
+        src = self._src(tmp_path, b"data")
+        honey = tmp_path / "honey"
+        honey.write_bytes(b"secret")
+        out_root = tmp_path / "out"
+        (out_root / "Docs").mkdir(parents=True)
+        (out_root / "Docs" / "file.txt").symlink_to(honey)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+
+        assert result.failed
+        # The symlink target is untouched (not truncated/overwritten).
+        assert honey.read_bytes() == b"secret"
+
+    def test_falls_back_when_destination_outside_output_root(self, tmp_path: Path) -> None:
+        """If ``destination`` is not under ``output_root`` (mismatched custom
+        wiring), the writer uses the parent-rooted fallback rather than failing —
+        the copy still succeeds with leaf protection.
+        """
+        src = self._src(tmp_path, b"fallback")
+        out_root = tmp_path / "declared_root"
+        out_root.mkdir()
+        dest = tmp_path / "elsewhere" / "file.txt"  # NOT under out_root
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert dest.read_bytes() == b"fallback"
+
+    def test_symlinked_output_root_is_honored(self, tmp_path: Path) -> None:
+        """A legitimately symlinked output *root* (e.g. ``~/Organized -> /mnt/...``)
+        must be followed, not refused: the root is the trusted, user-supplied
+        anchor. Only attacker-influenced segments *below* it are O_NOFOLLOW-walked.
+        Regression guard for the anchored path rejecting symlinked roots.
+        """
+        src = self._src(tmp_path, b"via-symlink-root")
+        real_root = tmp_path / "real_storage"
+        real_root.mkdir()
+        out_root = tmp_path / "Organized"  # symlink -> real_storage
+        out_root.symlink_to(real_root, target_is_directory=True)
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        # Written through the symlinked root into the real storage tree.
+        assert (real_root / "Docs" / "file.txt").read_bytes() == b"via-symlink-root"
+
+    def test_metadata_parity_with_copy2(self, tmp_path: Path) -> None:
+        """The anchored path replicates copy2's mode bits (no execute leak)."""
+        src = self._src(tmp_path, b"x")
+        os.chmod(src, 0o600)
+        out_root = tmp_path / "out"
+        out_root.mkdir()
+        dest = out_root / "Docs" / "file.txt"
+        ctx = StageContext(file_path=src, destination=dest, output_root=out_root, dry_run=False)
+        result = WriterStage().process(ctx)
+        assert not result.failed, result.error
+        assert stat.S_IMODE(dest.stat().st_mode) == 0o600
 
     def test_preserves_mode_and_mtime(self, tmp_path: Path) -> None:
         """The hardened copy replicates copy2's mode + atime/mtime via fd ops."""

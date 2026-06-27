@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.console import Console
 
@@ -15,16 +17,14 @@ console = Console()
 
 @update_app.command(name="check")
 def update_check(
-    repo: str = typer.Option(
-        "curdriceaurora/Local-File-Organizer",
-        "--repo",
-        help="GitHub repository to check.",
-    ),
-    include_prerelease: bool = typer.Option(
-        False,
-        "--pre",
-        help="Include pre-release versions.",
-    ),
+    repo: Annotated[
+        str,
+        typer.Option("--repo", help="GitHub repository to check."),
+    ] = "curdriceaurora/fo-core",
+    include_prerelease: Annotated[
+        bool,
+        typer.Option("--pre", help="Include pre-release versions."),
+    ] = False,
 ) -> None:
     """Check if a newer version is available."""
     from file_organizer.updater import UpdateManager
@@ -40,24 +40,22 @@ def update_check(
         console.print(f"  Release: {release.html_url}")
         if release.body:
             console.print(f"\n[dim]{release.body[:300]}[/dim]")
-        console.print("\nRun [bold]file-organizer update install[/bold] to update.")
+        console.print("\nRun [bold]fo update install[/bold] to update.")
     else:
         console.print("[green]Already up to date.[/green]")
 
 
 @update_app.command(name="install")
 def update_install(
-    dry_run: bool = typer.Option(False, "--dry-run", help="Download but don't install."),
-    repo: str = typer.Option(
-        "curdriceaurora/Local-File-Organizer",
-        "--repo",
-        help="GitHub repository.",
-    ),
-    include_prerelease: bool = typer.Option(
-        False,
-        "--pre",
-        help="Include pre-release versions.",
-    ),
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Download but don't install.")] = False,
+    repo: Annotated[
+        str,
+        typer.Option("--repo", help="GitHub repository."),
+    ] = "curdriceaurora/fo-core",
+    include_prerelease: Annotated[
+        bool,
+        typer.Option("--pre", help="Include pre-release versions."),
+    ] = False,
 ) -> None:
     """Download and install the latest update."""
     from file_organizer.updater import UpdateManager

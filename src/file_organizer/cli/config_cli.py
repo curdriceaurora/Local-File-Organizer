@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.console import Console
 
@@ -12,7 +14,7 @@ config_app = typer.Typer(help="Configuration management.")
 
 @config_app.command(name="show")
 def config_show(
-    profile: str = typer.Option("default", help="Profile name."),
+    profile: Annotated[str, typer.Option(help="Profile name.")] = "default",
 ) -> None:
     """Show current configuration."""
     from file_organizer.config import ConfigManager
@@ -49,20 +51,29 @@ def config_list() -> None:
 
 @config_app.command(name="edit")
 def config_edit(
-    profile: str = typer.Option("default", help="Profile name to edit."),
-    text_model: str | None = typer.Option(None, help="Set text model name."),
-    vision_model: str | None = typer.Option(None, help="Set vision model name."),
-    temperature: float | None = typer.Option(None, help="Set temperature (0.0-1.0)."),
-    device: str | None = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
-    methodology: str | None = typer.Option(None, help="Set default methodology (none, para, jd)."),
+    profile: Annotated[str, typer.Option(help="Profile name to edit.")] = "default",
+    text_model: Annotated[str | None, typer.Option(help="Set text model name.")] = None,
+    vision_model: Annotated[str | None, typer.Option(help="Set vision model name.")] = None,
+    temperature: Annotated[float | None, typer.Option(help="Set temperature (0.0-1.0).")] = None,
+    device: Annotated[
+        str | None, typer.Option(help="Set device (auto, cpu, cuda, mps, metal).")
+    ] = None,
+    methodology: Annotated[
+        str | None, typer.Option(help="Set default methodology (none, para, jd).")
+    ] = None,
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
+    from file_organizer.utils.cli_errors import format_validation_error
 
     _VALID_DEVICES = {"auto", "cpu", "cuda", "mps", "metal"}
     _VALID_METHODOLOGIES = {"none", "para", "jd"}
 
-    # Validate constrained inputs before touching the config file.
+    # Validate constrained inputs before touching the config file. Use
+    # `format_validation_error` so each site emits a "valid values: ..."
+    # tail plus a "did you mean 'cuda'?" suggestion when the input is a
+    # near-typo. Pulling from `_VALID_*` constants keeps the error in
+    # sync with the validator (a future addition flows automatically).
     if temperature is not None and not (0.0 <= temperature <= 1.0):
         console.print(
             f"[red]Error: temperature must be between 0.0 and 1.0 (got {temperature}).[/red]"
@@ -70,13 +81,12 @@ def config_edit(
         raise typer.Exit(code=1)
     if device is not None and device not in _VALID_DEVICES:
         console.print(
-            f"[red]Error: device must be one of {sorted(_VALID_DEVICES)} (got '{device}').[/red]"
+            f"[red]Error: {format_validation_error(field='device', value=device, valid_values=sorted(_VALID_DEVICES))}[/red]"
         )
         raise typer.Exit(code=1)
     if methodology is not None and methodology not in _VALID_METHODOLOGIES:
         console.print(
-            f"[red]Error: methodology must be one of "
-            f"{sorted(_VALID_METHODOLOGIES)} (got '{methodology}').[/red]"
+            f"[red]Error: {format_validation_error(field='methodology', value=methodology, valid_values=sorted(_VALID_METHODOLOGIES))}[/red]"
         )
         raise typer.Exit(code=1)
 
@@ -94,5 +104,15 @@ def config_edit(
     if methodology is not None:
         cfg.default_methodology = methodology
 
-    mgr.save(cfg, profile=profile)
+    from file_organizer.config.manager import UnsupportedConfigVersionError
+
+    try:
+        mgr.save(cfg, profile=profile)
+    except UnsupportedConfigVersionError as exc:
+        console.print(
+            f"[red]Error: profile '{profile}' uses an unsupported config version "
+            f"and cannot be edited. Delete or migrate it first.[/red]\n"
+            f"[dim]Details: {exc}[/dim]"
+        )
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved profile '{profile}'[/green]")

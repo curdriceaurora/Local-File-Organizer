@@ -29,6 +29,19 @@ bash .claude/scripts/pre-commit-validation.sh
 
 If it fails: fix locally, re-run, only commit after passing. Never skip with `--no-verify`.
 
+### On shared feature branches (multi-agent or multi-session work)
+
+Always synchronise with the remote **before** running pre-commit and committing:
+
+```bash
+git pull --rebase origin <branch>   # ← sync first
+# make changes
+bash .claude/scripts/pre-commit-validation.sh
+git add <files> && git commit && git push
+```
+
+**Why this matters:** pre-commit validates the local working tree. If another agent has pushed to the same branch since your last pull, the remote may contain a different version of a file than what pre-commit sees locally. Validating a stale local copy gives a false green — CI then fails on the actual remote content. Pull before you validate, not after.
+
 ## Pre-Commit Hooks (`.pre-commit-config.yaml`)
 
 - `ruff check` — lint
@@ -51,4 +64,4 @@ If it fails: fix locally, re-run, only commit after passing. Never skip with `--
 - Detailed validation: `.claude/rules/code-quality-validation.md`
 
 ---
-**Last Updated**: 2026-04-07
+**Last Updated**: 2026-04-11

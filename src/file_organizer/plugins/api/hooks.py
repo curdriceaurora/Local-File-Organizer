@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -60,15 +62,183 @@ def _default_http_client_factory() -> httpx.Client:
     return httpx.Client(follow_redirects=False)
 
 
-def _validate_callback_url(callback_url: str) -> str:
-    """Validate callback URL has http/https scheme and a hostname, raising on invalid input."""
+def _validate_callback_url(callback_url: str, *, allow_unresolved_host: bool = True) -> str:
+    """Validate callback URL has http/https scheme and a hostname, raising on invalid input.
+
+    Also enforces SSRF protection by resolving the host and checking that it is not
+    loopback, unspecified, private, link-local, reserved, multicast, or metadata IP.
+
+    ``allow_unresolved_host`` controls registration- vs dispatch-time semantics: at
+    registration we allow hosts that don't resolve yet (fail open), but at dispatch
+    time the caller passes ``allow_unresolved_host=False`` so an unresolvable host
+    blocks delivery (fail closed) instead of silently proceeding.
+    """
     candidate = callback_url.strip()
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("Callback URL must use http or https.")
     if not parsed.netloc:
         raise ValueError("Callback URL must include a host.")
+
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Callback URL must include a valid host.")
+
+    # Block common local hostnames statically first
+    lower_host = host.lower()
+    if lower_host in {"localhost", "localhost.localdomain"}:
+        raise ValueError("Callback URL host is not allowed.")
+
+    # Resolve IP and check
+    try:
+        addr_info = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        if not allow_unresolved_host:
+            raise ValueError("Callback URL host must resolve before dispatch.") from exc
+        # Host doesn't resolve (e.g. dummy test URL). We allow registration;
+        # if it resolves later at trigger time to a private IP, it will be blocked.
+        addr_info = []
+
+    for _family, _, _, _, sockaddr in addr_info:
+        ip_str = str(sockaddr[0])
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        _reject_unsafe_ip(ip, ip_str)
+
     return candidate
+
+
+def _reject_unsafe_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, ip_str: str) -> None:
+    """Raise ValueError if the resolved IP falls into an SSRF-unsafe category."""
+    if ip.is_loopback:
+        raise ValueError("Loopback addresses are not allowed.")
+    if ip.is_unspecified:
+        raise ValueError("Unspecified addresses are not allowed.")
+    if ip.is_private:
+        raise ValueError("Private network addresses are not allowed.")
+    if ip.is_link_local:
+        raise ValueError("Link-local addresses are not allowed.")
+    if ip.is_reserved:
+        raise ValueError("Reserved network addresses are not allowed.")
+    if ip.is_multicast:
+        raise ValueError("Multicast addresses are not allowed.")
+    # Check metadata IP explicitly
+    if ip_str == "169.254.169.254":
+        raise ValueError("Metadata service access is not allowed.")
+
+
+def _resolve_and_validate_host(host: str) -> str:
+    """Resolve host, validate against SSRF, and return safe resolved IP address.
+
+    Checks if host is an IP address literal and validates it.
+    Otherwise, resolves hostname using socket.getaddrinfo and validates all resolved IPs.
+    Returns the first safe resolved IP address.
+    """
+    # Check if host is already an IP address
+    is_ip = False
+    try:
+        ipaddress.ip_address(host)
+        is_ip = True
+    except ValueError:
+        pass
+
+    if is_ip:
+        ip = ipaddress.ip_address(host)
+        _reject_unsafe_ip(ip, host)
+        return host
+
+    lower_host = host.lower()
+    if lower_host in {"localhost", "localhost.localdomain"}:
+        raise ValueError("Callback URL host is not allowed.")
+
+    # Resolve IP
+    try:
+        addr_info = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        raise ValueError("Callback URL host must resolve before dispatch.") from exc
+
+    if not addr_info:
+        raise ValueError("Callback URL host must resolve before dispatch.")
+
+    # Validate all resolved IPs to be safe
+    safe_ips = []
+    for _family, _, _, _, sockaddr in addr_info:
+        ip_str = str(sockaddr[0])
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        _reject_unsafe_ip(ip, ip_str)
+        safe_ips.append(ip_str)
+
+    if not safe_ips:
+        raise ValueError("Callback URL host must resolve to a valid IP address.")
+
+    # Pin to the first resolved safe IP address
+    return safe_ips[0]
+
+
+def _prepare_secure_request_args(
+    url: str,
+    headers: Mapping[str, str],
+) -> tuple[str, dict[str, str], dict[str, Any]]:
+    """Resolve host, validate against SSRF, and return rewritten URL/headers/extensions.
+
+    This prevents DNS rebinding by replacing the hostname in the URL with the
+    resolved, validated IP address. It sets the 'Host' header and the
+    'sni_hostname' extension to the original hostname so TLS/SNI and HTTP routing
+    continue to function correctly.
+    """
+    candidate = url.strip()
+    parsed = urlparse(candidate)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Callback URL must use http or https.")
+    if not parsed.netloc:
+        raise ValueError("Callback URL must include a host.")
+
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Callback URL must include a valid host.")
+
+    resolved_ip = _resolve_and_validate_host(host)
+
+    # Reconstruct the netloc with the IP address, preserving port if present
+    port_suffix = f":{parsed.port}" if parsed.port is not None else ""
+
+    if ":" in resolved_ip and not resolved_ip.startswith("["):
+        ip_for_netloc = f"[{resolved_ip}]"
+    else:
+        ip_for_netloc = resolved_ip
+
+    netloc_with_ip = f"{ip_for_netloc}{port_suffix}"
+
+    if parsed.username or parsed.password:
+        userpass = f"{parsed.username or ''}"
+        if parsed.password:
+            userpass += f":{parsed.password}"
+        netloc_with_ip = f"{userpass}@{netloc_with_ip}"
+
+    rewritten_url = parsed._replace(netloc=netloc_with_ip).geturl()
+
+    # Copy headers to avoid mutating the original mapping. Build the Host header
+    # from the bare hostname/port only -- parsed.netloc would leak any userinfo
+    # (e.g. https://user:pass@host/) into the header sent on the wire.
+    new_headers = dict(headers)
+    host_header = host
+    if ":" in host_header and not host_header.startswith("["):
+        host_header = f"[{host_header}]"
+    if parsed.port is not None:
+        host_header = f"{host_header}:{parsed.port}"
+    new_headers["Host"] = host_header
+
+    # Set sni_hostname extension for HTTPS
+    extensions = {}
+    if parsed.scheme == "https":
+        extensions["sni_hostname"] = host
+
+    return rewritten_url, new_headers, extensions
 
 
 class PluginHookManager:
@@ -213,12 +383,34 @@ class PluginHookManager:
                 }
                 if webhook.secret:
                     headers["X-Plugin-Secret"] = webhook.secret
+
+                # Re-validate target URL immediately before dispatch to block SSRF / DNS-rebinding,
+                # and prepare secure request arguments (IP pinning) to prevent DNS rebinding TOCTOU.
+                try:
+                    rewritten_url, new_headers, extensions = _prepare_secure_request_args(
+                        webhook.callback_url,
+                        headers,
+                    )
+                except ValueError as exc:
+                    results.append(
+                        WebhookDeliveryResult(
+                            plugin_id=webhook.plugin_id,
+                            event=webhook.event,
+                            callback_url=webhook.callback_url,
+                            status_code=None,
+                            delivered=False,
+                            error=f"SSRF Prevention: {exc}",
+                        )
+                    )
+                    continue
+
                 try:
                     response = client.post(
-                        webhook.callback_url,
+                        rewritten_url,
                         json=body,
-                        headers=headers,
+                        headers=new_headers,
                         timeout=timeout_seconds,
+                        extensions=extensions,
                     )
                 except httpx.HTTPError as exc:
                     results.append(

@@ -162,7 +162,7 @@ for THREAD_ID in "${THREAD_ARRAY[@]}"; do
     echo "  ↳ Adding reply: ${REPLY:0:60}..."
 
     if [[ "$DRY_RUN" != "true" ]]; then
-      if gh api graphql --repo "$REPO_OWNER/$REPO_NAME" -f query='mutation {
+      if gh api graphql -f query='mutation {
         addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: "'$THREAD_ID'", body: "'"${REPLY}"'"}) {
           comment {
             id
@@ -180,7 +180,7 @@ for THREAD_ID in "${THREAD_ARRAY[@]}"; do
   echo "  ↳ Resolving thread..."
 
   if [[ "$DRY_RUN" != "true" ]]; then
-    if gh api graphql --repo "$REPO_OWNER/$REPO_NAME" -f query='mutation {
+    if gh api graphql -f query='mutation {
       resolveReviewThread(input: {threadId: "'$THREAD_ID'"}) {
         thread {
           isResolved

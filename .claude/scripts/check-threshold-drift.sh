@@ -15,16 +15,37 @@ if [[ -z "$NEW_VAL" ]] || [[ -z "$OLD_VAL" ]] || [[ "$NEW_VAL" == "$OLD_VAL" ]];
   exit 0
 fi
 
-HITS=$(grep -rn "$OLD_VAL" \
+# Docs that use the old value outside what this check can reason about: a dated
+# historical snapshot (must keep the number it reported at the time) and a
+# meta-doc whose "95%" mentions are pedagogical examples, not state claims.
+# Excluded by path so the content-based matching below stays precise elsewhere.
+EXCLUDE_PATHS=(
+  "$REPO_ROOT/docs/testing/coverage-report.md"
+  "$REPO_ROOT/.claude/rules/documentation-generation-checklist.md"
+  "$REPO_ROOT/docs/superpowers/plans/2026-04-07-docstring-completion-and-ratchet.md"
+)
+
+HITS=$(grep -rnE "\b${OLD_VAL}\b" \
   "$REPO_ROOT/docs/" \
   "$REPO_ROOT/README.md" \
   "$REPO_ROOT/CONTRIBUTING.md" \
   "$REPO_ROOT/.claude/rules/" \
   "$REPO_ROOT/.github/" \
   2>/dev/null \
-  | grep -iE "cover|docstring|gate|threshold|fail.under" \
   | grep -v "^Binary" \
+  | awk -F: '
+      {
+        content = $0
+        sub(/^[^:]+:[^:]+:/, "", content)
+        lc = tolower(content)
+        if ((lc ~ /cover|gate|threshold|fail.under/) && (lc !~ /docstring|interrogate/)) print
+      }
+    ' \
   || true)
+
+for excluded in "${EXCLUDE_PATHS[@]}"; do
+  HITS=$(printf '%s\n' "$HITS" | grep -v "^${excluded}:" || true)
+done
 
 if [[ -n "$HITS" ]]; then
   printf "ERROR: Coverage threshold changed from %s%% to %s%% but stale references remain:\n" "$OLD_VAL" "$NEW_VAL"

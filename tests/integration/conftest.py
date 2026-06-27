@@ -58,6 +58,8 @@ def _stub_text_generate(prompt: str, **kwargs: Any) -> str:
 def _stub_vision_generate(prompt: str, **kwargs: Any) -> str:
     """Return a deterministic vision response based on prompt keywords."""
     prompt_lower = prompt.lower()
+    if "json schema" in prompt_lower or "respond only with a json" in prompt_lower:
+        return '{"description": "Deterministic vision stub response.", "folder_name": "nature_photography", "filename": "mountain_sunset", "has_text": false, "extracted_text": null}'
     for key, response in _VISION_RESPONSES.items():
         if key != "default" and key in prompt_lower:
             return response

@@ -32,6 +32,8 @@ Guardrail 4 is diff-based until a full-suite clean-up is done.
 from __future__ import annotations
 
 import ast
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -62,30 +64,127 @@ def _changed_test_files() -> list[Path]:
     )
 
 
+def _git_bin() -> str:
+    git_path = shutil.which("git")
+    if git_path is None:
+        raise OSError("git executable not found on PATH")
+    return git_path
+
+
+def _git_ref_exists(ref: str) -> bool:
+    """Return whether *ref* resolves to a commit in the local checkout."""
+    try:
+        git = _git_bin()
+    except OSError:
+        return False
+    result = subprocess.run(
+        [git, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=FO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def _git_stdout(*args: str, check: bool = True) -> str:
+    """Run git and return stripped stdout."""
+    git = _git_bin()
+    result = subprocess.run(
+        [git, *args],
+        cwd=FO_ROOT,
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _resolve_diff_base() -> str | None:
+    """Resolve a commit-ish usable as the changed-files diff base.
+
+    Returns None in CI if a configured base branch (GITHUB_BASE_REF) is set
+    but origin/base_branch cannot be resolved (indicating a shallow clone).
+    """
+    base_branch = os.environ.get("GITHUB_BASE_REF")
+
+    # Try GITHUB_BASE_REF and origin/main candidates first
+    candidates = []
+    if base_branch:
+        candidates.extend(
+            [f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch]
+        )
+    else:
+        candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
+
+    # Drop duplicates
+    candidates = list(dict.fromkeys(candidates))
+
+    for candidate in candidates:
+        if _git_ref_exists(candidate):
+            merge_base = _git_stdout("merge-base", "HEAD", candidate, check=False)
+            if merge_base:
+                return merge_base
+
+    # If running in CI (GitHub Actions) and we are on a PR/epic branch, GITHUB_BASE_REF or GITHUB_REF_NAME
+    # will be set. If we couldn't resolve the base ref, return None to trigger a loud failure.
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        if base_branch or os.environ.get("GITHUB_REF_NAME") != "main":
+            return None
+
+    # Local fallback
+    head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
+    if head_parent:
+        return head_parent
+    return _git_stdout("rev-parse", "HEAD")
+
+
 def _git_changed_test_files() -> list[Path]:
     """Return test files modified relative to main (diff-based subset).
 
     Used for guardrails that have known pre-existing violations in the full
     suite.  Only files touched in the current branch are checked, preventing
     failures on historical code while blocking new violations.
+
+    In CI, a shallow checkout can leave ``origin/main`` unresolvable, which
+    would otherwise silently collapse the diff to empty and skip every
+    violation. Fail loudly in that case rather than degrade to a no-op
+    guardrail. Outside CI (local dev, possibly without a configured
+    ``origin`` remote) the silent fallback below is intentional.
     """
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "origin/main...HEAD"],
-            capture_output=True,
-            text=True,
-            cwd=FO_ROOT,
+    diff_base = _resolve_diff_base()
+    if diff_base is None:
+        pytest.fail(
+            "Unable to determine changed test files for PR guardrail checks. "
+            "Git-based diff-base resolution failed (likely due to a shallow checkout). "
+            "Please ensure fetch-depth: 0 is used in the checkout step."
         )
-        if not result.stdout.strip():
-            result = subprocess.run(
-                ["git", "diff", "--name-only", "HEAD"],
-                capture_output=True,
-                text=True,
-                cwd=FO_ROOT,
-            )
-        changed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
-    except Exception:
-        changed = set()
+
+    head_sha = _git_stdout("rev-parse", "HEAD")
+    changed: set[str] = set()
+
+    if diff_base != head_sha:
+        diff_output = _git_stdout(
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            f"{diff_base}...HEAD",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        )
+        changed.update(line.strip() for line in diff_output.splitlines() if line.strip())
+
+    # Add staged and unstaged local changes
+    staged_diff = _git_stdout(
+        "diff", "--cached", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
+    )
+    changed.update(line.strip() for line in staged_diff.splitlines() if line.strip())
+
+    unstaged_diff = _git_stdout(
+        "diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
+    )
+    changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
     return sorted(
         p
         for p in TESTS_ROOT.rglob("*.py")

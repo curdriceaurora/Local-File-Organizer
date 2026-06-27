@@ -155,10 +155,16 @@ def test_autotag_batch_mode(mock_service_cls, tmp_path):
     assert "text" in result.stdout
 
 
-def test_autotag_nonexistent_dir():
-    """suggest fails with exit 1 for a non-existent directory."""
-    result = runner.invoke(app, ["autotag", "suggest", "/nonexistent"])
-    assert result.exit_code == 1
+def test_autotag_nonexistent_dir(tmp_path):
+    """suggest fails with exit 2 (typer ``BadParameter``) for a non-existent
+    directory. A.cli migrated from custom ``typer.Exit(1)`` to the
+    typer-native POSIX-aligned exit 2 for CLI usage errors. T13: use
+    tmp_path, not a hardcoded absolute literal.
+    """
+    missing = tmp_path / "missing"
+    result = runner.invoke(app, ["autotag", "suggest", str(missing)])
+    assert result.exit_code == 2
+    assert "does not exist" in result.output.lower()
 
 
 @patch("file_organizer.services.auto_tagging.AutoTaggingService")

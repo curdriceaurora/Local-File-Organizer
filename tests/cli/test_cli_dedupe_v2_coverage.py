@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.dedupe_v2 — uncovered lines 28-236."""
+"""Coverage tests for cli.dedupe_v2 — uncovered lines 28-236."""
 
 from __future__ import annotations
 
@@ -30,38 +30,10 @@ class _FakeDupGroup:
     files: list = field(default_factory=list)
 
 
-class TestDedupeHelpers:
-    """Covers _build_scan_options and _format_size."""
-
-    def test_format_size_bytes(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert _format_size(500) == "500 B"
-
-    def test_format_size_kb(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert "KB" in _format_size(2048)
-
-    def test_format_size_mb(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert "MB" in _format_size(2 * 1024 * 1024)
-
-    def test_format_size_gb(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert "GB" in _format_size(2 * 1024**3)
-
-    def test_format_size_tb(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert "TB" in _format_size(2 * 1024**4)
-
-    def test_format_size_pb(self) -> None:
-        from file_organizer.cli.dedupe_v2 import _format_size
-
-        assert "PB" in _format_size(2 * 1024**5)
+# NOTE: ``_format_size`` was moved into ``cli.dedupe_renderer`` (D4 Renderer
+# extraction, issue #157). Direct unit tests for size formatting now live in
+# ``tests/cli/test_dedupe_renderer.py`` (the rendered output asserts ``"KB"``,
+# ``"MB"``, etc. via the renderer surface).
 
 
 class TestDedupeScan:
@@ -91,9 +63,15 @@ class TestDedupeScan:
         mock_detector.get_duplicate_groups.return_value = {"abc123": group}
 
         with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=mock_detector):
-            result = runner.invoke(dedupe_app, ["scan", str(tmp_path), "--json"])
+            result = runner.invoke(dedupe_app, ["scan", str(tmp_path), "--format", "json"])
 
         assert result.exit_code == 0
+        # Output is a valid JSON envelope with the documented schema
+        import json as _json
+
+        envelope = _json.loads(result.output)
+        assert envelope["version"] == 1
+        assert envelope["command"] == "scan"
 
     def test_scan_with_duplicates_table(self, tmp_path: Path) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app
@@ -225,9 +203,15 @@ class TestDedupeReport:
         mock_detector.get_statistics.return_value = {"total_files": 10}
 
         with patch("file_organizer.cli.dedupe_v2._get_detector", return_value=mock_detector):
-            result = runner.invoke(dedupe_app, ["report", str(tmp_path), "--json"])
+            result = runner.invoke(dedupe_app, ["report", str(tmp_path), "--format", "json"])
 
         assert result.exit_code == 0
+        import json as _json
+
+        envelope = _json.loads(result.output)
+        assert envelope["version"] == 1
+        assert envelope["command"] == "report"
+        assert envelope["summary"]["total_files"] == 10
 
     def test_report_table(self, tmp_path: Path) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app

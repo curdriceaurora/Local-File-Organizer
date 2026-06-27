@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.autotag_v2 — uncovered error/edge branches."""
+"""Coverage tests for cli.autotag_v2 — uncovered error/edge branches."""
 
 from __future__ import annotations
 
@@ -31,12 +31,13 @@ class TestAutotagSuggestErrors:
     """Covers error branches in suggest command (lines 47-49, 53-54, 61-62)."""
 
     def test_suggest_dir_not_found(self, tmp_path: Path) -> None:
+        """A.cli: non-existent dir → ``typer.BadParameter`` (exit 2)."""
         from file_organizer.cli.autotag_v2 import autotag_app
 
         bad = tmp_path / "nonexistent"
         result = runner.invoke(autotag_app, ["suggest", str(bad)])
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower()
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_suggest_service_init_error(self, tmp_path: Path) -> None:
         from file_organizer.cli.autotag_v2 import autotag_app
@@ -87,11 +88,13 @@ class TestAutotagApplyErrors:
     """Covers error branches in apply command (lines 113-114, 119-121)."""
 
     def test_apply_file_not_found(self, tmp_path: Path) -> None:
+        """A.cli: non-existent file → ``typer.BadParameter`` (exit 2)."""
         from file_organizer.cli.autotag_v2 import autotag_app
 
         missing = tmp_path / "gone.txt"
         result = runner.invoke(autotag_app, ["apply", str(missing), "tag1", "tag2"])
-        assert result.exit_code == 1
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_apply_service_error(self, tmp_path: Path) -> None:
         from file_organizer.cli.autotag_v2 import autotag_app
@@ -181,11 +184,13 @@ class TestAutotagBatchErrors:
     """Covers error branches in batch command (lines 198-199, 203-205, 211-212, 218-220)."""
 
     def test_batch_dir_not_found(self, tmp_path: Path) -> None:
+        """A.cli: non-existent dir → ``typer.BadParameter`` (exit 2)."""
         from file_organizer.cli.autotag_v2 import autotag_app
 
         bad = tmp_path / "missing"
         result = runner.invoke(autotag_app, ["batch", str(bad)])
-        assert result.exit_code == 1
+        assert result.exit_code == 2
+        assert "does not exist" in result.output.lower()
 
     def test_batch_service_init_error(self, tmp_path: Path) -> None:
         from file_organizer.cli.autotag_v2 import autotag_app

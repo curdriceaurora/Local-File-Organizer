@@ -19,6 +19,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
+from file_organizer.api.dependencies import get_setup_user
 from file_organizer.api.routers.setup import router as setup_router
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -32,6 +33,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 @pytest.fixture()
 def client() -> TestClient:
     app = FastAPI()
+    app.dependency_overrides[get_setup_user] = lambda: None
     app.include_router(setup_router, prefix="/api")
     return TestClient(app, raise_server_exceptions=True)
 

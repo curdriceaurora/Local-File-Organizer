@@ -368,6 +368,47 @@ file-organizer redo [OPTIONS]
 
 ---
 
+### `recover`
+
+Replay or sweep the durable-move journal to recover interrupted cross-device moves.
+
+A crash midway through a cross-device rollback move can leave the durable-move
+JSONL journal with unfinished `started`/`copied` entries (and possibly orphan
+files on disk). Reconciliation is **not** automatic — run this command on demand
+(for example, after a crash) to sweep the journal and complete or roll back the
+interrupted moves.
+
+**Usage:**
+
+```bash
+file-organizer recover [OPTIONS]
+```
+
+**Options:**
+- `--journal PATH` — Path to the durable-move journal. Defaults to the shared undo journal.
+- `--dry-run` — Report planned recovery actions without mutating the journal or disk.
+
+**Examples:**
+
+```bash
+# Sweep the default journal
+file-organizer recover
+
+# Preview what recovery would do, without touching disk
+file-organizer recover --dry-run
+
+# Recover from a specific journal file
+file-organizer recover --journal /path/to/durable_move.jsonl
+```
+
+**Behavior notes:**
+
+- `--dry-run` calls the same `plan_recovery_actions` planner the real sweep uses, so the preview can never drift from the actual run.
+- If the journal does not exist or has no entries, the command reports that there is nothing to recover and exits successfully.
+- Transient filesystem errors during the sweep (permissions, disk full) surface as a clean error message, not a stack trace.
+
+---
+
 ### `history`
 
 View operation history.
@@ -1476,7 +1517,7 @@ file-organizer autotag batch ~/Documents --pattern "*.pdf" --json
 
 ---
 
-## `file-organizer-desktop` — Native Desktop Window
+## `fo desktop` — Native Desktop Window
 
 Launch the File Organizer desktop application as a native OS window powered by
 pywebview.
@@ -1484,13 +1525,20 @@ pywebview.
 **Usage:**
 
 ```bash
-file-organizer-desktop
+file-organizer desktop [OPTIONS]
+# Or using the short alias:
+fo desktop [OPTIONS]
 ```
+
+**Options:**
+
+- `--title TEXT` — Window title bar text (default: `File Organizer`)
+- `--width INTEGER` — Initial window width in logical pixels (default: `1280`)
+- `--height INTEGER` — Initial window height in logical pixels (default: `800`)
 
 The command starts the FastAPI web UI on a random free port in a background
 thread, waits up to 10 seconds for the server to become ready, then opens a
-native OS window (WebKit on macOS, Edge WebView2 on Windows, WebKitGTK on
-Linux) pointing at the local server.
+native OS window pointing at the local server.
 
 The process exits cleanly when the window is closed; no background server is
 left running.
@@ -1501,17 +1549,57 @@ left running.
 - Ollama running with at least one model pulled
 - Linux: `sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1`
 
+!!! note
+    The legacy standalone `file-organizer-desktop` entry point is still supported as a backward-compatibility alias, but the unified `fo desktop` subcommand is preferred.
+
 **Examples:**
 
 ```bash
-# Start the desktop window
-file-organizer-desktop
+# Start the desktop window with default settings
+fo desktop
 
-# Start with Ollama running in the background
-ollama serve & file-organizer-desktop
+# Start with a custom title and window dimensions
+fo desktop --title "My Personal Organizer" --width 1024 --height 768
 ```
 
 See [Desktop App Guide](desktop-app.md) for full documentation.
+
+---
+
+## `fo docs` — Project Documentation
+
+Build or serve the local project documentation using mkdocs.
+
+**Usage:**
+
+```bash
+file-organizer docs [OPTIONS]
+# Or using the short alias:
+fo docs [OPTIONS]
+```
+
+**Options:**
+
+- `--build, -b` — Compile the documentation to HTML instead of starting the live-reload server (default: false)
+- `--host TEXT` — Bind address for the docs server (default: `127.0.0.1`)
+- `--port INTEGER` — Port number for the docs server (default: `8001`)
+
+**Prerequisites:**
+
+- `pip install "local-file-organizer[docs]"` (installs mkdocs + mkdocs-material)
+
+**Examples:**
+
+```bash
+# Start the live-reload documentation server at http://127.0.0.1:8001/
+fo docs
+
+# Start the server on a custom port and bind address
+fo docs --host 0.0.0.0 --port 9000
+
+# Build the static HTML documentation to the site/ directory
+fo docs --build
+```
 
 ---
 

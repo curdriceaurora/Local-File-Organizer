@@ -7,11 +7,16 @@ organisation rules.
 
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+from file_organizer.cli.path_validation import resolve_cli_path
 
 rules_app = typer.Typer(
     name="rules",
@@ -23,7 +28,7 @@ console = Console()
 
 @rules_app.command(name="list")
 def rules_list(
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set name."),
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set name.")] = "default",
 ) -> None:
     """List all rules in a rule set."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -75,20 +80,27 @@ def rules_sets() -> None:
 
 @rules_app.command(name="add")
 def rules_add(
-    name: str = typer.Argument(..., help="Rule name."),
-    extension: str | None = typer.Option(
-        None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."
-    ),
-    pattern: str | None = typer.Option(None, "--pattern", help="Filename glob pattern."),
-    action: str = typer.Option(
-        "move",
-        "--action",
-        "-a",
-        help="Action type (move, rename, tag, categorize, archive, copy, delete).",
-    ),
-    destination: str = typer.Option("", "--dest", "-d", help="Destination path or pattern."),
-    priority: int = typer.Option(0, "--priority", "-p", help="Rule priority (higher = first)."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name.")],
+    extension: Annotated[
+        str | None,
+        typer.Option("--ext", help="File extension filter (e.g. '.pdf,.docx')."),
+    ] = None,
+    pattern: Annotated[str | None, typer.Option("--pattern", help="Filename glob pattern.")] = None,
+    action: Annotated[
+        str,
+        typer.Option(
+            "--action",
+            "-a",
+            help="Action type (move, rename, tag, categorize, archive, copy, delete).",
+        ),
+    ] = "move",
+    destination: Annotated[
+        str, typer.Option("--dest", "-d", help="Destination path or pattern.")
+    ] = "",
+    priority: Annotated[
+        int, typer.Option("--priority", "-p", help="Rule priority (higher = first).")
+    ] = 0,
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Add a new rule to a rule set."""
     from file_organizer.services.copilot.rules.models import (
@@ -127,8 +139,8 @@ def rules_add(
 
 @rules_app.command(name="remove")
 def rules_remove(
-    name: str = typer.Argument(..., help="Rule name to remove."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name to remove.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Remove a rule from a rule set."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -142,8 +154,8 @@ def rules_remove(
 
 @rules_app.command(name="toggle")
 def rules_toggle(
-    name: str = typer.Argument(..., help="Rule name to toggle."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name to toggle.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Toggle a rule's enabled/disabled state."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -159,16 +171,17 @@ def rules_toggle(
 
 @rules_app.command(name="preview")
 def rules_preview(
-    directory: Path = typer.Argument(..., help="Directory to preview against."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to evaluate."),
-    recursive: bool = typer.Option(
-        True, "--recursive/--no-recursive", help="Recurse into subdirectories."
-    ),
-    max_files: int = typer.Option(500, "--max-files", help="Maximum files to scan."),
+    directory: Annotated[Path, typer.Argument(help="Directory to preview against.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to evaluate.")] = "default",
+    recursive: Annotated[
+        bool, typer.Option("--recursive/--no-recursive", help="Recurse into subdirectories.")
+    ] = True,
+    max_files: Annotated[int, typer.Option("--max-files", help="Maximum files to scan.")] = 500,
 ) -> None:
     """Preview what rules would do (dry-run)."""
     from file_organizer.services.copilot.rules import PreviewEngine, RuleManager
 
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     mgr = RuleManager()
     rs = mgr.load_rule_set(rule_set)
 
@@ -204,11 +217,11 @@ def rules_preview(
 
 @rules_app.command(name="export")
 def rules_export(
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to export."),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Output file path."),
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to export.")] = "default",
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path.")] = None,
 ) -> None:
     """Export a rule set to YAML."""
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 
     from file_organizer.services.copilot.rules import RuleManager
 
@@ -217,7 +230,38 @@ def rules_export(
     content = yaml.dump(rs.to_dict(), default_flow_style=False, sort_keys=False)
 
     if output:
-        output.write_text(content, encoding="utf-8")
+        # A.cli: output file may not exist (we're creating it). The parent
+        # directory must exist and be a directory; if output itself already
+        # exists it must be a regular file, otherwise write_text() would
+        # raise IsADirectoryError after validation. Project F3: write via
+        # tempfile + os.replace so a mid-write crash or concurrent writer
+        # never leaves a half-written YAML export on disk.
+        output = resolve_cli_path(output, must_exist=False, must_be_dir=False)
+        if not output.parent.is_dir():
+            raise typer.BadParameter(f"Output directory does not exist: {output.parent}")
+        if output.exists() and not output.is_file():
+            raise typer.BadParameter(f"Output path is not a regular file: {output}")
+        tmp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=output.parent,
+                prefix=f".{output.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as tmp_file:
+                tmp_path = Path(tmp_file.name)
+                tmp_file.write(content)
+            os.replace(tmp_path, output)
+        except OSError as exc:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+            console.print(f"[red]Failed to write YAML: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
         console.print(f"[green]Exported '{rule_set}' to {output}[/green]")
     else:
         console.print(content)
@@ -225,17 +269,23 @@ def rules_export(
 
 @rules_app.command(name="import")
 def rules_import(
-    file: Path = typer.Argument(..., help="YAML file to import."),
-    rule_set: str | None = typer.Option(None, "--set", "-s", help="Override rule set name."),
+    file: Annotated[Path, typer.Argument(help="YAML file to import.")],
+    rule_set: Annotated[
+        str | None, typer.Option("--set", "-s", help="Override rule set name.")
+    ] = None,
 ) -> None:
     """Import a rule set from a YAML file."""
     import yaml
 
-    from file_organizer.services.copilot.rules import RuleManager, RuleSet
+    # A.cli: YAML file must exist and be a regular file. `must_be_dir=False`
+    # on its own only rejects directories *when must_be_dir=True*; we need
+    # an explicit is_file() guard to catch the dir-passed-to-import case
+    # before yaml.safe_load tries to read_text() it.
+    file = resolve_cli_path(file, must_exist=True, must_be_dir=False)
+    if not file.is_file():
+        raise typer.BadParameter(f"Input path is not a regular file: {file}")
 
-    if not file.exists():
-        console.print(f"[red]File not found: {file}[/red]")
-        raise typer.Exit(code=1)
+    from file_organizer.services.copilot.rules import RuleManager, RuleSet
 
     try:
         raw = yaml.safe_load(file.read_text(encoding="utf-8"))

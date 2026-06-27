@@ -10,12 +10,13 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
 from rich.table import Table  # pyre-ignore[21]
 
+from file_organizer.cli.path_validation import resolve_cli_path, validate_pair
 from file_organizer.config.path_manager import get_state_dir
 
 console = Console()
@@ -33,26 +34,45 @@ _DEFAULT_PID_FILE = _DEFAULT_PID_DIR / "daemon.pid"
 
 @daemon_app.command()
 def start(
-    watch_dir: Path | None = typer.Option(
-        None, "--watch-dir", "-w", help="Directory to watch for new files."
-    ),
-    output_dir: Path | None = typer.Option(
-        None, "--output-dir", "-o", help="Destination directory for organized files."
-    ),
-    foreground: bool = typer.Option(
-        False, "--foreground", "-f", help="Run in the foreground (blocking)."
-    ),
-    poll_interval: float = typer.Option(
-        1.0, "--poll-interval", help="Seconds between file-system polls."
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
+    watch_dir: Annotated[
+        Path | None,
+        typer.Option("--watch-dir", "-w", help="Directory to watch for new files."),
+    ] = None,
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", "-o", help="Destination directory for organized files."),
+    ] = None,
+    foreground: Annotated[
+        bool,
+        typer.Option("--foreground", "-f", help="Run in the foreground (blocking)."),
+    ] = False,
+    poll_interval: Annotated[
+        float,
+        typer.Option("--poll-interval", help="Seconds between file-system polls."),
+    ] = 1.0,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without moving files.")
+    ] = False,
 ) -> None:
     """Start the background file organization daemon."""
     from file_organizer.daemon.config import DaemonConfig
     from file_organizer.daemon.service import DaemonService
 
+    # A.cli: resolve + validate both paths. watch_dir must exist;
+    # output_dir is created on demand. Default "organized_output" is
+    # resolved too so it passes through validate_pair — otherwise
+    # ``--watch-dir .`` with no ``--output-dir`` would write into the
+    # watched tree, which is exactly the nested pair we're trying to reject.
+    if watch_dir is not None:
+        watch_dir = resolve_cli_path(watch_dir, must_exist=True, must_be_dir=True)
+    if output_dir is None:
+        output_dir = resolve_cli_path(Path("organized_output"), must_exist=False, must_be_dir=True)
+    else:
+        output_dir = resolve_cli_path(output_dir, must_exist=False, must_be_dir=True)
+    if watch_dir is not None:
+        validate_pair(watch_dir, output_dir)
     watch_dirs = [watch_dir] if watch_dir else []
-    out = output_dir or Path("organized_output")
+    out = output_dir
 
     config = DaemonConfig(
         watch_directories=watch_dirs,
@@ -91,11 +111,17 @@ def stop() -> None:
         console.print("[yellow]No PID file found — daemon may not be running.[/yellow]")
         raise typer.Exit(code=1)
 
-    pid = mgr.read_pid(_DEFAULT_PID_FILE)
-    if pid is None:
+    # F2 (hardening roadmap #159): use ``read_pid_record`` so we parse
+    # both JSON records written by ``write_pid_record`` and legacy
+    # text-only files. ``read_pid`` only handles the legacy int format
+    # and would silently return None for a JSON record, causing stop to
+    # delete a valid PID file and leave the daemon orphaned.
+    record = mgr.read_pid_record(_DEFAULT_PID_FILE)
+    if record is None:
         console.print("[yellow]Could not read PID from file.[/yellow]")
         mgr.remove_pid(_DEFAULT_PID_FILE)
         raise typer.Exit(code=1)
+    pid = record.pid
 
     console.print(f"Sending SIGTERM to PID {pid}...")
     try:
@@ -119,7 +145,9 @@ def status() -> None:
 
     mgr = PidFileManager()
     running = mgr.is_running(_DEFAULT_PID_FILE)
-    pid = mgr.read_pid(_DEFAULT_PID_FILE) if _DEFAULT_PID_FILE.exists() else None
+    # F2: ``read_pid_record`` handles both JSON and legacy formats.
+    record = mgr.read_pid_record(_DEFAULT_PID_FILE) if _DEFAULT_PID_FILE.exists() else None
+    pid = record.pid if record is not None else None
 
     table = Table(title="Daemon Status")
     table.add_column("Property", style="bold")
@@ -138,13 +166,17 @@ def status() -> None:
 
 @daemon_app.command()
 def watch(
-    watch_dir: Path = typer.Argument(..., help="Directory to watch for file events."),
-    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Seconds between polls."),
+    watch_dir: Annotated[Path, typer.Argument(help="Directory to watch for file events.")],
+    poll_interval: Annotated[
+        float, typer.Option("--poll-interval", help="Seconds between polls.")
+    ] = 1.0,
 ) -> None:
     """Watch a directory and stream file events (Ctrl+C to stop)."""
     from file_organizer.watcher.config import WatcherConfig
     from file_organizer.watcher.monitor import FileMonitor
 
+    # A.cli: must exist + must be a dir — watcher would fail later otherwise.
+    watch_dir = resolve_cli_path(watch_dir, must_exist=True, must_be_dir=True)
     console.print(f"[bold]Watching[/bold] {watch_dir}  (Ctrl+C to stop)")
 
     config = WatcherConfig(
@@ -160,7 +192,7 @@ def watch(
             for event in events:
                 event_type = getattr(event, "event_type", "unknown")
                 event_path = getattr(event, "path", getattr(event, "src_path", "?"))
-                console.print(f"  [{event_type}] {event_path}")
+                console.print(f"  [{event_type}] {event_path}", markup=False)
     except KeyboardInterrupt:
         console.print("\n[dim]Stopped watching.[/dim]")
     finally:
@@ -169,13 +201,19 @@ def watch(
 
 @daemon_app.command()
 def process(
-    input_dir: Path = typer.Argument(..., help="Directory containing files to process."),
-    output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
+    input_dir: Annotated[Path, typer.Argument(help="Directory containing files to process.")],
+    output_dir: Annotated[Path, typer.Argument(help="Destination directory for organized files.")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without moving files.")
+    ] = False,
 ) -> None:
     """One-shot: organize files and display a summary."""
     from file_organizer.core.organizer import FileOrganizer
 
+    # A.cli: same input/output contract as `fo organize`.
+    input_dir = resolve_cli_path(input_dir, must_exist=True, must_be_dir=True)
+    output_dir = resolve_cli_path(output_dir, must_exist=False, must_be_dir=True)
+    validate_pair(input_dir, output_dir)
     console.print(f"[bold]Processing[/bold] {input_dir} -> {output_dir}")
     if dry_run:
         console.print("[yellow]Dry-run mode — no files will be moved.[/yellow]")

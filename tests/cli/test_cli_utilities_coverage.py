@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.utilities — uncovered lines."""
+"""Coverage tests for cli.utilities — uncovered lines."""
 
 from __future__ import annotations
 
@@ -47,7 +47,9 @@ class TestSearchLimitZero:
         app = _make_app()
         missing = tmp_path / "missing"
         result = runner.invoke(app, ["search", "foo", str(missing), "--limit", "0"])
-        assert result.exit_code == 1
+        # A.cli switched invalid-path errors from `typer.Exit(1)` to
+        # `typer.BadParameter` which exits 2 (POSIX usage-error convention).
+        assert result.exit_code == 2
         assert "does not exist" in " ".join(result.output.split())
 
     def test_limit_zero_still_validates_type_filter(self, tmp_path: Path) -> None:
@@ -66,8 +68,9 @@ class TestSearchDirectoryNotExist:
         app = _make_app()
         bad = tmp_path / "nonexistent"
         result = runner.invoke(app, ["search", "foo", str(bad)])
-        assert result.exit_code == 1
-        # Typer may wrap output with extra whitespace; normalise before checking.
+        # A.cli: `typer.BadParameter` exits 2 (POSIX usage-error convention)
+        # instead of the previous custom exit 1 path.
+        assert result.exit_code == 2
         normalised = " ".join(result.output.split())
         assert "does not exist" in normalised
 

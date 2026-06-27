@@ -7,12 +7,14 @@ import os
 import time
 import warnings
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
 
-import file_organizer.cli._globals as _g
-from file_organizer.utils import is_hidden
+from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.cli.state import _get_state
+from file_organizer.core.path_guard import safe_walk
 
 console = Console()
 
@@ -259,18 +261,14 @@ def _do_semantic_search(
     max_docs = max(limit * 10, 200)
     type_exts = TYPE_EXTENSIONS.get(type_filter) if type_filter is not None else None
 
-    gen = search_dir.rglob("*") if recursive else search_dir.glob("*")
+    gen = safe_walk(search_dir, recursive=recursive)
     for entry in gen:
         if len(documents) >= max_docs:
             break
         rel_entry = entry.relative_to(search_dir)
-        if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
-            continue
         if type_exts is not None and _normalized_extension(entry) not in type_exts:
             continue
-        # search_dir is the trusted walked root: anchor the read so a symlink
-        # swapped into any intermediate directory under it is refused (#286).
-        text = read_text_safe(entry, scan_root=search_dir)
+        text = read_text_safe(entry)
         doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
         documents.append(doc)
         sem_paths.append(entry)
@@ -310,9 +308,9 @@ def _do_default_search(
     is_glob = any(c in query for c in ("*", "?", "["))
 
     if is_glob:
-        candidates = search_dir.rglob(query) if recursive else search_dir.glob(query)
+        candidates = safe_walk(search_dir, pattern=query, recursive=recursive)
     else:
-        candidates = search_dir.rglob("*") if recursive else search_dir.glob("*")
+        candidates = safe_walk(search_dir, recursive=recursive)
 
     query_lower = query.lower()
     matches: list[Path] = []
@@ -337,24 +335,29 @@ def _do_default_search(
 
 
 def search(
-    query: str = typer.Argument(..., help="Search query (glob pattern or keyword)."),
-    directory: Path = typer.Argument(".", help="Directory to search in.", exists=False),
-    type_filter: str | None = typer.Option(
-        None,
-        "--type",
-        "-t",
-        help="Filter by type: text, image, video, audio, archive.",
-    ),
-    limit: int = typer.Option(50, "--limit", "-n", help="Max results to show."),
-    recursive: bool = typer.Option(True, help="Search subdirectories."),
-    json_out: bool = typer.Option(False, "--json", help="Output as JSON array."),
-    semantic: bool = typer.Option(
-        False,
-        "--semantic",
-        help="Use hybrid BM25+vector semantic search instead of filename matching.",
-    ),
+    query: Annotated[str, typer.Argument(help="Search query (glob pattern or keyword).")],
+    directory: Annotated[Path, typer.Argument(help="Directory to search in.")] = Path("."),
+    type_filter: Annotated[
+        str | None,
+        typer.Option(
+            "--type",
+            "-t",
+            help="Filter by type: text, image, video, audio, archive.",
+        ),
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Max results to show.")] = 50,
+    recursive: Annotated[bool, typer.Option(help="Search subdirectories.")] = True,
+    json_out: Annotated[bool, typer.Option("--json", help="Output as JSON array.")] = False,
+    semantic: Annotated[
+        bool,
+        typer.Option(
+            "--semantic",
+            help="Use hybrid BM25+vector semantic search instead of filename matching.",
+        ),
+    ] = False,
 ) -> None:
     """Search for files by name pattern with optional type filtering."""
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     search_dir, should_exit = _validate_search_params(limit, directory, type_filter)
     if should_exit:
         _output_search_results([], json_out)
@@ -371,9 +374,11 @@ def search(
 
 
 def analyze(
-    file_path: Path = typer.Argument(..., help="File to analyze."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show additional details."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    file_path: Annotated[Path, typer.Argument(help="File to analyze.")],
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Show additional details.")
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Analyze a file using AI and show description, category, and confidence."""
     from file_organizer.services.analyzer import (
@@ -383,9 +388,13 @@ def analyze(
         truncate_content,
     )
 
-    # Check file exists and is a regular file
+    # A.cli: `resolve_cli_path(must_be_dir=False)` accepts any existing
+    # path (file, dir, socket, fifo). Keep the explicit is_file() guard so
+    # directories and special files get a clear "not a regular file"
+    # error rather than a later decode failure.
+    file_path = resolve_cli_path(file_path, must_exist=True, must_be_dir=False)
     if not file_path.is_file():
-        console.print(f"[red]Error: File '{file_path}' not found.[/red]")
+        console.print(f"[red]Error: File '{file_path}' is not a regular file.[/red]")
         raise typer.Exit(code=1)
 
     # Detect binary files before reading as text
@@ -439,7 +448,7 @@ def analyze(
     elapsed = time.monotonic() - start
 
     # Output
-    if json_output or _g.json_output:
+    if json_output or _get_state().json_output:
         typer.echo(
             json_mod.dumps(
                 {
@@ -455,7 +464,7 @@ def analyze(
         console.print(f"[bold]Description:[/bold] {description}")
         console.print(f"[bold]Confidence:[/bold] {confidence:.0%}")
 
-        if verbose or _g.verbose:
+        if verbose or _get_state().verbose:
             console.print(f"[bold]Model:[/bold] {config.name}")
             console.print(f"[bold]Processing time:[/bold] {elapsed:.2f}s")
             console.print(f"[bold]Content length:[/bold] {content_length} chars")

@@ -128,9 +128,14 @@ def test_search_empty_directory(tmp_path: Path):
 
 
 def test_search_nonexistent_directory():
-    """Search in a nonexistent directory exits 1 with 'does not exist' message."""
+    """Search in a nonexistent directory exits 2 (typer ``BadParameter`` /
+    POSIX usage-error convention) with a 'does not exist' message. A.cli
+    moved invalid-path errors from a custom ``typer.Exit(1)`` path to
+    typer-native ``BadParameter`` so typer's usage-line renderer formats
+    the message consistently across commands.
+    """
     result = runner.invoke(app, ["search", "*", "/nonexistent/path/xyz"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "does not exist" in result.output.lower()
 
 

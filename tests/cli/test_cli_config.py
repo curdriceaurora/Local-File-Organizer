@@ -27,7 +27,7 @@ def _make_config(
     device: str = "auto",
     check_on_startup: bool = True,
     interval_hours: int = 24,
-    repo: str = "curdriceaurora/Local-File-Organizer",
+    repo: str = "curdriceaurora/fo-core",
     include_prereleases: bool = False,
 ) -> MagicMock:
     """Return a mock AppConfig object."""
@@ -136,15 +136,25 @@ class TestConfigEdit:
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_device(self, mock_cls: MagicMock) -> None:
+        # Step 3 swapped the validation-error format from "device must be
+        # one of [...]" to the hint-rich "Invalid value 'tpu' for device.
+        # Valid values: ..." style (lists valid values + "did you mean").
+        # Use wrap-immune word checks since Rich may break long messages.
         result = runner.invoke(app, ["config", "edit", "--device", "tpu"])
         assert result.exit_code == 1
-        assert "device must be one of" in result.output
+        normalized = " ".join(result.output.lower().split())
+        assert "invalid value" in normalized
+        assert "device" in normalized
+        assert "'tpu'" in normalized
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_methodology(self, mock_cls: MagicMock) -> None:
         result = runner.invoke(app, ["config", "edit", "--methodology", "custom"])
         assert result.exit_code == 1
-        assert "methodology must be one of" in result.output
+        normalized = " ".join(result.output.lower().split())
+        assert "invalid value" in normalized
+        assert "methodology" in normalized
+        assert "'custom'" in normalized
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_valid_device(self, mock_cls: MagicMock) -> None:

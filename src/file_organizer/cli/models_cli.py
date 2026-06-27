@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.console import Console
 
@@ -12,9 +14,10 @@ model_app = typer.Typer(help="AI model management.")
 
 @model_app.command(name="list")
 def model_list(
-    type_filter: str | None = typer.Option(
-        None, "--type", help="Filter by model type (text, vision, audio)."
-    ),
+    type_filter: Annotated[
+        str | None,
+        typer.Option("--type", help="Filter by model type (text, vision, audio)."),
+    ] = None,
 ) -> None:
     """List available AI models with install status."""
     from file_organizer.models.model_manager import ModelManager
@@ -25,15 +28,16 @@ def model_list(
 
 @model_app.command(name="pull")
 def model_pull(
-    name: str = typer.Argument(
-        ..., help="Model name to download (e.g. qwen2.5:3b-instruct-q4_K_M)."
-    ),
+    name: Annotated[
+        str,
+        typer.Argument(help="Model name to download (e.g. qwen2.5:3b-instruct-q4_K_M)."),
+    ],
 ) -> None:
     """Download an AI model via Ollama."""
     from file_organizer.models.model_manager import ModelManager
 
     mgr = ModelManager(console=console)
-    success = mgr.pull_model(name)
+    success = mgr.pull_model(name=name)
     if not success:
         raise typer.Exit(code=1)
 

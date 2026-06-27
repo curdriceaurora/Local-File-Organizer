@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.pipeline.orchestrator import PipelineConfig, PipelineOrchestrator
+from file_organizer.watcher.config import WatcherConfig
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
@@ -58,6 +61,45 @@ class TestWatchLoop:
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
             mock_process.assert_called_once_with(Path("/tmp/test.txt"))
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="symlinks require admin on Windows")
+    def test_watch_loop_resolves_symlinked_watch_root_for_trusted_root(self, tmp_path: Path):
+        """A symlinked watch directory must be resolved before use as
+        ``trusted_root``: ``SafeDir.open_root`` refuses a symlinked root
+        outright, so passing the raw configured symlink (e.g. macOS
+        ``/tmp`` -> ``/private/tmp``) would make every file under it fail
+        with "Refused to read symlinked file" instead of processing.
+        """
+        real_root = tmp_path / "real"
+        real_root.mkdir()
+        link_root = tmp_path / "link"
+        link_root.symlink_to(real_root)
+
+        config = PipelineConfig(
+            dry_run=True, watch_config=WatcherConfig(watch_directories=[link_root])
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
+
+        call_count = 0
+
+        def fake_get_events(max_size=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return [FakeEvent(path=link_root / "f.txt")]
+            orch._running = False
+            return []
+
+        mock_monitor.get_events = fake_get_events
+
+        with patch.object(orch, "process_file") as mock_process:
+            orch._watch_loop()
+            mock_process.assert_called_once_with(
+                link_root / "f.txt", trusted_root=real_root.resolve()
+            )
 
     def test_watch_loop_skips_directory_events(self):
         """Directory events should be skipped."""
@@ -222,3 +264,512 @@ class TestWatchLoopExecutor:
         with patch.object(orch._executor, "shutdown") as mock_shutdown:
             orch.stop()
             mock_shutdown.assert_called_once_with(wait=False)
+
+    def test_stop_drains_watch_workers_before_closing_stages(self):
+        """stop() waits for in-flight workers before closing stage resources.
+
+        Regression for #1285 review: ``shutdown(wait=False)`` lets already-
+        submitted ``process_file`` work keep running, so a stage's ``close()``
+        must not release resources while a worker is still in ``stage.process()``.
+        An in-flight future must complete before any ``stage.close()`` runs;
+        ``futures_wait`` guarantees this ordering deterministically (no sleep).
+        """
+        order: list[str] = []
+
+        def record_work() -> None:
+            order.append("work_done")
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                order.append("close")
+
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch._stages = [_ClosableStage()]
+
+        future = orch._executor.submit(record_work)
+        orch._watch_futures.add(future)
+        future.add_done_callback(orch._on_watch_future_done)
+
+        orch.stop()
+
+        # Worker drained (work_done) strictly before the stage was closed.
+        assert order == ["work_done", "close"]
+
+    def test_stop_skips_stage_close_when_workers_exceed_drain_timeout(self):
+        """stop() does not close stages if a worker outlives the drain timeout.
+
+        Regression for #1285 review: a bounded drain that timed out and then
+        closed stages anyway would reintroduce the closed-fd race for slow
+        (>timeout) workers. When futures remain un-drained, the close loop is
+        skipped (the fd is reclaimed at process exit) rather than raced.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch._stages = [_ClosableStage()]
+        # Simulate a still-running worker by registering a pending future.
+        orch._watch_futures.add(MagicMock())
+
+        # Patch the drain to report the worker as not finished within timeout.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()
+
+        mock_wait.assert_called_once()
+        # Stage close was skipped because the worker did not drain in time.
+        assert closed == []
+
+    def test_stop_defers_pool_cleanup_when_drain_times_out(self):
+        """processor_pool.cleanup() is deferred when the watch drain times out.
+
+        Regression for #1291 review: cleanup() previously ran BEFORE the drain,
+        so an in-flight legacy watch worker could still be using a pool processor
+        when it was released. It must be gated on a successful drain.
+        """
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch.processor_pool = MagicMock()
+        # Simulate a still-running worker.
+        orch._watch_futures.add(MagicMock())
+
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ):
+            orch.stop()
+
+        # Drain timed out -> cleanup deferred, not called.
+        orch.processor_pool.cleanup.assert_not_called()
+        assert orch._pending_pool_cleanup is True
+
+        # A later stop() with a clean drain retries the deferred cleanup.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=({object()}, set()),
+        ):
+            orch._watch_futures.clear()
+            orch.stop()
+
+        orch.processor_pool.cleanup.assert_called_once()
+        assert orch._pending_pool_cleanup is False
+
+    def test_stop_runs_pool_cleanup_after_clean_drain(self):
+        """processor_pool.cleanup() runs once the watch drain completes cleanly."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch.processor_pool = MagicMock()
+
+        orch.stop()
+
+        orch.processor_pool.cleanup.assert_called_once()
+        assert orch._pending_pool_cleanup is False
+
+    def test_stop_closes_stages_for_batch_only_callers(self):
+        """stop() closes stage resources even when start() was never called.
+
+        Regression for #1285 review: batch-mode callers (process_batch without
+        start()) leave _running False, so a stop() that returned early would
+        leak stage-owned fds. The close loop must run on this path too.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        # No start(): batch-only lifecycle, _running stays False.
+        assert orch._running is False
+        orch._stages = [_ClosableStage()]
+
+        orch.stop()
+        assert closed == ["close"]
+
+        # Idempotent: a second stop() does not double-close.
+        orch.stop()
+        assert closed == ["close"]
+
+    def test_second_stop_after_drain_timeout_still_skips_close(self):
+        """A second stop() re-checks workers and won't close under a live worker.
+
+        Regression for #1285 review: the first (watch-mode) stop() times out
+        draining, leaving _running False but _watch_futures populated. A second
+        stop() takes the not-running branch — it must re-check the still-running
+        futures rather than blindly closing stage resources, which would
+        reintroduce the closed-fd race the timeout path avoids.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        orch._stages = [_ClosableStage()]
+        # A worker that never finishes: stays in _watch_futures across stops.
+        orch._watch_futures.add(MagicMock())
+
+        # Drain always reports the worker as still running (exceeds timeout).
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()  # watch-mode path: times out, skips close
+            assert orch._running is False
+            orch.stop()  # not-running path: must re-check, still skip
+
+        # Re-checked on both calls; never closed under the live worker.
+        assert mock_wait.call_count == 2
+        assert closed == []
+
+    def test_on_watch_future_done_discards_under_lock(self):
+        """The done-callback removes the future via the lock-guarded path.
+
+        Regression for #1285 review: _watch_futures is mutated from executor
+        threads, so add/discard/snapshot must share a lock. Verify the callback
+        discards the tracked future (and is a no-op for an unknown one).
+        """
+        orch = self._make_orchestrator()
+        tracked = MagicMock()
+        with orch._watch_futures_lock:
+            orch._watch_futures.add(tracked)
+        orch._on_watch_future_done(tracked)
+        assert tracked not in orch._watch_futures
+
+        # Discarding a future that is not tracked is a safe no-op.
+        orch._on_watch_future_done(MagicMock())
+
+    def test_on_watch_future_done_logs_failed_future(self):
+        """A watch future that finished with an exception is logged and discarded.
+
+        Regression for #1291 review: the done-callback discarded futures without
+        observing exceptions, so process_file() failures vanished silently.
+        """
+        import logging
+        from concurrent.futures import Future
+
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
+
+        target = orch_logger
+        records = []
+
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.set_exception(RuntimeError("process_file boom"))
+
+            orch._on_watch_future_done(future)
+
+            # Discarded despite the failure ...
+            assert future not in orch._watch_futures
+            # ... and the failure was surfaced via the module logger.
+            assert any("process_file boom" in record.getMessage() for record in records)
+        finally:
+            target.setLevel(prev_level)
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
+
+    def test_on_watch_future_done_cancelled_future_not_logged(self):
+        """A cancelled watch future is discarded without touching .exception()."""
+        import logging
+        from concurrent.futures import Future
+
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
+
+        target = orch_logger
+        records = []
+
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.cancel()
+
+            orch._on_watch_future_done(future)
+
+            assert future not in orch._watch_futures
+            assert records == []
+        finally:
+            target.setLevel(prev_level)
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
+
+    def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
+        """Lazy buffer-pool init must not need the lifecycle lock.
+
+        Regression for #1285 review: ``stop()`` holds ``self._lock`` while
+        draining workers; if lazy ``buffer_pool`` init also took ``self._lock``,
+        a worker initializing the pool mid-shutdown would deadlock and the drain
+        would time out, wrongly skipping stage close. Init must use its own lock.
+        """
+        orch = self._make_orchestrator()
+        orch._buffer_pool = None
+        result: dict[str, object] = {}
+
+        def init_pool() -> None:
+            result["pool"] = orch.buffer_pool
+
+        # Hold the lifecycle lock, then init the pool from another thread.
+        with orch._lock:
+            worker = threading.Thread(target=init_pool)
+            worker.start()
+            worker.join(timeout=2.0)
+            assert not worker.is_alive(), (
+                "buffer_pool init blocked on the lifecycle lock held by stop()"
+            )
+
+        assert result.get("pool") is not None
+
+    def test_set_stages_resets_close_guard(self):
+        """Replacing stages re-arms the close guard so new stages are closed.
+
+        Regression for #1285 review: after one stop() closed a stage list, a
+        batch caller can set_stages() and run another batch without start(); the
+        next stop() must close the newly installed stages rather than no-op on a
+        stale ``_stages_closed`` guard.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            name = "closable"
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append("close")
+
+        orch = self._make_orchestrator()
+        orch._stages = [_ClosableStage()]
+        orch.stop()  # batch-only close of the first stage list
+        assert closed == ["close"]
+
+        # Replace stages at runtime; the guard must reset so the new stage closes.
+        orch.set_stages([_ClosableStage()])
+        orch.stop()
+        assert closed == ["close", "close"]
+
+    def test_stop_closes_retired_stages_replaced_via_set_stages(self):
+        """A stage retired by set_stages() is still closed on a later stop().
+
+        Regression for #1286: _close_stages() iterates only self._stages, so a
+        stage replaced via set_stages() before any close became unreachable and
+        leaked its fd. Retired stages must be tracked and closed by stop().
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        # Stage A is installed (and "used") but never closed before replacement.
+        orch.set_stages([_ClosableStage("a")])
+        # Replace with stage B at runtime: A is retired and must not be lost.
+        orch.set_stages([_ClosableStage("b")])
+
+        orch.stop()
+        # Both the retired (a) and the current (b) stage are closed.
+        assert sorted(closed) == ["a", "b"]
+
+    def test_set_stages_carryover_stage_closed_once(self):
+        """A stage carried over into the replacement list is closed only once.
+
+        Regression for #1289: set_stages([a]) then set_stages([a, b]) (extend /
+        reorder) must NOT retire `a` — it stays a current stage. Retiring it
+        anyway would close it twice on stop() (retired loop + current loop).
+        Only stages actually dropped from the new list are retired.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        # Extend: `a` is carried over (stays current), `b` is added.
+        orch.set_stages([a, _ClosableStage("b")])
+
+        orch.stop()
+        # `a` is closed exactly once (not double-closed); `b` once.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
+    def test_reinstalled_stage_closed_once(self):
+        """A stage dropped then reinstalled before stop() is closed only once.
+
+        Regression for #1289: set_stages([a]) -> set_stages([b]) retires `a`;
+        set_stages([a]) reinstalls it as current. Without purging it from the
+        retired list, stop() would close `a` twice (retired loop + current loop).
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        a = _ClosableStage("a")
+        orch.set_stages([a])
+        orch.set_stages([_ClosableStage("b")])  # `a` retired
+        orch.set_stages([a])  # `a` reinstalled — must be purged from retired
+
+        orch.stop()
+        # `a` closed once (current), `b` once (retired) — `a` not double-closed.
+        assert sorted(closed) == ["a", "b"]
+        assert closed.count("a") == 1
+
+    def test_second_stop_does_not_double_close_retired_stages(self):
+        """A repeated stop() does not re-close retired stages (list cleared).
+
+        Regression for #1286: clearing _retired_stages after a successful close
+        is what keeps a second stop() from double-closing a retired stage.
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        orch.set_stages([_ClosableStage("a")])
+        orch.set_stages([_ClosableStage("b")])
+
+        orch.stop()
+        assert sorted(closed) == ["a", "b"]
+
+        # Second stop() must not re-close the already-closed retired stage.
+        orch.stop()
+        assert sorted(closed) == ["a", "b"]
+
+    def test_stop_skips_retired_stage_close_when_drain_times_out(self):
+        """Retired stages are NOT closed while a watch worker is still live.
+
+        Regression for #1286: retired-stage closing must obey the same drain
+        safety as current-stage closing. When the drain times out (a worker is
+        still inside stage.process()), closing a retired stage's fd could race
+        the live worker, so the close loop — including retired stages — is
+        skipped and they remain queued for a later stop().
+        """
+        closed: list[str] = []
+
+        class _ClosableStage:
+            def __init__(self, label: str) -> None:
+                self.name = label
+                self._label = label
+
+            def process(self, context):  # pragma: no cover - not invoked here
+                return context
+
+            def close(self) -> None:
+                closed.append(self._label)
+
+        orch = self._make_orchestrator()
+        orch.set_stages([_ClosableStage("a")])
+        orch.set_stages([_ClosableStage("b")])  # retire "a"
+        orch._running = True
+        orch._watch_thread = MagicMock()
+        # Simulate a still-running worker by registering a pending future.
+        orch._watch_futures.add(MagicMock())
+
+        # Patch the drain to report the worker as not finished within timeout.
+        with patch(
+            "file_organizer.pipeline.orchestrator.futures_wait",
+            return_value=(set(), {object()}),
+        ) as mock_wait:
+            orch.stop()
+
+        mock_wait.assert_called_once()
+        # Neither the current nor the retired stage was closed during the race.
+        assert closed == []
+        # The retired stage stays queued for a future stop() that drains cleanly.
+        assert len(orch._retired_stages) == 1

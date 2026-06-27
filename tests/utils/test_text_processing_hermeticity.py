@@ -1,13 +1,14 @@
-"""Tests for NLTK test hermeticity (Issue #470).
+"""Tests for text-processing hermeticity (Issue #470, WP-4.4 #1234).
 
-Verifies that text processing tests pass in isolated environments
-without host NLTK corpus data.
+Verifies that text processing is fully offline and deterministic. As of WP-4.4 the
+module no longer depends on NLTK or any downloadable corpus — stopwords are vendored
+and stemming uses the pure-Python ``snowballstemmer`` package — so these tests now
+pass trivially in any environment (no corpus to install, no network to reach).
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -19,161 +20,117 @@ from file_organizer.utils.text_processing import (
     sanitize_filename,
 )
 
+pytestmark = pytest.mark.unit
 
-@pytest.mark.unit
-class TestNLTKHermeticity:
-    """Tests ensuring NLTK functionality works in isolated environments."""
+
+class TestOfflineHermeticity:
+    """Tests ensuring text processing works fully offline."""
 
     @pytest.mark.parametrize(
         "text,expected_contains",
         [
-            ("Hello World Test", ["hello", "world"]),
+            ("Hello World Test", ["hello", "world", "test"]),
             ("CamelCaseTest", ["camel", "case", "test"]),
             ("Multiple   Spaces", ["multiple", "spaces"]),
         ],
     )
-    def test_clean_text_without_nltk_corpus(
+    def test_clean_text_offline(
         self,
         text: str,
         expected_contains: list[str],
         isolated_nltk_environment: None,
     ) -> None:
-        """Test clean_text works without NLTK corpus in isolated env."""
-        result = clean_text(text, max_words=5)
+        """clean_text works fully offline; surface forms preserved (lemmatize=False)."""
+        result = clean_text(text, max_words=5, lemmatize=False)
 
-        # Result should be non-empty
+        # Result should be non-empty and lowercase.
         assert result
-
-        # Result should be lowercase
         assert result == result.lower()
 
-        # Result should contain underscores for word separation
-        assert "_" in result or len(result.split("_")) >= 1
-
-        # Result should contain the expected words (possibly with underscores)
-        result_words = set(result.lower().split("_"))
+        # Expected words present.
+        result_words = set(result.split("_"))
         for expected_word in expected_contains:
             assert expected_word in result_words, (
                 f"Expected '{expected_word}' in result '{result}' (words: {result_words})"
             )
 
-    def test_extract_keywords_fallback_without_nltk(
+    def test_extract_keywords_offline(
         self,
         isolated_nltk_environment: None,
     ) -> None:
-        """Test extract_keywords uses fallback without NLTK."""
+        """extract_keywords works fully offline."""
         text = "python programming language development tools"
         keywords = extract_keywords(text, top_n=3)
 
-        # Should return at most 3 keywords
-        assert len(keywords) == 3  # 5 non-stop-words, top_n=3 → exactly 3 returned
+        # All words are equal frequency; deterministic tie-break keeps first appearance.
+        assert keywords == ["python", "programming", "language"]
 
-        # Keywords should be from the input text
-        for keyword in keywords:
-            assert keyword in text.lower()
-
-    def test_get_unwanted_words_without_nltk(
+    def test_get_unwanted_words_offline(
         self,
         isolated_nltk_environment: None,
     ) -> None:
-        """Test get_unwanted_words works without NLTK stopwords."""
+        """get_unwanted_words includes vendored stopwords without any corpus."""
         unwanted = get_unwanted_words()
 
-        # Should still return a set of unwanted words
         assert isinstance(unwanted, set)
         assert len(unwanted) > 0
-
-        # Should contain built-in unwanted words
+        # Vendored stopwords are always present.
         assert "the" in unwanted
         assert "and" in unwanted
         assert "a" in unwanted
 
-    def test_sanitize_filename_without_nltk(
+    def test_sanitize_filename_offline(
         self,
         isolated_nltk_environment: None,
     ) -> None:
-        """Test sanitize_filename works without NLTK."""
+        """sanitize_filename works fully offline."""
         name = "Test Document Name 2025"
         result = sanitize_filename(name)
 
-        # Should be non-empty
         assert result
-
-        # Should be lowercase
         assert result == result.lower()
-
-        # Should not contain special characters
         assert all(c.isalnum() or c == "_" for c in result)
 
-    def test_ensure_nltk_data_in_isolated_env(
+    def test_ensure_nltk_data_is_noop(
         self,
         isolated_nltk_environment: None,
     ) -> None:
-        """Test ensure_nltk_data handles missing NLTK gracefully."""
-        # Should not raise an exception
-        ensure_nltk_data()
-
-        # Should complete without creating .config directory
-        config_path = Path.home() / ".config"
-        if config_path.exists():
-            # If .config exists, ensure it's not a new creation from this test
-            # (This is a soft check - we mainly care that the function doesn't crash)
-            pass
+        """ensure_nltk_data is a no-op that does not raise or touch the network."""
+        with patch("file_organizer.utils.text_processing.logger") as mock_logger:
+            assert ensure_nltk_data() is None
+            mock_logger.warning.assert_not_called()
+            mock_logger.info.assert_not_called()
 
 
-@pytest.mark.unit
-class TestNLTKMockingCompleteness:
-    """Tests verifying NLTK mocking is complete for all code paths."""
+class TestDeterministicBehavior:
+    """Tests verifying deterministic, offline NLP behavior."""
 
-    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.word_tokenize")
-    @patch("file_organizer.utils.text_processing.stopwords")
-    @patch("file_organizer.utils.text_processing.WordNetLemmatizer")
-    def test_clean_text_with_mocked_nltk(
-        self,
-        mock_lemmatizer_cls: MagicMock,
-        mock_stopwords: MagicMock,
-        mock_tokenize: MagicMock,
-    ) -> None:
-        """Test clean_text works with comprehensive NLTK mocking."""
-        # Setup mocks
-        mock_tokenize.return_value = ["hello", "world", "test"]
-        mock_stopwords.words.return_value = ["the", "a"]
+    def test_clean_text_stems_deterministically(self) -> None:
+        """Default stemming is deterministic and offline."""
+        # running -> run, files -> file, organized -> organiz
+        result = clean_text("running files organized", remove_unwanted=False)
+        assert result == "run_file_organiz"
+        # Repeated call is identical.
+        assert result == clean_text("running files organized", remove_unwanted=False)
 
-        mock_lemmatizer = MagicMock()
-        mock_lemmatizer.lemmatize.side_effect = lambda x: x
-        mock_lemmatizer_cls.return_value = mock_lemmatizer
+    def test_extract_keywords_deterministic(self) -> None:
+        """Frequency-ranked keywords are deterministic."""
+        text = "python test code testing python"
+        first = extract_keywords(text, top_n=2)
+        second = extract_keywords(text, top_n=2)
+        assert first == second
+        # 'python' appears twice -> ranked first; 'testing' (>3 chars) next.
+        assert first[0] == "python"
 
-        # Test clean_text
-        clean_text("hello world test", max_words=5)
+    def test_extract_keywords_tie_break_is_first_appearance(self) -> None:
+        """Equal-frequency words rank by first appearance (explicit tie-break).
 
-        # Verify mocks were called
-        mock_tokenize.assert_called()
-
-    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.word_tokenize")
-    @patch("nltk.probability.FreqDist", create=True)
-    def test_extract_keywords_with_mocked_nltk(
-        self,
-        mock_freqdist_cls: MagicMock,
-        mock_tokenize: MagicMock,
-    ) -> None:
-        """Test extract_keywords works with comprehensive NLTK mocking."""
-        # Setup mocks
-        mock_tokenize.return_value = ["python", "test", "code", "testing"]
-
-        mock_freqdist_instance = MagicMock()
-        mock_freqdist_instance.most_common.return_value = [
-            ("python", 2),
-            ("test", 1),
-        ]
-        mock_freqdist_cls.return_value = mock_freqdist_instance
-
-        # Test extract_keywords
-        extract_keywords("python test code testing", top_n=2)
-
-        # Verify mocks were called
-        mock_tokenize.assert_called()
+        ``alpha`` and ``beta`` each occur twice; ``gamma``/``delta`` once. The two
+        winners must be ordered by where they first appear, not by an arbitrary
+        ``Counter`` tie order — guarding the determinism the PR introduces.
+        """
+        keywords = extract_keywords("alpha beta alpha gamma beta delta", top_n=2)
+        assert keywords == ["alpha", "beta"]
 
 
 if __name__ == "__main__":

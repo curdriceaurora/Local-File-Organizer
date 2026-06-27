@@ -29,6 +29,11 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v6
+        with:
+          # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
+          # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -37,14 +42,6 @@ jobs:
         run: |
           pip install -e ".[dev,search]"
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run test shard
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -57,7 +54,7 @@ jobs:
             --timeout=30 -n=auto --override-ini="addopts="
           mv .coverage .coverage.shard-${{ matrix.shard }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: daily-coverage-${{ matrix.python-version }}-${{ matrix.shard }}
           path: .coverage.shard-${{ matrix.shard }}
@@ -103,14 +100,6 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         # CI Full's cross-platform contract: validate the portable ci/smoke subset on macOS.
         run: pytest tests/ --strict-markers --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"
@@ -131,14 +120,6 @@ jobs:
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
         # in TestBM25Index, TestVectorIndexRecall, TestHybridRetriever, and TestSemanticSearch.
         run: pip install -e ".[dev,search]"
-      - name: Cache NLTK data
-        uses: actions/cache@v5
-        with:
-          path: ~/nltk_data
-          key: nltk-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: nltk-${{ runner.os }}-
-      - name: Download NLTK data
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
         # CI Full's cross-platform contract: validate the portable ci/smoke subset on Windows.
         # -n=auto intentionally omitted: xdist worker shutdown on Windows propagates
