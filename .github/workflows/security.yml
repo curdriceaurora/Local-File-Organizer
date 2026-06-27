@@ -26,10 +26,18 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pip-audit
-        run: pip install pip-audit
-      - name: Audit dependencies
-        run: pip-audit -r <(pip install -e . && pip freeze)
-        continue-on-error: true
+        run: pip install pip-audit pyyaml
+      - name: Install project (for accurate dependency resolution)
+        run: |
+          for attempt in 1 2 3; do
+            pip install -e . && break
+            echo "pip install failed (attempt $attempt), retrying in 5s..."
+            sleep 5
+          done
+      - name: Run pip-audit
+        run: pip-audit --format json -o .pip-audit.json || true
+      - name: Gate pip-audit findings against accepted risks
+        run: python .claude/scripts/pip_audit_gate.py --audit .pip-audit.json
 
   bandit-scan:
     runs-on: ubuntu-latest

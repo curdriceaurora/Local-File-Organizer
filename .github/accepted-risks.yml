@@ -1,0 +1,68 @@
+# Accepted risk allowlist for scripts/pip_audit_gate.py (WP-6.3, #1242).
+#
+# Each entry suppresses ONE pip-audit finding (matched by package name +
+# vulnerability id) from failing the gate. Every entry MUST have a
+# `reason` and a `tracking_issue` — no silent suppressions.
+#
+# Remove an entry once the underlying package is upgraded past the fix
+# version; the gate will then start failing again if the same id
+# resurfaces (e.g. a regression), which is the intended behavior.
+
+risks:
+  - package: pillow
+    vulnerability_id: PYSEC-2026-165
+    reason: >
+      pyproject.toml pins Pillow~=10.0; the fix requires bumping to
+      12.x, a two-major-version jump used across 10+ files for image
+      processing/dedup. Needs its own compatibility-audit PR.
+    tracking_issue: "#1342"
+
+  - package: pillow
+    vulnerability_id: CVE-2026-25990
+    reason: "Same Pillow 10.x->12.x gap as PYSEC-2026-165."
+    tracking_issue: "#1342"
+
+  - package: pillow
+    vulnerability_id: CVE-2026-40192
+    reason: "Same Pillow 10.x->12.x gap as PYSEC-2026-165."
+    tracking_issue: "#1342"
+
+  - package: pillow
+    vulnerability_id: CVE-2026-42310
+    reason: "Same Pillow 10.x->12.x gap as PYSEC-2026-165."
+    tracking_issue: "#1342"
+
+  - package: pillow
+    vulnerability_id: CVE-2026-42311
+    reason: "Same Pillow 10.x->12.x gap as PYSEC-2026-165."
+    tracking_issue: "#1342"
+
+  - package: pip
+    vulnerability_id: PYSEC-2026-196
+    reason: >
+      pip itself is the CI runner's installed build tool, scanned
+      incidentally by pip-audit's environment scan — it is not a
+      dependency this project pins via pyproject.toml. Upgrading the
+      runner image's pip is an infra change, not an application
+      dependency change.
+    tracking_issue: "#1343"
+
+  - package: pip
+    vulnerability_id: CVE-2025-8869
+    reason: "Same CI-runner-pip gap as PYSEC-2026-196."
+    tracking_issue: "#1343"
+
+  - package: pip
+    vulnerability_id: CVE-2026-1703
+    reason: "Same CI-runner-pip gap as PYSEC-2026-196."
+    tracking_issue: "#1343"
+
+  - package: pip
+    vulnerability_id: CVE-2026-3219
+    reason: "Same CI-runner-pip gap as PYSEC-2026-196."
+    tracking_issue: "#1343"
+
+  - package: pip
+    vulnerability_id: CVE-2026-6357
+    reason: "Same CI-runner-pip gap as PYSEC-2026-196."
+    tracking_issue: "#1343"
