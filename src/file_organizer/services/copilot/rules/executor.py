@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from loguru import logger
 from file_organizer.history.models import OperationType
 from file_organizer.services.copilot.rules.actions import (
     ConflictStrategy,
+    LinkResult,
     apply_hardlink,
     apply_symlink,
     copy_file,
@@ -295,7 +297,7 @@ class RuleExecutor:
         destination: str,
         base_dir: Path,
         operation_type: OperationType,
-        fn,
+        fn: Callable[[Path, Path, ConflictStrategy], LinkResult],
         undo_manager: UndoManager,
         transaction_id: str,
     ) -> ExecutionResult:
