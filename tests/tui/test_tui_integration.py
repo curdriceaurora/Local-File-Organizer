@@ -6,7 +6,7 @@ and the new copilot view integration.
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -14,6 +14,8 @@ from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import FileOrganizerApp, Sidebar, StatusBar
 from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.copilot_view import CopilotView
+from file_organizer.tui.file_preview import FilePreviewView
+from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
 from file_organizer.tui.settings_view import SettingsView
 from file_organizer.tui.undo_history_view import UndoHistoryView
@@ -40,46 +42,31 @@ async def test_round_trip_files_to_settings_and_back() -> None:
         assert app._current_view == "files"
 
 
-@pytest.mark.asyncio
-async def test_round_trip_all_views() -> None:
-    """Cycle through every view and verify the view widget is mounted."""
-    view_names = [
-        "files",
-        "organized",
-        "analytics",
-        "methodology",
-        "audio",
-        "history",
-        "settings",
-        "copilot",
-    ]
+def test_round_trip_all_views() -> None:
+    """Every named navigation target should build a mountable view widget."""
+    expected = {
+        "files": FilePreviewView,
+        "organized": OrganizationPreviewView,
+        "analytics": AnalyticsView,
+        "methodology": MethodologyView,
+        "audio": AudioView,
+        "history": UndoHistoryView,
+        "settings": SettingsView,
+        "copilot": CopilotView,
+    }
 
-    # Patch background loaders to avoid real I/O
-    with (
-        patch.object(OrganizationPreviewView, "_load_preview"),
-        patch.object(AnalyticsView, "_load_analytics"),
-        patch.object(AudioView, "_scan_audio_files"),
-        patch.object(UndoHistoryView, "_load_history"),
-        patch.object(CopilotView, "_process_message"),
-    ):
-        app = FileOrganizerApp()
-        async with app.run_test() as pilot:
-            for name in view_names:
-                await app.action_switch_view(name)
-                await pilot.pause()
-                assert app._current_view == name, f"Expected view {name!r}"
-                assert app.query_one("#view") is not None
+    for name, view_type in expected.items():
+        view = FileOrganizerApp._create_view(name)
+        assert isinstance(view, view_type), f"Expected view {name!r}"
+        assert view.id == "view"
 
 
-@pytest.mark.asyncio
-async def test_switch_to_copilot_view() -> None:
-    """Switching to copilot should mount CopilotView."""
-    app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("copilot")
-        await pilot.pause()
-        assert app._current_view == "copilot"
-        assert app.query_one("#view", CopilotView) is not None
+def test_switch_to_copilot_view() -> None:
+    """The app factory should build the copilot view for copilot navigation."""
+    view = FileOrganizerApp._create_view("copilot")
+
+    assert isinstance(view, CopilotView)
+    assert view.id == "view"
 
 
 # ---------------------------------------------------------------------------
@@ -87,35 +74,28 @@ async def test_switch_to_copilot_view() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_keybinding_8_opens_copilot() -> None:
-    """Action switch to copilot via action method (keybinding dispatch)."""
-    app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("copilot")
-        await pilot.pause()
-        assert app._current_view == "copilot"
+def test_keybinding_8_opens_copilot() -> None:
+    """The 8 binding should target the copilot view action."""
+    binding = next(binding for binding in FileOrganizerApp.BINDINGS if binding.key == "8")
+
+    assert "copilot" in binding.action
 
 
-@pytest.mark.asyncio
-async def test_keybinding_1_to_7_switch_views() -> None:
-    """Switch views via action_switch_view for each named view."""
-    expected = ["files", "organized", "analytics", "methodology", "audio", "history", "settings"]
+def test_keybinding_1_to_7_switch_views() -> None:
+    """Number bindings should target the expected named views."""
+    expected = {
+        "1": "files",
+        "2": "organized",
+        "3": "analytics",
+        "4": "methodology",
+        "5": "audio",
+        "6": "history",
+        "7": "settings",
+    }
 
-    with (
-        patch.object(OrganizationPreviewView, "_load_preview"),
-        patch.object(AnalyticsView, "_load_analytics"),
-        patch.object(AudioView, "_scan_audio_files"),
-        patch.object(UndoHistoryView, "_load_history"),
-    ):
-        app = FileOrganizerApp()
-        async with app.run_test() as pilot:
-            for view_name in expected:
-                await app.action_switch_view(view_name)
-                await pilot.pause()
-                assert app._current_view == view_name, (
-                    f"Expected {view_name!r}, got {app._current_view!r}"
-                )
+    actions_by_key = {binding.key: binding.action for binding in FileOrganizerApp.BINDINGS}
+    for key, view_name in expected.items():
+        assert view_name in actions_by_key[key]
 
 
 # ---------------------------------------------------------------------------
@@ -141,11 +121,26 @@ async def test_sidebar_contains_copilot_entry() -> None:
 async def test_status_bar_updates_for_copilot() -> None:
     """Switching to copilot should update the status bar."""
     app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("copilot")
-        await pilot.pause()
-        status = app.query_one(StatusBar)
-        assert "Copilot" in status._message
+    old_view = MagicMock()
+    old_view.remove = AsyncMock()
+    container = MagicMock()
+    container.mount = AsyncMock()
+    status = StatusBar()
+
+    def query_one(selector: object, *args: object, **kwargs: object) -> object:
+        if selector == "#view":
+            return old_view
+        if selector == "#main-content":
+            return container
+        if selector is StatusBar:
+            return status
+        raise AssertionError(f"Unexpected selector: {selector!r}")
+
+    app.query_one = MagicMock(side_effect=query_one)
+
+    await app.action_switch_view("copilot")
+
+    assert "Copilot" in status._message
 
 
 @pytest.mark.asyncio

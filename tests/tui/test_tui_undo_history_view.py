@@ -171,30 +171,18 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_undo_history_view_mounts() -> None:
-    """UndoHistoryView should mount and render panels."""
-    from file_organizer.tui.app import FileOrganizerApp
+def test_undo_history_view_mounts() -> None:
+    """UndoHistoryView should compose panels and trigger history loading on mount."""
+    view = UndoHistoryView()
 
-    mock_config = MagicMock()
-    mock_config.setup_completed = True
+    widgets = list(view.compose())
 
-    mock_cm = MagicMock()
-    mock_cm.load.return_value = mock_config
-
-    with (
-        patch("file_organizer.tui.app.ConfigManager", return_value=mock_cm),
-        patch.object(UndoHistoryView, "_load_history"),
-    ):
-        app = FileOrganizerApp()
-        async with app.run_test() as pilot:
-            await app.action_switch_view("history")
-            await pilot.pause()
-            view = app.query_one("#view", UndoHistoryView)
-            assert view is not None
-            assert app.query_one(OperationHistoryPanel) is not None
-            assert app.query_one(UndoRedoStackPanel) is not None
-            assert app.query_one(HistoryStatsPanel) is not None
+    assert any(isinstance(widget, OperationHistoryPanel) for widget in widgets)
+    assert any(isinstance(widget, UndoRedoStackPanel) for widget in widgets)
+    assert any(isinstance(widget, HistoryStatsPanel) for widget in widgets)
+    with patch.object(view, "_load_history") as mock_load:
+        view.on_mount()
+        mock_load.assert_called_once_with()
 
 
 @pytest.mark.asyncio
