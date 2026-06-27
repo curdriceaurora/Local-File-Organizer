@@ -91,7 +91,7 @@ def rules_add(
         typer.Option(
             "--action",
             "-a",
-            help="Action type (move, rename, tag, categorize, archive, copy, delete).",
+            help="Action type (move, rename, tag, categorize, archive, copy, delete, hardlink, symlink).",
         ),
     ] = "move",
     destination: Annotated[
@@ -213,6 +213,106 @@ def rules_preview(
     if result.errors:
         for path, err in result.errors:
             console.print(f"  [red]Error:[/red] {path}: {err}")
+
+
+def _print_apply_result(result) -> None:
+    console.print(f"\n[bold]Rules apply: {result.summary}[/bold]\n")
+
+    if result.results:
+        table = Table(title="Rule Actions")
+        table.add_column("File", style="cyan")
+        table.add_column("Rule")
+        table.add_column("Action")
+        table.add_column("Status")
+        table.add_column("Destination")
+        table.add_column("Message")
+
+        for item in result.results[:50]:
+            table.add_row(
+                Path(item.file_path).name,
+                item.rule_name,
+                item.action_type,
+                item.status,
+                item.destination or "-",
+                item.message or "-",
+            )
+        console.print(table)
+
+    if result.transaction_id:
+        console.print(f"[dim]Undo transaction: {result.transaction_id}[/dim]")
+
+    if result.errors:
+        for path, err in result.errors:
+            console.print(f"  [red]Error:[/red] {path}: {err}")
+
+
+@rules_app.command(name="apply")
+def rules_apply(
+    directory: Annotated[Path, typer.Argument(help="Directory to apply rules against.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to evaluate.")] = "default",
+    recursive: Annotated[
+        bool, typer.Option("--recursive/--no-recursive", help="Recurse into subdirectories.")
+    ] = True,
+    max_files: Annotated[int, typer.Option("--max-files", help="Maximum files to scan.")] = 500,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview actions only.")] = False,
+) -> None:
+    """Apply enabled rules to files."""
+    from file_organizer.services.copilot.rules import RuleExecutor, RuleManager
+
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
+    mgr = RuleManager()
+    rs = mgr.load_rule_set(rule_set)
+
+    if not rs.enabled_rules:
+        console.print(f"[yellow]No enabled rules in set '{rule_set}'[/yellow]")
+        return
+
+    result = RuleExecutor().apply(
+        rs,
+        directory,
+        recursive=recursive,
+        max_files=max_files,
+        dry_run=dry_run,
+    )
+    _print_apply_result(result)
+
+
+@rules_app.command(name="watch")
+def rules_watch(
+    directory: Annotated[Path, typer.Argument(help="Directory to watch/apply rules against.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to evaluate.")] = "default",
+    recursive: Annotated[
+        bool, typer.Option("--recursive/--no-recursive", help="Recurse into subdirectories.")
+    ] = True,
+    max_files: Annotated[int, typer.Option("--max-files", help="Maximum files to scan.")] = 500,
+    interval: Annotated[
+        float, typer.Option("--interval", help="Seconds between apply runs.")
+    ] = 10.0,
+    once: Annotated[bool, typer.Option("--once", help="Run one watch cycle and exit.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview actions only.")] = False,
+) -> None:
+    """Continuously apply enabled rules for fire-and-forget workflows."""
+    from file_organizer.services.copilot.rules import RuleExecutor, RuleManager
+
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
+    mgr = RuleManager()
+    rs = mgr.load_rule_set(rule_set)
+
+    if not rs.enabled_rules:
+        console.print(f"[yellow]No enabled rules in set '{rule_set}'[/yellow]")
+        return
+
+    console.print(f"[green]Watching {directory} with rule set '{rule_set}'[/green]")
+    result = RuleExecutor().watch(
+        rs,
+        directory,
+        recursive=recursive,
+        max_files=max_files,
+        interval_seconds=interval,
+        once=once,
+        dry_run=dry_run,
+    )
+    _print_apply_result(result)
 
 
 @rules_app.command(name="export")

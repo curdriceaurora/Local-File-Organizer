@@ -65,8 +65,10 @@ class OperationValidator:
             conflicts.extend(self._validate_undo_rename(operation))
         elif operation.operation_type == OperationType.DELETE:
             conflicts.extend(self._validate_undo_delete(operation))
-        elif operation.operation_type == OperationType.COPY:
+        elif operation.operation_type in {OperationType.COPY, OperationType.HARDLINK}:
             conflicts.extend(self._validate_undo_copy(operation))
+        elif operation.operation_type == OperationType.SYMLINK:
+            conflicts.extend(self._validate_undo_symlink(operation))
         elif operation.operation_type == OperationType.CREATE:
             conflicts.extend(self._validate_undo_create(operation))
         else:
@@ -112,7 +114,11 @@ class OperationValidator:
             conflicts.extend(self._validate_redo_rename(operation))
         elif operation.operation_type == OperationType.DELETE:
             conflicts.extend(self._validate_redo_delete(operation))
-        elif operation.operation_type == OperationType.COPY:
+        elif operation.operation_type in {
+            OperationType.COPY,
+            OperationType.HARDLINK,
+            OperationType.SYMLINK,
+        }:
             conflicts.extend(self._validate_redo_copy(operation))
         elif operation.operation_type == OperationType.CREATE:
             conflicts.extend(self._validate_redo_create(operation))
@@ -320,6 +326,23 @@ class OperationValidator:
                         actual="Different hash",
                     )
                 )
+
+        return conflicts
+
+    def _validate_undo_symlink(self, operation: Operation) -> list[Conflict]:
+        """Validate undo of a symlink operation (delete the link)."""
+        conflicts = []
+
+        if operation.destination_path is None or not operation.destination_path.is_symlink():
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.destination_path),
+                    description="Symlink has already been deleted or replaced",
+                    expected="Symlink exists",
+                    actual="Symlink not found",
+                )
+            )
 
         return conflicts
 

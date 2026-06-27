@@ -110,6 +110,8 @@ class PreviewEngine:
         try:
             pattern = target.rglob("*") if recursive else target.iterdir()
             for entry in pattern:
+                if entry.is_symlink():
+                    continue
                 if entry.is_file():
                     files.append(entry)
                     if len(files) >= max_files:

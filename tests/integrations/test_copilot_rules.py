@@ -54,6 +54,13 @@ class TestRuleAction:
         d = a.to_dict()
         assert d["parameters"]["tags"] == ["important"]
 
+    def test_link_actions_roundtrip(self) -> None:
+        for action_type in (ActionType.HARDLINK, ActionType.SYMLINK):
+            action = RuleAction(action_type=action_type, destination="~/SecondView/{name}")
+            restored = RuleAction.from_dict(action.to_dict())
+            assert restored.action_type == action_type
+            assert restored.destination == "~/SecondView/{name}"
+
 
 @pytest.mark.unit
 class TestRule:

@@ -22,7 +22,7 @@ from file_organizer.services.copilot.rules.models import (
     RuleSet,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 # ---------------------------------------------------------------------------
 # Patch paths — rules.py uses *lazy imports* inside each command function.
@@ -33,6 +33,7 @@ _RULES_PKG = "file_organizer.services.copilot.rules"
 _RULE_MGR_PATH = f"{_RULES_PKG}.RuleManager"
 _RULE_MGR_ADD_PATH = f"{_RULES_PKG}.rule_manager.RuleManager"
 _PREVIEW_ENGINE_PATH = f"{_RULES_PKG}.PreviewEngine"
+_RULE_EXECUTOR_PATH = f"{_RULES_PKG}.RuleExecutor"
 _RULE_SET_PATH = f"{_RULES_PKG}.RuleSet"
 
 
@@ -204,6 +205,17 @@ class TestRulesAdd:
         call_args = mock_mgr.add_rule.call_args
         assert call_args[0][0] == "my-set"
 
+    def test_add_rule_with_link_action(self, runner):
+        mock_mgr = MagicMock()
+        with patch(_RULE_MGR_ADD_PATH, return_value=mock_mgr):
+            result = runner.invoke(
+                rules_app,
+                ["add", "second-view", "--action", "hardlink", "--dest", "Links"],
+            )
+        assert result.exit_code == 0
+        rule = mock_mgr.add_rule.call_args[0][1]
+        assert rule.action.action_type == ActionType.HARDLINK
+
 
 # ============================================================================
 # Remove Tests
@@ -257,6 +269,91 @@ class TestRulesToggle:
             result = runner.invoke(rules_app, ["toggle", "nonexistent"])
         assert result.exit_code == 0
         assert "not found" in result.output
+
+
+@pytest.mark.unit
+class TestRulesApply:
+    """Tests for apply/watch subcommands."""
+
+    def test_apply_invokes_rule_executor(self, runner, mock_rule_manager, tmp_path):
+        mock_executor = MagicMock()
+        mock_item = MagicMock()
+        mock_item.file_path = str(tmp_path / "note.txt")
+        mock_item.rule_name = "txt-rule"
+        mock_item.action_type = "hardlink"
+        mock_item.status = "applied"
+        mock_item.destination = str(tmp_path / "links" / "note.txt")
+        mock_item.message = ""
+        mock_result = MagicMock()
+        mock_result.summary = "1 applied, 0 skipped, 0 failed"
+        mock_result.results = [mock_item]
+        mock_result.errors = [(str(tmp_path / "bad.txt"), "boom")]
+        mock_result.transaction_id = "tx-1"
+        mock_executor.apply.return_value = mock_result
+
+        with (
+            patch(_RULE_MGR_PATH, return_value=mock_rule_manager),
+            patch(_RULE_EXECUTOR_PATH, return_value=mock_executor),
+        ):
+            result = runner.invoke(rules_app, ["apply", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "1 applied" in result.output
+        assert "txt-rule" in result.output
+        assert "tx-1" in result.output
+        assert "boom" in result.output
+        mock_executor.apply.assert_called_once()
+
+    def test_apply_no_enabled_rules_returns_without_executor(
+        self, runner, mock_rule_manager, tmp_path
+    ):
+        mock_rule_manager.load_rule_set.return_value = RuleSet(name="empty", rules=[])
+        mock_executor = MagicMock()
+
+        with (
+            patch(_RULE_MGR_PATH, return_value=mock_rule_manager),
+            patch(_RULE_EXECUTOR_PATH, return_value=mock_executor),
+        ):
+            result = runner.invoke(rules_app, ["apply", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "No enabled rules" in result.output
+        mock_executor.apply.assert_not_called()
+
+    def test_watch_once_invokes_rule_executor_watch(self, runner, mock_rule_manager, tmp_path):
+        mock_executor = MagicMock()
+        mock_result = MagicMock()
+        mock_result.summary = "1 applied, 0 skipped, 0 failed"
+        mock_result.results = []
+        mock_result.errors = []
+        mock_result.transaction_id = None
+        mock_executor.watch.return_value = mock_result
+
+        with (
+            patch(_RULE_MGR_PATH, return_value=mock_rule_manager),
+            patch(_RULE_EXECUTOR_PATH, return_value=mock_executor),
+        ):
+            result = runner.invoke(rules_app, ["watch", str(tmp_path), "--once"])
+
+        assert result.exit_code == 0
+        assert "Watching" in result.output
+        mock_executor.watch.assert_called_once()
+
+    def test_watch_no_enabled_rules_returns_without_executor(
+        self, runner, mock_rule_manager, tmp_path
+    ):
+        mock_rule_manager.load_rule_set.return_value = RuleSet(name="empty", rules=[])
+        mock_executor = MagicMock()
+
+        with (
+            patch(_RULE_MGR_PATH, return_value=mock_rule_manager),
+            patch(_RULE_EXECUTOR_PATH, return_value=mock_executor),
+        ):
+            result = runner.invoke(rules_app, ["watch", str(tmp_path), "--once"])
+
+        assert result.exit_code == 0
+        assert "No enabled rules" in result.output
+        mock_executor.watch.assert_not_called()
 
 
 # ============================================================================

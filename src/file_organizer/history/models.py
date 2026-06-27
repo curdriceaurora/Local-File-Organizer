@@ -22,6 +22,8 @@ class OperationType(StrEnum):
     DELETE = "delete"
     COPY = "copy"
     CREATE = "create"
+    HARDLINK = "hardlink"
+    SYMLINK = "symlink"
 
 
 class OperationStatus(StrEnum):
