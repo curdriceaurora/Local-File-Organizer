@@ -54,3 +54,9 @@ name = "pytest-raises-hygiene"
 command = ["python", ".claude/scripts/check_pytest_raises_hygiene.py"]
 mode = "advisory"
 description = "Ensures pytest.raises on generic/built-in exceptions specifies a match regex (WP-6.2)."
+
+[[rail]]
+name = "safedir-valueerror"
+command = ["python", ".claude/scripts/check_safedir_valueerror.py"]
+mode = "advisory"
+description = "Flags broad except blocks that swallow SafeDir's path-safety ValueError (WP-6.1)."
