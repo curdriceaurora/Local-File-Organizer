@@ -98,5 +98,15 @@ def config_edit(
     if methodology is not None:
         cfg.default_methodology = methodology
 
-    mgr.save(cfg, profile=profile)
+    from file_organizer.config.manager import UnsupportedConfigVersionError
+
+    try:
+        mgr.save(cfg, profile=profile)
+    except UnsupportedConfigVersionError as exc:
+        console.print(
+            f"[red]Error: profile '{profile}' uses an unsupported config version "
+            f"and cannot be edited. Delete or migrate it first.[/red]\n"
+            f"[dim]Details: {exc}[/dim]"
+        )
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved profile '{profile}'[/green]")

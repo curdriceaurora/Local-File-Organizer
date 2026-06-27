@@ -374,6 +374,7 @@ class TestEntryPoint:
         mock_close.assert_called_once_with(99)
         assert exc_info.value.code == 0
 
+    @pytest.mark.ci
     def test_register_profile_command_swallows_import_error(self) -> None:
         """A missing intelligence-service chain (ImportError) is silenced,
         not propagated — profile registration degrades gracefully. Setting

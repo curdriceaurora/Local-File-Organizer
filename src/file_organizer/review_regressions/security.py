@@ -168,7 +168,7 @@ def _resolve_path_names(tree: ast.AST) -> set[str]:
     * ``import <pkg>.api.utils as alias`` — module-alias form; adds the alias so
       that ``alias.resolve_path(...)`` is matched by the attribute branch of
       ``_is_resolve_path_call``.
-    * ``from <pkg>.api import file_organizer.utils [as alias]`` — package-level module import;
+    * ``from <pkg>.api import utils [as alias]`` — package-level module import;
       adds ``utils`` (or alias) so ``utils.resolve_path(...)`` is recognized.
     * ``def resolve_path(...)`` — locally re-implemented or re-defined; adds
       ``"resolve_path"`` so test fixtures and thin wrappers are covered.
