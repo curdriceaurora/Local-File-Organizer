@@ -122,6 +122,10 @@ class RollbackExecutor:
                 return self.rollback_delete(operation)
             elif operation.operation_type == OperationType.COPY:
                 return self.rollback_copy(operation)
+            elif operation.operation_type == OperationType.HARDLINK:
+                return self.rollback_hardlink(operation)
+            elif operation.operation_type == OperationType.SYMLINK:
+                return self.rollback_symlink(operation)
             elif operation.operation_type == OperationType.CREATE:
                 return self.rollback_create(operation)
             else:
@@ -149,6 +153,10 @@ class RollbackExecutor:
                 return self.redo_delete(operation)
             elif operation.operation_type == OperationType.COPY:
                 return self.redo_copy(operation)
+            elif operation.operation_type == OperationType.HARDLINK:
+                return self.redo_hardlink(operation)
+            elif operation.operation_type == OperationType.SYMLINK:
+                return self.redo_symlink(operation)
             elif operation.operation_type == OperationType.CREATE:
                 return self.redo_create(operation)
             else:
@@ -274,6 +282,76 @@ class RollbackExecutor:
             return True
         except Exception as e:
             logger.error(f"Failed to rollback copy operation {operation.id}: {e}")
+            return False
+
+    def rollback_hardlink(self, operation: Operation) -> bool:
+        """Rollback a hardlink operation by unlinking the link itself."""
+        link_path = operation.destination_path
+
+        if link_path is None:
+            logger.error(f"Cannot rollback hardlink operation {operation.id}: no destination path")
+            return False
+
+        logger.info(f"Rolling back hardlink: deleting {link_path}")
+
+        try:
+            if link_path.is_symlink() or not link_path.exists():
+                logger.error(
+                    f"Refusing to rollback hardlink operation; destination is not a file: {link_path}"
+                )
+                return False
+            if not operation.source_path.exists():
+                logger.error(
+                    f"Refusing to rollback hardlink operation; source is missing: {operation.source_path}"
+                )
+                return False
+            source_stat = operation.source_path.stat()
+            link_stat = link_path.stat()
+            if (source_stat.st_dev, source_stat.st_ino) != (
+                link_stat.st_dev,
+                link_stat.st_ino,
+            ):
+                logger.error(
+                    "Refusing to rollback hardlink operation; destination no longer "
+                    f"matches source inode: {link_path}"
+                )
+                return False
+            link_path.unlink()
+            fsync_directory(link_path)
+            logger.info(f"Successfully rolled back hardlink operation {operation.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to rollback hardlink operation {operation.id}: {e}")
+            return False
+
+    def rollback_symlink(self, operation: Operation) -> bool:
+        """Rollback a symlink operation by unlinking the link itself."""
+        link_path = operation.destination_path
+
+        if link_path is None:
+            logger.error(f"Cannot rollback symlink operation {operation.id}: no destination path")
+            return False
+
+        logger.info(f"Rolling back symlink: deleting {link_path}")
+
+        try:
+            if not link_path.is_symlink():
+                logger.error(
+                    f"Refusing to rollback symlink operation; destination is not a symlink: {link_path}"
+                )
+                return False
+            if link_path.resolve(strict=False) != operation.source_path.resolve(strict=False):
+                logger.error(
+                    "Refusing to rollback symlink operation; destination target no longer "
+                    f"matches source: {link_path}"
+                )
+                return False
+            link_path.unlink()
+            fsync_directory(link_path)
+            logger.info(f"Successfully rolled back symlink operation {operation.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to rollback symlink operation {operation.id}: {e}")
             return False
 
     def rollback_create(self, operation: Operation) -> bool:
@@ -413,6 +491,44 @@ class RollbackExecutor:
             return True
         except Exception as e:
             logger.error(f"Failed to redo copy operation {operation.id}: {e}")
+            return False
+
+    def redo_hardlink(self, operation: Operation) -> bool:
+        """Redo a hardlink operation."""
+        source = operation.source_path
+        destination = operation.destination_path
+
+        if destination is None:
+            logger.error(f"Cannot redo hardlink operation {operation.id}: no destination path")
+            return False
+
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.link(source, destination)
+            fsync_directory(destination)
+            logger.info(f"Successfully redid hardlink operation {operation.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to redo hardlink operation {operation.id}: {e}")
+            return False
+
+    def redo_symlink(self, operation: Operation) -> bool:
+        """Redo a symlink operation."""
+        source = operation.source_path
+        destination = operation.destination_path
+
+        if destination is None:
+            logger.error(f"Cannot redo symlink operation {operation.id}: no destination path")
+            return False
+
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.symlink_to(source)
+            fsync_directory(destination)
+            logger.info(f"Successfully redid symlink operation {operation.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to redo symlink operation {operation.id}: {e}")
             return False
 
     def redo_create(self, operation: Operation) -> bool:

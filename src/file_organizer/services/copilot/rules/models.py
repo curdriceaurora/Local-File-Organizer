@@ -35,6 +35,8 @@ class ActionType(Enum):
     DELETE = "delete"
     ARCHIVE = "archive"
     COPY = "copy"
+    HARDLINK = "hardlink"
+    SYMLINK = "symlink"
 
 
 @dataclass

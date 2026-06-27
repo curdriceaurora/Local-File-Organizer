@@ -15,6 +15,7 @@ Covers uncovered branches in:
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -437,6 +438,179 @@ class TestValidateUndoCopy:
 
 
 # ---------------------------------------------------------------------------
+# OperationValidator — validate_undo HARDLINK / SYMLINK branches
+# ---------------------------------------------------------------------------
+
+
+class TestValidateUndoLinks:
+    def test_hardlink_matching_inode_can_proceed(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        os.link(source, link)
+
+        op = Operation(
+            id=21,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert result.can_proceed
+
+    def test_hardlink_missing_destination_adds_conflict(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = Operation(
+            id=22,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=tmp_path / "missing-link.txt",
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.description == "Hardlink has already been deleted" for c in result.conflicts)
+
+    def test_hardlink_rejects_symlink_destination(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+        op = Operation(
+            id=23,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(
+            c.description == "Hardlink was replaced with a symlink" for c in result.conflicts
+        )
+
+    def test_hardlink_detects_missing_source(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        link.write_text("replacement")
+        op = Operation(
+            id=24,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.description == "Source file no longer exists" for c in result.conflicts)
+
+    def test_hardlink_detects_replaced_file(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.write_text("different")
+        op = Operation(
+            id=25,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(
+            c.description == "Hardlink was replaced with a different file" for c in result.conflicts
+        )
+
+    def test_symlink_matching_target_can_proceed(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+        op = Operation(
+            id=26,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert result.can_proceed
+
+    def test_symlink_missing_destination_adds_conflict(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = Operation(
+            id=27,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=tmp_path / "missing-link.txt",
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(
+            c.description == "Symlink has already been deleted or replaced"
+            for c in result.conflicts
+        )
+
+    def test_symlink_detects_replaced_target(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        other = tmp_path / "other.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        other.write_text("other")
+        link.symlink_to(other)
+        op = Operation(
+            id=28,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(
+            c.description == "Symlink was replaced with a different target"
+            for c in result.conflicts
+        )
+
+
+# ---------------------------------------------------------------------------
 # OperationValidator — validate_undo CREATE branches
 # ---------------------------------------------------------------------------
 
@@ -613,6 +787,62 @@ class TestValidateRedo:
         result = v.validate_redo(op)
         assert not result.can_proceed
 
+    def test_redo_hardlink_requires_destination(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        src.write_text("source")
+        op = Operation(
+            id=29,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=None,
+            status=OperationStatus.ROLLED_BACK,
+        )
+
+        result = v.validate_redo(op)
+
+        assert not result.can_proceed
+        assert any(c.description == "Link destination was not recorded" for c in result.conflicts)
+
+    def test_redo_symlink_destination_available_can_proceed(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        op = Operation(
+            id=30,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.ROLLED_BACK,
+        )
+
+        result = v.validate_redo(op)
+
+        assert result.can_proceed
+
+    def test_redo_symlink_destination_occupied_adds_conflict(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        dest.write_text("occupied")
+        op = Operation(
+            id=31,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.ROLLED_BACK,
+        )
+
+        result = v.validate_redo(op)
+
+        assert not result.can_proceed
+        assert any("occupied" in str(c.conflict_type).lower() for c in result.conflicts)
+
     def test_redo_create_path_available(self, tmp_path: Path) -> None:
         v = OperationValidator(trash_dir=tmp_path / "trash")
         src = tmp_path / "new_file.txt"  # doesn't exist → available
@@ -720,6 +950,80 @@ class TestCheckConflicts:
         op = _make_op(tmp_path, status=OperationStatus.COMPLETED)
         conflicts = v.check_conflicts(op, is_undo=False)
         assert conflicts == []
+
+
+# ---------------------------------------------------------------------------
+# OperationValidator — _get_trash_path
+# ---------------------------------------------------------------------------
+
+
+class TestGetTrashPath:
+    def test_get_trash_path_prefers_recorded_destination(self, tmp_path: Path) -> None:
+        trash = tmp_path / "trash"
+        v = OperationValidator(trash_dir=trash)
+        src = tmp_path / "doc.txt"
+        recorded = trash / "txn" / "doc.txt"
+        recorded.parent.mkdir(parents=True)
+        recorded.write_text("x")
+        op = Operation(
+            id=999,
+            operation_type=OperationType.DELETE,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=recorded,
+            status=OperationStatus.COMPLETED,
+        )
+
+        assert v._get_trash_path(op) == recorded
+
+    def test_get_trash_path_finds_operation_id_layout(self, tmp_path: Path) -> None:
+        trash = tmp_path / "trash"
+        v = OperationValidator(trash_dir=trash)
+        src = tmp_path / "doc.txt"
+        recovered = trash / "42" / "doc.txt"
+        recovered.parent.mkdir(parents=True)
+        recovered.write_text("x")
+        op = Operation(
+            id=42,
+            operation_type=OperationType.DELETE,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=None,
+            status=OperationStatus.COMPLETED,
+        )
+
+        assert v._get_trash_path(op) == recovered
+
+    def test_get_trash_path_falls_back_to_filename_search(self, tmp_path: Path) -> None:
+        trash = tmp_path / "trash"
+        v = OperationValidator(trash_dir=trash)
+        src = tmp_path / "doc.txt"
+        recovered = trash / "nested" / "doc.txt"
+        recovered.parent.mkdir(parents=True)
+        recovered.write_text("x")
+        op = Operation(
+            id=999,
+            operation_type=OperationType.DELETE,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=None,
+            status=OperationStatus.COMPLETED,
+        )
+
+        assert v._get_trash_path(op) == recovered
+
+    def test_get_trash_path_returns_none_when_not_found(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        op = Operation(
+            id=999,
+            operation_type=OperationType.DELETE,
+            timestamp=datetime.now(UTC),
+            source_path=tmp_path / "doc.txt",
+            destination_path=None,
+            status=OperationStatus.COMPLETED,
+        )
+
+        assert v._get_trash_path(op) is None
 
 
 # ---------------------------------------------------------------------------
