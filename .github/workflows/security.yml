@@ -28,12 +28,7 @@ jobs:
       - name: Install pip-audit
         run: pip install pip-audit pyyaml
       - name: Install project (for accurate dependency resolution)
-        run: |
-          for attempt in 1 2 3; do
-            pip install -e . && break
-            echo "pip install failed (attempt $attempt), retrying in 5s..."
-            sleep 5
-          done
+        run: bash scripts/pip_install_retry.sh -e .
       - name: Run pip-audit
         run: pip-audit --format json -o .pip-audit.json || true
       - name: Gate pip-audit findings against accepted risks
