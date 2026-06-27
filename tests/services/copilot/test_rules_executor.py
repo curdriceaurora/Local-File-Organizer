@@ -58,6 +58,7 @@ def test_apply_dry_run_uses_preview_matches_without_mutating(tmp_path: Path) -> 
     assert result.results[0].message == "dry-run"
     assert source.exists()
     assert not (tmp_path / "links").exists()
+    assert result.transaction_id is None
 
 
 def test_apply_skips_symlinked_inputs(tmp_path: Path) -> None:

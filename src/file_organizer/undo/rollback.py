@@ -313,13 +313,18 @@ class RollbackExecutor:
                     f"Refusing to rollback hardlink operation; destination is not a file: {link_path}"
                 )
                 return False
+            if operation.source_path.is_symlink():
+                std_log.error(
+                    f"Refusing to rollback hardlink operation; source is a symlink: {operation.source_path}"
+                )
+                return False
             if not operation.source_path.exists():
                 std_log.error(
                     f"Refusing to rollback hardlink operation; source is missing: {operation.source_path}"
                 )
                 return False
-            source_stat = operation.source_path.stat()
-            link_stat = link_path.stat()
+            source_stat = operation.source_path.lstat()
+            link_stat = link_path.lstat()
             if (source_stat.st_dev, source_stat.st_ino) != (
                 link_stat.st_dev,
                 link_stat.st_ino,

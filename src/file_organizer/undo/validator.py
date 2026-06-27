@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from ..history.models import Operation, OperationStatus, OperationType
@@ -393,7 +394,8 @@ class OperationValidator:
             return conflicts
 
         try:
-            source_exists = operation.source_path.exists()
+            source_is_symlink = operation.source_path.is_symlink()
+            source_exists = os.path.lexists(operation.source_path)
         except OSError as exc:
             conflicts.append(self._path_inspection_conflict(operation.source_path, exc))
             return conflicts
@@ -410,9 +412,21 @@ class OperationValidator:
             )
             return conflicts
 
+        if source_is_symlink:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.HASH_MISMATCH,
+                    path=str(operation.source_path),
+                    description="Source file is now a symlink",
+                    expected="Hardlink source",
+                    actual="Symlink",
+                )
+            )
+            return conflicts
+
         try:
-            source_stat = operation.source_path.stat()
-            destination_stat = destination_path.stat()
+            source_stat = operation.source_path.lstat()
+            destination_stat = destination_path.lstat()
         except OSError as exc:
             conflicts.append(self._path_inspection_conflict(destination_path, exc))
             return conflicts
@@ -590,12 +604,12 @@ class OperationValidator:
             )
         else:
             try:
-                is_sym = operation.destination_path.is_symlink()
+                dest_exists = os.path.lexists(operation.destination_path)
             except OSError as exc:
                 conflicts.append(self._path_inspection_conflict(operation.destination_path, exc))
                 return conflicts
 
-            if is_sym:
+            if dest_exists:
                 if not any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in conflicts):
                     conflicts.append(
                         Conflict(

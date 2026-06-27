@@ -300,7 +300,7 @@ class TestRulesApply:
         ):
             result = runner.invoke(rules_app, ["apply", str(tmp_path)])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "1 applied" in result.output
         assert "txt-rule" in result.output
         assert "tx-1" in result.output

@@ -338,14 +338,12 @@ def test_durable_move_refuses_symlinked_destination_after_move(
     dst = tmp_path / "b.txt"
 
     real_lstat = rb.os.lstat
-    calls = {"n": 0}
 
     class _SymlinkStat:
         st_mode = stat_mod.S_IFLNK | 0o777
 
     def fake_lstat(path: object, *a: object, **k: object) -> object:
-        calls["n"] += 1
-        if calls["n"] == 1:  # source → real (regular file)
+        if str(path) == str(src):
             return real_lstat(path, *a, **k)
         return _SymlinkStat()  # post-move dst → looks like a symlink
 

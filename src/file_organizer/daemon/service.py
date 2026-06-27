@@ -165,7 +165,13 @@ class DaemonService:
                         "Daemon is already running (stale PID file indicates a live process). "
                         "Stop the existing daemon or remove the PID file and retry."
                     )
-                self._pid_manager.remove_pid(pid_file)
+                # Read the stale record that we just verified is not running
+                record_before = self._pid_manager.read_pid_record(pid_file)
+                if pid_file.exists():
+                    # Double-check that it hasn't been claimed in the meantime
+                    current_record = self._pid_manager.read_pid_record(pid_file)
+                    if current_record == record_before:
+                        self._pid_manager.remove_pid(pid_file)
                 try:
                     self._pid_manager.claim_pid_file(pid_file)
                 except FileExistsError as exc:

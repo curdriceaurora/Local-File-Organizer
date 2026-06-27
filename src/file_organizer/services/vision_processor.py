@@ -83,7 +83,8 @@ def preprocess_and_clamp_image(image_path: Path, max_edge: int = 1024) -> tuple[
         return image_path.read_bytes(), guessed or "image/jpeg"
 
     try:
-        with Image.open(image_path) as img:
+        with Image.open(image_path) as opened_img:
+            img: Image.Image = opened_img
             width, height = img.size
             if width == 0 or height == 0:
                 raise ValueError(f"Invalid image dimensions: {width}x{height}")

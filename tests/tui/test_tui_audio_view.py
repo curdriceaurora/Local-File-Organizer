@@ -186,6 +186,7 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_audio_view_mounts() -> None:
     """AudioView should compose its panels and trigger scanning on mount."""
     view = AudioView()
@@ -200,6 +201,7 @@ def test_audio_view_mounts() -> None:
         mock_scan.assert_called_once_with()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_audio_view_bindings_exist() -> None:
     """AudioView should have r, j, k bindings."""
@@ -209,6 +211,7 @@ async def test_audio_view_bindings_exist() -> None:
     assert "k" in binding_keys
 
 
+@pytest.mark.integration
 def test_audio_view_navigation() -> None:
     """j/k navigation should change current index."""
     with patch.object(AudioView, "_scan_audio_files"):

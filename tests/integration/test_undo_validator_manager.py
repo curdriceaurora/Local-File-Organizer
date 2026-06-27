@@ -875,8 +875,8 @@ class TestValidateRedo:
                 raise PermissionError("stat denied")
             return original_stat(self, *args, **kwargs)
 
-        original_stat = Path.stat
-        monkeypatch.setattr(Path, "stat", fail_stat)
+        original_stat = Path.lstat
+        monkeypatch.setattr(Path, "lstat", fail_stat)
 
         result = v.validate_undo(op)
 
@@ -905,8 +905,8 @@ class TestValidateRedo:
                 raise PermissionError("stat denied")
             return original_stat(self, *args, **kwargs)
 
-        original_stat = Path.stat
-        monkeypatch.setattr(Path, "stat", fail_stat)
+        original_stat = Path.lstat
+        monkeypatch.setattr(Path, "lstat", fail_stat)
         monkeypatch.setattr(Path, "exists", lambda self: True if self in {src, dest} else False)
 
         result = v.validate_undo(op)

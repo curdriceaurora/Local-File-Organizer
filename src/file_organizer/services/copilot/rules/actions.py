@@ -58,7 +58,23 @@ def copy_file(source: Path, destination: Path, strategy: ConflictStrategy) -> Li
     if resolved is None:
         return LinkResult(source=source, destination=destination, skipped=True, reason="exists")
     resolved.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, resolved)
+    try:
+        fd = os.open(resolved, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return LinkResult(source=source, destination=resolved, skipped=True, reason="exists")
+
+    try:
+        with os.fdopen(fd, "wb") as dst_file:
+            with open(source, "rb") as src_file:
+                shutil.copyfileobj(src_file, dst_file)
+        shutil.copystat(source, resolved)
+    except Exception:
+        try:
+            os.unlink(resolved)
+        except OSError:
+            pass
+        raise
+
     fsync_directory(resolved)
     return LinkResult(source=source, destination=resolved)
 
