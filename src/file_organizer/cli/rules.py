@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.services.copilot.rules import ApplyResult
 
 rules_app = typer.Typer(
     name="rules",
@@ -215,7 +216,7 @@ def rules_preview(
             console.print(f"  [red]Error:[/red] {path}: {err}")
 
 
-def _print_apply_result(result) -> None:
+def _print_apply_result(result: ApplyResult) -> None:
     console.print(f"\n[bold]Rules apply: {result.summary}[/bold]\n")
 
     if result.results:
@@ -302,17 +303,36 @@ def rules_watch(
         console.print(f"[yellow]No enabled rules in set '{rule_set}'[/yellow]")
         return
 
+    if interval <= 0:
+        raise typer.BadParameter("--interval must be greater than 0")
+
     console.print(f"[green]Watching {directory} with rule set '{rule_set}'[/green]")
-    result = RuleExecutor().watch(
-        rs,
-        directory,
-        recursive=recursive,
-        max_files=max_files,
-        interval_seconds=interval,
-        once=once,
-        dry_run=dry_run,
-    )
-    _print_apply_result(result)
+    executor = RuleExecutor()
+    if once:
+        result = executor.watch(
+            rs,
+            directory,
+            recursive=recursive,
+            max_files=max_files,
+            interval_seconds=interval,
+            once=True,
+            dry_run=dry_run,
+        )
+        _print_apply_result(result)
+        return
+
+    try:
+        executor.watch(
+            rs,
+            directory,
+            recursive=recursive,
+            max_files=max_files,
+            interval_seconds=interval,
+            dry_run=dry_run,
+            on_cycle=_print_apply_result,
+        )
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Stopped watching rules.[/yellow]")
 
 
 @rules_app.command(name="export")

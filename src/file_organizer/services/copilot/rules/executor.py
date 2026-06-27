@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -164,6 +165,7 @@ class RuleExecutor:
         interval_seconds: float = 10.0,
         once: bool = False,
         dry_run: bool = False,
+        on_cycle: Callable[[ApplyResult], None] | None = None,
     ) -> ApplyResult:
         """Run rules repeatedly for fire-and-forget workflows."""
         last_result = ApplyResult()
@@ -175,6 +177,8 @@ class RuleExecutor:
                 max_files=max_files,
                 dry_run=dry_run,
             )
+            if on_cycle is not None:
+                on_cycle(last_result)
             if once:
                 return last_result
             time.sleep(interval_seconds)
@@ -320,13 +324,17 @@ class RuleExecutor:
         undo_manager: UndoManager,
         transaction_id: str,
     ) -> ExecutionResult:
+        trash_path = (
+            undo_manager.executor.trash_dir / transaction_id / f"{uuid.uuid4().hex}-{source.name}"
+        )
+        durable_move(source, trash_path, journal=default_journal_path())
         op_id = undo_manager.history.log_operation(
             OperationType.DELETE,
             source_path=source,
+            destination_path=trash_path,
             transaction_id=transaction_id,
         )
-        trash_path = undo_manager.executor.trash_dir / str(op_id) / source.name
-        durable_move(source, trash_path, journal=default_journal_path())
+        logger.debug("Logged delete operation {} after moving {} to trash", op_id, source)
         return self._applied(rule, source, trash_path)
 
     @staticmethod
@@ -365,12 +373,29 @@ class RuleExecutor:
         if action_type in {ActionType.RENAME, ActionType.DELETE, ActionType.TAG}:
             return False
         target = cls._target_path(source, destination, action_type, base_dir)
+        if not cls._destination_is_directory_like(destination, action_type, target):
+            return source.resolve() == target.resolve()
         root = target.parent
         try:
             source.resolve().relative_to(root.resolve())
         except ValueError:
             return False
         return True
+
+    @staticmethod
+    def _destination_is_directory_like(
+        destination: str,
+        action_type: ActionType,
+        target: Path,
+    ) -> bool:
+        if not destination:
+            return False
+        raw = Path(destination).expanduser()
+        if action_type == ActionType.RENAME:
+            return False
+        if target.exists():
+            return target.is_dir()
+        return not raw.suffix
 
     @staticmethod
     def _applied(rule: Rule, source: Path, destination: Path) -> ExecutionResult:

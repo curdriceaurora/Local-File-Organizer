@@ -41,7 +41,7 @@ def test_symlink_creates_pointer_to_source(tmp_path: Path) -> None:
 
 def test_conflict_skip_leaves_existing_destination(tmp_path: Path) -> None:
     source = tmp_path / "source.txt"
-    destination = tmp_path / "source.txt"
+    destination = tmp_path / "dest.txt"
     source.write_text("new", encoding="utf-8")
     destination.write_text("old", encoding="utf-8")
 

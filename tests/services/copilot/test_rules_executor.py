@@ -8,8 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from file_organizer.history.models import Operation, OperationType
+from file_organizer.history.models import Operation, OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
+from file_organizer.services.copilot.rules import executor as executor_module
 from file_organizer.services.copilot.rules.executor import RuleExecutor
 from file_organizer.services.copilot.rules.models import (
     ActionType,
@@ -117,6 +118,42 @@ def test_apply_move_uses_resolved_directory_destination(tmp_path: Path) -> None:
     assert (tmp_path / "archive" / "note.txt").read_text(encoding="utf-8") == "hello"
 
 
+def test_copy_to_sibling_file_destination_is_not_treated_as_destination_root(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "note.txt"
+    source.write_text("hello", encoding="utf-8")
+    manager = _manager(tmp_path)
+
+    result = RuleExecutor(undo_manager=manager).apply(
+        _rule(ActionType.COPY, "note-copy.txt"),
+        tmp_path,
+    )
+
+    assert result.applied_count == 1
+    assert (tmp_path / "note-copy.txt").read_text(encoding="utf-8") == "hello"
+
+
+def test_delete_logs_operation_only_after_durable_move_succeeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "note.txt"
+    source.write_text("hello", encoding="utf-8")
+    manager = _manager(tmp_path)
+
+    def fail_move(*args, **kwargs):
+        raise OSError("move failed")
+
+    monkeypatch.setattr(executor_module, "durable_move", fail_move)
+
+    result = RuleExecutor(undo_manager=manager).apply(_rule(ActionType.DELETE, ""), tmp_path)
+
+    assert result.failed_count == 1
+    assert source.exists()
+    assert manager.history.get_operations(transaction_id=result.transaction_id) == []
+
+
 def test_link_actions_undo_and_redo_transaction(tmp_path: Path) -> None:
     for action_type in (ActionType.HARDLINK, ActionType.SYMLINK):
         case_dir = tmp_path / action_type.value
@@ -141,6 +178,22 @@ def test_link_actions_undo_and_redo_transaction(tmp_path: Path) -> None:
         else:
             assert link.is_symlink()
             assert link.resolve() == source
+
+
+def test_watch_calls_cycle_callback(tmp_path: Path) -> None:
+    source = tmp_path / "note.txt"
+    source.write_text("hello", encoding="utf-8")
+    seen = []
+
+    result = RuleExecutor(undo_manager=_manager(tmp_path)).watch(
+        _rule(ActionType.COPY, "links"),
+        tmp_path,
+        once=True,
+        on_cycle=seen.append,
+    )
+
+    assert seen == [result]
+    assert result.applied_count == 1
 
 
 def test_watch_once_skips_existing_outputs_inside_destination_root(tmp_path: Path) -> None:
@@ -194,6 +247,59 @@ def test_rollback_executor_handles_link_operation_types(tmp_path: Path) -> None:
     assert os.stat(source).st_ino == os.stat(hardlink).st_ino
     assert symlink.is_symlink()
     assert symlink.resolve() == source
+
+
+def test_rollback_refuses_replaced_links(tmp_path: Path) -> None:
+    source = tmp_path / "source.txt"
+    source.write_text("hello", encoding="utf-8")
+    other = tmp_path / "other.txt"
+    other.write_text("other", encoding="utf-8")
+    replaced_hardlink = tmp_path / "hardlink.txt"
+    replaced_hardlink.write_text("replacement", encoding="utf-8")
+    replaced_symlink = tmp_path / "symlink.txt"
+    replaced_symlink.symlink_to(other)
+    executor = RollbackExecutor(OperationValidator(trash_dir=tmp_path / "trash"))
+
+    hardlink_op = Operation(
+        id=10,
+        operation_type=OperationType.HARDLINK,
+        timestamp=datetime.now(UTC),
+        source_path=source,
+        destination_path=replaced_hardlink,
+    )
+    symlink_op = Operation(
+        id=11,
+        operation_type=OperationType.SYMLINK,
+        timestamp=datetime.now(UTC),
+        source_path=source,
+        destination_path=replaced_symlink,
+    )
+
+    assert executor.validator.validate_undo(hardlink_op).can_proceed is False
+    assert executor.validator.validate_undo(symlink_op).can_proceed is False
+    assert executor.rollback_operation(hardlink_op) is False
+    assert executor.rollback_operation(symlink_op) is False
+    assert replaced_hardlink.exists()
+    assert replaced_symlink.is_symlink()
+
+
+def test_redo_link_validation_requires_destination(tmp_path: Path) -> None:
+    source = tmp_path / "source.txt"
+    source.write_text("hello", encoding="utf-8")
+    validator = OperationValidator(trash_dir=tmp_path / "trash")
+    op = Operation(
+        id=12,
+        operation_type=OperationType.HARDLINK,
+        timestamp=datetime.now(UTC),
+        source_path=source,
+        destination_path=None,
+        status=OperationStatus.ROLLED_BACK,
+    )
+
+    result = validator.validate_redo(op)
+
+    assert result.can_proceed is False
+    assert result.conflicts
 
 
 def test_link_operation_error_branches(tmp_path: Path) -> None:
