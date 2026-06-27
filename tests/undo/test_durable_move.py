@@ -429,6 +429,106 @@ class TestDurableMoveSweep:
         journal.write_text("")
         sweep(journal)
 
+    def test_sweep_noop_when_journal_vanishes_between_exists_and_open(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The LOCK_EX path treats an exists→open FileNotFoundError as a
+        benign race and returns without raising."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text("", encoding="utf-8")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        dm.sweep(journal)  # no raise
+
+    def test_sweep_race_with_nonempty_journal_content_is_still_benign(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """exists→open race is benign even when the journal had real
+        ``started``-state content before vanishing. The FileNotFoundError
+        is treated as the journal having already been cleaned up by a
+        concurrent sweep."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        # Pre-populate with a real started-state entry so exists() is True.
+        journal.write_text(
+            '{"op":"move","src":"/a","dst":"/b","state":"started"}\n',
+            encoding="utf-8",
+        )
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        dm.sweep(journal)  # no raise regardless of prior journal content
+
+    def test_sweep_race_open_passthrough_for_non_journal_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The patched-open race in sweep() only fires for the journal
+        path. Other ``open`` calls (e.g. from the standard library during
+        test setup) must pass through to the real ``builtins.open``."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text("", encoding="utf-8")
+        other = tmp_path / "other.txt"
+        other.write_text("sentinel")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        real_open = builtins.open
+        opened_other = []
+
+        def selective_disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            result = real_open(path, *args, **kwargs)
+            if Path(path) == other:
+                opened_other.append(True)
+            return result
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", selective_disappearing_open)
+
+        dm.sweep(journal)  # no raise
+
+        # Confirm the non-journal open path was not blocked.
+        with builtins.open(other, encoding="utf-8") as fh:
+            assert fh.read() == "sentinel"
+
     def test_sweep_started_state_retains_entry_and_preserves_paths(self, tmp_path: Path) -> None:
         """Codex P1 PRRT_kwDOR_Rkws59gbdD + PRRT_kwDOR_Rkws59g2Ex:
         ``started`` is AMBIGUOUS — a crash between ``os.replace`` and
@@ -2021,6 +2121,83 @@ class TestJournalSchemaV2Parser:
         assert len(entries) == 1
         assert entries[0].state == "copied"
 
+    def test_v2_metadata_validation_rejects_bad_types_and_skips_blank_lines(self) -> None:
+        """The v2 parser drops invalid optional metadata fields one row
+        at a time, while tolerating blank lines between records."""
+        from file_organizer.undo.durable_move import _parse_journal_text
+
+        valid = json.dumps(
+            {
+                "schema": 2,
+                "op": "move",
+                "op_id": "ok",
+                "src": "/ok-src",
+                "dst": "/ok-dst",
+                "state": "done",
+            }
+        )
+        invalid_lines = [
+            json.dumps({"schema": 0, "op": "move", "src": "/a", "dst": "/b", "state": "done"}),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": 123,
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "tmp-bad",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "started",
+                    "tmp_path": 7,
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "ts-bool",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "ts": True,
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "ts-str",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "ts": "later",
+                }
+            ),
+            json.dumps(
+                {
+                    "schema": 2,
+                    "op": "move",
+                    "op_id": "pid-bool",
+                    "src": "/a",
+                    "dst": "/b",
+                    "state": "done",
+                    "host_pid": False,
+                }
+            ),
+        ]
+
+        entries = _parse_journal_text("\n".join(["", *invalid_lines, "", valid, ""]) + "\n")
+        assert len(entries) == 1
+        assert entries[0].op_id == "ok"
+
     def test_unknown_op_preserves_raw_line(self) -> None:
         """§4.2: unknown-op records preserve the FULL raw JSON line on
         ``_raw`` so compaction re-serializes them verbatim. A future
@@ -2100,6 +2277,40 @@ class TestJournalSchemaV2Parser:
         assert _hash16(raw) == h  # deterministic
         # Different content → different hash.
         assert _hash16(raw.replace('"done"', '"started"')) != h
+
+    def test_serialize_entry_omits_none_optional_v2_fields(self) -> None:
+        """The v2 serializer keeps the envelope minimal when diagnostic
+        fields are absent."""
+        from file_organizer.undo.durable_move import _JournalEntry, _serialize_entry
+
+        payload = json.loads(
+            _serialize_entry(
+                _JournalEntry(
+                    op="move",
+                    src="/a",
+                    dst="/b",
+                    state="done",
+                    schema=2,
+                    op_id="abc",
+                )
+            )
+        )
+
+        assert payload == {
+            "schema": 2,
+            "op": "move",
+            "op_id": "abc",
+            "src": "/a",
+            "dst": "/b",
+            "state": "done",
+        }
+
+    def test_is_descendant_rejects_exact_path(self) -> None:
+        """Equal paths are not descendants; only deeper children match."""
+        from file_organizer.undo.durable_move import _is_descendant
+
+        assert _is_descendant("/trash/dir", "/trash/dir") is False
+        assert _is_descendant("/trash/dir/file.txt", "/trash/dir") is True
 
 
 # ---------------------------------------------------------------------------
@@ -2415,7 +2626,131 @@ class TestJournalLockFile:
         holder.close()
         assert reader_done.wait(timeout=5.0)
         t.join(timeout=2)
-        assert result[0] is False
+
+    def test_read_journal_under_shared_lock_returns_empty_when_journal_vanishes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The shared-lock reader treats an exists→open FileNotFoundError
+        as a benign race and returns an empty entry list."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text('{"op":"move","src":"/a","dst":"/b","state":"done"}\n', encoding="utf-8")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        assert dm.read_journal_under_shared_lock(journal) == []
+
+    def test_read_journal_under_shared_lock_race_returns_list_not_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Return value on race is an *empty list*, not ``None`` or any
+        other falsy non-list. Callers iterate the result."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text('{"op":"move","src":"/x","dst":"/y","state":"done"}\n', encoding="utf-8")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        result = dm.read_journal_under_shared_lock(journal)
+        assert result == []
+        assert isinstance(result, list), (
+            "read_journal_under_shared_lock must return a list, not None or other falsy"
+        )
+
+    def test_read_journal_under_shared_lock_race_with_multi_entry_journal(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """exists→open race returns [] regardless of how many entries the
+        journal had before it vanished. The race is indistinguishable from
+        a concurrent sweep that already processed all entries."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text(
+            '{"op":"move","src":"/a","dst":"/b","state":"done"}\n'
+            '{"op":"move","src":"/c","dst":"/d","state":"started"}\n'
+            '{"op":"move","src":"/e","dst":"/f","state":"copied"}\n',
+            encoding="utf-8",
+        )
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        def disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return builtins.open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", disappearing_open)
+
+        assert dm.read_journal_under_shared_lock(journal) == []
+
+    def test_read_journal_under_shared_lock_passthrough_for_non_journal_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Race-handling open override only raises for the journal path;
+        all other ``open`` calls are passed through to the real open."""
+        import builtins
+        import contextlib
+
+        from file_organizer.undo import durable_move as dm
+
+        journal = tmp_path / "move.journal"
+        journal.write_text('{"op":"move","src":"/a","dst":"/b","state":"done"}\n', encoding="utf-8")
+        other = tmp_path / "other.txt"
+        other.write_text("sentinel")
+
+        @contextlib.contextmanager
+        def unlocked(_journal: Path, _mode: int):  # type: ignore[no-untyped-def]
+            yield None
+
+        real_open = builtins.open
+
+        def selective_disappearing_open(path, *args, **kwargs):  # type: ignore[no-untyped-def]
+            if Path(path) == journal:
+                raise FileNotFoundError("simulated exists-open race")
+            return real_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(dm, "_locked", unlocked)
+        monkeypatch.setattr("builtins.open", selective_disappearing_open)
+
+        assert dm.read_journal_under_shared_lock(journal) == []
+
+        with builtins.open(other, encoding="utf-8") as fh:
+            assert fh.read() == "sentinel"
 
     def test_replace_journal_under_held_lock_does_not_break_appender(self, tmp_path: Path) -> None:
         """Round-1 review blocking case: a sweep that would

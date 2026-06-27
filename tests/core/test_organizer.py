@@ -254,6 +254,28 @@ class TestFileOps:
         files = collect_files(link, MagicMock())
         assert files == []
 
+    def test_collect_files_rejects_symlinked_directory_input(self, tmp_path: Path) -> None:
+        """A directory symlink passed as the scan root must not enumerate its
+        target tree through ``safe_walk``'s default symlink guard."""
+        import sys
+
+        from file_organizer.core.file_ops import collect_files
+
+        if sys.platform == "win32":
+            pytest.skip("symlink filtering is POSIX-focused")
+
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "secret.txt").write_text("attacker secret")
+        linked_root = tmp_path / "linked_root"
+        try:
+            linked_root.symlink_to(outside, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        files = collect_files(linked_root, MagicMock())
+        assert files == []
+
     def test_simulate_organization(self, tmp_path: Path) -> None:
         """Test simulation builds output structure without creating files."""
         from file_organizer.core.file_ops import simulate_organization
@@ -374,6 +396,29 @@ class TestFileOps:
         cleanup_empty_dirs(tmp_path)
 
         assert not (tmp_path / ".empty_hidden").exists()
+
+    def test_cleanup_empty_dirs_skips_symlinked_directories(self, tmp_path: Path) -> None:
+        """Cleanup must not traverse or remove a directory symlink entry."""
+        import sys
+
+        from file_organizer.core.file_ops import cleanup_empty_dirs
+
+        if sys.platform == "win32":
+            pytest.skip("symlink filtering is POSIX-focused")
+
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        linked_dir = tmp_path / "linked_dir"
+        try:
+            linked_dir.symlink_to(outside, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        cleanup_empty_dirs(tmp_path)
+
+        assert linked_dir.exists()
+        assert linked_dir.is_symlink()
+        assert outside.exists()
 
 
 # ---------------------------------------------------------------------------
