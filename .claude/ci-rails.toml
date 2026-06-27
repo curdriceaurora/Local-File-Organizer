@@ -60,3 +60,9 @@ name = "safedir-valueerror"
 command = ["python", ".claude/scripts/check_safedir_valueerror.py"]
 mode = "advisory"
 description = "Flags broad except blocks that swallow SafeDir's path-safety ValueError (WP-6.1)."
+
+[[rail]]
+name = "textiowrapper-detach"
+command = ["python", ".claude/scripts/check_textiowrapper_detach.py"]
+mode = "advisory"
+description = "Flags io.TextIOWrapper instances that are never detach()-ed before going out of scope (WP-6.1)."
