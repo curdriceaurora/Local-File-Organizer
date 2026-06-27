@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 if TYPE_CHECKING:
     from file_organizer.client.exceptions import ClientError
@@ -62,9 +62,9 @@ def _print_json(payload: object) -> None:
 
 @api_app.command("health")
 def health(
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Check API health."""
     client, ClientError = _build_client(
@@ -87,16 +87,15 @@ def health(
 
 @api_app.command("login")
 def login(
-    username: str = typer.Option(..., prompt=True, help="Username."),
-    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    save_to: Path | None = typer.Option(
-        None,
-        "--save-token",
-        help="Optional path to save token JSON.",
-    ),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    username: Annotated[str, typer.Option(prompt=True, help="Username.")],
+    password: Annotated[str, typer.Option(prompt=True, hide_input=True, help="Password.")],
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    save_to: Annotated[
+        Path | None,
+        typer.Option("--save-token", help="Optional path to save token JSON."),
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Authenticate and print/store access tokens."""
     client, ClientError = _build_client(
@@ -123,10 +122,10 @@ def login(
 
 @api_app.command("me")
 def me(
-    token: str = typer.Option(..., "--token", help="Bearer token."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    token: Annotated[str, typer.Option("--token", help="Bearer token.")],
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Show authenticated user info."""
     client, ClientError = _build_client(
@@ -149,10 +148,10 @@ def me(
 
 @api_app.command("logout")
 def logout(
-    token: str = typer.Option(..., "--token", help="Bearer token."),
-    refresh_token: str = typer.Option(..., "--refresh-token", help="Refresh token to revoke."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
+    token: Annotated[str, typer.Option("--token", help="Bearer token.")],
+    refresh_token: Annotated[str, typer.Option("--refresh-token", help="Refresh token to revoke.")],
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
 ) -> None:
     """Revoke the current access/refresh token pair."""
     client, ClientError = _build_client(
@@ -170,14 +169,14 @@ def logout(
 
 @api_app.command("files")
 def files_list(
-    path: str = typer.Argument(..., help="Directory to list."),
-    token: str = typer.Option(..., "--token", help="Bearer token."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    recursive: bool = typer.Option(False, help="Include nested files."),
-    include_hidden: bool = typer.Option(False, help="Include hidden files."),
-    limit: int = typer.Option(100, min=1, max=500, help="Maximum rows."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    path: Annotated[str, typer.Argument(help="Directory to list.")],
+    token: Annotated[str, typer.Option("--token", help="Bearer token.")],
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    recursive: Annotated[bool, typer.Option(help="Include nested files.")] = False,
+    include_hidden: Annotated[bool, typer.Option(help="Include hidden files.")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=500, help="Maximum rows.")] = 100,
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """List files via the API client."""
     client, ClientError = _build_client(
@@ -209,11 +208,11 @@ def files_list(
 
 @api_app.command("system-status")
 def system_status(
-    path: str = typer.Argument(".", help="Path to inspect."),
-    token: str = typer.Option(..., "--token", help="Bearer token."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    token: Annotated[str, typer.Option("--token", help="Bearer token.")],
+    path: Annotated[str, typer.Argument(help="Path to inspect.")] = ".",
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Show system status from the API."""
     client, ClientError = _build_client(
@@ -236,13 +235,13 @@ def system_status(
 
 @api_app.command("system-stats")
 def system_stats(
-    path: str = typer.Argument(".", help="Directory to analyze."),
-    token: str = typer.Option(..., "--token", help="Bearer token."),
-    base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    max_depth: int | None = typer.Option(None, min=1, help="Optional max depth."),
-    use_cache: bool = typer.Option(True, help="Use server-side cache."),
-    timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
+    token: Annotated[str, typer.Option("--token", help="Bearer token.")],
+    path: Annotated[str, typer.Argument(help="Directory to analyze.")] = ".",
+    base_url: Annotated[str, typer.Option(help="API base URL.")] = "http://localhost:8000",
+    max_depth: Annotated[int | None, typer.Option(min=1, help="Optional max depth.")] = None,
+    use_cache: Annotated[bool, typer.Option(help="Use server-side cache.")] = True,
+    timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Show storage analytics stats from the API."""
     client, ClientError = _build_client(

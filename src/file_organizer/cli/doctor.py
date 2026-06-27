@@ -11,7 +11,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -335,24 +335,24 @@ def install_groups(groups: set[str]) -> None:
 
 
 def doctor(
-    path: Path = typer.Argument(
-        ...,
-        help="Directory path to scan for file types.",
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        resolve_path=True,
-    ),
-    install: bool = typer.Option(
-        False,
-        "--install",
-        help="Automatically install recommended dependency groups.",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Output as JSON.",
-    ),
+    path: Annotated[
+        Path,
+        typer.Argument(
+            help="Directory path to scan for file types.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ],
+    install: Annotated[
+        bool,
+        typer.Option("--install", help="Automatically install recommended dependency groups."),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON."),
+    ] = False,
 ) -> None:
     """Scan directory for file types and recommend optional dependencies.
 

@@ -1,8 +1,8 @@
 """Setup wizard CLI sub-app."""
 
 from __future__ import annotations
-from typing import Annotated
 
+from typing import Annotated
 
 import typer
 from rich.panel import Panel
@@ -16,20 +16,16 @@ setup_app = typer.Typer(help="Interactive setup wizard for first-run configurati
 
 @setup_app.command(name="run")
 def setup_run(  # noqa: C901
-    mode: Annotated[str, typer.Option(
-        "--mode",
-        "-m",
-        help="Setup mode: quick-start or power-user.",
-    )] = "quick-start",
-    profile: Annotated[str, typer.Option(
-        "--profile", 
-        "-p", 
-        help="Profile name."
-    )] = "default",
-    dry_run: Annotated[bool, typer.Option(
-        "--dry-run", 
-        help="Preview without saving."
-    )] = False,
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-m",
+            help="Setup mode: quick-start or power-user.",
+        ),
+    ] = "quick-start",
+    profile: Annotated[str, typer.Option("--profile", "-p", help="Profile name.")] = "default",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without saving.")] = False,
 ) -> None:
     """Run the setup wizard to configure File Organizer.
 
