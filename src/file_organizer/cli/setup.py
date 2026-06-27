@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.panel import Panel
 from rich.table import Table  # pyre-ignore[21]
@@ -14,14 +16,16 @@ setup_app = typer.Typer(help="Interactive setup wizard for first-run configurati
 
 @setup_app.command(name="run")
 def setup_run(  # noqa: C901
-    mode: str = typer.Option(
-        "quick-start",
-        "--mode",
-        "-m",
-        help="Setup mode: quick-start or power-user.",
-    ),
-    profile: str = typer.Option("default", "--profile", "-p", help="Profile name."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without saving."),
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-m",
+            help="Setup mode: quick-start or power-user.",
+        ),
+    ] = "quick-start",
+    profile: Annotated[str, typer.Option("--profile", "-p", help="Profile name.")] = "default",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without saving.")] = False,
 ) -> None:
     """Run the setup wizard to configure File Organizer.
 

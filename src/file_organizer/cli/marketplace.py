@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 if TYPE_CHECKING:
     from file_organizer.plugins.marketplace import MarketplaceService, PluginPackage
@@ -55,10 +55,14 @@ def _render_plugins(items: list[PluginPackage]) -> None:
 
 @marketplace_app.command("list")
 def list_plugins(
-    page: int = typer.Option(1, "--page", "-p", min=1, help="Page number."),
-    per_page: int = typer.Option(20, "--per-page", min=1, max=100, help="Results per page."),
-    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category."),
-    tags: list[str] | None = typer.Option(None, "--tag", "-t", help="Filter by tags."),
+    page: Annotated[int, typer.Option("--page", "-p", min=1, help="Page number.")] = 1,
+    per_page: Annotated[
+        int, typer.Option("--per-page", min=1, max=100, help="Results per page.")
+    ] = 20,
+    category: Annotated[
+        str | None, typer.Option("--category", "-c", help="Filter by category.")
+    ] = None,
+    tags: Annotated[list[str] | None, typer.Option("--tag", "-t", help="Filter by tags.")] = None,
 ) -> None:
     """List available plugins."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -79,9 +83,11 @@ def list_plugins(
 
 @marketplace_app.command("search")
 def search_plugins(
-    query: str = typer.Argument(..., help="Search query."),
-    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category."),
-    tags: list[str] | None = typer.Option(None, "--tag", "-t", help="Filter by tags."),
+    query: Annotated[str, typer.Argument(help="Search query.")],
+    category: Annotated[
+        str | None, typer.Option("--category", "-c", help="Filter by category.")
+    ] = None,
+    tags: Annotated[list[str] | None, typer.Option("--tag", "-t", help="Filter by tags.")] = None,
 ) -> None:
     """Search marketplace plugins."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -103,8 +109,10 @@ def search_plugins(
 
 @marketplace_app.command("info")
 def plugin_info(
-    name: str = typer.Argument(..., help="Plugin name."),
-    version: str | None = typer.Option(None, "--version", "-v", help="Specific version."),
+    name: Annotated[str, typer.Argument(help="Plugin name.")],
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Specific version.")
+    ] = None,
 ) -> None:
     """Show detailed plugin metadata."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -132,8 +140,10 @@ def plugin_info(
 
 @marketplace_app.command("install")
 def install_plugin(
-    name: str = typer.Argument(..., help="Plugin name."),
-    version: str | None = typer.Option(None, "--version", "-v", help="Specific version."),
+    name: Annotated[str, typer.Argument(help="Plugin name.")],
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Specific version.")
+    ] = None,
 ) -> None:
     """Install a plugin from marketplace."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -148,7 +158,7 @@ def install_plugin(
 
 @marketplace_app.command("uninstall")
 def uninstall_plugin(
-    name: str = typer.Argument(..., help="Plugin name."),
+    name: Annotated[str, typer.Argument(help="Plugin name.")],
 ) -> None:
     """Uninstall a marketplace plugin."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -163,7 +173,7 @@ def uninstall_plugin(
 
 @marketplace_app.command("update")
 def update_plugin(
-    name: str = typer.Argument(..., help="Plugin name."),
+    name: Annotated[str, typer.Argument(help="Plugin name.")],
 ) -> None:
     """Update an installed plugin."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -220,11 +230,11 @@ def available_updates() -> None:
 
 @marketplace_app.command("review")
 def add_review(
-    name: str = typer.Argument(..., help="Plugin name.", metavar="PLUGIN_NAME"),
-    user: str = typer.Option(..., "--user", help="Reviewer ID."),
-    rating: int = typer.Option(..., "--rating", min=1, max=5, help="Rating from 1 to 5."),
-    title: str = typer.Option(..., "--title", help="Review title."),
-    content: str = typer.Option(..., "--content", help="Review text."),
+    name: Annotated[str, typer.Argument(help="Plugin name.", metavar="PLUGIN_NAME")],
+    user: Annotated[str, typer.Option("--user", help="Reviewer ID.")],
+    rating: Annotated[int, typer.Option("--rating", min=1, max=5, help="Rating from 1 to 5.")],
+    title: Annotated[str, typer.Option("--title", help="Review title.")],
+    content: Annotated[str, typer.Option("--content", help="Review text.")],
 ) -> None:
     """Add or update a plugin review."""
     from file_organizer.plugins.marketplace import MarketplaceError, PluginReview

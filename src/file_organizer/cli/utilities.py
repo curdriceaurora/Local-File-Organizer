@@ -7,6 +7,7 @@ import os
 import time
 import warnings
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -334,22 +335,26 @@ def _do_default_search(
 
 
 def search(
-    query: str = typer.Argument(..., help="Search query (glob pattern or keyword)."),
-    directory: Path = typer.Argument(".", help="Directory to search in.", exists=False),
-    type_filter: str | None = typer.Option(
-        None,
-        "--type",
-        "-t",
-        help="Filter by type: text, image, video, audio, archive.",
-    ),
-    limit: int = typer.Option(50, "--limit", "-n", help="Max results to show."),
-    recursive: bool = typer.Option(True, help="Search subdirectories."),
-    json_out: bool = typer.Option(False, "--json", help="Output as JSON array."),
-    semantic: bool = typer.Option(
-        False,
-        "--semantic",
-        help="Use hybrid BM25+vector semantic search instead of filename matching.",
-    ),
+    query: Annotated[str, typer.Argument(help="Search query (glob pattern or keyword).")],
+    directory: Annotated[Path, typer.Argument(help="Directory to search in.")] = Path("."),
+    type_filter: Annotated[
+        str | None,
+        typer.Option(
+            "--type",
+            "-t",
+            help="Filter by type: text, image, video, audio, archive.",
+        ),
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Max results to show.")] = 50,
+    recursive: Annotated[bool, typer.Option(help="Search subdirectories.")] = True,
+    json_out: Annotated[bool, typer.Option("--json", help="Output as JSON array.")] = False,
+    semantic: Annotated[
+        bool,
+        typer.Option(
+            "--semantic",
+            help="Use hybrid BM25+vector semantic search instead of filename matching.",
+        ),
+    ] = False,
 ) -> None:
     """Search for files by name pattern with optional type filtering."""
     directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
@@ -369,9 +374,11 @@ def search(
 
 
 def analyze(
-    file_path: Path = typer.Argument(..., help="File to analyze."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show additional details."),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+    file_path: Annotated[Path, typer.Argument(help="File to analyze.")],
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Show additional details.")
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Analyze a file using AI and show description, category, and confidence."""
     from file_organizer.services.analyzer import (

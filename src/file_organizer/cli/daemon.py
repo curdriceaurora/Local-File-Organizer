@@ -10,7 +10,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -34,19 +34,25 @@ _DEFAULT_PID_FILE = _DEFAULT_PID_DIR / "daemon.pid"
 
 @daemon_app.command()
 def start(
-    watch_dir: Path | None = typer.Option(
-        None, "--watch-dir", "-w", help="Directory to watch for new files."
-    ),
-    output_dir: Path | None = typer.Option(
-        None, "--output-dir", "-o", help="Destination directory for organized files."
-    ),
-    foreground: bool = typer.Option(
-        False, "--foreground", "-f", help="Run in the foreground (blocking)."
-    ),
-    poll_interval: float = typer.Option(
-        1.0, "--poll-interval", help="Seconds between file-system polls."
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
+    watch_dir: Annotated[
+        Path | None,
+        typer.Option("--watch-dir", "-w", help="Directory to watch for new files."),
+    ] = None,
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", "-o", help="Destination directory for organized files."),
+    ] = None,
+    foreground: Annotated[
+        bool,
+        typer.Option("--foreground", "-f", help="Run in the foreground (blocking)."),
+    ] = False,
+    poll_interval: Annotated[
+        float,
+        typer.Option("--poll-interval", help="Seconds between file-system polls."),
+    ] = 1.0,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without moving files.")
+    ] = False,
 ) -> None:
     """Start the background file organization daemon."""
     from file_organizer.daemon.config import DaemonConfig
@@ -160,8 +166,10 @@ def status() -> None:
 
 @daemon_app.command()
 def watch(
-    watch_dir: Path = typer.Argument(..., help="Directory to watch for file events."),
-    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Seconds between polls."),
+    watch_dir: Annotated[Path, typer.Argument(help="Directory to watch for file events.")],
+    poll_interval: Annotated[
+        float, typer.Option("--poll-interval", help="Seconds between polls.")
+    ] = 1.0,
 ) -> None:
     """Watch a directory and stream file events (Ctrl+C to stop)."""
     from file_organizer.watcher.config import WatcherConfig
@@ -193,9 +201,11 @@ def watch(
 
 @daemon_app.command()
 def process(
-    input_dir: Path = typer.Argument(..., help="Directory containing files to process."),
-    output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
+    input_dir: Annotated[Path, typer.Argument(help="Directory containing files to process.")],
+    output_dir: Annotated[Path, typer.Argument(help="Destination directory for organized files.")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without moving files.")
+    ] = False,
 ) -> None:
     """One-shot: organize files and display a summary."""
     from file_organizer.core.organizer import FileOrganizer

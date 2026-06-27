@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 from rich.console import Console
 
@@ -12,7 +14,7 @@ config_app = typer.Typer(help="Configuration management.")
 
 @config_app.command(name="show")
 def config_show(
-    profile: str = typer.Option("default", help="Profile name."),
+    profile: Annotated[str, typer.Option(help="Profile name.")] = "default",
 ) -> None:
     """Show current configuration."""
     from file_organizer.config import ConfigManager
@@ -49,12 +51,16 @@ def config_list() -> None:
 
 @config_app.command(name="edit")
 def config_edit(
-    profile: str = typer.Option("default", help="Profile name to edit."),
-    text_model: str | None = typer.Option(None, help="Set text model name."),
-    vision_model: str | None = typer.Option(None, help="Set vision model name."),
-    temperature: float | None = typer.Option(None, help="Set temperature (0.0-1.0)."),
-    device: str | None = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
-    methodology: str | None = typer.Option(None, help="Set default methodology (none, para, jd)."),
+    profile: Annotated[str, typer.Option(help="Profile name to edit.")] = "default",
+    text_model: Annotated[str | None, typer.Option(help="Set text model name.")] = None,
+    vision_model: Annotated[str | None, typer.Option(help="Set vision model name.")] = None,
+    temperature: Annotated[float | None, typer.Option(help="Set temperature (0.0-1.0).")] = None,
+    device: Annotated[
+        str | None, typer.Option(help="Set device (auto, cpu, cuda, mps, metal).")
+    ] = None,
+    methodology: Annotated[
+        str | None, typer.Option(help="Set default methodology (none, para, jd).")
+    ] = None,
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
@@ -98,5 +104,15 @@ def config_edit(
     if methodology is not None:
         cfg.default_methodology = methodology
 
-    mgr.save(cfg, profile=profile)
+    from file_organizer.config.manager import UnsupportedConfigVersionError
+
+    try:
+        mgr.save(cfg, profile=profile)
+    except UnsupportedConfigVersionError as exc:
+        console.print(
+            f"[red]Error: profile '{profile}' uses an unsupported config version "
+            f"and cannot be edited. Delete or migrate it first.[/red]\n"
+            f"[dim]Details: {exc}[/dim]"
+        )
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved profile '{profile}'[/green]")

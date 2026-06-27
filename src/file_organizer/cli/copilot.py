@@ -7,6 +7,7 @@ commands to the copilot engine.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -23,16 +24,18 @@ console = Console()
 
 @copilot_app.command(name="chat")
 def copilot_chat(
-    message: str | None = typer.Argument(
-        None,
-        help="Single message to send (omit for interactive REPL).",
-    ),
-    directory: str | None = typer.Option(
-        None,
-        "--dir",
-        "-d",
-        help="Working directory for file operations.",
-    ),
+    message: Annotated[
+        str | None,
+        typer.Argument(help="Single message to send (omit for interactive REPL)."),
+    ] = None,
+    directory: Annotated[
+        str | None,
+        typer.Option(
+            "--dir",
+            "-d",
+            help="Working directory for file operations.",
+        ),
+    ] = None,
 ) -> None:
     """Chat with the file-organisation copilot.
 

@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import click
 import typer
@@ -77,29 +77,38 @@ files first."""
 @app.callback()
 def main_callback(
     ctx: typer.Context,
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without executing."),
-    json_output: bool = typer.Option(False, "--json", help="Output results as JSON."),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Auto-confirm all prompts."),
-    interactive: bool = typer.Option(
-        True, "--interactive/--no-interactive", help="Toggle interactive prompts."
-    ),
-    debug: bool = typer.Option(
-        False,
-        "--debug",
-        help=(
-            "Enable verbose logging and surface tracebacks on errors. "
-            "Required for filing useful beta bug reports."
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose output.")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without executing.")
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Output results as JSON.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Auto-confirm all prompts.")] = False,
+    interactive: Annotated[
+        bool,
+        typer.Option("--interactive/--no-interactive", help="Toggle interactive prompts."),
+    ] = True,
+    debug: Annotated[
+        bool,
+        typer.Option(
+            "--debug",
+            help=(
+                "Enable verbose logging and surface tracebacks on errors. "
+                "Required for filing useful beta bug reports."
+            ),
         ),
-    ),
-    version_flag: bool = typer.Option(
-        False,
-        "--version",
-        "-V",
-        callback=_version_callback,
-        is_eager=True,
-        help="Show the application version and exit.",
-    ),
+    ] = False,
+    version_flag: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the application version and exit.",
+        ),
+    ] = False,
 ) -> None:
     """Initialize global CLI state and perform startup bookkeeping.
 
@@ -222,10 +231,10 @@ def version() -> None:
 
 @app.command()
 def serve(
-    host: str = typer.Option("0.0.0.0", help="Bind address."),
-    port: int = typer.Option(8000, help="Port number."),
-    reload: bool = typer.Option(False, help="Auto-reload on code changes."),
-    workers: int = typer.Option(1, help="Number of worker processes."),
+    host: Annotated[str, typer.Option(help="Bind address.")] = "0.0.0.0",
+    port: Annotated[int, typer.Option(help="Port number.")] = 8000,
+    reload: Annotated[bool, typer.Option(help="Auto-reload on code changes.")] = False,
+    workers: Annotated[int, typer.Option(help="Number of worker processes.")] = 1,
 ) -> None:
     """Start the File Organizer web server and API."""
     try:
@@ -268,9 +277,9 @@ def launch_tui() -> None:
 
 @app.command(name="desktop")
 def launch_desktop(
-    title: str = typer.Option("File Organizer", help="Window title bar text."),
-    width: int = typer.Option(1280, help="Initial window width in logical pixels."),
-    height: int = typer.Option(800, help="Initial window height in logical pixels."),
+    title: Annotated[str, typer.Option(help="Window title bar text.")] = "File Organizer",
+    width: Annotated[int, typer.Option(help="Initial window width in logical pixels.")] = 1280,
+    height: Annotated[int, typer.Option(help="Initial window height in logical pixels.")] = 800,
 ) -> None:
     """Launch the native desktop window application."""
     try:
@@ -292,11 +301,12 @@ def launch_desktop(
 
 @app.command(name="docs")
 def docs_command(
-    build: bool = typer.Option(
-        False, "--build", "-b", help="Compile documentation to HTML instead of serving."
-    ),
-    host: str = typer.Option("127.0.0.1", help="Bind address for the docs server."),
-    port: int = typer.Option(8001, help="Port number for the docs server."),
+    build: Annotated[
+        bool,
+        typer.Option("--build", "-b", help="Compile documentation to HTML instead of serving."),
+    ] = False,
+    host: Annotated[str, typer.Option(help="Bind address for the docs server.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Port number for the docs server.")] = 8001,
 ) -> None:
     """Build or serve the project documentation."""
     import shutil
@@ -347,7 +357,7 @@ def docs_command(
 
 @app.command(name="hardware-info")
 def hardware_info(
-    json_out: bool = typer.Option(False, "--json", help="Output as JSON."),
+    json_out: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Print the current machine's hardware profile to the console.
 
@@ -391,10 +401,10 @@ def hardware_info(
 
 @app.command()
 def undo(
-    operation_id: int | None = typer.Option(None, help="Specific operation ID to undo."),
-    transaction_id: str | None = typer.Option(None, help="Transaction ID to undo."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    operation_id: Annotated[int | None, typer.Option(help="Specific operation ID to undo.")] = None,
+    transaction_id: Annotated[str | None, typer.Option(help="Transaction ID to undo.")] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without executing.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Undo previously recorded file operations.
 
@@ -417,9 +427,9 @@ def undo(
 
 @app.command()
 def redo(
-    operation_id: int | None = typer.Option(None, help="Specific operation ID to redo."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    operation_id: Annotated[int | None, typer.Option(help="Specific operation ID to redo.")] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without executing.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Redo previously recorded file operations.
 
@@ -440,11 +450,11 @@ def redo(
 
 @app.command()
 def history(
-    limit: int = typer.Option(10, help="Maximum number of operations to show."),
-    operation_type: str | None = typer.Option(None, "--type", help="Filter by type."),
-    status: str | None = typer.Option(None, help="Filter by status."),
-    stats: bool = typer.Option(False, help="Show statistics."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    limit: Annotated[int, typer.Option(help="Maximum number of operations to show.")] = 10,
+    operation_type: Annotated[str | None, typer.Option("--type", help="Filter by type.")] = None,
+    status: Annotated[str | None, typer.Option(help="Filter by status.")] = None,
+    stats: Annotated[bool, typer.Option(help="Show statistics.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """View operation history."""
     from file_organizer.cli.undo_redo import history_command as _history
@@ -461,12 +471,13 @@ def history(
 
 @app.command()
 def recover(
-    journal: Path | None = typer.Option(
-        None,
-        # --journal is a read-only path; defaults to system state dir.
-        help="Override path to durable_move.journal (defaults to the user state dir).",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    journal: Annotated[
+        Path | None,
+        typer.Option(
+            help="Override path to durable_move.journal (defaults to the user state dir)."
+        ),
+    ] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Preview pending durable_move recovery actions without executing them.
 
@@ -483,8 +494,8 @@ def recover(
 
 @app.command()
 def analytics(
-    directory: Path | None = typer.Argument(None, help="Directory to analyze."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    directory: Annotated[Path | None, typer.Argument(help="Directory to analyze.")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Display storage analytics dashboard."""
     from file_organizer.cli.analytics import analytics_command
@@ -519,10 +530,17 @@ def _register_profile_command() -> None:
 
         typer_click_object = typer.main.get_group(app)
         typer_click_object.add_command(_profile_click_group, "profile")
-    except ImportError:
+    except ImportError as exc:
         # Profile module may fail to import if intelligence services
-        # are not installed; we degrade gracefully.
-        pass
+        # are not installed; degrade gracefully but log so operators can
+        # diagnose why `fo profile` is missing from the help output.
+        _logger = logging.getLogger(__name__)
+        _logger.warning(
+            "Could not register 'fo profile' command: %s. "
+            "The 'profile' sub-command will not be available.",
+            exc,
+            exc_info=True,
+        )
 
 
 # ---------------------------------------------------------------------------
