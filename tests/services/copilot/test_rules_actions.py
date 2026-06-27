@@ -105,7 +105,6 @@ def test_conflict_rename_multiple_increments(tmp_path: Path) -> None:
     """Tests the while-loop branch where dest.txt and dest_1.txt both exist."""
     source = tmp_path / "source.txt"
     source.write_text("brand new", encoding="utf-8")
-    
     (tmp_path / "dest.txt").write_text("original", encoding="utf-8")
     (tmp_path / "dest_1.txt").write_text("first conflict", encoding="utf-8")
 
