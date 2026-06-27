@@ -155,6 +155,7 @@ def test_repo_registry_loads_registered_rails() -> None:
         "pytest-raises-hygiene",
         "safedir-valueerror",
         "textiowrapper-detach",
+        "called-attribute-assertion",
     }
     for rail in rails:
         assert rail.mode == "advisory"
