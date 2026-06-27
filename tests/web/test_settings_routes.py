@@ -676,7 +676,7 @@ class TestSettingsImportPathBased:
 
     @pytest.fixture()
     def _client(self, tmp_path):
-        """Yield a TestClient with settings_router mounted and get_settings overridden."""
+        """Return a TestClient with settings_router mounted and get_settings overridden."""
         api_settings = ApiSettings(
             allowed_paths=[str(tmp_path)],
             auth_enabled=False,
@@ -685,7 +685,7 @@ class TestSettingsImportPathBased:
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: api_settings
         app.include_router(settings_router)
-        yield TestClient(app, raise_server_exceptions=False), tmp_path
+        return TestClient(app, raise_server_exceptions=False), tmp_path
 
     @pytest.mark.ci
     def test_import_via_path_returns_200(self, _client):

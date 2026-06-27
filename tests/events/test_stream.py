@@ -589,9 +589,14 @@ class TestRedisStreamManagerContextManager:
         mock_client.ping.return_value = True
         mock_redis_module.Redis.from_url.return_value = mock_client
 
-        with pytest.raises(ValueError, match="test error"):
-            with RedisStreamManager() as manager:
+        manager = RedisStreamManager()
+
+        def _enter_and_fail() -> None:
+            with manager:
                 assert manager.is_connected is True
                 raise ValueError("test error")
+
+        with pytest.raises(ValueError, match="test error"):
+            _enter_and_fail()
 
         assert manager.is_connected is False

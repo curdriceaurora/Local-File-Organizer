@@ -926,12 +926,12 @@ class TestVideoMetadataExtractorGaps:
 
 class TestEpubEnhancedGaps:
     def test_epub_enhanced_import_errors(self) -> None:
+        from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
+
         with (
             patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", False),
             pytest.raises(ImportError),
         ):
-            from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
-
             EnhancedEPUBReader()
 
         with (
@@ -939,8 +939,6 @@ class TestEpubEnhancedGaps:
             patch("file_organizer.utils.epub_enhanced.BS4_AVAILABLE", False),
             pytest.raises(ImportError),
         ):
-            from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
-
             EnhancedEPUBReader()
 
     def test_epub_enhanced_word_to_number_and_clean_isbn(self) -> None:

@@ -51,5 +51,5 @@ python .claude/scripts/ci_rails.py --enforce-all  # CI: treat all rails as enfor
 - `docs/internal/wp-0.1-retargeting-checklist.md` — porting checklist
 
 ---
-**Last Updated**: 2026-06-20
-**Status**: Active (advisory framework; no rails registered yet)
+**Last Updated**: 2026-06-27
+**Status**: Active (advisory framework; 11 rails registered — see SECURITY.md's lint-rail table for the full list and status of each)

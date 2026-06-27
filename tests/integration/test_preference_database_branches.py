@@ -253,7 +253,7 @@ class TestPreferenceDatabaseTransaction:
         """Exception inside transaction() triggers rollback (lines 239-243)."""
         db = _make_db(tmp_path)
 
-        with pytest.raises(ValueError, match="tx_fail"):
+        def _insert_then_fail() -> None:
             with db.transaction() as conn:
                 conn.execute(
                     "INSERT INTO preferences "
@@ -263,6 +263,9 @@ class TestPreferenceDatabaseTransaction:
                     "'2026-01-01Z', '2026-01-01Z', 'user')"
                 )
                 raise ValueError("tx_fail")
+
+        with pytest.raises(ValueError, match="tx_fail"):
+            _insert_then_fail()
 
         # Row was rolled back
         result = db.get_preference("test", "k1")

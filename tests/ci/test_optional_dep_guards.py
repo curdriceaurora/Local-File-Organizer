@@ -19,8 +19,8 @@ This guardrail:
    references an optional package when no ``pytest.importorskip(...)`` call exists
    anywhere in the file.
 
-Scope: diff-based (changed files only) — broadened to full suite once all pre-existing
-violations are resolved.
+Scope: full test suite (broadened from diff-based in WP-6.2, #1241 — see
+test_test_files_guard_optional_deps).
 """
 
 from __future__ import annotations
@@ -285,6 +285,16 @@ def _git_changed_test_files() -> list[Path]:
         "diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
     )
     changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
+    return sorted(p for p in _eligible_test_files() if str(p.relative_to(FO_ROOT)) in changed)
+
+
+def _eligible_test_files() -> list[Path]:
+    """All tests/**/*.py paths excluding self, fixtures, ci, and conftest.
+
+    Shared by both _git_changed_test_files (diff-scoped) and
+    _all_test_files (full-suite) so the exclusion rules can't drift
+    between the two.
+    """
     return sorted(
         p
         for p in TESTS_ROOT.rglob("*.py")
@@ -292,8 +302,16 @@ def _git_changed_test_files() -> list[Path]:
         and "fixtures" not in p.parts
         and "ci" not in p.parts
         and p.name != "conftest.py"
-        and str(p.relative_to(FO_ROOT)) in changed
     )
+
+
+def _all_test_files() -> list[Path]:
+    """Return every test file under tests/, for full-suite enforcement.
+
+    Safe to use once a diff-scoped guard has been confirmed clean against
+    the full suite (see test_test_files_guard_optional_deps' docstring).
+    """
+    return _eligible_test_files()
 
 
 # -------------------------------------------------------------------------
@@ -350,7 +368,7 @@ def test_detector_parametrized(source: str, expected_violations: int) -> None:
 
 
 def test_test_files_guard_optional_deps() -> None:
-    """Changed test files must use ``pytest.importorskip`` when importing optional packages.
+    """Test files must use ``pytest.importorskip`` when importing optional packages.
 
     A module-level ``import rank_bm25`` or ``from sklearn import ...`` crashes the entire
     test file at collection time when the package is absent.  The correct pattern is a
@@ -363,19 +381,21 @@ def test_test_files_guard_optional_deps() -> None:
             def _require_rank_bm25(self) -> None:
                 pytest.importorskip("rank_bm25")
 
-    Applies to changed files only (diff-scoped until full-suite cleanup is complete).
+    Applies to the full test suite — a full-suite dry run found zero
+    pre-existing violations (WP-6.2, #1241), so this guard was broadened
+    from its prior diff-scoped form.
     """
     optional_deps = _load_optional_dep_names()
     if not optional_deps:
         pytest.skip("No optional deps found in pyproject.toml — check parser logic")
 
     violations: list[str] = []
-    for path in _git_changed_test_files():
+    for path in _all_test_files():
         source = path.read_text(encoding="utf-8")
         violations.extend(_find_unguarded_optional_imports(source, optional_deps, str(path)))
 
     assert not violations, (
-        "Optional-dep imports without pytest.importorskip guard found in changed tests.\n"
+        "Optional-dep imports without pytest.importorskip guard found.\n"
         "Add a class-level autouse fixture: pytest.importorskip('<package>')\n"
         + "\n".join(violations)
     )

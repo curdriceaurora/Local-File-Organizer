@@ -229,11 +229,17 @@ class TestOperationTransaction:
 
     def test_auto_rollback_on_exception(self, history: OperationHistory) -> None:
         txn_id = None
-        with pytest.raises(ValueError, match="test error"):
+        txn = None
+
+        def _log_and_fail() -> None:
+            nonlocal txn_id, txn
             with OperationTransaction(history) as txn:
                 txn.log_move(Path("/src/a.txt"), Path("/dst/a.txt"))
                 txn_id = txn.get_transaction_id()
                 raise ValueError("test error")
+
+        with pytest.raises(ValueError, match="test error"):
+            _log_and_fail()
 
         assert txn._rolled_back is True
         db_txn = history.get_transaction(txn_id)
@@ -308,10 +314,16 @@ class TestOperationTransaction:
 
         txn1_id = txn1.get_transaction_id()
 
-        with pytest.raises(RuntimeError):
+        txn2 = None
+
+        def _log_and_abort() -> None:
+            nonlocal txn2
             with OperationTransaction(history) as txn2:
                 txn2.log_move(Path("/s2.txt"), Path("/d2.txt"))
                 raise RuntimeError("abort txn2")
+
+        with pytest.raises(RuntimeError):
+            _log_and_abort()
 
         txn2_id = txn2.get_transaction_id()
         assert txn1_id != txn2_id

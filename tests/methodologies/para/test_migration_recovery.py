@@ -11,7 +11,6 @@ import os
 import shutil
 import tempfile
 import time
-from collections.abc import Generator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -79,15 +78,13 @@ class TestMigrationBackupSystem:
         )
 
     @pytest.fixture
-    def migration_manager(
-        self, config: PARAConfig, tmp_path: Path
-    ) -> Generator[PARAMigrationManager, None, None]:
+    def migration_manager(self, config: PARAConfig, tmp_path: Path) -> PARAMigrationManager:
         """Create migration manager instance with isolated backup root."""
         manager = PARAMigrationManager(config)
         # Override backup_root to use tmp_path so parallel tests don't collide
         manager.backup_root = tmp_path / "migration-backups"
         manager.backup_root.mkdir(parents=True, exist_ok=True)
-        yield manager
+        return manager
 
     def test_backup_creation(self, migration_manager, temp_source, temp_target):
         """Test backup creation for migration files."""
@@ -438,14 +435,12 @@ class TestMigrationManagerEdgeCases:
         )
 
     @pytest.fixture
-    def migration_manager(
-        self, config: PARAConfig, tmp_path: Path
-    ) -> Generator[PARAMigrationManager, None, None]:
+    def migration_manager(self, config: PARAConfig, tmp_path: Path) -> PARAMigrationManager:
         """Create migration manager instance with isolated backup root."""
         manager = PARAMigrationManager(config)
         manager.backup_root = tmp_path / "migration-backups"
         manager.backup_root.mkdir(parents=True, exist_ok=True)
-        yield manager
+        return manager
 
     def test_migration_manager_with_custom_heuristic_engine(self, config, tmp_path):
         """Test migration manager with custom heuristic engine."""

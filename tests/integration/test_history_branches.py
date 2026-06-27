@@ -86,13 +86,17 @@ class TestDatabaseManagerBranches:
     def test_transaction_context_exception_rolls_back(self, tmp_path: Path) -> None:
         """Exception inside db.transaction() triggers rollback (lines 186-189)."""
         db = _make_db(tmp_path)
-        with pytest.raises(RuntimeError, match="deliberate"):
+
+        def _insert_then_fail() -> None:
             with db.transaction() as conn:
                 conn.execute(
                     "INSERT INTO operations (operation_type, source_path, timestamp, status)"
                     " VALUES ('move', '/x', '2026-01-01T00:00:00Z', 'completed')"
                 )
                 raise RuntimeError("deliberate")
+
+        with pytest.raises(RuntimeError, match="deliberate"):
+            _insert_then_fail()
         # Row was rolled back
         assert db.get_operation_count() == 0
 

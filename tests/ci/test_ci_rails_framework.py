@@ -153,6 +153,10 @@ def test_repo_registry_loads_registered_rails() -> None:
         "test-hardcoded-paths",
         "test-separator-paths",
         "pytest-raises-hygiene",
+        "safedir-valueerror",
+        "textiowrapper-detach",
+        "called-attribute-assertion",
+        "xdist-loadgroup",
     }
     for rail in rails:
         assert rail.mode == "advisory"
