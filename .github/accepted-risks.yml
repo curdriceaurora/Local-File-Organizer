@@ -1,4 +1,4 @@
-# Accepted risk allowlist for scripts/pip_audit_gate.py (WP-6.3, #1242).
+# Accepted risk allowlist for .claude/scripts/pip_audit_gate.py (WP-6.3, #1242).
 #
 # Each entry suppresses ONE pip-audit finding (matched by package name +
 # vulnerability id) from failing the gate. Every entry MUST have a

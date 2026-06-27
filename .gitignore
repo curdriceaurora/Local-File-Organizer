@@ -77,7 +77,7 @@ coverage.xml
 .coverage-unit.json
 htmlcov/
 
-# pip-audit output (generated, see scripts/pip_audit_gate.py)
+# pip-audit output (generated, see .claude/scripts/pip_audit_gate.py)
 .pip-audit.json
 
 # MkDocs build output
