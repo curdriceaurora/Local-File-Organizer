@@ -21,7 +21,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Annotated, Any, TypedDict, cast
 
 import typer
 
@@ -1135,53 +1135,59 @@ def _validate_compare_path(compare_path: Path | None) -> Path | None:
 
 @benchmark_app.command()
 def run(
-    input_path: Path = typer.Argument(
-        Path("tests/fixtures/"),
-        help="Path to files to benchmark.",
-    ),
-    iterations: int = typer.Option(
-        10,
-        "--iterations",
-        "-i",
-        help="Number of measured iterations to run (excluding warmup). Total runs = warmup + iterations.",
-        min=1,
-    ),
-    warmup: int = typer.Option(
-        3,
-        "--warmup",
-        "-w",
-        help="Warmup iterations excluded from statistics.",
-        min=0,
-    ),
-    suite: str = typer.Option(
-        "io",
-        "--suite",
-        "-s",
-        help=(
-            "Benchmark suite to run (io, text, vision, audio, pipeline, e2e). "
-            "Each suite executes a dedicated runner."
+    input_path: Annotated[
+        Path,
+        typer.Argument(help="Path to files to benchmark."),
+    ] = Path("tests/fixtures/"),
+    iterations: Annotated[
+        int,
+        typer.Option(
+            "--iterations",
+            "-i",
+            help="Number of measured iterations to run (excluding warmup). Total runs = warmup + iterations.",
+            min=1,
         ),
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Output results as JSON.",
-    ),
-    compare_path: Path | None = typer.Option(
-        None,
-        "--compare",
-        help="Path to baseline JSON file for regression comparison.",
-    ),
-    transcribe_smoke: bool = typer.Option(
-        False,
-        "--transcribe-smoke",
-        help=(
-            "Run AudioModel.generate() on one candidate file as an "
-            "end-to-end smoke test. Only meaningful with --suite audio. "
-            "Requires the [media] extra. Off by default to keep "
-            "benchmark runs fast."
+    ] = 10,
+    warmup: Annotated[
+        int,
+        typer.Option(
+            "--warmup",
+            "-w",
+            help="Warmup iterations excluded from statistics.",
+            min=0,
         ),
-    ),
+    ] = 3,
+    suite: Annotated[
+        str,
+        typer.Option(
+            "--suite",
+            "-s",
+            help=(
+                "Benchmark suite to run (io, text, vision, audio, pipeline, e2e). "
+                "Each suite executes a dedicated runner."
+            ),
+        ),
+    ] = "io",
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output results as JSON."),
+    ] = False,
+    compare_path: Annotated[
+        Path | None,
+        typer.Option("--compare", help="Path to baseline JSON file for regression comparison."),
+    ] = None,
+    transcribe_smoke: Annotated[
+        bool,
+        typer.Option(
+            "--transcribe-smoke",
+            help=(
+                "Run AudioModel.generate() on one candidate file as an "
+                "end-to-end smoke test. Only meaningful with --suite audio. "
+                "Requires the [media] extra. Off by default to keep "
+                "benchmark runs fast."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Run a performance benchmark with statistical output.
 

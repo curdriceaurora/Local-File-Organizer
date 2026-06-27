@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -74,59 +75,69 @@ def _resolve_parallel_settings(
 
 
 def organize(
-    input_dir: Path = typer.Argument(..., help="Directory containing files to organize."),
-    output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without moving files."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
-    max_workers: int | None = typer.Option(
-        None,
-        "--max-workers",
-        min=1,
-        help="Maximum number of parallel workers for file processing.",
-    ),
-    sequential: bool = typer.Option(
-        False,
-        "--sequential",
-        help="Force single-worker sequential processing.",
-    ),
-    no_vision: bool = typer.Option(
-        False,
-        "--no-vision",
-        "--text-only",
-        help="Disable vision model usage and organize images by extension fallback.",
-    ),
-    prefetch_depth: int = typer.Option(
-        2,
-        "--prefetch-depth",
-        min=0,
-        help=(
-            "Task scheduling prefetch depth per worker (0 disables queue-ahead and "
-            "uses strictly sequential submission)."
+    input_dir: Annotated[Path, typer.Argument(help="Directory containing files to organize.")],
+    output_dir: Annotated[Path, typer.Argument(help="Destination directory for organized files.")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview without moving files.")
+    ] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+    max_workers: Annotated[
+        int | None,
+        typer.Option(
+            "--max-workers",
+            min=1,
+            help="Maximum number of parallel workers for file processing.",
         ),
-    ),
-    no_prefetch: bool = typer.Option(
-        False,
-        "--no-prefetch",
-        help="Backward-compatible alias for --prefetch-depth 0.",
-    ),
-    transcribe_audio: bool = typer.Option(
-        False,
-        "--transcribe-audio",
-        help=(
-            "Transcribe audio files (requires the [media] extra) and use the "
-            "transcript for content-aware categorization. Off by default — "
-            "transcription is the expensive operation in the audio pipeline."
+    ] = None,
+    sequential: Annotated[
+        bool,
+        typer.Option("--sequential", help="Force single-worker sequential processing."),
+    ] = False,
+    no_vision: Annotated[
+        bool,
+        typer.Option(
+            "--no-vision",
+            "--text-only",
+            help="Disable vision model usage and organize images by extension fallback.",
         ),
-    ),
-    max_transcribe_seconds: float = typer.Option(
-        600.0,
-        "--max-transcribe-seconds",
-        min=0.0,
-        help=(
-            "Skip transcription for audio files longer than this (seconds). "
-            "Default: 600 (10 min). Set to 0 to disable the cap entirely."
+    ] = False,
+    prefetch_depth: Annotated[
+        int,
+        typer.Option(
+            "--prefetch-depth",
+            min=0,
+            help=(
+                "Task scheduling prefetch depth per worker (0 disables queue-ahead and "
+                "uses strictly sequential submission)."
+            ),
         ),
-    ),
+    ] = 2,
+    no_prefetch: Annotated[
+        bool,
+        typer.Option("--no-prefetch", help="Backward-compatible alias for --prefetch-depth 0."),
+    ] = False,
+    transcribe_audio: Annotated[
+        bool,
+        typer.Option(
+            "--transcribe-audio",
+            help=(
+                "Transcribe audio files (requires the [media] extra) and use the "
+                "transcript for content-aware categorization. Off by default — "
+                "transcription is the expensive operation in the audio pipeline."
+            ),
+        ),
+    ] = False,
+    max_transcribe_seconds: Annotated[
+        float,
+        typer.Option(
+            "--max-transcribe-seconds",
+            min=0.0,
+            help=(
+                "Skip transcription for audio files longer than this (seconds). "
+                "Default: 600 (10 min). Set to 0 to disable the cap entirely."
+            ),
+        ),
+    ] = 600.0,
 ) -> None:
     """Organize files in a directory using AI models."""
     # First-run setup gate now lives in `cli.main.main_callback` and runs
@@ -177,55 +188,63 @@ def organize(
 
 
 def preview(
-    input_dir: Path = typer.Argument(..., help="Directory to preview."),
-    max_workers: int | None = typer.Option(
-        None,
-        "--max-workers",
-        min=1,
-        help="Maximum number of parallel workers for file processing.",
-    ),
-    sequential: bool = typer.Option(
-        False,
-        "--sequential",
-        help="Force single-worker sequential processing.",
-    ),
-    no_vision: bool = typer.Option(
-        False,
-        "--no-vision",
-        "--text-only",
-        help="Disable vision model usage and organize images by extension fallback.",
-    ),
-    prefetch_depth: int = typer.Option(
-        2,
-        "--prefetch-depth",
-        min=0,
-        help=(
-            "Task scheduling prefetch depth per worker (0 disables queue-ahead and "
-            "uses strictly sequential submission)."
+    input_dir: Annotated[Path, typer.Argument(help="Directory to preview.")],
+    max_workers: Annotated[
+        int | None,
+        typer.Option(
+            "--max-workers",
+            min=1,
+            help="Maximum number of parallel workers for file processing.",
         ),
-    ),
-    no_prefetch: bool = typer.Option(
-        False,
-        "--no-prefetch",
-        help="Backward-compatible alias for --prefetch-depth 0.",
-    ),
-    transcribe_audio: bool = typer.Option(
-        False,
-        "--transcribe-audio",
-        help=(
-            "Transcribe audio files (requires the [media] extra) and use the "
-            "transcript for content-aware categorization. Off by default."
+    ] = None,
+    sequential: Annotated[
+        bool,
+        typer.Option("--sequential", help="Force single-worker sequential processing."),
+    ] = False,
+    no_vision: Annotated[
+        bool,
+        typer.Option(
+            "--no-vision",
+            "--text-only",
+            help="Disable vision model usage and organize images by extension fallback.",
         ),
-    ),
-    max_transcribe_seconds: float = typer.Option(
-        600.0,
-        "--max-transcribe-seconds",
-        min=0.0,
-        help=(
-            "Skip transcription for audio files longer than this (seconds). "
-            "Default: 600 (10 min). Set to 0 to disable the cap entirely."
+    ] = False,
+    prefetch_depth: Annotated[
+        int,
+        typer.Option(
+            "--prefetch-depth",
+            min=0,
+            help=(
+                "Task scheduling prefetch depth per worker (0 disables queue-ahead and "
+                "uses strictly sequential submission)."
+            ),
         ),
-    ),
+    ] = 2,
+    no_prefetch: Annotated[
+        bool,
+        typer.Option("--no-prefetch", help="Backward-compatible alias for --prefetch-depth 0."),
+    ] = False,
+    transcribe_audio: Annotated[
+        bool,
+        typer.Option(
+            "--transcribe-audio",
+            help=(
+                "Transcribe audio files (requires the [media] extra) and use the "
+                "transcript for content-aware categorization. Off by default."
+            ),
+        ),
+    ] = False,
+    max_transcribe_seconds: Annotated[
+        float,
+        typer.Option(
+            "--max-transcribe-seconds",
+            min=0.0,
+            help=(
+                "Skip transcription for audio files longer than this (seconds). "
+                "Default: 600 (10 min). Set to 0 to disable the cap entirely."
+            ),
+        ),
+    ] = 600.0,
 ) -> None:
     """Preview how files would be organized (dry-run)."""
     # Setup gate moved to `cli.main.main_callback` (Step 3).

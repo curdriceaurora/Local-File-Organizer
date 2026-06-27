@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -27,7 +28,7 @@ console = Console()
 
 @rules_app.command(name="list")
 def rules_list(
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set name."),
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set name.")] = "default",
 ) -> None:
     """List all rules in a rule set."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -79,20 +80,27 @@ def rules_sets() -> None:
 
 @rules_app.command(name="add")
 def rules_add(
-    name: str = typer.Argument(..., help="Rule name."),
-    extension: str | None = typer.Option(
-        None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."
-    ),
-    pattern: str | None = typer.Option(None, "--pattern", help="Filename glob pattern."),
-    action: str = typer.Option(
-        "move",
-        "--action",
-        "-a",
-        help="Action type (move, rename, tag, categorize, archive, copy, delete).",
-    ),
-    destination: str = typer.Option("", "--dest", "-d", help="Destination path or pattern."),
-    priority: int = typer.Option(0, "--priority", "-p", help="Rule priority (higher = first)."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name.")],
+    extension: Annotated[
+        str | None,
+        typer.Option("--ext", help="File extension filter (e.g. '.pdf,.docx')."),
+    ] = None,
+    pattern: Annotated[str | None, typer.Option("--pattern", help="Filename glob pattern.")] = None,
+    action: Annotated[
+        str,
+        typer.Option(
+            "--action",
+            "-a",
+            help="Action type (move, rename, tag, categorize, archive, copy, delete).",
+        ),
+    ] = "move",
+    destination: Annotated[
+        str, typer.Option("--dest", "-d", help="Destination path or pattern.")
+    ] = "",
+    priority: Annotated[
+        int, typer.Option("--priority", "-p", help="Rule priority (higher = first).")
+    ] = 0,
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Add a new rule to a rule set."""
     from file_organizer.services.copilot.rules.models import (
@@ -131,8 +139,8 @@ def rules_add(
 
 @rules_app.command(name="remove")
 def rules_remove(
-    name: str = typer.Argument(..., help="Rule name to remove."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name to remove.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Remove a rule from a rule set."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -146,8 +154,8 @@ def rules_remove(
 
 @rules_app.command(name="toggle")
 def rules_toggle(
-    name: str = typer.Argument(..., help="Rule name to toggle."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
+    name: Annotated[str, typer.Argument(help="Rule name to toggle.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Target rule set.")] = "default",
 ) -> None:
     """Toggle a rule's enabled/disabled state."""
     from file_organizer.services.copilot.rules import RuleManager
@@ -163,12 +171,12 @@ def rules_toggle(
 
 @rules_app.command(name="preview")
 def rules_preview(
-    directory: Path = typer.Argument(..., help="Directory to preview against."),
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to evaluate."),
-    recursive: bool = typer.Option(
-        True, "--recursive/--no-recursive", help="Recurse into subdirectories."
-    ),
-    max_files: int = typer.Option(500, "--max-files", help="Maximum files to scan."),
+    directory: Annotated[Path, typer.Argument(help="Directory to preview against.")],
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to evaluate.")] = "default",
+    recursive: Annotated[
+        bool, typer.Option("--recursive/--no-recursive", help="Recurse into subdirectories.")
+    ] = True,
+    max_files: Annotated[int, typer.Option("--max-files", help="Maximum files to scan.")] = 500,
 ) -> None:
     """Preview what rules would do (dry-run)."""
     from file_organizer.services.copilot.rules import PreviewEngine, RuleManager
@@ -209,8 +217,8 @@ def rules_preview(
 
 @rules_app.command(name="export")
 def rules_export(
-    rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to export."),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Output file path."),
+    rule_set: Annotated[str, typer.Option("--set", "-s", help="Rule set to export.")] = "default",
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path.")] = None,
 ) -> None:
     """Export a rule set to YAML."""
     import yaml
@@ -261,8 +269,10 @@ def rules_export(
 
 @rules_app.command(name="import")
 def rules_import(
-    file: Path = typer.Argument(..., help="YAML file to import."),
-    rule_set: str | None = typer.Option(None, "--set", "-s", help="Override rule set name."),
+    file: Annotated[Path, typer.Argument(help="YAML file to import.")],
+    rule_set: Annotated[
+        str | None, typer.Option("--set", "-s", help="Override rule set name.")
+    ] = None,
 ) -> None:
     """Import a rule set from a YAML file."""
     import yaml

@@ -12,7 +12,7 @@ Epic D / D4).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -121,30 +121,38 @@ def _hidden_files_will_be_scanned(directory: Path, *, include_hidden: bool) -> b
 
 @dedupe_app.command()
 def scan(
-    directory: Path = typer.Argument(..., help="Directory to scan for duplicates."),
-    algorithm: str = typer.Option("sha256", help="Hash algorithm (md5, sha256)."),
-    recursive: bool = typer.Option(True, help="Scan subdirectories."),
-    min_size: int = typer.Option(0, help="Minimum file size in bytes."),
-    max_size: int | None = typer.Option(None, help="Maximum file size in bytes."),
-    include: str | None = typer.Option(None, help="Comma-separated glob include patterns."),
-    exclude: str | None = typer.Option(None, help="Comma-separated glob exclude patterns."),
-    include_hidden: bool = typer.Option(
-        False,
-        "--include-hidden",
-        help=(
-            "Include dotfiles and files under hidden directories "
-            "(.env, .ssh, .config). Off by default — hidden paths often "
-            "contain credentials."
+    directory: Annotated[Path, typer.Argument(help="Directory to scan for duplicates.")],
+    algorithm: Annotated[str, typer.Option(help="Hash algorithm (md5, sha256).")] = "sha256",
+    recursive: Annotated[bool, typer.Option(help="Scan subdirectories.")] = True,
+    min_size: Annotated[int, typer.Option(help="Minimum file size in bytes.")] = 0,
+    max_size: Annotated[int | None, typer.Option(help="Maximum file size in bytes.")] = None,
+    include: Annotated[
+        str | None, typer.Option(help="Comma-separated glob include patterns.")
+    ] = None,
+    exclude: Annotated[
+        str | None, typer.Option(help="Comma-separated glob exclude patterns.")
+    ] = None,
+    include_hidden: Annotated[
+        bool,
+        typer.Option(
+            "--include-hidden",
+            help=(
+                "Include dotfiles and files under hidden directories "
+                "(.env, .ssh, .config). Off by default — hidden paths often "
+                "contain credentials."
+            ),
         ),
-    ),
-    output_format: str = typer.Option(
-        "rich",
-        "--format",
-        "-f",
-        help=_FORMAT_HELP,
-        case_sensitive=False,
-        callback=_validate_format,
-    ),
+    ] = False,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help=_FORMAT_HELP,
+            case_sensitive=False,
+            callback=_validate_format,
+        ),
+    ] = "rich",
 ) -> None:
     """Scan a directory and display duplicate file groups."""
     directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
@@ -179,34 +187,38 @@ def scan(
 
 @dedupe_app.command()
 def resolve(
-    directory: Path = typer.Argument(..., help="Directory to scan for duplicates."),
-    strategy: str = typer.Option(
-        "manual",
-        help="Resolution strategy (manual, oldest, newest, largest, smallest).",
-    ),
-    algorithm: str = typer.Option("sha256", help="Hash algorithm."),
-    recursive: bool = typer.Option(True, help="Scan subdirectories."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without deleting."),
-    min_size: int = typer.Option(0, help="Minimum file size in bytes."),
-    max_size: int | None = typer.Option(None, help="Maximum file size in bytes."),
-    include: str | None = typer.Option(None, help="Comma-separated include patterns."),
-    exclude: str | None = typer.Option(None, help="Comma-separated exclude patterns."),
-    include_hidden: bool = typer.Option(
-        False,
-        "--include-hidden",
-        help=(
-            "Include dotfiles / hidden directories. Off by default; when "
-            "on, a confirmation prompt appears before any deletion."
+    directory: Annotated[Path, typer.Argument(help="Directory to scan for duplicates.")],
+    strategy: Annotated[
+        str,
+        typer.Option(help="Resolution strategy (manual, oldest, newest, largest, smallest)."),
+    ] = "manual",
+    algorithm: Annotated[str, typer.Option(help="Hash algorithm.")] = "sha256",
+    recursive: Annotated[bool, typer.Option(help="Scan subdirectories.")] = True,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Preview without deleting.")] = False,
+    min_size: Annotated[int, typer.Option(help="Minimum file size in bytes.")] = 0,
+    max_size: Annotated[int | None, typer.Option(help="Maximum file size in bytes.")] = None,
+    include: Annotated[str | None, typer.Option(help="Comma-separated include patterns.")] = None,
+    exclude: Annotated[str | None, typer.Option(help="Comma-separated exclude patterns.")] = None,
+    include_hidden: Annotated[
+        bool,
+        typer.Option(
+            "--include-hidden",
+            help=(
+                "Include dotfiles / hidden directories. Off by default; when "
+                "on, a confirmation prompt appears before any deletion."
+            ),
         ),
-    ),
-    output_format: str = typer.Option(
-        "rich",
-        "--format",
-        "-f",
-        help=_FORMAT_HELP,
-        case_sensitive=False,
-        callback=_validate_format,
-    ),
+    ] = False,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help=_FORMAT_HELP,
+            case_sensitive=False,
+            callback=_validate_format,
+        ),
+    ] = "rich",
 ) -> None:
     """Scan and resolve duplicates using a strategy."""
     directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
@@ -285,22 +297,26 @@ def resolve(
 
 @dedupe_app.command()
 def report(
-    directory: Path = typer.Argument(..., help="Directory to scan."),
-    algorithm: str = typer.Option("sha256", help="Hash algorithm."),
-    recursive: bool = typer.Option(True, help="Scan subdirectories."),
-    include_hidden: bool = typer.Option(
-        False,
-        "--include-hidden",
-        help="Include dotfiles and files under hidden directories in the report.",
-    ),
-    output_format: str = typer.Option(
-        "rich",
-        "--format",
-        "-f",
-        help=_FORMAT_HELP,
-        case_sensitive=False,
-        callback=_validate_format,
-    ),
+    directory: Annotated[Path, typer.Argument(help="Directory to scan.")],
+    algorithm: Annotated[str, typer.Option(help="Hash algorithm.")] = "sha256",
+    recursive: Annotated[bool, typer.Option(help="Scan subdirectories.")] = True,
+    include_hidden: Annotated[
+        bool,
+        typer.Option(
+            "--include-hidden",
+            help="Include dotfiles and files under hidden directories in the report.",
+        ),
+    ] = False,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help=_FORMAT_HELP,
+            case_sensitive=False,
+            callback=_validate_format,
+        ),
+    ] = "rich",
 ) -> None:
     """Scan and display a summary report of duplicates."""
     directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
