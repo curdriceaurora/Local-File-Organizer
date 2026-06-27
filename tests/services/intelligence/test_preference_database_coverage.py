@@ -77,7 +77,7 @@ class TestTransaction:
         assert pref is not None
 
     def test_transaction_rollback_on_error(self, db):
-        with pytest.raises(ValueError):
+        def _insert_then_fail() -> None:
             with db.transaction() as conn:
                 conn.execute(
                     "INSERT INTO preferences "
@@ -87,6 +87,9 @@ class TestTransaction:
                     ("test", "rollback_key", "v1", 0.5, 1, "2025-01-01", "2025-01-01", "test"),
                 )
                 raise ValueError("boom")
+
+        with pytest.raises(ValueError):
+            _insert_then_fail()
         # The row written inside the transaction must not be visible after rollback
         assert db.get_preference("test", "rollback_key") is None
 

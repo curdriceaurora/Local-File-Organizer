@@ -286,12 +286,16 @@ select = [
     "RUF100",  # stale noqa comments
     "DTZ",  # datetime timezone rules (DTZ001-DTZ007, DTZ011-DTZ012)
     "S113", # requests calls without explicit timeout
+    "PT012", # pytest.raises() block must contain a single simple statement (WP-6.4, #1243)
+    "PT017", # assertion on exception in except block — use pytest.raises() (WP-6.4, #1243)
+    "PT022", # useless yield fixture without teardown — use return (WP-6.4, #1243)
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
     "B008",   # do not perform function calls in argument defaults
     "ANN401", # **kwargs: Any is acceptable in abstract/polymorphic interfaces
 ]
+external = ["G1", "G2", "G3", "G4", "G5"]  # grep-based pre-commit hook codes (WP-6.4, #1243); not real ruff rules, reserved so RUF100 doesn't flag `# noqa: G1` etc.
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15

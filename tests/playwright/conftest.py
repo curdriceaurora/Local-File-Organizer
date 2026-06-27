@@ -726,4 +726,4 @@ def activate_playwright_loop(clear_leaked_running_loop: None) -> Iterator[None]:
         except Exception:
             pass
 
-    yield
+    return

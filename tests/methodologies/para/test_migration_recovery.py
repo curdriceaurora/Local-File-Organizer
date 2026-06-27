@@ -87,7 +87,7 @@ class TestMigrationBackupSystem:
         # Override backup_root to use tmp_path so parallel tests don't collide
         manager.backup_root = tmp_path / "migration-backups"
         manager.backup_root.mkdir(parents=True, exist_ok=True)
-        yield manager
+        return manager
 
     def test_backup_creation(self, migration_manager, temp_source, temp_target):
         """Test backup creation for migration files."""
@@ -445,7 +445,7 @@ class TestMigrationManagerEdgeCases:
         manager = PARAMigrationManager(config)
         manager.backup_root = tmp_path / "migration-backups"
         manager.backup_root.mkdir(parents=True, exist_ok=True)
-        yield manager
+        return manager
 
     def test_migration_manager_with_custom_heuristic_engine(self, config, tmp_path):
         """Test migration manager with custom heuristic engine."""

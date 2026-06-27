@@ -84,6 +84,10 @@ class TestDocumentEmbedderInit:
 
     def test_sklearn_import_error(self):
         """Raises ImportError when sklearn not available."""
+        import importlib
+
+        import file_organizer.services.deduplication.embedder as mod
+
         with patch.dict(
             "sys.modules",
             {
@@ -92,14 +96,14 @@ class TestDocumentEmbedderInit:
                 "sklearn.feature_extraction.text": None,
             },
         ):
-            with pytest.raises(ImportError, match="scikit-learn"):
+
+            def _reload_and_construct() -> None:
                 # Force reimport
-                import importlib
-
-                import file_organizer.services.deduplication.embedder as mod
-
                 importlib.reload(mod)
                 mod.DocumentEmbedder()
+
+            with pytest.raises(ImportError, match="scikit-learn"):
+                _reload_and_construct()
 
     def test_cache_path_not_set(self, embedder):
         """cache_path is None by default."""

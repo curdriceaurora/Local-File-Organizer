@@ -685,7 +685,7 @@ class TestSettingsImportPathBased:
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: api_settings
         app.include_router(settings_router)
-        yield TestClient(app, raise_server_exceptions=False), tmp_path
+        return TestClient(app, raise_server_exceptions=False), tmp_path
 
     @pytest.mark.ci
     def test_import_via_path_returns_200(self, _client):

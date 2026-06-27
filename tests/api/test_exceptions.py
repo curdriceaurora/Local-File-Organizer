@@ -70,20 +70,18 @@ class TestApiErrorRaiseCatch:
         assert exc_info.value.error == "conflict"
 
     def test_catch_as_exception(self) -> None:
-        try:
+        with pytest.raises(ApiError) as exc_info:
             raise ApiError(status_code=500, error="boom", message="Unexpected")
-        except Exception as exc:
-            assert isinstance(exc, ApiError)
+        assert isinstance(exc_info.value, ApiError)
 
     def test_caught_exception_preserves_fields(self) -> None:
-        try:
+        with pytest.raises(ApiError) as exc_info:
             raise ApiError(
                 status_code=418,
                 error="teapot",
                 message="I'm a teapot",
                 details={"brew": "earl_grey"},
             )
-        except Exception as exc:
-            assert isinstance(exc, ApiError)
-            assert exc.status_code == 418
-            assert exc.details == {"brew": "earl_grey"}
+        assert isinstance(exc_info.value, ApiError)
+        assert exc_info.value.status_code == 418
+        assert exc_info.value.details == {"brew": "earl_grey"}

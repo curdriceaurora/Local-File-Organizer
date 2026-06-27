@@ -755,11 +755,15 @@ class TestResolveProcessedCount:
         from file_organizer.cli.benchmark import _resolve_processed_count
 
         console = MagicMock()
-        with pytest.raises(SystemExit) as excinfo:
+
+        def _call_and_convert_exit() -> None:
             try:
                 _resolve_processed_count([1, 2, 3], warmup=0, suite="io", console=console)
             except typer.Exit as e:
                 raise SystemExit(e.exit_code) from e
+
+        with pytest.raises(SystemExit) as excinfo:
+            _call_and_convert_exit()
         assert excinfo.value.code == 1
         console.print.assert_called_once()
 

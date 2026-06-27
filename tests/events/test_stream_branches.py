@@ -45,11 +45,15 @@ class TestRedisConnectionError:
 
     def test_not_caught_by_value_error(self):
         """RedisConnectionError is not a subtype of ValueError."""
-        with pytest.raises(RedisConnectionError):
+
+        def _raise_and_maybe_catch() -> None:
             try:
                 raise RedisConnectionError("oops")
             except ValueError:
                 pass
+
+        with pytest.raises(RedisConnectionError):
+            _raise_and_maybe_catch()
 
 
 # ---------------------------------------------------------------------------
