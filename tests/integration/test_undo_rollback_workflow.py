@@ -12,12 +12,14 @@ conftest.py already redirects HOME/XDG vars.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
 from file_organizer.history.models import Operation, OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
+from file_organizer.undo import rollback as rollback_module
 from file_organizer.undo.models import ConflictType
 from file_organizer.undo.rollback import RollbackExecutor
 from file_organizer.undo.undo_manager import UndoManager
@@ -249,6 +251,154 @@ class TestRollbackExecutor:
         trash_file = executor.trash_dir / "42" / "copy.txt"
         assert trash_file.exists()
 
+    def test_rollback_hardlink_unlinks_matching_link(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        os.link(source, link)
+
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=43)
+        result = executor.rollback_hardlink(op)
+
+        assert result is True
+        assert source.exists()
+        assert not link.exists()
+
+    def test_rollback_hardlink_refuses_missing_destination(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.HARDLINK, source, None, op_id=44)
+
+        assert executor.rollback_hardlink(op) is False
+
+    def test_rollback_hardlink_refuses_symlink_destination(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=45)
+
+        assert executor.rollback_hardlink(op) is False
+        assert link.is_symlink()
+
+    def test_rollback_hardlink_refuses_missing_source(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        link.write_text("replacement")
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=46)
+
+        assert executor.rollback_hardlink(op) is False
+        assert link.exists()
+
+    def test_rollback_hardlink_refuses_replaced_inode(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.write_text("replacement")
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=47)
+
+        assert executor.rollback_hardlink(op) is False
+        assert link.exists()
+
+    def test_rollback_hardlink_handles_unlink_exception(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        os.link(source, link)
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=48)
+
+        def fail_fsync(path: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
+
+        assert executor.rollback_hardlink(op) is False
+
+    def test_rollback_symlink_unlinks_matching_target(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=48)
+        result = executor.rollback_symlink(op)
+
+        assert result is True
+        assert source.exists()
+        assert not link.exists()
+        assert not link.is_symlink()
+
+    def test_rollback_symlink_refuses_missing_destination(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.SYMLINK, source, None, op_id=49)
+
+        assert executor.rollback_symlink(op) is False
+
+    def test_rollback_symlink_refuses_plain_file(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.write_text("plain")
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=50)
+
+        assert executor.rollback_symlink(op) is False
+        assert link.exists()
+
+    def test_rollback_symlink_refuses_mismatched_target(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        other = tmp_path / "other.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        other.write_text("other")
+        link.symlink_to(other)
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=51)
+
+        assert executor.rollback_symlink(op) is False
+        assert link.is_symlink()
+
+    def test_rollback_symlink_handles_unlink_exception(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=56)
+
+        def fail_fsync(path: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
+
+        assert executor.rollback_symlink(op) is False
+
     def test_rollback_create_moves_to_trash(
         self, executor: RollbackExecutor, tmp_path: Path
     ) -> None:
@@ -323,6 +473,48 @@ class TestRollbackExecutor:
         assert src.exists()
         assert dst.exists()
         assert dst.read_text() == "content to copy"
+
+    def test_redo_hardlink_creates_link(self, executor: RollbackExecutor, tmp_path: Path) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "links" / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=52)
+
+        result = executor.redo_hardlink(op)
+
+        assert result is True
+        assert link.exists()
+        assert os.stat(source).st_ino == os.stat(link).st_ino
+
+    def test_redo_hardlink_fails_without_destination(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.HARDLINK, source, None, op_id=53)
+
+        assert executor.redo_hardlink(op) is False
+
+    def test_redo_symlink_creates_link(self, executor: RollbackExecutor, tmp_path: Path) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "links" / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=54)
+
+        result = executor.redo_symlink(op)
+
+        assert result is True
+        assert link.is_symlink()
+        assert link.resolve() == source
+
+    def test_redo_symlink_fails_without_destination(
+        self, executor: RollbackExecutor, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.SYMLINK, source, None, op_id=55)
+
+        assert executor.redo_symlink(op) is False
 
     def test_redo_create_file(self, executor: RollbackExecutor, tmp_path: Path) -> None:
         file_path = tmp_path / "sub" / "new.txt"
