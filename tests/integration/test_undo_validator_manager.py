@@ -26,7 +26,7 @@ from file_organizer.history.models import Operation, OperationStatus, OperationT
 from file_organizer.undo.models import ConflictType, ValidationResult
 from file_organizer.undo.validator import OperationValidator
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -994,7 +994,28 @@ class TestValidateRedo:
         result = v.validate_redo(op)
 
         assert not result.can_proceed
-        assert any("occupied" in str(c.conflict_type).lower() for c in result.conflicts)
+        assert any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in result.conflicts)
+
+    def test_redo_symlink_destination_dangling_symlink_adds_conflict(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        # Create a dangling symlink at dest
+        dest.symlink_to(tmp_path / "non_existent.txt")
+        op = Operation(
+            id=31,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.ROLLED_BACK,
+        )
+
+        result = v.validate_redo(op)
+
+        assert not result.can_proceed
+        assert any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in result.conflicts)
 
     def test_redo_create_path_available(self, tmp_path: Path) -> None:
         v = OperationValidator(trash_dir=tmp_path / "trash")

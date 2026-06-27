@@ -10,6 +10,8 @@ import pytest
 
 from file_organizer.services.deduplication.hasher import FileHasher
 
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestFileHasherInit:

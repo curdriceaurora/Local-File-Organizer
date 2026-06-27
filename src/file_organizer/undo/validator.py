@@ -588,6 +588,24 @@ class OperationValidator:
                     actual="No destination path",
                 )
             )
+        else:
+            try:
+                is_sym = operation.destination_path.is_symlink()
+            except OSError as exc:
+                conflicts.append(self._path_inspection_conflict(operation.destination_path, exc))
+                return conflicts
+
+            if is_sym:
+                if not any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in conflicts):
+                    conflicts.append(
+                        Conflict(
+                            conflict_type=ConflictType.PATH_OCCUPIED,
+                            path=str(operation.destination_path),
+                            description="Destination path is now occupied",
+                            expected="Path available",
+                            actual="Path occupied",
+                        )
+                    )
 
         return conflicts
 

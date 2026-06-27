@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from loguru import logger
 from redis import Redis
@@ -98,7 +98,7 @@ class RedisLoginRateLimiter:
 
     def _ttl(self, key: str) -> int:
         """Return the configured window TTL in seconds."""
-        ttl = self.redis.ttl(key)
+        ttl = cast(Any, self.redis.ttl(key))
         if ttl is None or int(ttl) < 0:
             return self.window_seconds
         return int(ttl)
@@ -106,7 +106,7 @@ class RedisLoginRateLimiter:
     def is_blocked(self, key: str) -> tuple[bool, int]:
         """Return whether the key is currently blocked and retry-after seconds."""
         redis_key = self._key(key)
-        value = self.redis.get(redis_key)
+        value = cast(Any, self.redis.get(redis_key))
         if value is None:
             return False, 0
         try:

@@ -27,7 +27,7 @@ from file_organizer.methodologies.johnny_decimal.config import (
     create_para_compatible_config,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.fixture

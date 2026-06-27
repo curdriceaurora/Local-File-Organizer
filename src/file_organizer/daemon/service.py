@@ -110,8 +110,9 @@ class DaemonService:
         try:
             # Write PID file — F2 record format (pid + create_time) so
             # ``is_running`` can detect PID recycling after crash.
-            if self.config.pid_file is not None:
-                self._pid_manager.write_pid_record(self.config.pid_file)
+            pid_file = self.config.pid_file
+            if pid_file is not None:
+                self._pid_manager.write_pid_record(pid_file)
 
             # Install signal handlers (only in main thread)
             self._install_signal_handlers()
@@ -157,15 +158,16 @@ class DaemonService:
             # on-disk PID file shows a live process (including a recycled PID
             # matched by create_time), refuse to start rather than creating a
             # second daemon writing to the same PID file.
-            if self.config.pid_file is not None:
-                if self._pid_manager.is_running(self.config.pid_file):
+            pid_file = self.config.pid_file
+            if pid_file is not None:
+                if self._pid_manager.is_running(pid_file):
                     raise RuntimeError(
                         "Daemon is already running (stale PID file indicates a live process). "
                         "Stop the existing daemon or remove the PID file and retry."
                     )
-                self._pid_manager.remove_pid(self.config.pid_file)
+                self._pid_manager.remove_pid(pid_file)
                 try:
-                    self._pid_manager.claim_pid_file(self.config.pid_file)
+                    self._pid_manager.claim_pid_file(pid_file)
                 except FileExistsError as exc:
                     raise RuntimeError(
                         "Daemon is already starting or running; PID file was claimed "
@@ -191,8 +193,9 @@ class DaemonService:
                 # Reset state on thread creation failure
                 self._running = False
                 self._thread = None
-                if self.config.pid_file is not None:
-                    self._pid_manager.remove_pid(self.config.pid_file)
+                pid_file = self.config.pid_file
+                if pid_file is not None:
+                    self._pid_manager.remove_pid(pid_file)
                 raise
 
         # Wait for the daemon to fully initialize.  _started_event is set by
@@ -293,8 +296,9 @@ class DaemonService:
         try:
             # Write PID file — F2 record format (pid + create_time) so
             # ``is_running`` can detect PID recycling after crash.
-            if self.config.pid_file is not None:
-                self._pid_manager.write_pid_record(self.config.pid_file)
+            pid_file = self.config.pid_file
+            if pid_file is not None:
+                self._pid_manager.write_pid_record(pid_file)
 
             # Set up default periodic tasks
             self._setup_default_tasks()
@@ -434,8 +438,9 @@ class DaemonService:
         self._scheduler.stop()
 
         # Remove PID file
-        if self.config.pid_file is not None:
-            self._pid_manager.remove_pid(self.config.pid_file)
+        pid_file = self.config.pid_file
+        if pid_file is not None:
+            self._pid_manager.remove_pid(pid_file)
 
         # Restore signal handlers
         self._restore_signal_handlers()

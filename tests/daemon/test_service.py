@@ -394,3 +394,22 @@ class TestSignalHandling:
             assert len(data) > 0
 
         svc._running = False
+
+    def test_start_background_thread_creation_failure(
+        self, daemon: DaemonService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If starting the background thread raises an exception, the daemon resets its state and removes the PID file."""
+        import threading
+
+        def fail_start(*args, **kwargs):
+            raise RuntimeError("thread creation failed")
+
+        monkeypatch.setattr(threading.Thread, "start", fail_start)
+
+        with pytest.raises(RuntimeError, match="thread creation failed"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+        assert daemon._thread is None
+        if daemon.config.pid_file is not None:
+            assert not daemon.config.pid_file.exists()

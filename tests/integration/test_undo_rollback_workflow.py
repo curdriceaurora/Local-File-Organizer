@@ -25,7 +25,7 @@ from file_organizer.undo.rollback import RollbackExecutor
 from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.validator import OperationValidator
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -817,3 +817,19 @@ class TestUndoManager:
         assert result is True
         assert src1.exists()
         assert src2.exists()
+
+    def test_fsync_link_mutation_handles_oserror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from file_organizer.undo.rollback import RollbackExecutor
+
+        executor = RollbackExecutor()
+
+        # Mock fsync_directory to raise OSError
+        def mock_fsync_directory(p: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr("file_organizer.undo.rollback.fsync_directory", mock_fsync_directory)
+
+        # This should not raise and should log warning
+        executor._fsync_link_mutation(tmp_path, 1)
