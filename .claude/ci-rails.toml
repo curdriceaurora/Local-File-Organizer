@@ -72,3 +72,9 @@ name = "called-attribute-assertion"
 command = ["python", ".claude/scripts/check_called_attribute_assertion.py"]
 mode = "advisory"
 description = "Flags weak `assert mock.called` / bare `assert mock.call_count` test assertions (WP-6.2)."
+
+[[rail]]
+name = "xdist-loadgroup"
+command = ["python", ".claude/scripts/check_xdist_loadgroup.py"]
+mode = "advisory"
+description = "Reminds to mark tests sharing xdist-wide temp state with xdist_group (WP-6.2)."
