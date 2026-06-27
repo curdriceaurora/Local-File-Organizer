@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from pathlib import Path
-from typing import cast
 
 from ..history.models import Operation, OperationStatus, OperationType
 from .models import Conflict, ConflictType, ValidationResult
@@ -333,12 +332,13 @@ class OperationValidator:
     def _validate_undo_hardlink(self, operation: Operation) -> list[Conflict]:
         """Validate undo of a hardlink operation (unlink the link)."""
         conflicts = []
+        destination_path = operation.destination_path
 
-        if operation.destination_path is None or not operation.destination_path.exists():
+        if destination_path is None or not destination_path.exists():
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
-                    path=str(operation.destination_path),
+                    path=str(destination_path),
                     description="Hardlink has already been deleted",
                     expected="Hardlink exists",
                     actual="Hardlink not found",
@@ -346,11 +346,11 @@ class OperationValidator:
             )
             return conflicts
 
-        if operation.destination_path.is_symlink():
+        if destination_path.is_symlink():
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
+                    path=str(destination_path),
                     description="Hardlink was replaced with a symlink",
                     expected="Hardlink to source inode",
                     actual="Symlink",
@@ -371,7 +371,7 @@ class OperationValidator:
             return conflicts
 
         source_stat = operation.source_path.stat()
-        destination_stat = operation.destination_path.stat()
+        destination_stat = destination_path.stat()
         if (source_stat.st_dev, source_stat.st_ino) != (
             destination_stat.st_dev,
             destination_stat.st_ino,
@@ -379,7 +379,7 @@ class OperationValidator:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
+                    path=str(destination_path),
                     description="Hardlink was replaced with a different file",
                     expected="Same inode as source",
                     actual="Different inode",
@@ -391,12 +391,13 @@ class OperationValidator:
     def _validate_undo_symlink(self, operation: Operation) -> list[Conflict]:
         """Validate undo of a symlink operation (delete the link)."""
         conflicts = []
+        destination_path = operation.destination_path
 
-        if operation.destination_path is None or not operation.destination_path.is_symlink():
+        if destination_path is None or not destination_path.is_symlink():
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
-                    path=str(operation.destination_path),
+                    path=str(destination_path),
                     description="Symlink has already been deleted or replaced",
                     expected="Symlink exists",
                     actual="Symlink not found",
@@ -404,16 +405,14 @@ class OperationValidator:
             )
             return conflicts
 
-        if operation.destination_path.resolve(strict=False) != operation.source_path.resolve(
-            strict=False
-        ):
+        if destination_path.resolve(strict=False) != operation.source_path.resolve(strict=False):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
+                    path=str(destination_path),
                     description="Symlink was replaced with a different target",
                     expected=str(operation.source_path.resolve(strict=False)),
-                    actual=str(operation.destination_path.resolve(strict=False)),
+                    actual=str(destination_path.resolve(strict=False)),
                 )
             )
 
@@ -619,7 +618,7 @@ class OperationValidator:
             result = self.validate_undo(operation)
         else:
             result = self.validate_redo(operation)
-        return cast(list[Conflict], result.conflicts)
+        return result.conflicts
 
     def _get_trash_path(self, operation: Operation) -> Path | None:
         """Get the trash path for a deleted file.
@@ -631,13 +630,13 @@ class OperationValidator:
             Path in trash or None if not found
         """
         if operation.destination_path is not None and operation.destination_path.exists():
-            return cast(Path, operation.destination_path)
+            return operation.destination_path
 
         # Trash path format: trash_dir / operation_id / filename
         if operation.id:
             trash_path = self.trash_dir / str(operation.id) / operation.source_path.name
             if trash_path.exists():
-                return cast(Path, trash_path)
+                return trash_path
 
         # Fallback: search by filename
         filename = operation.source_path.name
