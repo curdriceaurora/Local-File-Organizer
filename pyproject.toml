@@ -334,6 +334,57 @@ warn_no_return = true
 follow_imports = "normal"
 ignore_missing_imports = true
 
+# WP-6.4 (#1243) ratchet baseline: mypy's gate widened from
+# src/file_organizer/models/ to all of src/file_organizer/ on 2026-06-27.
+# These files had pre-existing type errors at widening time and are
+# exempted until fixed — remove an entry once its file is clean under
+# `mypy src/file_organizer/<path>`, do not add new entries for new code.
+[[tool.mypy.overrides]]
+module = [
+    "file_organizer.api.cache",
+    "file_organizer.api.config",
+    "file_organizer.api.main",
+    "file_organizer.api.repositories.file_metadata_repo",
+    "file_organizer.api.repositories.job_repo",
+    "file_organizer.api.repositories.session_repo",
+    "file_organizer.api.repositories.settings_repo",
+    "file_organizer.api.repositories.workspace_repo",
+    "file_organizer.api.routers",
+    "file_organizer.api.routers.auth",
+    "file_organizer.api.routers.organize",
+    "file_organizer.api.routers.search",
+    "file_organizer.api.service_facade",
+    "file_organizer.cli.dedupe_hash",
+    "file_organizer.cli.dedupe_renderer",
+    "file_organizer.cli.interactive",
+    "file_organizer.cli.rules",
+    "file_organizer.core",
+    "file_organizer.core.backend_detector",
+    "file_organizer.core.path_guard",
+    "file_organizer.desktop.app",
+    "file_organizer.pipeline.stages.writer",
+    "file_organizer.review_regressions.correctness",
+    "file_organizer.review_regressions.security",
+    "file_organizer.services.audio.utils",
+    "file_organizer.services.deduplication.embedder",
+    "file_organizer.services.deduplication.image_utils",
+    "file_organizer.services.deduplication.semantic",
+    "file_organizer.services.intelligence.profile_importer",
+    "file_organizer.services.search.embedding_cache",
+    "file_organizer.services.search.vector_index",
+    "file_organizer.tui.app",
+    "file_organizer.tui.setup_wizard_view",
+    "file_organizer.utils.epub_enhanced",
+    "file_organizer.utils.readers",
+    "file_organizer.utils.readers.cad",
+    "file_organizer.watcher.monitor",
+    "file_organizer.web.csrf",
+    "file_organizer.web.organize_routes",
+    "file_organizer.web.profile_routes",
+    "file_organizer.web.settings_routes",
+]
+ignore_errors = true
+
 # Pytest configuration
 [tool.pytest.ini_options]
 pythonpath = ["src"]

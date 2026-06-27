@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Run mypy on changed files, but only those inside the gated scope.
-# Scope matches CI gate: src/file_organizer/models/
-# Extend this list as more modules reach type-clean status.
+# Scope matches CI gate: src/file_organizer/ (widened WP-6.4, #1243)
 set -euo pipefail
 
-GATED_PREFIX="src/file_organizer/models/"
+GATED_PREFIX="src/file_organizer/"
 files=""
 
 for file in "$@"; do
