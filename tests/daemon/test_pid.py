@@ -502,3 +502,191 @@ class TestWritePidRecordPermissions:
         assert record.pid == os.getpid()
         data = json.loads(pid_file.read_text())
         assert data["pid"] == os.getpid()
+
+
+@pytest.mark.unit
+class TestClaimPidFile:
+    """Tests for PidFileManager.claim_pid_file and its F4 TOCTOU integration.
+
+    F4 (hardening roadmap #159): ``open(path, "x")`` is atomic on POSIX —
+    exactly one caller succeeds; all others raise ``FileExistsError``.
+    """
+
+    def test_claim_creates_file(self, pid_manager: PidFileManager, pid_file: Path) -> None:
+        """claim_pid_file creates the file when it does not exist."""
+        assert not pid_file.exists()
+        pid_manager.claim_pid_file(pid_file)
+        assert pid_file.exists()
+
+    def test_claim_raises_if_already_exists(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """claim_pid_file raises FileExistsError when the file already exists."""
+        pid_manager.claim_pid_file(pid_file)
+        with pytest.raises(FileExistsError):
+            pid_manager.claim_pid_file(pid_file)
+
+    def test_claim_creates_parent_dirs(self, tmp_path: Path) -> None:
+        """claim_pid_file creates missing parent directories."""
+        pid_manager = PidFileManager()
+        deep_pid = tmp_path / "a" / "b" / "daemon.pid"
+        assert not deep_pid.parent.exists()
+        pid_manager.claim_pid_file(deep_pid)
+        assert deep_pid.exists()
+
+    def test_write_pid_record_claims_file_when_absent(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """write_pid_record uses claim_pid_file when the PID file does not exist.
+
+        After write_pid_record the file must contain valid JSON — the
+        claim placeholder is overwritten by the tmp-replace dance.
+        """
+        assert not pid_file.exists()
+        record = pid_manager.write_pid_record(pid_file)
+        assert pid_file.exists()
+        data = json.loads(pid_file.read_text())
+        assert data["pid"] == os.getpid()
+        assert data["pid"] == record.pid
+
+    def test_write_pid_record_skips_claim_on_rotation(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """write_pid_record skips claim_pid_file when the PID file already exists.
+
+        The rotation path (daemon re-writing its own PID file) must not
+        raise FileExistsError — it should succeed via the normal os.replace.
+        """
+        # First write: creates and claims
+        pid_manager.write_pid_record(pid_file)
+        # Second write (rotation): file already present, no claim attempted
+        record2 = pid_manager.write_pid_record(pid_file)
+        assert record2.pid == os.getpid()
+        data = json.loads(pid_file.read_text())
+        assert data["pid"] == os.getpid()
+
+    def test_toctou_second_claimer_raises(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """Simulate two processes racing to claim the same PID file.
+
+        The first claim wins; the second must raise FileExistsError —
+        this is the F4 guarantee that prevents a second daemon from
+        silently overwriting the first's PID.
+        """
+        # Process 1 claims the file
+        pid_manager.claim_pid_file(pid_file)
+
+        # Process 2 (simulated) tries to claim the same path — must fail
+        pid_manager2 = PidFileManager()
+        with pytest.raises(FileExistsError):
+            pid_manager2.claim_pid_file(pid_file)
+
+    def test_claim_oserror_on_unwritable_dir(
+        self, pid_manager: PidFileManager, tmp_path: Path
+    ) -> None:
+        """claim_pid_file raises OSError for genuine I/O failures."""
+        import stat
+
+        locked_dir = tmp_path / "locked"
+        locked_dir.mkdir()
+        pid_path = locked_dir / "daemon.pid"
+
+        # Remove write permission from the directory
+        locked_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
+        try:
+            with pytest.raises(OSError):
+                pid_manager.claim_pid_file(pid_path)
+        finally:
+            locked_dir.chmod(stat.S_IRWXU)  # restore so tmp_path cleanup works
+
+    def test_claim_fchmod_oserror_is_non_fatal(
+        self, pid_manager: PidFileManager, pid_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An OSError from fchmod does not abort claim_pid_file.
+
+        The fchmod step is best-effort; a failure must be swallowed so
+        the write still completes.  The placeholder file should exist
+        and the claim should succeed.
+        """
+        import file_organizer.daemon.pid as pid_mod
+
+        original_fchmod = os.fchmod
+
+        def _failing_fchmod(fd: int, mode: int) -> None:
+            raise OSError("simulated fchmod failure")
+
+        monkeypatch.setattr(pid_mod.os, "fchmod", _failing_fchmod)
+        # claim should succeed despite fchmod failure
+        pid_manager.claim_pid_file(pid_file)
+        assert pid_file.exists()
+
+        # restore so teardown works
+        monkeypatch.setattr(pid_mod.os, "fchmod", original_fchmod)
+
+    def test_claim_write_oserror_cleans_up_file(
+        self, pid_manager: PidFileManager, pid_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If writing to the claimed fd raises OSError, the file is removed.
+
+        Without cleanup the next claim attempt would raise FileExistsError
+        on a file that contains no valid PID — the cleanup must unlink it
+        so the caller can retry.
+        """
+        import file_organizer.daemon.pid as pid_mod
+
+        original_fdopen = os.fdopen
+
+        def _failing_fdopen(fd: int, *args: object, **kwargs: object) -> object:
+            # Close the fd to avoid a resource leak in the test, then raise.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise OSError("simulated fdopen write failure")
+
+        monkeypatch.setattr(pid_mod.os, "fdopen", _failing_fdopen)
+        with pytest.raises(OSError, match="simulated fdopen write failure"):
+            pid_manager.claim_pid_file(pid_file)
+        # File must be cleaned up so a subsequent claim can succeed
+        assert not pid_file.exists()
+
+        # Restore and verify we can now claim successfully
+        monkeypatch.setattr(pid_mod.os, "fdopen", original_fdopen)
+        pid_manager.claim_pid_file(pid_file)
+        assert pid_file.exists()
+
+    def test_claim_write_oserror_unlink_also_fails_still_raises(
+        self, pid_manager: PidFileManager, pid_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If both fdopen write and cleanup unlink raise, the write error propagates.
+
+        Covers the ``except OSError: pass`` guard inside the cleanup block
+        (lines 202-203 in pid.py) — unlink() failure is silently swallowed
+        and the original write OSError is re-raised.
+        """
+        import file_organizer.daemon.pid as pid_mod
+
+        original_fdopen = os.fdopen
+
+        def _failing_fdopen(fd: int, *args: object, **kwargs: object) -> object:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise OSError("simulated fdopen write failure")
+
+        original_unlink = Path.unlink
+
+        def _failing_unlink(self: Path, missing_ok: bool = False) -> None:
+            raise OSError("simulated unlink failure")
+
+        monkeypatch.setattr(pid_mod.os, "fdopen", _failing_fdopen)
+        monkeypatch.setattr(Path, "unlink", _failing_unlink)
+
+        # The original fdopen write error must propagate even if unlink fails
+        with pytest.raises(OSError, match="simulated fdopen write failure"):
+            pid_manager.claim_pid_file(pid_file)
+
+        monkeypatch.setattr(pid_mod.os, "fdopen", original_fdopen)
+        monkeypatch.setattr(Path, "unlink", original_unlink)
