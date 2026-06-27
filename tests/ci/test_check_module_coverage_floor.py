@@ -57,7 +57,7 @@ def test_below_floor_is_a_violation(tmp_path: Path, capsys: pytest.CaptureFixtur
     assert "BELOW FLOOR" in capsys.readouterr().err
 
 
-def test_meets_floor_passes(tmp_path: Path) -> None:
+def test_meets_floor_passes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     json_path = tmp_path / "cov.json"
     _write_coverage_json(
         json_path,
@@ -77,6 +77,7 @@ def test_meets_floor_passes(tmp_path: Path) -> None:
         '[tool.coverage.floors.unit]\n"src/file_organizer/x.py" = 80\n', encoding="utf-8"
     )
     checker.main(["--json", str(json_path), "--pyproject", str(pyproject_path)])
+    assert "All per-file unit coverage floors met" in capsys.readouterr().out
 
 
 def test_missing_floor_for_covered_file_is_a_violation(

@@ -676,7 +676,7 @@ class TestSettingsImportPathBased:
 
     @pytest.fixture()
     def _client(self, tmp_path):
-        """Yield a TestClient with settings_router mounted and get_settings overridden."""
+        """Return a TestClient with settings_router mounted and get_settings overridden."""
         api_settings = ApiSettings(
             allowed_paths=[str(tmp_path)],
             auth_enabled=False,

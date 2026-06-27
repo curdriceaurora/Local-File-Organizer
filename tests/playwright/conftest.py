@@ -710,7 +710,7 @@ def browser(playwright: Any, launch_browser: Callable[[], Any]) -> Iterator[Any]
 
 
 @pytest.fixture(autouse=True)
-def activate_playwright_loop(clear_leaked_running_loop: None) -> Iterator[None]:
+def activate_playwright_loop(clear_leaked_running_loop: None) -> None:
     """Ensure the Playwright session event loop is set as the running loop for this test.
 
     This counters the 'clear_leaked_running_loop' autouse fixture in the root conftest,
@@ -725,5 +725,3 @@ def activate_playwright_loop(clear_leaked_running_loop: None) -> Iterator[None]:
             asyncio.events._set_running_loop(_PLAYWRIGHT_LOOP)
         except Exception:
             pass
-
-    return

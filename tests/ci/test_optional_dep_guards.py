@@ -285,22 +285,15 @@ def _git_changed_test_files() -> list[Path]:
         "diff", "--name-only", "--diff-filter=ACMR", "--", "tests/**/*.py", "tests/*.py"
     )
     changed.update(line.strip() for line in unstaged_diff.splitlines() if line.strip())
-    return sorted(
-        p
-        for p in TESTS_ROOT.rglob("*.py")
-        if p.resolve() != _SELF
-        and "fixtures" not in p.parts
-        and "ci" not in p.parts
-        and p.name != "conftest.py"
-        and str(p.relative_to(FO_ROOT)) in changed
-    )
+    return sorted(p for p in _eligible_test_files() if str(p.relative_to(FO_ROOT)) in changed)
 
 
-def _all_test_files() -> list[Path]:
-    """Return every test file under tests/, for full-suite enforcement.
+def _eligible_test_files() -> list[Path]:
+    """All tests/**/*.py paths excluding self, fixtures, ci, and conftest.
 
-    Safe to use once a diff-scoped guard has been confirmed clean against
-    the full suite (see test_test_files_guard_optional_deps' docstring).
+    Shared by both _git_changed_test_files (diff-scoped) and
+    _all_test_files (full-suite) so the exclusion rules can't drift
+    between the two.
     """
     return sorted(
         p
@@ -310,6 +303,15 @@ def _all_test_files() -> list[Path]:
         and "ci" not in p.parts
         and p.name != "conftest.py"
     )
+
+
+def _all_test_files() -> list[Path]:
+    """Return every test file under tests/, for full-suite enforcement.
+
+    Safe to use once a diff-scoped guard has been confirmed clean against
+    the full suite (see test_test_files_guard_optional_deps' docstring).
+    """
+    return _eligible_test_files()
 
 
 # -------------------------------------------------------------------------
