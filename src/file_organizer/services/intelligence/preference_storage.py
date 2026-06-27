@@ -1,4 +1,3 @@
-# pyre-ignore-all-errors
 """Storage backends for ``PreferenceTracker`` (Epic D / D5).
 
 Tracks: issue #157 (Hardening Epic D, item D5).
