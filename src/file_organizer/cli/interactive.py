@@ -20,45 +20,30 @@ from rich.progress import (
 )
 from rich.prompt import Confirm, Prompt
 
-# Module-level flags set by main_callback in main.py
-_yes: bool = False
-_no_interactive: bool = False
+from file_organizer.cli.state import _get_state
 
 console = Console()
 
 
-def set_flags(*, yes: bool = False, no_interactive: bool = False) -> None:
-    """Update the module-level interactive flags.
-
-    Called by ``main_callback()`` during CLI startup.
-
-    Args:
-        yes: If ``True``, auto-confirm all prompts.
-        no_interactive: If ``True``, skip all interactive prompts.
-    """
-    global _yes, _no_interactive
-    _yes = yes
-    _no_interactive = no_interactive
-
-
 def confirm_action(message: str, *, default: bool = False) -> bool:
-    """Ask the user for confirmation.
+    """Ask the user to confirm an action.
 
-    Returns ``True`` immediately when ``--yes`` is active.  Returns
-    *default* when ``--no-interactive`` is active.
+    If the global CLI state has `yes` enabled, automatically confirms and returns True.
+    If `no_interactive` is enabled, returns the provided `default` without prompting.
 
-    Args:
-        message: Prompt text.
-        default: Default answer if non-interactive.
+    Parameters:
+        message (str): Prompt text shown to the user.
+        default (bool): Value returned when non-interactive mode is active.
 
     Returns:
-        ``True`` if the user confirmed (or auto-confirmed).
+        bool: `True` if the action is confirmed, `False` otherwise.
     """
-    if _yes:
+    state = _get_state()
+    if state.yes:
         return True
-    if _no_interactive:
+    if state.no_interactive:
         return default
-    return Confirm.ask(message, default=default)
+    return Confirm.ask(message, default=default)  # type: ignore[no-any-return]
 
 
 def prompt_directory(message: str = "Enter directory path") -> Path:
@@ -86,21 +71,23 @@ def prompt_choice(
     *,
     default: str | None = None,
 ) -> str:
-    """Prompt the user to pick from a list of choices.
+    """Prompt the user to select one value from a list of allowed choices.
 
-    Args:
-        message: Prompt text.
-        choices: Allowed values.
-        default: Preselected value.
+    If the global CLI state has `no_interactive` enabled and `default` is provided, returns `default` without prompting.
+
+    Parameters:
+        message (str): Text displayed to the user when prompting.
+        choices (Sequence[str]): Permitted choice strings shown to the user.
+        default (str | None): Value returned automatically in non-interactive mode or used as the prompt's default.
 
     Returns:
-        The chosen string.
+        The chosen string from `choices`.
     """
-    if _no_interactive and default is not None:
+    if _get_state().no_interactive and default is not None:
         return default
     if default is not None:
-        return Prompt.ask(message, choices=list(choices), default=default)
-    return Prompt.ask(message, choices=list(choices))
+        return Prompt.ask(message, choices=list(choices), default=default)  # type: ignore[no-any-return]
+    return Prompt.ask(message, choices=list(choices))  # type: ignore[no-any-return]
 
 
 def create_progress() -> Progress:

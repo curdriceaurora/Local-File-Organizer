@@ -102,6 +102,30 @@ def reset_realtime_state() -> None:
 
 
 @pytest.fixture(autouse=True)
+def clear_leaked_running_loop() -> None:
+    """Clear any leaked running event loop from the thread-local state.
+
+    Playwright's sync API uses greenlets and leaves the event loop marked as running
+    in the thread-local state even after the Playwright test has paused or finished.
+    This prevents subsequent async tests from running their own event loops.
+    We clear the running loop if there is no active asyncio task currently executing.
+    """
+    import asyncio
+    import asyncio.events
+
+    try:
+        if asyncio.events._get_running_loop() is not None:
+            try:
+                task = asyncio.current_task()
+            except RuntimeError:
+                task = None
+            if task is None:
+                asyncio.events._set_running_loop(None)
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
 def ensure_default_event_loop(request: pytest.FixtureRequest) -> None:
     """Ensure sync tests can instantiate asyncio-bound widgets across Python versions.
 
@@ -111,9 +135,30 @@ def ensure_default_event_loop(request: pytest.FixtureRequest) -> None:
     This fixture gives each sync test an explicit default loop; async tests use
     ``pytest-asyncio``/``anyio`` loop management and are skipped here.
     """
-    if request.node.get_closest_marker("asyncio") or request.node.get_closest_marker("anyio"):
+    import inspect
+
+    # Skip if the test is an async test managed by pytest-asyncio or anyio
+    if (
+        request.node.get_closest_marker("asyncio")
+        or request.node.get_closest_marker("anyio")
+        or inspect.iscoroutinefunction(request.node.obj)
+    ):
         yield
         return
+
+    # Skip for playwright E2E tests, which manage their own browser loops
+    if request.node.get_closest_marker("playwright") or "playwright" in request.node.nodeid:
+        yield
+        return
+
+    # Check if there is already a running loop in the current thread
+    try:
+        loop = asyncio.get_running_loop()
+        if loop.is_running():
+            yield
+            return
+    except RuntimeError:
+        pass
 
     created_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(created_loop)
@@ -498,3 +543,34 @@ def mock_marketplace_service() -> MagicMock:
     mock_instance.install.return_value = installed_plugin
 
     return mock_instance
+
+
+# ---------------------------------------------------------------------------
+# Step 3: global setup-gate bypass for all CLI-invoking tests.
+# ---------------------------------------------------------------------------
+# The first-run setup gate now lives in `cli.main.main_callback` and runs
+# for every non-allowlisted command. Existing CLI smoke/contract tests
+# don't pre-mark setup as complete (they assumed the command-level gate
+# they patched explicitly), so the gate would block them and break
+# dozens of pre-existing tests.
+#
+# This autouse fixture patches `cli.organize._check_setup_completed` to
+# return True for ALL tests project-wide. The gate in `cli.main` imports
+# this function LAZILY (inside the callback body via
+# `from file_organizer.cli.organize import _check_setup_completed`) rather than at
+# module level, so each invocation re-fetches the attribute from
+# `cli.organize` — patching the origin module is therefore correct.
+# Tests that specifically exercise the gate must opt out by adding
+# `@pytest.mark.uses_setup_gate`.
+# Those tests configure the on-disk `setup_completed` flag via a
+# tmp_path config dir and need the gate to actually run.
+@pytest.fixture(autouse=True)
+def _bypass_setup_gate(request: pytest.FixtureRequest) -> object:
+    """Default-bypass the global setup gate; opt-out via `uses_setup_gate` marker."""
+    if request.node.get_closest_marker("uses_setup_gate") is not None:
+        yield
+        return
+    from unittest.mock import patch
+
+    with patch("file_organizer.cli.organize._check_setup_completed", return_value=True):
+        yield

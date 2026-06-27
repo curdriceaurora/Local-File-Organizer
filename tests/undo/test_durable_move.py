@@ -3347,10 +3347,27 @@ class TestWriterProtocolV2:
                 events.append(("journal_started", str(j)))
             return real_locked_append(j, payload)
 
+        import json
+
+        real_append_durable = dm_mod.append_durable
+
+        def tracking_append_durable(j, text):  # type: ignore[no-untyped-def]
+            try:
+                payload = json.loads(text)
+                if payload.get("state") == "started":
+                    events.append(("journal_started", str(j)))
+            except Exception:
+                pass
+            return real_append_durable(j, text)
+
         monkeypatch.setattr("file_organizer.undo.durable_move.os.open", tracking_open)
         monkeypatch.setattr(
             "file_organizer.undo.durable_move._append_journal_line_locked",
             tracking_locked_append,
+        )
+        monkeypatch.setattr(
+            "file_organizer.undo.durable_move.append_durable",
+            tracking_append_durable,
         )
 
         dm_mod.durable_move(src, dst, journal=journal)

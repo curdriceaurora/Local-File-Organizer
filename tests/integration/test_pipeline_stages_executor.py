@@ -11,6 +11,7 @@ Covers:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -146,6 +147,107 @@ class TestPreprocessorStageProcess:
         ctx = StageContext(file_path=f)
         result = stage.process(ctx)
         assert "mime_type" in result.metadata
+
+    def test_directory_path_sets_error(self, tmp_path: Path) -> None:
+        """A directory (not a regular file) is rejected with an error."""
+        d = tmp_path / "a_dir"
+        d.mkdir()
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=d)
+        result = stage.process(ctx)
+        assert result.failed
+        assert "Not a file" in result.error
+
+    def test_stat_oserror_sets_error(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An OSError from path.stat() (after exists()/is_file() pass) is reported."""
+        f = tmp_path / "flaky.txt"
+        f.write_text("content")
+        real_stat = Path.stat
+        calls = {"n": 0}
+
+        def flaky_stat(self: Path, *args: object, **kwargs: object) -> object:
+            calls["n"] += 1
+            if calls["n"] <= 2:
+                return real_stat(self, *args, **kwargs)
+            raise OSError("disk error")
+
+        monkeypatch.setattr(Path, "stat", flaky_stat)
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=f)
+        result = stage.process(ctx)
+        assert result.failed
+        assert "Cannot read file metadata" in result.error
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="trusted_root anchored reads are POSIX-only")
+class TestPreprocessorStageTrustedRoot:
+    """PreprocessorStage's SafeDir-anchored read path when trusted_root is set."""
+
+    def test_direct_match_reads_via_safedir(self, tmp_path: Path) -> None:
+        """File directly under trusted_root is read through the anchored fd path."""
+        root = tmp_path / "watched"
+        root.mkdir()
+        f = root / "doc.txt"
+        f.write_text("hello world")
+
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=f, trusted_root=root)
+        result = stage.process(ctx)
+
+        assert not result.failed
+        assert result.metadata["size_bytes"] == len("hello world")
+        assert result.filename == "doc"
+
+    def test_resolve_fallback_reads_via_safedir(self, tmp_path: Path) -> None:
+        """A trusted_root reached through a symlinked *ancestor* (not the root
+        directory itself) matches via the resolve() fallback and still reads
+        through SafeDir successfully, since ``open_root`` only rejects a
+        symlinked final component, not a symlinked ancestor in the path used
+        to reach it.
+        """
+        real_parent = tmp_path / "real_parent"
+        sub = real_parent / "sub"
+        sub.mkdir(parents=True)
+        link_parent = tmp_path / "link_parent"
+        link_parent.symlink_to(real_parent)
+
+        trusted_root = link_parent / "sub"
+        f = sub / "doc.txt"
+        f.write_text("hello")
+
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=f, trusted_root=trusted_root)
+        result = stage.process(ctx)
+
+        assert not result.failed
+        assert result.metadata["size_bytes"] == len("hello")
+
+    def test_path_outside_trusted_root_sets_value_error(self, tmp_path: Path) -> None:
+        """A path with no relation (direct or resolved) to trusted_root is rejected."""
+        root = tmp_path / "watched"
+        root.mkdir()
+        outside = tmp_path / "elsewhere" / "doc.txt"
+        outside.parent.mkdir()
+        outside.write_text("content")
+
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=outside, trusted_root=root)
+        result = stage.process(ctx)
+
+        assert result.failed
+
+    def test_missing_file_under_trusted_root_sets_oserror(self, tmp_path: Path) -> None:
+        """A file that doesn't exist under trusted_root surfaces as a read error."""
+        root = tmp_path / "watched"
+        root.mkdir()
+        missing = root / "missing.txt"
+
+        stage = PreprocessorStage()
+        ctx = StageContext(file_path=missing, trusted_root=root)
+        result = stage.process(ctx)
+
+        assert result.failed
+        assert "Cannot read file" in result.error
 
 
 # ---------------------------------------------------------------------------

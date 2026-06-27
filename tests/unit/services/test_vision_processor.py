@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.vision_schema import VisionSchema
 from file_organizer.services.vision_processor import ProcessedImage, VisionProcessor
 
 
@@ -60,20 +61,13 @@ class TestVisionProcessor:
     def test_process_file_success(self, mock_vision_model, mock_image_path):
         processor = VisionProcessor(vision_model=mock_vision_model)
 
-        # Setup specific responses for different calls
-        def mock_generate(*args, **kwargs):
-            prompt = kwargs.get("prompt", "")
-            if "Describe this image" in prompt:
-                return "A beautiful sunset over the mountains"
-            elif "Extract ALL visible text" in prompt:
-                return "Welcome to the Mountains"
-            elif "generate a general category" in prompt:
-                return "nature_landscapes"
-            elif "generate a specific descriptive filename" in prompt:
-                return "mountain_sunset"
-            return "default response"
-
-        mock_vision_model.generate.side_effect = mock_generate
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="A beautiful sunset over the mountains",
+            folder_name="nature_landscapes",
+            filename="mountain_sunset",
+            has_text=True,
+            extracted_text="Welcome to the Mountains",
+        )
 
         result = processor.process_file(
             mock_image_path,
@@ -95,13 +89,13 @@ class TestVisionProcessor:
     def test_process_file_no_text_found(self, mock_vision_model, mock_image_path):
         processor = VisionProcessor(vision_model=mock_vision_model)
 
-        def mock_generate(*args, **kwargs):
-            prompt = kwargs.get("prompt", "")
-            if "Extract ALL visible text" in prompt:
-                return "NO_TEXT"
-            return "dummy"
-
-        mock_vision_model.generate.side_effect = mock_generate
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="dummy",
+            folder_name="images",
+            filename="test_image",
+            has_text=False,
+            extracted_text=None,
+        )
 
         result = processor.process_file(
             mock_image_path,
@@ -119,14 +113,14 @@ class TestVisionProcessor:
         mock_model.config.model_type = ModelType.VISION
 
         processor = VisionProcessor(vision_model=mock_model)
-        # Mock an internal method to raise an error so we hit the top-level except block
-        processor._generate_description = MagicMock(side_effect=Exception("API Error"))
+        mock_model.generate_structured.side_effect = Exception("API Error")
 
         result = processor.process_file(mock_image_path)
 
-        assert "API Error" in str(result.error) if result.error else False
-        assert result.folder_name == "errors"
-        assert result.description == ""
+        assert result.error is not None
+        assert "API Error" in str(result.error)
+        assert result.folder_name == "Images/Untagged"
+        assert result.description == f"Image from {mock_image_path.name}"
 
     def test_clean_ai_generated_name(self):
         mock = MagicMock()

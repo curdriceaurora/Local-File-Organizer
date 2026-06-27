@@ -25,6 +25,8 @@ from file_organizer.watcher.config import WatcherConfig
 from file_organizer.watcher.handler import FileEventHandler
 from file_organizer.watcher.queue import EventQueue, EventType, FileEvent
 
+pytestmark = [pytest.mark.unit, pytest.mark.integration, pytest.mark.ci]
+
 
 @pytest.fixture
 def default_config() -> WatcherConfig:

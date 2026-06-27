@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import mimetypes
 import re
 import threading
 import time
@@ -15,6 +17,7 @@ from loguru import logger
 from file_organizer.models import VisionModel
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_vision_model
+from file_organizer.models.vision_schema import VisionSchema
 from file_organizer.services.inference_timer import time_inference
 
 
@@ -52,6 +55,90 @@ class ProcessedImage:
     confidence: float = 1.0
 
 
+def _mime_type_for_image_format(image_format: str | None) -> str:
+    """Map a Pillow image format to the MIME type emitted by preprocessing."""
+    if image_format == "JPEG":
+        return "image/jpeg"
+    if image_format in {"PNG", "WEBP", "GIF"}:
+        return f"image/{image_format.lower()}"
+    return "image/jpeg"
+
+
+_VISION_API_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
+)
+
+
+def preprocess_and_clamp_image(image_path: Path, max_edge: int = 1024) -> tuple[bytes, str]:
+    """Load, validate dimensions, and clamp/resize image to fit within max_edge limit.
+
+    If Pillow is not installed, returns the raw un-clamped bytes of the file
+    with a MIME type guessed from the filename.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.warning("Pillow not installed; skipping shape validation and clamping.")
+        guessed, _ = mimetypes.guess_type(str(image_path))
+        return image_path.read_bytes(), guessed or "image/jpeg"
+
+    try:
+        with Image.open(image_path) as img:
+            width, height = img.size
+            if width == 0 or height == 0:
+                raise ValueError(f"Invalid image dimensions: {width}x{height}")
+
+            needs_resize = max(width, height) > max_edge
+            if needs_resize:
+                if width > height:
+                    new_width = max_edge
+                    new_height = int(height * (max_edge / width))
+                else:
+                    new_height = max_edge
+                    new_width = int(width * (max_edge / height))
+
+                resample = getattr(Image, "Resampling", None)
+                filter_type = getattr(resample, "LANCZOS", 1)
+
+                img = img.resize((new_width, new_height), filter_type)
+                logger.info(
+                    "Clamped image {} from {}x{} to {}x{}",
+                    image_path.name,
+                    width,
+                    height,
+                    new_width,
+                    new_height,
+                )
+
+            img_format = img.format or "JPEG"
+            if img_format not in ("JPEG", "PNG", "WEBP", "GIF"):
+                img_format = "JPEG"
+            mime_type = _mime_type_for_image_format(img_format)
+
+            needs_rgb_conversion = img_format == "JPEG" and img.mode in ("RGBA", "LA", "P")
+            if (
+                not needs_resize
+                and not needs_rgb_conversion
+                and img_format == (img.format or "JPEG")
+            ):
+                return image_path.read_bytes(), mime_type
+
+            if needs_rgb_conversion:
+                img = img.convert("RGB")
+
+            buf = io.BytesIO()
+            img.save(buf, format=img_format)
+            return buf.getvalue(), mime_type
+    except Exception as e:
+        logger.warning(
+            "Image preprocessing failed for {}: {}. Using raw bytes.",
+            image_path.name,
+            e,
+        )
+        guessed, _ = mimetypes.guess_type(str(image_path))
+        return image_path.read_bytes(), guessed or "image/jpeg"
+
+
 class VisionProcessor:
     """Process image and video files using AI to generate metadata.
 
@@ -70,6 +157,11 @@ class VisionProcessor:
         "health resp",
         "runner has unexpectedly stopped",
         "failed to connect",
+        "out of memory",
+        "oom:",
+        "oom ",
+        "failed to allocate",
+        "cuda out of memory",
     )
 
     def __init__(
@@ -173,35 +265,49 @@ class VisionProcessor:
         generate_filename: bool,
         perform_ocr: bool,
     ) -> tuple[ProcessedImage, bool]:
-        """Inner body of :meth:`process_file`.
+        """Inner body of :meth:`process_file` using structured generation.
 
-        Returns ``(result, model_invoked)``. ``model_invoked`` is True iff at
-        least one model call (description / OCR / folder / filename) was
-        attempted — regardless of whether it succeeded or raised. Failed-but-
-        attempted inferences contribute to the #410 p95/p99 summary; pre-
-        inference early returns (circuit-open, file-not-found) do not.
+        Returns ``(result, model_invoked)``.
         """
         model_invoked = False
         try:
+            if not (generate_description or generate_folder or generate_filename or perform_ocr):
+                # All flags off, bypass model call entirely
+                processing_time = time.time() - start_time
+                return (
+                    ProcessedImage(
+                        file_path=file_path,
+                        description="",
+                        folder_name="",
+                        filename="",
+                        has_text=False,
+                        extracted_text=None,
+                        processing_time=processing_time,
+                        source="vision",
+                        confidence=1.0,
+                    ),
+                    False,  # no model call attempted
+                )
+
             if self._is_circuit_open():
                 logger.warning(
                     "Vision backend circuit open; skipping model calls for {}",
                     file_path.name,
                 )
                 error_message = self._circuit_open_error()
-                logger.debug(
-                    "Circuit-open fallback for {} with error={}",
-                    file_path.name,
-                    error_message,
-                )
+                from file_organizer.services.vision_fallback import compute_fallback
+
+                fb = compute_fallback(file_path)
+                fallback_conf = 0.5 if fb.source == "fallback_exif" else 0.3
                 return (
                     ProcessedImage(
                         file_path=file_path,
                         description=f"Image from {file_path.name}",
-                        folder_name="images",
-                        filename=file_path.stem,
+                        folder_name=fb.folder,
+                        filename=fb.filename,
                         error=error_message,
-                        confidence=0.0,
+                        source=fb.source,
+                        confidence=fallback_conf,
                     ),
                     False,  # no model call attempted
                 )
@@ -220,54 +326,87 @@ class VisionProcessor:
                     False,  # no model call attempted
                 )
 
-            # Generate description
-            description = ""
-            if generate_description:
-                logger.debug(f"Analyzing image: {file_path.name}")
-                model_invoked = True
-                description = self._generate_description(file_path)
-                logger.debug(f"Generated description ({len(description)} chars)")
-                if self._is_circuit_open():
-                    error_message = self._circuit_open_error()
-                    return (
-                        ProcessedImage(
-                            file_path=file_path,
-                            description=description or f"Image from {file_path.name}",
-                            folder_name="images",
-                            filename=file_path.stem,
-                            error=error_message,
-                            confidence=0.0,
+            if file_path.suffix.lower() not in _VISION_API_SUPPORTED_EXTENSIONS:
+                from file_organizer.services.vision_fallback import compute_fallback
+
+                fb = compute_fallback(file_path)
+                fallback_conf = 0.5 if fb.source == "fallback_exif" else 0.3
+                return (
+                    ProcessedImage(
+                        file_path=file_path,
+                        description=f"Image from {file_path.name}",
+                        folder_name=fb.folder,
+                        filename=fb.filename,
+                        error=(
+                            "Unsupported image format for vision model: "
+                            f"{file_path.suffix.lower() or '<none>'}"
                         ),
-                        True,  # the call that tripped the circuit DID happen
-                    )
+                        source=fb.source,
+                        confidence=fallback_conf,
+                    ),
+                    False,  # no model call attempted
+                )
 
-            # Extract text if needed
-            extracted_text = None
-            has_text = False
-            if perform_ocr:
-                model_invoked = True
-                extracted_text = self._extract_text(file_path)
-                has_text = bool(extracted_text and len(extracted_text.strip()) > 10)
-                if has_text and extracted_text is not None:
-                    logger.debug(f"Extracted {len(extracted_text)} chars of text")
+            # Preprocess and clamp image
+            image_bytes, image_mime_type = preprocess_and_clamp_image(file_path)
 
-            # Generate folder name
+            prompt = self._build_structured_prompt(
+                file_path=file_path,
+                generate_folder=generate_folder,
+                generate_filename=generate_filename,
+                perform_ocr=perform_ocr,
+            )
+
+            logger.debug(f"Analyzing image: {file_path.name}")
+            model_invoked = True
+
+            # Call structured generation
+            schema_result = self._guarded_generate_structured(
+                prompt=prompt,
+                schema=VisionSchema,
+                image_data=image_bytes,
+                mime_type=image_mime_type,
+            )
+
+            description = schema_result.description if generate_description else ""
+            has_text = schema_result.has_text if perform_ocr else False
+            extracted_text = (
+                (schema_result.extracted_text if has_text else None) if perform_ocr else None
+            )
+
+            # Clean folder name
             folder_name = ""
             if generate_folder:
-                model_invoked = True
-                # Use extracted text if available, otherwise use description
-                context: str = (extracted_text or description) if has_text else description
-                folder_name = self._generate_folder_name(file_path, context)
-                logger.debug(f"Generated folder name: {folder_name}")
+                folder_name = schema_result.folder_name
+                # Remove common prefixes and quotes
+                for prefix in ["folder:", "category:", "the folder is", "the category is"]:
+                    folder_name = folder_name.replace(prefix, "").strip()
+                folder_name = folder_name.strip("\"'")
+                folder_name = self._clean_ai_generated_name(folder_name, max_words=2)
+                if not folder_name or len(folder_name) < 3:
+                    folder_name = "images"
+            else:
+                folder_name = "images"
 
-            # Generate filename
+            # Clean filename
             filename = ""
             if generate_filename:
-                model_invoked = True
-                # Use extracted text if available, otherwise use description
-                context = (extracted_text or description) if has_text else description
-                filename = self._generate_filename(file_path, context)
-                logger.debug(f"Generated filename: {filename}")
+                filename = schema_result.filename
+                # Remove common prefixes and quotes
+                for prefix in ["filename:", "file:", "name:", "the filename is", "the name is"]:
+                    filename = filename.replace(prefix, "").strip()
+                filename = filename.strip("\"'")
+                # Remove file extensions if AI added them
+                filename = re.sub(r"\.(txt|pdf|jpg|jpeg|png|gif|bmp)$", "", filename)
+                filename = self._clean_ai_generated_name(filename, max_words=3)
+                if not filename or len(filename) < 3:
+                    filename = file_path.stem
+                # Final safety check
+                filename = re.sub(r"[^\w_]", "_", filename)
+                filename = re.sub(r"_+", "_", filename).strip("_")
+                filename = filename[:50] if filename else "image"
+            else:
+                filename = file_path.stem
 
             processing_time = time.time() - start_time
 
@@ -280,23 +419,85 @@ class VisionProcessor:
                     has_text=has_text,
                     extracted_text=extracted_text[:500] if extracted_text else None,
                     processing_time=processing_time,
+                    source="vision",
+                    confidence=1.0,
                 ),
                 model_invoked,
             )
 
         except Exception as e:
             logger.exception(f"Failed to process {file_path.name}: {e}")
-            return (
-                ProcessedImage(
-                    file_path=file_path,
-                    description="",
-                    folder_name="errors",
-                    filename=file_path.stem,
-                    error=str(e),
-                    confidence=0.0,
-                ),
-                model_invoked,
+            # Fallback to metadata-only fallback
+            from file_organizer.services.vision_fallback import compute_fallback
+
+            try:
+                fb = compute_fallback(file_path)
+                fallback_conf = 0.5 if fb.source == "fallback_exif" else 0.3
+                return (
+                    ProcessedImage(
+                        file_path=file_path,
+                        description=f"Image from {file_path.name}",
+                        folder_name=fb.folder,
+                        filename=fb.filename,
+                        error=str(e),
+                        source=fb.source,
+                        confidence=fallback_conf,
+                    ),
+                    model_invoked,
+                )
+            except Exception as fb_exc:
+                logger.error(f"Fallback also failed for {file_path.name}: {fb_exc}")
+                return (
+                    ProcessedImage(
+                        file_path=file_path,
+                        description="",
+                        folder_name="errors",
+                        filename=file_path.stem,
+                        error=str(e),
+                        confidence=0.0,
+                    ),
+                    model_invoked,
+                )
+
+    def _build_structured_prompt(
+        self,
+        *,
+        file_path: Path,
+        generate_folder: bool,
+        generate_filename: bool,
+        perform_ocr: bool,
+    ) -> str:
+        """Build the structured single-call image analysis prompt."""
+        prompt_lines = [
+            "Analyze this image and provide the following details:",
+            "- description: A detailed description of the main subject and important details.",
+        ]
+        if generate_folder:
+            prompt_lines.append(
+                "- folder_name: A general plural lowercase category (max 2 words) e.g. 'screenshots', 'receipts'."
             )
+        else:
+            prompt_lines.append("- folder_name: Return the string 'images'.")
+
+        if generate_filename:
+            prompt_lines.append(
+                "- filename: A descriptive snake_case filename (max 3 words) e.g. 'grocery_receipt_target'."
+            )
+        else:
+            prompt_lines.append(f"- filename: Return the string '{file_path.stem}'.")
+
+        if perform_ocr:
+            prompt_lines.append(
+                "- has_text: True if there is significant visible text that should be extracted."
+            )
+            prompt_lines.append(
+                "- extracted_text: The exact text extracted from the image if has_text is True."
+            )
+        else:
+            prompt_lines.append("- has_text: Return False.")
+            prompt_lines.append("- extracted_text: Return null.")
+
+        return "\n".join(prompt_lines)
 
     def _clean_ai_generated_name(self, name: str, max_words: int = 3) -> str:
         """Clean AI-generated folder/file names with lighter filtering.
@@ -594,6 +795,19 @@ FILENAME:"""
 
         try:
             return self.vision_model.generate(**kwargs)
+        except Exception as exc:  # Intentional catch-all: circuit-breaker for any backend error
+            if self._is_fatal_backend_error(exc):
+                self._trip_backend_circuit(exc)
+            raise
+
+    def _guarded_generate_structured(self, **kwargs: Any) -> Any:
+        """Run model.generate_structured behind a fatal-error circuit-breaker."""
+        if self._is_circuit_open():
+            reason = self._circuit_reason or "backend unavailable"
+            raise RuntimeError(f"Vision backend circuit open: {reason}")
+
+        try:
+            return self.vision_model.generate_structured(**kwargs)
         except Exception as exc:  # Intentional catch-all: circuit-breaker for any backend error
             if self._is_fatal_backend_error(exc):
                 self._trip_backend_circuit(exc)

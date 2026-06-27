@@ -7,6 +7,7 @@ PID file management, callback registration, and background operation.
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import threading
@@ -18,7 +19,7 @@ import pytest
 from file_organizer.daemon.config import DaemonConfig
 from file_organizer.daemon.service import DaemonService
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 @pytest.fixture
@@ -40,7 +41,7 @@ def output_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def pid_file(tmp_path: Path) -> Path:
     """Return a temporary PID file path."""
-    return tmp_path / "daemon.pid"
+    return tmp_path / "file_organizer.daemon.pid"
 
 
 @pytest.fixture
@@ -124,17 +125,86 @@ class TestDaemonLifecycle:
 
         assert daemon.is_running is True
 
+    def test_start_background_refuses_when_pid_file_shows_live_process(
+        self, daemon: DaemonService, pid_file: Path
+    ) -> None:
+        """If the on-disk PID file already points at a live process (e.g.
+        a prior daemon that crashed without cleaning up, or a still-running
+        one), start_background() must refuse rather than spawning a second
+        daemon that writes to the same PID file.
+
+        Uses this test process's own PID/create_time as the "live process"
+        the on-disk record points to, since it's guaranteed to be alive
+        for the duration of the test.
+        """
+        daemon._pid_manager.write_pid_record(pid_file, pid=os.getpid())
+
+        with pytest.raises(RuntimeError, match="stale PID file indicates a live process"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+
+    def test_start_background_propagates_startup_failure(self, daemon: DaemonService) -> None:
+        """If initialization in the background thread raises,
+        start_background() must re-raise rather than returning a false
+        success (regression: previously the caller only saw _started_event
+        get set and assumed the daemon was up).
+        """
+        from unittest.mock import patch
+
+        with patch.object(daemon, "_setup_default_tasks", side_effect=RuntimeError("boom")):
+            with pytest.raises(RuntimeError, match="Daemon failed to start"):
+                daemon.start_background()
+
+        assert daemon.is_running is False
+
+    def test_repeated_restart_cycles_do_not_leave_scheduler_zombie(
+        self,
+        daemon: DaemonService,
+    ) -> None:
+        """Repeated start/stop cycles must not leave the scheduler in a
+        zombied ``_running=True`` state.
+
+        Regression for the ``test_restart_cycles_daemon`` flake (PR #179 CI):
+        ``DaemonScheduler.run()`` used to clear ``_stop_event`` inside itself,
+        which races with ``_cleanup()``'s ``scheduler.stop()`` call. Under
+        xdist CI contention this caused the next ``run_in_background()`` in
+        ``_background_run`` to raise ``RuntimeError("Scheduler is already
+        running")``, leaving the daemon with ``is_running=False`` after
+        restart.
+        """
+        for _ in range(5):
+            daemon.start_background()
+            assert daemon.is_running is True
+            daemon.restart()
+
+            # restart() already waits for the background thread to reach
+            # _started_event.set(). is_running must be True immediately.
+            assert daemon.is_running is True
+
+            daemon.stop()
+            deadline = time.monotonic() + 5.0
+            while daemon.is_running and time.monotonic() < deadline:
+                pass
+            assert daemon.is_running is False
+
 
 class TestPidFileManagement:
     """Tests for PID file lifecycle with the daemon."""
 
     def test_pid_file_created_on_start(self, daemon: DaemonService, pid_file: Path) -> None:
-        """Starting the daemon creates the PID file."""
+        """Starting the daemon creates the PID file.
+
+        F2: the service now writes via ``write_pid_record`` so the file
+        contains a JSON record (``{pid, create_time}``). The record's
+        ``pid`` field must be the current process's PID.
+        """
         daemon.start_background()
 
         assert pid_file.exists()
-        content = pid_file.read_text().strip()
-        assert int(content) == os.getpid()
+        data = json.loads(pid_file.read_text())
+        assert data["pid"] == os.getpid()
+        assert "create_time" in data
 
     def test_pid_file_removed_on_stop(self, daemon: DaemonService, pid_file: Path) -> None:
         """Stopping the daemon removes the PID file."""

@@ -20,6 +20,9 @@ def _build_app() -> tuple[FastAPI, TestClient]:
     app = FastAPI()
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
+    from file_organizer.api.dependencies import require_admin_user
+
+    app.dependency_overrides[require_admin_user] = lambda: None
     app.include_router(router, prefix="/api/v1")
     client = TestClient(app)
     return app, client
@@ -303,3 +306,21 @@ class TestToggleDaemon:
             body = resp.json()
             assert body["success"] is False
             assert "error" in body
+
+
+@pytest.mark.unit
+class TestDaemonAuthEnforcement:
+    """Verify that the daemon endpoints actually reject unauthenticated requests by default."""
+
+    def test_daemon_status_unauthenticated_fails(self) -> None:
+        """Test status endpoint without override or active user rejects request."""
+        settings = ApiSettings(environment="test", auth_enabled=True)
+        app = FastAPI()
+        setup_exception_handlers(app)
+        app.dependency_overrides[get_settings] = lambda: settings
+        app.include_router(router, prefix="/api/v1")
+        client = TestClient(app)
+
+        resp = client.get("/api/v1/daemon/status")
+        # Should return 401 Unauthorized
+        assert resp.status_code == 401

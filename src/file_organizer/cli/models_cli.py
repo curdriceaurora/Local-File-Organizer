@@ -33,7 +33,7 @@ def model_pull(
     from file_organizer.models.model_manager import ModelManager
 
     mgr = ModelManager(console=console)
-    success = mgr.pull_model(name)
+    success = mgr.pull_model(name=name)
     if not success:
         raise typer.Exit(code=1)
 

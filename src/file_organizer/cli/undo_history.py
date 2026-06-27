@@ -10,8 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..history.models import Operation
-    from ..undo.undo_manager import UndoManager
+    from file_organizer.history.models import Operation
+    from file_organizer.undo.undo_manager import UndoManager
 
 
 def normalize_transaction_id(transaction_id: str | None) -> str | None:

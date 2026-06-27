@@ -37,8 +37,8 @@ These tests are **intentionally skipped** and should be documented in CHANGELOG 
 
 | Test File | Line | Test Function | Reason |
 |-----------|------|---------------|--------|
-| `tests/test_web_organize_routes.py` | 330 | `test_organize_stream_cancellation` | SSE streaming not implemented |
-| `tests/test_web_files_routes.py` | 246 | `test_files_sse_placeholder` | SSE routes not implemented |
+| `tests/web/test_web_organize_routes.py` | 330 | `test_organize_stream_cancellation` | SSE streaming not implemented |
+| `tests/web/test_web_files_routes.py` | 246 | `test_files_sse_placeholder` | SSE routes not implemented |
 
 ### PLATFORM Category (22 skip conditions - No Documentation Needed)
 

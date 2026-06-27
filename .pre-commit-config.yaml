@@ -100,13 +100,13 @@ repos:
 
       - id: pytest-websocket
         name: pytest (websocket validations)
-        entry: bash -c "pytest tests/test_api_websocket.py -q --override-ini='addopts='"
+        entry: bash -c "pytest tests/api/test_api_websocket.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
 
       - id: pytest-web-ui
         name: pytest (web ui)
-        entry: bash -c "pytest tests/test_web_ui.py -q --override-ini='addopts='"
+        entry: bash -c "pytest tests/web/test_web_ui.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
 
@@ -215,6 +215,19 @@ repos:
         language: system
         pass_filenames: false
         files: ^(src/|pyproject\.toml)
+
+      # ----------------------------------------------------------------
+      # CI-rail framework (WP-0.1, #1222) — advisory runner.
+      # Runs the rails declared in .claude/ci-rails.toml. The registry is empty
+      # until WP-6.x adds rails, so this is a no-op (exit 0) today. Advisory
+      # rails warn but never block; enforce rails block. See .claude/rules/ci-rails.md.
+      # ----------------------------------------------------------------
+      - id: ci-rails
+        name: ci rails (advisory framework)
+        entry: python .claude/scripts/ci_rails.py
+        language: system
+        always_run: true
+        pass_filenames: false
 
   # ----------------------------------------------------------------
   # Markdown linting

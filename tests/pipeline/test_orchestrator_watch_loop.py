@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.pipeline.orchestrator import PipelineConfig, PipelineOrchestrator
+from file_organizer.watcher.config import WatcherConfig
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
@@ -59,6 +61,45 @@ class TestWatchLoop:
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
             mock_process.assert_called_once_with(Path("/tmp/test.txt"))
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="symlinks require admin on Windows")
+    def test_watch_loop_resolves_symlinked_watch_root_for_trusted_root(self, tmp_path: Path):
+        """A symlinked watch directory must be resolved before use as
+        ``trusted_root``: ``SafeDir.open_root`` refuses a symlinked root
+        outright, so passing the raw configured symlink (e.g. macOS
+        ``/tmp`` -> ``/private/tmp``) would make every file under it fail
+        with "Refused to read symlinked file" instead of processing.
+        """
+        real_root = tmp_path / "real"
+        real_root.mkdir()
+        link_root = tmp_path / "link"
+        link_root.symlink_to(real_root)
+
+        config = PipelineConfig(
+            dry_run=True, watch_config=WatcherConfig(watch_directories=[link_root])
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
+
+        call_count = 0
+
+        def fake_get_events(max_size=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return [FakeEvent(path=link_root / "f.txt")]
+            orch._running = False
+            return []
+
+        mock_monitor.get_events = fake_get_events
+
+        with patch.object(orch, "process_file") as mock_process:
+            orch._watch_loop()
+            mock_process.assert_called_once_with(
+                link_root / "f.txt", trusted_root=real_root.resolve()
+            )
 
     def test_watch_loop_skips_directory_events(self):
         """Directory events should be skipped."""
@@ -426,50 +467,91 @@ class TestWatchLoopExecutor:
         tracked = MagicMock()
         with orch._watch_futures_lock:
             orch._watch_futures.add(tracked)
-
         orch._on_watch_future_done(tracked)
         assert tracked not in orch._watch_futures
 
         # Discarding a future that is not tracked is a safe no-op.
         orch._on_watch_future_done(MagicMock())
 
-    def test_on_watch_future_done_logs_failed_future(self, caplog):
+    def test_on_watch_future_done_logs_failed_future(self):
         """A watch future that finished with an exception is logged and discarded.
 
         Regression for #1291 review: the done-callback discarded futures without
         observing exceptions, so process_file() failures vanished silently.
         """
+        import logging
         from concurrent.futures import Future
 
-        orch = self._make_orchestrator()
-        future: Future = Future()
-        with orch._watch_futures_lock:
-            orch._watch_futures.add(future)
-        future.set_exception(RuntimeError("process_file boom"))
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
 
-        with caplog.at_level("ERROR"):
+        target = orch_logger
+        records = []
+
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.set_exception(RuntimeError("process_file boom"))
+
             orch._on_watch_future_done(future)
 
-        # Discarded despite the failure ...
-        assert future not in orch._watch_futures
-        # ... and the failure was surfaced via the module logger.
-        assert any("process_file boom" in record.getMessage() for record in caplog.records)
+            # Discarded despite the failure ...
+            assert future not in orch._watch_futures
+            # ... and the failure was surfaced via the module logger.
+            assert any("process_file boom" in record.getMessage() for record in records)
+        finally:
+            target.setLevel(prev_level)
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
 
-    def test_on_watch_future_done_cancelled_future_not_logged(self, caplog):
+    def test_on_watch_future_done_cancelled_future_not_logged(self):
         """A cancelled watch future is discarded without touching .exception()."""
+        import logging
         from concurrent.futures import Future
 
-        orch = self._make_orchestrator()
-        future: Future = Future()
-        with orch._watch_futures_lock:
-            orch._watch_futures.add(future)
-        future.cancel()
+        from file_organizer.pipeline.orchestrator import logger as orch_logger
 
-        with caplog.at_level("ERROR"):
+        target = orch_logger
+        records = []
+
+        class Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = Collector()
+        target.addHandler(handler)
+        prev_level = target.level
+        target.setLevel(logging.DEBUG)
+        prev_disable = logging.root.manager.disable
+        logging.root.manager.disable = logging.NOTSET
+
+        try:
+            orch = self._make_orchestrator()
+            future: Future = Future()
+            with orch._watch_futures_lock:
+                orch._watch_futures.add(future)
+            future.cancel()
+
             orch._on_watch_future_done(future)
 
-        assert future not in orch._watch_futures
-        assert caplog.records == []
+            assert future not in orch._watch_futures
+            assert records == []
+        finally:
+            target.setLevel(prev_level)
+            target.removeHandler(handler)
+            logging.root.manager.disable = prev_disable
 
     def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
         """Lazy buffer-pool init must not need the lifecycle lock.

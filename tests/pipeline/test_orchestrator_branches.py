@@ -16,6 +16,8 @@ existing unit tests:
 - process_batch with stages + prefetch_stages>1 warning
 - process_batch with stages + prefetch_depth=0 (sequential chunk loop)
 - stop() cleanup with monitor and watch_thread
+- _watch_loop: per-event trusted_root resolution (direct match, resolve()
+  fallback, no match), directory-event skip, and inner/outer error handling
 """
 
 from __future__ import annotations
@@ -23,8 +25,9 @@ from __future__ import annotations
 import logging
 import math
 import threading
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -33,6 +36,8 @@ from file_organizer.optimization.buffer_pool import BufferPool
 from file_organizer.pipeline.config import PipelineConfig
 from file_organizer.pipeline.orchestrator import PipelineOrchestrator
 from file_organizer.pipeline.router import ProcessorType
+from file_organizer.watcher.config import WatcherConfig
+from file_organizer.watcher.queue import EventType, FileEvent
 
 pytestmark = pytest.mark.integration
 
@@ -634,7 +639,7 @@ class TestStagedBatchProcessing:
             prefetch_depth=2,
             prefetch_stages=2,
         )
-        with caplog.at_level(logging.WARNING, logger="file_organizer.pipeline.orchestrator"):
+        with caplog.at_level(logging.WARNING, logger="file_organizer.pipeline"):
             results = orch.process_batch(files)
 
         # All results must be produced despite the warning
@@ -851,3 +856,193 @@ class TestBufferKeyInContext:
         # the context.extra is not accessible post-call, so we confirm no leak
         # by checking that the pool returns all buffers
         assert orch.buffer_pool.in_use_count == 0
+
+
+# ---------------------------------------------------------------------------
+# TestWatchLoop
+# ---------------------------------------------------------------------------
+
+
+def _one_shot_get_events(orch: PipelineOrchestrator, events: list[FileEvent]):
+    """Build a get_events stand-in that returns events once, then stops the loop.
+
+    On the first call it returns *events*; on every subsequent call it sets
+    ``orch._running = False`` and returns an empty list so ``_watch_loop``
+    exits after exactly one batch of work.
+    """
+    call_count = {"n": 0}
+
+    def _fake_get_events(max_size: int | None = None) -> list[FileEvent]:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return events
+        orch._running = False
+        return []
+
+    return _fake_get_events
+
+
+@pytest.mark.integration
+class TestWatchLoop:
+    """_watch_loop: per-event trusted_root resolution and error handling."""
+
+    def test_skips_directory_events(self, tmp_path: Path) -> None:
+        """Directory events are skipped and never reach the executor."""
+        orch = PipelineOrchestrator(PipelineConfig(output_directory=tmp_path / "out"))
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=tmp_path / "somedir",
+            timestamp=datetime.now(UTC),
+            is_directory=True,
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            mock_submit.assert_not_called()
+
+    def test_submits_without_trusted_root_when_no_watch_config(self, tmp_path: Path) -> None:
+        """With no watch_config, trusted_root stays None and is omitted from submit."""
+        orch = PipelineOrchestrator(PipelineConfig(output_directory=tmp_path / "out"))
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=tmp_path / "f.txt",
+            timestamp=datetime.now(UTC),
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            mock_submit.assert_called_once_with(orch.process_file, event.path)
+
+    def test_resolves_trusted_root_on_direct_match(self, tmp_path: Path) -> None:
+        """An event path directly under a watch directory resolves trusted_root to it."""
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+        config = PipelineConfig(
+            output_directory=tmp_path / "out",
+            watch_config=WatcherConfig(watch_directories=[watch_dir]),
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=watch_dir / "f.txt",
+            timestamp=datetime.now(UTC),
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            mock_submit.assert_called_once_with(
+                orch.process_file, event.path, trusted_root=watch_dir
+            )
+
+    def test_resolves_trusted_root_via_resolve_fallback(self, tmp_path: Path) -> None:
+        """A symlinked watch directory matches via the resolve() fallback.
+
+        ``event.path.relative_to(d)`` fails because the event arrives via the
+        real (non-symlink) path while ``d`` is the symlink configured in
+        watch_directories; the ``resolve()`` comparison still matches because
+        both sides canonicalize to the same real path. ``trusted_root`` is
+        passed as the *resolved* directory (not the symlink itself), since
+        ``SafeDir.open_root`` refuses a symlinked root outright.
+        """
+        real_dir = tmp_path / "real"
+        real_dir.mkdir()
+        link_dir = tmp_path / "link"
+        link_dir.symlink_to(real_dir)
+        config = PipelineConfig(
+            output_directory=tmp_path / "out",
+            watch_config=WatcherConfig(watch_directories=[link_dir]),
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=real_dir / "f.txt",
+            timestamp=datetime.now(UTC),
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            mock_submit.assert_called_once_with(
+                orch.process_file, event.path, trusted_root=real_dir.resolve()
+            )
+
+    def test_no_match_falls_through_to_none_trusted_root(self, tmp_path: Path) -> None:
+        """An event outside every configured watch directory leaves trusted_root None."""
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+        unrelated = tmp_path / "elsewhere"
+        unrelated.mkdir()
+        config = PipelineConfig(
+            output_directory=tmp_path / "out",
+            watch_config=WatcherConfig(watch_directories=[watch_dir]),
+        )
+        orch = PipelineOrchestrator(config)
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=unrelated / "f.txt",
+            timestamp=datetime.now(UTC),
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            mock_submit.assert_called_once_with(orch.process_file, event.path)
+
+    def test_inner_exception_from_submit_is_caught_and_loop_continues(self, tmp_path: Path) -> None:
+        """A RuntimeError raised while submitting to the executor doesn't crash the loop."""
+        orch = PipelineOrchestrator(PipelineConfig(output_directory=tmp_path / "out"))
+        orch._running = True
+        mock_monitor = MagicMock()
+        event = FileEvent(
+            event_type=EventType.CREATED,
+            path=tmp_path / "f.txt",
+            timestamp=datetime.now(UTC),
+        )
+        mock_monitor.get_events = _one_shot_get_events(orch, [event])
+        orch._monitor = mock_monitor
+
+        with patch.object(orch._executor, "submit", side_effect=RuntimeError("boom")):
+            orch._watch_loop()  # must not raise
+
+        assert orch._running is False
+
+    def test_outer_exception_from_get_events_is_caught_and_loop_continues(
+        self, tmp_path: Path
+    ) -> None:
+        """An OSError raised by monitor.get_events doesn't crash the loop."""
+        orch = PipelineOrchestrator(PipelineConfig(output_directory=tmp_path / "out"))
+        orch._running = True
+        mock_monitor = MagicMock()
+        call_count = {"n": 0}
+
+        def _fake_get_events(max_size: int | None = None) -> list[FileEvent]:
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise OSError("monitor unavailable")
+            orch._running = False
+            return []
+
+        mock_monitor.get_events = _fake_get_events
+        orch._monitor = mock_monitor
+
+        orch._watch_loop()  # must not raise
+
+        assert call_count["n"] == 2

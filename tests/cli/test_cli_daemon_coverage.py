@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.daemon — uncovered lines 51-208."""
+"""Coverage tests for cli.daemon — uncovered lines 51-208."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
+from file_organizer.daemon.pid import PidRecord
+
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
@@ -116,11 +118,11 @@ class TestDaemonStop:
     def test_stop_unreadable_pid(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         pid_file.write_text("not_a_number")
 
         mock_mgr = MagicMock()
-        mock_mgr.read_pid.return_value = None
+        mock_mgr.read_pid_record.return_value = None
 
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
@@ -134,11 +136,11 @@ class TestDaemonStop:
     def test_stop_success(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         pid_file.write_text("12345")
 
         mock_mgr = MagicMock()
-        mock_mgr.read_pid.return_value = 12345
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
@@ -153,11 +155,11 @@ class TestDaemonStop:
     def test_stop_process_not_found(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         pid_file.write_text("99999")
 
         mock_mgr = MagicMock()
-        mock_mgr.read_pid.return_value = 99999
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=99999, create_time=None)
 
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
@@ -172,11 +174,11 @@ class TestDaemonStop:
     def test_stop_permission_error(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         pid_file.write_text("1")
 
         mock_mgr = MagicMock()
-        mock_mgr.read_pid.return_value = 1
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=1, create_time=None)
 
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
@@ -195,12 +197,12 @@ class TestDaemonStatus:
     def test_status_running(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        pid_file = tmp_path / "daemon.pid"
+        pid_file = tmp_path / "file_organizer.daemon.pid"
         pid_file.write_text("12345")
 
         mock_mgr = MagicMock()
         mock_mgr.is_running.return_value = True
-        mock_mgr.read_pid.return_value = 12345
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
         with (
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", pid_file),
@@ -233,17 +235,25 @@ class TestDaemonStatus:
 class TestDaemonProcess:
     """Covers lines 177-208."""
 
+    # A.cli: daemon process now rejects output-inside-input at the CLI
+    # boundary (same rule as `fo organize`). Tests use sibling dirs.
+    def _setup_dirs(self, tmp_path: Path) -> tuple[Path, Path]:
+        in_dir = tmp_path / "in"
+        in_dir.mkdir()
+        out_dir = tmp_path / "out"
+        return in_dir, out_dir
+
     def test_process_success(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        (tmp_path / "file.txt").write_text("hello")
-        output_dir = tmp_path / "output"
+        in_dir, out_dir = self._setup_dirs(tmp_path)
+        (in_dir / "file.txt").write_text("hello")
 
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = _FakeOrganizeResult()
 
         with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
-            result = runner.invoke(daemon_app, ["process", str(tmp_path), str(output_dir)])
+            result = runner.invoke(daemon_app, ["process", str(in_dir), str(out_dir)])
 
         assert result.exit_code == 0
         assert "Processing Summary" in result.output
@@ -251,14 +261,14 @@ class TestDaemonProcess:
     def test_process_dry_run(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        output_dir = tmp_path / "output"
+        in_dir, out_dir = self._setup_dirs(tmp_path)
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = _FakeOrganizeResult()
 
         with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
             result = runner.invoke(
                 daemon_app,
-                ["process", str(tmp_path), str(output_dir), "--dry-run"],
+                ["process", str(in_dir), str(out_dir), "--dry-run"],
             )
 
         assert result.exit_code == 0
@@ -267,7 +277,7 @@ class TestDaemonProcess:
     def test_process_with_errors(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        output_dir = tmp_path / "output"
+        in_dir, out_dir = self._setup_dirs(tmp_path)
         fake_result = _FakeOrganizeResult(
             errors=[("file1.txt", "permission denied"), ("file2.pdf", "corrupt")]
         )
@@ -275,7 +285,7 @@ class TestDaemonProcess:
         mock_organizer.organize.return_value = fake_result
 
         with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
-            result = runner.invoke(daemon_app, ["process", str(tmp_path), str(output_dir)])
+            result = runner.invoke(daemon_app, ["process", str(in_dir), str(out_dir)])
 
         assert result.exit_code == 0
         assert "Errors" in result.output
@@ -283,26 +293,26 @@ class TestDaemonProcess:
     def test_process_exception(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        output_dir = tmp_path / "output"
+        in_dir, out_dir = self._setup_dirs(tmp_path)
         mock_organizer = MagicMock()
         mock_organizer.organize.side_effect = RuntimeError("boom")
 
         with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
-            result = runner.invoke(daemon_app, ["process", str(tmp_path), str(output_dir)])
+            result = runner.invoke(daemon_app, ["process", str(in_dir), str(out_dir)])
 
         assert result.exit_code == 1
 
     def test_process_many_errors_truncated(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
-        output_dir = tmp_path / "output"
+        in_dir, out_dir = self._setup_dirs(tmp_path)
         errors = [(f"file{i}.txt", "err") for i in range(15)]
         fake_result = _FakeOrganizeResult(errors=errors)
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = fake_result
 
         with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
-            result = runner.invoke(daemon_app, ["process", str(tmp_path), str(output_dir)])
+            result = runner.invoke(daemon_app, ["process", str(in_dir), str(out_dir)])
 
         assert result.exit_code == 0
         assert "5 more" in result.output

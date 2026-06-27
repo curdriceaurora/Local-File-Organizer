@@ -15,6 +15,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.core.path_guard import safe_walk
+
 console = Console()
 
 suggest_app = typer.Typer(
@@ -39,8 +42,8 @@ def _get_analyzer() -> Any:
 
 
 def _collect_files(directory: Path) -> list[Path]:
-    """Recursively collect files under *directory*."""
-    return [p for p in directory.rglob("*") if p.is_file()]
+    """Recursively collect files under *directory* with symlink + hidden filters."""
+    return list(safe_walk(directory))
 
 
 # -----------------------------------------------------------------------
@@ -57,6 +60,7 @@ def files(
     dry_run: bool = typer.Option(False, "--dry-run", help="Alias for preview mode."),
 ) -> None:
     """Generate organisation suggestions for files in a directory."""
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     engine = _get_engine()
     analyzer = _get_analyzer()
     file_list = _collect_files(directory)
@@ -123,6 +127,7 @@ def apply(
     """Generate suggestions and apply them (with confirmation)."""
     from file_organizer.cli.interactive import confirm_action
 
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     engine = _get_engine()
     analyzer = _get_analyzer()
     file_list = _collect_files(directory)
@@ -180,6 +185,7 @@ def patterns(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
 ) -> None:
     """Detect and display naming/structure patterns in a directory."""
+    directory = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
     analyzer = _get_analyzer()
 
     with console.status("Detecting patterns…"):

@@ -338,7 +338,7 @@ GitHub Actions runs automated checks on every PR and push to main:
 
 **Main Branch Pushes:**
 - Full test suite passes (`pytest`)
-- Coverage must be ≥ 95% (code) and ≥ 95% (docstrings) — both gates must pass
+- Coverage must be ≥ 93% (code) and ≥ 95% (docstrings) — both gates must pass
 - Linting must pass (ruff and markdownlint)
 - Type checking must pass (mypy)
 

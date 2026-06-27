@@ -42,6 +42,7 @@ class _FakeHttpClient:
         json: dict[str, Any],
         headers: dict[str, str],
         timeout: float,
+        extensions: dict[str, Any] | None = None,
     ) -> _FakeResponse:
         self._sink.append(
             {
@@ -49,6 +50,7 @@ class _FakeHttpClient:
                 "json": json,
                 "headers": headers,
                 "timeout": timeout,
+                "extensions": extensions,
             }
         )
         return _FakeResponse(status_code=202)
@@ -143,7 +145,7 @@ def test_plugin_hooks_register_list_trigger_unregister(
             "/api/v1/plugins/hooks/register",
             json={
                 "event": "file.organized",
-                "callback_url": "http://localhost:9999/plugin-hook",
+                "callback_url": "http://8.8.8.8:9999/plugin-hook",
             },
             headers=headers,
         )
@@ -172,7 +174,7 @@ def test_plugin_hooks_register_list_trigger_unregister(
             "/api/v1/plugins/hooks/unregister",
             json={
                 "event": "file.organized",
-                "callback_url": "http://localhost:9999/plugin-hook",
+                "callback_url": "http://8.8.8.8:9999/plugin-hook",
             },
             headers=headers,
         )

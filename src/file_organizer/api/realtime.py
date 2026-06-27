@@ -148,7 +148,7 @@ class ConnectionManager:
                 self._subscriptions[websocket].add(channel)
 
     async def unsubscribe(self, websocket: WebSocket, channel: str) -> None:
-        """Unsubscribe a WebSocket from events on channel."""
+        """Unsubscribe a WebSocket from file_organizer.events on channel."""
         async with self._ensure_lock():
             if websocket in self._subscriptions:
                 self._subscriptions[websocket].discard(channel)

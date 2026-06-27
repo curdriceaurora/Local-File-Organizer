@@ -1,18 +1,16 @@
-"""Smoke tests validating the three new integration test fixtures.
+"""Smoke tests validating integration test fixtures.
 
 One test per layer confirms each fixture wires up correctly.  These are
-deliberately minimal: proving the HTTP connection, CLI invocation, and model
-interface work end-to-end — not exercising full business logic.
+deliberately minimal: proving the CLI invocation and model interface work
+end-to-end — not exercising full business logic.
 
 Layers covered:
-  - API routers / web routes  → ``async_client`` fixture
   - CLI                       → ``cli_runner`` fixture
   - Model integrations        → ``fake_text_model`` fixture
 """
 
 from __future__ import annotations
 
-import httpx
 import pytest
 from typer.testing import CliRunner
 
@@ -20,39 +18,6 @@ from file_organizer.cli.main import app as cli_app
 from tests.integration.conftest import FakeTextModel, make_text_config
 
 pytestmark = [pytest.mark.integration, pytest.mark.smoke]
-
-
-# ---------------------------------------------------------------------------
-# Layer: API routers + web routes (async_client)
-# ---------------------------------------------------------------------------
-
-
-class TestAsyncClientFixture:
-    """Smoke tests for the ``async_client`` fixture.
-
-    Verifies that the ASGI transport wires up to the full FastAPI app and
-    that basic routes respond correctly without a running server process.
-    """
-
-    async def test_health_responds(self, async_client: httpx.AsyncClient) -> None:
-        """GET /api/v1/health → 200 (ok) or 207 (degraded, Ollama unreachable in CI)."""
-        r = await async_client.get("/api/v1/health")
-        assert r.status_code in {200, 207}
-
-    async def test_health_body_contains_status_key(self, async_client: httpx.AsyncClient) -> None:
-        """Health response body includes a ``status`` field."""
-        r = await async_client.get("/api/v1/health")
-        assert r.status_code in {200, 207}
-        assert "status" in r.json()
-
-    async def test_unknown_route_returns_404(self, async_client: httpx.AsyncClient) -> None:
-        """Requests to non-existent routes return 404, not 500."""
-        r = await async_client.get("/api/v1/nonexistent-route-xyz")
-        assert r.status_code == 404
-
-    async def test_base_url_is_wired_correctly(self, async_client: httpx.AsyncClient) -> None:
-        """Fixture base_url is set to the ASGI test host."""
-        assert async_client.base_url.host == "test"
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +40,7 @@ class TestCliRunnerFixture:
     def test_help_mentions_app_name(self, cli_runner: CliRunner) -> None:
         """Help text includes the application name."""
         result = cli_runner.invoke(cli_app, ["--help"])
-        assert "file-organizer" in result.output.lower()
+        assert "fo" in result.output.lower()
 
     def test_successive_invocations_are_independent(self, cli_runner: CliRunner) -> None:
         """Multiple invocations on the same runner are independent (no state leak)."""

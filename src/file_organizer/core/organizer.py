@@ -17,7 +17,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from loguru import logger
 from rich.console import Console
@@ -57,7 +57,7 @@ class FileOrganizer:
         CAD_EXTENSIONS: Supported CAD file extensions
     """
 
-    # ClassVars re-exported from core.types for backward compatibility
+    # ClassVars re-exported from file_organizer.core.types for backward compatibility
     TEXT_EXTENSIONS: ClassVar[set[str]] = set(TEXT_EXTENSIONS)
     IMAGE_EXTENSIONS: ClassVar[set[str]] = set(IMAGE_EXTENSIONS)
     VIDEO_EXTENSIONS: ClassVar[set[str]] = set(VIDEO_EXTENSIONS)
@@ -92,6 +92,8 @@ class FileOrganizer:
         *,
         prefetch_depth: int = 2,
         enable_vision: bool = True,
+        transcribe_audio: bool = False,
+        max_transcribe_seconds: float | None = 600.0,
     ) -> None:
         """Initialize file organizer.
 
@@ -106,6 +108,18 @@ class FileOrganizer:
             enable_vision: If False, skip vision model initialization and
                 organize images with extension-based fallbacks.
             no_prefetch: Backward-compatible alias for ``prefetch_depth=0``.
+            transcribe_audio: If True, run audio files through Whisper for
+                content-aware categorization. Requires the ``[media]``
+                extra; degrades gracefully (warning + metadata-only path)
+                when the dependency is missing. Default False because
+                transcription is the expensive operation in the audio
+                pipeline.
+            max_transcribe_seconds: Per-file duration cap for
+                ``transcribe_audio``. Files longer than this skip
+                transcription and use metadata-only categorization.
+                Whisper "tiny" is roughly 5-10x realtime on CPU; the 600s
+                default keeps a single file under ~2 minutes of CPU work.
+                ``None`` disables the cap.
         """
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -142,6 +156,13 @@ class FileOrganizer:
 
         self.text_processor: TextProcessor | None = None
         self.vision_processor: VisionProcessor | None = None
+        self.transcribe_audio = transcribe_audio
+        if max_transcribe_seconds is not None and max_transcribe_seconds < 0:
+            raise ValueError(
+                f"max_transcribe_seconds must be >= 0 or None (got {max_transcribe_seconds!r})"
+            )
+        self.max_transcribe_seconds = max_transcribe_seconds
+        self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
         self._last_output_path: Path | None = None
@@ -313,6 +334,8 @@ class FileOrganizer:
         # Organize
         # Content‑based deduplication: remove duplicate files based on file content hash
         if all_processed:
+            # Sort by file path to ensure deterministic deduplication order across runs
+            all_processed.sort(key=lambda x: str(x.file_path))
             seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
@@ -566,8 +589,43 @@ class FileOrganizer:
         )
 
     def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
-        """Classify audio files and append results to the plan."""
-        return dispatcher.process_audio_files(files, extractor_cls=AudioMetadataExtractor)
+        """Extract metadata from audio *files* and return processed results.
+
+        When ``transcribe_audio=True`` was passed to ``__init__``, lazy-init
+        an ``AudioModel`` here and forward it to the dispatcher so each
+        file within ``max_transcribe_seconds`` gets a transcript attached
+        for downstream content-aware categorization. Falls back to
+        metadata-only with a warning if the ``[media]`` extra is missing.
+        """
+        transcriber: Any = None
+        if self.transcribe_audio:
+            try:
+                from file_organizer.services.audio.transcriber import _FASTER_WHISPER_AVAILABLE
+
+                if not _FASTER_WHISPER_AVAILABLE:
+                    raise ImportError("faster_whisper is not installed (the [media] extra)")
+
+                from file_organizer.models.audio_model import AudioModel
+                from file_organizer.models.base import ModelConfig, ModelType
+
+                if self._audio_model is None:
+                    self._audio_model = AudioModel(
+                        ModelConfig(name="tiny", model_type=ModelType.AUDIO)
+                    )
+                    self._audio_model.initialize()
+                transcriber = self._audio_model
+            except ImportError as exc:
+                self.console.print(
+                    f"[yellow]--transcribe-audio requires the \\[media] extra: {exc}. "
+                    "Falling back to metadata-only categorization.[/yellow]"
+                )
+
+        return dispatcher.process_audio_files(
+            files,
+            extractor_cls=AudioMetadataExtractor,
+            transcriber=transcriber,
+            max_transcribe_seconds=self.max_transcribe_seconds,
+        )
 
     def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Classify video files and append results to the plan."""

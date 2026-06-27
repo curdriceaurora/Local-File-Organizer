@@ -160,7 +160,11 @@ class ClaudeVisionModel(BaseModel):
         else:
             if image_data is None:
                 raise ValueError("image_data is None after guard check; this is a caller bug")
-            data_url = bytes_to_data_url(image_data)
+            mime_type = kwargs.get("mime_type")
+            if mime_type:
+                data_url = bytes_to_data_url(image_data, mime_type=mime_type)
+            else:
+                data_url = bytes_to_data_url(image_data)
 
         image_block = _build_image_block(data_url)
         text_block: dict[str, Any] = {"type": "text", "text": prompt}

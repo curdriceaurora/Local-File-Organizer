@@ -39,12 +39,32 @@ collect_changed_files() {
   local untracked_files=()
 
   if git diff --cached --quiet; then
-    mapfile -t tracked_files < <(git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || true)
-    mapfile -t untracked_files < <(git ls-files --others --exclude-standard)
-    changed_files=("${tracked_files[@]}" "${untracked_files[@]}")
+    tracked_files=()
+    while IFS= read -r line; do
+      tracked_files+=("$line")
+    done < <(git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || true)
+
+    untracked_files=()
+    while IFS= read -r line; do
+      untracked_files+=("$line")
+    done < <(git ls-files --others --exclude-standard)
+
+    # Guard against bash <4.4 "unbound variable" on "${arr[@]}" when arr is
+    # empty under `set -u` (e.g. macOS system bash 3.2). ${#arr[@]} is always
+    # safe to read, even for an empty/unset array.
+    changed_files=()
+    if ((${#tracked_files[@]})); then
+      changed_files+=("${tracked_files[@]}")
+    fi
+    if ((${#untracked_files[@]})); then
+      changed_files+=("${untracked_files[@]}")
+    fi
     changed_mode="working tree vs HEAD + untracked"
   else
-    mapfile -t changed_files < <(git diff --cached --name-only --diff-filter=ACMR)
+    changed_files=()
+    while IFS= read -r line; do
+      changed_files+=("$line")
+    done < <(git diff --cached --name-only --diff-filter=ACMR)
     changed_mode="staged diff"
   fi
 }
@@ -55,7 +75,11 @@ echo "Pre-PR Guardrail Validation"
 echo "==========================="
 echo "Branch: $(git branch --show-current)"
 echo ""
-print_files "$changed_mode" "${changed_files[@]}"
+if ((${#changed_files[@]})); then
+  print_files "$changed_mode" "${changed_files[@]}"
+else
+  print_files "$changed_mode"
+fi
 echo ""
 
 run_step "Validate pre-commit configuration" pre-commit validate-config

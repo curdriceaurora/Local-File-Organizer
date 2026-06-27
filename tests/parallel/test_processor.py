@@ -18,7 +18,7 @@ from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor, _execute_with_timing
 from file_organizer.parallel.result import BatchResult, FileResult
 
-pytestmark = [pytest.mark.ci, pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit, pytest.mark.integration]
 
 # ---------------------------------------------------------------------------
 # Simple test functions (no real file I/O)

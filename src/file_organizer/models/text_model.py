@@ -179,7 +179,7 @@ class TextModel(BaseModel):
             "num_predict": kwargs.get("max_tokens", self.config.max_tokens),
         }
 
-        # Add any extra params from config
+        # Add any extra params from file_organizer.config
         if self.config.extra_params:
             options.update(self.config.extra_params)
 

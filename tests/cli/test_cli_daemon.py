@@ -12,8 +12,9 @@ import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+from file_organizer.daemon.pid import PidRecord
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
@@ -111,7 +112,7 @@ class TestDaemonStop:
         mock_pid_file.exists.return_value = True
         mock_mgr = MagicMock()
         mock_pid_cls.return_value = mock_mgr
-        mock_mgr.read_pid.return_value = 12345
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
         result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
@@ -129,7 +130,7 @@ class TestDaemonStop:
         mock_pid_file.exists.return_value = True
         mock_mgr = MagicMock()
         mock_pid_cls.return_value = mock_mgr
-        mock_mgr.read_pid.return_value = 99999
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=99999, create_time=None)
 
         result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
@@ -151,7 +152,7 @@ class TestDaemonStatus:
         mock_mgr = MagicMock()
         mock_pid_cls.return_value = mock_mgr
         mock_mgr.is_running.return_value = True
-        mock_mgr.read_pid.return_value = 12345
+        mock_mgr.read_pid_record.return_value = PidRecord(pid=12345, create_time=None)
 
         result = runner.invoke(app, ["daemon", "status"])
         assert result.exit_code == 0
@@ -237,3 +238,68 @@ class TestDaemonProcess:
         result = runner.invoke(app, ["daemon", "process", str(input_dir), str(output_dir)])
         assert result.exit_code == 1
         assert "Model unavailable" in result.output
+
+
+class TestDaemonWatch:
+    """Tests for ``fo daemon watch`` — the polling loop that D#167 left
+    uncovered when the legacy watch entry point was removed.
+    """
+
+    @patch("file_organizer.watcher.monitor.FileMonitor")
+    @patch("file_organizer.watcher.config.WatcherConfig")
+    def test_watch_prints_events_then_exits_on_ctrl_c(
+        self, mock_config_cls: MagicMock, mock_monitor_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        evt = MagicMock()
+        evt.event_type = "created"
+        evt.path = str(watch_dir / "new.txt")
+        # First poll yields an event; second poll raises KeyboardInterrupt
+        # so the command exits cleanly (that's the documented stop mechanism).
+        mock_monitor.get_events_blocking.side_effect = [[evt], KeyboardInterrupt()]
+
+        result = runner.invoke(app, ["daemon", "watch", str(watch_dir)])
+        assert result.exit_code == 0
+        # Rich wraps long paths at the CliRunner terminal width — normalize
+        # line breaks before asserting file-name substrings so the test
+        # passes regardless of the platform's reported width.
+        normalized_output = result.output.replace("\n", "")
+        assert "Watching" in result.output
+        assert "new.txt" in normalized_output
+        assert "Stopped watching" in result.output
+        mock_monitor.start.assert_called_once()
+        mock_monitor.stop.assert_called_once()
+
+    @patch("file_organizer.watcher.monitor.FileMonitor")
+    @patch("file_organizer.watcher.config.WatcherConfig")
+    def test_watch_uses_event_src_path_fallback_when_path_missing(
+        self, mock_config_cls: MagicMock, mock_monitor_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        watch_dir = tmp_path / "watched"
+        watch_dir.mkdir()
+
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        class _EventNoPath:
+            event_type = "modified"
+            src_path = str(watch_dir / "fallback.txt")
+
+        mock_monitor.get_events_blocking.side_effect = [
+            [_EventNoPath()],
+            KeyboardInterrupt(),
+        ]
+
+        result = runner.invoke(app, ["daemon", "watch", str(watch_dir)])
+        assert result.exit_code == 0
+        # Rich wraps long paths at the terminal width that CliRunner exposes,
+        # which can split "fallback.txt" across a newline on narrow Linux CI
+        # runners. Normalize line breaks before matching so the assertion is
+        # about *content*, not Rich's layout.
+        normalized_output = result.output.replace("\n", "")
+        assert "fallback.txt" in normalized_output

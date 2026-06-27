@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from fastapi import FastAPI
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 class TestAppInitializationLaziness:
@@ -244,3 +244,25 @@ class TestAppCaching:
 
         finally:
             api_package._app_cache = original_app
+
+
+class TestAppLifespan:
+    """Test that the FastAPI lifespan context actually fires."""
+
+    def test_lifespan_resets_health_startup_time_on_entry(self):
+        """Entering the app's lifespan (e.g. via TestClient) calls
+        reset_startup_time() — pins the wiring between create_app()'s
+        lifespan and the health router's uptime tracking."""
+        from fastapi.testclient import TestClient
+
+        from file_organizer.api.main import create_app
+        from file_organizer.api.routers import health
+
+        health._startup_time -= 100.0
+        stale_time = health._startup_time
+
+        app = create_app()
+        with TestClient(app):
+            pass
+
+        assert health._startup_time > stale_time

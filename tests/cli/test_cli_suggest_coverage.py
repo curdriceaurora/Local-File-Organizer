@@ -1,4 +1,4 @@
-"""Coverage tests for file_organizer.cli.suggest — uncovered lines 27-236."""
+"""Coverage tests for cli.suggest — uncovered lines 27-236."""
 
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ class _FakeSuggestionType(Enum):
 class _FakeSuggestion:
     suggestion_id: str = "s1"
     suggestion_type: _FakeSuggestionType = _FakeSuggestionType.MOVE
-    file_path: Path = Path("/tmp/a.txt")
-    target_path: Path | None = Path("/tmp/docs/a.txt")
+    file_path: Path = field(default_factory=lambda: Path("a.txt"))
+    target_path: Path | None = field(default_factory=lambda: Path("docs") / "a.txt")
     confidence: float = 75.0
     reasoning: str = "File matches docs pattern"
     new_name: str | None = None

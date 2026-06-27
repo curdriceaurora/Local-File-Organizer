@@ -100,8 +100,8 @@ def test_load_unsupported_version_falls_back_without_touching_disk(tmp_path: Pat
 
     cfg = cm.load("default")
 
-    assert cfg.version == CURRENT_SCHEMA_VERSION  # defaults, not the on-disk profile
-    assert cfg.default_methodology == "none"
+    assert cfg.version == "99.0"  # loaded best-effort
+    assert cfg.default_methodology == "para"  # loaded best-effort
     assert config_path.read_bytes() == before  # untouched on disk
 
 

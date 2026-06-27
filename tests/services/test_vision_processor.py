@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.models.base import ModelType
+from file_organizer.models.vision_schema import VisionSchema
 from file_organizer.services.vision_processor import ProcessedImage, VisionProcessor
 
 pytestmark = pytest.mark.unit
@@ -118,13 +120,14 @@ class TestVisionProcessorProcessFile:
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8\xff\xe0")  # JPEG magic bytes
 
-        # Sequential responses: description, OCR, folder, filename
-        mock_vision_model.generate.side_effect = [
-            "A beautiful sunset over mountains",
-            "Welcome to Nature Park",  # OCR text (>10 chars)
-            "nature_landscapes",
-            "mountain_sunset_view",
-        ]
+        # Mock structured response
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="A beautiful sunset over mountains",
+            folder_name="nature_landscapes",
+            filename="mountain_sunset_view",
+            has_text=True,
+            extracted_text="Welcome to Nature Park",
+        )
 
         result = vision_processor.process_file(img)
 
@@ -132,7 +135,9 @@ class TestVisionProcessorProcessFile:
         assert result.file_path == img
         assert result.description == "A beautiful sunset over mountains"
         assert result.has_text is True
-        assert result.extracted_text is not None
+        assert result.extracted_text == "Welcome to Nature Park"
+        assert result.folder_name == "nature_landscapes"
+        assert result.filename == "mountain_sunset_view"
         assert result.error is None
         assert result.processing_time >= 0
 
@@ -146,20 +151,22 @@ class TestVisionProcessorProcessFile:
     def test_process_file_model_errors_graceful(
         self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
     ) -> None:
-        """Test model errors are handled gracefully by each internal method."""
+        """Test model errors are handled gracefully by falling back to metadata-only."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
 
-        mock_vision_model.generate.side_effect = RuntimeError("model crashed")
+        mock_vision_model.generate_structured.side_effect = RuntimeError("model crashed")
 
         result = vision_processor.process_file(img)
 
-        # Each helper catches errors individually and returns fallbacks
-        assert result.error is None  # outer try/except not triggered
-        assert result.description == f"Image from {img.name}"  # _generate_description fallback
-        assert result.folder_name == "images"  # _generate_folder_name fallback
-        assert result.filename == img.stem  # _generate_filename fallback
-        assert result.has_text is False  # _extract_text returned None
+        # In the new structured pipeline, a model failure trips the metadata fallback path
+        assert result.error == "model crashed"
+        assert result.description == f"Image from {img.name}"
+        assert result.folder_name == "Images/Untagged"
+        assert result.filename == img.stem
+        assert result.has_text is False
+        assert result.source == "fallback_filename"
+        assert result.confidence == 0.3
 
     def test_process_file_no_description(
         self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
@@ -168,16 +175,19 @@ class TestVisionProcessorProcessFile:
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
 
-        # Only OCR, folder, filename responses needed
-        mock_vision_model.generate.side_effect = [
-            "NO_TEXT",  # OCR
-            "general",  # folder (context will be empty description)
-            "test_file",  # filename
-        ]
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="Should be cleared",
+            folder_name="general",
+            filename="test_file",
+            has_text=False,
+            extracted_text=None,
+        )
 
         result = vision_processor.process_file(img, generate_description=False)
 
         assert result.description == ""
+        assert result.folder_name == "general"
+        assert result.filename == "test_file"
 
     def test_process_file_no_ocr(
         self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
@@ -186,16 +196,21 @@ class TestVisionProcessorProcessFile:
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
 
-        mock_vision_model.generate.side_effect = [
-            "Image description",  # description
-            "nature",  # folder
-            "sunset",  # filename
-        ]
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="Image description",
+            folder_name="nature",
+            filename="sunset",
+            has_text=True,
+            extracted_text="Some text",
+        )
 
         result = vision_processor.process_file(img, perform_ocr=False)
 
         assert result.extracted_text is None
         assert result.has_text is False
+        assert result.description == "Image description"
+        assert result.folder_name == "nature"
+        assert result.filename == "sunset"
 
     def test_process_file_all_flags_off(
         self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
@@ -212,7 +227,7 @@ class TestVisionProcessorProcessFile:
             perform_ocr=False,
         )
 
-        mock_vision_model.generate.assert_not_called()
+        mock_vision_model.generate_structured.assert_not_called()
         assert result.description == ""
         assert result.folder_name == ""
         assert result.filename == ""
@@ -221,16 +236,17 @@ class TestVisionProcessorProcessFile:
     def test_process_file_ocr_no_text(
         self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
     ) -> None:
-        """Test OCR returning NO_TEXT sets has_text=False."""
+        """Test OCR returning no text sets has_text=False."""
         img = tmp_path / "test.jpg"
         img.write_bytes(b"\xff\xd8")
 
-        mock_vision_model.generate.side_effect = [
-            "Image description",  # description
-            "NO_TEXT",  # OCR -> no text
-            "general",  # folder (using description as context)
-            "img_file",  # filename
-        ]
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="Image description",
+            folder_name="general",
+            filename="img_file",
+            has_text=False,
+            extracted_text=None,
+        )
 
         result = vision_processor.process_file(img)
 
@@ -245,16 +261,18 @@ class TestVisionProcessorProcessFile:
         img.write_bytes(b"\xff\xd8")
 
         long_text = "x" * 1000
-        mock_vision_model.generate.side_effect = [
-            "desc",
-            long_text,  # OCR returns >500 chars
-            "folder",
-            "filename",
-        ]
+        mock_vision_model.generate_structured.return_value = VisionSchema(
+            description="desc",
+            folder_name="folder",
+            filename="filename",
+            has_text=True,
+            extracted_text=long_text,
+        )
 
         result = vision_processor.process_file(img)
 
         assert result.has_text is True
+        assert result.extracted_text is not None
         assert len(result.extracted_text) == 500
 
     def test_process_file_trips_circuit_on_fatal_backend_error(
@@ -268,7 +286,7 @@ class TestVisionProcessorProcessFile:
 
         call_count = 0
 
-        def _fatal_generate(**_: object) -> str:
+        def _fatal_generate(**_: object) -> Any:
             nonlocal call_count
             call_count += 1
             raise RuntimeError(
@@ -277,7 +295,7 @@ class TestVisionProcessorProcessFile:
                 "(status code: 500)"
             )
 
-        mock_vision_model.generate.side_effect = _fatal_generate
+        mock_vision_model.generate_structured.side_effect = _fatal_generate
         processor = VisionProcessor(
             vision_model=mock_vision_model,
             backend_cooldown_seconds=120.0,
@@ -289,9 +307,9 @@ class TestVisionProcessorProcessFile:
         assert call_count == 1
         assert first.error is not None
         assert second.error is not None
-        assert "Vision backend unavailable" in first.error
+        assert "model runner has unexpectedly stopped" in first.error
         assert "Vision backend unavailable" in second.error
-        assert second.folder_name == "images"
+        assert second.folder_name == "Images/Untagged"
         assert second.filename == "second"
 
     def test_process_file_nonfatal_500_does_not_trip_circuit(
@@ -301,7 +319,7 @@ class TestVisionProcessorProcessFile:
         img = tmp_path / "sample.jpg"
         img.write_bytes(b"\xff\xd8")
 
-        mock_vision_model.generate.side_effect = RuntimeError(
+        mock_vision_model.generate_structured.side_effect = RuntimeError(
             "provider response (status code: 500)"
         )
         processor = VisionProcessor(
@@ -311,7 +329,7 @@ class TestVisionProcessorProcessFile:
 
         result = processor.process_file(img)
 
-        assert result.error is None
+        assert result.error == "provider response (status code: 500)"
         assert processor._is_circuit_open() is False
 
 

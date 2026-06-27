@@ -56,6 +56,10 @@ _DEFAULT_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
         ".gif",
         ".bmp",
         ".tiff",
+        ".webp",
+        ".heic",
+        ".heif",
+        ".svg",
     }
 )
 

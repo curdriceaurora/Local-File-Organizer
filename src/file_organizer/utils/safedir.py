@@ -149,6 +149,30 @@ def _is_symlink_at(name: str, dir_fd: int) -> bool:
     return _stat.S_ISLNK(st.st_mode)
 
 
+def _anchored_relative_parts(
+    relative_path: str | os.PathLike[str], *, caller: str
+) -> tuple[str, ...]:
+    """Validate a relative anchored-traversal path and return its components.
+
+    Single source of truth for the security-critical traversal checks shared by
+    :meth:`SafeDir.open_anchored_reader` and :meth:`SafeDir.open_anchored_writer`
+    — the relative path must not be absolute, must be non-empty, and must not
+    contain ``..`` components (which would escape the anchor before the per-step
+    ``O_NOFOLLOW`` walk even begins). Keeping this in one place stops the
+    read-side and write-side checks from drifting apart. *caller* names the
+    invoking method for the error messages.
+    """
+    rel = relative_path if isinstance(relative_path, PurePath) else PurePath(relative_path)
+    if rel.is_absolute():
+        raise ValueError(f"{caller} requires a relative path, got absolute {rel!r}")
+    parts = rel.parts
+    if not parts:
+        raise ValueError(f"{caller} requires a non-empty relative path")
+    if any(part == ".." for part in parts):
+        raise ValueError(f"{caller} refuses '..' components in {rel!r}")
+    return parts
+
+
 class SafeDir:
     """Holds an open directory fd; every operation uses ``dir_fd=`` + ``O_NOFOLLOW``.
 
@@ -425,14 +449,7 @@ class SafeDir:
                 component, etc.).
         """
         self._check_open()
-        rel = PurePath(relative_path) if not isinstance(relative_path, PurePath) else relative_path
-        if rel.is_absolute():
-            raise ValueError(f"open_anchored_reader requires a relative path, got absolute {rel!r}")
-        parts = rel.parts
-        if not parts:
-            raise ValueError("open_anchored_reader requires a non-empty relative path")
-        if any(part == ".." for part in parts):
-            raise ValueError(f"open_anchored_reader refuses '..' components in {rel!r}")
+        parts = _anchored_relative_parts(relative_path, caller="open_anchored_reader")
         # Walk intermediates inside an ExitStack so any subdir fd is closed
         # exactly once even if a later component raises. The leaf fd is
         # handed back open — caller owns its lifetime (see Returns above).
@@ -441,6 +458,81 @@ class SafeDir:
             for component in parts[:-1]:
                 current = stack.enter_context(current.open_subdir(component))
             return current.open_for_reader(parts[-1])
+
+    def open_anchored_writer(
+        self,
+        relative_path: str | os.PathLike[str],
+        *,
+        flags: int = os.O_WRONLY | os.O_CREAT,
+        mode: int = 0o666,
+        dir_mode: int = 0o755,
+    ) -> int:
+        """Walk *relative_path* from this SafeDir, creating dirs, and open the leaf for writing.
+
+        The write-side counterpart to :meth:`open_anchored_reader`. Each
+        intermediate component is created (``mkdir``, tolerating an existing
+        directory) and re-opened via :meth:`open_subdir` — both ``O_NOFOLLOW``
+        — so a symlinked **ancestor** swapped into the output tree between
+        destination computation and this write is refused with
+        :class:`SymlinkRejected`, not dereferenced. The leaf is opened via
+        :meth:`open_child` (also ``O_NOFOLLOW``), closing the symlinked-
+        ancestor TOCTOU window (#1268) that the parent-rooted
+        ``open_root(destination.parent).open_child(...)`` write path leaves
+        open: ``O_NOFOLLOW`` on a single ``open`` only guards the final
+        component, and ``Path.mkdir(parents=True)`` follows symlinks.
+
+        ``O_TRUNC`` is intentionally **not** forced — callers that need to
+        validate the opened inode (regular-file / same-inode checks) before
+        truncating pass their own ``flags`` and ``ftruncate`` afterwards, the
+        same race-free pattern the writer stage uses for the leaf fd.
+
+        Args:
+            relative_path: A relative path under this SafeDir (e.g.
+                ``category/filename.ext``). Must not be absolute and must not
+                contain ``..`` components. May be ``str`` or any
+                ``os.PathLike``.
+            flags: Extra open flags OR-ed onto the leaf open. ``O_NOFOLLOW`` is
+                always added by :meth:`open_child`. Defaults to
+                ``O_WRONLY | O_CREAT``.
+            mode: File permission mode for a newly created leaf (consulted only
+                when ``O_CREAT`` is set). Defaults to ``0o666`` (matching the
+                ``open()`` builtin → ``0o644`` under a typical ``022`` umask).
+            dir_mode: Permission mode for intermediate directories created
+                during the walk. Defaults to ``0o755``.
+
+        Returns:
+            The leaf file descriptor, opened for writing. Caller owns its
+            lifetime — wrap with ``os.fdopen(fd, "wb", closefd=True)`` and
+            ``os.close(fd)`` on ``fdopen`` failure. Intermediate subdir fds
+            opened during traversal are released before this returns.
+
+        Raises:
+            ValueError: If *relative_path* is absolute, contains ``..``, is
+                empty, or any component fails :func:`_validate_name`.
+            SymlinkRejected: If any component (intermediate or leaf) is a
+                symlink at open time.
+            FileExistsError: If the leaf exists, ``O_EXCL`` was passed, and the
+                existing entry is a regular file.
+            OSError: For other open failures (permission denied, an
+                intermediate component that exists as a non-directory, etc.).
+        """
+        self._check_open()
+        parts = _anchored_relative_parts(relative_path, caller="open_anchored_writer")
+        # Create + descend each intermediate inside an ExitStack so every
+        # subdir fd is closed exactly once even if a later component raises.
+        # The leaf fd is handed back open — caller owns its lifetime.
+        with contextlib.ExitStack() as stack:
+            current = self
+            for component in parts[:-1]:
+                try:
+                    current.mkdir(component, mode=dir_mode)
+                except FileExistsError:
+                    # Already present — reuse it. ``open_subdir`` (O_NOFOLLOW)
+                    # below still refuses it if the existing entry is a symlink,
+                    # so a pre-planted symlink can't be silently traversed.
+                    pass
+                current = stack.enter_context(current.open_subdir(component))
+            return current.open_child(parts[-1], flags=flags, mode=mode)
 
     # ------------------------------------------------------------------
     # Inspect / list / stat

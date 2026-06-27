@@ -21,7 +21,9 @@ if [ -z "$files" ]; then
   exit 0
 fi
 
-# Convert newline-separated files to a deduplicated array and run mypy safely
-mapfile -t files_sorted < <(printf '%s\n' "$files" | sort -u)
+files_sorted=()
+while IFS= read -r line; do
+  files_sorted+=("$line")
+done < <(printf '%s\n' "$files" | sort -u)
 MYPY=$(.venv/bin/mypy --version >/dev/null 2>&1 && echo .venv/bin/mypy || echo mypy)
-$MYPY -- "${files_sorted[@]}"
+$MYPY --follow-imports=silent -- "${files_sorted[@]}"
