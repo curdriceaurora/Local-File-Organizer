@@ -82,6 +82,7 @@ class DaemonService:
         # ``_SIGNAL_LOG_MIN_INTERVAL_S`` so the log remains useful.
         self._last_signal_log_time = 0.0
         self._started_at: float | None = None
+        self._start_exception: BaseException | None = None
         self._files_processed: int = 0
         self._on_start_callback: Callable[[], None] | None = None
         self._on_stop_callback: Callable[[], None] | None = None
@@ -167,6 +168,7 @@ class DaemonService:
             self._stop_event.clear()
             self._started_event.clear()
             self._stopped_event.clear()
+            self._start_exception = None
 
             # Set _running = True while holding lock to prevent race condition
             # where two threads both pass the check above before _running is set
@@ -188,6 +190,16 @@ class DaemonService:
         # _background_run whether startup succeeded or failed, so this never
         # blocks for the full timeout on early startup failures.
         self._started_event.wait(timeout=5.0)
+
+        # _background_run records any startup exception in
+        # _start_exception before setting _started_event (see except
+        # clause below). Without re-raising here, callers (CLI/API) saw
+        # start_background() return normally even though the daemon
+        # thread had already died — a false success.
+        if self._start_exception is not None:
+            exc = self._start_exception
+            self._start_exception = None
+            raise RuntimeError("Daemon failed to start") from exc
 
     def stop(self) -> None:
         """Request a graceful shutdown of the daemon.
@@ -294,11 +306,22 @@ class DaemonService:
             # Main event loop
             self._run_loop()
 
-        except Exception:
+        except Exception as exc:
             # Startup-failure safety: ensure start_background()'s wait() is
             # unblocked even when initialization raises before _started_event
             # is set.  Without this the caller blocks for the full 5-second
-            # timeout and has no indication that startup failed.
+            # timeout and has no indication that startup failed. Recording
+            # the exception lets start_background() re-raise it instead of
+            # returning a false success.
+            #
+            # _running is cleared here (not just in the _cleanup() finally
+            # below) because _started_event.set() unblocks the caller's
+            # wait() immediately — without this, is_running could still
+            # read True for a brief window while _cleanup() is still
+            # running concurrently on this thread.
+            with self._lock:
+                self._running = False
+            self._start_exception = exc
             self._started_event.set()
             logger.exception("Daemon startup failed")
             raise

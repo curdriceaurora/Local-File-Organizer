@@ -528,6 +528,7 @@ def _register_profile_command() -> None:
             "Could not register 'fo profile' command: %s. "
             "The 'profile' sub-command will not be available.",
             exc,
+            exc_info=True,
         )
 
 

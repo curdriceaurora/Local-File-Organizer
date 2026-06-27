@@ -125,6 +125,20 @@ class TestDaemonLifecycle:
 
         assert daemon.is_running is True
 
+    def test_start_background_propagates_startup_failure(self, daemon: DaemonService) -> None:
+        """If initialization in the background thread raises,
+        start_background() must re-raise rather than returning a false
+        success (regression: previously the caller only saw _started_event
+        get set and assumed the daemon was up).
+        """
+        from unittest.mock import patch
+
+        with patch.object(daemon, "_setup_default_tasks", side_effect=RuntimeError("boom")):
+            with pytest.raises(RuntimeError, match="Daemon failed to start"):
+                daemon.start_background()
+
+        assert daemon.is_running is False
+
     def test_repeated_restart_cycles_do_not_leave_scheduler_zombie(
         self,
         daemon: DaemonService,
