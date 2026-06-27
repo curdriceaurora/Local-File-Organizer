@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -11,7 +10,9 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-_SCRIPT = Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "check_safedir_valueerror.py"
+_SCRIPT = (
+    Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "check_safedir_valueerror.py"
+)
 
 
 def _load_checker() -> ModuleType:
@@ -69,11 +70,7 @@ def test_allows_bare_except_that_reraises(tmp_path: Path) -> None:
 def test_ignores_unrelated_try_blocks(tmp_path: Path) -> None:
     src = tmp_path / "unrelated.py"
     src.write_text(
-        "def f():\n"
-        "    try:\n"
-        "        return 1 / 0\n"
-        "    except Exception:\n"
-        "        return None\n",
+        "def f():\n    try:\n        return 1 / 0\n    except Exception:\n        return None\n",
         encoding="utf-8",
     )
     assert checker.check_file(src) == []

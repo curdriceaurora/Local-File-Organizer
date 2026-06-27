@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -30,10 +29,7 @@ checker = _load_checker()
 def test_flags_wrapper_without_detach(tmp_path: Path) -> None:
     src = tmp_path / "bad.py"
     src.write_text(
-        "import io\n"
-        "def f(buf):\n"
-        "    wrapper = io.TextIOWrapper(buf)\n"
-        "    return wrapper.read()\n",
+        "import io\ndef f(buf):\n    wrapper = io.TextIOWrapper(buf)\n    return wrapper.read()\n",
         encoding="utf-8",
     )
     violations = checker.check_file(src)

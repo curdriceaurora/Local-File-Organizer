@@ -10,7 +10,9 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-_SCRIPT = Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "select_tests_for_changes.py"
+_SCRIPT = (
+    Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "select_tests_for_changes.py"
+)
 
 
 def _load_module() -> ModuleType:

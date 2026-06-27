@@ -66,8 +66,7 @@ def test_allows_getbasetemp_with_class_marker(tmp_path: Path) -> None:
 def test_ignores_plain_tmp_path(tmp_path: Path) -> None:
     src = tmp_path / "unrelated.py"
     src.write_text(
-        "def test_x(tmp_path):\n"
-        "    assert tmp_path.exists()\n",
+        "def test_x(tmp_path):\n    assert tmp_path.exists()\n",
         encoding="utf-8",
     )
     assert checker.check_file(src) == []
