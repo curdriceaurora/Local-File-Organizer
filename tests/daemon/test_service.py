@@ -125,6 +125,25 @@ class TestDaemonLifecycle:
 
         assert daemon.is_running is True
 
+    def test_start_background_refuses_when_pid_file_shows_live_process(
+        self, daemon: DaemonService, pid_file: Path
+    ) -> None:
+        """If the on-disk PID file already points at a live process (e.g.
+        a prior daemon that crashed without cleaning up, or a still-running
+        one), start_background() must refuse rather than spawning a second
+        daemon that writes to the same PID file.
+
+        Uses this test process's own PID/create_time as the "live process"
+        the on-disk record points to, since it's guaranteed to be alive
+        for the duration of the test.
+        """
+        daemon._pid_manager.write_pid_record(pid_file, pid=os.getpid())
+
+        with pytest.raises(RuntimeError, match="stale PID file indicates a live process"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+
     def test_start_background_propagates_startup_failure(self, daemon: DaemonService) -> None:
         """If initialization in the background thread raises,
         start_background() must re-raise rather than returning a false

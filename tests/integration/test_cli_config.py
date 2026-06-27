@@ -172,6 +172,7 @@ class TestConfigEdit:
         assert result.exit_code == 0
         assert "llama3.2:3b" in result.output
 
+    @pytest.mark.ci
     def test_config_edit_unsupported_version_exits_1_with_friendly_message(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
