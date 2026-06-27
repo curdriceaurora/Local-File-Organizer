@@ -59,6 +59,8 @@ class TestActionType:
             "delete",
             "archive",
             "copy",
+            "hardlink",
+            "symlink",
         }
         assert {at.value for at in ActionType} == expected
 

@@ -186,21 +186,18 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_audio_view_mounts() -> None:
-    """AudioView should mount and render panels."""
-    from file_organizer.tui.app import FileOrganizerApp
+def test_audio_view_mounts() -> None:
+    """AudioView should compose its panels and trigger scanning on mount."""
+    view = AudioView()
 
-    with patch.object(AudioView, "_scan_audio_files"):
-        app = FileOrganizerApp()
-        async with app.run_test() as pilot:
-            await app.action_switch_view("audio")
-            await pilot.pause()
-            view = app.query_one("#view", AudioView)
-            assert view is not None
-            assert app.query_one(AudioFileListPanel) is not None
-            assert app.query_one(AudioMetadataPanel) is not None
-            assert app.query_one(AudioClassificationPanel) is not None
+    widgets = list(view.compose())
+
+    assert any(isinstance(widget, AudioFileListPanel) for widget in widgets)
+    assert any(isinstance(widget, AudioMetadataPanel) for widget in widgets)
+    assert any(isinstance(widget, AudioClassificationPanel) for widget in widgets)
+    with patch.object(view, "_scan_audio_files") as mock_scan:
+        view.on_mount()
+        mock_scan.assert_called_once_with()
 
 
 @pytest.mark.asyncio

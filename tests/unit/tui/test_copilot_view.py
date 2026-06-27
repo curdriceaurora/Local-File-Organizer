@@ -1,113 +1,95 @@
-from unittest.mock import MagicMock, patch
-
-import pytest
-from textual.app import App, ComposeResult
-from textual.widgets import Input
+from types import SimpleNamespace
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from file_organizer.services.copilot.models import MessageRole
-from file_organizer.tui.app import StatusBar
 from file_organizer.tui.copilot_view import CopilotInput, CopilotMessageLog, CopilotView
 
 
-class MinimalApp(App):
-    def compose(self) -> ComposeResult:
-        yield CopilotView()
-        yield StatusBar()
+def _capture_log_mounts(log: CopilotMessageLog) -> list[object]:
+    mounted: list[object] = []
+    log.mount = MagicMock(side_effect=mounted.append)
+    return mounted
 
 
-@pytest.mark.asyncio
-async def test_copilot_message_log_add_message():
-    app = MinimalApp()
-    async with app.run_test():
-        log = app.query_one(CopilotMessageLog)
-        assert len(log.children) == 1
-        # Test USER
-        log.add_message(MessageRole.USER, "Hello[world]")
-        assert "Hello\\[world]" in str(log.children[-1].render()) or "Hello[world]" in str(
-            log.children[-1].render()
-        )
+def test_copilot_message_log_add_message():
+    log = CopilotMessageLog()
+    mounted = _capture_log_mounts(log)
 
-        # Test ASSISTANT
-        log.add_message(MessageRole.ASSISTANT, "Assistant here")
-        assert "Assistant here" in str(log.children[-1].render())
+    log.add_message(MessageRole.USER, "Hello[world]")
+    assert "Hello\\[world]" in str(mounted[-1].render()) or "Hello[world]" in str(
+        mounted[-1].render()
+    )
 
-        # Test SYSTEM
-        log.add_message(MessageRole.SYSTEM, "System message")
-        assert "System message" in str(log.children[-1].render())
+    log.add_message(MessageRole.ASSISTANT, "Assistant here")
+    assert "Assistant here" in str(mounted[-1].render())
+
+    log.add_message(MessageRole.SYSTEM, "System message")
+    assert "System message" in str(mounted[-1].render())
 
 
-@pytest.mark.asyncio
-async def test_copilot_view_input_submitted():
-    app = MinimalApp()
-    async with app.run_test() as pilot:
-        view = app.query_one(CopilotView)
-        inp = app.query_one(CopilotInput)
+def test_copilot_view_input_submitted():
+    view = CopilotView()
+    inp = MagicMock(spec=CopilotInput)
+    inp.value = "   "
+    log = MagicMock(spec=CopilotMessageLog)
+    view.query_one = MagicMock(side_effect=[inp, log])
 
-        # Blank submit
-        inp.value = "   "
-        await inp.action_submit()
+    view.on_input_submitted(SimpleNamespace(value="   "))
 
-        # Valid submit
-        inp.value = "Test message"
-        with patch.object(view, "_process_message") as mock_process:
-            # We mock call_from_thread on the view to prevent workers from crashing
-            app.call_from_thread = MagicMock(side_effect=lambda func, *args: func(*args))
-            # Textual 0.x input action_submit sometimes needs event explicitly called for parent binding
-            view.on_input_submitted(Input.Submitted(inp, "Test message"))
-            await pilot.pause()
+    log.add_message.assert_not_called()
 
-            assert inp.value == ""
-            mock_process.assert_called_once_with("Test message")
+    view.query_one = MagicMock(side_effect=[inp, log])
+    with patch.object(view, "_process_message") as mock_process:
+        view.on_input_submitted(SimpleNamespace(value="Test message"))
+
+    assert inp.value == ""
+    log.add_message.assert_called_once_with(MessageRole.USER, "Test message")
+    mock_process.assert_called_once_with("Test message")
 
 
-@pytest.mark.asyncio
-async def test_copilot_view_action_clear_input():
-    app = MinimalApp()
-    async with app.run_test():
-        view = app.query_one(CopilotView)
-        inp = app.query_one(CopilotInput)
+def test_copilot_view_action_clear_input():
+    view = CopilotView()
+    inp = MagicMock(spec=CopilotInput)
+    inp.value = "Test Message"
+    view.query_one = MagicMock(return_value=inp)
 
-        inp.value = "Test Message"
-        view.action_clear_input()
-        assert inp.value == ""
+    view.action_clear_input()
 
-
-@pytest.mark.asyncio
-async def test_copilot_view_process_message_success():
-    app = MinimalApp()
-    async with app.run_test() as pilot:
-        view = app.query_one(CopilotView)
-        mock_engine = MagicMock()
-        mock_engine.chat.return_value = "Response"
-        view._get_engine = MagicMock(return_value=mock_engine)
-
-        # Patch call_from_thread to execute immediately on the same thread for test purposes
-        app.call_from_thread = MagicMock(side_effect=lambda func, *args: func(*args))
-
-        # Actually execute the thread worker synchronously for test using underlying func
-        view._process_message.__wrapped__(view, "Test")
-        await pilot.pause()
-
-        log = app.query_one(CopilotMessageLog)
-        assert "Response" in str(log.children[-1].render())
+    assert inp.value == ""
 
 
-@pytest.mark.asyncio
-async def test_copilot_view_process_message_error():
-    app = MinimalApp()
-    async with app.run_test() as pilot:
-        view = app.query_one(CopilotView)
-        mock_engine = MagicMock()
-        mock_engine.chat.side_effect = Exception("Crash")
-        view._get_engine = MagicMock(return_value=mock_engine)
+def test_copilot_view_process_message_success():
+    view = CopilotView()
+    log = CopilotMessageLog()
+    mounted = _capture_log_mounts(log)
+    mock_engine = MagicMock()
+    mock_engine.chat.return_value = "Response"
+    mock_app = MagicMock()
+    mock_app.call_from_thread = MagicMock(side_effect=lambda func, *args: func(*args))
+    view.query_one = MagicMock(return_value=log)
+    view._get_engine = MagicMock(return_value=mock_engine)
 
-        app.call_from_thread = MagicMock(side_effect=lambda func, *args: func(*args))
+    with patch.object(CopilotView, "app", new_callable=PropertyMock, return_value=mock_app):
+        CopilotView._process_message.__wrapped__(view, "Test")
 
-        view._process_message.__wrapped__(view, "Test")
-        await pilot.pause()
+    assert "Response" in str(mounted[-1].render())
 
-        log = app.query_one(CopilotMessageLog)
-        assert "Crash" in str(log.children[-1].render())
+
+def test_copilot_view_process_message_error():
+    view = CopilotView()
+    log = CopilotMessageLog()
+    mounted = _capture_log_mounts(log)
+    mock_engine = MagicMock()
+    mock_engine.chat.side_effect = Exception("Crash")
+    mock_app = MagicMock()
+    mock_app.call_from_thread = MagicMock(side_effect=lambda func, *args: func(*args))
+    view.query_one = MagicMock(return_value=log)
+    view._get_engine = MagicMock(return_value=mock_engine)
+
+    with patch.object(CopilotView, "app", new_callable=PropertyMock, return_value=mock_app):
+        CopilotView._process_message.__wrapped__(view, "Test")
+
+    assert "Crash" in str(mounted[-1].render())
 
 
 def test_copilot_view_get_engine():

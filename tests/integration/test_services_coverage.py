@@ -11,6 +11,8 @@ Files covered:
 
 from __future__ import annotations
 
+import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -49,6 +51,15 @@ from file_organizer.services.video.scene_detector import (
 )
 
 pytestmark = pytest.mark.integration
+
+
+def _install_faster_whisper_mock(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Provide a fake optional faster_whisper module for CI without media extras."""
+    mock_whisper_cls = MagicMock()
+    mock_module = types.ModuleType("faster_whisper")
+    mock_module.WhisperModel = mock_whisper_cls
+    monkeypatch.setitem(sys.modules, "faster_whisper", mock_module)
+    return mock_whisper_cls
 
 
 # ===========================================================================
@@ -585,8 +596,8 @@ class TestServiceAudioTranscriber:
                 transcriber = ServiceAudioTranscriber(device="auto")
                 assert transcriber.device == "mps"
 
-    @patch("faster_whisper.WhisperModel")
-    def test_lazy_load_model_caching_and_failures(self, mock_whisper_cls: MagicMock) -> None:
+    def test_lazy_load_model_caching_and_failures(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        mock_whisper_cls = _install_faster_whisper_mock(monkeypatch)
         mock_whisper = MagicMock()
         mock_whisper_cls.return_value = mock_whisper
 
@@ -617,10 +628,10 @@ class TestServiceAudioTranscriber:
             transcriber.unload_model()
             assert transcriber._model is None
 
-    @patch("faster_whisper.WhisperModel")
     def test_transcribe_options_payloads_and_segments(
-        self, mock_whisper_cls: MagicMock, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        mock_whisper_cls = _install_faster_whisper_mock(monkeypatch)
         dummy_audio = tmp_path / "audio.wav"
         dummy_audio.write_bytes(b"dummy wav data")
 
@@ -731,7 +742,9 @@ class TestServiceAudioTranscriber:
         results = transcriber.transcribe_batch([dummy_audio])
         assert len(results) == 0
 
-    def test_transcribe_options_variations(self, tmp_path: Path) -> None:
+    def test_transcribe_options_variations(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         dummy_audio = tmp_path / "audio.wav"
         dummy_audio.write_bytes(b"dummy")
 
@@ -753,7 +766,10 @@ class TestServiceAudioTranscriber:
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([mock_seg], mock_info)
 
-        with patch("faster_whisper.WhisperModel", return_value=mock_model):
+        mock_whisper_cls = _install_faster_whisper_mock(monkeypatch)
+        mock_whisper_cls.return_value = mock_model
+
+        with patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", True):
             transcriber = ServiceAudioTranscriber(device="cpu")
             # 1. Option variations: word_timestamps=False, language=None, initial_prompt=None, vad_filter=False
             options = ServiceTranscriptionOptions(

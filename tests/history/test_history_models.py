@@ -37,6 +37,8 @@ class TestOperationType:
             OperationType.DELETE,
             OperationType.COPY,
             OperationType.CREATE,
+            OperationType.HARDLINK,
+            OperationType.SYMLINK,
         }
 
     def test_string_values(self) -> None:
@@ -45,6 +47,8 @@ class TestOperationType:
         assert OperationType.DELETE.value == "delete"
         assert OperationType.COPY.value == "copy"
         assert OperationType.CREATE.value == "create"
+        assert OperationType.HARDLINK.value == "hardlink"
+        assert OperationType.SYMLINK.value == "symlink"
 
     def test_construction_from_value(self) -> None:
         assert OperationType("move") is OperationType.MOVE

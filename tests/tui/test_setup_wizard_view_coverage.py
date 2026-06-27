@@ -13,6 +13,14 @@ from textual.widgets import Static
 from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
+_ORIGINAL_SETUP_WIZARD_APP = SetupWizardView.app
+
+
+@pytest.fixture(autouse=True)
+def restore_setup_wizard_app_property() -> None:
+    """Restore the Textual app descriptor after tests replace it with a mock."""
+    yield
+    SetupWizardView.app = _ORIGINAL_SETUP_WIZARD_APP
 
 
 def _create_view_with_mocks() -> tuple[SetupWizardView, MagicMock, MagicMock]:
@@ -561,7 +569,7 @@ def test_setup_wizard_view_run_hardware_detection_success() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_hardware_detection.__wrapped__(view)
+        SetupWizardView._run_hardware_detection.__wrapped__(view)
 
         assert view._detection_status == "complete"
         assert view._capabilities == mock_caps
@@ -582,7 +590,7 @@ def test_setup_wizard_view_run_hardware_detection_failure() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_hardware_detection.__wrapped__(view)
+        SetupWizardView._run_hardware_detection.__wrapped__(view)
 
         assert view._detection_status == "error"
         assert view._detection_message == "Hardware error"
@@ -596,7 +604,7 @@ def test_setup_wizard_view_run_model_download_no_model() -> None:
     view, _, _ = _create_view_with_mocks()
     view._selected_model = None
     with patch("sys.modules") as mock_modules:
-        view._run_model_download.__wrapped__(view)
+        SetupWizardView._run_model_download.__wrapped__(view)
         # Should not attempt to import or query packages
         assert "ollama" not in mock_modules
 
@@ -611,7 +619,7 @@ def test_setup_wizard_view_run_model_download_missing_ollama_package() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download.__wrapped__(view)
+        SetupWizardView._run_model_download.__wrapped__(view)
 
         assert view._download_status == "error"
         assert "Ollama Python package not installed" in view._download_message
@@ -648,7 +656,7 @@ def test_setup_wizard_view_run_model_download_success() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download.__wrapped__(view)
+        SetupWizardView._run_model_download.__wrapped__(view)
 
         assert view._download_status == "complete"
         assert view._download_progress == 100
@@ -672,7 +680,7 @@ def test_setup_wizard_view_run_model_download_failure() -> None:
         patch.object(view, "_refresh_screen") as mock_refresh,
         patch.object(view, "_set_status") as mock_status,
     ):
-        view._run_model_download.__wrapped__(view)
+        SetupWizardView._run_model_download.__wrapped__(view)
 
         assert view._download_status == "error"
         assert view._download_message == "network timeout"
