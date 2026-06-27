@@ -136,8 +136,8 @@ class PidFileManager:
             logger.warning("Failed to remove PID file %s: %s", pid_file, exc, exc_info=True)
             return False
 
-    def claim_pid_file(self, pid_file: Path) -> None:
-        """Atomically claim *pid_file* via an exclusive create.
+    def claim_pid_file(self, pid_file: Path, pid: int | None = None) -> PidRecord:
+        """Atomically claim *pid_file* with a live PID record.
 
         F4 (hardening roadmap #159): closes the TOCTOU window between
         :meth:`is_running` and :meth:`write_pid_record`.  Two daemon
@@ -146,8 +146,9 @@ class PidFileManager:
         the second silently overwriting the first.  This method uses
         ``os.open(O_CREAT | O_EXCL | O_WRONLY)`` which is atomic on POSIX:
         exactly one caller succeeds; every subsequent caller raises
-        :exc:`FileExistsError`.  ``fchmod`` is called immediately on the
-        open fd to force mode ``0o644`` regardless of the caller's umask.
+        :exc:`FileExistsError`. The winner writes the real JSON PID record
+        immediately so a concurrent starter sees a live daemon instead of a
+        placeholder it might treat as stale/corrupt.
 
         :meth:`write_pid_record` calls this internally before the
         tmp-file dance, so callers do not need to invoke it directly.
@@ -156,6 +157,10 @@ class PidFileManager:
 
         Args:
             pid_file: Path to claim.
+            pid: Process ID to write. Defaults to the current process.
+
+        Returns:
+            The :class:`PidRecord` that was written.
 
         Raises:
             FileExistsError: If another process has already claimed
@@ -163,6 +168,10 @@ class PidFileManager:
             OSError: For other I/O failures (permissions, missing parent
                 directory, etc.).
         """
+        pid = pid if pid is not None else os.getpid()
+        create_time = psutil.Process(pid).create_time()
+        record = PidRecord(pid=pid, create_time=create_time)
+        payload = json.dumps({"pid": pid, "create_time": create_time})
         pid_file = Path(pid_file)
         pid_file.parent.mkdir(parents=True, exist_ok=True)
         # os.open() with O_CREAT|O_EXCL is the POSIX atomic exclusive-create
@@ -193,7 +202,9 @@ class PidFileManager:
                 pass  # non-fatal; chmod on tmp_path below will cover it
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write("claimed\n")
+                fh.write(payload)
+                fh.flush()
+                os.fsync(fh.fileno())
         except OSError:
             # Write to the already-created fd failed — the file exists on
             # disk but is empty/partial; clean up and re-raise.
@@ -202,6 +213,7 @@ class PidFileManager:
             except OSError:
                 pass
             raise
+        return record
 
     def write_pid_record(self, pid_file: Path, pid: int | None = None) -> PidRecord:
         """Write a PID + process-start-time record to *pid_file*.
@@ -238,7 +250,7 @@ class PidFileManager:
         # to the normal os.replace() path which is idempotent for the same
         # process.
         if not pid_file.exists():
-            self.claim_pid_file(pid_file)
+            return self.claim_pid_file(pid_file, pid=pid)
         # F3 (atomic write): temp file + os.replace so a mid-write crash
         # can never leave a partial JSON file. A corrupt record would
         # otherwise defeat the F2 recycling check — ``read_pid_record``

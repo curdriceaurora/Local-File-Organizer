@@ -276,7 +276,7 @@ class FileSystemAdapter(MethodologyAdapter):
                 return num
 
         # Default: hash-based assignment (using deterministic MD5)
-        hash_value = int(hashlib.md5(name.lower().encode()).hexdigest(), 16)
+        hash_value = int(hashlib.md5(name.lower().encode(), usedforsecurity=False).hexdigest(), 16)
         return 10 + (hash_value % 90)
 
     def _suggest_category_from_name(self, name: str) -> int:
@@ -291,7 +291,7 @@ class FileSystemAdapter(MethodologyAdapter):
                     return num
 
         # Default: hash-based (using deterministic MD5)
-        hash_value = int(hashlib.md5(name.lower().encode()).hexdigest(), 16)
+        hash_value = int(hashlib.md5(name.lower().encode(), usedforsecurity=False).hexdigest(), 16)
         return 1 + (hash_value % 99)
 
     def _suggest_id_from_index(self, index: int) -> int:

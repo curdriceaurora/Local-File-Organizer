@@ -375,7 +375,7 @@ class NamingAnalyzer:
         signature = f"{len(structure.tokens)}:{','.join(structure.delimiters)}"
         signature += f":{structure.has_date}:{structure.has_version}"
 
-        return hashlib.md5(signature.encode()).hexdigest()[:8]
+        return hashlib.md5(signature.encode(), usedforsecurity=False).hexdigest()[:8]
 
     def _calculate_token_similarity(self, tokens1: list[str], tokens2: list[str]) -> float:
         """Calculate similarity between token lists."""

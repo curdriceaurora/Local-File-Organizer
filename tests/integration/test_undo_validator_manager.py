@@ -23,7 +23,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from file_organizer.history.models import Operation, OperationStatus, OperationType
-from file_organizer.undo.models import ValidationResult
+from file_organizer.undo.models import ConflictType, ValidationResult
 from file_organizer.undo.validator import OperationValidator
 
 pytestmark = pytest.mark.integration
@@ -481,6 +481,54 @@ class TestValidateUndoLinks:
         assert not result.can_proceed
         assert any(c.description == "Hardlink has already been deleted" for c in result.conflicts)
 
+    def test_hardlink_none_destination_adds_conflict(self, tmp_path: Path) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        source.write_text("data")
+        op = Operation(
+            id=34,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=None,
+            status=OperationStatus.COMPLETED,
+        )
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.description == "Hardlink has already been deleted" for c in result.conflicts)
+
+    def test_hardlink_destination_exists_error_adds_permission_conflict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        os.link(source, link)
+        op = Operation(
+            id=35,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=source,
+            destination_path=link,
+            status=OperationStatus.COMPLETED,
+        )
+
+        def fail_exists(self: Path) -> bool:
+            if self == link:
+                raise OSError("exists failed")
+            return original_exists(self)
+
+        original_exists = Path.exists
+        monkeypatch.setattr(Path, "exists", fail_exists)
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.conflict_type == ConflictType.PERMISSION_DENIED for c in result.conflicts)
+
     def test_hardlink_rejects_symlink_destination(self, tmp_path: Path) -> None:
         v = OperationValidator(trash_dir=tmp_path / "trash")
         source = tmp_path / "src.txt"
@@ -804,6 +852,111 @@ class TestValidateRedo:
 
         assert not result.can_proceed
         assert any(c.description == "Link destination was not recorded" for c in result.conflicts)
+
+    def test_undo_hardlink_stat_error_adds_permission_conflict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        os.link(src, dest)
+        op = Operation(
+            id=32,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.COMPLETED,
+        )
+
+        def fail_stat(self: Path, *args: object, **kwargs: object) -> os.stat_result:
+            if self == src:
+                raise PermissionError("stat denied")
+            return original_stat(self, *args, **kwargs)
+
+        original_stat = Path.stat
+        monkeypatch.setattr(Path, "stat", fail_stat)
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.conflict_type == ConflictType.PERMISSION_DENIED for c in result.conflicts)
+
+    def test_undo_hardlink_destination_stat_error_adds_permission_conflict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        os.link(src, dest)
+        op = Operation(
+            id=36,
+            operation_type=OperationType.HARDLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.COMPLETED,
+        )
+
+        def fail_stat(self: Path, *args: object, **kwargs: object) -> os.stat_result:
+            if self == dest:
+                raise PermissionError("stat denied")
+            return original_stat(self, *args, **kwargs)
+
+        original_stat = Path.stat
+        monkeypatch.setattr(Path, "stat", fail_stat)
+        monkeypatch.setattr(Path, "exists", lambda self: True if self in {src, dest} else False)
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.conflict_type == ConflictType.PERMISSION_DENIED for c in result.conflicts)
+
+    def test_check_file_integrity_read_error_returns_false(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        path = tmp_path / "file.txt"
+        path.write_text("data")
+
+        def fail_open(*args: object, **kwargs: object) -> object:
+            raise OSError("read failed")
+
+        monkeypatch.setattr("builtins.open", fail_open)
+
+        assert v.check_file_integrity(path, "expected") is False
+
+    def test_undo_symlink_resolve_loop_adds_permission_conflict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        v = OperationValidator(trash_dir=tmp_path / "trash")
+        src = tmp_path / "source.txt"
+        dest = tmp_path / "link.txt"
+        src.write_text("source")
+        dest.symlink_to(src)
+        op = Operation(
+            id=33,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(UTC),
+            source_path=src,
+            destination_path=dest,
+            status=OperationStatus.COMPLETED,
+        )
+
+        def fail_resolve(self: Path, *args: object, **kwargs: object) -> Path:
+            if self == dest:
+                raise RuntimeError("Symlink loop from resolve")
+            return original_resolve(self, *args, **kwargs)
+
+        original_resolve = Path.resolve
+        monkeypatch.setattr(Path, "resolve", fail_resolve)
+
+        result = v.validate_undo(op)
+
+        assert not result.can_proceed
+        assert any(c.conflict_type == ConflictType.PERMISSION_DENIED for c in result.conflicts)
 
     def test_redo_symlink_destination_available_can_proceed(self, tmp_path: Path) -> None:
         v = OperationValidator(trash_dir=tmp_path / "trash")

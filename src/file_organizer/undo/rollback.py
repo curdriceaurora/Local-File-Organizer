@@ -37,6 +37,18 @@ class RollbackExecutor:
         self.validator = validator or OperationValidator()
         self.trash_dir = self.validator.trash_dir
 
+    def _fsync_link_mutation(self, path: Path, operation_id: int) -> None:
+        """Best-effort persistence after a completed link mutation."""
+        try:
+            fsync_directory(path)
+        except OSError as exc:
+            logger.warning(
+                "Link mutation for operation %s succeeded, but directory fsync failed: %s",
+                operation_id,
+                exc,
+                exc_info=True,
+            )
+
     def _durable_move(self, src: Path, dst: Path) -> None:
         """Move *src* → *dst* durably, refusing symlinks and inode swaps.
 
@@ -317,7 +329,7 @@ class RollbackExecutor:
                 )
                 return False
             link_path.unlink()
-            fsync_directory(link_path)
+            self._fsync_link_mutation(link_path, operation.id)
             logger.info(f"Successfully rolled back hardlink operation {operation.id}")
             return True
         except Exception as e:
@@ -347,7 +359,7 @@ class RollbackExecutor:
                 )
                 return False
             link_path.unlink()
-            fsync_directory(link_path)
+            self._fsync_link_mutation(link_path, operation.id)
             logger.info(f"Successfully rolled back symlink operation {operation.id}")
             return True
         except Exception as e:
@@ -505,7 +517,7 @@ class RollbackExecutor:
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             os.link(source, destination)
-            fsync_directory(destination)
+            self._fsync_link_mutation(destination, operation.id)
             logger.info(f"Successfully redid hardlink operation {operation.id}")
             return True
         except Exception as e:
@@ -524,7 +536,7 @@ class RollbackExecutor:
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.symlink_to(source)
-            fsync_directory(destination)
+            self._fsync_link_mutation(destination, operation.id)
             logger.info(f"Successfully redid symlink operation {operation.id}")
             return True
         except Exception as e:

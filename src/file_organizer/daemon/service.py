@@ -157,13 +157,20 @@ class DaemonService:
             # on-disk PID file shows a live process (including a recycled PID
             # matched by create_time), refuse to start rather than creating a
             # second daemon writing to the same PID file.
-            if self.config.pid_file is not None and self._pid_manager.is_running(
-                self.config.pid_file
-            ):
-                raise RuntimeError(
-                    "Daemon is already running (stale PID file indicates a live process). "
-                    "Stop the existing daemon or remove the PID file and retry."
-                )
+            if self.config.pid_file is not None:
+                if self._pid_manager.is_running(self.config.pid_file):
+                    raise RuntimeError(
+                        "Daemon is already running (stale PID file indicates a live process). "
+                        "Stop the existing daemon or remove the PID file and retry."
+                    )
+                self._pid_manager.remove_pid(self.config.pid_file)
+                try:
+                    self._pid_manager.claim_pid_file(self.config.pid_file)
+                except FileExistsError as exc:
+                    raise RuntimeError(
+                        "Daemon is already starting or running; PID file was claimed "
+                        "by another process."
+                    ) from exc
 
             self._stop_event.clear()
             self._started_event.clear()
@@ -184,6 +191,8 @@ class DaemonService:
                 # Reset state on thread creation failure
                 self._running = False
                 self._thread = None
+                if self.config.pid_file is not None:
+                    self._pid_manager.remove_pid(self.config.pid_file)
                 raise
 
         # Wait for the daemon to fully initialize.  _started_event is set by

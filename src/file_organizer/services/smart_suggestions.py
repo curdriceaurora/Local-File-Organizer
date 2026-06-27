@@ -500,7 +500,7 @@ class SuggestionEngine:
     def _generate_id(self, file_path: Path, target: Path | None) -> str:
         """Generate unique ID for suggestion."""
         content = f"{file_path}{target}{datetime.now(UTC).isoformat()}"
-        return hashlib.md5(content.encode()).hexdigest()[:16]
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:16]
 
     def _get_common_root(self, files: list[Path]) -> Path:
         """Get common root directory for files."""

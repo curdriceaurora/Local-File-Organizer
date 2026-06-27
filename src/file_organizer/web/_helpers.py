@@ -169,7 +169,7 @@ def detect_kind(path: Path) -> str:
 
 def path_id(path: Path) -> str:
     """Return a short hash identifier for a path."""
-    digest = hashlib.sha1(str(path).encode("utf-8")).hexdigest()
+    digest = hashlib.sha1(str(path).encode("utf-8"), usedforsecurity=False).hexdigest()
     return digest[:10]
 
 

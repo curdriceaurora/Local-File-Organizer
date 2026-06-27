@@ -144,6 +144,25 @@ class TestDaemonLifecycle:
 
         assert daemon.is_running is False
 
+    def test_start_background_refuses_when_pid_file_claim_is_lost(
+        self, daemon: DaemonService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A concurrent process that claims the PID file after the liveness
+        check must prevent this daemon from spawning a background thread.
+        """
+        monkeypatch.setattr(daemon._pid_manager, "is_running", lambda _pid_file: False)
+
+        def claim_lost(_pid_file: Path) -> None:
+            raise FileExistsError("claimed by competitor")
+
+        monkeypatch.setattr(daemon._pid_manager, "claim_pid_file", claim_lost)
+
+        with pytest.raises(RuntimeError, match="PID file was claimed"):
+            daemon.start_background()
+
+        assert daemon.is_running is False
+        assert daemon._thread is None
+
     def test_start_background_propagates_startup_failure(self, daemon: DaemonService) -> None:
         """If initialization in the background thread raises,
         start_background() must re-raise rather than returning a false

@@ -37,6 +37,16 @@ class OperationValidator:
         self.trash_dir: Path = trash_dir
         self.trash_dir.mkdir(parents=True, exist_ok=True)
 
+    def _path_inspection_conflict(self, path: Path, exc: OSError) -> Conflict:
+        """Build a validation conflict for unreadable or unresolvable paths."""
+        return Conflict(
+            conflict_type=ConflictType.PERMISSION_DENIED,
+            path=str(path),
+            description="Unable to inspect link path",
+            expected="Readable filesystem metadata",
+            actual=f"{type(exc).__name__}: {exc}",
+        )
+
     def validate_undo(self, operation: Operation) -> ValidationResult:
         """Validate an undo operation.
 
@@ -334,7 +344,7 @@ class OperationValidator:
         conflicts = []
         destination_path = operation.destination_path
 
-        if destination_path is None or not destination_path.exists():
+        if destination_path is None:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -346,7 +356,31 @@ class OperationValidator:
             )
             return conflicts
 
-        if destination_path.is_symlink():
+        try:
+            destination_exists = destination_path.exists()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
+
+        if not destination_exists:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(destination_path),
+                    description="Hardlink has already been deleted",
+                    expected="Hardlink exists",
+                    actual="Hardlink not found",
+                )
+            )
+            return conflicts
+
+        try:
+            destination_is_symlink = destination_path.is_symlink()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
+
+        if destination_is_symlink:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
@@ -358,7 +392,13 @@ class OperationValidator:
             )
             return conflicts
 
-        if not operation.source_path.exists():
+        try:
+            source_exists = operation.source_path.exists()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(operation.source_path, exc))
+            return conflicts
+
+        if not source_exists:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -370,8 +410,12 @@ class OperationValidator:
             )
             return conflicts
 
-        source_stat = operation.source_path.stat()
-        destination_stat = destination_path.stat()
+        try:
+            source_stat = operation.source_path.stat()
+            destination_stat = destination_path.stat()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
         if (source_stat.st_dev, source_stat.st_ino) != (
             destination_stat.st_dev,
             destination_stat.st_ino,
@@ -405,14 +449,22 @@ class OperationValidator:
             )
             return conflicts
 
-        if destination_path.resolve(strict=False) != operation.source_path.resolve(strict=False):
+        try:
+            destination_resolved = destination_path.resolve(strict=False)
+            source_resolved = operation.source_path.resolve(strict=False)
+        except (OSError, RuntimeError) as exc:
+            os_error = exc if isinstance(exc, OSError) else OSError(str(exc))
+            conflicts.append(self._path_inspection_conflict(destination_path, os_error))
+            return conflicts
+
+        if destination_resolved != source_resolved:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
                     path=str(destination_path),
                     description="Symlink was replaced with a different target",
-                    expected=str(operation.source_path.resolve(strict=False)),
-                    actual=str(destination_path.resolve(strict=False)),
+                    expected=str(source_resolved),
+                    actual=str(destination_resolved),
                 )
             )
 
