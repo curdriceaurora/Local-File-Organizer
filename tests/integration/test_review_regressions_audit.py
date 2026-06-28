@@ -12,22 +12,11 @@ Covers:
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Dynamically redirect imports of file_organizer.review_regressions.audit to scripts/audit.py
-scripts_dir = Path(__file__).parents[2] / "scripts"
-spec = importlib.util.spec_from_file_location(
-    "file_organizer.review_regressions.audit", scripts_dir / "audit.py"
-)
-audit_module = importlib.util.module_from_spec(spec)
-sys.modules["file_organizer.review_regressions.audit"] = audit_module
-spec.loader.exec_module(audit_module)
 
 pytestmark = pytest.mark.integration
 
@@ -231,9 +220,8 @@ class TestLoadDetectors:
 
     def test_load_existing_instance_attribute(self) -> None:
         """load_detectors can also load a pre-built instance attribute."""
-        from file_organizer.review_regressions.audit import _is_detector, load_detectors
-
         import file_organizer.review_regressions.test_quality as tq
+        from file_organizer.review_regressions.audit import _is_detector, load_detectors
 
         instance = tq.WeakMockCallCountAssertionDetector()
         module_mock = MagicMock()
@@ -365,7 +353,6 @@ class TestMain:
 
     def test_main_returns_one_when_findings_and_fail_on_findings(self, tmp_path: Path) -> None:
         from file_organizer.review_regressions.audit import main
-
         from file_organizer.review_regressions.framework import AuditReport, Violation
 
         mock_finding = MagicMock(spec=Violation)
