@@ -353,6 +353,7 @@ class TestAnalyticsView:
         keys = [b.key for b in bindings]
         assert "r" in keys
 
+    @pytest.mark.keep_default_paths
     def test_initialization_with_default_directory(self) -> None:
         """Test AnalyticsView initialization with default directory."""
         view = AnalyticsView()

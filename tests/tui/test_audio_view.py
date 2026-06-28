@@ -267,6 +267,7 @@ class TestAudioClassificationPanel:
 class TestAudioViewInit:
     """Test AudioView initialization."""
 
+    @pytest.mark.keep_default_paths
     def test_default_scan_dir(self):
         view = AudioView()
         assert view._scan_dir == Path(".")

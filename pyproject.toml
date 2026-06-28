@@ -437,6 +437,7 @@ markers = [
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
     "uses_setup_gate: opts out of the autouse setup-gate bypass to exercise the real gate",
     "asyncio: marks tests as async (requires pytest-asyncio)",
+    "keep_default_paths: opts out of the autouse tmp_path re-routing in TUI conftest (use on tests that verify default '.' path behaviour)",
     "playwright: browser-based E2E tests (requires `playwright install <browser>` for chromium, firefox, or webkit; select with --browser=<name>; run with --override-ini='addopts=')",
 ]
 filterwarnings = [
@@ -446,6 +447,13 @@ filterwarnings = [
     "ignore::DeprecationWarning:google",
     "ignore::DeprecationWarning:importlib",
     "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
+    # FileBrowserTree.set_extension_filter calls Textual's DirectoryTree.reload(), which is an
+    # async coroutine.  In unit tests there is no running event loop, so the RuntimeError is
+    # caught in file_browser.py, but Python still garbage-collects the unawaited coroutine and
+    # emits this RuntimeWarning.  This is a Textual upstream design issue (reload() should
+    # guard against being called outside an event loop); suppress until resolved upstream.
+    # See: src/file_organizer/tui/file_browser.py :: FileBrowserTree.set_extension_filter
+    "ignore:coroutine 'DirectoryTree.*' was never awaited:RuntimeWarning",
 ]
 # pytest-benchmark settings (pass via CLI: --benchmark-min-rounds=3 --benchmark-max-time=30.0)
 # benchmark_ prefix keys are NOT supported as ini_options in pytest-benchmark 5.x

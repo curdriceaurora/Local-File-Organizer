@@ -249,6 +249,7 @@ class TestMethodologyView:
         assert "n" in keys  # None
         assert "m" in keys  # Migrate
 
+    @pytest.mark.keep_default_paths
     def test_initialization_with_default_directory(self) -> None:
         """Test MethodologyView initialization with default directory."""
         view = MethodologyView()
