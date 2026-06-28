@@ -146,3 +146,42 @@ def test_link_strategies_handling_skipped_conflicts(tmp_path: Path) -> None:
     sl_result = apply_symlink(source, destination, ConflictStrategy.SKIP)
     assert sl_result.skipped is True
     assert sl_result.reason == "exists"
+
+
+def test_copy_file_fsync_failure_unlinks_destination(tmp_path: Path) -> None:
+    """Tests that a failure in fsync_directory unlinks the created copy."""
+    source = tmp_path / "source.txt"
+    destination = tmp_path / "dest.txt"
+    source.write_text("payload", encoding="utf-8")
+
+    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+        with pytest.raises(OSError, match="fsync failed"):
+            copy_file(source, destination, ConflictStrategy.SKIP)
+
+    assert not destination.exists()
+
+
+def test_apply_hardlink_fsync_failure_unlinks_destination(tmp_path: Path) -> None:
+    """Tests that a failure in fsync_directory unlinks the created hardlink."""
+    source = tmp_path / "source.txt"
+    destination = tmp_path / "dest.txt"
+    source.write_text("payload", encoding="utf-8")
+
+    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+        with pytest.raises(OSError, match="fsync failed"):
+            apply_hardlink(source, destination, ConflictStrategy.SKIP)
+
+    assert not destination.exists()
+
+
+def test_apply_symlink_fsync_failure_unlinks_destination(tmp_path: Path) -> None:
+    """Tests that a failure in fsync_directory unlinks the created symlink."""
+    source = tmp_path / "source.txt"
+    destination = tmp_path / "dest.txt"
+    source.write_text("payload", encoding="utf-8")
+
+    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+        with pytest.raises(OSError, match="fsync failed"):
+            apply_symlink(source, destination, ConflictStrategy.SKIP)
+
+    assert not destination.exists()

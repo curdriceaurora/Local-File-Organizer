@@ -16,7 +16,7 @@ import time
 from collections.abc import Callable
 
 from .config import DaemonConfig
-from .pid import PidFileManager
+from .pid import PidFileManager, PidRecord
 from .scheduler import DaemonScheduler
 
 logger = logging.getLogger(__name__)
@@ -86,6 +86,7 @@ class DaemonService:
         self._files_processed: int = 0
         self._on_start_callback: Callable[[], None] | None = None
         self._on_stop_callback: Callable[[], None] | None = None
+        self._my_record: PidRecord | None = None
 
     def start(self) -> None:
         """Start the daemon in the foreground (blocking).
@@ -112,7 +113,7 @@ class DaemonService:
             # ``is_running`` can detect PID recycling after crash.
             pid_file = self.config.pid_file
             if pid_file is not None:
-                self._pid_manager.write_pid_record(pid_file)
+                self._my_record = self._pid_manager.write_pid_record(pid_file)
 
             # Install signal handlers (only in main thread)
             self._install_signal_handlers()
@@ -171,9 +172,9 @@ class DaemonService:
                     # Double-check that it hasn't been claimed in the meantime
                     current_record = self._pid_manager.read_pid_record(pid_file)
                     if current_record == record_before:
-                        self._pid_manager.remove_pid(pid_file)
+                        self._pid_manager.remove_pid(pid_file, expected_record=record_before)
                 try:
-                    self._pid_manager.claim_pid_file(pid_file)
+                    self._my_record = self._pid_manager.claim_pid_file(pid_file)
                 except FileExistsError as exc:
                     raise RuntimeError(
                         "Daemon is already starting or running; PID file was claimed "
@@ -201,7 +202,8 @@ class DaemonService:
                 self._thread = None
                 pid_file = self.config.pid_file
                 if pid_file is not None:
-                    self._pid_manager.remove_pid(pid_file)
+                    self._pid_manager.remove_pid(pid_file, expected_record=self._my_record)
+                    self._my_record = None
                 raise
 
         # Wait for the daemon to fully initialize.  _started_event is set by
@@ -446,7 +448,8 @@ class DaemonService:
         # Remove PID file
         pid_file = self.config.pid_file
         if pid_file is not None:
-            self._pid_manager.remove_pid(pid_file)
+            self._pid_manager.remove_pid(pid_file, expected_record=self._my_record)
+            self._my_record = None
 
         # Restore signal handlers
         self._restore_signal_handlers()

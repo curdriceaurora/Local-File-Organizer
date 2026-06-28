@@ -451,7 +451,26 @@ class OperationValidator:
         conflicts = []
         destination_path = operation.destination_path
 
-        if destination_path is None or not destination_path.is_symlink():
+        if destination_path is None:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(destination_path),
+                    description="Symlink has already been deleted or replaced",
+                    expected="Symlink exists",
+                    actual="Symlink not found",
+                )
+            )
+            return conflicts
+
+        try:
+            is_symlink = destination_path.is_symlink()
+        except (OSError, RuntimeError) as exc:
+            os_error = exc if isinstance(exc, OSError) else OSError(str(exc))
+            conflicts.append(self._path_inspection_conflict(destination_path, os_error))
+            return conflicts
+
+        if not is_symlink:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,

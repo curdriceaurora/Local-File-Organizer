@@ -113,20 +113,28 @@ class PidFileManager:
             logger.warning("Failed to read PID from %s: %s", pid_file, exc, exc_info=True)
             return None
 
-    def remove_pid(self, pid_file: Path) -> bool:
+    def remove_pid(self, pid_file: Path, expected_record: PidRecord | None = None) -> bool:
         """Remove a PID file.
 
         Args:
             pid_file: Path to the PID file to remove.
+            expected_record: If provided, only remove the PID file if its current on-disk
+                record matches expected_record (to avoid unlinking a file newly claimed by another process).
 
         Returns:
-            True if the file was removed, False if it did not exist.
+            True if the file was removed, False if it did not exist or record did not match.
         """
         pid_file = Path(pid_file)
 
         if not pid_file.exists():
             logger.debug("PID file does not exist: %s", pid_file)
             return False
+
+        if expected_record is not None:
+            current_record = self.read_pid_record(pid_file)
+            if current_record != expected_record:
+                logger.debug("PID file record changed; skipping removal: %s", pid_file)
+                return False
 
         try:
             pid_file.unlink()

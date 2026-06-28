@@ -77,7 +77,8 @@ def test_watch_rejects_non_positive_interval(tmp_path: Path) -> None:
 
 def test_path_traversal_absolute_destination(tmp_path: Path) -> None:
     executor = RuleExecutor(undo_manager=_manager(tmp_path))
-    rs = _rule(ActionType.COPY, "/absolute/path/escapes")
+    abs_dest = str(tmp_path.resolve() / "escapes")
+    rs = _rule(ActionType.COPY, abs_dest)
     source = tmp_path / "note.txt"
     source.write_text("hello", encoding="utf-8")
 

@@ -218,16 +218,57 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             await pilot.pause()
             assert app._current_view == "audio"
 
-            # Wait for background thread scanning to complete and UI updates to be scheduled/applied
-            await pilot.pause(0.5)
+            import asyncio
+
+            from file_organizer.tui.audio_view import (
+                AudioClassificationPanel,
+                AudioMetadataPanel,
+            )
 
             view = app.query_one("#view", AudioView)
+
+            # Wait for background thread scanning to complete and UI updates to be scheduled/applied
+            for _ in range(100):
+                if len(view._files) == 1:
+                    break
+                await asyncio.sleep(0.02)
+                await pilot.pause()
+            else:
+                pytest.fail("Timed out waiting for AudioView files to load")
+
             assert len(view._files) == 1
+
+            # Verify details are populated correctly in the panels
+            metadata_panel = view.query_one(AudioMetadataPanel)
+            classification_panel = view.query_one(AudioClassificationPanel)
+
+            assert "Test Song" in str(metadata_panel.renderable)
+            assert "Test Artist" in str(metadata_panel.renderable)
+            assert "music" in str(classification_panel.renderable)
 
             # Test pilot actions/navigation
             await pilot.press("j")
             await pilot.pause()
+            assert view._current_index == 0
+            assert "Test Song" in str(metadata_panel.renderable)
+
             await pilot.press("k")
             await pilot.pause()
+            assert view._current_index == 0
+            assert "Test Song" in str(metadata_panel.renderable)
+
+            # Press r to refresh/reload
             await pilot.press("r")
-            await pilot.pause()
+
+            # Wait for reload scanning to complete
+            for _ in range(100):
+                if len(view._files) == 1:
+                    break
+                await asyncio.sleep(0.02)
+                await pilot.pause()
+            else:
+                pytest.fail("Timed out waiting for AudioView files to reload")
+
+            assert len(view._files) == 1
+            assert view._current_index == 0
+            assert "Test Song" in str(metadata_panel.renderable)

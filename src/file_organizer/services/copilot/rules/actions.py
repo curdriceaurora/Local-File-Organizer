@@ -9,6 +9,7 @@ from pathlib import Path
 
 from file_organizer._compat import StrEnum
 from file_organizer.utils.atomic_io import fsync_directory
+from file_organizer.utils.safedir import SafeDir
 
 
 class ConflictStrategy(StrEnum):
@@ -64,18 +65,32 @@ def copy_file(source: Path, destination: Path, strategy: ConflictStrategy) -> Li
         return LinkResult(source=source, destination=resolved, skipped=True, reason="exists")
 
     try:
-        with os.fdopen(fd, "wb") as dst_file:
-            with open(source, "rb") as src_file:
+        with SafeDir.open_root(source.parent) as src_root:
+            src_fd = src_root.open_child(source.name, flags=os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            src_file = os.fdopen(src_fd, "rb", closefd=True)
+        except OSError:
+            os.close(src_fd)
+            raise
+
+        try:
+            with src_file, os.fdopen(fd, "wb") as dst_file:
                 shutil.copyfileobj(src_file, dst_file)
-        shutil.copystat(source, resolved)
+            shutil.copystat(source, resolved)
+            fsync_directory(resolved)
+        except Exception:
+            raise
     except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
         try:
             os.unlink(resolved)
         except OSError:
             pass
         raise
 
-    fsync_directory(resolved)
     return LinkResult(source=source, destination=resolved)
 
 
@@ -86,7 +101,14 @@ def apply_hardlink(source: Path, destination: Path, strategy: ConflictStrategy) 
         return LinkResult(source=source, destination=destination, skipped=True, reason="exists")
     resolved.parent.mkdir(parents=True, exist_ok=True)
     os.link(source, resolved)
-    fsync_directory(resolved)
+    try:
+        fsync_directory(resolved)
+    except Exception:
+        try:
+            os.unlink(resolved)
+        except OSError:
+            pass
+        raise
     return LinkResult(source=source, destination=resolved)
 
 
@@ -97,5 +119,12 @@ def apply_symlink(source: Path, destination: Path, strategy: ConflictStrategy) -
         return LinkResult(source=source, destination=destination, skipped=True, reason="exists")
     resolved.parent.mkdir(parents=True, exist_ok=True)
     resolved.symlink_to(source)
-    fsync_directory(resolved)
+    try:
+        fsync_directory(resolved)
+    except Exception:
+        try:
+            os.unlink(resolved)
+        except OSError:
+            pass
+        raise
     return LinkResult(source=source, destination=resolved)

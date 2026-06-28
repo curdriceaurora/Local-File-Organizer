@@ -13,8 +13,6 @@ import shutil
 import stat as stat_mod
 from pathlib import Path
 
-from loguru import logger as loguru_logger
-
 from ..history.models import Operation, OperationType
 from ..utils.atomic_io import fsync_directory
 from .models import RollbackResult
@@ -44,10 +42,9 @@ class RollbackExecutor:
         try:
             fsync_directory(path)
         except OSError as exc:
-            loguru_logger.opt(exception=exc).warning(
-                "Link mutation for operation {} succeeded, but directory fsync failed: {}",
-                operation_id,
-                exc,
+            std_log.warning(
+                f"Link mutation for operation {operation_id} succeeded, but directory fsync failed: {exc}",
+                exc_info=True,
             )
 
     def _durable_move(self, src: Path, dst: Path) -> None:
