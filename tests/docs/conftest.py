@@ -46,10 +46,9 @@ def mkdocs_config() -> dict:
 def all_doc_files(docs_dir: Path) -> list[Path]:
     """Return all markdown files under the docs directory.
 
-    Excludes docs/superpowers/ — internal AI-authored planning and specification
-    documents that contain partial code snippets and example content intended for
-    insertion into other files, not syntactically complete standalone Python or
-    navigable internal links.
+    Excludes docs/superpowers/ for now while the legacy agent-artifact cleanup
+    settles. The directory remains intentionally out of docs coverage because
+    its contents are not part of the public docs site.
     """
     return [f for f in docs_dir.rglob("*.md") if "superpowers" not in f.parts]
 

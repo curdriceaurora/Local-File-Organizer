@@ -3,9 +3,6 @@
 # and does not rely on this file. These entries exist so that running
 # `markdownlint-cli2 "**/*.md"` locally does not flag non-documentation files.
 
-# Internal CCPM framework files (not user-facing documentation)
-.claude/
-
 # Demo/sample content (illustrative files, not docs)
 demo_files/
 
