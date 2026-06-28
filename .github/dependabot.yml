@@ -36,7 +36,7 @@ updates:
       security:
         patterns:
           - "bcrypt"
-          - "python-jose"
+          - "pyjwt"
           - "cryptography"
 
   - package-ecosystem: "github-actions"

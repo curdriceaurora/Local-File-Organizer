@@ -65,11 +65,9 @@ dependencies = [
     "websockets~=12.0",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
-    # Security: ecdsa is transitive via python-jose. Pin >= 0.19.2 for CVE-2026-33936.
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
-    "ecdsa>=0.19.2",
     "Pygments>=2.20.0",
-    "python-jose~=3.3",
+    "pyjwt~=2.8",
     "bcrypt>=4.0.0,<6.0.0",
     # Database
     "sqlalchemy~=2.0",
@@ -114,11 +112,9 @@ web = [
     "websockets~=12.0",
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
-    # Security: ecdsa is transitive via python-jose. Pin >= 0.19.2 for CVE-2026-33936.
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
-    "ecdsa>=0.19.2",
     "Pygments>=2.20.0",
-    "python-jose~=3.3",
+    "pyjwt~=2.8",
     "bcrypt>=4.0.0,<6.0.0",
 
     "redis~=8.0",
@@ -504,7 +500,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "python-pptx" = "pptx"
 "beautifulsoup4" = "bs4"
 "pyyaml" = "yaml"
-"python-jose" = "jose"
+"pyjwt" = "jwt"
 "scikit-learn" = "sklearn"
 "opencv-python" = "cv2"
 "pydantic-settings" = "pydantic_settings"
@@ -543,8 +539,7 @@ DEP002 = [
     "PyQt6",
     # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
     "netCDF4",
-    # ecdsa: transitive via python-jose; pinned for CVE-2026-33936
-    "ecdsa",
+
     # Pygments: transitive via rich/textual; pinned for CVE-2026-4539
     "Pygments",
     # pywebview: desktop GUI wrapper; import name is 'webview' (mapped above); used in desktop/app.py

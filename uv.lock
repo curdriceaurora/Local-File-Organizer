@@ -1217,18 +1217,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ecdsa"
-version = "0.19.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/25/ca/8de7744cb3bc966c85430ca2d0fcaeea872507c6a4cf6e007f7fe269ed9d/ecdsa-0.19.2.tar.gz", hash = "sha256:62635b0ac1ca2e027f82122b5b81cb706edc38cd91c63dda28e4f3455a2bf930", size = 202432, upload-time = "2026-03-26T09:58:17.675Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/79/119091c98e2bf49e24ed9f3ae69f816d715d2904aefa6a2baa039a2ba0b0/ecdsa-0.19.2-py2.py3-none-any.whl", hash = "sha256:840f5dc5e375c68f36c1a7a5b9caad28f95daa65185c9253c0c08dd952bb7399", size = 150818, upload-time = "2026-03-26T09:58:15.808Z" },
-]
-
-[[package]]
 name = "email-validator"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2134,7 +2122,6 @@ dependencies = [
     { name = "bcrypt" },
     { name = "click" },
     { name = "defusedxml" },
-    { name = "ecdsa" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -2149,8 +2136,8 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pygments" },
+    { name = "pyjwt" },
     { name = "python-dotenv" },
-    { name = "python-jose" },
     { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "redis" },
@@ -2178,7 +2165,6 @@ all = [
     { name = "deptry" },
     { name = "diff-cover" },
     { name = "ebooklib" },
-    { name = "ecdsa" },
     { name = "ezdxf" },
     { name = "faker" },
     { name = "fastapi" },
@@ -2204,6 +2190,7 @@ all = [
     { name = "pydub" },
     { name = "pygments" },
     { name = "pyinstaller" },
+    { name = "pyjwt" },
     { name = "pymarkdownlnt" },
     { name = "pymupdf" },
     { name = "pypdf" },
@@ -2218,7 +2205,6 @@ all = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "python-docx" },
-    { name = "python-jose" },
     { name = "python-multipart" },
     { name = "python-pptx" },
     { name = "rank-bm25" },
@@ -2334,12 +2320,11 @@ video = [
 ]
 web = [
     { name = "bcrypt" },
-    { name = "ecdsa" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "pygments" },
-    { name = "python-jose" },
+    { name = "pyjwt" },
     { name = "python-multipart" },
     { name = "redis" },
     { name = "uvicorn", extra = ["standard"] },
@@ -2363,8 +2348,6 @@ requires-dist = [
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.16.0" },
     { name = "diff-cover", marker = "extra == 'dev'", specifier = "~=7.0" },
     { name = "ebooklib", marker = "extra == 'parsers'", specifier = ">=0.20,<1" },
-    { name = "ecdsa", specifier = ">=0.19.2" },
-    { name = "ecdsa", marker = "extra == 'web'", specifier = ">=0.19.2" },
     { name = "email-validator", specifier = "~=2.1" },
     { name = "ezdxf", marker = "extra == 'cad'", specifier = "~=1.1" },
     { name = "faker", marker = "extra == 'dev'", specifier = "~=40.12" },
@@ -2408,6 +2391,8 @@ requires-dist = [
     { name = "pygments", specifier = ">=2.20.0" },
     { name = "pygments", marker = "extra == 'web'", specifier = ">=2.20.0" },
     { name = "pyinstaller", marker = "extra == 'build'", specifier = "~=6.0" },
+    { name = "pyjwt", specifier = "~=2.8" },
+    { name = "pyjwt", marker = "extra == 'web'", specifier = "~=2.8" },
     { name = "pymarkdownlnt", marker = "extra == 'dev'", specifier = ">=0.9.25" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = "~=10.7" },
     { name = "pymupdf", marker = "extra == 'parsers'", specifier = "~=1.23" },
@@ -2424,8 +2409,6 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = "~=3.5" },
     { name = "python-docx", marker = "extra == 'parsers'", specifier = "~=1.0" },
     { name = "python-dotenv", specifier = "~=1.0" },
-    { name = "python-jose", specifier = "~=3.3" },
-    { name = "python-jose", marker = "extra == 'web'", specifier = "~=3.3" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "python-multipart", marker = "extra == 'web'", specifier = ">=0.0.9" },
     { name = "python-pptx", marker = "extra == 'parsers'", specifier = ">=0.6.0" },
@@ -3667,15 +3650,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyasn1"
-version = "0.6.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5c/5f/6583902b6f79b399c9c40674ac384fd9cd77805f9e6205075f828ef11fb2/pyasn1-0.6.3.tar.gz", hash = "sha256:697a8ecd6d98891189184ca1fa05d1bb00e2f84b5977c481452050549c8a72cf", size = 148685, upload-time = "2026-03-17T01:06:53.382Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/a0/7d793dce3fa811fe047d6ae2431c672364b462850c6235ae306c0efd025f/pyasn1-0.6.3-py3-none-any.whl", hash = "sha256:a80184d120f0864a52a073acc6fc642847d0be408e7c7252f31390c0f4eadcde", size = 83997, upload-time = "2026-03-17T01:06:52.036Z" },
-]
-
-[[package]]
 name = "pybcj"
 version = "1.0.7"
 source = { registry = "https://pypi.org/simple" }
@@ -4073,6 +4047,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyjwt"
+version = "2.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/81/58d0ac84e1ef3a3843791d6954d94c0b33d526c75eeb1efbce9d0a4c4077/pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423", size = 107515, upload-time = "2026-05-21T19:54:36.618Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/5e/ecf12fdb62546d64385c158514e9b2b671f7832108ef2ecd2020ce0af2d1/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728", size = 31274, upload-time = "2026-05-21T19:54:35.362Z" },
+]
+
+[[package]]
 name = "pymarkdownlnt"
 version = "0.9.35"
 source = { registry = "https://pypi.org/simple" }
@@ -4350,7 +4333,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "9.0.3"
+version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -4359,21 +4342,21 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
 ]
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.3"
+version = "0.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/27/f036ec4bcbfd056c54572d7169ba3dbb54e7181f02f21caadd3aecb9cf5b/pytest-asyncio-0.23.3.tar.gz", hash = "sha256:af313ce900a62fbe2b1aed18e37ad757f1ef9940c6b6a88e2954de38d6b1fb9f", size = 44841, upload-time = "2024-01-01T14:03:58.77Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/c4/453c52c659521066969523e87d85d54139bbd17b78f09532fb8eb8cdb58e/pytest_asyncio-0.26.0.tar.gz", hash = "sha256:c4df2a697648241ff39e7f0e4a73050b03f123f760673956cf0d72a4990e312f", size = 54156, upload-time = "2025-03-25T06:22:28.883Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/d6/568f370599c794cc97e2f36293e06ee9bd5bd3a2d2eb62525671425d266b/pytest_asyncio-0.23.3-py3-none-any.whl", hash = "sha256:37a9d912e8338ee7b4a3e917381d1c95bfc8682048cb0fbc35baba316ec1faba", size = 17383, upload-time = "2024-01-01T14:03:56.293Z" },
+    { url = "https://files.pythonhosted.org/packages/20/7f/338843f449ace853647ace35870874f69a764d251872ed1b4de9f234822c/pytest_asyncio-0.26.0-py3-none-any.whl", hash = "sha256:7b51ed894f4fbea1340262bdae5135797ebbe21d8638978e35d31c6d19f72fb0", size = 19694, upload-time = "2025-03-25T06:22:27.807Z" },
 ]
 
 [[package]]
@@ -4511,20 +4494,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
-]
-
-[[package]]
-name = "python-jose"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ecdsa" },
-    { name = "pyasn1" },
-    { name = "rsa" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/77/3a1c9039db7124eb039772b935f2244fbb73fc8ee65b9acf2375da1c07bf/python_jose-3.5.0.tar.gz", hash = "sha256:fb4eaa44dbeb1c26dcc69e4bd7ec54a1cb8dd64d3b4d81ef08d90ff453f2b01b", size = 92726, upload-time = "2025-05-28T17:31:54.288Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/c3/0bd11992072e6a1c513b16500a5d07f91a24017c5909b02c72c62d7ad024/python_jose-3.5.0-py2.py3-none-any.whl", hash = "sha256:abd1202f23d34dfad2c3d28cb8617b90acf34132c7afd60abd0b0b7d3cb55771", size = 34624, upload-time = "2025-05-28T17:31:52.802Z" },
 ]
 
 [[package]]
@@ -4875,18 +4844,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ab/3a/0316b28d0761c6734d6bc14e770d85506c986c85ffb239e688eeaab2c2bc/rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098", size = 223149, upload-time = "2024-11-01T16:43:57.873Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/19/71/39c7c0d87f8d4e6c020a393182060eaefeeae6c01dab6a84ec346f2567df/rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90", size = 242424, upload-time = "2024-11-01T16:43:55.817Z" },
-]
-
-[[package]]
-name = "rsa"
-version = "4.9.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyasn1" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/da/8a/22b7beea3ee0d44b1916c0c1cb0ee3af23b700b6da9f04991899d0c555d4/rsa-4.9.1.tar.gz", hash = "sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75", size = 29034, upload-time = "2025-04-16T09:51:18.218Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl", hash = "sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762", size = 34696, upload-time = "2025-04-16T09:51:17.142Z" },
 ]
 
 [[package]]

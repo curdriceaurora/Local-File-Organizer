@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import jwt
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
 
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User
