@@ -12,6 +12,7 @@ Violations:
 Usage:
     python .claude/scripts/check-integration-floors.py [--json PATH] [--pyproject PATH]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,6 +23,7 @@ from pathlib import Path
 
 
 def compute_combined(summary: dict) -> float | None:
+    """Compute combined statement and branch coverage percentage."""
     total = summary.get("num_statements", 0) + summary.get("num_branches", 0)
     if total == 0:
         return None
@@ -30,6 +32,7 @@ def compute_combined(summary: dict) -> float | None:
 
 
 def main() -> None:
+    """Run the coverage floor check validation."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", default=".coverage-integration.json", dest="json_path")
     parser.add_argument("--pyproject", default="pyproject.toml")
@@ -43,7 +46,10 @@ def main() -> None:
             coverage_data = json.load(f)
     except FileNotFoundError:
         print(f"ERROR: coverage JSON not found: {json_path}", file=sys.stderr)
-        print("Run: bash .claude/scripts/measure-integration-coverage.sh --cov-report=json:.coverage-integration.json", file=sys.stderr)
+        print(
+            "Run: bash .claude/scripts/measure-integration-coverage.sh --cov-report=json:.coverage-integration.json",
+            file=sys.stderr,
+        )
         sys.exit(1)
     except json.JSONDecodeError as exc:
         print(f"ERROR: malformed coverage JSON {json_path}: {exc}", file=sys.stderr)
@@ -57,22 +63,19 @@ def main() -> None:
         sys.exit(1)
 
     floors: dict[str, int] = (
-        pyproject.get("tool", {})
-        .get("coverage", {})
-        .get("floors", {})
-        .get("integration", {})
+        pyproject.get("tool", {}).get("coverage", {}).get("floors", {}).get("integration", {})
     )
 
     # Normalize JSON paths
     json_files: dict[str, dict] = {
-        str(Path(p).as_posix()): info
-        for p, info in coverage_data["files"].items()
+        str(Path(p).as_posix()): info for p, info in coverage_data["files"].items()
     }
 
     violations: list[str] = []
 
-    # Check 1: below floor + Check 2: missing entry
     for norm, info in json_files.items():
+        if not norm.startswith("src/"):
+            continue
         combined = compute_combined(info["summary"])
         if combined is None:
             continue
@@ -85,9 +88,7 @@ def main() -> None:
         else:
             floor = floors[norm]
             if floor > 0 and combined < floor:
-                violations.append(
-                    f"BELOW FLOOR: {norm}: {combined:.1f}% < {floor}% floor"
-                )
+                violations.append(f"BELOW FLOOR: {norm}: {combined:.1f}% < {floor}% floor")
 
     # Check 3: stale entries
     for key in floors:

@@ -8,8 +8,6 @@ and execution logic.
 from __future__ import annotations
 
 import logging
-import sys
-from pathlib import Path
 
 from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.viewer import HistoryViewer
@@ -184,86 +182,3 @@ def history_command(
     finally:
         if "viewer" in locals():
             viewer.close()
-
-
-def main_undo() -> None:
-    """Main entry point for undo command."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Undo file operations")
-    parser.add_argument("--operation-id", type=int, help="Specific operation ID to undo")
-    parser.add_argument("--transaction-id", help="Transaction ID to undo")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without executing")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-
-    args = parser.parse_args()
-
-    sys.exit(
-        undo_command(
-            operation_id=args.operation_id,
-            transaction_id=args.transaction_id,
-            dry_run=args.dry_run,
-            verbose=args.verbose,
-        )
-    )
-
-
-def main_redo() -> None:
-    """Main entry point for redo command."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Redo file operations")
-    parser.add_argument("--operation-id", type=int, help="Specific operation ID to redo")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without executing")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-
-    args = parser.parse_args()
-
-    sys.exit(
-        redo_command(operation_id=args.operation_id, dry_run=args.dry_run, verbose=args.verbose)
-    )
-
-
-def main_history() -> None:
-    """Main entry point for history command."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="View operation history")
-    parser.add_argument("--limit", type=int, default=10, help="Maximum number of operations")
-    parser.add_argument("--type", dest="operation_type", help="Filter by operation type")
-    parser.add_argument("--status", help="Filter by status")
-    parser.add_argument("--since", help="Filter by start date")
-    parser.add_argument("--until", help="Filter by end date")
-    parser.add_argument("--search", help="Search by path")
-    parser.add_argument("--transaction", help="Show specific transaction")
-    parser.add_argument("--operation-id", type=int, help="Show specific operation")
-    parser.add_argument("--stats", action="store_true", help="Show statistics")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-
-    args = parser.parse_args()
-
-    sys.exit(
-        history_command(
-            limit=args.limit,
-            operation_type=args.operation_type,
-            status=args.status,
-            since=args.since,
-            until=args.until,
-            search=args.search,
-            transaction=args.transaction,
-            operation_id=args.operation_id,
-            stats=args.stats,
-            verbose=args.verbose,
-        )
-    )
-
-
-if __name__ == "__main__":
-    # Determine which command based on script name
-    script_name = Path(sys.argv[0]).stem
-    if "undo" in script_name:
-        main_undo()
-    elif "redo" in script_name:
-        main_redo()
-    else:
-        main_history()

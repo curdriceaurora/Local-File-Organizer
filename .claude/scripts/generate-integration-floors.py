@@ -12,6 +12,7 @@ Rules:
 - Sorts keys alphabetically for deterministic diffs.
 - Flags stale entries (in table but absent from JSON) to stderr -- does not remove them.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,6 +23,7 @@ from pathlib import Path
 
 
 def compute_floor(summary: dict) -> int:
+    """Compute floor percentage for a file."""
     total = summary.get("num_statements", 0) + summary.get("num_branches", 0)
     if total == 0:
         return 0
@@ -35,13 +37,14 @@ def _find_section_bounds(text: str, header: str) -> tuple[int, int] | None:
     if header not in text:
         return None
     start = text.index(header)
-    rest = text[start + len(header):]
+    rest = text[start + len(header) :]
     next_section = rest.find("\n[")
     end = start + len(header) + next_section + 1 if next_section != -1 else len(text)
     return start, end
 
 
 def main() -> None:
+    """Run the integration floor generation process."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", default=".coverage-integration.json", dest="json_path")
     parser.add_argument("--pyproject", default="pyproject.toml")
@@ -56,7 +59,10 @@ def main() -> None:
             coverage_data = json.load(f)
     except FileNotFoundError:
         print(f"ERROR: coverage JSON not found: {json_path}", file=sys.stderr)
-        print("Run: bash .claude/scripts/measure-integration-coverage.sh --cov-report=json:.coverage-integration.json", file=sys.stderr)
+        print(
+            "Run: bash .claude/scripts/measure-integration-coverage.sh --cov-report=json:.coverage-integration.json",
+            file=sys.stderr,
+        )
         sys.exit(1)
     except json.JSONDecodeError as exc:
         print(f"ERROR: malformed coverage JSON {json_path}: {exc}", file=sys.stderr)
@@ -70,10 +76,7 @@ def main() -> None:
         sys.exit(1)
 
     existing: dict[str, int] = (
-        pyproject.get("tool", {})
-        .get("coverage", {})
-        .get("floors", {})
-        .get("integration", {})
+        pyproject.get("tool", {}).get("coverage", {}).get("floors", {}).get("integration", {})
     )
 
     new_floors: dict[str, int] = {}
@@ -81,6 +84,8 @@ def main() -> None:
 
     for path, info in coverage_data["files"].items():
         norm = str(Path(path).as_posix())
+        if not norm.startswith("src/"):
+            continue
         computed = compute_floor(info["summary"])
         current = existing.get(norm)
         if current is None:

@@ -28,6 +28,11 @@ LAZY_COMMANDS: dict[str, tuple[str, str, str]] = {
         "api_app",
         "Remote API operations via the official Python client.",
     ),
+    "api-keys": (
+        "file_organizer.cli.api_keys",
+        "api_keys_app",
+        "Manage API keys locally.",
+    ),
     "marketplace": (
         "file_organizer.cli.marketplace",
         "marketplace_app",
