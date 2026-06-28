@@ -18,6 +18,7 @@ from file_organizer.tui.audio_view import (
     AudioView,
     _truncate,
 )
+
 pytestmark = pytest.mark.unit
 
 
