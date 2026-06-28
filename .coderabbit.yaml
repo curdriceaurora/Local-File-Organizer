@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 # CodeRabbit Configuration
-# Excludes internal Claude Code configuration from review
 
 language: en
 
@@ -11,7 +10,6 @@ reviews:
     enabled: true
   review_status: true
   path_filters:
-    - "!.claude/**"
     - "!.vscode/**"
     - "!.idea/**"
     - "!.DS_Store"

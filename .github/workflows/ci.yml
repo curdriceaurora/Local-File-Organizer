@@ -3,24 +3,8 @@ name: CI
 on:
   push:
     branches: [main, "epic/**"]
-    paths-ignore:
-      - ".claude/agents/**"
-      - ".claude/commands/**"
-      - ".claude/context/**"
-      - ".claude/epics/**"
-      - ".claude/prds/**"
-      - ".claude/rules/**"
-      - ".claude/README.md"
   pull_request:
     branches: [main, "epic/**"]
-    paths-ignore:
-      - ".claude/agents/**"
-      - ".claude/commands/**"
-      - ".claude/context/**"
-      - ".claude/epics/**"
-      - ".claude/prds/**"
-      - ".claude/rules/**"
-      - ".claude/README.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -55,7 +55,6 @@ LICENSE
 
 # CI/CD configuration
 .github/
-.claude/
 .gitlab-ci.yml
 
 # OS files
