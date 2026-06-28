@@ -79,5 +79,3 @@ def tui_completed_setup(
             orig_org_init(self, input_dir, output_dir, *args, **kwargs)
 
         monkeypatch.setattr(OrganizationPreviewView, "__init__", patched_org_init)
-
-

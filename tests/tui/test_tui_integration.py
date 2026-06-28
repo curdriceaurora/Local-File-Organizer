@@ -208,6 +208,7 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
         async with app.run_test() as pilot:
             await app.action_switch_view("audio")
             import asyncio
+
             await asyncio.sleep(0.1)
             assert app._current_view == "audio"
 
