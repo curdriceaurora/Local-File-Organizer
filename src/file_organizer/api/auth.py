@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
 
 from file_organizer.api.config import ApiSettings
 
@@ -162,7 +162,7 @@ def decode_token(token: str, settings: ApiSettings) -> dict[str, Any]:
             algorithms=[settings.auth_jwt_algorithm],
         )
         return result
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise TokenError("Invalid token") from exc
 
 
