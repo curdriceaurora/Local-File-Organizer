@@ -210,13 +210,12 @@ repos:
         files: ^(src/|pyproject\.toml)
 
       # ----------------------------------------------------------------
-      # CI-rail framework (WP-0.1, #1222) — advisory runner.
-      # Runs the rails declared in scripts/ci/rails.toml. The registry is empty
-      # until WP-6.x adds rails, so this is a no-op (exit 0) today. Advisory
-      # rails warn but never block; enforce rails block.
+      # CI-rail framework (WP-0.1, #1222) — advisory/enforced runner.
+      # Runs the rails declared in scripts/ci/rails.toml. Advisory rails warn
+      # but never block; enforce rails block.
       # ----------------------------------------------------------------
       - id: ci-rails
-        name: ci rails (advisory framework)
+        name: ci rails
         entry: python scripts/ci/ci_rails.py
         language: system
         always_run: true
