@@ -14,6 +14,7 @@ from loguru import logger
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.path_migration import resolve_legacy_path
 from file_organizer.services.copilot.rules.models import Rule, RuleSet
+from file_organizer.utils.atomic_write import atomic_write_text
 
 _DEFAULT_RULES_DIR = resolve_legacy_path(
     get_config_dir() / "rules",
@@ -96,7 +97,7 @@ class RuleManager:
             default_flow_style=False,
             sort_keys=False,
         )
-        path.write_text(content, encoding="utf-8")
+        atomic_write_text(path, content)
         logger.info("Saved rule set '{}' to {}", rule_set.name, path)
         return path
 

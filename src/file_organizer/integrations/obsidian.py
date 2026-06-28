@@ -15,6 +15,7 @@ from file_organizer.integrations.base import (
     IntegrationStatus,
     IntegrationType,
 )
+from file_organizer.utils.atomic_write import atomic_write_text
 
 
 class ObsidianIntegration(Integration):
@@ -97,9 +98,7 @@ class ObsidianIntegration(Integration):
         shutil.copy2(source, destination)  # noqa: safedir-required  # Obsidian integration — source/destination validated at integration boundary
 
         note_dir.mkdir(parents=True, exist_ok=True)
-        note_path.write_text(
-            self._build_note_content(source, destination, metadata), encoding="utf-8"
-        )
+        atomic_write_text(note_path, self._build_note_content(source, destination, metadata))
         return True
 
     async def get_status(self) -> IntegrationStatus:

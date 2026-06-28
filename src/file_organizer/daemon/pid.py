@@ -38,6 +38,8 @@ from pathlib import Path
 
 import psutil
 
+from file_organizer.utils.atomic_write import atomic_write_text
+
 logger = logging.getLogger(__name__)
 
 # Tolerance for matching create_time. psutil typically returns
@@ -87,7 +89,7 @@ class PidFileManager:
         pid = pid if pid is not None else os.getpid()
         pid_file = Path(pid_file)
         pid_file.parent.mkdir(parents=True, exist_ok=True)
-        pid_file.write_text(str(pid), encoding="utf-8")
+        atomic_write_text(pid_file, str(pid))
 
     def read_pid(self, pid_file: Path) -> int | None:
         """Read the process ID from a PID file.
