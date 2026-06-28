@@ -236,9 +236,8 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             classification_panel = view.query_one(AudioClassificationPanel)
 
             for _ in range(100):
-                if (
-                    "Test Song" in str(metadata_panel.renderable)
-                    and "music" in str(classification_panel.renderable)
+                if "Test Song" in str(metadata_panel.renderable) and "music" in str(
+                    classification_panel.renderable
                 ):
                     break
                 await asyncio.sleep(0.05)
@@ -273,9 +272,8 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
 
             # Wait for UI panels to reflect reloaded state.
             for _ in range(100):
-                if (
-                    "Test Song" in str(metadata_panel.renderable)
-                    and "music" in str(classification_panel.renderable)
+                if "Test Song" in str(metadata_panel.renderable) and "music" in str(
+                    classification_panel.renderable
                 ):
                     break
                 await asyncio.sleep(0.05)
