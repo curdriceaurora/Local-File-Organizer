@@ -146,14 +146,14 @@ artifact, not the x86_64 one GitHub ships. Use for test validation, not release 
 
 ## Phase 4 — Fix branch protection (do this or merges block forever)
 
-`main-branch-protection.md` lists required status checks. If hosted runners stop
+GitHub branch protection lists the required status checks. If hosted runners stop
 reporting, those checks never go green and **every merge is blocked**. Choose:
 
 - **If you self-host** (Phases 1–3 via self-hosted runners): checks still report —
   leave protection as is.
 - **If you gate purely locally**: remove the required-status-check rule and rely on
-  the `pre-push` hook + `make ci` as the gate. Update `main-branch-protection.md`
-  to match reality.
+  the `pre-push` hook + `make ci` as the gate. Update the repository's branch
+  protection settings to match reality.
 
 ---
 
