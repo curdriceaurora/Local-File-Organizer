@@ -491,7 +491,10 @@ def recover(
 
     if journal is not None:
         journal = resolve_cli_path(journal, must_exist=True, must_be_dir=False)
-
+        if not journal.is_file():
+            raise typer.BadParameter(
+                f"Journal path is not a regular file: {journal!s}"
+            )
     code = _recover(journal=journal, verbose=_merge_flag(verbose, _get_state().verbose))
     raise typer.Exit(code=code if code is not None else 1)
 
