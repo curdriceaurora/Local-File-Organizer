@@ -15,42 +15,17 @@ backstop that runs the full-scan path on every CI run.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import pytest
 
+from scripts.ci.guardrails import check_predicate_negative_coverage
+
 pytestmark = pytest.mark.ci
-
-_SCRIPT = (
-    Path(__file__).resolve().parents[2]
-    / "scripts"
-    / "ci"
-    / "guardrails"
-    / "check_predicate_negative_coverage.py"
-)
-
-
-def _load_checker():
-    """Load the shared hook script as a module; fail loudly if missing or malformed."""
-    spec = importlib.util.spec_from_file_location("check_predicate_negative_coverage", _SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load predicate coverage script — file not found or unreadable: {_SCRIPT}"
-        )
-    mod = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    except (SyntaxError, Exception) as exc:
-        raise RuntimeError(f"Failed to load predicate coverage script {_SCRIPT}: {exc}") from exc
-    return mod
 
 
 @pytest.mark.ci
 def test_all_predicates_have_negative_cases() -> None:
     """Every predicate in review_regressions/ must have a negative test case."""
-    checker = _load_checker()
-    missing = checker.check()
+    missing = check_predicate_negative_coverage.check()
     assert not missing, (
         "T10: These predicates are missing negative test cases\n"
         "(add `assert not <predicate_name>(...)` to the paired test file):\n"
