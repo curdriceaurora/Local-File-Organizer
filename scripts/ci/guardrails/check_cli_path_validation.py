@@ -41,6 +41,23 @@ def _is_cli_command(node: ast.FunctionDef) -> bool:
     return False
 
 
+def _annotation_type_expr(annotation: ast.expr) -> ast.expr:
+    """Return the declared type expr for annotations, unwrapping Annotated[T, ...]."""
+    if not isinstance(annotation, ast.Subscript):
+        return annotation
+
+    value = annotation.value
+    is_annotated = (isinstance(value, ast.Name) and value.id == "Annotated") or (
+        isinstance(value, ast.Attribute) and value.attr == "Annotated"
+    )
+    if not is_annotated:
+        return annotation
+
+    if isinstance(annotation.slice, ast.Tuple) and annotation.slice.elts:
+        return annotation.slice.elts[0]
+    return annotation
+
+
 class PathTypeChecker(ast.NodeVisitor):
     """Visitor to check if type annotation AST uses Path."""
 
@@ -84,7 +101,7 @@ class CliPathValidationVisitor(ast.NodeVisitor):
             # Check annotation (e.g., Path, Path | None, Optional[Path])
             if arg.annotation:
                 checker = PathTypeChecker()
-                checker.visit(arg.annotation)
+                checker.visit(_annotation_type_expr(arg.annotation))
                 if checker.has_path:
                     is_path = True
 
@@ -133,7 +150,12 @@ class CliPathValidationVisitor(ast.NodeVisitor):
                 line_content = self.lines[line_idx] if 0 <= line_idx < len(self.lines) else ""
 
                 # Check for noqa override
-                if "noqa: cli-path-validation" in line_content or "noqa" in line_content:
+                line_content_lower = line_content.lower()
+                if (
+                    "copilot: wontfix" in line_content_lower
+                    or "noqa: cli-path-validation" in line_content_lower
+                    or "noqa" in line_content_lower
+                ):
                     continue
 
                 self.violations.append(
@@ -189,7 +211,8 @@ def main() -> int:
         for file_path, lineno, msg, line in all_violations:
             print(f"  {file_path}:{lineno}: {msg} -> `{line}`", file=sys.stderr)
         print(
-            "\nFix: Wrap the CLI Path argument in resolve_cli_path() or add '# noqa: cli-path-validation' if exempt.",
+            "\nFix: Wrap the CLI Path argument in resolve_cli_path() or add "
+            "'# copilot: wontfix' (or '# noqa: cli-path-validation') if exempt.",
             file=sys.stderr,
         )
         return 1

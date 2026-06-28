@@ -40,6 +40,8 @@ def generate_key(
 
     # Resolve output path
     resolved_output = resolve_cli_path(output, must_exist=False, must_be_dir=False)
+    if resolved_output.exists() and not resolved_output.is_file():
+        raise typer.BadParameter(f"Output path is not a regular file: {resolved_output!s}")
     api_key = generate_api_key(prefix=prefix)
     _write_key(resolved_output, api_key)
 

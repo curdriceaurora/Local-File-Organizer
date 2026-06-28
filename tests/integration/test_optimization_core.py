@@ -252,7 +252,7 @@ class TestMemoryProfiler:
         with (
             patch("builtins.open", side_effect=FileNotFoundError),
             patch("sys.platform", "linux"),
-            patch("resource.getrusage", side_effect=ImportError),
+            patch.dict(sys.modules, {"resource": None}),
         ):
             rss = MemoryProfiler._get_rss()
             assert rss == 0
@@ -299,6 +299,24 @@ class TestMemoryProfiler:
             assert rss == 5000 * 1024
             assert vms == 0
 
+    def test_get_rss_vms_linux_missing_vmrss_keeps_vms(self) -> None:
+        """Verify VmSize parse is preserved while RSS falls back if VmRSS is absent."""
+        from unittest.mock import mock_open
+
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 5000
+        mock_data = "VmSize:     7000 kB\n"
+        with (
+            patch("builtins.open", mock_open(read_data=mock_data)),
+            patch("sys.platform", "linux"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 5000 * 1024
+            assert vms == 7000 * 1024
+
     def test_get_rss_vms_resource_import_error(self) -> None:
         """Verify that _get_rss_vms returns (0, 0) if both proc status and resource modules fail."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -306,7 +324,7 @@ class TestMemoryProfiler:
         with (
             patch("builtins.open", side_effect=FileNotFoundError),
             patch("sys.platform", "linux"),
-            patch("resource.getrusage", side_effect=ImportError),
+            patch.dict(sys.modules, {"resource": None}),
         ):
             rss, vms = MemoryProfiler._get_rss_vms()
             assert rss == 0

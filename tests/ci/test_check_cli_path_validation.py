@@ -71,6 +71,21 @@ def run(path: Annotated[str, typer.Argument(help="Path to inspect.")] = ".") -> 
     assert len(violations) == 0
 
 
+def test_ignores_path_references_in_annotated_metadata(tmp_path: Path) -> None:
+    """Verify Annotated metadata references to Path do not count as Path-typed params."""
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+@app.command()
+def run(path: Annotated[str, typer.Option(path_type=Path)] = ".") -> None:
+    pass
+""",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 0
+
+
 def test_flags_unvalidated_doctor_command(tmp_path: Path) -> None:
     """Verify that 'doctor' functions are treated as CLI command entrypoints even without decorators."""
     src = tmp_path / "app.py"
@@ -87,12 +102,12 @@ def doctor(path: Path) -> None:
 
 
 def test_allows_noqa_override(tmp_path: Path) -> None:
-    """Verify that inline # noqa: cli-path-validation overrides suppress warnings."""
+    """Verify that inline suppression markers can exempt intentional violations."""
     src = tmp_path / "app.py"
     src.write_text(
         """
 @app.command()
-def run(directory: Path) -> None:  # noqa: cli-path-validation
+def run(directory: Path) -> None:  # copilot: wontfix
     pass
 """,
         encoding="utf-8",
