@@ -285,6 +285,28 @@ class TestLoginCommand:
         payload = json.loads(token_file.read_text())
         assert payload["access_token"] == "saved-token"
 
+    def test_login_save_token_rejects_non_file_path(self, tmp_path: Path) -> None:
+        """--save-token fails when the destination exists as a directory."""
+        token_dir = tmp_path / "tokens-dir"
+        token_dir.mkdir()
+        client = _make_mock_client(login=_token_response())
+        with _patch_build_client(client):
+            result = runner.invoke(
+                api_app,
+                [
+                    "login",
+                    "--username",
+                    "alice",
+                    "--password",
+                    "secret",
+                    "--save-token",
+                    str(token_dir),
+                ],
+            )
+
+        assert result.exit_code == 2
+        assert "Token output path is not a regular file" in result.output
+
     def test_login_client_error_exits_1(self) -> None:
         """ClientError during login exits with code 1."""
         from file_organizer.client.exceptions import ClientError

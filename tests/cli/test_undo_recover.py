@@ -309,6 +309,19 @@ class TestRecoverCommand:
             f"observed sweep calls: {sweep_calls}"
         )
 
+    def test_recover_rejects_non_file_journal_override(
+        self, tmp_path: Path, runner: CliRunner
+    ) -> None:
+        """--journal must point to an existing regular file, not a directory."""
+        from file_organizer.cli.main import app
+
+        journal_dir = tmp_path / "journal-dir"
+        journal_dir.mkdir()
+
+        result = runner.invoke(app, ["recover", "--journal", str(journal_dir)])
+        assert result.exit_code == 2, result.output
+        assert "Journal path is not a regular file" in result.output
+
     def test_recover_surfaces_warning_drops(
         self, tmp_path: Path, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
     ) -> None:
