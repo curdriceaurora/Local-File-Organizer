@@ -105,6 +105,9 @@ def login(
         tokens = client.login(username, password)
         payload = tokens.model_dump()
         if save_to is not None:
+            from file_organizer.cli.path_validation import resolve_cli_path
+
+            save_to = resolve_cli_path(save_to, must_exist=False, must_be_dir=False)
             save_to.parent.mkdir(parents=True, exist_ok=True)
             save_to.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Saved tokens to[/green] {save_to}")

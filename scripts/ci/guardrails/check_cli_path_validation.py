@@ -19,6 +19,45 @@ VALIDATION_FUNCTIONS = {
 }
 
 
+def _is_cli_command(node: ast.FunctionDef) -> bool:
+    """Check if the function is a CLI command entrypoint."""
+    if node.name == "doctor":
+        return True
+    for decorator in node.decorator_list:
+        dec_name = ""
+        if isinstance(decorator, ast.Call):
+            func = decorator.func
+            if isinstance(func, ast.Attribute):
+                dec_name = func.attr
+            elif isinstance(func, ast.Name):
+                dec_name = func.id
+        elif isinstance(decorator, ast.Attribute):
+            dec_name = decorator.attr
+        elif isinstance(decorator, ast.Name):
+            dec_name = decorator.id
+
+        if dec_name in ("command", "callback"):
+            return True
+    return False
+
+
+class PathTypeChecker(ast.NodeVisitor):
+    """Visitor to check if type annotation AST uses Path."""
+
+    def __init__(self) -> None:
+        self.has_path = False
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if node.id == "Path":
+            self.has_path = True
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if node.attr == "Path":
+            self.has_path = True
+        self.generic_visit(node)
+
+
 class CliPathValidationVisitor(ast.NodeVisitor):
     """AST visitor to check CLI path argument validation."""
 
@@ -28,11 +67,8 @@ class CliPathValidationVisitor(ast.NodeVisitor):
         self.violations: list[tuple[int, str, str]] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: C901
-        # We only care about CLI command entrypoints. In Typer, these are usually
-        # public functions in a CLI module, or functions decorated with commands.
-        # Let's check all functions in cli/ modules, but exclude helper functions
-        # (by convention, helpers start with an underscore like _resolve_parallel_settings).
-        if node.name.startswith("_"):
+        # We only care about CLI command entrypoints.
+        if node.name.startswith("_") or not _is_cli_command(node):
             self.generic_visit(node)
             return
 
@@ -44,8 +80,9 @@ class CliPathValidationVisitor(ast.NodeVisitor):
             is_path = False
             # Check annotation (e.g., Path, Path | None, Optional[Path])
             if arg.annotation:
-                annotation_str = ast.unparse(arg.annotation)
-                if "Path" in annotation_str:
+                checker = PathTypeChecker()
+                checker.visit(arg.annotation)
+                if checker.has_path:
                     is_path = True
 
             # If it's a path parameter, record it
@@ -137,7 +174,7 @@ def main() -> int:
     all_violations = []
     # Scan all python files in the cli directory
     for path in cli_dir.glob("*.py"):
-        if path.name == "__init__.py" or path.name == "_globals.py":
+        if path.name in ("__init__.py", "_globals.py", "path_validation.py"):
             continue
 
         violations = check_file(path)

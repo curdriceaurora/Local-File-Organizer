@@ -27,7 +27,7 @@ description = "Flags raw file write operations, enforcing the use of atomic_writ
 [[rail]]
 name = "cli-path-validation"
 command = ["python", "scripts/ci/guardrails/check_cli_path_validation.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Ensures all CLI command path arguments are validated before use (WP-6.1)."
 
 [[rail]]

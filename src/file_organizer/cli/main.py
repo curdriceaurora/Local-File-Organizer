@@ -486,7 +486,11 @@ def recover(
     Parameters:
         journal (Path | None): Optional override path to the durable_move.journal file (defaults to the user's state directory).
     """
+    from file_organizer.cli.path_validation import resolve_cli_path
     from file_organizer.cli.undo_recover import recover_command as _recover
+
+    if journal is not None:
+        journal = resolve_cli_path(journal, must_exist=True, must_be_dir=False)
 
     code = _recover(journal=journal, verbose=_merge_flag(verbose, _get_state().verbose))
     raise typer.Exit(code=code if code is not None else 1)
