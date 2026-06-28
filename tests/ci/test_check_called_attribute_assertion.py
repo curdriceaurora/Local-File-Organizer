@@ -2,34 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 
+from scripts.ci.guardrails import check_called_attribute_assertion as checker
+
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
-
-_SCRIPT = (
-    Path(__file__).resolve().parents[2]
-    / "scripts"
-    / "ci"
-    / "guardrails"
-    / "check_called_attribute_assertion.py"
-)
-
-
-def _load_checker() -> ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        "check_called_attribute_assertion_under_test", _SCRIPT
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-checker = _load_checker()
 
 
 def test_flags_assert_called(tmp_path: Path) -> None:

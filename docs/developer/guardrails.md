@@ -48,6 +48,24 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `scripts/dev/pre-commit-validation.sh`.
 
+### Importable Guardrail Modules
+
+Project-owned CI guardrail scripts live under `scripts/ci/guardrails/` and are
+importable as normal Python modules from `scripts.ci.guardrails`. Keep each
+module runnable as a script for pre-commit and CI, but write tests against the
+imported module:
+
+```python
+from scripts.ci.guardrails import check_example_guardrail
+
+
+def test_example(tmp_path: Path) -> None:
+    assert check_example_guardrail.check_file(tmp_path / "subject.py") == []
+```
+
+Avoid adding new `importlib.util.spec_from_file_location` loaders for
+`scripts/ci/guardrails` modules.
+
 ## API Compatibility Rule Index
 
 Issue `#813` adds allowlisted public-signature compatibility checks. These are
@@ -134,8 +152,10 @@ negative test case (`assert not predicate(...)`).
 | CI backstop | `tests/ci/test_predicate_negative_coverage.py` | On every CI run (full scan) |
 
 Shared logic lives in `scripts/ci/guardrails/check_predicate_negative_coverage.py`.
-The CI test imports from this script via `importlib`; the pre-commit hook runs
-it directly.  Update the script when new detector modules are added.
+The CI test imports it as
+`scripts.ci.guardrails.check_predicate_negative_coverage`; the pre-commit hook
+runs the same file directly. Update the script when new detector modules are
+added.
 
 | Detector module | Test file | Module stem in `_MODULE_TO_TEST` |
 |-----------------|-----------|----------------------------------|

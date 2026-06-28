@@ -8,29 +8,14 @@ synthetic rails whose commands deterministically pass/fail.
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 
+from scripts.ci import ci_rails
+
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
-
-_RUNNER = Path(__file__).resolve().parents[2] / "scripts" / "ci" / "ci_rails.py"
-
-
-def _load_runner() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("ci_rails_under_test", _RUNNER)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    # Register before exec so @dataclass can resolve the module via sys.modules.
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-ci_rails = _load_runner()
 
 # Commands that deterministically pass / fail via the test interpreter.
 _PASS = [sys.executable, "-c", "import sys; sys.exit(0)"]
