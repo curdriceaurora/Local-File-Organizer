@@ -430,7 +430,7 @@ class NamingPatternExtractor:
         import hashlib
 
         content = "".join(sorted(filenames[:5]))
-        return hashlib.md5(content.encode()).hexdigest()[:12]
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:12]
 
     def _build_pattern_elements(
         self, pattern: NamingPattern, analyses: list[dict[str, Any]]

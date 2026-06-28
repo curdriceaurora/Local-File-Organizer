@@ -82,6 +82,25 @@ class TestRemovePid:
         """remove_pid returns False for a nonexistent file."""
         assert pid_manager.remove_pid(pid_file) is False
 
+    def test_remove_with_expected_record_matches(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """remove_pid deletes the PID file if the record matches expected_record."""
+        record = pid_manager.write_pid_record(pid_file)
+        assert pid_manager.remove_pid(pid_file, expected_record=record) is True
+        assert not pid_file.exists()
+
+    def test_remove_with_expected_record_mismatch(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """remove_pid does not delete the PID file if the record does not match expected_record."""
+        pid_manager.write_pid_record(pid_file)
+        from file_organizer.daemon.pid import PidRecord
+
+        mismatched_record = PidRecord(pid=999, create_time=12345.6)
+        assert pid_manager.remove_pid(pid_file, expected_record=mismatched_record) is False
+        assert pid_file.exists()
+
 
 @pytest.mark.unit
 class TestIsRunning:
@@ -515,8 +534,20 @@ class TestClaimPidFile:
     def test_claim_creates_file(self, pid_manager: PidFileManager, pid_file: Path) -> None:
         """claim_pid_file creates the file when it does not exist."""
         assert not pid_file.exists()
-        pid_manager.claim_pid_file(pid_file)
+        record = pid_manager.claim_pid_file(pid_file)
         assert pid_file.exists()
+        assert record.pid == os.getpid()
+
+    def test_claim_writes_readable_pid_record(
+        self, pid_manager: PidFileManager, pid_file: Path
+    ) -> None:
+        """claim_pid_file writes a live JSON record, not a stale placeholder."""
+        written = pid_manager.claim_pid_file(pid_file)
+
+        read = pid_manager.read_pid_record(pid_file)
+
+        assert read == written
+        assert pid_manager.is_running(pid_file) is True
 
     def test_claim_raises_if_already_exists(
         self, pid_manager: PidFileManager, pid_file: Path

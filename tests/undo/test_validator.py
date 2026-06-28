@@ -605,6 +605,42 @@ class TestOperationValidator(unittest.TestCase):
         expected = get_data_dir() / "trash"
         self.assertEqual(validator.trash_dir, expected)
 
+    def test_validate_undo_symlink_success(self):
+        """Test successful validation of symlink undo."""
+        link_path = self.test_dir / "link.txt"
+        link_path.symlink_to(self.source_file)
+        operation = Operation(
+            id=1,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(tz=UTC),
+            source_path=self.source_file,
+            destination_path=link_path,
+            status=OperationStatus.COMPLETED,
+        )
+        result = self.validator.validate_undo(operation)
+        self.assertTrue(result.can_proceed)
+        self.assertEqual(len(result.conflicts), 0)
+
+    def test_validate_undo_symlink_is_symlink_raises_oserror(self):
+        """Test validation of symlink undo when is_symlink raises OSError."""
+        link_path = self.test_dir / "link.txt"
+        operation = Operation(
+            id=1,
+            operation_type=OperationType.SYMLINK,
+            timestamp=datetime.now(tz=UTC),
+            source_path=self.source_file,
+            destination_path=link_path,
+            status=OperationStatus.COMPLETED,
+        )
+        from unittest.mock import patch
+
+        with patch.object(Path, "is_symlink", side_effect=OSError("permission denied")):
+            result = self.validator.validate_undo(operation)
+            self.assertFalse(result.can_proceed)
+            self.assertTrue(
+                any(c.conflict_type == ConflictType.PERMISSION_DENIED for c in result.conflicts)
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

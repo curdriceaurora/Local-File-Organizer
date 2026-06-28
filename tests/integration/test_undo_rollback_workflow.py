@@ -25,7 +25,7 @@ from file_organizer.undo.rollback import RollbackExecutor
 from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.validator import OperationValidator
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +327,31 @@ class TestRollbackExecutor:
 
         monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
 
+        assert executor.rollback_hardlink(op) is True
+        assert not link.exists()
+
+    def test_rollback_hardlink_returns_false_when_unlink_fails(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        os.link(source, link)
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=59)
+
+        def fail_unlink(self: Path, missing_ok: bool = False) -> None:
+            if self == link:
+                raise OSError("unlink failed")
+            return original_unlink(self, missing_ok=missing_ok)
+
+        original_unlink = Path.unlink
+        monkeypatch.setattr(Path, "unlink", fail_unlink)
+
         assert executor.rollback_hardlink(op) is False
+        assert link.exists()
 
     def test_rollback_symlink_unlinks_matching_target(
         self, executor: RollbackExecutor, tmp_path: Path
@@ -397,7 +421,31 @@ class TestRollbackExecutor:
 
         monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
 
+        assert executor.rollback_symlink(op) is True
+        assert not link.exists()
+
+    def test_rollback_symlink_returns_false_when_unlink_fails(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "link.txt"
+        source.write_text("data")
+        link.symlink_to(source)
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=60)
+
+        def fail_unlink(self: Path, missing_ok: bool = False) -> None:
+            if self == link:
+                raise OSError("unlink failed")
+            return original_unlink(self, missing_ok=missing_ok)
+
+        original_unlink = Path.unlink
+        monkeypatch.setattr(Path, "unlink", fail_unlink)
+
         assert executor.rollback_symlink(op) is False
+        assert link.is_symlink()
 
     def test_rollback_create_moves_to_trash(
         self, executor: RollbackExecutor, tmp_path: Path
@@ -486,6 +534,26 @@ class TestRollbackExecutor:
         assert link.exists()
         assert os.stat(source).st_ino == os.stat(link).st_ino
 
+    def test_redo_hardlink_succeeds_when_fsync_fails(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "links" / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.HARDLINK, source, link, op_id=57)
+
+        def fail_fsync(path: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
+
+        assert executor.redo_hardlink(op) is True
+        assert link.exists()
+        assert os.stat(source).st_ino == os.stat(link).st_ino
+
     def test_redo_hardlink_fails_without_destination(
         self, executor: RollbackExecutor, tmp_path: Path
     ) -> None:
@@ -504,6 +572,26 @@ class TestRollbackExecutor:
         result = executor.redo_symlink(op)
 
         assert result is True
+        assert link.is_symlink()
+        assert link.resolve() == source
+
+    def test_redo_symlink_succeeds_when_fsync_fails(
+        self,
+        executor: RollbackExecutor,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "src.txt"
+        link = tmp_path / "links" / "src.txt"
+        source.write_text("data")
+        op = _make_operation(OperationType.SYMLINK, source, link, op_id=58)
+
+        def fail_fsync(path: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr(rollback_module, "fsync_directory", fail_fsync)
+
+        assert executor.redo_symlink(op) is True
         assert link.is_symlink()
         assert link.resolve() == source
 
@@ -729,3 +817,19 @@ class TestUndoManager:
         assert result is True
         assert src1.exists()
         assert src2.exists()
+
+    def test_fsync_link_mutation_handles_oserror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from file_organizer.undo.rollback import RollbackExecutor
+
+        executor = RollbackExecutor()
+
+        # Mock fsync_directory to raise OSError
+        def mock_fsync_directory(p: Path) -> None:
+            raise OSError("fsync failed")
+
+        monkeypatch.setattr("file_organizer.undo.rollback.fsync_directory", mock_fsync_directory)
+
+        # This should not raise and should log warning
+        executor._fsync_link_mutation(tmp_path, 1)

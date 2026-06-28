@@ -14,6 +14,8 @@ from file_organizer.services.intelligence.naming_analyzer import (
     NamingAnalyzer,
 )
 
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestNameStructure:

@@ -300,7 +300,7 @@ class TestRulesApply:
         ):
             result = runner.invoke(rules_app, ["apply", str(tmp_path)])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "1 applied" in result.output
         assert "txt-rule" in result.output
         assert "tx-1" in result.output
@@ -394,9 +394,16 @@ class TestRulesApply:
         assert result.exit_code == 0
         assert "1 applied" in result.output
         assert "Stopped watching rules" in result.output
-        mock_executor.watch.assert_called_once()
+        mock_executor.watch.assert_called_once_with(
+            mock_rule_manager.load_rule_set.return_value,
+            tmp_path,
+            recursive=True,
+            max_files=500,
+            interval_seconds=10.0,
+            dry_run=False,
+            on_cycle=mock_executor.watch.call_args.kwargs["on_cycle"],
+        )
         assert mock_executor.watch.call_args.kwargs["on_cycle"] is not None
-        assert "once" not in mock_executor.watch.call_args.kwargs
 
     def test_watch_no_enabled_rules_returns_without_executor(
         self, runner, mock_rule_manager, tmp_path

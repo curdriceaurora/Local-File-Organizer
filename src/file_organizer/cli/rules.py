@@ -276,6 +276,8 @@ def rules_apply(
         dry_run=dry_run,
     )
     _print_apply_result(result)
+    if result.failed_count > 0 or result.errors:
+        raise typer.Exit(code=1)
 
 
 @rules_app.command(name="watch")
@@ -319,6 +321,8 @@ def rules_watch(
             dry_run=dry_run,
         )
         _print_apply_result(result)
+        if result.failed_count > 0 or result.errors:
+            raise typer.Exit(code=1)
         return
 
     try:

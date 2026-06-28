@@ -25,8 +25,10 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
       - name: Install pip-audit
-        run: pip install pip-audit pyyaml
+        run: python -m pip install pip-audit pyyaml
       - name: Install project (for accurate dependency resolution)
         run: bash scripts/pip_install_retry.sh -e .
       - name: Run pip-audit
@@ -42,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install bandit
-        run: pip install bandit[toml]
+        run: python -m pip install bandit[toml]
       - name: Run bandit
         run: bandit -r src/ -c pyproject.toml || true
 

@@ -15,6 +15,8 @@ from file_organizer.services.intelligence.pattern_extractor import (
     PatternElement,
 )
 
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestNamingPatternExtractor:

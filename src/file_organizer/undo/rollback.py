@@ -18,7 +18,7 @@ from ..utils.atomic_io import fsync_directory
 from .models import RollbackResult
 from .validator import OperationValidator
 
-logger = logging.getLogger(__name__)
+std_log = logging.getLogger(__name__)
 
 
 class RollbackExecutor:
@@ -36,6 +36,16 @@ class RollbackExecutor:
         """
         self.validator = validator or OperationValidator()
         self.trash_dir = self.validator.trash_dir
+
+    def _fsync_link_mutation(self, path: Path, operation_id: int | None) -> None:
+        """Best-effort persistence after a completed link mutation."""
+        try:
+            fsync_directory(path)
+        except OSError as exc:
+            std_log.warning(
+                f"Link mutation for operation {operation_id} succeeded, but directory fsync failed: {exc}",
+                exc_info=True,
+            )
 
     def _durable_move(self, src: Path, dst: Path) -> None:
         """Move *src* → *dst* durably, refusing symlinks and inode swaps.
@@ -102,7 +112,7 @@ class RollbackExecutor:
             try:
                 fsync_directory(src)
             except OSError:  # pragma: no cover - best-effort source-dir flush
-                logger.debug("Could not fsync source directory %s", src.parent)
+                std_log.debug("Could not fsync source directory %s", src.parent)
 
     def rollback_operation(self, operation: Operation) -> bool:
         """Rollback a single operation (undo).
@@ -129,10 +139,10 @@ class RollbackExecutor:
             elif operation.operation_type == OperationType.CREATE:
                 return self.rollback_create(operation)
             else:
-                logger.error(f"Unknown operation type: {operation.operation_type}")
+                std_log.error(f"Unknown operation type: {operation.operation_type}")
                 return False
         except Exception as e:
-            logger.error(f"Failed to rollback operation {operation.id}: {e}", exc_info=True)
+            std_log.error(f"Failed to rollback operation {operation.id}: {e}", exc_info=True)
             return False
 
     def redo_operation(self, operation: Operation) -> bool:
@@ -160,10 +170,10 @@ class RollbackExecutor:
             elif operation.operation_type == OperationType.CREATE:
                 return self.redo_create(operation)
             else:
-                logger.error(f"Unknown operation type: {operation.operation_type}")
+                std_log.error(f"Unknown operation type: {operation.operation_type}")
                 return False
         except Exception as e:
-            logger.error(f"Failed to redo operation {operation.id}: {e}", exc_info=True)
+            std_log.error(f"Failed to redo operation {operation.id}: {e}", exc_info=True)
             return False
 
     def rollback_move(self, operation: Operation) -> bool:
@@ -179,19 +189,19 @@ class RollbackExecutor:
         destination = operation.destination_path
 
         if destination is None:
-            logger.error("Cannot rollback move operation %s: no destination path", operation.id)
+            std_log.error("Cannot rollback move operation %s: no destination path", operation.id)
             return False
 
-        logger.info(f"Rolling back move: {destination} -> {source}")
+        std_log.info(f"Rolling back move: {destination} -> {source}")
 
         try:
             # Move file back durably (symlink-refusing, inode-verified).
             self._durable_move(destination, source)
 
-            logger.info(f"Successfully rolled back move operation {operation.id}")
+            std_log.info(f"Successfully rolled back move operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback move operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback move operation {operation.id}: {e}")
             return False
 
     def rollback_rename(self, operation: Operation) -> bool:
@@ -207,19 +217,19 @@ class RollbackExecutor:
         new_name = operation.destination_path
 
         if new_name is None:
-            logger.error(f"Cannot rollback rename operation {operation.id}: no destination path")
+            std_log.error(f"Cannot rollback rename operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Rolling back rename: {new_name} -> {old_name}")
+        std_log.info(f"Rolling back rename: {new_name} -> {old_name}")
 
         try:
             # Rename back durably (symlink-refusing, inode-verified).
             self._durable_move(new_name, old_name)
 
-            logger.info(f"Successfully rolled back rename operation {operation.id}")
+            std_log.info(f"Successfully rolled back rename operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback rename operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback rename operation {operation.id}: {e}")
             return False
 
     def rollback_delete(self, operation: Operation) -> bool:
@@ -235,10 +245,10 @@ class RollbackExecutor:
         trash_path = self.validator._get_trash_path(operation)
 
         if not trash_path or not trash_path.exists():
-            logger.error(f"File not found in trash for operation {operation.id}")
+            std_log.error(f"File not found in trash for operation {operation.id}")
             return False
 
-        logger.info(f"Rolling back delete: restoring {original_path} from trash")
+        std_log.info(f"Rolling back delete: restoring {original_path} from trash")
 
         try:
             # Restore from trash durably (symlink-refusing, inode-verified).
@@ -251,10 +261,10 @@ class RollbackExecutor:
                 except OSError:
                     pass  # Directory not empty or other issue
 
-            logger.info(f"Successfully rolled back delete operation {operation.id}")
+            std_log.info(f"Successfully rolled back delete operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback delete operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback delete operation {operation.id}: {e}")
             return False
 
     def rollback_copy(self, operation: Operation) -> bool:
@@ -269,19 +279,19 @@ class RollbackExecutor:
         copy_path = operation.destination_path
 
         if copy_path is None:
-            logger.error(f"Cannot rollback copy operation {operation.id}: no destination path")
+            std_log.error(f"Cannot rollback copy operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Rolling back copy: deleting {copy_path}")
+        std_log.info(f"Rolling back copy: deleting {copy_path}")
 
         try:
             # Move to trash instead of permanent delete
             self._move_to_trash(copy_path, operation.id)
 
-            logger.info(f"Successfully rolled back copy operation {operation.id}")
+            std_log.info(f"Successfully rolled back copy operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback copy operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback copy operation {operation.id}: {e}")
             return False
 
     def rollback_hardlink(self, operation: Operation) -> bool:
@@ -289,39 +299,44 @@ class RollbackExecutor:
         link_path = operation.destination_path
 
         if link_path is None:
-            logger.error(f"Cannot rollback hardlink operation {operation.id}: no destination path")
+            std_log.error(f"Cannot rollback hardlink operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Rolling back hardlink: deleting {link_path}")
+        std_log.info(f"Rolling back hardlink: deleting {link_path}")
 
         try:
             if link_path.is_symlink() or not link_path.exists():
-                logger.error(
+                std_log.error(
                     f"Refusing to rollback hardlink operation; destination is not a file: {link_path}"
                 )
                 return False
+            if operation.source_path.is_symlink():
+                std_log.error(
+                    f"Refusing to rollback hardlink operation; source is a symlink: {operation.source_path}"
+                )
+                return False
             if not operation.source_path.exists():
-                logger.error(
+                std_log.error(
                     f"Refusing to rollback hardlink operation; source is missing: {operation.source_path}"
                 )
                 return False
-            source_stat = operation.source_path.stat()
-            link_stat = link_path.stat()
+            source_stat = operation.source_path.lstat()
+            link_stat = link_path.lstat()
             if (source_stat.st_dev, source_stat.st_ino) != (
                 link_stat.st_dev,
                 link_stat.st_ino,
             ):
-                logger.error(
+                std_log.error(
                     "Refusing to rollback hardlink operation; destination no longer "
                     f"matches source inode: {link_path}"
                 )
                 return False
             link_path.unlink()
-            fsync_directory(link_path)
-            logger.info(f"Successfully rolled back hardlink operation {operation.id}")
+            self._fsync_link_mutation(link_path, operation.id)
+            std_log.info(f"Successfully rolled back hardlink operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback hardlink operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback hardlink operation {operation.id}: {e}")
             return False
 
     def rollback_symlink(self, operation: Operation) -> bool:
@@ -329,29 +344,29 @@ class RollbackExecutor:
         link_path = operation.destination_path
 
         if link_path is None:
-            logger.error(f"Cannot rollback symlink operation {operation.id}: no destination path")
+            std_log.error(f"Cannot rollback symlink operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Rolling back symlink: deleting {link_path}")
+        std_log.info(f"Rolling back symlink: deleting {link_path}")
 
         try:
             if not link_path.is_symlink():
-                logger.error(
+                std_log.error(
                     f"Refusing to rollback symlink operation; destination is not a symlink: {link_path}"
                 )
                 return False
             if link_path.resolve(strict=False) != operation.source_path.resolve(strict=False):
-                logger.error(
+                std_log.error(
                     "Refusing to rollback symlink operation; destination target no longer "
                     f"matches source: {link_path}"
                 )
                 return False
             link_path.unlink()
-            fsync_directory(link_path)
-            logger.info(f"Successfully rolled back symlink operation {operation.id}")
+            self._fsync_link_mutation(link_path, operation.id)
+            std_log.info(f"Successfully rolled back symlink operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback symlink operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback symlink operation {operation.id}: {e}")
             return False
 
     def rollback_create(self, operation: Operation) -> bool:
@@ -365,16 +380,16 @@ class RollbackExecutor:
         """
         created_path = operation.source_path
 
-        logger.info(f"Rolling back create: deleting {created_path}")
+        std_log.info(f"Rolling back create: deleting {created_path}")
 
         try:
             # Move to trash instead of permanent delete
             self._move_to_trash(created_path, operation.id)
 
-            logger.info(f"Successfully rolled back create operation {operation.id}")
+            std_log.info(f"Successfully rolled back create operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to rollback create operation {operation.id}: {e}")
+            std_log.error(f"Failed to rollback create operation {operation.id}: {e}")
             return False
 
     def redo_move(self, operation: Operation) -> bool:
@@ -390,19 +405,19 @@ class RollbackExecutor:
         destination = operation.destination_path
 
         if destination is None:
-            logger.error(f"Cannot redo move operation {operation.id}: no destination path")
+            std_log.error(f"Cannot redo move operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Redoing move: {source} -> {destination}")
+        std_log.info(f"Redoing move: {source} -> {destination}")
 
         try:
             # Move file durably (symlink-refusing, inode-verified).
             self._durable_move(source, destination)
 
-            logger.info(f"Successfully redid move operation {operation.id}")
+            std_log.info(f"Successfully redid move operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo move operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo move operation {operation.id}: {e}")
             return False
 
     def redo_rename(self, operation: Operation) -> bool:
@@ -418,19 +433,19 @@ class RollbackExecutor:
         new_name = operation.destination_path
 
         if new_name is None:
-            logger.error(f"Cannot redo rename operation {operation.id}: no destination path")
+            std_log.error(f"Cannot redo rename operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Redoing rename: {old_name} -> {new_name}")
+        std_log.info(f"Redoing rename: {old_name} -> {new_name}")
 
         try:
             # Rename durably (symlink-refusing, inode-verified).
             self._durable_move(old_name, new_name)
 
-            logger.info(f"Successfully redid rename operation {operation.id}")
+            std_log.info(f"Successfully redid rename operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo rename operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo rename operation {operation.id}: {e}")
             return False
 
     def redo_delete(self, operation: Operation) -> bool:
@@ -444,16 +459,16 @@ class RollbackExecutor:
         """
         file_path = operation.source_path
 
-        logger.info(f"Redoing delete: {file_path}")
+        std_log.info(f"Redoing delete: {file_path}")
 
         try:
             # Move to trash
             self._move_to_trash(file_path, operation.id)
 
-            logger.info(f"Successfully redid delete operation {operation.id}")
+            std_log.info(f"Successfully redid delete operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo delete operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo delete operation {operation.id}: {e}")
             return False
 
     def redo_copy(self, operation: Operation) -> bool:
@@ -469,10 +484,10 @@ class RollbackExecutor:
         destination = operation.destination_path
 
         if destination is None:
-            logger.error(f"Cannot redo copy operation {operation.id}: no destination path")
+            std_log.error(f"Cannot redo copy operation {operation.id}: no destination path")
             return False
 
-        logger.info(f"Redoing copy: {source} -> {destination}")
+        std_log.info(f"Redoing copy: {source} -> {destination}")
 
         try:
             # Ensure parent directory exists
@@ -484,13 +499,13 @@ class RollbackExecutor:
             elif source.is_dir():
                 shutil.copytree(str(source), str(destination))
             else:
-                logger.error(f"Source path is neither file nor directory: {source}")
+                std_log.error(f"Source path is neither file nor directory: {source}")
                 return False
 
-            logger.info(f"Successfully redid copy operation {operation.id}")
+            std_log.info(f"Successfully redid copy operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo copy operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo copy operation {operation.id}: {e}")
             return False
 
     def redo_hardlink(self, operation: Operation) -> bool:
@@ -499,17 +514,17 @@ class RollbackExecutor:
         destination = operation.destination_path
 
         if destination is None:
-            logger.error(f"Cannot redo hardlink operation {operation.id}: no destination path")
+            std_log.error(f"Cannot redo hardlink operation {operation.id}: no destination path")
             return False
 
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             os.link(source, destination)
-            fsync_directory(destination)
-            logger.info(f"Successfully redid hardlink operation {operation.id}")
+            self._fsync_link_mutation(destination, operation.id)
+            std_log.info(f"Successfully redid hardlink operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo hardlink operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo hardlink operation {operation.id}: {e}")
             return False
 
     def redo_symlink(self, operation: Operation) -> bool:
@@ -518,17 +533,17 @@ class RollbackExecutor:
         destination = operation.destination_path
 
         if destination is None:
-            logger.error(f"Cannot redo symlink operation {operation.id}: no destination path")
+            std_log.error(f"Cannot redo symlink operation {operation.id}: no destination path")
             return False
 
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.symlink_to(source)
-            fsync_directory(destination)
-            logger.info(f"Successfully redid symlink operation {operation.id}")
+            self._fsync_link_mutation(destination, operation.id)
+            std_log.info(f"Successfully redid symlink operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo symlink operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo symlink operation {operation.id}: {e}")
             return False
 
     def redo_create(self, operation: Operation) -> bool:
@@ -542,7 +557,7 @@ class RollbackExecutor:
         """
         file_path = operation.source_path
 
-        logger.info(f"Redoing create: {file_path}")
+        std_log.info(f"Redoing create: {file_path}")
 
         try:
             # Ensure parent directory exists
@@ -554,10 +569,10 @@ class RollbackExecutor:
             else:
                 file_path.touch()
 
-            logger.info(f"Successfully redid create operation {operation.id}")
+            std_log.info(f"Successfully redid create operation {operation.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to redo create operation {operation.id}: {e}")
+            std_log.error(f"Failed to redo create operation {operation.id}: {e}")
             return False
 
     def rollback_transaction(
@@ -572,7 +587,7 @@ class RollbackExecutor:
         Returns:
             RollbackResult with details
         """
-        logger.info(f"Rolling back transaction {transaction_id} with {len(operations)} operations")
+        std_log.info(f"Rolling back transaction {transaction_id} with {len(operations)} operations")
 
         rolled_back = 0
         failed = 0
@@ -591,7 +606,7 @@ class RollbackExecutor:
             except Exception as e:
                 failed += 1
                 errors.append((operation.id or 0, str(e)))
-                logger.error(
+                std_log.error(
                     f"Failed to rollback operation {operation.id} in transaction {transaction_id}: {e}"
                 )
 
@@ -612,11 +627,11 @@ class RollbackExecutor:
         )
 
         if success:
-            logger.info(
+            std_log.info(
                 f"Successfully rolled back transaction {transaction_id}: {rolled_back} operations"
             )
         else:
-            logger.error(
+            std_log.error(
                 f"Failed to rollback transaction {transaction_id}: "
                 f"{rolled_back} succeeded, {failed} failed"
             )
@@ -647,5 +662,5 @@ class RollbackExecutor:
         trash_path = trash_dir / file_path.name
         self._durable_move(file_path, trash_path)
 
-        logger.debug(f"Moved {file_path} to trash: {trash_path}")
+        std_log.debug(f"Moved {file_path} to trash: {trash_path}")
         return trash_path

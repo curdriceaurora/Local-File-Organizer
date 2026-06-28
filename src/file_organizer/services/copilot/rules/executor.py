@@ -26,6 +26,10 @@ from file_organizer.undo._journal import default_journal_path
 from file_organizer.undo.durable_move import durable_move
 
 
+class PostMutationError(Exception):
+    """Raised when an error occurs after a filesystem mutation was performed."""
+
+
 @dataclass
 class ExecutionResult:
     """Outcome for one file matched by one rule."""
@@ -130,21 +134,35 @@ class RuleExecutor:
                 if rule is None:
                     continue
                 source = Path(match.file_path)
-                if self._inside_destination_root(
-                    source, match.destination, rule.action.action_type, target
-                ):
-                    result.results.append(self._skipped(rule, source, source, "inside destination"))
-                    continue
-                result.results.append(
-                    self._execute_match(
-                        rule,
-                        source,
-                        match.destination,
-                        target,
-                        undo_manager,
-                        transaction_id,
+                try:
+                    if self._inside_destination_root(
+                        source, match.destination, rule.action.action_type, target
+                    ):
+                        result.results.append(
+                            self._skipped(rule, source, source, "inside destination")
+                        )
+                        continue
+                    result.results.append(
+                        self._execute_match(
+                            rule,
+                            source,
+                            match.destination,
+                            target,
+                            undo_manager,
+                            transaction_id,
+                        )
                     )
-                )
+                except ValueError as val_exc:
+                    result.results.append(
+                        ExecutionResult(
+                            file_path=str(source),
+                            rule_name=rule.name,
+                            action_type=rule.action.action_type.value,
+                            destination=match.destination,
+                            status="failed",
+                            message=str(val_exc),
+                        )
+                    )
         except Exception:
             logger.exception(
                 "Rule execution failed; leaving transaction {} uncommitted", transaction_id
@@ -168,6 +186,8 @@ class RuleExecutor:
         on_cycle: Callable[[ApplyResult], None] | None = None,
     ) -> ApplyResult:
         """Run rules repeatedly for fire-and-forget workflows."""
+        if interval_seconds <= 0:
+            raise ValueError("interval_seconds must be positive")
         last_result = ApplyResult()
         while True:
             last_result = self.apply(
@@ -258,6 +278,8 @@ class RuleExecutor:
                 status="failed",
                 message="unsupported action",
             )
+        except PostMutationError:
+            raise
         except Exception as exc:
             logger.warning("Rule '{}' failed for {}: {}", rule.name, source, exc)
             return ExecutionResult(
@@ -284,14 +306,21 @@ class RuleExecutor:
         if resolved is None:
             return self._skipped(rule, source, target, "exists")
         durable_move(source, resolved, journal=default_journal_path())
-        undo_manager.history.log_operation(
-            OperationType.RENAME
-            if rule.action.action_type == ActionType.RENAME
-            else OperationType.MOVE,
-            source_path=source,
-            destination_path=resolved,
-            transaction_id=transaction_id,
-        )
+        try:
+            undo_manager.history.log_operation(
+                OperationType.RENAME
+                if rule.action.action_type == ActionType.RENAME
+                else OperationType.MOVE,
+                source_path=source,
+                destination_path=resolved,
+                transaction_id=transaction_id,
+            )
+        except Exception as log_exc:
+            try:
+                durable_move(resolved, source, journal=default_journal_path())
+            except Exception as rollback_exc:
+                logger.error("Failed to rollback filesystem mutation: {}", rollback_exc)
+            raise PostMutationError(str(log_exc)) from log_exc
         return self._applied(rule, source, resolved)
 
     def _execute_copy_like(
@@ -309,12 +338,20 @@ class RuleExecutor:
         link_result = fn(source, target, self._conflict_strategy(rule))
         if link_result.skipped:
             return self._skipped(rule, source, link_result.destination, link_result.reason)
-        undo_manager.history.log_operation(
-            operation_type,
-            source_path=source,
-            destination_path=link_result.destination,
-            transaction_id=transaction_id,
-        )
+        try:
+            undo_manager.history.log_operation(
+                operation_type,
+                source_path=source,
+                destination_path=link_result.destination,
+                transaction_id=transaction_id,
+            )
+        except Exception as log_exc:
+            try:
+                if link_result.destination.exists() or link_result.destination.is_symlink():
+                    link_result.destination.unlink()
+            except Exception as rollback_exc:
+                logger.error("Failed to rollback filesystem mutation: {}", rollback_exc)
+            raise PostMutationError(str(log_exc)) from log_exc
         return self._applied(rule, source, link_result.destination)
 
     def _execute_delete(
@@ -328,12 +365,19 @@ class RuleExecutor:
             undo_manager.executor.trash_dir / transaction_id / f"{uuid.uuid4().hex}-{source.name}"
         )
         durable_move(source, trash_path, journal=default_journal_path())
-        op_id = undo_manager.history.log_operation(
-            OperationType.DELETE,
-            source_path=source,
-            destination_path=trash_path,
-            transaction_id=transaction_id,
-        )
+        try:
+            op_id = undo_manager.history.log_operation(
+                OperationType.DELETE,
+                source_path=source,
+                destination_path=trash_path,
+                transaction_id=transaction_id,
+            )
+        except Exception as log_exc:
+            try:
+                durable_move(trash_path, source, journal=default_journal_path())
+            except Exception as rollback_exc:
+                logger.error("Failed to rollback filesystem mutation: {}", rollback_exc)
+            raise PostMutationError(str(log_exc)) from log_exc
         logger.debug("Logged delete operation {} after moving {} to trash", op_id, source)
         return self._applied(rule, source, trash_path)
 
@@ -352,15 +396,28 @@ class RuleExecutor:
         if not destination:
             return source.parent / source.name
         raw = Path(destination).expanduser()
-        if action_type == ActionType.RENAME and not raw.is_absolute():
-            return source.parent / raw
-        if not raw.is_absolute():
-            raw = base_dir / raw
-        if raw.exists() and raw.is_dir():
-            return raw / source.name
-        if raw.suffix:
-            return raw
-        return raw / source.name
+        if raw.is_absolute():
+            raise ValueError(f"Absolute path not allowed for destination: {destination}")
+        if action_type == ActionType.RENAME:
+            candidate = source.parent / raw
+        else:
+            candidate = base_dir / raw
+
+        # Path traversal guard: verify candidate remains inside base_dir
+        try:
+            resolved_base = base_dir.resolve()
+            resolved_candidate = candidate.resolve(strict=False)
+            resolved_candidate.relative_to(resolved_base)
+        except ValueError as exc:
+            raise ValueError(
+                f"Path traversal detected: {destination} escapes base directory {base_dir}"
+            ) from exc
+
+        if candidate.exists() and candidate.is_dir():
+            return candidate / source.name
+        if candidate.suffix:
+            return candidate
+        return candidate / source.name
 
     @classmethod
     def _inside_destination_root(

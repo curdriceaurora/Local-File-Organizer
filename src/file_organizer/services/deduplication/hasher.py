@@ -79,7 +79,7 @@ class FileHasher:
 
         # Create hash object
         if algorithm == "md5":
-            hasher = hashlib.md5()
+            hasher = hashlib.md5(usedforsecurity=False)
         elif algorithm == "sha256":
             hasher = hashlib.sha256()
         else:

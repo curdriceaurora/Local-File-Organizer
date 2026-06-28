@@ -87,20 +87,11 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
 
 ## Known Limitations
 
-- **`bandit -r src/` is not gated.** A dry run found 153 findings (135
-  low, 11 medium, 7 high). All 7 high-severity findings are `B324`
-  (weak-hash-function usage) on content-fingerprinting/dedup code paths
-  (`services/deduplication/hasher.py`, `services/intelligence/*.py`,
-  `web/_helpers.py`) — not cryptographic or authentication uses, but
-  bandit cannot distinguish that from a real weak-hash vulnerability.
-  Gating on the current signal would require triaging all 153 findings
-  first. Tracked as
+- **`bandit -r src/` is not gated.** After triaging and annotating the
+  non-cryptographic weak-hash call sites, the remaining findings are
+  low/medium severity and still need review before this job can become
+  blocking. Tracked as
   [#1344](https://github.com/curdriceaurora/Local-File-Organizer/issues/1344).
-- **`pillow` is pinned to `~=10.0`**, which has 5 known CVEs fixed in
-  `12.x`. The 2-major-version jump touches 10+ call sites across image
-  processing and deduplication and needs its own compatibility-audit
-  PR rather than a blind bump. Tracked via `.github/accepted-risks.yml`
-  and its linked follow-up issue.
 - **mypy's `strict = true` config is repo-wide, but 41 files are
   exempted** via a dated `[[tool.mypy.overrides]] ignore_errors = true`
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").

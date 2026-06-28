@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from ..history.models import Operation, OperationStatus, OperationType
@@ -36,6 +37,16 @@ class OperationValidator:
             trash_dir = get_data_dir() / "trash"
         self.trash_dir: Path = trash_dir
         self.trash_dir.mkdir(parents=True, exist_ok=True)
+
+    def _path_inspection_conflict(self, path: Path, exc: OSError) -> Conflict:
+        """Build a validation conflict for unreadable or unresolvable paths."""
+        return Conflict(
+            conflict_type=ConflictType.PERMISSION_DENIED,
+            path=str(path),
+            description="Unable to inspect link path",
+            expected="Readable filesystem metadata",
+            actual=f"{type(exc).__name__}: {exc}",
+        )
 
     def validate_undo(self, operation: Operation) -> ValidationResult:
         """Validate an undo operation.
@@ -334,7 +345,7 @@ class OperationValidator:
         conflicts = []
         destination_path = operation.destination_path
 
-        if destination_path is None or not destination_path.exists():
+        if destination_path is None:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -346,7 +357,31 @@ class OperationValidator:
             )
             return conflicts
 
-        if destination_path.is_symlink():
+        try:
+            destination_exists = destination_path.exists()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
+
+        if not destination_exists:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(destination_path),
+                    description="Hardlink has already been deleted",
+                    expected="Hardlink exists",
+                    actual="Hardlink not found",
+                )
+            )
+            return conflicts
+
+        try:
+            destination_is_symlink = destination_path.is_symlink()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
+
+        if destination_is_symlink:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
@@ -358,7 +393,14 @@ class OperationValidator:
             )
             return conflicts
 
-        if not operation.source_path.exists():
+        try:
+            source_is_symlink = operation.source_path.is_symlink()
+            source_exists = os.path.lexists(operation.source_path)
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(operation.source_path, exc))
+            return conflicts
+
+        if not source_exists:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -370,8 +412,24 @@ class OperationValidator:
             )
             return conflicts
 
-        source_stat = operation.source_path.stat()
-        destination_stat = destination_path.stat()
+        if source_is_symlink:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.HASH_MISMATCH,
+                    path=str(operation.source_path),
+                    description="Source file is now a symlink",
+                    expected="Hardlink source",
+                    actual="Symlink",
+                )
+            )
+            return conflicts
+
+        try:
+            source_stat = operation.source_path.lstat()
+            destination_stat = destination_path.lstat()
+        except OSError as exc:
+            conflicts.append(self._path_inspection_conflict(destination_path, exc))
+            return conflicts
         if (source_stat.st_dev, source_stat.st_ino) != (
             destination_stat.st_dev,
             destination_stat.st_ino,
@@ -393,7 +451,7 @@ class OperationValidator:
         conflicts = []
         destination_path = operation.destination_path
 
-        if destination_path is None or not destination_path.is_symlink():
+        if destination_path is None:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -405,14 +463,41 @@ class OperationValidator:
             )
             return conflicts
 
-        if destination_path.resolve(strict=False) != operation.source_path.resolve(strict=False):
+        try:
+            is_symlink = destination_path.is_symlink()
+        except (OSError, RuntimeError) as exc:
+            os_error = exc if isinstance(exc, OSError) else OSError(str(exc))
+            conflicts.append(self._path_inspection_conflict(destination_path, os_error))
+            return conflicts
+
+        if not is_symlink:
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(destination_path),
+                    description="Symlink has already been deleted or replaced",
+                    expected="Symlink exists",
+                    actual="Symlink not found",
+                )
+            )
+            return conflicts
+
+        try:
+            destination_resolved = destination_path.resolve(strict=False)
+            source_resolved = operation.source_path.resolve(strict=False)
+        except (OSError, RuntimeError) as exc:
+            os_error = exc if isinstance(exc, OSError) else OSError(str(exc))
+            conflicts.append(self._path_inspection_conflict(destination_path, os_error))
+            return conflicts
+
+        if destination_resolved != source_resolved:
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.HASH_MISMATCH,
                     path=str(destination_path),
                     description="Symlink was replaced with a different target",
-                    expected=str(operation.source_path.resolve(strict=False)),
-                    actual=str(destination_path.resolve(strict=False)),
+                    expected=str(source_resolved),
+                    actual=str(destination_resolved),
                 )
             )
 
@@ -536,6 +621,24 @@ class OperationValidator:
                     actual="No destination path",
                 )
             )
+        else:
+            try:
+                dest_exists = os.path.lexists(operation.destination_path)
+            except OSError as exc:
+                conflicts.append(self._path_inspection_conflict(operation.destination_path, exc))
+                return conflicts
+
+            if dest_exists:
+                if not any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in conflicts):
+                    conflicts.append(
+                        Conflict(
+                            conflict_type=ConflictType.PATH_OCCUPIED,
+                            path=str(operation.destination_path),
+                            description="Destination path is now occupied",
+                            expected="Path available",
+                            actual="Path occupied",
+                        )
+                    )
 
         return conflicts
 
