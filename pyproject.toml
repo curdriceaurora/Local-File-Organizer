@@ -831,6 +831,7 @@ DEP002 = [
 "src/file_organizer/plugins/security.py" = 100
 "src/file_organizer/review_regressions/__init__.py" = 100
 "src/file_organizer/review_regressions/api_compat.py" = 20
+"src/file_organizer/review_regressions/audit.py" = 95
 "src/file_organizer/review_regressions/correctness.py" = 90
 "src/file_organizer/review_regressions/framework.py" = 80
 "src/file_organizer/review_regressions/memory_lifecycle.py" = 90
