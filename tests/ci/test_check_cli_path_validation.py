@@ -12,6 +12,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def test_flags_unvalidated_cli_path(tmp_path: Path) -> None:
+    """Verify that the checker flags unvalidated path parameters in command entrypoints."""
     src = tmp_path / "app.py"
     src.write_text(
         """
@@ -27,6 +28,7 @@ def run(directory: Path) -> None:
 
 
 def test_allows_validated_cli_path(tmp_path: Path) -> None:
+    """Verify that resolved/validated path parameters do not trigger violations."""
     src = tmp_path / "app.py"
     src.write_text(
         """
@@ -41,6 +43,7 @@ def run(directory: Path) -> None:
 
 
 def test_ignores_non_command_helper(tmp_path: Path) -> None:
+    """Verify helper functions that are not CLI commands are ignored by the checker."""
     src = tmp_path / "app.py"
     src.write_text(
         """
@@ -54,6 +57,7 @@ def helper(directory: Path) -> None:
 
 
 def test_ignores_non_path_type_literal_descriptions(tmp_path: Path) -> None:
+    """Verify that type annotations are checked strictly, ignoring descriptions containing 'Path'."""
     src = tmp_path / "app.py"
     src.write_text(
         """
@@ -68,6 +72,7 @@ def run(path: Annotated[str, typer.Argument(help="Path to inspect.")] = ".") -> 
 
 
 def test_flags_unvalidated_doctor_command(tmp_path: Path) -> None:
+    """Verify that 'doctor' functions are treated as CLI command entrypoints even without decorators."""
     src = tmp_path / "app.py"
     src.write_text(
         """
@@ -82,6 +87,7 @@ def doctor(path: Path) -> None:
 
 
 def test_allows_noqa_override(tmp_path: Path) -> None:
+    """Verify that inline # noqa: cli-path-validation overrides suppress warnings."""
     src = tmp_path / "app.py"
     src.write_text(
         """

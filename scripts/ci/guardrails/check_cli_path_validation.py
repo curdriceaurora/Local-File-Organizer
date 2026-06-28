@@ -45,14 +45,17 @@ class PathTypeChecker(ast.NodeVisitor):
     """Visitor to check if type annotation AST uses Path."""
 
     def __init__(self) -> None:
+        """Initialize the visitor setting has_path to False."""
         self.has_path = False
 
     def visit_Name(self, node: ast.Name) -> None:
+        """Record if name matches Path."""
         if node.id == "Path":
             self.has_path = True
         self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
+        """Record if attribute matches Path."""
         if node.attr == "Path":
             self.has_path = True
         self.generic_visit(node)

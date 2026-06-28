@@ -204,6 +204,7 @@ class TestMemoryProfiler:
         assert counts == sorted(counts, reverse=True)
 
     def test_get_rss_linux_proc_success(self) -> None:
+        """Verify that _get_rss parses VmRSS successfully on Linux proc status."""
         from unittest.mock import mock_open
 
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -214,6 +215,7 @@ class TestMemoryProfiler:
             assert rss == 1000 * 1024
 
     def test_get_rss_linux_proc_missing_vmrss(self) -> None:
+        """Verify that _get_rss falls back to resource module on Linux if VmRSS is missing in proc status."""
         from unittest.mock import mock_open
 
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -230,6 +232,7 @@ class TestMemoryProfiler:
             assert rss == 2000 * 1024
 
     def test_get_rss_darwin_proc_missing(self) -> None:
+        """Verify that _get_rss queries resource maxrss directly on macOS/Darwin when proc status is missing."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
 
         mock_usage = MagicMock()
@@ -243,6 +246,7 @@ class TestMemoryProfiler:
             assert rss == 3000
 
     def test_get_rss_resource_import_error(self) -> None:
+        """Verify that _get_rss returns 0 if both proc status and resource module raise errors."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
 
         with (
@@ -254,6 +258,7 @@ class TestMemoryProfiler:
             assert rss == 0
 
     def test_get_rss_vms_linux_proc_success(self) -> None:
+        """Verify that _get_rss_vms parses both VmRSS and VmSize successfully on Linux proc status."""
         from unittest.mock import mock_open
 
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -265,6 +270,7 @@ class TestMemoryProfiler:
             assert vms == 5000 * 1024
 
     def test_get_rss_vms_darwin(self) -> None:
+        """Verify that _get_rss_vms queries resource maxrss and returns 0 VMS on macOS/Darwin."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
 
         mock_usage = MagicMock()
@@ -279,6 +285,7 @@ class TestMemoryProfiler:
             assert vms == 0
 
     def test_get_rss_vms_linux_resource_fallback(self) -> None:
+        """Verify that _get_rss_vms falls back to resource module on Linux if proc status is missing."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
 
         mock_usage = MagicMock()
@@ -293,6 +300,7 @@ class TestMemoryProfiler:
             assert vms == 0
 
     def test_get_rss_vms_resource_import_error(self) -> None:
+        """Verify that _get_rss_vms returns (0, 0) if both proc status and resource modules fail."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
 
         with (
