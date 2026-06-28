@@ -388,12 +388,10 @@ class DocumentExtractor:
             Extracted text
         """
         try:
-            from xml.etree.ElementTree import ParseError
-
             # ``content.xml`` comes from an untrusted document; use defusedxml to
             # reject entity-expansion / external-entity (XXE) payloads that the
             # stdlib parser would otherwise process.
-            from defusedxml.ElementTree import fromstring as _xml_fromstring
+            from defusedxml.ElementTree import ParseError, fromstring as _xml_fromstring
 
             # ODT files are ZIP archives; open through SafeDir (symlink-safe).
             with self._open_binary(file_path, scan_root) as f, zipfile.ZipFile(f, "r") as odt_zip:
