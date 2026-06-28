@@ -108,6 +108,10 @@ def login(
             from file_organizer.cli.path_validation import resolve_cli_path
 
             save_to = resolve_cli_path(save_to, must_exist=False, must_be_dir=False)
+            if save_to.exists() and not save_to.is_file():
+                raise typer.BadParameter(
+                    f"Token output path is not a regular file: {save_to!s}"
+                )
             save_to.parent.mkdir(parents=True, exist_ok=True)
             save_to.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Saved tokens to[/green] {save_to}")
