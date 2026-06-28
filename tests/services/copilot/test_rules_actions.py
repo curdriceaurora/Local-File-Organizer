@@ -64,6 +64,8 @@ def test_conflict_rename_new_preserves_existing_destination(tmp_path: Path) -> N
     assert destination.read_text(encoding="utf-8") == "old"
     assert result.destination == tmp_path / "dest_1.txt"
     assert result.destination.read_text(encoding="utf-8") == "new"
+
+
 def test_copy_file_clean_success(tmp_path: Path) -> None:
     """Tests copying a file where no destination or parent directory exists yet."""
     source = tmp_path / "source.txt"
