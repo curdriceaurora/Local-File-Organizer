@@ -86,6 +86,21 @@ def run(path: Annotated[str, typer.Option(path_type=Path)] = ".") -> None:
     assert len(violations) == 0
 
 
+def test_ignores_path_in_nested_annotated_metadata(tmp_path: Path) -> None:
+    """Verify nested Annotated metadata Path references are ignored."""
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+@app.command()
+def run(path: list[Annotated[str, typer.Option(path_type=Path)]]) -> None:
+    pass
+""",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 0
+
+
 def test_flags_unvalidated_doctor_command(tmp_path: Path) -> None:
     """Verify that 'doctor' functions are treated as CLI command entrypoints even without decorators."""
     src = tmp_path / "app.py"

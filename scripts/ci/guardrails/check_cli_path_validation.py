@@ -41,21 +41,12 @@ def _is_cli_command(node: ast.FunctionDef) -> bool:
     return False
 
 
-def _annotation_type_expr(annotation: ast.expr) -> ast.expr:
-    """Return the declared type expr for annotations, unwrapping Annotated[T, ...]."""
-    if not isinstance(annotation, ast.Subscript):
-        return annotation
-
-    value = annotation.value
-    is_annotated = (isinstance(value, ast.Name) and value.id == "Annotated") or (
+def _is_annotated_subscript(node: ast.Subscript) -> bool:
+    """Return True if ``node`` represents ``Annotated[...]``."""
+    value = node.value
+    return (isinstance(value, ast.Name) and value.id == "Annotated") or (
         isinstance(value, ast.Attribute) and value.attr == "Annotated"
     )
-    if not is_annotated:
-        return annotation
-
-    if isinstance(annotation.slice, ast.Tuple) and annotation.slice.elts:
-        return annotation.slice.elts[0]
-    return annotation
 
 
 class PathTypeChecker(ast.NodeVisitor):
@@ -75,6 +66,17 @@ class PathTypeChecker(ast.NodeVisitor):
         """Record if attribute matches Path."""
         if node.attr == "Path":
             self.has_path = True
+        self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        """For ``Annotated[T, ...]``, inspect only ``T`` and ignore metadata."""
+        if _is_annotated_subscript(node):
+            annotation_slice = node.slice
+            if isinstance(annotation_slice, ast.Tuple) and annotation_slice.elts:
+                self.visit(annotation_slice.elts[0])
+            else:
+                self.visit(annotation_slice)
+            return
         self.generic_visit(node)
 
 
@@ -101,7 +103,7 @@ class CliPathValidationVisitor(ast.NodeVisitor):
             # Check annotation (e.g., Path, Path | None, Optional[Path])
             if arg.annotation:
                 checker = PathTypeChecker()
-                checker.visit(_annotation_type_expr(arg.annotation))
+                checker.visit(arg.annotation)
                 if checker.has_path:
                     is_path = True
 

@@ -26,3 +26,12 @@ def test_api_keys_generate_command(tmp_path: Path) -> None:
     assert "Bcrypt hash:" in result.stdout
     assert output_file.exists()
     assert output_file.read_text().startswith("testprefix_")
+
+
+def test_api_keys_generate_rejects_existing_directory_output(tmp_path: Path) -> None:
+    """Verify --output rejects an existing directory path."""
+    output_dir = tmp_path / "keys-dir"
+    output_dir.mkdir()
+    result = runner.invoke(app, ["api-keys", "generate", "--output", str(output_dir)])
+    assert result.exit_code == 2
+    assert "not a regular file" in result.output.lower()
