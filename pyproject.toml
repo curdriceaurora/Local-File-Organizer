@@ -478,6 +478,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+    # Lines with an inline safedir-required exemption are already reviewed
+    # and approved raw-I/O callsites; they don't need diff-cover gates.
+    "noqa: safedir-required",
 ]
 
 # Interrogate configuration (docstring coverage)
