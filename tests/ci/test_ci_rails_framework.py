@@ -143,20 +143,19 @@ def test_list_is_noop_exit_zero(tmp_path: Path) -> None:
 
 
 def test_repo_registry_loads_registered_rails() -> None:
-    """The checked-in registry loads all registered rails, and they must be advisory in this phase."""
+    """The checked-in registry loads all registered rails with the expected enforcement modes."""
     rails = ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY)
-    assert {rail.name for rail in rails} == {
-        "safedir-required",
-        "atomic-write",
-        "cli-path-validation",
-        "defusedxml-fallback",
-        "test-hardcoded-paths",
-        "test-separator-paths",
-        "pytest-raises-hygiene",
-        "safedir-valueerror",
-        "textiowrapper-detach",
-        "called-attribute-assertion",
-        "xdist-loadgroup",
+    expected_modes = {
+        "safedir-required": "advisory",
+        "atomic-write": "advisory",
+        "cli-path-validation": "advisory",
+        "defusedxml-fallback": "advisory",
+        "test-hardcoded-paths": "advisory",
+        "test-separator-paths": "advisory",
+        "pytest-raises-hygiene": "advisory",
+        "safedir-valueerror": "enforce",
+        "textiowrapper-detach": "enforce",
+        "called-attribute-assertion": "advisory",
+        "xdist-loadgroup": "enforce",
     }
-    for rail in rails:
-        assert rail.mode == "advisory"
+    assert {rail.name: rail.mode for rail in rails} == expected_modes
