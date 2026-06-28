@@ -56,9 +56,9 @@ class TestMkdocsNavIntegrity:
     def test_nav_does_not_reference_superpowers(self, mkdocs_config: dict) -> None:
         """No mkdocs.yml nav entry may reference a docs/superpowers/ path.
 
-        superpowers/ contains internal AI-authored planning documents that are
-        intentionally excluded from public documentation.  This test prevents
-        accidental nav additions from publishing those files.
+        The exclusion is retained for now while the repository finishes its
+        agent-artifact cleanup, so this test prevents accidental nav additions
+        from publishing those files.
         """
         nav = mkdocs_config.get("nav", [])
         nav_paths: list[str] = []

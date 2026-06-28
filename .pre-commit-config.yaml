@@ -231,9 +231,6 @@ repos:
         args: ["-c", ".pymarkdown.json", "scan"]
         exclude: >
           (?x)^(
-            \.claude/|
-            \.auto-claude/|
-            memory/test-generation-patterns\.md|
             docs/internal/|
             docs/testing/|
             docs/developer/testing\.md|
