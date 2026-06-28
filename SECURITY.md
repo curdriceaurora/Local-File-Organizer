@@ -56,7 +56,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | advisory |
 | `safedir-valueerror` | A broad `except Exception`/bare `except` around a `SafeDir` call that doesn't re-raise or catch `ValueError` explicitly | enforced |
 | `textiowrapper-detach` | An `io.TextIOWrapper` that is never `.detach()`-ed before going out of scope (use-after-close risk on the wrapped buffer/fd) | enforced |
-| `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | advisory |
+| `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | enforced |
 | `xdist-loadgroup` | A test using the xdist-wide `tmp_path_factory.getbasetemp()` without an `xdist_group` marker | enforced |
 
 Per-file coverage floors (`check-integration-floors.py` for the
@@ -100,7 +100,7 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   enforcement. Flipping a rail to `enforce` requires first reducing its
   violation count to zero (or to an explicitly accepted/`noqa`-tagged
   remainder). The remaining advisory rails are tracked individually in
-  #1363 through #1370.
+  #1363 through #1369.
 
 ## Reporting a Vulnerability
 

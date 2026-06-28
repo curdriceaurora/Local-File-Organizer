@@ -140,7 +140,7 @@ def test_repo_registry_loads_registered_rails() -> None:
         "pytest-raises-hygiene": "advisory",
         "safedir-valueerror": "enforce",
         "textiowrapper-detach": "enforce",
-        "called-attribute-assertion": "advisory",
+        "called-attribute-assertion": "enforce",
         "xdist-loadgroup": "enforce",
     }
     assert {rail.name: rail.mode for rail in rails} == expected_modes

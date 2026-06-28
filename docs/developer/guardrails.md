@@ -48,6 +48,18 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `scripts/dev/pre-commit-validation.sh`.
 
+## Blocking Guardrails
+
+Once a rail's backlog reaches zero, flip its registry mode to `enforce`.
+Blocking rails run through the `ci-rails` pre-commit hook and
+`scripts/ci/ci_rails.py`, so local pre-commit and CI both fail on new
+violations. Re-run the rail directly to verify it exits 0 before promoting
+it:
+
+```bash
+python scripts/ci/guardrails/check_called_attribute_assertion.py
+```
+
 ### Importable Guardrail Modules
 
 Project-owned CI guardrail scripts live under `scripts/ci/guardrails/` and are

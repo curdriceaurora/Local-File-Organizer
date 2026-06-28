@@ -258,9 +258,9 @@ class TestBumpVersionIntegration:
         mock_read.return_value = "2.0.0"
         result = bump_version("patch")
         assert result == "2.0.1"
-        assert mock_update_file.called
-        assert mock_update_ver.called
-        assert mock_update_init.called
+        mock_update_file.assert_called_once()
+        mock_update_ver.assert_called_once()
+        mock_update_init.assert_called_once()
 
     @patch("release._update_init_py")
     @patch("release._update_version_py")

@@ -306,7 +306,7 @@ class TestDisplaySummary:
             space_saved=0,
             dry_run=True,
         )
-        assert mock_console.print.called
+        assert mock_console.print.call_count == 4
 
     def test_real_summary(self) -> None:
         from file_organizer.cli.dedupe_display import display_summary
@@ -320,7 +320,7 @@ class TestDisplaySummary:
             space_saved=1024 * 1024,
             dry_run=False,
         )
-        assert mock_console.print.called
+        assert mock_console.print.call_count == 4
 
 
 # ---------------------------------------------------------------------------
