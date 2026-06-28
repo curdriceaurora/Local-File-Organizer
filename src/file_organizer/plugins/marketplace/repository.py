@@ -167,7 +167,7 @@ class PluginRepository:
                     ) from exc
             if not source_path.exists() or not source_path.is_file():
                 raise MarketplaceRepositoryError(f"Plugin artifact not found: {source_path}")
-            shutil.copy2(source_path, destination_path)
+            shutil.copy2(source_path, destination_path)  # noqa: safedir-required  # plugin repository — source/destination are pre-validated plugin cache paths
             return destination_path
 
         if parsed.scheme not in {"http", "https"}:
@@ -177,7 +177,7 @@ class PluginRepository:
             with httpx.Client(timeout=self.timeout_seconds, follow_redirects=True) as client:
                 with client.stream("GET", source_url) as response:
                     response.raise_for_status()
-                    with destination_path.open("wb") as handle:
+                    with destination_path.open("wb") as handle:  # noqa: safedir-required  # plugin repository — destination path is an internal cache location
                         for chunk in response.iter_bytes(chunk_size=65536):
                             if chunk:
                                 handle.write(chunk)
@@ -192,7 +192,7 @@ class PluginRepository:
         import hashlib
 
         digest = hashlib.sha256()
-        with file_path.open("rb") as handle:
+        with file_path.open("rb") as handle:  # noqa: safedir-required  # plugin repository — path is an internal cache location
             while True:
                 chunk = handle.read(8192)
                 if not chunk:

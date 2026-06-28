@@ -39,7 +39,7 @@ def _parse_str_list(raw: object, *, field_name: str) -> tuple[str, ...]:
 def compute_sha256(file_path: Path) -> str:
     """Compute SHA256 hex digest for a file."""
     digest = hashlib.sha256()
-    with file_path.open("rb") as handle:
+    with file_path.open("rb") as handle:  # noqa: safedir-required  # plugin metadata reader — path is a trusted, pre-validated plugin file
         while True:
             chunk = handle.read(8192)
             if not chunk:

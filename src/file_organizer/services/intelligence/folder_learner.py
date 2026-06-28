@@ -300,7 +300,7 @@ class FolderPreferenceLearner:
             "total_choices": self.total_choices,
         }
 
-        with open(storage_path, "w") as f:
+        with open(storage_path, "w") as f:  # noqa: safedir-required  # folder learner writer — path is an internal data file
             json.dump(data, f, indent=2)
 
     def _load_preferences(self) -> None:
@@ -310,7 +310,7 @@ class FolderPreferenceLearner:
             return
 
         try:
-            with open(storage_path) as f:
+            with open(storage_path) as f:  # noqa: safedir-required  # folder learner reader — path is an internal data file
                 data = json.load(f)
 
             # Load type_folder_map

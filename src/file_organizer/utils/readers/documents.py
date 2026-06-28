@@ -104,7 +104,7 @@ def read_text_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_text(f, max_chars, path.name)
@@ -154,7 +154,7 @@ def read_docx_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_docx(f, path.name)
@@ -318,7 +318,7 @@ def read_spreadsheet_file(
             raise FileReadError(f"Failed to read spreadsheet file {path.name}: {e}") from e
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _dispatch_spreadsheet(f, ext, max_rows, path.name)
@@ -377,7 +377,7 @@ def read_presentation_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_presentation(f, path.name)

@@ -156,7 +156,7 @@ def read_text_safe(
             return ""
     if raw is None:
         try:
-            with path.open("rb") as fh:  # safedir: ok — Windows / NotImplementedError fallback
+            with path.open("rb") as fh:  # noqa: safedir-required  # Windows / NotImplementedError fallback; SafeDir-aware callers use the fd branch
                 raw = fh.read(limit)
         except OSError:
             return ""

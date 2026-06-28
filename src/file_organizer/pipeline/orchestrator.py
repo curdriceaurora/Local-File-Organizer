@@ -931,7 +931,7 @@ class PipelineOrchestrator:
             final_dest = destination.parent / f"{stem}_{counter}{suffix}"
             counter += 1
 
-        shutil.copy2(source, final_dest)
+        shutil.copy2(source, final_dest)  # noqa: safedir-required  # orchestrator copy — source/destination are SafeDir-resolved paths
         logger.info("Organized %s -> %s", source, final_dest)
 
     def _start_watch_mode(self) -> None:

@@ -40,7 +40,7 @@ def compute_file_hash(path: Path) -> str:
         OSError: If the file cannot be read.
     """
     hasher = hashlib.sha256()
-    with open(path, "rb") as f:
+    with open(path, "rb") as f:  # noqa: safedir-required  # checkpoint hash — path is a managed checkpoint file, content is read for integrity
         while True:
             chunk = f.read(_HASH_CHUNK_SIZE)
             if not chunk:
@@ -150,7 +150,7 @@ class CheckpointManager:
         # Atomic write: write to temp file, fsync, rename, then fsync directory
         temp_path = path.with_suffix(".tmp")
         try:
-            with open(temp_path, "w", encoding="utf-8") as f:
+            with open(temp_path, "w", encoding="utf-8") as f:  # noqa: safedir-required  # checkpoint writer — path is an internally managed temp checkpoint file
                 f.write(json.dumps(data, indent=2, default=str))
                 f.flush()
                 os.fsync(f.fileno())

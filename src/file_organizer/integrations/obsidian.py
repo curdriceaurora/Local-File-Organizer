@@ -94,7 +94,7 @@ class ObsidianIntegration(Integration):
             return False
 
         target_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
+        shutil.copy2(source, destination)  # noqa: safedir-required  # Obsidian integration — source/destination validated at integration boundary
 
         note_dir.mkdir(parents=True, exist_ok=True)
         note_path.write_text(

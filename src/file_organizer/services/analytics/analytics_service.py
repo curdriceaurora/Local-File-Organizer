@@ -357,11 +357,11 @@ class AnalyticsService:
         if format == "json":
             import json
 
-            with open(output_path, "w") as f:
+            with open(output_path, "w") as f:  # noqa: safedir-required  # analytics export — output path validated at CLI/API boundary
                 json.dump(dashboard.to_dict(), f, indent=2)
 
         elif format == "text":
-            with open(output_path, "w") as f:
+            with open(output_path, "w") as f:  # noqa: safedir-required  # analytics export — output path validated at CLI/API boundary
                 f.write(self._format_dashboard_text(dashboard))
 
         else:

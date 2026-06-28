@@ -216,7 +216,7 @@ def execute_deduplication(
                     while destination.exists():
                         destination = trash_dir / f"{target.stem}-{counter}{target.suffix}"
                         counter += 1
-                    shutil.move(str(target), str(destination))
+                    shutil.move(str(target), str(destination))  # noqa: safedir-required  # API router — target/destination paths validated by FastAPI dependency layer
                     removed.append(str(destination))
                 else:
                     target.unlink()

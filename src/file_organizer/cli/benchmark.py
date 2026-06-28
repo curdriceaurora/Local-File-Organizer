@@ -644,7 +644,7 @@ def _run_e2e_suite(files: list[Path]) -> _SuiteIterationOutcome:
         for index, source in enumerate(candidates):
             target = input_dir / f"{index:03d}_{source.name}"
             try:
-                shutil.copy2(source, target)
+                shutil.copy2(source, target)  # noqa: safedir-required  # benchmark — source/target are internally managed benchmark fixture paths
                 copied.append(target)
             except OSError as exc:
                 copy_failures.append((source, str(exc)))

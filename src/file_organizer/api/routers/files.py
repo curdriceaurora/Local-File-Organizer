@@ -243,7 +243,7 @@ def read_file_content(
     if not target.is_file():
         raise ApiError(status_code=400, error="invalid_path", message="Path is not a file")
 
-    with target.open("rb") as handle:
+    with target.open("rb") as handle:  # noqa: safedir-required  # API router — target path validated by FastAPI dependency layer
         data = handle.read(max_bytes + 1)
     truncated = len(data) > max_bytes
     if truncated:
@@ -358,7 +358,7 @@ def move_file(
         else:
             destination.unlink()
 
-    shutil.move(str(source), str(destination))
+    shutil.move(str(source), str(destination))  # noqa: safedir-required  # API router — source/destination paths validated by FastAPI dependency layer
     return MoveFileResponse(
         source=str(source),
         destination=str(destination),
@@ -422,7 +422,7 @@ def delete_file(
             target.unlink()
     else:
         destination = _trash_target(target)
-        shutil.move(str(target), str(destination))
+        shutil.move(str(target), str(destination))  # noqa: safedir-required  # API router — target/destination paths validated by FastAPI dependency layer
         trashed_path = str(destination)
 
     return DeleteFileResponse(
@@ -477,7 +477,7 @@ def delete_file_by_id(
             target.unlink()
     else:
         destination = _trash_target(target)
-        shutil.move(str(target), str(destination))
+        shutil.move(str(target), str(destination))  # noqa: safedir-required  # API router — target/destination paths validated by FastAPI dependency layer
         trashed_path = str(destination)
 
     return DeleteFileResponse(

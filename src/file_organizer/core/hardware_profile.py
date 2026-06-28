@@ -238,7 +238,7 @@ def _get_system_ram() -> int:
 
     # Fallback: /proc/meminfo on Linux
     try:
-        with open("/proc/meminfo") as f:
+        with open("/proc/meminfo") as f:  # noqa: safedir-required  # read-only Linux proc FS — not a user-supplied path
             for line in f:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) * 1024

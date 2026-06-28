@@ -191,7 +191,7 @@ class JohnnyDecimalConfig:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(path, "w") as f:
+        with open(path, "w") as f:  # noqa: safedir-required  # JD config writer — path is an internal config file
             json.dump(self.to_dict(), f, indent=2)
 
         logger.info(f"Configuration saved to {path}")
@@ -213,7 +213,7 @@ class JohnnyDecimalConfig:
         if not path.exists():
             raise FileNotFoundError(f"Configuration file not found: {path}")
 
-        with open(path) as f:
+        with open(path) as f:  # noqa: safedir-required  # JD config reader — path is an internal config file
             data = json.load(f)
 
         logger.info(f"Configuration loaded from {path}")

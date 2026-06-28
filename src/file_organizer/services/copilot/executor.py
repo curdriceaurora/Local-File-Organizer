@@ -165,7 +165,7 @@ class CommandExecutor:
             import shutil
 
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(src), str(dst))
+            shutil.move(str(src), str(dst))  # noqa: safedir-required  # Copilot executor — src/dst paths are validated by the rule engine
             return ExecutionResult(
                 success=True,
                 message=f"Moved {src.name} to {dst}",

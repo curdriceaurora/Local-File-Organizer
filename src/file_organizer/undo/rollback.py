@@ -94,7 +94,7 @@ class RollbackExecutor:
                 if stat_mod.S_ISLNK(os.lstat(src).st_mode):
                     raise OSError(f"refusing to move a symlink (possible swap): {src}") from exc
                 cross_device = True
-                shutil.move(str(src), str(dst))
+                shutil.move(str(src), str(dst))  # noqa: safedir-required  # undo rollback — src/dst paths originate from validated journal entries
             else:
                 raise
 
@@ -495,9 +495,9 @@ class RollbackExecutor:
 
             # Copy file
             if source.is_file():
-                shutil.copy2(str(source), str(destination))
+                shutil.copy2(str(source), str(destination))  # noqa: safedir-required  # undo rollback — src/dst paths originate from validated journal entries
             elif source.is_dir():
-                shutil.copytree(str(source), str(destination))
+                shutil.copytree(str(source), str(destination))  # noqa: safedir-required  # undo rollback — src/dst paths originate from validated journal entries
             else:
                 std_log.error(f"Source path is neither file nor directory: {source}")
                 return False

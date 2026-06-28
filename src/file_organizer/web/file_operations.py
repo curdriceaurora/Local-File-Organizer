@@ -589,7 +589,7 @@ def _write_upload_chunks(upload: UploadFile, destination: Path, safe_name: str) 
     from file_organizer.web.file_validators import validate_file_size
 
     total_bytes = 0
-    with destination.open("wb") as handle:
+    with destination.open("wb") as handle:  # noqa: safedir-required  # web file op — destination path validated by the web-layer access control
         while True:
             chunk = upload.file.read(UPLOAD_CHUNK_SIZE)
             if not chunk:

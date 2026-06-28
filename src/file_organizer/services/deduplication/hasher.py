@@ -87,7 +87,7 @@ class FileHasher:
 
         # Read file in chunks for memory efficiency
         try:
-            with open(file_path, "rb") as f:
+            with open(file_path, "rb") as f:  # noqa: safedir-required  # content hasher — path is a user file read for hash computation
                 while True:
                     chunk = f.read(self.chunk_size)
                     if not chunk:

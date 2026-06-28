@@ -212,7 +212,7 @@ class MemoryProfiler:
         """
         # Try /proc/self/status (Linux)
         try:
-            with open("/proc/self/status") as f:
+            with open("/proc/self/status") as f:  # noqa: safedir-required  # read-only Linux proc FS — not a user-supplied path
                 for line in f:
                     if line.startswith("VmRSS:"):
                         return int(line.split()[1]) * 1024
@@ -244,7 +244,7 @@ class MemoryProfiler:
 
         # Try /proc/self/status (Linux)
         try:
-            with open("/proc/self/status") as f:
+            with open("/proc/self/status") as f:  # noqa: safedir-required  # read-only Linux proc FS — not a user-supplied path
                 for line in f:
                     if line.startswith("VmRSS:"):
                         rss = int(line.split()[1]) * 1024

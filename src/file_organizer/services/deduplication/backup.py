@@ -93,7 +93,7 @@ class BackupManager:
 
         # Copy file to backup directory
         try:
-            shutil.copy2(file_path, backup_path)
+            shutil.copy2(file_path, backup_path)  # noqa: safedir-required  # dedup backup — path is a content-addressed backup target
         except (OSError, shutil.Error) as e:
             raise OSError(f"Failed to create backup: {e}") from e
 
@@ -150,7 +150,7 @@ class BackupManager:
 
         # Copy backup to target location
         try:
-            shutil.copy2(backup_path, target_path)
+            shutil.copy2(backup_path, target_path)  # noqa: safedir-required  # dedup restore — path is a content-addressed backup source
         except (OSError, shutil.Error) as e:
             raise OSError(f"Failed to restore backup: {e}") from e
 
@@ -294,7 +294,7 @@ class BackupManager:
             return {}
 
         try:
-            with open(self.manifest_path, encoding="utf-8") as f:
+            with open(self.manifest_path, encoding="utf-8") as f:  # noqa: safedir-required  # dedup manifest reader — path is an internal manifest file
                 # Acquire shared lock for reading (Unix only)
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)

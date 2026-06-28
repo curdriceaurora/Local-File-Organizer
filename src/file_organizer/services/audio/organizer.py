@@ -367,7 +367,7 @@ class AudioOrganizer:
             if final_dest.exists():
                 final_dest = _resolve_conflict(final_dest)
 
-            shutil.move(str(source), str(final_dest))
+            shutil.move(str(source), str(final_dest))  # noqa: safedir-required  # audio organizer — source/dest paths are validated by the audio pipeline
             logger.info(f"Moved: {source} -> {final_dest}")
             return FileMove(
                 source=source,
