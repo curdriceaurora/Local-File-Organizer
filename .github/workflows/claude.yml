@@ -16,6 +16,6 @@ jobs:
     if: contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
     steps:
-      - uses: anthropics/claude-code-action@39431830520a7ae6c0c572f11a7707e7043325e3
+      - uses: anthropics/claude-code-action@a92e7c70a4da9793dc164451d829089dc057a464
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
