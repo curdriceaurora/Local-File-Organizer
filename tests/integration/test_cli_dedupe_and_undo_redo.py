@@ -306,6 +306,7 @@ class TestDisplaySummary:
             space_saved=0,
             dry_run=True,
         )
+        # blank line, divider, blank line, and dry-run summary panel
         assert mock_console.print.call_count == 4
 
     def test_real_summary(self) -> None:
@@ -320,6 +321,7 @@ class TestDisplaySummary:
             space_saved=1024 * 1024,
             dry_run=False,
         )
+        # blank line, divider, blank line, and completion summary panel
         assert mock_console.print.call_count == 4
 
 

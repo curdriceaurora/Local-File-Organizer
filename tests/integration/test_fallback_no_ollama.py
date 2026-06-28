@@ -114,7 +114,7 @@ class TestFallbackDoesNotCrash:
 
         assert result.total_files == expected
         assert result.failed_files == 0
-        # Verify fallback path was used with exactly the collected source files.
+        # Text, CAD, and image inputs each fall back once when Ollama is down.
         assert mock_fallback.call_count == 3
         fallback_files = {
             file_path
@@ -176,6 +176,7 @@ class TestFallbackDoesNotCrash:
             organizer.organize(source_dir, output_dir)
 
         # AI processing paths were called with actual file lists (not fallback)
+        # Text and CAD files both route through _process_text_files here.
         assert mock_text.call_count == 2
         # Verify files were passed (text_files call + cad_files call)
         all_text_args = [call.args[0] for call in mock_text.call_args_list]
