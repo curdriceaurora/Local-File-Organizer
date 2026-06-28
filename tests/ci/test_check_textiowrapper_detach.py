@@ -11,7 +11,11 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 _SCRIPT = (
-    Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "check_textiowrapper_detach.py"
+    Path(__file__).resolve().parents[2]
+    / "scripts"
+    / "ci"
+    / "guardrails"
+    / "check_textiowrapper_detach.py"
 )
 
 

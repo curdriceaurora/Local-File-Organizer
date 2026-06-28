@@ -11,7 +11,7 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-_SCRIPT = Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "pip_audit_gate.py"
+_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "security" / "pip_audit_gate.py"
 
 
 def _load_module() -> ModuleType:

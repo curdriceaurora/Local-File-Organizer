@@ -12,8 +12,9 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 _SCRIPT = (
     Path(__file__).resolve().parents[2]
-    / ".claude"
     / "scripts"
+    / "ci"
+    / "guardrails"
     / "check_called_attribute_assertion.py"
 )
 

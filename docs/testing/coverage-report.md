@@ -214,15 +214,17 @@ Tests are integrated with GitHub Actions:
 ## How to Maintain Coverage
 
 1. **Before Committing Code**
+
    ```bash
    # Run smoke tests
    pytest -m smoke -x
    ```
 
 2. **Before Creating PR**
+
    ```bash
    # Full test validation
-   bash .claude/scripts/pre-commit-validation.sh
+   bash scripts/dev/pre-commit-validation.sh
    ```
 
 3. **Adding New Code**
@@ -231,6 +233,7 @@ Tests are integrated with GitHub Actions:
    - Mark complex tests with `@pytest.mark.slow` if > 5s
 
 4. **Adding Docstrings**
+
    ```bash
    # Check docstring coverage
    interrogate -v src/file_organizer --fail-under 95
@@ -283,6 +286,7 @@ Credit to the testing effort that ensured:
 **Next Steps**: Review Phase C roadmap for remaining coverage gaps.
 
 **Questions?** See [Testing Guide](../developer/testing.md) or run:
+
 ```bash
 pytest --help
 interrogate --help

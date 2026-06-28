@@ -40,12 +40,12 @@ project-specific AST checks layered on top of both.
 ## CI-Enforced Lint Rails
 
 The rails below are AST-based static checks run via
-`.claude/scripts/ci_rails.py` (registry: `.claude/ci-rails.toml`),
+`scripts/ci/ci_rails.py` (registry: `scripts/ci/rails.toml`),
 either as a pre-commit hook or in CI. All rails are currently
 **advisory** (they print violations but do not fail the build) because
 the codebase has a substantial backlog of pre-existing violations from
-before each rail existed; see `.claude/rules/ci-rails.md` for the
-advisory-to-enforce process.
+before each rail existed. Issue #1356 tracks the advisory-to-enforce
+follow-up.
 
 | Rail | What it flags | Status |
 |---|---|---|
@@ -81,7 +81,7 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
 
 | Check | What it does | Status |
 |---|---|---|
-| `pip-audit` | Scans installed dependencies against the OSV database | **enforced** via `.claude/scripts/pip_audit_gate.py`, findings suppressible only via a documented entry in `.github/accepted-risks.yml` |
+| `pip-audit` | Scans installed dependencies against the OSV database | **enforced** via `scripts/security/pip_audit_gate.py`, findings suppressible only via a documented entry in `.github/accepted-risks.yml` |
 | `bandit` | Static analysis for common Python security anti-patterns | advisory (`\|\| true`) — see Known Limitations |
 | `codeql-analysis` | GitHub's semantic code-scanning | enforced |
 
@@ -101,8 +101,8 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   pre-existing violation count in the hundreds (e.g. `test-separator-paths`
   had 1310 at last count) that predates the rail's existence. Flipping
   a rail to `enforce` requires first reducing its violation count to
-  zero (or to an explicitly accepted/`noqa`-tagged remainder) — see
-  `.claude/rules/ci-rails.md`.
+  zero (or to an explicitly accepted/`noqa`-tagged remainder). Issue
+  #1356 tracks those decisions.
 
 ## Reporting a Vulnerability
 

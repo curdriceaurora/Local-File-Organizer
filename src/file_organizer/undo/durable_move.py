@@ -178,7 +178,7 @@ def _capture_dst_inode(dst: Path) -> DstInode | None:
 class _JournalEntry:
     """A parsed journal row.
 
-    F7.1 schema v2 (see ``docs/internal/F7-1-journal-protocol-design.md`` §2):
+    F7.1 schema v2:
 
     - ``schema``: 1 for legacy PR #197 records (no ``schema`` field on disk),
       2 for records this binary writes. Writers always emit 2; parsers accept

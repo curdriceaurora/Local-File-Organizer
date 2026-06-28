@@ -8,7 +8,7 @@ Acceptance criteria (issue #930):
 - Fails with a clear message listing which predicates are missing negative cases
 - All existing predicates pass at merge (backfill done before this merges)
 
-The check logic lives in .claude/scripts/check_predicate_negative_coverage.py
+The check logic lives in scripts/ci/guardrails/check_predicate_negative_coverage.py
 (shared with the pre-commit hook added in issue #931).  This test is a
 backstop that runs the full-scan path on every CI run.
 """
@@ -24,8 +24,9 @@ pytestmark = pytest.mark.ci
 
 _SCRIPT = (
     Path(__file__).resolve().parents[2]
-    / ".claude"
     / "scripts"
+    / "ci"
+    / "guardrails"
     / "check_predicate_negative_coverage.py"
 )
 

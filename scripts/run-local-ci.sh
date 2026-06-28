@@ -320,7 +320,7 @@ run_integration() {
   run_step \
     "Check per-file integration coverage floors" \
     python \
-    .claude/scripts/check-integration-floors.py
+    scripts/coverage/check-integration-floors.py
 }
 
 run_security() {

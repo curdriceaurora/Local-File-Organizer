@@ -59,7 +59,7 @@ Create `scripts/local-ci.sh` that runs each job in order. Job → command mappin
 | diff-cover gate | `diff-cover coverage.xml --compare-branch=origin/main --fail-under=80` |
 | `test-full` | drop sharding: `pytest tests/ -m "not benchmark and not e2e" --cov=file_organizer -n=auto --override-ini="addopts="` |
 | `coverage-gate` | `coverage report --fail-under=93` then `interrogate -v src/ --fail-under 95` |
-| `test-integration` | `pytest tests/ -m integration --cov-branch --cov-fail-under=72.0 --override-ini="addopts="` then `python .claude/scripts/check-integration-floors.py` |
+| `test-integration` | `pytest tests/ -m integration --cov-branch --cov-fail-under=72.0 --override-ini="addopts="` then `python scripts/coverage/check-integration-floors.py` |
 | `test-benchmark` | `pytest tests/ -m benchmark --benchmark-only --override-ini="addopts="` |
 | `playwright` | loop `--browser chromium|firefox|webkit` over `pytest tests/playwright/ ...` |
 
@@ -71,7 +71,7 @@ Drop or adapt (not real checks):
 - **`GITHUB_TOKEN` + PR-comment / benchmark-baseline-comparison** — PR-only advisory,
   needs real GitHub; skip locally.
 
-You already have ~70% of this in `.claude/scripts/pre-commit-validation.sh` — reuse it.
+You already have ~70% of this in `scripts/dev/pre-commit-validation.sh` — reuse it.
 
 Add a `make ci` target that calls `scripts/local-ci.sh`, and a git `pre-push` hook so
 nothing broken reaches GitHub.

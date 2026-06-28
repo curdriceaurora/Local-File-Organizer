@@ -1931,7 +1931,7 @@ class TestIsPathInFlightSharedLock:
 
 # ---------------------------------------------------------------------------
 # F7.1 journal schema v2 — parser + rejection-rule coverage
-# (tracks #201, docs/internal/F7-1-journal-protocol-design.md §4, §9.1)
+# (tracks #201)
 # ---------------------------------------------------------------------------
 
 
@@ -2315,7 +2315,7 @@ class TestJournalSchemaV2Parser:
 
 # ---------------------------------------------------------------------------
 # F7.1 step 5: atomic journal compaction
-# (tracks #201, docs/internal/F7-1-journal-protocol-design.md §6.2–6.6)
+# (tracks #201)
 # ---------------------------------------------------------------------------
 
 
@@ -2497,7 +2497,7 @@ class TestAtomicCompaction:
 
 # ---------------------------------------------------------------------------
 # F7.1 step 4: lock-file extraction
-# (tracks #201, docs/internal/F7-1-journal-protocol-design.md §6.1, §6.5)
+# (tracks #201)
 # ---------------------------------------------------------------------------
 
 
@@ -2804,7 +2804,7 @@ class TestJournalLockFile:
 
 # ---------------------------------------------------------------------------
 # F7.1 step 2: pure planner `plan_recovery_actions`
-# (tracks #201, docs/internal/F7-1-journal-protocol-design.md §8.1, §9)
+# (tracks #201)
 # ---------------------------------------------------------------------------
 
 

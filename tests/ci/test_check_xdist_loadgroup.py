@@ -10,7 +10,13 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-_SCRIPT = Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "check_xdist_loadgroup.py"
+_SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "scripts"
+    / "ci"
+    / "guardrails"
+    / "check_xdist_loadgroup.py"
+)
 
 
 def _load_checker() -> ModuleType:

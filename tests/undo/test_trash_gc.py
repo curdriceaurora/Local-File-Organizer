@@ -20,7 +20,6 @@ Test classes mirror the design-spec sections:
 - :class:`TestTrashGCRollbackIntegration` — composition with
   ``RollbackExecutor`` (§6.4).
 
-Spec reference: ``docs/internal/F8-1-trash-gc-design.md``.
 """
 
 from __future__ import annotations

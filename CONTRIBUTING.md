@@ -70,15 +70,14 @@ pre-commit install
 | **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
 | **pytest** (multiple) | CI guardrails, web UI, websocket tests | Test failures block commit |
 
-**Pre-PR Orchestration** (via `bash .claude/scripts/pre-commit-validation.sh`):
+**Pre-PR Orchestration** (via `bash scripts/dev/pre-commit-validation.sh`):
 
 | Layer | Canonical owner | Purpose |
 |-------|-----------------|---------|
 | **Staged-file guardrails** | `.pre-commit-config.yaml` | Mechanical checks, focused pytest gates, and changed-file validation |
 | **Semantic guardrails** | `tests/ci/` | Behavior, contract, and review-regression checks |
 | **CI runtime support** | `.github/workflows/ci.yml` | Permissions and environment required by CI-only guardrails |
-| **Pre-PR orchestration** | `.claude/scripts/pre-commit-validation.sh` | Runs the enforced layers above before push/PR |
-| **Reference guidance** | anti-pattern docs under `memory/` and `.claude/rules/` | Explains why a guard exists; not a blocking policy source |
+| **Pre-PR orchestration** | `scripts/dev/pre-commit-validation.sh` | Runs the enforced layers above before push/PR |
 
 **Manual Validation**:
 
@@ -91,7 +90,7 @@ pre-commit run ruff-check --all-files
 pre-commit run codespell --all-files
 
 # Run the canonical pre-PR guardrail orchestrator
-bash .claude/scripts/pre-commit-validation.sh
+bash scripts/dev/pre-commit-validation.sh
 ```
 
 **Skipping Hooks** (only if necessary):
@@ -110,7 +109,7 @@ git commit --no-verify
 **MANDATORY**: Before EVERY push, run the canonical pre-PR guardrail orchestrator:
 
 ```bash
-bash .claude/scripts/pre-commit-validation.sh
+bash scripts/dev/pre-commit-validation.sh
 # Must pass (exit code 0) before proceeding to push
 ```
 
@@ -246,7 +245,7 @@ The canonical ownership rules and examples live in
 [Developer Guardrails](docs/developer/guardrails.md). Use
 `.pre-commit-config.yaml` for staged-file checks, `tests/ci/` for semantic
 guardrails, `.github/workflows/ci.yml` for CI-only runtime support, and
-`.claude/scripts/pre-commit-validation.sh` only as the pre-PR orchestrator.
+`scripts/dev/pre-commit-validation.sh` only as the pre-PR orchestrator.
 
 ---
 
@@ -377,7 +376,7 @@ The `--override-ini='addopts='` flag is required to suppress the default `--cov-
 
 Before committing code, this project enforces three quality gates (in order). **Note**: The `/simplify` and `/code-reviewer` commands are Claude Code-specific tools. For contributors not using Claude Code, follow the automated validation script only.
 
-1. **Pre-Commit Validation** (`bash .claude/scripts/pre-commit-validation.sh`)
+1. **Pre-Commit Validation** (`bash scripts/dev/pre-commit-validation.sh`)
    - Lint, format, type-check, test, validate patterns
    - Must PASS before committing
    - Prevents CI failures due to local issues
@@ -399,7 +398,7 @@ Before committing code, this project enforces three quality gates (in order). **
 
 **For non-Claude-Code contributors**: Run only step 1 (pre-commit validation script). GitHub CI enforces additional checks.
 
-For details, see `.claude/rules/code-quality-validation.md` and `.claude/rules/development-guidelines.md`.
+For details, see [Guardrail Workflow](docs/developer/guardrails.md).
 
 ---
 
@@ -408,7 +407,7 @@ For details, see `.claude/rules/code-quality-validation.md` and `.claude/rules/d
 1. Create a feature branch from `main`: `git checkout -b feature/description`
 2. Make changes with tests
 3. Run quality gates (in order):
-   - `bash .claude/scripts/pre-commit-validation.sh` (required, all contributors)
+   - `bash scripts/dev/pre-commit-validation.sh` (required, all contributors)
    - `/code-reviewer` (Claude Code users only: validate design and logic)
    - `/simplify` (Claude Code users only: optional if >50 lines of code changes)
 4. Commit with descriptive message following conventional commits
@@ -432,4 +431,4 @@ If reviewers request changes:
 
 This single-pass approach prevents review churn and keeps PR history clean.
 
-See `.claude/rules/pr-review-response-protocol.md` for full details.
+Use the same single-pass approach for all PR review follow-up.

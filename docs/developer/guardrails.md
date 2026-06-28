@@ -13,8 +13,7 @@ Each blocking guardrail belongs in exactly one enforced layer:
 | Staged diff and mechanical checks | `.pre-commit-config.yaml` | Fast, deterministic checks on changed files before commit |
 | Semantic regressions and contract checks | `tests/ci/` | Python-based assertions are easier to evolve and review than shell heuristics |
 | CI-only runtime support | `.github/workflows/ci.yml` | Some guardrails need GitHub permissions or environment variables to behave in PR CI |
-| Pre-PR orchestration | `.claude/scripts/pre-commit-validation.sh` | Runs the enforced layers together before push or PR creation |
-| Explanatory guidance | `memory/`, `.claude/rules/`, and related docs | Captures lessons and rationale, but should not be the only blocking source |
+| Pre-PR orchestration | `scripts/dev/pre-commit-validation.sh` | Runs the enforced layers together before push or PR creation |
 
 Pitfall: if a rule only exists in prose or only exists in the shell script, it
 will drift. Blocking policy belongs in pre-commit hooks or `tests/ci`.
@@ -24,7 +23,7 @@ will drift. Blocking policy belongs in pre-commit hooks or `tests/ci`.
 Run this before opening or updating a PR:
 
 ```bash
-bash .claude/scripts/pre-commit-validation.sh
+bash scripts/dev/pre-commit-validation.sh
 ```
 
 That command must expand to this canonical command set:
@@ -47,7 +46,7 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 3. Update `.github/workflows/ci.yml` when a CI-only guardrail needs runtime support such as `GITHUB_TOKEN` or `pull-requests: read`.
 4. Update documentation after the enforcement layer exists, not before.
 
-Do not add new blocking policy directly to `.claude/scripts/pre-commit-validation.sh`.
+Do not add new blocking policy directly to `scripts/dev/pre-commit-validation.sh`.
 
 ## API Compatibility Rule Index
 
@@ -119,9 +118,9 @@ heuristics.
 | `S2:hidden-file-filter(startswith("."))` | `tests/ci/test_search_code_quality.py` | Prevents indexing of `.git`, `.env`, `.ssh/authorized_keys`, and other hidden paths |
 
 Implementation detail:
+
 - Guardrail logic lives in `tests/ci/test_search_code_quality.py` (function `_find_unguarded_traversals`).
 - Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
-- Rule definitions and fix examples live in `.claude/patterns/search-generation-patterns.md` patterns S1 and S2.
 
 ## T10 Predicate Negative-Case Rule Index
 
@@ -134,7 +133,7 @@ negative test case (`assert not predicate(...)`).
 | Pre-commit hook | `.pre-commit-config.yaml` → `predicate-negative-coverage` | When detector modules or their test files are staged |
 | CI backstop | `tests/ci/test_predicate_negative_coverage.py` | On every CI run (full scan) |
 
-Shared logic lives in `.claude/scripts/check_predicate_negative_coverage.py`.
+Shared logic lives in `scripts/ci/guardrails/check_predicate_negative_coverage.py`.
 The CI test imports from this script via `importlib`; the pre-commit hook runs
 it directly.  Update the script when new detector modules are added.
 

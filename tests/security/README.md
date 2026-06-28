@@ -1,7 +1,6 @@
 # tests/security
 
-Security hardening and regression tests for the fo-core pull-back
-(`docs/internal/fo-core-pullback-implementation-plan.md`).
+Security hardening and regression tests.
 
 Tests landing here travel with the work package that hardens the code they
 cover — for example the path-safety suite (WP-1.1) and the write/undo durability

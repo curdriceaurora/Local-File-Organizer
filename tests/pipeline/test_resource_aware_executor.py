@@ -44,8 +44,7 @@ class _RecordingStage:
     ``test_preserves_file_order`` relies on ``run_prefetched_batch``
     assembling results in input-index order rather than completion
     order; no artificial delay is needed. The project's C1 CI
-    guardrail (see ``.claude/rules/ci-generation-patterns.md``)
-    forbids ``time.sleep`` in changed tests.
+    guardrail forbids ``time.sleep`` in changed tests.
     """
 
     name = "recorder"
