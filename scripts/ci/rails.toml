@@ -57,13 +57,13 @@ description = "Ensures pytest.raises on generic/built-in exceptions specifies a 
 [[rail]]
 name = "safedir-valueerror"
 command = ["python", "scripts/ci/guardrails/check_safedir_valueerror.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags broad except blocks that swallow SafeDir's path-safety ValueError (WP-6.1)."
 
 [[rail]]
 name = "textiowrapper-detach"
 command = ["python", "scripts/ci/guardrails/check_textiowrapper_detach.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags io.TextIOWrapper instances that are never detach()-ed before going out of scope (WP-6.1)."
 
 [[rail]]
@@ -75,5 +75,5 @@ description = "Flags weak `assert mock.called` / bare `assert mock.call_count` t
 [[rail]]
 name = "xdist-loadgroup"
 command = ["python", "scripts/ci/guardrails/check_xdist_loadgroup.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Reminds to mark tests sharing xdist-wide temp state with xdist_group (WP-6.2)."
