@@ -35,7 +35,6 @@ _OPEN_EXEMPT_NAMESPACES: frozenset[str] = frozenset(
         "cv2",  # OpenCV image read
         "PIL",  # PIL package-level alias
         "wave",  # stdlib wave.open()
-        "mimetypes",  # stdlib mimetypes — no file open, but guard for completeness
     }
 )
 

@@ -124,8 +124,14 @@ def test_allows_os_open(tmp_path: Path) -> None:
 def test_allows_self_image_open(tmp_path: Path) -> None:
     """self.Image.open() (chained attribute access for PIL) must not be flagged."""
     src = tmp_path / "ok.py"
+    # Simulate a class that stores Image as a class attribute (common PIL injection pattern)
     src.write_text(
-        "class Foo:\n    Image = __import__('PIL').Image\n    def f(self, path):\n        with self.Image.open(path) as img:\n            pass\n",
+        "from PIL import Image as _Image\n"
+        "class Foo:\n"
+        "    Image = _Image\n"
+        "    def f(self, path):\n"
+        "        with self.Image.open(path) as img:\n"
+        "            pass\n",
         encoding="utf-8",
     )
     assert checker.check_file(src) == []
