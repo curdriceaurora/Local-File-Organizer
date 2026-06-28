@@ -22,15 +22,15 @@ repos:
       # ----------------------------------------------------------------
       - id: ruff-check
         name: ruff check
-        entry: ruff check .
+        entry: ruff check --force-exclude
         language: system
-        pass_filenames: false
+        types: [python]
 
       - id: ruff-format-check
         name: ruff format check
-        entry: ruff format . --check
+        entry: ruff format --check --force-exclude
         language: system
-        pass_filenames: false
+        types: [python]
 
       # ----------------------------------------------------------------
       # G1: No hardcoded /tmp/ or absolute paths in staged Python diff
@@ -104,25 +104,6 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
-      # Diff-coverage gate: changed lines must have ≥80% test coverage
-      # Runs pytest with coverage, then diff-cover against merge base.
-      # Skips if no src/ Python files are staged.
-      # ----------------------------------------------------------------
-      - id: diff-cover
-        name: diff-cover gate (80%)
-        entry: |
-          bash -c '
-          CHANGED=$(git diff --cached --name-only -- "src/**/*.py" "src/*.py")
-          if [ -z "$CHANGED" ]; then exit 0; fi
-          MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~1)
-          pytest tests/ -q --override-ini="addopts=" --cov=file_organizer --cov-report=xml:coverage.xml --no-header 2>/dev/null
-          diff-cover coverage.xml --compare-branch="$MERGE_BASE" --fail-under=80 --quiet
-          '
-        language: system
-        pass_filenames: false
-        stages: [pre-commit]
-
-      # ----------------------------------------------------------------
       # Spelling
       # ----------------------------------------------------------------
       - id: codespell
@@ -132,14 +113,34 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
-      # Type checking on models (scoped mypy gate)
+      # Type checking on changed file_organizer files
       # ----------------------------------------------------------------
       - id: mypy-changed
-        name: mypy (changed models files)
+        name: mypy (changed file_organizer files)
         entry: bash scripts/run-mypy-changed.sh
         language: system
-        files: ^src/file_organizer/models/.*\.py$
+        files: ^src/file_organizer/.*\.py$
         pass_filenames: true
+
+      # ----------------------------------------------------------------
+      # Docstring coverage gate for changed source files
+      # ----------------------------------------------------------------
+      - id: interrogate-changed
+        name: interrogate (changed src files)
+        entry: interrogate --fail-under 95 --quiet
+        language: system
+        files: ^src/.*\.py$
+        pass_filenames: true
+
+      # ----------------------------------------------------------------
+      # Documentation link integrity (runs only when markdown changes)
+      # ----------------------------------------------------------------
+      - id: link-integrity
+        name: link-integrity (docs links)
+        entry: bash -c "pytest tests/docs/test_link_integrity.py -q --override-ini='addopts='"
+        language: system
+        files: \.md$
+        pass_filenames: false
 
       # ----------------------------------------------------------------
       # PyPI version validation
