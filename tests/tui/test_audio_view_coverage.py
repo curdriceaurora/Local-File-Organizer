@@ -18,8 +18,18 @@ from file_organizer.tui.audio_view import (
     AudioView,
     _truncate,
 )
-
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def clean_audio_view_class():
+    """Ensure class-level modifications to AudioView.app are reverted after each test."""
+    orig_app = getattr(AudioView, "app", None)
+    yield
+    if orig_app is not None:
+        AudioView.app = orig_app
+    elif "app" in AudioView.__dict__:
+        delattr(AudioView, "app")
 
 
 def _create_view_with_mocks() -> tuple[AudioView, dict[type[Static], MagicMock], MagicMock]:

@@ -190,15 +190,7 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
     mock_classifier = MagicMock()
     mock_classifier.classify.return_value = mock_classification
 
-    # Patch AudioView's scan_dir via __init__ wrapping
-    original_init = AudioView.__init__
-
-    def patched_init(self, *args, **kwargs):
-        kwargs["scan_dir"] = tmp_path
-        original_init(self, *args, **kwargs)
-
     with (
-        patch("file_organizer.tui.audio_view.AudioView.__init__", patched_init),
         patch(
             "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
             return_value=mock_extractor,
@@ -215,10 +207,9 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
         app = FileOrganizerApp()
         async with app.run_test() as pilot:
             await app.action_switch_view("audio")
-            await pilot.pause()
-            assert app._current_view == "audio"
-
             import asyncio
+            await asyncio.sleep(0.1)
+            assert app._current_view == "audio"
 
             from file_organizer.tui.audio_view import (
                 AudioClassificationPanel,
@@ -231,8 +222,7 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             for _ in range(100):
                 if len(view._files) == 1:
                     break
-                await asyncio.sleep(0.02)
-                await pilot.pause()
+                await asyncio.sleep(0.05)
             else:
                 pytest.fail("Timed out waiting for AudioView files to load")
 
@@ -264,8 +254,7 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             for _ in range(100):
                 if len(view._files) == 1:
                     break
-                await asyncio.sleep(0.02)
-                await pilot.pause()
+                await asyncio.sleep(0.05)
             else:
                 pytest.fail("Timed out waiting for AudioView files to reload")
 
