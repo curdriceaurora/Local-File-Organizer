@@ -32,9 +32,10 @@ def tui_completed_setup(
     )
 
     # Re-route default '.' scan/input paths to the unique tmp_path for all tests
-    # except those explicitly verifying default/initialization path values.
-    excluded_keywords = {"default", "init"}
-    if not any(kw in request.node.name.lower() for kw in excluded_keywords):
+    # except those explicitly opting out with @pytest.mark.keep_default_paths.
+    # Using a marker (rather than substring-matching request.node.name) ensures
+    # only intentional tests bypass isolation, preventing accidental leakage.
+    if request.node.get_closest_marker("keep_default_paths") is None:
         from file_organizer.tui.audio_view import AudioView
         from file_organizer.tui.file_preview import FilePreviewView
         from file_organizer.tui.methodology_view import MethodologyView

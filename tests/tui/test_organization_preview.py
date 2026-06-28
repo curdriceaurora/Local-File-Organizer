@@ -229,6 +229,7 @@ class TestOrganizationPreviewView:
         assert "enter" in keys  # Confirm
         assert "escape" in keys  # Cancel
 
+    @pytest.mark.keep_default_paths
     def test_initialization_with_defaults(self) -> None:
         """Test OrganizationPreviewView with default directories."""
         view = OrganizationPreviewView()

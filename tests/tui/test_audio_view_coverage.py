@@ -24,10 +24,17 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture(autouse=True)
 def clean_audio_view_class():
-    """Ensure class-level modifications to AudioView.app are reverted after each test."""
-    orig_app = getattr(AudioView, "app", None)
+    """Ensure class-level modifications to AudioView.app are reverted after each test.
+
+    Uses ``AudioView.__dict__`` (not ``getattr``) to capture the *raw* class-level
+    state.  ``getattr`` resolves inherited descriptors from ``Widget``/``DOMNode``,
+    which would cause teardown to inject a brand-new ``AudioView.app`` entry even
+    when the class never defined one originally, permanently altering the MRO.
+    """
+    had_local_app = "app" in AudioView.__dict__
+    orig_app = AudioView.__dict__.get("app")
     yield
-    if orig_app is not None:
+    if had_local_app:
         AudioView.app = orig_app
     elif "app" in AudioView.__dict__:
         delattr(AudioView, "app")

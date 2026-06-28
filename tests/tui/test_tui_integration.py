@@ -219,7 +219,7 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
 
             view = app.query_one("#view", AudioView)
 
-            # Wait for background thread scanning to complete and UI updates to be scheduled/applied
+            # Wait for background thread scanning to complete.
             for _ in range(100):
                 if len(view._files) == 1:
                     break
@@ -229,9 +229,21 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
 
             assert len(view._files) == 1
 
-            # Verify details are populated correctly in the panels
+            # Verify details are populated correctly in the panels.
+            # Wait for the UI-level panel updates dispatched via call_from_thread;
+            # _files being set does not guarantee renderable has been updated yet.
             metadata_panel = view.query_one(AudioMetadataPanel)
             classification_panel = view.query_one(AudioClassificationPanel)
+
+            for _ in range(100):
+                if (
+                    "Test Song" in str(metadata_panel.renderable)
+                    and "music" in str(classification_panel.renderable)
+                ):
+                    break
+                await asyncio.sleep(0.05)
+            else:
+                pytest.fail("Timed out waiting for panel UI to reflect loaded state")
 
             assert "Test Song" in str(metadata_panel.renderable)
             assert "Test Artist" in str(metadata_panel.renderable)
@@ -251,13 +263,21 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             # Press r to refresh/reload
             await pilot.press("r")
 
-            # Wait for reload scanning to complete
+            # Wait for reload scanning to complete.
             for _ in range(100):
                 if len(view._files) == 1:
                     break
                 await asyncio.sleep(0.05)
             else:
                 pytest.fail("Timed out waiting for AudioView files to reload")
+
+            # Wait for UI panels to reflect reloaded state.
+            for _ in range(100):
+                if "Test Song" in str(metadata_panel.renderable):
+                    break
+                await asyncio.sleep(0.05)
+            else:
+                pytest.fail("Timed out waiting for panel UI to reflect reloaded state")
 
             assert len(view._files) == 1
             assert view._current_index == 0
