@@ -273,7 +273,10 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
 
             # Wait for UI panels to reflect reloaded state.
             for _ in range(100):
-                if "Test Song" in str(metadata_panel.renderable):
+                if (
+                    "Test Song" in str(metadata_panel.renderable)
+                    and "music" in str(classification_panel.renderable)
+                ):
                     break
                 await asyncio.sleep(0.05)
             else:
@@ -282,3 +285,4 @@ async def test_audio_view_full_integration(tmp_path: Path) -> None:
             assert len(view._files) == 1
             assert view._current_index == 0
             assert "Test Song" in str(metadata_panel.renderable)
+            assert "music" in str(classification_panel.renderable)
