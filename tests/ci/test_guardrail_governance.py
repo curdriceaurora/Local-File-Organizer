@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PRE_PR_SCRIPT = PROJECT_ROOT / ".claude" / "scripts" / "pre-commit-validation.sh"
+PRE_PR_SCRIPT = PROJECT_ROOT / "scripts" / "dev" / "pre-commit-validation.sh"
 GUARDRAIL_DOC = PROJECT_ROOT / "docs" / "developer" / "guardrails.md"
 CONTRIBUTING_DOC = PROJECT_ROOT / "CONTRIBUTING.md"
 
@@ -91,7 +91,7 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
         ".pre-commit-config.yaml",
         "tests/ci/",
         ".github/workflows/ci.yml",
-        ".claude/scripts/pre-commit-validation.sh",
+        "scripts/dev/pre-commit-validation.sh",
         "tests/ci/test_api_compat_guardrails.py",
         "from file_organizer.review_regressions.api_compat import",
         "legacy-positional-prefix-changed",

@@ -2,7 +2,7 @@
 
 Tracks: issue #157 (Hardening Epic D, item D5).
 
-Test contract (from ``docs/internal/D-storage-design.md`` §3.6):
+Test contract:
 - One parametrized class runs against both ``InMemoryPreferenceStorage()``
   and ``SqlitePreferenceStorage(tmp_path / "test.db")``.
 - Each test asserts the published shape of the Protocol — never reaches

@@ -2,13 +2,6 @@
 
 ```text
 Local-File-Organizer/
-├── .claude/                          # CCPM project management
-│   ├── commands/                     # PM commands
-│   ├── prds/                         # Product requirements
-│   ├── epics/                        # Epic planning workspace
-│   ├── rules/                        # Standard operation rules
-│   └── scripts/                      # Validation scripts
-│
 ├── src/file_organizer/               # Main application (~78,800 LOC, 314 modules)
 │   ├── models/                       # AI model abstractions (9 modules)
 │   │   ├── base.py                   # BaseModel interface, ModelConfig

@@ -1,4 +1,4 @@
-"""Unit tests for .claude/scripts/generate-integration-floors.py and
+"""Unit tests for scripts/coverage/generate-integration-floors.py and
 check-integration-floors.py."""
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPTS_DIR = Path(__file__).resolve().parents[2] / ".claude" / "scripts"
+SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts" / "coverage"
 GENERATE_SCRIPT = SCRIPTS_DIR / "generate-integration-floors.py"
 CHECK_SCRIPT = SCRIPTS_DIR / "check-integration-floors.py"
 

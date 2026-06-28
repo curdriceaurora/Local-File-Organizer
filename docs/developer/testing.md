@@ -272,8 +272,6 @@ class TestModelErrors:
 - `TextProcessor` uses graceful degradation: model errors produce fallback values (`"documents"`/`"document"`), not `failed_files`
 - All tests marked `@pytest.mark.integration` — CI runs them on main pushes only, not on every PR
 
-See `.claude/epics/integration-test-harness/epic.md` for the full architecture and gap analysis.
-
 ## Test Quality Standards
 
 All tests must follow these standards:
@@ -317,7 +315,7 @@ Before committing, run the smoke test suite:
 pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopts="
 
 # Or use the canonical pre-PR guardrail orchestrator
-bash .claude/scripts/pre-commit-validation.sh
+bash scripts/dev/pre-commit-validation.sh
 ```
 
 Both must pass before committing code changes.
@@ -428,8 +426,6 @@ else:
 - **Phase A**: API, plugins, CLI, web, services (12% → 91% coverage) ✅ COMPLETE
 - **Phase B**: TUI, models, updater, watcher, docstrings (91% → 96.8%) ✅ COMPLETE
 - **Phase C**: Remaining modules and integration (target: 95%+)
-
-See `.claude/epics/desktopui-test-coverage/` for detailed task tracking.
 
 ## References
 

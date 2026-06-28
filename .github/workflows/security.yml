@@ -34,7 +34,7 @@ jobs:
       - name: Run pip-audit
         run: pip-audit --format json -o .pip-audit.json || true
       - name: Gate pip-audit findings against accepted risks
-        run: python .claude/scripts/pip_audit_gate.py --audit .pip-audit.json
+        run: python scripts/security/pip_audit_gate.py --audit .pip-audit.json
 
   bandit-scan:
     runs-on: ubuntu-latest

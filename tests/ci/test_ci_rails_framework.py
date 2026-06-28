@@ -1,6 +1,6 @@
 """Tests for the WP-0.1 advisory CI-rail framework (#1222).
 
-Exercises ``.claude/scripts/ci_rails.py``: registry parsing, advisory vs.
+Exercises ``scripts/ci/ci_rails.py``: registry parsing, advisory vs.
 enforce semantics, the ``--enforce-all`` override, and the empty-registry
 no-op. No real rails exist yet (WP-6.x adds them), so these tests register
 synthetic rails whose commands deterministically pass/fail.
@@ -17,7 +17,7 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-_RUNNER = Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "ci_rails.py"
+_RUNNER = Path(__file__).resolve().parents[2] / "scripts" / "ci" / "ci_rails.py"
 
 
 def _load_runner() -> ModuleType:

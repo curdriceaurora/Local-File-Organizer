@@ -494,4 +494,4 @@ jobs:
         run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=75.7 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
 
       - name: Check per-file integration coverage floors
-        run: python .claude/scripts/check-integration-floors.py
+        run: python scripts/coverage/check-integration-floors.py

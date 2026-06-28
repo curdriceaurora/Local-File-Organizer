@@ -23,8 +23,6 @@ Public surface (see :class:`TrashGC` for details):
 - ``TrashDeleteResult`` (StrEnum, six variants) and
   ``TrashDeleteOutcome`` (frozen dataclass) — public outcome types.
 
-Spec + operator reference: ``docs/internal/F8-1-trash-gc-design.md`` and
-``docs/internal/F8-1-trash-gc.md``.
 """
 
 from __future__ import annotations

@@ -12,7 +12,7 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 _SCRIPT = (
-    Path(__file__).resolve().parents[2] / ".claude" / "scripts" / "check_module_coverage_floor.py"
+    Path(__file__).resolve().parents[2] / "scripts" / "coverage" / "check_module_coverage_floor.py"
 )
 
 

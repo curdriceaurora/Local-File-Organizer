@@ -79,7 +79,7 @@ repos:
 
       - id: stale-doc-refs
         name: stale documentation references
-        entry: bash .claude/scripts/check-stale-doc-refs.sh --staged-only
+        entry: bash scripts/dev/check-stale-doc-refs.sh --staged-only
         language: system
         pass_filenames: false
 
@@ -153,7 +153,7 @@ repos:
       # ----------------------------------------------------------------
       - id: pypi-version-check
         name: Verify pyproject.toml minimum versions exist on PyPI
-        entry: python3 .claude/scripts/check_pypi_versions.py
+        entry: python3 scripts/dev/check_pypi_versions.py
         language: system
         files: ^pyproject\.toml$
         pass_filenames: false
@@ -165,7 +165,7 @@ repos:
       # ----------------------------------------------------------------
       - id: threshold-drift-check
         name: coverage threshold drift (C4)
-        entry: bash .claude/scripts/check-threshold-drift.sh
+        entry: bash scripts/dev/check-threshold-drift.sh
         language: system
         files: ^pyproject\.toml$
         pass_filenames: false
@@ -189,7 +189,7 @@ repos:
       # ----------------------------------------------------------------
       - id: predicate-negative-coverage
         name: T10 predicate negative-case coverage
-        entry: python .claude/scripts/check_predicate_negative_coverage.py
+        entry: python scripts/ci/guardrails/check_predicate_negative_coverage.py
         language: system
         files: ^(src/file_organizer/review_regressions/|tests/unit/review_regressions/test_)
         pass_filenames: true
@@ -218,13 +218,13 @@ repos:
 
       # ----------------------------------------------------------------
       # CI-rail framework (WP-0.1, #1222) — advisory runner.
-      # Runs the rails declared in .claude/ci-rails.toml. The registry is empty
+      # Runs the rails declared in scripts/ci/rails.toml. The registry is empty
       # until WP-6.x adds rails, so this is a no-op (exit 0) today. Advisory
-      # rails warn but never block; enforce rails block. See .claude/rules/ci-rails.md.
+      # rails warn but never block; enforce rails block.
       # ----------------------------------------------------------------
       - id: ci-rails
         name: ci rails (advisory framework)
-        entry: python .claude/scripts/ci_rails.py
+        entry: python scripts/ci/ci_rails.py
         language: system
         always_run: true
         pass_filenames: false

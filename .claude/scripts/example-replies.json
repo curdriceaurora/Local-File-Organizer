@@ -1,7 +1,0 @@
-{
-  "THREAD_ID_1": "✅ Fixed: Brief explanation of what was fixed. Include enough context for reviewers to understand the change.",
-  "THREAD_ID_2": "✅ Fixed: Another finding addressed with explanation.",
-  "THREAD_ID_3": "✅ Clarified: If this was a clarification question, explain the answer here.",
-  "THREAD_ID_4": "📋 Deferred: Created issue #123 for follow-up. Link: https://github.com/owner/repo/issues/123",
-  "THREAD_ID_5": "ℹ️ Note: Explanation if this was not actionable or was already addressed."
-}
