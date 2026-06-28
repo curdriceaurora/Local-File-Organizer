@@ -121,8 +121,8 @@ web = [
 ]
 
 dev = [
-    "pytest>=7.4,<10.0",
-    "pytest-asyncio~=0.23",
+    "pytest==9.0.3",
+    "pytest-asyncio~=1.4",
     "pytest-cov~=4.1",
     "pytest-mock~=3.12",
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
