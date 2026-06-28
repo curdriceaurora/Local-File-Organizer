@@ -177,7 +177,9 @@ def test_allowed_paths_are_skipped_in_main(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_main_returns_zero_on_no_violations(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_returns_zero_on_no_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """main() must return 0 when no violations are found."""
     monkeypatch.chdir(tmp_path)
     pkg = tmp_path / "src" / "file_organizer"
