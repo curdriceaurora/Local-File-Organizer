@@ -266,7 +266,6 @@ file_organizer = [
 line-length = 100
 target-version = "py311"
 exclude = [
-    ".claude/",
     ".venv*/",
     "technical-debt/",
     "fix_coderabbit_issues.py",

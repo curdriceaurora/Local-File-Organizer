@@ -4,9 +4,9 @@
 
 Do NOT review or comment on these paths:
 
-- `.claude/` - Internal Claude Code configuration and project management
-- `.claude/**` - All Claude Code files (skills, plans, rules, settings)
-- `CLAUDE.md` - Project-internal Claude Code instructions
+- Generated build, cache, and coverage artifacts.
+- Vendored dependency output and binary assets unless the PR explicitly changes
+  asset handling.
 
 ## Focus Areas for Code Review
 
@@ -32,20 +32,19 @@ Do NOT review or comment on these paths:
 - Dependency updates and compatibility
 
 ### DO NOT
-- Comment on .claude/ directory files
-- Suggest changes to internal Claude Code configuration
-- Review Claude Code project management files
-- Comment on skill files (.claude/skills/)
-- Review CLAUDE.md instructions
+- Suggest changes to generated artifacts or dependency cache files.
+- Review binary assets unless the PR explicitly changes asset handling.
 
 ## Suppression Syntax
 
-If a PR touches .claude/ files, use:
+If a PR should suppress automated review noise, use:
+
 ```text
 <!-- copilot: skip_review -->
 ```
 
 Or in inline comments:
+
 ```python
 # copilot: wontfix
 ```

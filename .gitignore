@@ -5,9 +5,6 @@
 .direnv/
 .envrc
 
-# Ephemeral context checkpoint (session state, not project code)
-.claude/context/checkpoint.md
-
 # Byte-compiled Python files
 __pycache__/
 *.py[cod]
@@ -112,16 +109,8 @@ node_modules/
 
 # MkDocs build output
 site/
-.claude/worktrees/
 /.worktrees/
 
-# Auto Claude data directory
-.auto-claude/
-
-# Auto Claude generated files
-.auto-claude-security.json
-.auto-claude-status
-.claude_settings.json
 .worktrees/
 .security-key
 logs/security/
