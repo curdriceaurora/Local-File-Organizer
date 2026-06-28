@@ -123,7 +123,7 @@ def _excluded_doc_dir(md_file: Path) -> bool:
     except ValueError:
         return False
     # Check whether any path component is an excluded directory name.
-    # This covers both docs/plans/… and docs/superpowers/plans/… etc.
+    # This covers both docs/plans/… and the legacy docs/superpowers/plans/… cases.
     return any(part in EXCLUDED_DOC_DIRS for part in rel.parts)
 
 
