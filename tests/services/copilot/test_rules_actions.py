@@ -154,7 +154,10 @@ def test_copy_file_fsync_failure_unlinks_destination(tmp_path: Path) -> None:
     destination = tmp_path / "dest.txt"
     source.write_text("payload", encoding="utf-8")
 
-    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+    with patch(
+        "file_organizer.services.copilot.rules.actions.fsync_directory",
+        side_effect=OSError("fsync failed"),
+    ):
         with pytest.raises(OSError, match="fsync failed"):
             copy_file(source, destination, ConflictStrategy.SKIP)
 
@@ -167,7 +170,10 @@ def test_apply_hardlink_fsync_failure_unlinks_destination(tmp_path: Path) -> Non
     destination = tmp_path / "dest.txt"
     source.write_text("payload", encoding="utf-8")
 
-    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+    with patch(
+        "file_organizer.services.copilot.rules.actions.fsync_directory",
+        side_effect=OSError("fsync failed"),
+    ):
         with pytest.raises(OSError, match="fsync failed"):
             apply_hardlink(source, destination, ConflictStrategy.SKIP)
 
@@ -180,7 +186,10 @@ def test_apply_symlink_fsync_failure_unlinks_destination(tmp_path: Path) -> None
     destination = tmp_path / "dest.txt"
     source.write_text("payload", encoding="utf-8")
 
-    with patch("file_organizer.services.copilot.rules.actions.fsync_directory", side_effect=OSError("fsync failed")):
+    with patch(
+        "file_organizer.services.copilot.rules.actions.fsync_directory",
+        side_effect=OSError("fsync failed"),
+    ):
         with pytest.raises(OSError, match="fsync failed"):
             apply_symlink(source, destination, ConflictStrategy.SKIP)
 
