@@ -220,7 +220,7 @@ build = [
 docs = [
     "mkdocs~=1.5",
     "mkdocs-material~=9.5",
-    "pymdown-extensions~=10.7",
+    "pymdown-extensions~=11.0",
     "mkdocs-minify-plugin>=0.8.0",  # 0.x — unstable API, keep >=
     "mkdocstrings[python]>=0.24.0",  # 0.x — unstable API, keep >=
 ]
