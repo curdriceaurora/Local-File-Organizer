@@ -10,7 +10,7 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
-from file_organizer.cli.dedupe import DedupeConfig, dedupe_command, main
+from file_organizer.cli.dedupe import DedupeConfig, dedupe_command
 
 pytestmark = pytest.mark.unit
 
@@ -205,14 +205,3 @@ def test_dedupe_command_verbose_logging(tmp_path: Path) -> None:
         assert exit_code == 0
         # Check logger configurations were updated (verbose branch calls remove() once)
         mock_logger.remove.assert_called_once()
-
-
-def test_cli_main_execution() -> None:
-    """Verify main() entry point triggers sys.exit with command result."""
-    with (
-        patch("file_organizer.cli.dedupe.dedupe_command", return_value=42) as mock_command,
-        patch("sys.exit") as mock_exit,
-    ):
-        main()
-        mock_command.assert_called_once()
-        mock_exit.assert_called_once_with(42)

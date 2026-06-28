@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import secrets
-import sys
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -93,7 +92,3 @@ def _main(argv: list[str]) -> int:
     print("API key saved to:", output_path)
     print("Bcrypt hash:", hash_api_key(api_key))
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(_main(sys.argv[1:]))

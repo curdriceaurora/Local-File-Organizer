@@ -380,12 +380,3 @@ Examples:
         console.print(f"\n[red]Error: {e}[/red]")
         logger.exception("Analytics generation failed")
         return 1
-
-
-def main() -> None:
-    """Main entry point for standalone execution."""
-    sys.exit(analytics_command())
-
-
-if __name__ == "__main__":
-    main()

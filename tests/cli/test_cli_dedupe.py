@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.console import Console
 
-from file_organizer.cli.dedupe import DedupeConfig, dedupe_command, main
+from file_organizer.cli.dedupe import DedupeConfig, dedupe_command
 from file_organizer.cli.dedupe_display import (
     display_duplicate_group,
     display_summary,
@@ -881,26 +881,3 @@ class TestDedupeCommandDuplicates:
             # Live run, no safe mode, but no duplicates found
             result = dedupe_command([str(tmp_path), "--no-safe-mode"])
         assert result == 0
-
-
-# ============================================================================
-# main() entry-point test
-# ============================================================================
-
-
-@pytest.mark.unit
-class TestMain:
-    """Tests for the main() entry point."""
-
-    def test_main_calls_dedupe_command(self):
-        with patch("file_organizer.cli.dedupe.dedupe_command", return_value=0) as mock_cmd:
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            mock_cmd.assert_called_once()
-            assert exc_info.value.code == 0
-
-    def test_main_propagates_exit_code(self):
-        with patch("file_organizer.cli.dedupe.dedupe_command", return_value=1):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
-            assert exc_info.value.code == 1

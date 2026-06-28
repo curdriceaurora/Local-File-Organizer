@@ -312,12 +312,3 @@ Examples:
         console.print(f"\n[red]Error: {e}[/red]")
         logger.exception("Deduplication failed")
         return 1
-
-
-def main() -> None:
-    """Main entry point for standalone execution."""
-    sys.exit(dedupe_command())
-
-
-if __name__ == "__main__":
-    main()
