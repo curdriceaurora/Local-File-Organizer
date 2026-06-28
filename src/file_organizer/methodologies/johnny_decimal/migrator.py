@@ -302,7 +302,7 @@ class JohnnyDecimalMigrator:
         backup_name = f"backup_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
         backup_path = root_path.parent / backup_name
 
-        shutil.copytree(root_path, backup_path)
+        shutil.copytree(root_path, backup_path)  # noqa: safedir-required  # JD migration backup — root/backup paths are validated at migration start
         logger.info(f"Created backup at {backup_path}")
 
         return backup_path
@@ -323,7 +323,7 @@ class JohnnyDecimalMigrator:
             "backup_path": str(rollback_info.backup_path) if rollback_info.backup_path else None,
         }
 
-        with open(rollback_file, "w") as f:
+        with open(rollback_file, "w") as f:  # noqa: safedir-required  # JD rollback writer — rollback file is an internal temp file
             json.dump(data, f, indent=2)
 
         logger.debug(f"Saved rollback info to {rollback_file}")

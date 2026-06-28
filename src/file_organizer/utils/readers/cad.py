@@ -374,7 +374,7 @@ def read_step_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             encoding="utf-8", errors="ignore"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             content = f.read(10000)  # first 10 KB, matches legacy behavior
@@ -489,7 +489,7 @@ def read_iges_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             encoding="utf-8", errors="ignore"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             lines = [f.readline() for _ in range(max_lines)]

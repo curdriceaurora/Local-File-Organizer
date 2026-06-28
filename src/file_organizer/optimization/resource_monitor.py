@@ -174,7 +174,7 @@ class ResourceMonitor:
 
         # Try /proc/self/status (Linux)
         try:
-            with open("/proc/self/status") as f:
+            with open("/proc/self/status") as f:  # noqa: safedir-required  # read-only Linux proc FS — not a user-supplied path
                 for line in f:
                     if line.startswith("VmRSS:"):
                         rss = int(line.split()[1]) * 1024  # Convert kB to bytes
@@ -214,7 +214,7 @@ class ResourceMonitor:
         """
         # Try /proc/meminfo (Linux)
         try:
-            with open("/proc/meminfo") as f:
+            with open("/proc/meminfo") as f:  # noqa: safedir-required  # read-only Linux proc FS — not a user-supplied path
                 for line in f:
                     if line.startswith("MemTotal:"):
                         return int(line.split()[1]) * 1024

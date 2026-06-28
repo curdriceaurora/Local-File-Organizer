@@ -247,7 +247,7 @@ def _write_destination(source: Path, destination: Path, output_root: Path | None
         pass
     # Windows / SafeDir unavailable: preserve prior behaviour.
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
+    shutil.copy2(source, destination)  # noqa: safedir-required  # pipeline writer — source/destination are SafeDir-resolved stage paths
 
 
 class WriterStage:

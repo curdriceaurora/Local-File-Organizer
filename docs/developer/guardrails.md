@@ -191,6 +191,66 @@ assert "--no-prefetch" in rendered_help
 Pitfall: direct assertions on styled help output can pass locally and fail in
 GitHub Actions because Rich changes wrapping and ANSI rendering.
 
+## SafeDir-Required Rule (WP-6.1)
+
+Issue `#1351` adds the `safedir-required` CI rail, which flags raw `open()`,
+`Path.open()`, and `shutil` copy/move calls in production source. The rail is
+declared in `scripts/ci/rails.toml` and is run by the `ci-rails` pre-commit
+hook and by `scripts/ci/ci_rails.py` in CI.
+
+The rail is now **enforced** — it blocks commits and CI runs when violations
+are found.
+
+### What is flagged
+
+| Pattern | Message |
+|---------|---------|
+| `open(path, ...)` | `raw open() call` |
+| `path.open(...)` on a `Path` or similar object | `raw Path.open() call` |
+| `shutil.copy2`, `shutil.move`, `shutil.copytree`, etc. | `raw shutil.<op>() call` |
+
+### What is NOT flagged
+
+Library-specific `.open()` calls on known non-filesystem namespaces are
+excluded to avoid detector overreach:
+
+| Namespace | Reason excluded |
+|-----------|----------------|
+| `os.open()` | Returns a low-level file descriptor (int), not a Python file object |
+| `Image.open()` | PIL/Pillow image decode call |
+| `fitz.open()` | PyMuPDF document open |
+| `tarfile.open()` | stdlib tar archive open |
+| `tokenize.open()` | stdlib encoding-aware source reader |
+| `aiofiles.open()` | Async file I/O library |
+| `zipfile.open()` | stdlib ZipFile method |
+
+### Inline exemptions
+
+For accepted exceptions (proc filesystem reads, undo-journal primitives, plugin
+installers, etc.), add an inline exemption with a brief reason:
+
+```python
+with open("/proc/meminfo") as f:  # noqa: safedir-required  # read-only Linux proc FS
+    ...
+
+shutil.copy2(src, dst)  # noqa: safedir-required  # updater — src/dst are pre-validated
+```
+
+Run the rail directly to verify it exits 0:
+
+```bash
+python scripts/ci/guardrails/check_safedir_required.py
+```
+
+The guardrail module is importable for tests:
+
+```python
+from scripts.ci.guardrails import check_safedir_required
+
+def test_my_check(tmp_path: Path) -> None:
+    assert check_safedir_required.check_file(tmp_path / "subject.py") == []
+```
+
 ## GitHub-Environment Branching Helpers
 
 Guardrail code that branches on `GITHUB_*` variables is CI-first code. Treat it

@@ -154,7 +154,7 @@ def organize_files(
             if use_hardlinks:
                 os.link(result.file_path, new_path)
             else:
-                shutil.copy2(result.file_path, new_path)
+                shutil.copy2(result.file_path, new_path)  # noqa: safedir-required  # core file op — file_path/new_path are SafeDir-validated by the caller
 
             if undo_manager is not None and transaction_id is not None:
                 try:

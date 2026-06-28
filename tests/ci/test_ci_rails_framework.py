@@ -131,7 +131,7 @@ def test_repo_registry_loads_registered_rails() -> None:
     """The checked-in registry loads all registered rails with the expected enforcement modes."""
     rails = ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY)
     expected_modes = {
-        "safedir-required": "advisory",
+        "safedir-required": "enforce",
         "atomic-write": "advisory",
         "cli-path-validation": "advisory",
         "defusedxml-fallback": "advisory",

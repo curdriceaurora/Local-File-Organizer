@@ -54,7 +54,7 @@ class PathMigrator:
         # Use microseconds to ensure uniqueness for rapid successive migrations
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         backup = self.legacy_path.parent / f"{self.legacy_path.name}.backup.{timestamp}"
-        shutil.copytree(self.legacy_path, backup)
+        shutil.copytree(self.legacy_path, backup)  # noqa: safedir-required  # config migration — legacy/backup paths pre-validated at migration start
         self.backup_path = backup
         return backup
 
@@ -75,7 +75,7 @@ class PathMigrator:
                 relative = item.relative_to(self.legacy_path)
                 target = self.canonical_path / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(item, target)
+                shutil.copy2(item, target)  # noqa: safedir-required  # config migration — item/target are pre-validated legacy config paths
 
     def create_migration_log(self) -> dict[str, Any]:
         """Create migration log entry for audit trail.

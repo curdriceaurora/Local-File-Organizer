@@ -658,7 +658,7 @@ class AIHeuristic(Heuristic):
                 # (filenames with backslash / NUL / path separators).
                 return None
         try:
-            with file_path.open("rb") as f:  # safedir: ok — Windows / NotImplementedError fallback
+            with file_path.open("rb") as f:  # noqa: safedir-required  # Windows / NotImplementedError fallback; SafeDir-aware callers use the fd branch
                 return f.read(limit)
         except OSError:
             return None

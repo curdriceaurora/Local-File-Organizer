@@ -328,7 +328,7 @@ class OperationHistory:
             SHA256 hash as hex string
         """
         sha256_hash = hashlib.sha256()
-        with open(file_path, "rb") as f:
+        with open(file_path, "rb") as f:  # noqa: safedir-required  # history tracker — reads binary content of a tracked file for checksum
             # Read file in chunks to handle large files
             for byte_block in iter(lambda: f.read(4096), b""):
                 sha256_hash.update(byte_block)

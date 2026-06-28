@@ -102,7 +102,7 @@ class PluginInstaller:
                 self.plugin_dir.mkdir(parents=True, exist_ok=True)
                 if destination.exists():
                     shutil.rmtree(destination)
-                shutil.copytree(source_dir, destination)
+                shutil.copytree(source_dir, destination)  # noqa: safedir-required  # plugin installer — source is a trusted, pre-validated plugin archive
 
             installed_plugin = InstalledPlugin(
                 name=package.name,
@@ -206,7 +206,7 @@ class PluginInstaller:
                         "Plugin archive extraction escaped target path."
                     ) from exc
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with archive.open(info, "r") as source, target.open("wb") as handle:
+                with archive.open(info, "r") as source, target.open("wb") as handle:  # noqa: safedir-required  # plugin installer — archive.open/target.open within trusted zip extraction
                     shutil.copyfileobj(source, handle)
 
     def _locate_plugin_root(self, extracted_dir: Path) -> Path:

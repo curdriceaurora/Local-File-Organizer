@@ -99,7 +99,7 @@ class StorageReporter:
             output_path: Output CSV file path
         """
         try:
-            with open(output_path, "w", newline="", encoding="utf-8") as f:
+            with open(output_path, "w", newline="", encoding="utf-8") as f:  # noqa: safedir-required  # dedup report writer — output path validated at CLI/API boundary
                 writer = csv.writer(f)
 
                 # Header
@@ -141,7 +141,7 @@ class StorageReporter:
             output_path: Output JSON file path
         """
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
+            with open(output_path, "w", encoding="utf-8") as f:  # noqa: safedir-required  # dedup report writer — output path validated at CLI/API boundary
                 json.dump(duplicate_results, f, indent=2, default=str)
 
             logger.info(f"Exported duplicate report to {output_path}")

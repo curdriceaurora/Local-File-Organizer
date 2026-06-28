@@ -128,7 +128,7 @@ def read_zip_file(
     # with the fileobj branch and the other readers).
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_zip(f, max_files, path.name)
@@ -220,7 +220,7 @@ def read_7z_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_7z(f, max_files, path.name)
@@ -343,7 +343,7 @@ def read_tar_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_tar(f, max_files, path.name)
@@ -443,7 +443,7 @@ def read_rar_file(
     path = Path(file_path)
     _check_file_size(path)
     try:
-        with path.open(
+        with path.open(  # noqa: safedir-required  # reader utility — legacy path-branch; SafeDir-aware callers pass fileobj=
             "rb"
         ) as f:  # safedir: ok — legacy path-branch; SafeDir-aware callers pass fileobj=
             return _parse_rar(f, max_files, path.name)

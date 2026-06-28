@@ -124,7 +124,7 @@ class ProfileImporter:
     def _load_json_file(self, file_path: Path, errors: list[str]) -> dict[str, Any] | None:
         """Load and parse JSON file."""
         try:
-            with open(file_path, encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:  # noqa: safedir-required  # profile importer reader — input path validated at CLI boundary
                 return json.load(f)
         except json.JSONDecodeError as e:
             errors.append(f"Invalid JSON format: {e}")

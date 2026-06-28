@@ -477,7 +477,7 @@ class FileOrganizer:
                 return None
         # Legacy path-based fallback (Windows / NotImplementedError).
         try:
-            with file_path.open("rb") as f:  # safedir: ok — Windows / NotImplementedError fallback
+            with file_path.open("rb") as f:  # noqa: safedir-required  # Windows / NotImplementedError fallback; SafeDir-aware callers use the fd branch
                 for chunk in iter(lambda: f.read(65536), b""):
                     hasher.update(chunk)
             return hasher.hexdigest()

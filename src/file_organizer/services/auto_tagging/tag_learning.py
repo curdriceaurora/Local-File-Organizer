@@ -449,7 +449,7 @@ class TagLearningEngine:
             }
 
             storage_path = self.storage_path
-            with open(storage_path, "w") as f:
+            with open(storage_path, "w") as f:  # noqa: safedir-required  # tag learning writer — path is an internal storage file
                 json.dump(data, f, indent=2)
 
             logger.debug(f"Saved learning data to {storage_path}")
@@ -465,7 +465,7 @@ class TagLearningEngine:
             return
 
         try:
-            with open(storage_path) as f:
+            with open(storage_path) as f:  # noqa: safedir-required  # tag learning reader — path is an internal storage file
                 data = json.load(f)
 
             # Load tag usage

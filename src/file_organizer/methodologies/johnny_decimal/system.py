@@ -407,7 +407,7 @@ class JohnnyDecimalSystem:
 
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(save_path, "w") as f:
+        with open(save_path, "w") as f:  # noqa: safedir-required  # JD system writer — path is an internal data file
             json.dump(config, f, indent=2)
 
         logger.info(f"Saved configuration to {save_path}")
@@ -430,7 +430,7 @@ class JohnnyDecimalSystem:
         if not load_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {load_path}")
 
-        with open(load_path) as f:
+        with open(load_path) as f:  # noqa: safedir-required  # JD system reader — path is an internal data file
             config = json.load(f)
 
         # Restore reserved numbers

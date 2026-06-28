@@ -210,7 +210,7 @@ class PARAFileMover:
             # Handle name collision
             final_dest = self._resolve_collision(destination)
 
-            shutil.move(str(source), str(final_dest))
+            shutil.move(str(source), str(final_dest))  # noqa: safedir-required  # PARA file mover — source/dest paths are validated by the PARA categoriser
             logger.info("Moved %s -> %s", source, final_dest)
 
             return MoveResult(

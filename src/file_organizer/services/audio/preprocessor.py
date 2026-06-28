@@ -325,7 +325,7 @@ class AudioPreprocessor:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             import shutil
 
-            shutil.copy2(current_file, output_path)
+            shutil.copy2(current_file, output_path)  # noqa: safedir-required  # audio preprocessor — current_file/output_path are pipeline-managed
             current_file = output_path
 
         # Step 2: Normalize

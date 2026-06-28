@@ -19,6 +19,43 @@ ALLOWED_PATHS = {
     "src/file_organizer/core/path_guard.py",
 }
 
+# Third-party and stdlib library namespaces whose `.open()` methods are NOT raw
+# filesystem path operations on caller-supplied paths (e.g. Image.open() is a
+# PIL/Pillow decode call, os.open() returns a low-level file descriptor, etc.).
+# These are excluded from the Path.open() check to avoid detector overreach.
+_OPEN_EXEMPT_NAMESPACES: frozenset[str] = frozenset(
+    {
+        "os",  # os.open() → low-level fd, not a Python file object
+        "Image",  # PIL/Pillow image decode
+        "fitz",  # PyMuPDF document open
+        "tarfile",  # stdlib tar archive open
+        "tokenize",  # stdlib tokenize.open() — encoding-aware source reader
+        "aiofiles",  # async file I/O library
+        "zipfile",  # stdlib ZipFile.open()
+        "cv2",  # OpenCV image read
+        "PIL",  # PIL package-level alias
+        "wave",  # stdlib wave.open()
+        "mimetypes",  # stdlib mimetypes — no file open, but guard for completeness
+    }
+)
+
+
+def _open_receiver_name(node: ast.Attribute) -> str | None:
+    """Return the simple name of the receiver of a `.open()` attribute call.
+
+    For ``Image.open(...)`` the receiver is ``Image`` (a Name node).
+    For ``self.Image.open(...)`` the receiver is the inner Attribute whose
+    attr is ``Image``; we return that attr name.
+    Returns ``None`` when the receiver shape is too complex to inspect.
+    """
+    receiver = node.value
+    if isinstance(receiver, ast.Name):
+        return receiver.id
+    if isinstance(receiver, ast.Attribute):
+        # Handles chained access like ``self.Image.open(...)``
+        return receiver.attr
+    return None
+
 
 class SafeDirVisitor(ast.NodeVisitor):
     """AST visitor to find raw file operations."""
@@ -33,10 +70,12 @@ class SafeDirVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name) and node.func.id == "open":
             self.add_violation(node, "raw open() call")
 
-        # 2. Check for Path.open()
+        # 2. Check for Path.open() — but exclude known library namespaces whose
+        #    `.open()` is not a raw filesystem call on a caller-supplied path.
         elif isinstance(node.func, ast.Attribute) and node.func.attr == "open":
-            # Note: This flags any '.open()' call on any object, which is a safe approximation
-            self.add_violation(node, "raw Path.open() call")
+            receiver_name = _open_receiver_name(node.func)
+            if receiver_name not in _OPEN_EXEMPT_NAMESPACES:
+                self.add_violation(node, "raw Path.open() call")
 
         # 3. Check for shutil copy/move/etc.
         elif (

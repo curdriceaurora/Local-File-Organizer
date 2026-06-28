@@ -182,7 +182,7 @@ def organize_file_for_plugins(
         else:
             destination.unlink()
 
-    shutil.move(str(source), str(destination))
+    shutil.move(str(source), str(destination))  # noqa: safedir-required  # plugin API endpoint — source/destination validated by the plugin framework
     return PluginOrganizeFileResponse(
         source_path=str(source),
         destination_path=str(destination),

@@ -215,7 +215,7 @@ def has_children(path: Path) -> bool:
 def is_probably_text(path: Path) -> bool:
     """Heuristic to detect whether a file is likely text."""
     try:
-        with path.open("rb") as handle:
+        with path.open("rb") as handle:  # noqa: safedir-required  # web helper — path validated by the web-layer access control
             sample = handle.read(TEXT_SAMPLE_BYTES)
     except OSError:
         return False

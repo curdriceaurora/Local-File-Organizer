@@ -35,7 +35,7 @@ def image_to_data_url(image_path: Path) -> str:
     mime_type, _ = mimetypes.guess_type(str(image_path))
     if not mime_type:
         mime_type = _DEFAULT_IMAGE_MIME
-    with open(image_path, "rb") as fh:
+    with open(image_path, "rb") as fh:  # noqa: safedir-required  # vision helper — image_path is pre-validated by the inference layer
         encoded = base64.b64encode(fh.read()).decode("utf-8")
     return f"data:{mime_type};base64,{encoded}"
 

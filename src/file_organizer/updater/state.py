@@ -80,7 +80,7 @@ class UpdateStateStore:
         )
         temp_path = self._state_path.with_suffix(".tmp")
         try:
-            with open(temp_path, "w", encoding="utf-8") as f:
+            with open(temp_path, "w", encoding="utf-8") as f:  # noqa: safedir-required  # updater state — path is an internal state file
                 f.write(payload)
                 f.flush()
                 os.fsync(f.fileno())

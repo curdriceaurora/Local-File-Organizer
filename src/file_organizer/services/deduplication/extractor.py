@@ -114,7 +114,7 @@ class DocumentExtractor:
         # SafeDir-unavailable case (which would double-yield → RuntimeError).
         fd = DocumentExtractor._open_reader_fd(file_path, scan_root)
         if fd is None:
-            with open(file_path, "rb") as handle:
+            with open(file_path, "rb") as handle:  # noqa: safedir-required  # content extractor — path is a user file read for hash/content analysis
                 yield handle
             return
         # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd

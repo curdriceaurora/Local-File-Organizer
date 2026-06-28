@@ -269,7 +269,7 @@ def verify_sha256(file_path: Path, expected: str) -> bool:
 
     sha256 = hashlib.sha256()
     try:
-        with file_path.open("rb") as fh:
+        with file_path.open("rb") as fh:  # noqa: safedir-required  # sidecar updater — path is a pre-validated file within the update payload
             for chunk in iter(lambda: fh.read(65536), b""):
                 sha256.update(chunk)
     except OSError as exc:
