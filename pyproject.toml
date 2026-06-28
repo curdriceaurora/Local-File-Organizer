@@ -43,14 +43,9 @@ dependencies = [
     "defusedxml>=0.7",
 
     # CLI and UI
-    # Upper-bounded below 0.26: typer 0.26.0 switched to vendoring its own
-    # internal click fork (typer._click) instead of using the real `click`
-    # package for its Context/Command machinery. Our code calls real
-    # click.get_current_context() (cli/state.py) and builds real click.Context
-    # objects (cli/lazy.py) — under the vendored fork those never observe
-    # typer's own context stack, so state set in a callback silently reads
-    # back as defaults (issue: CLIState.debug/verbose always False, lazy
-    # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
+    # Typer 0.26+ uses a vendored click fork (typer._click). CLI state/lazy
+    # command wiring in src/file_organizer/cli/* is compatibility-hardened for
+    # that model, so keep the range broad within the 0.x line.
     "typer[all]>=0.12,<0.27",
     "rich~=13.0",
     "textual~=0.50",

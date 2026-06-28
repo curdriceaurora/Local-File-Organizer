@@ -34,11 +34,16 @@ def _get_state() -> CLIState:
     Returns:
         CLIState: the active CLIState from the context, or a default `CLIState` instance when no applicable context exists.
     """
-    import click
+    try:
+        from typer._click.globals import get_current_context as _get_current_context
+    except ImportError:
+        from click import get_current_context as _get_current_context  # pragma: no cover
 
-    ctx = click.get_current_context(silent=True)
-    if ctx is not None and isinstance(ctx.obj, CLIState):
-        return ctx.obj
+    ctx = _get_current_context(silent=True)
+    while ctx is not None:
+        if isinstance(ctx.obj, CLIState):
+            return ctx.obj
+        ctx = ctx.parent
     return CLIState()
 
 

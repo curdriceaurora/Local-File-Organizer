@@ -8,7 +8,7 @@ from unittest.mock import patch
 import click
 import pytest
 
-from file_organizer.cli.lazy import LazyCommandProxy
+from file_organizer.cli.lazy import LazyCommandProxy, _load_lazy_command
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit, pytest.mark.integration]
 
@@ -41,3 +41,24 @@ def test_load_caches_result_across_calls() -> None:
 
     mock_import.assert_called_once()
     assert first is second is real_command
+
+
+def test_load_lazy_command_reports_import_failures() -> None:
+    """_load_lazy_command raises a ClickException with command/module context."""
+    with patch("importlib.import_module", side_effect=ImportError("boom")):
+        with pytest.raises(
+            click.ClickException,
+            match="Failed to load lazy command 'real_cmd' from 'fake.module.path': boom",
+        ):
+            _load_lazy_command("fake.module.path", "real_cmd")
+
+
+def test_load_lazy_command_reports_missing_attribute() -> None:
+    """_load_lazy_command raises ClickException when module attr is missing."""
+    fake_module = types.SimpleNamespace()
+    with patch("importlib.import_module", return_value=fake_module):
+        with pytest.raises(
+            click.ClickException,
+            match="Failed to load lazy command 'missing_cmd' from 'fake.module.path'",
+        ):
+            _load_lazy_command("fake.module.path", "missing_cmd")
