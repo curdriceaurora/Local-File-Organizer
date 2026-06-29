@@ -62,9 +62,7 @@ def test_noqa_suppresses_violation(tmp_path: Path) -> None:
 def test_bare_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
     src = tmp_path / "bare.py"
     src.write_text(
-        "def test_x(mock_fn):\n"
-        "    subject(mock_fn)\n"
-        "    assert mock_fn.called  # noqa\n",
+        "def test_x(mock_fn):\n    subject(mock_fn)\n    assert mock_fn.called  # noqa\n",
         encoding="utf-8",
     )
     assert len(checker.check_file(src)) == 1
