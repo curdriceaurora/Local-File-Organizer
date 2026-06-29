@@ -87,6 +87,16 @@ def test_string_literal_noqa_text_does_not_suppress_violation(tmp_path: Path) ->
     assert len(violations) == 1
 
 
+def test_string_literal_noqa_directive_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "string_literal_directive.py"
+    src.write_text(
+        'message = "noqa: test-separator-paths"\nvalue = Path("docs/report.pdf")\n',
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
 def test_hash_in_string_literal_does_not_suppress_violation(tmp_path: Path) -> None:
     src = tmp_path / "hash_string.py"
     src.write_text(

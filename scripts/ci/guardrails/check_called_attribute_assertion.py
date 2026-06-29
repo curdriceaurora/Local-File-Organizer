@@ -12,6 +12,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 _WEAK_ATTRS = {"called", "call_count"}
 
 
@@ -31,7 +36,9 @@ class _Visitor(ast.NodeVisitor):
         # and is intentionally not flagged.
         if _is_weak_attribute_expr(test):
             line_idx = node.lineno - 1
-            if 0 <= line_idx < len(self.lines) and "noqa" in self.lines[line_idx]:
+            if 0 <= line_idx < len(self.lines) and has_targeted_noqa(
+                self.lines[line_idx], "called-attribute-assertion"
+            ):
                 self.generic_visit(node)
                 return
             self.violations.append(

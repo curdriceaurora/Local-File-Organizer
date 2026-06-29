@@ -11,6 +11,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 # Paths that are allowed to perform raw file operations (the primitives themselves)
 ALLOWED_PATHS = {
     "src/file_organizer/utils/safedir.py",
@@ -100,8 +105,7 @@ class SafeDirVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: safedir-required" in line_content or "noqa" in line_content:
+            if has_targeted_noqa(line_content, "safedir-required"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
 

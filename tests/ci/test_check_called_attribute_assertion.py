@@ -57,3 +57,24 @@ def test_noqa_suppresses_violation(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert checker.check_file(src) == []
+
+
+def test_bare_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "bare.py"
+    src.write_text(
+        "def test_x(mock_fn):\n    subject(mock_fn)\n    assert mock_fn.called  # noqa\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1
+
+
+def test_string_literal_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "string_literal.py"
+    src.write_text(
+        "def test_x(mock_fn):\n"
+        "    msg = 'noqa: called-attribute-assertion'\n"
+        "    subject(mock_fn)\n"
+        "    assert mock_fn.called\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1

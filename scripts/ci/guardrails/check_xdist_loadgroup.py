@@ -14,6 +14,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 
 def _calls_getbasetemp(node: ast.AST) -> bool:
     for child in ast.walk(node):
@@ -66,7 +71,9 @@ class _Visitor(ast.NodeVisitor):
             return
 
         line_idx = node.lineno - 1
-        if 0 <= line_idx < len(self.lines) and "noqa" in self.lines[line_idx]:
+        if 0 <= line_idx < len(self.lines) and has_targeted_noqa(
+            self.lines[line_idx], "xdist-loadgroup"
+        ):
             return
 
         self.violations.append(

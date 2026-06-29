@@ -43,3 +43,12 @@ def test_mixed_noqa_list_with_atomic_write_suppresses_violation(tmp_path: Path) 
     src = tmp_path / "mixed.py"
     src.write_text("Path('x').write_text('data')  # noqa: F401, atomic-write\n", encoding="utf-8")
     assert checker.check_file(src) == []
+
+
+def test_string_literal_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "string_literal.py"
+    src.write_text(
+        "msg = 'noqa: atomic-write'\nPath('x').write_text('data')\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1

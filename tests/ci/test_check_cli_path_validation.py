@@ -129,3 +129,43 @@ def run(directory: Path) -> None:  # copilot: wontfix
     )
     violations = checker.check_file(src)
     assert len(violations) == 0
+
+
+def test_allows_targeted_noqa_override(tmp_path: Path) -> None:
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+@app.command()
+def run(directory: Path) -> None:  # noqa: cli-path-validation
+    pass
+""",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_bare_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+@app.command()
+def run(directory: Path) -> None:  # noqa
+    pass
+""",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1
+
+
+def test_string_literal_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+@app.command()
+def run(directory: Path) -> None:
+    msg = "noqa: cli-path-validation"
+    pass
+""",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1

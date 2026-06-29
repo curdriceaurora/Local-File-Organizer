@@ -11,6 +11,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 
 class DefusedXmlVisitor(ast.NodeVisitor):
     """AST visitor to find standard xml module imports."""
@@ -36,8 +41,7 @@ class DefusedXmlVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: defusedxml-fallback" in line_content or "noqa" in line_content:
+            if has_targeted_noqa(line_content, "defusedxml-fallback"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
 
