@@ -261,7 +261,6 @@ class DocumentExtractor:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
         except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
-        except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 
