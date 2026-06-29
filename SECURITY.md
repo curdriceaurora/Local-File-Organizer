@@ -50,7 +50,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | advisory |
 | `atomic-write` | Raw file-write operations bypassing `atomic_write()` | advisory |
 | `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | advisory |
-| `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | advisory |
+| `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | enforced |
 | `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | advisory |
 | `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | advisory |
 | `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | advisory |

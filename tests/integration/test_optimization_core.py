@@ -154,6 +154,30 @@ class TestMemoryProfiler:
         assert r.allocated >= 0
         assert r.freed >= 0
 
+    def test_profile_decorator_keeps_gc_disabled_if_initially_disabled(self) -> None:
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        profiler = MemoryProfiler()
+
+        @profiler.profile
+        def returns_value() -> str:
+            return "ok"
+
+        with (
+            patch("gc.isenabled", return_value=False),
+            patch("gc.disable") as disable_mock,
+            patch("gc.enable") as enable_mock,
+            patch("gc.collect"),
+            patch.object(MemoryProfiler, "_get_rss", side_effect=[1_000, 2_000]),
+            patch("time.monotonic", side_effect=[10.0, 10.05]),
+        ):
+            assert returns_value() == "ok"
+
+        disable_mock.assert_called_once()
+        enable_mock.assert_not_called()
+        assert profiler.last_result is not None
+        assert profiler.last_result.allocated == 1_000
+
     def test_start_tracking_and_stop_tracking(self) -> None:
         from file_organizer.optimization.memory_profiler import MemoryProfiler, MemoryTimeline
 
