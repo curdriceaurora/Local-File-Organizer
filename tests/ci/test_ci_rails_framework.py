@@ -133,7 +133,7 @@ def test_repo_registry_loads_registered_rails() -> None:
     expected_modes = {
         "safedir-required": "enforce",
         "atomic-write": "advisory",
-        "cli-path-validation": "advisory",
+        "cli-path-validation": "enforce",
         "defusedxml-fallback": "advisory",
         "test-hardcoded-paths": "advisory",
         "test-separator-paths": "advisory",

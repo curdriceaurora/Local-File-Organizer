@@ -203,6 +203,133 @@ class TestMemoryProfiler:
         counts = [c for _, c in result]
         assert counts == sorted(counts, reverse=True)
 
+    def test_get_rss_linux_proc_success(self) -> None:
+        """Verify that _get_rss parses VmRSS successfully on Linux proc status."""
+        from unittest.mock import mock_open
+
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_data = "VmRSS:     1000 kB\nVmSize:     5000 kB\n"
+        with patch("builtins.open", mock_open(read_data=mock_data)):
+            rss = MemoryProfiler._get_rss()
+            assert rss == 1000 * 1024
+
+    def test_get_rss_linux_proc_missing_vmrss(self) -> None:
+        """Verify that _get_rss falls back to resource module on Linux if VmRSS is missing in proc status."""
+        from unittest.mock import mock_open
+
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_data = "SomeOtherField: 1000 kB\n"
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 2000
+        with (
+            patch("builtins.open", mock_open(read_data=mock_data)),
+            patch("sys.platform", "linux"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss = MemoryProfiler._get_rss()
+            assert rss == 2000 * 1024
+
+    def test_get_rss_darwin_proc_missing(self) -> None:
+        """Verify that _get_rss queries resource maxrss directly on macOS/Darwin when proc status is missing."""
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 3000
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("sys.platform", "darwin"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss = MemoryProfiler._get_rss()
+            assert rss == 3000
+
+    def test_get_rss_resource_import_error(self) -> None:
+        """Verify that _get_rss returns 0 if both proc status and resource module raise errors."""
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("sys.platform", "linux"),
+            patch.dict(sys.modules, {"resource": None}),
+        ):
+            rss = MemoryProfiler._get_rss()
+            assert rss == 0
+
+    def test_get_rss_vms_linux_proc_success(self) -> None:
+        """Verify that _get_rss_vms parses both VmRSS and VmSize successfully on Linux proc status."""
+        from unittest.mock import mock_open
+
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_data = "VmRSS:     1000 kB\nVmSize:     5000 kB\n"
+        with patch("builtins.open", mock_open(read_data=mock_data)):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 1000 * 1024
+            assert vms == 5000 * 1024
+
+    def test_get_rss_vms_darwin(self) -> None:
+        """Verify that _get_rss_vms queries resource maxrss and returns 0 VMS on macOS/Darwin."""
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 4000
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("sys.platform", "darwin"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 4000
+            assert vms == 0
+
+    def test_get_rss_vms_linux_resource_fallback(self) -> None:
+        """Verify that _get_rss_vms falls back to resource module on Linux if proc status is missing."""
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 5000
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("sys.platform", "linux"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 5000 * 1024
+            assert vms == 0
+
+    def test_get_rss_vms_linux_missing_vmrss_keeps_vms(self) -> None:
+        """Verify VmSize parse is preserved while RSS falls back if VmRSS is absent."""
+        from unittest.mock import mock_open
+
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        mock_usage = MagicMock()
+        mock_usage.ru_maxrss = 5000
+        mock_data = "VmSize:     7000 kB\n"
+        with (
+            patch("builtins.open", mock_open(read_data=mock_data)),
+            patch("sys.platform", "linux"),
+            patch("resource.getrusage", return_value=mock_usage),
+        ):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 5000 * 1024
+            assert vms == 7000 * 1024
+
+    def test_get_rss_vms_resource_import_error(self) -> None:
+        """Verify that _get_rss_vms returns (0, 0) if both proc status and resource modules fail."""
+        from file_organizer.optimization.memory_profiler import MemoryProfiler
+
+        with (
+            patch("builtins.open", side_effect=FileNotFoundError),
+            patch("sys.platform", "linux"),
+            patch.dict(sys.modules, {"resource": None}),
+        ):
+            rss, vms = MemoryProfiler._get_rss_vms()
+            assert rss == 0
+            assert vms == 0
+
 
 # ===========================================================================
 # TestResourceMonitor

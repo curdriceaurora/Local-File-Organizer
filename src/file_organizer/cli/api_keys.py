@@ -36,9 +36,12 @@ def generate_key(
 ) -> None:
     """Generate a secure API key and print its bcrypt hash."""
     from file_organizer.api.api_keys import _write_key, generate_api_key, hash_api_key
+    from file_organizer.cli.path_validation import resolve_cli_path
 
     # Resolve output path
-    resolved_output = output.expanduser()
+    resolved_output = resolve_cli_path(output, must_exist=False, must_be_dir=False)
+    if resolved_output.exists() and not resolved_output.is_file():
+        raise typer.BadParameter(f"Output path is not a regular file: {resolved_output!s}")
     api_key = generate_api_key(prefix=prefix)
     _write_key(resolved_output, api_key)
 
