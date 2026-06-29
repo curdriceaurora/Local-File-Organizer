@@ -21,7 +21,7 @@ description = "Flags raw open(), Path.open(), and shutil copy/move functions on 
 [[rail]]
 name = "atomic-write"
 command = ["python", "scripts/ci/guardrails/check_atomic_write.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags raw file write operations, enforcing the use of atomic_write (WP-6.1)."
 
 [[rail]]

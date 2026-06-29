@@ -23,6 +23,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.utils import resolve_path
 from file_organizer.config.path_manager import get_config_dir
+from file_organizer.utils.atomic_write import atomic_write_text
 from file_organizer.web._helpers import base_context, templates
 
 settings_router = APIRouter(tags=["web"])
@@ -205,7 +206,7 @@ def _save_web_settings(ws: WebSettings) -> None:
     """Persist *ws* to the JSON settings file on disk."""
     try:
         _SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
-        _SETTINGS_FILE.write_text(json.dumps(asdict(ws), indent=2) + "\n", encoding="utf-8")
+        atomic_write_text(_SETTINGS_FILE, json.dumps(asdict(ws), indent=2) + "\n")
     except Exception as exc:
         logger.error("Failed to save settings to {}: {}", _SETTINGS_FILE, exc)
 

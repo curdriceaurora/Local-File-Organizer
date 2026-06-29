@@ -77,7 +77,7 @@ class ProfileExporter:
 
             # Write to temporary file first (atomic write)
             temp_file = file_path.parent / f"{file_path.name}.tmp"
-            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required  # profile exporter — path is an internal temp file
+            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile exporter — path is an internal temp file
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
             # Validate export file
@@ -167,7 +167,7 @@ class ProfileExporter:
 
             # Write to temporary file first (atomic write)
             temp_file = file_path.parent / f"{file_path.name}.tmp"
-            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required  # profile exporter — path is an internal temp file
+            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile exporter — path is an internal temp file
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
             # Atomic rename
@@ -196,7 +196,7 @@ class ProfileExporter:
                 return False
 
             # Load and parse JSON
-            with open(file_path, encoding="utf-8") as f:  # noqa: safedir-required  # profile exporter reader — input path validated at CLI boundary
+            with open(file_path, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile exporter reader — input path validated at CLI boundary
                 data = json.load(f)
 
             # Check required fields

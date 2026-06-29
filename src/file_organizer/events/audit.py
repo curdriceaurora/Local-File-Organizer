@@ -178,7 +178,7 @@ class AuditLogger:
         entries: list[AuditEntry] = []
 
         try:
-            with open(self._log_path, encoding="utf-8") as f:  # noqa: safedir-required  # audit log reader — path is an internal audit file
+            with open(self._log_path, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # audit log reader — path is an internal audit file
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -215,7 +215,7 @@ class AuditLogger:
 
         count = 0
         try:
-            with open(self._log_path, encoding="utf-8") as f:  # noqa: safedir-required  # audit log reader — path is an internal audit file
+            with open(self._log_path, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # audit log reader — path is an internal audit file
                 for line in f:
                     if line.strip():
                         count += 1
@@ -243,7 +243,7 @@ class AuditLogger:
         """
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(self._log_path, "a", encoding="utf-8") as f:  # noqa: safedir-required  # audit log appender — path is an internal audit file
+        with open(self._log_path, "a", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # audit log appender — path is an internal audit file
             f.write(json.dumps(entry.to_dict()) + "\n")
 
     @staticmethod

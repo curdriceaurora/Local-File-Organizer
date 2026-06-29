@@ -281,7 +281,7 @@ def _locked(journal: Path, mode: int) -> Iterator[object | None]:
     # ``open(..., "a")`` creates the file if absent without truncating
     # it — keeps a stable inode across all callers.
     # atomic-write: ok — fcntl lock file, stable inode required
-    fh = open(lock, "a", encoding="utf-8")  # noqa: safedir-required  # undo-journal lock file — path is an internal temp file, not user-supplied
+    fh = open(lock, "a", encoding="utf-8")  # noqa: safedir-required, atomic-write  # undo-journal lock file — path is an internal temp file, not user-supplied
     try:
         fcntl.flock(fh.fileno(), mode)
         try:
@@ -511,7 +511,7 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
         os.replace(tmp_path, dst)
         fsync_directory(dst)
     else:
-        shutil.copyfile(src, tmp_path)  # noqa: safedir-required  # undo-journal atomic copy — src/dst are temp paths managed within the subsystem
+        shutil.copyfile(src, tmp_path)  # noqa: safedir-required, atomic-write  # undo-journal atomic copy — src/dst are temp paths managed within the subsystem
         # #1248 fix [P2]: fsync the copied DATA before copying mode bits.
         # The previous order ran ``copystat`` first, which can stamp a
         # read-only mode (e.g. 0444) onto the tmp; the subsequent
@@ -535,7 +535,7 @@ def _durable_cross_device_move(src: Path, dst: Path, *, journal: Path) -> None:
         # source mode can't block the data fsync above. The final dst
         # mode equals the source mode (copystat parity).
         try:
-            shutil.copystat(src, tmp_path)  # noqa: safedir-required  # undo-journal atomic copy — src/dst are temp paths managed within the subsystem
+            shutil.copystat(src, tmp_path)  # noqa: safedir-required, atomic-write  # undo-journal atomic copy — src/dst are temp paths managed within the subsystem
         except OSError:
             # copystat failures are non-fatal — better to complete the
             # move with default mode than fail.
@@ -611,7 +611,7 @@ def directory_move(src: Path, dst: Path, *, journal: Path) -> None:
     _append_journal(journal, payload)
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(src), str(dst))  # noqa: safedir-required  # undo-journal atomic move — src/dst are temp paths managed within the subsystem
+        shutil.move(str(src), str(dst))  # noqa: safedir-required, atomic-write  # undo-journal atomic move — src/dst are temp paths managed within the subsystem
     finally:
         # ``done`` is appended even if shutil.move raised, so a
         # caught exception still clears the in-flight marker for
@@ -661,7 +661,7 @@ def sweep(journal: Path) -> None:
                 # #1248 fix: explicit UTF-8 so the locked sweep read matches
                 # the UTF-8 writers; platform-default decoding could corrupt
                 # non-ASCII journal paths during reconciliation.
-                fh = open(journal, "r+", encoding="utf-8")  # noqa: safedir-required  # undo-journal reader — journal path is an internal file
+                fh = open(journal, "r+", encoding="utf-8")  # noqa: safedir-required, atomic-write  # undo-journal reader — journal path is an internal file
             except FileNotFoundError:
                 # Journal disappeared between ``exists()`` and ``open()`` —
                 # nothing to sweep. Narrow scope: don't swallow OSError
@@ -1495,7 +1495,7 @@ def read_journal_under_shared_lock(journal: Path) -> list[_JournalEntry]:
         return []
     if _HAS_FCNTL:
         try:
-            with _locked(journal, fcntl.LOCK_SH), open(journal, encoding="utf-8") as fh:  # noqa: safedir-required  # undo-journal reader — journal path is an internal file
+            with _locked(journal, fcntl.LOCK_SH), open(journal, encoding="utf-8") as fh:  # noqa: safedir-required, atomic-write  # undo-journal reader — journal path is an internal file
                 return _parse_journal_text(fh.read())
         except FileNotFoundError:  # pragma: no cover - exists()→open() race
             return []
@@ -1546,7 +1546,7 @@ def is_path_in_flight(path: Path, *, journal: Path) -> bool:
     entries: list[_JournalEntry] = []
     if _HAS_FCNTL:
         try:
-            with _locked(journal, fcntl.LOCK_SH), open(journal, encoding="utf-8") as fh:  # noqa: safedir-required  # undo-journal reader — journal path is an internal file
+            with _locked(journal, fcntl.LOCK_SH), open(journal, encoding="utf-8") as fh:  # noqa: safedir-required, atomic-write  # undo-journal reader — journal path is an internal file
                 entries = _parse_journal_text(fh.read())
         except FileNotFoundError:  # pragma: no cover - exists()→open() race
             # Journal disappeared between exists() and open() — treat
@@ -1675,7 +1675,7 @@ def _append_journal_line_locked(journal: Path, payload: Mapping[str, object]) ->
     """
     line = json.dumps(payload) + "\n"
     # atomic-write: ok — append_durable pattern (LOCK_EX held by caller + fsync below)
-    with open(journal, "a", encoding="utf-8") as fh:  # noqa: safedir-required  # undo-journal writer — journal path is an internal file
+    with open(journal, "a", encoding="utf-8") as fh:  # noqa: safedir-required, atomic-write  # undo-journal writer — journal path is an internal file
         fh.write(line)
         fh.flush()
         os.fsync(fh.fileno())

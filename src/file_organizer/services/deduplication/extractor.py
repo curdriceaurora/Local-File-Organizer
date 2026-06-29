@@ -114,7 +114,7 @@ class DocumentExtractor:
         # SafeDir-unavailable case (which would double-yield → RuntimeError).
         fd = DocumentExtractor._open_reader_fd(file_path, scan_root)
         if fd is None:
-            with open(file_path, "rb") as handle:  # noqa: safedir-required  # content extractor — path is a user file read for hash/content analysis
+            with open(file_path, "rb") as handle:  # noqa: safedir-required, atomic-write  # content extractor — path is a user file read for hash/content analysis
                 yield handle
             return
         # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
@@ -232,10 +232,13 @@ class DocumentExtractor:
         try:
             import pypdf
 
+            pypdf_error: type[Exception] = Exception
             try:
                 from pypdf.errors import PyPdfError
             except (ImportError, AttributeError):
-                PyPdfError = Exception
+                pass
+            else:
+                pypdf_error = PyPdfError
 
             text_parts = []
 
@@ -257,7 +260,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
-        except (PyPdfError, OSError, ValueError, KeyError, IndexError) as e:
+        except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 

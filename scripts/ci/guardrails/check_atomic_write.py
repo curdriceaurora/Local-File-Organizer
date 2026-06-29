@@ -8,6 +8,7 @@ operations except in designated primitive/utility modules.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -65,10 +66,21 @@ class AtomicWriteVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: atomic-write" in line_content or "noqa" in line_content:
+            # Only allow targeted suppression for this rail.
+            if _has_atomic_write_noqa(line_content):
                 return
             self.violations.append((lineno, message, line_content.strip()))
+
+
+def _has_atomic_write_noqa(line_content: str) -> bool:
+    """Return True when the line has an explicit noqa for atomic-write."""
+    match = re.search(r"#\s*noqa(?::\s*([a-z0-9_\-,\s]+))?", line_content.lower())
+    if match is None:
+        return False
+    codes = match.group(1)
+    if not codes:
+        return False
+    return "atomic-write" in {code.strip() for code in codes.split(",")}
 
 
 def check_file(filepath: Path) -> list[tuple[int, str, str]]:

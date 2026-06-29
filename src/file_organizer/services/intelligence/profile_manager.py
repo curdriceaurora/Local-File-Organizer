@@ -196,7 +196,7 @@ class ProfileManager:
 
             # Write to temporary file first (atomic write)
             temp_file = profile_path.parent / f"{profile_path.name}.tmp"
-            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required  # profile manager writer — path is an internal temp file
+            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile manager writer — path is an internal temp file
                 json.dump(profile.to_dict(), f, indent=2, ensure_ascii=False)
 
             # Atomic rename
@@ -223,7 +223,7 @@ class ProfileManager:
             if not profile_path.exists():
                 return None
 
-            with open(profile_path, encoding="utf-8") as f:  # noqa: safedir-required  # profile manager reader — path is an internal profile file
+            with open(profile_path, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile manager reader — path is an internal profile file
                 data = json.load(f)
 
             profile = Profile.from_dict(data)
@@ -246,7 +246,7 @@ class ProfileManager:
         """Get name of currently active profile."""
         try:
             if self.active_profile_file.exists():
-                with open(self.active_profile_file, encoding="utf-8") as f:  # noqa: safedir-required  # profile manager reader — path is an internal active-profile file
+                with open(self.active_profile_file, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile manager reader — path is an internal active-profile file
                     return f.read().strip()
         except OSError as e:
             print(f"Error reading active profile: {e}")
@@ -265,7 +265,7 @@ class ProfileManager:
         try:
             # Write to temporary file first (atomic write)
             temp_file = self.active_profile_file.parent / f"{self.active_profile_file.name}.tmp"
-            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required  # profile manager writer — path is an internal temp file
+            with open(temp_file, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile manager writer — path is an internal temp file
                 f.write(profile_name)
 
             # Atomic rename
@@ -398,7 +398,7 @@ class ProfileManager:
             # Create backup before deleting
             backup_path = profile_path.parent / f"{profile_path.name}.deleted.backup"
             try:
-                shutil.copy2(profile_path, backup_path)  # noqa: safedir-required  # profile backup — src/dst are internal profile/backup files
+                shutil.copy2(profile_path, backup_path)  # noqa: safedir-required, atomic-write  # profile backup — src/dst are internal profile/backup files
             except OSError as e:
                 print(f"Warning: Failed to create backup: {e}")
 

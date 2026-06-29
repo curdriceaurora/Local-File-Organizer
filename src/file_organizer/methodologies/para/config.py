@@ -159,7 +159,7 @@ class PARAConfig:
             return cls()
 
         try:
-            with open(config_path) as f:  # noqa: safedir-required  # PARA config reader — path is an internal config file
+            with open(config_path) as f:  # noqa: safedir-required, atomic-write  # PARA config reader — path is an internal config file
                 data = yaml.safe_load(f)
 
             if not data:
@@ -267,7 +267,7 @@ class PARAConfig:
 
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(config_path, "w") as f:  # noqa: safedir-required  # PARA config writer — path is an internal config file
+            with open(config_path, "w") as f:  # noqa: safedir-required, atomic-write  # PARA config writer — path is an internal config file
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
             logger.info(f"Configuration saved to {config_path}")
