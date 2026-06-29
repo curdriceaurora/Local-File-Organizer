@@ -211,16 +211,16 @@ class TestPreviewDuplicates:
             hash_value="abc123",
             files=[
                 DedupeFileInfo(
-                    path="/tmp/z-last.txt",
+                    path="/tmp/z-last.txt",  # noqa: test-hardcoded-paths
                     size=100,
                     modified=same_time,
-                    accessed=same_time,  # noqa: test-hardcoded-paths
+                    accessed=same_time,
                 ),
                 DedupeFileInfo(
-                    path="/tmp/a-first.txt",
+                    path="/tmp/a-first.txt",  # noqa: test-hardcoded-paths
                     size=100,
                     modified=same_time,
-                    accessed=same_time,  # noqa: test-hardcoded-paths
+                    accessed=same_time,
                 ),
             ],
             total_size=200,
