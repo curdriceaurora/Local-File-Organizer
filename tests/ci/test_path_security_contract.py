@@ -64,11 +64,6 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
         "target = Path(path)",
         "detector.scan_directory(Path(scan_dir))",
     },
-    # auth_db uses Path only to create the parent directory for the DB file;
-    # db_path comes from trusted config (ApiSettings.auth_db_path), not user input.
-    "api/auth_db.py": {
-        "Path(db_path).parent.mkdir(parents=True, exist_ok=True)  # codeql[py/path-injection]",
-    },
 }
 
 

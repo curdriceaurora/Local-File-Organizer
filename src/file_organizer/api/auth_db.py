@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from functools import cache
-from pathlib import Path
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,12 +17,14 @@ from file_organizer.api.database import (
 from file_organizer.api.database import (
     get_session_factory as get_db_session_factory,
 )
+from file_organizer.config.path_manager import get_config_dir
 
 
 def _ensure_db_dir(db_path: str) -> None:
-    """Create the parent directory for a SQLite file DB if it doesn't exist."""
-    if db_path != ":memory:":
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)  # codeql[py/path-injection]
+    """Create the default auth DB directory when using the default DB path."""
+    config_dir = get_config_dir()
+    if db_path == str(config_dir / "auth.db"):
+        config_dir.mkdir(parents=True, exist_ok=True)
 
 
 @cache
