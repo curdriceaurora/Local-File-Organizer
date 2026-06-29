@@ -387,12 +387,17 @@ class DocumentExtractor:
         Returns:
             Extracted text
         """
+        # Keep an always-defined fallback type in case defusedxml import fails
+        # before ParseError is bound in local scope.
+        _parse_error_type: type[BaseException] = SyntaxError
         try:
             # ``content.xml`` comes from an untrusted document; use defusedxml to
             # reject entity-expansion / external-entity (XXE) payloads that the
             # stdlib parser would otherwise process.
-            from defusedxml.ElementTree import ParseError
+            from defusedxml.ElementTree import ParseError as _DefusedParseError
             from defusedxml.ElementTree import fromstring as _xml_fromstring
+
+            _parse_error_type = _DefusedParseError
 
             # ODT files are ZIP archives; open through SafeDir (symlink-safe).
             with self._open_binary(file_path, scan_root) as f, zipfile.ZipFile(f, "r") as odt_zip:
@@ -428,7 +433,14 @@ class DocumentExtractor:
 
             return full_text
 
-        except (OSError, KeyError, ValueError, zipfile.BadZipFile, ParseError, ImportError) as e:
+        except (
+            OSError,
+            KeyError,
+            ValueError,
+            zipfile.BadZipFile,
+            _parse_error_type,
+            ImportError,
+        ) as e:
             # ParseError (malformed content.xml — a SyntaxError subclass) and
             # ImportError (defusedxml unavailable) are handled here so a bad or
             # untrusted ODT degrades to "" rather than crashing the dedup flow.
