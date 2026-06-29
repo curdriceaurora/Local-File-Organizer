@@ -27,6 +27,14 @@ def test_flags_windows_separator_in_path_constructor(tmp_path: Path) -> None:
     assert "docs\\report.pdf" in violations[0][1]  # noqa: test-separator-paths
 
 
+def test_flags_separator_in_fstring_path_constructor(tmp_path: Path) -> None:
+    src = tmp_path / "bad_fstring.py"
+    src.write_text('value = Path(f"/test/path{1}")\n', encoding="utf-8")
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "/test/path" in violations[0][1]  # noqa: test-separator-paths
+
+
 def test_targeted_noqa_suppresses_violation(tmp_path: Path) -> None:
     src = tmp_path / "exempt.py"
     src.write_text(
@@ -98,6 +106,12 @@ def test_root_path_is_not_flagged(tmp_path: Path) -> None:
 def test_url_literal_in_path_call_is_not_flagged(tmp_path: Path) -> None:
     src = tmp_path / "url.py"
     src.write_text('value = Path("https://example.com/a/b")\n', encoding="utf-8")
+    assert checker.check_file(src) == []
+
+
+def test_url_fstring_literal_in_path_call_is_not_flagged(tmp_path: Path) -> None:
+    src = tmp_path / "url_fstring.py"
+    src.write_text('value = Path(f"https://example.com/a/{1}")\n', encoding="utf-8")
     assert checker.check_file(src) == []
 
 

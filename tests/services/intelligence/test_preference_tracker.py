@@ -543,8 +543,8 @@ def test_get_recent_corrections_ordering_and_limit(tracker):
     """Test that recent corrections are ordered newest-first and respect limit."""
     for i in range(5):
         tracker.track_correction(
-            source=Path(f"/a/file{i}.txt"),
-            destination=Path(f"/b/file{i}.txt"),
+            source=Path("/") / "a" / f"file{i}.txt",
+            destination=Path("/") / "b" / f"file{i}.txt",
             correction_type=CorrectionType.FILE_MOVE,
         )
 

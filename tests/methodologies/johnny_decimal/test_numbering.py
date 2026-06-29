@@ -136,7 +136,7 @@ class TestJohnnyDecimalGenerator:
         # Register some categories
         for i in range(5):
             num = JohnnyDecimalNumber(area=10, category=i)
-            generator.register_existing_number(num, Path(f"/test/file{i}.txt"))
+            generator.register_existing_number(num, Path("/") / "test" / f"file{i}.txt")
 
         # Next available should be 5
         category = generator.get_next_available_category(area=10)
@@ -295,7 +295,7 @@ class TestJohnnyDecimalGenerator:
         # Register some numbers
         for i in range(3):
             num = JohnnyDecimalNumber(area=10, category=i)
-            generator.register_existing_number(num, Path(f"/test/file{i}.txt"))
+            generator.register_existing_number(num, Path("/") / "test" / f"file{i}.txt")
 
         # Resolve conflict for category 2
         conflicting = JohnnyDecimalNumber(area=10, category=2, name="Test")
@@ -310,7 +310,7 @@ class TestJohnnyDecimalGenerator:
         # Register 0, 1, 2, skip 3, register 4
         for i in [0, 1, 2, 4]:
             num = JohnnyDecimalNumber(area=10, category=i)
-            generator.register_existing_number(num, Path(f"/test/file{i}.txt"))
+            generator.register_existing_number(num, Path("/") / "test" / f"file{i}.txt")
 
         # Resolve should find 3
         conflicting = JohnnyDecimalNumber(area=10, category=2)
@@ -365,7 +365,7 @@ class TestAdvancedScenarios:
         # Fill up all IDs in a category
         for i in range(1000):
             num = JohnnyDecimalNumber(area=10, category=1, item_id=i)
-            generator.register_existing_number(num, Path(f"/test/file{i}.txt"))
+            generator.register_existing_number(num, Path("/") / "test" / f"file{i}.txt")
 
         # Try to get next ID - should raise error
         with pytest.raises(InvalidNumberError, match="No available ID numbers"):
@@ -376,7 +376,7 @@ class TestAdvancedScenarios:
         # Fill up all categories in area 10
         for i in range(100):
             num = JohnnyDecimalNumber(area=10, category=i)
-            generator.register_existing_number(num, Path(f"/test/file{i}.txt"))
+            generator.register_existing_number(num, Path("/") / "test" / f"file{i}.txt")
 
         # Try to get next category - should raise error
         with pytest.raises(InvalidNumberError, match="No available category numbers"):

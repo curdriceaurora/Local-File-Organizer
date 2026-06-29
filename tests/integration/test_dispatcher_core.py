@@ -759,7 +759,7 @@ class TestProcessAudioFiles:
     def test_multiple_files_all_processed(self) -> None:
         from file_organizer.core.dispatcher import process_audio_files
 
-        paths = [Path(f"/mock/music/track{i}.mp3") for i in range(3)]
+        paths = [Path("/") / "mock" / "music" / f"track{i}.mp3" for i in range(3)]
 
         call_count = {"n": 0}
 
@@ -1209,7 +1209,7 @@ class TestProcessVideoFiles:
     def test_multiple_files_all_processed(self) -> None:
         from file_organizer.core.dispatcher import process_video_files
 
-        paths = [Path(f"/mock/videos/clip{i}.mp4") for i in range(4)]
+        paths = [Path("/") / "mock" / "videos" / f"clip{i}.mp4" for i in range(4)]
 
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.return_value = MagicMock()

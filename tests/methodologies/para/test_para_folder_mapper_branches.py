@@ -110,7 +110,7 @@ class TestFolderMapperBranches:
         mapper = CategoryFolderMapper(config)
         results = [
             MappingResult(
-                source_path=Path(f"/src/file{i}.txt"),
+                source_path=Path("/") / "src" / f"file{i}.txt",
                 target_category=PARACategory.RESOURCE,
                 target_folder=Path("/") / "dst" / "Resources",
                 confidence=0.7,

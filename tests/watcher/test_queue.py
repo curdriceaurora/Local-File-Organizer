@@ -94,7 +94,7 @@ class TestEventQueue:
         """Helper to create a FileEvent."""
         return FileEvent(
             event_type=event_type,
-            path=Path(f"/tmp/{name}"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / f"{name}",  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
 
@@ -252,7 +252,7 @@ class TestEventQueueEdgeCases:
         """Helper to create a FileEvent."""
         return FileEvent(
             event_type=event_type,
-            path=Path(f"/tmp/{name}"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / f"{name}",  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
 

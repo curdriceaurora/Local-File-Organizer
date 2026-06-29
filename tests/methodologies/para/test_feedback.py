@@ -140,7 +140,7 @@ class TestFeedbackCollector:
         """Multiple events should accumulate."""
         for i in range(5):
             suggestion = _make_suggestion()
-            collector.record_acceptance(Path(f"/test/file_{i}.txt"), suggestion)
+            collector.record_acceptance(Path("/") / "test" / f"file_{i}.txt", suggestion)
         assert len(collector.get_events()) == 5
 
     def test_persistence_across_instances(self, tmp_path: Path) -> None:
@@ -179,7 +179,7 @@ class TestFeedbackCollector:
     ) -> None:
         """100% acceptance should show accuracy_rate of 1.0."""
         for i in range(10):
-            collector.record_acceptance(Path(f"/test/f{i}.txt"), _make_suggestion())
+            collector.record_acceptance(Path("/") / "test" / f"f{i}.txt", _make_suggestion())
         stats = collector.get_accuracy_stats()
         assert stats.total_events == 10
         assert stats.accepted_count == 10
@@ -193,11 +193,11 @@ class TestFeedbackCollector:
         """Mixed feedback should compute correct accuracy."""
         # 7 accepted
         for i in range(7):
-            collector.record_acceptance(Path(f"/test/a{i}.txt"), _make_suggestion())
+            collector.record_acceptance(Path("/") / "test" / f"a{i}.txt", _make_suggestion())
         # 3 rejected
         for i in range(3):
             collector.record_rejection(
-                Path(f"/test/r{i}.txt"),
+                Path("/") / "test" / f"r{i}.txt",
                 _make_suggestion(),
                 correct_category=PARACategory.ARCHIVE,
             )
@@ -215,7 +215,7 @@ class TestFeedbackCollector:
         # 2 accepted projects
         for i in range(2):
             collector.record_acceptance(
-                Path(f"/test/p{i}.txt"),
+                Path("/") / "test" / f"p{i}.txt",
                 _make_suggestion(PARACategory.PROJECT),
             )
         # 1 rejected project
@@ -333,7 +333,7 @@ class TestPatternLearner:
         """Create a batch of feedback events."""
         return [
             FeedbackEvent(
-                file_path=Path(f"/{directory}/file_{i}{extension}"),
+                file_path=Path("/") / f"{directory}" / f"file_{i}{extension}",
                 suggested=category,
                 actual=category,
                 confidence=0.8,
@@ -446,7 +446,7 @@ class TestPatternLearner:
         # Mix of accepted and rejected
         accepted = [
             FeedbackEvent(
-                file_path=Path(f"/test/a{i}.txt"),
+                file_path=Path("/") / "test" / f"a{i}.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.PROJECT,
                 confidence=0.8,
@@ -456,7 +456,7 @@ class TestPatternLearner:
         ]
         rejected = [
             FeedbackEvent(
-                file_path=Path(f"/test/r{i}.txt"),
+                file_path=Path("/") / "test" / f"r{i}.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.AREA,
                 confidence=0.5,
@@ -475,7 +475,7 @@ class TestPatternLearner:
         # Create events where >60% of rejections have parent_directory
         accepted = [
             FeedbackEvent(
-                file_path=Path(f"/test/a{i}.txt"),
+                file_path=Path("/") / "test" / f"a{i}.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.PROJECT,
                 confidence=0.8,
@@ -486,7 +486,7 @@ class TestPatternLearner:
         # 10 rejections with parent_directory (>60% of rejections)
         rejected_with_dir = [
             FeedbackEvent(
-                file_path=Path(f"/documents/r{i}.txt"),
+                file_path=Path("/") / "documents" / f"r{i}.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.AREA,
                 confidence=0.5,
@@ -498,7 +498,7 @@ class TestPatternLearner:
         # 2 rejections without parent_directory
         rejected_no_dir = [
             FeedbackEvent(
-                file_path=Path(f"/r{i}.txt"),
+                file_path=Path("/") / f"r{i}.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.5,

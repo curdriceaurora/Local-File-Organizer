@@ -392,7 +392,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(10):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=3)
         remaining = history.get_operations()
@@ -406,7 +406,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=10)
         assert deleted == 0
@@ -416,7 +416,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=0)
         assert deleted == 5
@@ -490,7 +490,7 @@ class TestHistoryCleanup:
         cleanup = HistoryCleanup(history.db, config)
 
         for i in range(3):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
 
         assert cleanup.should_cleanup() is True
 
@@ -498,7 +498,7 @@ class TestHistoryCleanup:
         config = HistoryCleanupConfig(max_operations=1, auto_cleanup_enabled=False)
         cleanup = HistoryCleanup(history.db, config)
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
         assert cleanup.should_cleanup() is False
 
     def test_clear_all_without_confirm_is_noop(
@@ -547,7 +547,7 @@ class TestHistoryCleanup:
         cleanup = HistoryCleanup(history.db, config)
 
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
 
         stats = cleanup.auto_cleanup()
         assert stats["deleted_operations"] > 0

@@ -58,7 +58,7 @@ class TestHistoryCleanup:
         """Test cleanup trigger based on operation count."""
         # Add operations exceeding limit
         for i in range(150):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         assert cleanup.should_cleanup() is True
 
@@ -66,7 +66,7 @@ class TestHistoryCleanup:
         """Test that cleanup is not triggered when under limits."""
         # Add few operations
         for i in range(50):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Should not need cleanup (50 < 100)
         assert cleanup.should_cleanup() is False
@@ -82,7 +82,7 @@ class TestHistoryCleanup:
         """Test keeping only N most recent operations."""
         # Add 150 operations
         for i in range(150):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Keep only 100
         deleted = cleanup.cleanup_by_count(max_operations=100)
@@ -96,7 +96,7 @@ class TestHistoryCleanup:
         """Test cleanup by count when under limit."""
         # Add only 50 operations
         for i in range(50):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Try to keep 100 (should delete 0)
         deleted = cleanup.cleanup_by_count(max_operations=100)
@@ -108,7 +108,16 @@ class TestHistoryCleanup:
         # Add many operations to increase size
         for i in range(1000):
             history.log_operation(
-                OperationType.MOVE, Path(f"/test/very/long/path/with/many/segments/file{i}")
+                OperationType.MOVE,
+                Path("/")
+                / "test"
+                / "very"
+                / "long"
+                / "path"
+                / "with"
+                / "many"
+                / "segments"
+                / f"file{i}",
             )
 
         history.db.get_operation_count()
@@ -124,14 +133,14 @@ class TestHistoryCleanup:
         for i in range(5):
             history.log_operation(
                 OperationType.MOVE,
-                Path(f"/test/path{i}"),
+                Path("/") / "test" / f"path{i}",
                 status=OperationStatus.FAILED,
                 error_message="Test error",
             )
 
         # Add some successful operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i + 5}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i + 5}")
 
         # This won't delete anything since operations are not old enough
         deleted = cleanup.cleanup_failed_operations(older_than_days=7)
@@ -142,7 +151,9 @@ class TestHistoryCleanup:
         # Add some rolled back operations
         for i in range(5):
             history.log_operation(
-                OperationType.MOVE, Path(f"/test/path{i}"), status=OperationStatus.ROLLED_BACK
+                OperationType.MOVE,
+                Path("/") / "test" / f"path{i}",
+                status=OperationStatus.ROLLED_BACK,
             )
 
         # This won't delete anything since operations are not old enough
@@ -165,7 +176,7 @@ class TestHistoryCleanup:
         """Test automatic cleanup."""
         # Add many operations to trigger cleanup
         for i in range(150):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Run auto cleanup
         stats = cleanup.auto_cleanup()
@@ -180,7 +191,7 @@ class TestHistoryCleanup:
 
         # Add many operations
         for i in range(150):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         assert cleanup.should_cleanup() is False
 
@@ -188,7 +199,7 @@ class TestHistoryCleanup:
         """Test that clear_all requires confirmation."""
         # Add operations
         for i in range(10):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         result = cleanup.clear_all(confirm=False)
         assert result is False
@@ -198,7 +209,7 @@ class TestHistoryCleanup:
         """Test clearing all history data."""
         # Add operations
         for i in range(10):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         result = cleanup.clear_all(confirm=True)
         assert result is True

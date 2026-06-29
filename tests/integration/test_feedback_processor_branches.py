@@ -92,7 +92,9 @@ class TestProcessCorrection:
         fp = _fp()
         fp.learning_threshold = 3
         for i in range(3):
-            result = fp.process_correction(Path(f"/a/f{i}.txt"), Path(f"/b/g{i}.txt"))
+            result = fp.process_correction(
+                Path("/") / "a" / f"f{i}.txt", Path("/") / "b" / f"g{i}.txt"
+            )
         assert result.get("trigger_retraining") is True
 
     def test_below_threshold_no_trigger(self) -> None:

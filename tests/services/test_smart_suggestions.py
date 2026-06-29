@@ -55,7 +55,9 @@ class FakeLocationPattern:
 @dataclass
 class FakeContentCluster:
     cluster_id: str = "cluster-1"
-    file_paths: list[Path] = field(default_factory=lambda: [Path(f"/f{i}.txt") for i in range(6)])
+    file_paths: list[Path] = field(
+        default_factory=lambda: [Path("/") / f"f{i}.txt" for i in range(6)]
+    )
     common_keywords: list[str] = field(default_factory=lambda: ["report", "quarterly", "finance"])
     file_types: set[str] = field(default_factory=lambda: {".txt"})
     size_range: tuple[int, int] = (100, 5000)

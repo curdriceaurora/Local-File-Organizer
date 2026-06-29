@@ -696,8 +696,8 @@ class TestGetStatistics:
         tracker = _tracker()
         for i in range(3):
             tracker.track_correction(
-                source=Path(f"/a/f{i}.txt"),
-                destination=Path(f"/b/f{i}.txt"),
+                source=Path("/") / "a" / f"f{i}.txt",
+                destination=Path("/") / "b" / f"f{i}.txt",
                 correction_type=CorrectionType.FILE_RENAME,
             )
         stats = tracker.get_statistics()
@@ -1002,8 +1002,8 @@ class TestCorrectionQueries:
         tracker = _tracker()
         for i in range(5):
             tracker.track_correction(
-                source=Path(f"/a/f{i}.txt"),
-                destination=Path(f"/b/f{i}.txt"),
+                source=Path("/") / "a" / f"f{i}.txt",
+                destination=Path("/") / "b" / f"f{i}.txt",
                 correction_type=CorrectionType.FILE_RENAME,
             )
         recent = tracker.get_recent_corrections(limit=3)
@@ -1019,8 +1019,8 @@ class TestCorrectionQueries:
         tracker = _tracker()
         for i in range(15):
             tracker.track_correction(
-                source=Path(f"/a/f{i}.txt"),
-                destination=Path(f"/b/f{i}.txt"),
+                source=Path("/") / "a" / f"f{i}.txt",
+                destination=Path("/") / "b" / f"f{i}.txt",
                 correction_type=CorrectionType.FILE_RENAME,
             )
         recent = tracker.get_recent_corrections()

@@ -607,7 +607,7 @@ class TestStatistics:
 
         # Add multiple preferences
         for i in range(3):
-            path = Path(f"/test/dir{i}")
+            path = Path("/") / "test" / f"dir{i}"
             store.add_preference(path, {"confidence": 0.5 + i * 0.1, "correction_count": i + 1})
 
         stats = store.get_statistics()
@@ -620,7 +620,7 @@ class TestStatistics:
         """Test listing all directory preferences"""
         store.load_preferences()
 
-        paths = [Path(f"/test/dir{i}") for i in range(3)]
+        paths = [Path("/") / "test" / f"dir{i}" for i in range(3)]
         for path in paths:
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{path}"}})
 
@@ -641,7 +641,7 @@ class TestThreadSafety:
 
         def add_preferences(thread_id):
             for i in range(10):
-                path = Path(f"/test/thread{thread_id}/dir{i}")
+                path = Path("/") / "test" / f"thread{thread_id}" / f"dir{i}"
                 store.add_preference(
                     path, {"folder_mappings": {f"*.{thread_id}": f"Thread{thread_id}"}}
                 )
@@ -720,7 +720,7 @@ class TestPerformance:
 
         # Add 100 preferences
         for i in range(100):
-            path = Path(f"/test/perf/dir{i}")
+            path = Path("/") / "test" / "perf" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Measure lookup time
@@ -739,7 +739,7 @@ class TestPerformance:
 
         # Add 100 preferences
         for i in range(100):
-            path = Path(f"/test/perf/dir{i}")
+            path = Path("/") / "test" / "perf" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Measure save time
@@ -783,7 +783,7 @@ class TestClearPreferences:
 
         # Add some preferences
         for i in range(5):
-            path = Path(f"/test/dir{i}")
+            path = Path("/") / "test" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Clear

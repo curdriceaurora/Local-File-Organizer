@@ -133,11 +133,11 @@ class TestFileSelectionManager:
         assert manager.count == 0
 
         for i in range(5):
-            manager.toggle(Path(f"/tmp/file{i}.txt"))  # noqa: test-hardcoded-paths
+            manager.toggle(Path("/") / "tmp" / f"file{i}.txt")  # noqa: test-hardcoded-paths
             assert manager.count == i + 1
 
         for i in range(5):
-            manager.toggle(Path(f"/tmp/file{i}.txt"))  # noqa: test-hardcoded-paths
+            manager.toggle(Path("/") / "tmp" / f"file{i}.txt")  # noqa: test-hardcoded-paths
             assert manager.count == 5 - i - 1
 
     def test_selected_files_returns_copy(self) -> None:
@@ -258,14 +258,14 @@ class TestFileSelectionManagerEdgeCases:
     def test_large_selection(self) -> None:
         """Test managing large number of selections."""
         manager = FileSelectionManager()
-        paths = {Path(f"/tmp/file{i}.txt") for i in range(1000)}  # noqa: test-hardcoded-paths
+        paths = {Path("/") / "tmp" / f"file{i}.txt" for i in range(1000)}  # noqa: test-hardcoded-paths
         manager.select_all(paths)
         assert manager.count == 1000
 
     def test_clear_after_large_selection(self) -> None:
         """Test clearing large selection."""
         manager = FileSelectionManager()
-        paths = {Path(f"/tmp/file{i}.txt") for i in range(100)}  # noqa: test-hardcoded-paths
+        paths = {Path("/") / "tmp" / f"file{i}.txt" for i in range(100)}  # noqa: test-hardcoded-paths
         manager.select_all(paths)
         manager.clear()
         assert manager.count == 0

@@ -209,7 +209,7 @@ class TestGenerateReport:
             failed_count=0,
             skipped_count=15,
             duration_seconds=0.5,
-            skipped_paths=[Path(f"/skip/{i}") for i in range(15)],
+            skipped_paths=[Path("/") / "skip" / f"{i}" for i in range(15)],
         )
         report = migrator.generate_report(result)
         assert "Skipped" in report
@@ -315,7 +315,7 @@ class TestMigratorCoverage:
             skipped_count=15,
             duration_seconds=1.0,
             failed_paths=[(Path("/") / "tmp" / "bad", "error")],  # noqa: test-hardcoded-paths
-            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(15)],  # noqa: test-hardcoded-paths
+            skipped_paths=[Path("/") / "tmp" / f"skip_{i}" for i in range(15)],  # noqa: test-hardcoded-paths
         )
         report = migrator.generate_report(result)
         assert "and 5 more" in report
@@ -329,7 +329,7 @@ class TestMigratorCoverage:
             failed_count=0,
             skipped_count=3,
             duration_seconds=0.5,
-            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(3)],  # noqa: test-hardcoded-paths
+            skipped_paths=[Path("/") / "tmp" / f"skip_{i}" for i in range(3)],  # noqa: test-hardcoded-paths
         )
         report = migrator.generate_report(result)
         assert "Skipped (3 folders)" in report

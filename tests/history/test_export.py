@@ -65,7 +65,7 @@ class TestHistoryExporter:
         """Test exporting operations to JSON."""
         # Add some operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         output_path = temp_output_dir / "export.json"
         stats = exporter.export_to_json(output_path)
@@ -126,7 +126,7 @@ class TestHistoryExporter:
         """Test exporting operations to CSV."""
         # Add some operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         output_path = temp_output_dir / "export.csv"
         count = exporter.export_to_csv(output_path)
@@ -175,7 +175,9 @@ class TestHistoryExporter:
         # Create transactions
         for i in range(3):
             txn_id = history.start_transaction()
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"), transaction_id=txn_id)
+            history.log_operation(
+                OperationType.MOVE, Path("/") / "test" / f"path{i}", transaction_id=txn_id
+            )
             history.commit_transaction(txn_id)
 
         output_path = temp_output_dir / "transactions.csv"
@@ -235,7 +237,7 @@ class TestHistoryExporter:
         """Test exporting with date range filter."""
         # Add operations (will have current timestamp)
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Export with date range that includes current time
         from datetime import timedelta

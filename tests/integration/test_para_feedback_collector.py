@@ -389,7 +389,7 @@ class TestPatternLearner:
 
         return [
             FeedbackEvent(
-                file_path=Path(f"/mock/{parent_dir}/file_{i}{extension}"),
+                file_path=Path("/") / "mock" / f"{parent_dir}" / f"file_{i}{extension}",
                 suggested=category,
                 actual=category,
                 confidence=0.75,
@@ -461,7 +461,7 @@ class TestPatternLearner:
         # 4 acceptances: .pdf → PROJECT (actual = PROJECT)
         acc_events = [
             FeedbackEvent(
-                file_path=Path(f"/mock/work/doc{i}.pdf"),
+                file_path=Path("/") / "mock" / "work" / f"doc{i}.pdf",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.PROJECT,
                 confidence=0.8,
@@ -474,7 +474,7 @@ class TestPatternLearner:
         # 4 rejections: suggested=PROJECT, actual=RESOURCE
         rej_events = [
             FeedbackEvent(
-                file_path=Path(f"/mock/work/ref{i}.pdf"),
+                file_path=Path("/") / "mock" / "work" / f"ref{i}.pdf",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.5,

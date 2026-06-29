@@ -354,7 +354,7 @@ class TestOpenAnchoredWriter:
         with SafeDir.open_root(tmp_path) as root:
             before = len(list(proc.iterdir()))
             for i in range(20):
-                fd = root.open_anchored_writer(Path(f"a/b/c/file_{i}.txt"))
+                fd = root.open_anchored_writer(Path("a") / "b" / "c" / f"file_{i}.txt")
                 os.close(fd)
             after = len(list(proc.iterdir()))
         assert after - before <= 2, f"fd leak: before={before} after={after}"
