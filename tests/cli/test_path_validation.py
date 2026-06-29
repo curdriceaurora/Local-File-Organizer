@@ -27,7 +27,12 @@ from pathlib import Path
 import pytest
 import typer
 
-from file_organizer.cli.path_validation import resolve_cli_path, validate_pair
+from file_organizer.cli.path_validation import (
+    resolve_cli_path,
+    validate_is_dir,
+    validate_pair,
+    validate_regular_file,
+)
 
 # --------------------------------------------------------------------------
 # resolve_cli_path — happy paths
@@ -230,3 +235,79 @@ def test_resolve_cli_path_works_regardless_of_cwd(
     monkeypatch.chdir(os.sep)  # root of filesystem
     result = resolve_cli_path(tmp_path)
     assert result == tmp_path.resolve()
+
+
+# --------------------------------------------------------------------------
+# validate_regular_file — file validation for must_be_dir=False paths
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+class TestValidateRegularFile:
+    def test_regular_file_passes(self, tmp_path: Path) -> None:
+        """A regular file should pass validation."""
+        file_path = tmp_path / "file.txt"
+        file_path.write_text("content")
+        # Should not raise
+        validate_regular_file(file_path)
+
+    def test_directory_raises_bad_parameter(self, tmp_path: Path) -> None:
+        """A directory should raise typer.BadParameter."""
+        dir_path = tmp_path / "subdir"
+        dir_path.mkdir()
+        with pytest.raises(typer.BadParameter, match="not a regular file"):
+            validate_regular_file(dir_path)
+
+    def test_error_includes_custom_param_name(self, tmp_path: Path) -> None:
+        """The error message should include the custom parameter name."""
+        dir_path = tmp_path / "subdir"
+        dir_path.mkdir()
+        with pytest.raises(typer.BadParameter, match="Output"):
+            validate_regular_file(dir_path, param_name="output")
+
+    def test_missing_file_passes_silently(self, tmp_path: Path) -> None:
+        """A missing file should pass (it's the caller's responsibility to
+        check existence via resolve_cli_path if needed).
+        """
+        missing = tmp_path / "does_not_exist.txt"
+        # Should not raise — validate_regular_file only checks *existing* paths
+        validate_regular_file(missing)
+
+
+# --------------------------------------------------------------------------
+# validate_is_dir — directory validation for must_be_dir=False paths
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+class TestValidateIsDir:
+    def test_directory_passes(self, tmp_path: Path) -> None:
+        """A directory should pass validation."""
+        dir_path = tmp_path / "subdir"
+        dir_path.mkdir()
+        # Should not raise
+        validate_is_dir(dir_path)
+
+    def test_file_raises_bad_parameter(self, tmp_path: Path) -> None:
+        """A regular file should raise typer.BadParameter."""
+        file_path = tmp_path / "file.txt"
+        file_path.write_text("content")
+        with pytest.raises(typer.BadParameter, match="not a directory"):
+            validate_is_dir(file_path)
+
+    def test_error_includes_custom_param_name(self, tmp_path: Path) -> None:
+        """The error message should include the custom parameter name."""
+        file_path = tmp_path / "file.txt"
+        file_path.write_text("content")
+        with pytest.raises(typer.BadParameter, match="Input"):
+            validate_is_dir(file_path, param_name="input")
+
+    def test_missing_path_passes_silently(self, tmp_path: Path) -> None:
+        """A missing path should pass (it's the caller's responsibility to
+        check existence via resolve_cli_path if needed).
+        """
+        missing = tmp_path / "does_not_exist"
+        # Should not raise — validate_is_dir only checks *existing* paths
+        validate_is_dir(missing)
