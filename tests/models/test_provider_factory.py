@@ -131,9 +131,15 @@ class TestGetTextModel:
         bad_config.provider = "invalid"  # type: ignore[assignment]
 
         # All built-in providers should appear in the error message
-        with pytest.raises(ValueError, match="Unknown provider"):
+        with pytest.raises(ValueError, match="Unknown provider") as exc_info:
             get_text_model(bad_config)
-        # provider list is covered by the message contract itself
+        error_msg = str(exc_info.value)
+        assert "Unknown provider" in error_msg
+        assert "ollama" in error_msg
+        assert "openai" in error_msg
+        assert "llama_cpp" in error_msg
+        assert "mlx" in error_msg
+        assert "claude" in error_msg
 
 
 # ---------------------------------------------------------------------------
