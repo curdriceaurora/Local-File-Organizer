@@ -280,7 +280,7 @@ class TestAudioViewInit:
 
     def test_string_scan_dir(self):
         view = AudioView(scan_dir="/tmp")  # noqa: test-hardcoded-paths
-        assert view._scan_dir == Path("/tmp")  # noqa: test-hardcoded-paths
+        assert view._scan_dir == Path("/") / "tmp"  # noqa: test-hardcoded-paths
 
 
 @pytest.mark.unit

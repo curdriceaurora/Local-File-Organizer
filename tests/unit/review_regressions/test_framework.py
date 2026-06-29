@@ -240,7 +240,7 @@ def test_violation_from_path_accepts_root_relative_paths(tmp_path: Path, monkeyp
         rule_class="correctness",
         rule_id="relative-path",
         root=root,
-        path=Path("pkg/module.py"),
+        path=Path("pkg") / "module.py",
         message="relative path",
     )
 
@@ -262,7 +262,7 @@ def test_violation_from_path_accepts_relative_paths_that_include_root(
         rule_class="correctness",
         rule_id="relative-with-root",
         root=Path("repo"),
-        path=Path("repo/pkg/module.py"),
+        path=Path("repo") / "pkg" / "module.py",
         message="root-prefixed relative path",
     )
 
@@ -285,7 +285,7 @@ def test_violation_from_path_accepts_root_prefixed_relative_paths_with_absolute_
         rule_class="correctness",
         rule_id="absolute-root-prefixed",
         root=root,
-        path=Path("repo/pkg/module.py"),
+        path=Path("repo") / "pkg" / "module.py",
         message="root-prefixed relative path with absolute root",
     )
 

@@ -69,7 +69,7 @@ class TestHappyPathTransitions:
         registry.load_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        result = mgr.load(Path("fake/plugin"))
+        result = mgr.load(Path("fake") / "plugin")
         assert result is record
         assert mgr.get_state(record.name) == PluginState.LOADED
 
@@ -80,7 +80,7 @@ class TestHappyPathTransitions:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.enable(record.name)
         assert mgr.get_state(record.name) == PluginState.ENABLED
         record.executor.call.assert_called_with("on_enable")
@@ -92,7 +92,7 @@ class TestHappyPathTransitions:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.enable(record.name)
         mgr.disable(record.name)
         assert mgr.get_state(record.name) == PluginState.DISABLED
@@ -105,7 +105,7 @@ class TestHappyPathTransitions:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.unload(record.name)
         assert mgr.get_state(record.name) == PluginState.UNLOADED
         registry.unload_plugin.assert_called_once_with(record.name)
@@ -126,7 +126,7 @@ class TestEnableIdempotency:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.enable(record.name)
         record.executor.call.reset_mock()
 
@@ -149,7 +149,7 @@ class TestDisableGuards:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.disable(record.name)  # Not enabled, should be no-op
         record.executor.call.assert_not_called()
 
@@ -170,7 +170,7 @@ class TestErrorState:
         record.executor.call.side_effect = RuntimeError("enable boom")
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         with pytest.raises(PluginLifecycleError, match="Failed to enable"):
             mgr.enable(record.name)
         assert mgr.get_state(record.name) == PluginState.ERROR
@@ -182,7 +182,7 @@ class TestErrorState:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         # First enable succeeds
         mgr.enable(record.name)
         # Now make disable fail
@@ -207,7 +207,7 @@ class TestUnloadAutoDisable:
         registry.get_plugin.return_value = record
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         mgr.enable(record.name)
 
         # Track calls to executor
@@ -226,7 +226,7 @@ class TestUnloadAutoDisable:
         registry.unload_plugin.side_effect = RuntimeError("unload boom")
         mgr = PluginLifecycleManager(registry)
 
-        mgr.load(Path("fake/plugin"))
+        mgr.load(Path("fake") / "plugin")
         with pytest.raises(PluginLifecycleError, match="Failed to unload"):
             mgr.unload(record.name)
         # State should be cleaned up (popped)

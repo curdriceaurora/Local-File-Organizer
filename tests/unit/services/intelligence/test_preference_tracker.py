@@ -22,10 +22,10 @@ def tracker():
 @pytest.fixture
 def mock_paths():
     return {
-        "src_txt": Path("/docs/test.txt"),
-        "dst_txt": Path("/docs/text/test.txt"),
-        "src_img": Path("/images/pic.png"),
-        "dst_img": Path("/images/vacation/pic.png"),
+        "src_txt": Path("/") / "docs" / "test.txt",
+        "dst_txt": Path("/") / "docs" / "text" / "test.txt",
+        "src_img": Path("/") / "images" / "pic.png",
+        "dst_img": Path("/") / "images" / "vacation" / "pic.png",
     }
 
 class TestPreferenceMetadata:
@@ -89,8 +89,8 @@ class TestCorrection:
         now = datetime.now(UTC)
         correction = Correction(
             correction_type=CorrectionType.FILE_MOVE,
-            source=Path("/test/file"),
-            destination=Path("/test/dir/file"),
+            source=Path("/") / "test" / "file",
+            destination=Path("/") / "test" / "dir" / "file",
             timestamp=now
         )
         key = correction.get_pattern_key()
@@ -122,7 +122,7 @@ class TestPreferenceTracker:
     def test_track_file_rename(self, tracker, mock_paths):
         tracker.track_correction(
             mock_paths["src_txt"],
-            Path("/docs/renamed.txt"),
+            Path("/") / "docs" / "renamed.txt",
             CorrectionType.FILE_RENAME
         )
 
@@ -181,7 +181,7 @@ class TestPreferenceTracker:
         )
 
         # 2nd time, to a different dict
-        dst_2 = Path("/docs/other/test.txt")
+        dst_2 = Path("/") / "docs" / "other" / "test.txt"
         # Need to match the pattern_key though...
         # For FILE_MOVE, pattern key is: `file_move|.txt|<dest_parent_name>`
         # So changing the dest path changes the pattern key!
@@ -197,13 +197,13 @@ class TestPreferenceTracker:
 
     def test_get_preference_folder_mapping(self, tracker):
         # Train two models for .jpg
-        tracker.track_correction(Path("/src/a.jpg"), Path("/dst/photos/a.jpg"), CorrectionType.FILE_MOVE)
-        tracker.track_correction(Path("/src/b.jpg"), Path("/dst/images/b.jpg"), CorrectionType.FILE_MOVE)
+        tracker.track_correction(Path("/") / "src" / "a.jpg", Path("/") / "dst" / "photos" / "a.jpg", CorrectionType.FILE_MOVE)
+        tracker.track_correction(Path("/") / "src" / "b.jpg", Path("/") / "dst" / "images" / "b.jpg", CorrectionType.FILE_MOVE)
         # Train images twice to give it higher confidence
-        tracker.track_correction(Path("/src/c.jpg"), Path("/dst/images/c.jpg"), CorrectionType.FILE_MOVE)
+        tracker.track_correction(Path("/") / "src" / "c.jpg", Path("/") / "dst" / "images" / "c.jpg", CorrectionType.FILE_MOVE)
 
         # Should return the one with higher confidence (images)
-        pref = tracker.get_preference(Path("/src/unknown.jpg"), PreferenceType.FOLDER_MAPPING)
+        pref = tracker.get_preference(Path("/") / "src" / "unknown.jpg", PreferenceType.FOLDER_MAPPING)
         assert pref is not None
         assert "images" in pref.value
 
@@ -219,7 +219,7 @@ class TestPreferenceTracker:
         assert pref is not None
         assert pref.value == "Code"
 
-        pref = tracker.get_preference(Path("/unknown/path.txt"), PreferenceType.CATEGORY_OVERRIDE)
+        pref = tracker.get_preference(Path("/") / "unknown" / "path.txt", PreferenceType.CATEGORY_OVERRIDE)
         assert pref is None
 
     def test_update_preference_confidence(self, tracker, mock_paths):
@@ -303,7 +303,7 @@ class TestConvenienceFunctions:
         assert len(prefs) == 1
 
     def test_track_file_rename(self, tracker, mock_paths):
-        track_file_rename(tracker, mock_paths["src_txt"], Path("/docs/renamed.txt"))
+        track_file_rename(tracker, mock_paths["src_txt"], Path("/") / "docs" / "renamed.txt")
         prefs = tracker.get_all_preferences(PreferenceType.NAMING_PATTERN)
         assert len(prefs) == 1
 

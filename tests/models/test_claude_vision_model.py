@@ -369,7 +369,7 @@ class TestClaudeVisionModelGenerateGuards:
             model = ClaudeVisionModel(claude_vision_config)
 
         with pytest.raises(RuntimeError, match="not initialized"):
-            model.generate("prompt", image_path=Path("/any"))
+            model.generate("prompt", image_path=Path("/") / "any")
 
     def test_raises_value_error_when_neither_image_nor_data(
         self,

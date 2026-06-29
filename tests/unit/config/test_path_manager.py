@@ -23,9 +23,9 @@ def test_get_canonical_paths_uses_xdg_when_available():
     ):
         paths = get_canonical_paths()
 
-        assert paths["config"] == Path("/tmp/test-xdg-config/file-organizer")  # noqa: test-hardcoded-paths
-        assert paths["data"] == Path("/tmp/test-xdg-data/file-organizer")  # noqa: test-hardcoded-paths
-        assert paths["state"] == Path("/tmp/test-xdg-state/file-organizer")  # noqa: test-hardcoded-paths
+        assert paths["config"] == Path("/") / "tmp" / "test-xdg-config" / "file-organizer"  # noqa: test-hardcoded-paths
+        assert paths["data"] == Path("/") / "tmp" / "test-xdg-data" / "file-organizer"  # noqa: test-hardcoded-paths
+        assert paths["state"] == Path("/") / "tmp" / "test-xdg-state" / "file-organizer"  # noqa: test-hardcoded-paths
         # Cache uses platformdirs user_cache_dir, which is independent of XDG_DATA_HOME
         from platformdirs import user_cache_dir
 

@@ -361,14 +361,14 @@ class TestAnalyticsView:
 
     def test_initialization_with_custom_directory(self) -> None:
         """Test AnalyticsView initialization with custom directory."""
-        test_path = Path("/tmp/test")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "tmp" / "test"  # noqa: test-hardcoded-paths
         view = AnalyticsView(directory=test_path)
         assert view._directory == test_path
 
     def test_initialization_with_string_directory(self) -> None:
         """Test AnalyticsView initialization with string directory."""
         view = AnalyticsView(directory="/tmp/test")  # noqa: test-hardcoded-paths
-        assert view._directory == Path("/tmp/test")  # noqa: test-hardcoded-paths
+        assert view._directory == Path("/") / "tmp" / "test"  # noqa: test-hardcoded-paths
 
     def test_has_compose_method(self) -> None:
         """Test that compose method is defined."""

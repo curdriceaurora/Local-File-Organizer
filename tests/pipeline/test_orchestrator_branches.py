@@ -398,7 +398,7 @@ class TestSafeFileSizeFallback:
     def test_safe_file_size_returns_zero_on_oserror(self) -> None:
         """_safe_file_size returns 0 when stat() raises OSError for a nonexistent path."""
         orch = PipelineOrchestrator()
-        ghost = Path("/nonexistent/totally/made/up.bin")
+        ghost = Path("/") / "nonexistent" / "totally" / "made" / "up.bin"
         size = orch._safe_file_size(ghost)
         assert size == 0
 

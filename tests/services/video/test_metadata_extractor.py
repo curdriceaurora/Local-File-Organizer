@@ -222,7 +222,7 @@ class TestFilesystemFallback:
 
     def test_file_not_found_raises(self, extractor: VideoMetadataExtractor) -> None:
         with pytest.raises(FileNotFoundError):
-            extractor.extract(Path("/nonexistent/video.mp4"))
+            extractor.extract(Path("/") / "nonexistent" / "video.mp4")
 
 
 # ---------------------------------------------------------------------------

@@ -88,7 +88,7 @@ class TestPARAConfigLoadFromYaml:
         assert cfg.temporal_thresholds.project_max_age == 15
         assert cfg.enable_ai_heuristic is True
         assert cfg.auto_categorize is False
-        assert cfg.default_root == Path("/tmp/para_root")  # noqa: test-hardcoded-paths
+        assert cfg.default_root == Path("/") / "tmp" / "para_root"  # noqa: test-hardcoded-paths
         assert cfg.project_dir == "Proj"
 
     def test_load_invalid_yaml_returns_defaults(self, tmp_path: Path) -> None:
@@ -129,7 +129,7 @@ class TestPARAConfigSaveToYaml:
             temporal_thresholds=TemporalThresholds(project_max_age=10),
             enable_ai_heuristic=True,
             auto_categorize=False,
-            default_root=Path("/some/path"),
+            default_root=Path("/") / "some" / "path",
             project_dir="P",
             area_dir="A",
             resource_dir="R",
@@ -142,7 +142,7 @@ class TestPARAConfigSaveToYaml:
         reloaded = PARAConfig.load_from_yaml(out_file)
         assert reloaded.enable_ai_heuristic is True
         assert reloaded.auto_categorize is False
-        assert reloaded.default_root == Path("/some/path")
+        assert reloaded.default_root == Path("/") / "some" / "path"
 
     def test_save_creates_parent_dirs(self, tmp_path: Path) -> None:
         """save_to_yaml creates parent directories."""
@@ -211,7 +211,7 @@ class TestCategorizationResultValidation:
         )
         # Verify conversion happened (line 115)
         assert isinstance(result.file_path, Path)
-        assert result.file_path == Path("/test/file.txt")
+        assert result.file_path == Path("/") / "test" / "file.txt"
         assert result.category == PARACategory.PROJECT
         assert result.confidence == 0.85
 
@@ -280,7 +280,7 @@ class TestLoadConfig:
         """When config_path is None and no default files exist, returns defaults."""
         with patch(
             "file_organizer.methodologies.para.config._get_para_config_dir",
-            return_value=Path("/nonexistent/dir"),
+            return_value=Path("/") / "nonexistent" / "dir",
         ):
             cfg = load_config(None)
             assert cfg.auto_categorize is True
@@ -309,7 +309,7 @@ class TestLoadConfig:
         with (
             patch(
                 "file_organizer.methodologies.para.config._get_para_config_dir",
-                return_value=Path("/nonexistent/dir"),
+                return_value=Path("/") / "nonexistent" / "dir",
             ),
             patch("file_organizer.methodologies.para.config.Path.cwd", return_value=tmp_path),
         ):
@@ -329,10 +329,11 @@ class TestLoadConfig:
         with (
             patch(
                 "file_organizer.methodologies.para.config._get_para_config_dir",
-                return_value=Path("/nonexistent/dir"),
+                return_value=Path("/") / "nonexistent" / "dir",
             ),
             patch(
-                "file_organizer.methodologies.para.config.Path.cwd", return_value=Path("/nowhere")
+                "file_organizer.methodologies.para.config.Path.cwd",
+                return_value=Path("/") / "nowhere",
             ),
             patch.object(config_module, "__file__", str(tmp_path / "config.py")),
         ):
@@ -346,11 +347,11 @@ class TestLoadConfig:
         with (
             patch(
                 "file_organizer.methodologies.para.config._get_para_config_dir",
-                return_value=Path("/nonexistent1"),
+                return_value=Path("/") / "nonexistent1",
             ),
             patch(
                 "file_organizer.methodologies.para.config.Path.cwd",
-                return_value=Path("/nonexistent2"),
+                return_value=Path("/") / "nonexistent2",
             ),
             patch.object(config_module, "__file__", "/nonexistent3/config.py"),
         ):

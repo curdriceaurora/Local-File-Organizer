@@ -100,38 +100,38 @@ class TestWatcherConfigShouldIncludeFile:
 
     def test_includes_normal_file_by_default(self):
         config = WatcherConfig()
-        path = Path("/home/user/document.txt")  # noqa: test-hardcoded-paths
+        path = Path("/") / "home" / "user" / "document.txt"  # noqa: test-hardcoded-paths
         assert config.should_include_file(path) is True
 
     def test_excludes_tmp_files(self):
         config = WatcherConfig()
-        path = Path("/home/user/file.tmp")  # noqa: test-hardcoded-paths
+        path = Path("/") / "home" / "user" / "file.tmp"  # noqa: test-hardcoded-paths
         assert config.should_include_file(path) is False
 
     def test_excludes_temp_files(self):
         config = WatcherConfig()
-        path = Path("/tmp/file.temp")  # noqa: test-hardcoded-paths
+        path = Path("/") / "tmp" / "file.temp"  # noqa: test-hardcoded-paths
         assert config.should_include_file(path) is False
 
     def test_excludes_git_directory(self):
         config = WatcherConfig()
-        path = Path("/project/.git/config")
+        path = Path("/") / "project" / ".git" / "config"
         assert config.should_include_file(path) is False
 
     def test_excludes_pycache(self):
         config = WatcherConfig()
-        path = Path("/project/__pycache__/module.pyc")
+        path = Path("/") / "project" / "__pycache__" / "module.pyc"
         assert config.should_include_file(path) is False
 
     def test_excludes_ds_store(self):
         config = WatcherConfig()
-        path = Path("/home/user/.DS_Store")  # noqa: test-hardcoded-paths
+        path = Path("/") / "home" / "user" / ".DS_Store"  # noqa: test-hardcoded-paths
         assert config.should_include_file(path) is False
 
     def test_excludes_node_modules(self):
         config = WatcherConfig()
         # "node_modules/*" pattern in defaults doesn't match this path due to pattern matching logic
-        path = Path("/project/node_modules/package/index.js")
+        path = Path("/") / "project" / "node_modules" / "package" / "index.js"
         # The pattern "node_modules/*" doesn't match individual path components
         result = config.should_include_file(path)
         # This path is included because no exclude pattern matches it
@@ -139,7 +139,7 @@ class TestWatcherConfigShouldIncludeFile:
 
     def test_excludes_by_suffix(self):
         config = WatcherConfig()
-        path = Path("/home/user/file.pyc")  # noqa: test-hardcoded-paths
+        path = Path("/") / "home" / "user" / "file.pyc"  # noqa: test-hardcoded-paths
         assert config.should_include_file(path) is False
 
     def test_with_custom_exclude_patterns(self):

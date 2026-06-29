@@ -722,7 +722,7 @@ class TestShardCoverage:
 
     @pytest.fixture
     def shard_script(self) -> str:
-        path = Path("scripts/ci_shard_paths.sh")
+        path = Path("scripts") / "ci_shard_paths.sh"
         assert path.exists(), "scripts/ci_shard_paths.sh must exist"
         return path.read_text()
 

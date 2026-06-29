@@ -81,7 +81,7 @@ class TestProcessTextFiles:
         from file_organizer.core.dispatcher import process_text_files
         from file_organizer.services import ProcessedFile
 
-        file_path = Path("/mock/docs/report.txt")
+        file_path = Path("/") / "mock" / "docs" / "report.txt"
         processed = ProcessedFile(
             file_path=file_path,
             description="A quarterly report",
@@ -113,7 +113,7 @@ class TestProcessTextFiles:
         from file_organizer.core.dispatcher import process_text_files
         from file_organizer.services import ProcessedFile
 
-        file_path = Path("/mock/docs/broken.txt")
+        file_path = Path("/") / "mock" / "docs" / "broken.txt"
         processed = ProcessedFile(
             file_path=file_path,
             description="",
@@ -142,7 +142,7 @@ class TestProcessTextFiles:
         from file_organizer.core.dispatcher import process_text_files
         from file_organizer.core.types import ERROR_FALLBACK_FOLDER
 
-        file_path = Path("/mock/docs/missing.txt")
+        file_path = Path("/") / "mock" / "docs" / "missing.txt"
         file_result = _make_file_result(success=False, path=file_path, error="process failed")
 
         mock_pp = MagicMock()
@@ -166,7 +166,7 @@ class TestProcessTextFiles:
         """When error is None on a failed result, fallback should use 'Unknown error'."""
         from file_organizer.core.dispatcher import process_text_files
 
-        file_path = Path("/mock/docs/mystery.txt")
+        file_path = Path("/") / "mock" / "docs" / "mystery.txt"
         file_result = _make_file_result(success=False, path=file_path, error=None)
 
         mock_pp = MagicMock()
@@ -206,8 +206,8 @@ class TestProcessTextFiles:
         from file_organizer.core.types import ERROR_FALLBACK_FOLDER
         from file_organizer.services import ProcessedFile
 
-        path_ok = Path("/mock/docs/good.txt")
-        path_fail = Path("/mock/docs/bad.txt")
+        path_ok = Path("/") / "mock" / "docs" / "good.txt"
+        path_fail = Path("/") / "mock" / "docs" / "bad.txt"
 
         processed_ok = ProcessedFile(
             file_path=path_ok,
@@ -248,7 +248,7 @@ class TestProcessImageFiles:
         from file_organizer.core.dispatcher import process_image_files
         from file_organizer.services import ProcessedImage
 
-        file_path = Path("/mock/photos/sunset.jpg")
+        file_path = Path("/") / "mock" / "photos" / "sunset.jpg"
         processed = ProcessedImage(
             file_path=file_path,
             description="A sunset over the ocean",
@@ -279,7 +279,7 @@ class TestProcessImageFiles:
         from file_organizer.core.dispatcher import process_image_files
         from file_organizer.services import ProcessedImage
 
-        file_path = Path("/mock/photos/corrupt.jpg")
+        file_path = Path("/") / "mock" / "photos" / "corrupt.jpg"
         processed = ProcessedImage(
             file_path=file_path,
             description="",
@@ -308,7 +308,7 @@ class TestProcessImageFiles:
         from file_organizer.core.dispatcher import process_image_files
         from file_organizer.core.types import ERROR_FALLBACK_FOLDER
 
-        file_path = Path("/mock/photos/missing.png")
+        file_path = Path("/") / "mock" / "photos" / "missing.png"
         file_result = _make_file_result(success=False, path=file_path, error="vision timeout")
 
         mock_pp = MagicMock()
@@ -337,9 +337,9 @@ class TestProcessImageFiles:
         from file_organizer.core.dispatcher import process_image_files
         from file_organizer.services import ProcessedImage
 
-        hung_path = Path("/mock/photos/hung.jpg")
-        retry1 = Path("/mock/photos/never_started_1.jpg")
-        retry2 = Path("/mock/photos/never_started_2.jpg")
+        hung_path = Path("/") / "mock" / "photos" / "hung.jpg"
+        retry1 = Path("/") / "mock" / "photos" / "never_started_1.jpg"
+        retry2 = Path("/") / "mock" / "photos" / "never_started_2.jpg"
 
         # Parallel processor yields one truly-hung abort (non_retryable)
         # + two never-started aborts (retryable).
@@ -441,7 +441,7 @@ class TestProcessImageFiles:
         # than letting the timeout escape as a generic error.
         from file_organizer.core.dispatcher import process_image_files
 
-        path = Path("/mock/photos/retry_timeout.jpg")
+        path = Path("/") / "mock" / "photos" / "retry_timeout.jpg"
         initial_abort = _make_file_result(
             success=False,
             path=path,
@@ -489,7 +489,7 @@ class TestProcessImageFiles:
         from file_organizer.core.dispatcher import process_image_files
         from file_organizer.core.types import ERROR_FALLBACK_FOLDER
 
-        path = Path("/mock/photos/retry_bad.jpg")
+        path = Path("/") / "mock" / "photos" / "retry_bad.jpg"
         initial_abort = _make_file_result(
             success=False,
             path=path,
@@ -532,7 +532,7 @@ class TestProcessImageFiles:
         # failures, reintroducing the cascade this path exists to prevent.
         from file_organizer.core.dispatcher import process_image_files
 
-        path = Path("/mock/photos/retry_never_ran.jpg")
+        path = Path("/") / "mock" / "photos" / "retry_never_ran.jpg"
         initial_abort = _make_file_result(
             success=False,
             path=path,
@@ -577,7 +577,7 @@ class TestProcessImageFiles:
     def test_failure_result_unknown_error(self) -> None:
         from file_organizer.core.dispatcher import process_image_files
 
-        file_path = Path("/mock/photos/unknown.jpg")
+        file_path = Path("/") / "mock" / "photos" / "unknown.jpg"
         file_result = _make_file_result(success=False, path=file_path, error=None)
 
         mock_pp = MagicMock()
@@ -654,7 +654,7 @@ class TestProcessAudioFiles:
     def test_success_path_appended(self) -> None:
         from file_organizer.core.dispatcher import process_audio_files
 
-        audio_path = Path("/mock/music/song.mp3")
+        audio_path = Path("/") / "mock" / "music" / "song.mp3"
         meta = self._make_audio_metadata(artist="The Band", title="My Song")
         classification = self._make_audio_classification()
         dest = self._make_dest_path("Music/The Band", "My_Song")
@@ -683,7 +683,7 @@ class TestProcessAudioFiles:
     def test_success_description_contains_type_and_artist(self) -> None:
         from file_organizer.core.dispatcher import process_audio_files
 
-        audio_path = Path("/mock/music/track.mp3")
+        audio_path = Path("/") / "mock" / "music" / "track.mp3"
         meta = self._make_audio_metadata(artist="DJ Echo", title="Night Drive")
         classification = self._make_audio_classification("music")
         dest = self._make_dest_path("Music/DJ Echo", "Night_Drive")
@@ -711,7 +711,7 @@ class TestProcessAudioFiles:
         from file_organizer.core.dispatcher import process_audio_files
         from file_organizer.core.types import AUDIO_FALLBACK_FOLDER
 
-        audio_path = Path("/mock/music/corrupt.mp3")
+        audio_path = Path("/") / "mock" / "music" / "corrupt.mp3"
 
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.side_effect = OSError("cannot read file")
@@ -734,7 +734,7 @@ class TestProcessAudioFiles:
         from file_organizer.core.dispatcher import process_audio_files
         from file_organizer.core.types import AUDIO_FALLBACK_FOLDER
 
-        audio_path = Path("/mock/music/bad.flac")
+        audio_path = Path("/") / "mock" / "music" / "bad.flac"
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.side_effect = ValueError("bad tag data")
         mock_extractor_cls = MagicMock(return_value=mock_extractor_instance)
@@ -804,7 +804,7 @@ class TestAudioTranscription:
         from file_organizer.core.dispatcher import _maybe_transcribe
 
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=None,
             max_transcribe_seconds=None,
@@ -817,7 +817,7 @@ class TestAudioTranscription:
 
         bad = object()  # no .transcribe / .generate
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=bad,
             max_transcribe_seconds=None,
@@ -829,7 +829,7 @@ class TestAudioTranscription:
 
         transcriber = MagicMock(spec=["transcribe"])
         result = _maybe_transcribe(
-            Path("/mock/long.mp3"),
+            Path("/") / "mock" / "long.mp3",
             metadata=MagicMock(duration=900.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
@@ -858,7 +858,7 @@ class TestAudioTranscription:
         )
         transcriber.transcribe.return_value = whisper_result
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
@@ -867,7 +867,7 @@ class TestAudioTranscription:
         assert result is whisper_result
         assert result.text == "hello from whisper"
         assert result.segments == whisper_result.segments
-        transcriber.transcribe.assert_called_once_with(str(Path("/mock/a.mp3")))
+        transcriber.transcribe.assert_called_once_with(str(Path("/") / "mock" / "a.mp3"))
 
     def test_maybe_transcribe_incomplete_object_synthesizes_result(self) -> None:
         """A text-bearing object lacking .segments/.duration is wrapped, not passed through.
@@ -885,7 +885,7 @@ class TestAudioTranscription:
         # Has .text but NOT .segments/.duration — not classify-ready.
         transcriber.transcribe.return_value = SimpleNamespace(text="partial adapter")
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=12.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
@@ -908,7 +908,7 @@ class TestAudioTranscription:
         transcriber = MagicMock(spec=["transcribe"])
         transcriber.transcribe.return_value = "plain text only"
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
@@ -929,7 +929,7 @@ class TestAudioTranscription:
         transcriber = MagicMock(spec=["generate"])
         transcriber.generate.return_value = "hello world"
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=600.0,
@@ -937,7 +937,7 @@ class TestAudioTranscription:
         assert isinstance(result, TranscriptionResult)
         assert result.text == "hello world"
         assert result.segments == []
-        transcriber.generate.assert_called_once_with(str(Path("/mock/a.mp3")))
+        transcriber.generate.assert_called_once_with(str(Path("/") / "mock" / "a.mp3"))
 
     def test_maybe_transcribe_recoverable_error_degrades(self) -> None:
         """A RuntimeError during transcription degrades, not aborts."""
@@ -946,7 +946,7 @@ class TestAudioTranscription:
         transcriber = MagicMock(spec=["transcribe"])
         transcriber.transcribe.side_effect = RuntimeError("decode failed")
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=None,
@@ -964,7 +964,7 @@ class TestAudioTranscription:
         transcriber = MagicMock(spec=["transcribe"])
         transcriber.transcribe.side_effect = TypeError("transcribe() takes no arguments")
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=None,
@@ -978,7 +978,7 @@ class TestAudioTranscription:
         transcriber = MagicMock(spec=["generate"])
         transcriber.generate.side_effect = AttributeError("no such attribute")
         result = _maybe_transcribe(
-            Path("/mock/a.mp3"),
+            Path("/") / "mock" / "a.mp3",
             metadata=MagicMock(duration=10.0),
             transcriber=transcriber,
             max_transcribe_seconds=None,
@@ -1005,7 +1005,7 @@ class TestAudioTranscription:
         """End-to-end: transcript attaches to ProcessedFile and reaches classify()."""
         from file_organizer.core.dispatcher import process_audio_files
 
-        audio_path = Path("/mock/podcasts/ep1.mp3")
+        audio_path = Path("/") / "mock" / "podcasts" / "ep1.mp3"
         meta = MagicMock()
         meta.artist = None
         meta.title = None
@@ -1067,7 +1067,7 @@ class TestAudioTranscription:
         """A transcription failure degrades to metadata-only — file still classified."""
         from file_organizer.core.dispatcher import process_audio_files
 
-        audio_path = Path("/mock/music/song.mp3")
+        audio_path = Path("/") / "mock" / "music" / "song.mp3"
         meta = MagicMock()
         meta.artist = "Band"
         meta.title = "Song"
@@ -1127,7 +1127,7 @@ class TestProcessVideoFiles:
     def test_success_path_appended(self) -> None:
         from file_organizer.core.dispatcher import process_video_files
 
-        video_path = Path("/mock/videos/movie.mp4")
+        video_path = Path("/") / "mock" / "videos" / "movie.mp4"
         meta = MagicMock()
 
         mock_extractor_instance = MagicMock()
@@ -1152,7 +1152,7 @@ class TestProcessVideoFiles:
         from file_organizer.core.dispatcher import process_video_files
         from file_organizer.core.types import VIDEO_FALLBACK_FOLDER
 
-        video_path = Path("/mock/videos/missing.avi")
+        video_path = Path("/") / "mock" / "videos" / "missing.avi"
 
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.side_effect = FileNotFoundError("file gone")
@@ -1171,7 +1171,7 @@ class TestProcessVideoFiles:
         from file_organizer.core.dispatcher import process_video_files
         from file_organizer.core.types import VIDEO_FALLBACK_FOLDER
 
-        video_path = Path("/mock/videos/locked.mkv")
+        video_path = Path("/") / "mock" / "videos" / "locked.mkv"
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.side_effect = OSError("permission denied")
         mock_extractor_cls = MagicMock(return_value=mock_extractor_instance)
@@ -1187,7 +1187,7 @@ class TestProcessVideoFiles:
         from file_organizer.core.dispatcher import process_video_files
         from file_organizer.core.types import VIDEO_FALLBACK_FOLDER
 
-        video_path = Path("/mock/videos/crash.mp4")
+        video_path = Path("/") / "mock" / "videos" / "crash.mp4"
         mock_extractor_instance = MagicMock()
         mock_extractor_instance.extract.side_effect = RuntimeError("ffprobe crashed")
         mock_extractor_cls = MagicMock(return_value=mock_extractor_instance)
@@ -1227,7 +1227,7 @@ class TestProcessVideoFiles:
     def test_description_stored_from_organizer(self) -> None:
         from file_organizer.core.dispatcher import process_video_files
 
-        video_path = Path("/mock/videos/documentary.mp4")
+        video_path = Path("/") / "mock" / "videos" / "documentary.mp4"
         meta = MagicMock()
 
         mock_extractor_instance = MagicMock()

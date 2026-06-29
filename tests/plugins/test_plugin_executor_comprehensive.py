@@ -43,15 +43,15 @@ class TestExecutorInit:
     """Tests for PluginExecutor.__init__."""
 
     def test_default_name_from_path(self) -> None:
-        ex = PluginExecutor(plugin_path=Path("foo/bar/my_plugin.py"))
+        ex = PluginExecutor(plugin_path=Path("foo") / "bar" / "my_plugin.py")
         assert ex._plugin_name == "my_plugin"
 
     def test_explicit_name(self) -> None:
-        ex = PluginExecutor(plugin_path=Path("foo/plugin.py"), plugin_name="custom")
+        ex = PluginExecutor(plugin_path=Path("foo") / "plugin.py", plugin_name="custom")
         assert ex._plugin_name == "custom"
 
     def test_default_policy_is_unrestricted(self) -> None:
-        ex = PluginExecutor(plugin_path=Path("foo/plugin.py"))
+        ex = PluginExecutor(plugin_path=Path("foo") / "plugin.py")
         assert ex._policy.allow_all_paths is True
         assert ex._policy.allow_all_operations is True
 

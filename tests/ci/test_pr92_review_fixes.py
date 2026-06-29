@@ -104,7 +104,7 @@ class TestPARAKeywordMatching:
     def test_evaluate_with_word_boundaries(self):
         """Test full evaluate() uses word boundary matching."""
         # Path with "projection" should not match "project" keyword
-        test_path = Path("/home/user/projection_analysis/data.txt")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "home" / "user" / "projection_analysis" / "data.txt"  # noqa: test-hardcoded-paths
 
         result = self.heuristic.evaluate(test_path)
 

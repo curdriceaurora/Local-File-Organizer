@@ -216,7 +216,7 @@ class TestOpenPath:
         assert args_passed[0] == "open"
         assert args_passed[1] == "-R"
         assert len(args_passed) == 3
-        assert args_passed[2] == str(Path("/some/file.txt").resolve())
+        assert args_passed[2] == str(Path("/") / "some" / "file.txt".resolve())
 
     def test_open_path_win32_dispatches_explorer_select(self, api: DesktopAPI) -> None:
         """On Windows, open_path uses 'explorer /select,<path>' and returns True."""

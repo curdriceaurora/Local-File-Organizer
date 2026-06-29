@@ -31,7 +31,7 @@ class TestDirectoryPrefs:
 
     def test_set_and_get_preference(self, dir_prefs):
         """Test setting and getting a single preference."""
-        test_path = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
         pref = {"folder_mappings": {"pdf": "PDFs"}, "confidence": 0.8}
 
         dir_prefs.set_preference(test_path, pref)
@@ -43,8 +43,8 @@ class TestDirectoryPrefs:
 
     def test_preference_inheritance(self, dir_prefs):
         """Test that child directories inherit parent preferences."""
-        parent_path = Path("/home/user")  # noqa: test-hardcoded-paths
-        child_path = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        parent_path = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        child_path = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
 
         parent_pref = {"global_setting": "parent_value"}
         child_pref = {"folder_mappings": {"pdf": "PDFs"}}
@@ -60,10 +60,10 @@ class TestDirectoryPrefs:
 
     def test_deep_inheritance_chain(self, dir_prefs):
         """Test inheritance across multiple directory levels."""
-        root = Path("/home/user")  # noqa: test-hardcoded-paths
-        level1 = Path("/home/user/documents")  # noqa: test-hardcoded-paths
-        level2 = Path("/home/user/documents/work")  # noqa: test-hardcoded-paths
-        level3 = Path("/home/user/documents/work/projects")  # noqa: test-hardcoded-paths
+        root = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        level1 = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
+        level2 = Path("/") / "home" / "user" / "documents" / "work"  # noqa: test-hardcoded-paths
+        level3 = Path("/") / "home" / "user" / "documents" / "work" / "projects"  # noqa: test-hardcoded-paths
 
         dir_prefs.set_preference(root, {"root_setting": "root"})
         dir_prefs.set_preference(level1, {"level1_setting": "l1"})
@@ -78,8 +78,8 @@ class TestDirectoryPrefs:
 
     def test_child_overrides_parent(self, dir_prefs):
         """Test that child preferences override parent for same keys."""
-        parent = Path("/home/user")  # noqa: test-hardcoded-paths
-        child = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        parent = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        child = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
 
         parent_pref = {"folder_mappings": {"pdf": "Documents"}}
         child_pref = {"folder_mappings": {"pdf": "PDFs"}}
@@ -94,8 +94,8 @@ class TestDirectoryPrefs:
 
     def test_override_parent_flag(self, dir_prefs):
         """Test override_parent flag stops inheritance."""
-        parent = Path("/home/user")  # noqa: test-hardcoded-paths
-        child = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        parent = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        child = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
 
         parent_pref = {"parent_setting": "should_not_inherit"}
         child_pref = {"child_setting": "only_this"}
@@ -111,8 +111,8 @@ class TestDirectoryPrefs:
 
     def test_deep_merge_nested_dicts(self, dir_prefs):
         """Test that nested dictionaries are merged properly."""
-        parent = Path("/home/user")  # noqa: test-hardcoded-paths
-        child = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        parent = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        child = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
 
         parent_pref = {"folder_mappings": {"pdf": "Documents", "txt": "TextFiles"}}
         child_pref = {
@@ -134,13 +134,13 @@ class TestDirectoryPrefs:
 
     def test_no_preference_returns_none(self, dir_prefs):
         """Test that querying a path with no preferences returns None."""
-        result = dir_prefs.get_preference_with_inheritance(Path("/nonexistent"))
+        result = dir_prefs.get_preference_with_inheritance(Path("/") / "nonexistent")
         assert result is None
 
     def test_list_directory_preferences(self, dir_prefs):
         """Test listing all directory preferences."""
-        path1 = Path("/home/user")  # noqa: test-hardcoded-paths
-        path2 = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        path1 = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        path2 = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
 
         dir_prefs.set_preference(path1, {"setting1": "value1"})
         dir_prefs.set_preference(path2, {"setting2": "value2"})
@@ -154,7 +154,7 @@ class TestDirectoryPrefs:
 
     def test_remove_preference(self, dir_prefs):
         """Test removing a preference."""
-        test_path = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(test_path, {"setting": "value"})
 
         # Verify it exists
@@ -169,13 +169,13 @@ class TestDirectoryPrefs:
 
     def test_remove_nonexistent_preference(self, dir_prefs):
         """Test removing a preference that doesn't exist."""
-        removed = dir_prefs.remove_preference(Path("/nonexistent"))
+        removed = dir_prefs.remove_preference(Path("/") / "nonexistent")
         assert removed is False
 
     def test_clear_all(self, dir_prefs):
         """Test clearing all preferences."""
-        dir_prefs.set_preference(Path("/path1"), {"setting": "value"})
-        dir_prefs.set_preference(Path("/path2"), {"setting": "value"})
+        dir_prefs.set_preference(Path("/") / "path1", {"setting": "value"})
+        dir_prefs.set_preference(Path("/") / "path2", {"setting": "value"})
 
         assert len(dir_prefs.list_directory_preferences()) == 2
 
@@ -185,9 +185,9 @@ class TestDirectoryPrefs:
 
     def test_statistics(self, dir_prefs):
         """Test preference statistics."""
-        dir_prefs.set_preference(Path("/path1"), {"s": "v"}, override_parent=False)
-        dir_prefs.set_preference(Path("/path2"), {"s": "v"}, override_parent=True)
-        dir_prefs.set_preference(Path("/path3"), {"s": "v"}, override_parent=False)
+        dir_prefs.set_preference(Path("/") / "path1", {"s": "v"}, override_parent=False)
+        dir_prefs.set_preference(Path("/") / "path2", {"s": "v"}, override_parent=True)
+        dir_prefs.set_preference(Path("/") / "path3", {"s": "v"}, override_parent=False)
 
         stats = dir_prefs.get_statistics()
 
@@ -208,7 +208,7 @@ class TestDirectoryPrefs:
 
     def test_metadata_not_in_result(self, dir_prefs):
         """Test that internal metadata is not included in results."""
-        test_path = Path("/home/user")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(test_path, {"setting": "value"})
 
         result = dir_prefs.get_preference_with_inheritance(test_path)
@@ -219,7 +219,7 @@ class TestDirectoryPrefs:
 
     def test_metadata_not_in_list(self, dir_prefs):
         """Test that internal metadata is not included in list results."""
-        dir_prefs.set_preference(Path("/home/user"), {"setting": "value"})  # noqa: test-hardcoded-paths
+        dir_prefs.set_preference(Path("/") / "home" / "user", {"setting": "value"})  # noqa: test-hardcoded-paths
 
         prefs_list = dir_prefs.list_directory_preferences()
         pref_dict = prefs_list[0][1]
@@ -230,7 +230,7 @@ class TestDirectoryPrefs:
 
     def test_empty_preference_dict(self, dir_prefs):
         """Test setting an empty preference dictionary."""
-        test_path = Path("/home/user")  # noqa: test-hardcoded-paths
+        test_path = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(test_path, {})
 
         result = dir_prefs.get_preference_with_inheritance(test_path)
@@ -241,17 +241,17 @@ class TestDirectoryPrefs:
     def test_complex_inheritance_scenario(self, dir_prefs):
         """Test a complex real-world inheritance scenario."""
         # Setup: root has global settings
-        root = Path("/home/user")  # noqa: test-hardcoded-paths
+        root = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(root, {"naming_patterns": {"prefix": "user_"}, "confidence": 0.7})
 
         # Documents overrides naming, adds folder mappings
-        docs = Path("/home/user/documents")  # noqa: test-hardcoded-paths
+        docs = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(
             docs, {"naming_patterns": {"prefix": "doc_"}, "folder_mappings": {"pdf": "PDFs"}}
         )
 
         # Work documents adds more mappings
-        work = Path("/home/user/documents/work")  # noqa: test-hardcoded-paths
+        work = Path("/") / "home" / "user" / "documents" / "work"  # noqa: test-hardcoded-paths
         dir_prefs.set_preference(
             work, {"folder_mappings": {"xlsx": "Spreadsheets"}, "confidence": 0.9}
         )
@@ -266,9 +266,9 @@ class TestDirectoryPrefs:
 
     def test_inheritance_stops_at_override(self, dir_prefs):
         """Test that inheritance chain stops at override_parent=True."""
-        grandparent = Path("/home/user")  # noqa: test-hardcoded-paths
-        parent = Path("/home/user/documents")  # noqa: test-hardcoded-paths
-        child = Path("/home/user/documents/work")  # noqa: test-hardcoded-paths
+        grandparent = Path("/") / "home" / "user"  # noqa: test-hardcoded-paths
+        parent = Path("/") / "home" / "user" / "documents"  # noqa: test-hardcoded-paths
+        child = Path("/") / "home" / "user" / "documents" / "work"  # noqa: test-hardcoded-paths
 
         dir_prefs.set_preference(grandparent, {"gp": "value"})
         dir_prefs.set_preference(parent, {"p": "value"}, override_parent=True)

@@ -671,8 +671,8 @@ class TestGetOperationHistory:
         mock_op.id = 1
         mock_op.operation_type = MagicMock()
         mock_op.operation_type.value = "move"
-        mock_op.source_path = Path("/tmp/src.txt")  # noqa: test-hardcoded-paths
-        mock_op.destination_path = Path("/tmp/dst.txt")  # noqa: test-hardcoded-paths
+        mock_op.source_path = Path("/") / "tmp" / "src.txt"  # noqa: test-hardcoded-paths
+        mock_op.destination_path = Path("/") / "tmp" / "dst.txt"  # noqa: test-hardcoded-paths
         mock_op.status = MagicMock()
         mock_op.status.value = "completed"
         mock_op.timestamp = MagicMock()
@@ -711,7 +711,7 @@ class TestGetOperationHistory:
         mock_op.id = 2
         mock_op.operation_type = MagicMock()
         mock_op.operation_type.value = "delete"
-        mock_op.source_path = Path("/tmp/gone.txt")  # noqa: test-hardcoded-paths
+        mock_op.source_path = Path("/") / "tmp" / "gone.txt"  # noqa: test-hardcoded-paths
         mock_op.destination_path = None
         mock_op.status = MagicMock()
         mock_op.status.value = "completed"

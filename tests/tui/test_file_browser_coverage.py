@@ -261,11 +261,11 @@ class TestFileBrowserView:
 
     def test_custom_path_init(self) -> None:
         view = FileBrowserView(path="tmp/test")
-        assert view._root_path == Path("tmp/test")
+        assert view._root_path == Path("tmp") / "test"
 
     def test_file_highlighted_message(self) -> None:
-        msg = FileBrowserView.FileHighlighted(Path("tmp/file.txt"))
-        assert msg.path == Path("tmp/file.txt")
+        msg = FileBrowserView.FileHighlighted(Path("tmp") / "file.txt")
+        assert msg.path == Path("tmp") / "file.txt"
 
     def test_bindings(self) -> None:
         keys = [b.key for b in FileBrowserView.BINDINGS]

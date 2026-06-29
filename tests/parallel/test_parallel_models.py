@@ -287,8 +287,8 @@ class TestCheckpoint(unittest.TestCase):
 
     def test_with_paths(self) -> None:
         """Test creating checkpoint with file paths."""
-        completed = [Path("/a/b.txt"), Path("/c/d.txt")]
-        pending = [Path("/e/f.txt")]
+        completed = [Path("/") / "a" / "b.txt", Path("/") / "c" / "d.txt"]
+        pending = [Path("/") / "e" / "f.txt"]
         ckpt = Checkpoint(
             job_id="paths-test",
             completed_paths=completed,
@@ -304,8 +304,8 @@ class TestCheckpoint(unittest.TestCase):
         now = datetime(2026, 6, 15, 14, 0, 0, tzinfo=UTC)
         ckpt = Checkpoint(
             job_id="ser-ckpt",
-            completed_paths=[Path("/done/a.txt")],
-            pending_paths=[Path("/todo/b.txt"), Path("/todo/c.txt")],
+            completed_paths=[Path("/") / "done" / "a.txt"],
+            pending_paths=[Path("/") / "todo" / "b.txt", Path("/") / "todo" / "c.txt"],
             file_hashes={"/done/a.txt": "hash-a"},
             last_updated=now,
         )
@@ -336,7 +336,7 @@ class TestCheckpoint(unittest.TestCase):
         }
         ckpt = Checkpoint.from_dict(data)
         self.assertEqual(ckpt.job_id, "deser-ckpt")
-        self.assertEqual(ckpt.completed_paths, [Path("/x/a.txt")])
+        self.assertEqual(ckpt.completed_paths, [Path("/") / "x" / "a.txt"])
         self.assertEqual(len(ckpt.pending_paths), 2)
         self.assertEqual(ckpt.file_hashes, {"/x/a.txt": "hash-a"})
 
@@ -357,8 +357,8 @@ class TestCheckpoint(unittest.TestCase):
         now = datetime(2026, 8, 1, 10, 0, 0, tzinfo=UTC)
         original = Checkpoint(
             job_id="roundtrip-ckpt",
-            completed_paths=[Path("/a.txt"), Path("/b.txt")],
-            pending_paths=[Path("/c.txt")],
+            completed_paths=[Path("/") / "a.txt", Path("/") / "b.txt"],
+            pending_paths=[Path("/") / "c.txt"],
             file_hashes={"/a.txt": "h1", "/b.txt": "h2"},
             last_updated=now,
         )
@@ -381,7 +381,7 @@ class TestCheckpoint(unittest.TestCase):
         """Test that default mutable fields are independent."""
         ckpt1 = Checkpoint(job_id="a")
         ckpt2 = Checkpoint(job_id="b")
-        ckpt1.completed_paths.append(Path("/x.txt"))
+        ckpt1.completed_paths.append(Path("/") / "x.txt")
         self.assertEqual(len(ckpt2.completed_paths), 0)
 
     def test_file_hashes_independent_across_instances(self) -> None:

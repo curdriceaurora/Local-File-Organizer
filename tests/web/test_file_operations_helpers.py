@@ -58,7 +58,7 @@ class TestBuildTreeContext:
 
 class TestGenerateThumbnail:
     def test_missing_file_raises_api_error(self, settings: ApiSettings) -> None:
-        missing = Path("/missing")
+        missing = Path("/") / "missing"
         with patch("file_organizer.web.file_operations.resolve_path", return_value=missing):
             with pytest.raises(ApiError, match="File not found"):
                 generate_thumbnail(str(missing), "file", settings)

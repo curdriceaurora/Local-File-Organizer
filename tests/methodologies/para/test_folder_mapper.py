@@ -133,8 +133,8 @@ class TestCategoryFolderMapper:
         """Test batch mapping handles errors gracefully."""
         # Include a non-existent file
         files = [
-            Path("/nonexistent/file1.txt"),
-            Path("/nonexistent/file2.txt"),
+            Path("/") / "nonexistent" / "file1.txt",
+            Path("/") / "nonexistent" / "file2.txt",
         ]
 
         results = mapper.map_batch(files, temp_target)
@@ -333,15 +333,15 @@ class TestMappingResult:
     def test_valid_mapping_result(self):
         """Test creating valid mapping result."""
         result = MappingResult(
-            source_path=Path("/source/file.txt"),
+            source_path=Path("/") / "source" / "file.txt",
             target_category=PARACategory.PROJECT,
-            target_folder=Path("/target/Projects"),
+            target_folder=Path("/") / "target" / "Projects",
             confidence=0.85,
             reasoning=["Reason 1"],
             subfolder_path="2024/01",
         )
 
-        assert result.source_path == Path("/source/file.txt")
+        assert result.source_path == Path("/") / "source" / "file.txt"
         assert result.target_category == PARACategory.PROJECT
         assert result.confidence == 0.85
         assert result.subfolder_path == "2024/01"
@@ -349,16 +349,16 @@ class TestMappingResult:
     def test_mapping_result_without_subfolder(self):
         """Test mapping result without subfolder."""
         result = MappingResult(
-            source_path=Path("/source/file.txt"),
+            source_path=Path("/") / "source" / "file.txt",
             target_category=PARACategory.AREA,
-            target_folder=Path("/target/Areas"),
+            target_folder=Path("/") / "target" / "Areas",
             confidence=0.75,
             reasoning=[],
             subfolder_path=None,
         )
 
         assert result.subfolder_path is None
-        assert result.target_folder == Path("/target/Areas")
+        assert result.target_folder == Path("/") / "target" / "Areas"
 
 
 @pytest.mark.unit
@@ -406,7 +406,7 @@ class TestMappingStrategy:
         strategy = MappingStrategy(custom_subfolder_fn=custom_fn)
 
         assert strategy.custom_subfolder_fn is not None
-        assert strategy.custom_subfolder_fn(Path("/test"), PARACategory.PROJECT) == "custom"
+        assert strategy.custom_subfolder_fn(Path("/") / "test", PARACategory.PROJECT) == "custom"
 
 
 @pytest.mark.unit
@@ -536,7 +536,7 @@ class TestCategoryFolderMapperEdgeCases:
         mapper = CategoryFolderMapper(config, strategy=strategy)
 
         # Use a non-existent file
-        nonexistent_file = Path("/nonexistent/file.txt")
+        nonexistent_file = Path("/") / "nonexistent" / "file.txt"
         result = mapper.map_file(nonexistent_file, temp_target)
 
         # Should handle gracefully, subfolder might be None or have no date part
@@ -677,7 +677,7 @@ class TestCategoryFolderMapperEdgeCases:
 
         mapper.map_file = failing_map_file
 
-        files = [Path("/test/failing_file.txt"), Path("/test/normal_file.txt")]
+        files = [Path("/") / "test" / "failing_file.txt", Path("/") / "test" / "normal_file.txt"]
         results = mapper.map_batch(files, temp_target)
 
         # Should have results for both files

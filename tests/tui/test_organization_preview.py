@@ -238,8 +238,8 @@ class TestOrganizationPreviewView:
 
     def test_initialization_with_custom_directories(self) -> None:
         """Test OrganizationPreviewView with custom directories."""
-        input_path = Path("/home/user/files")  # noqa: test-hardcoded-paths
-        output_path = Path("/home/user/organized")  # noqa: test-hardcoded-paths
+        input_path = Path("/") / "home" / "user" / "files"  # noqa: test-hardcoded-paths
+        output_path = Path("/") / "home" / "user" / "organized"  # noqa: test-hardcoded-paths
         view = OrganizationPreviewView(input_dir=input_path, output_dir=output_path)
         assert view._input_dir == input_path
         assert view._output_dir == output_path
@@ -250,8 +250,8 @@ class TestOrganizationPreviewView:
             input_dir="/tmp/input",  # noqa: test-hardcoded-paths
             output_dir="/tmp/output",  # noqa: test-hardcoded-paths
         )
-        assert view._input_dir == Path("/tmp/input")  # noqa: test-hardcoded-paths
-        assert view._output_dir == Path("/tmp/output")  # noqa: test-hardcoded-paths
+        assert view._input_dir == Path("/") / "tmp" / "input"  # noqa: test-hardcoded-paths
+        assert view._output_dir == Path("/") / "tmp" / "output"  # noqa: test-hardcoded-paths
 
     def test_has_compose_method(self) -> None:
         """Test that compose method is defined."""

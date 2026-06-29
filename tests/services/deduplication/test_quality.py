@@ -768,8 +768,8 @@ class TestIsLikelyCropped:
 
     def test_candidate_larger_returns_false(self, analyzer):
         """If candidate has equal or larger resolution, not a crop."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         self._mock_metrics(
             analyzer,
             {
@@ -781,8 +781,8 @@ class TestIsLikelyCropped:
 
     def test_different_aspect_ratio_is_crop(self, analyzer):
         """Large aspect ratio difference with smaller resolution = crop."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         self._mock_metrics(
             analyzer,
             {
@@ -794,8 +794,8 @@ class TestIsLikelyCropped:
 
     def test_proportional_resize_not_crop(self, analyzer):
         """Resolution reduced proportionally with same aspect = resize, not crop."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         # ratio = 900_000 / 1_000_000 = 0.9 > threshold (0.8)
         # aspect_diff = 0 < 0.1
         self._mock_metrics(
@@ -809,8 +809,8 @@ class TestIsLikelyCropped:
 
     def test_small_resolution_moderate_aspect_is_crop(self, analyzer):
         """Smaller resolution + moderate aspect change = likely crop."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         # ratio = 600_000 / 1_000_000 = 0.6 < threshold (0.8)
         # aspect_diff = 0.1 > 0.05
         self._mock_metrics(
@@ -824,8 +824,8 @@ class TestIsLikelyCropped:
 
     def test_small_resolution_tiny_aspect_diff_not_crop(self, analyzer):
         """Smaller resolution but very similar aspect ratio = ambiguous, returns False."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         # ratio = 600_000 / 1_000_000 = 0.6 < threshold (0.8)
         # aspect_diff = 0.02 < 0.05
         self._mock_metrics(
@@ -839,8 +839,8 @@ class TestIsLikelyCropped:
 
     def test_one_missing_metric_returns_false(self, analyzer):
         """If only one image has metrics, returns False."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         self._mock_metrics(
             analyzer,
             {
@@ -852,8 +852,8 @@ class TestIsLikelyCropped:
 
     def test_custom_threshold(self, analyzer):
         """Custom threshold parameter is respected."""
-        orig = Path("/fake/orig.jpg")
-        cand = Path("/fake/cand.jpg")
+        orig = Path("/") / "fake" / "orig.jpg"
+        cand = Path("/") / "fake" / "cand.jpg"
         # ratio = 700_000 / 1_000_000 = 0.7
         # With default threshold=0.8, ratio < threshold so it checks further
         # aspect_diff = 0.08 > 0.05, so it's a crop

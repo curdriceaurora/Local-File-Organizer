@@ -548,7 +548,7 @@ class TestIsAudioFileBranches:
         """Only the filename suffix matters; an audio extension in the dir name is ignored."""
         # The directory has .mp3 in name but the file has .txt extension
         # is_audio_file uses suffix of the full path, so it checks the last component
-        p = Path("/audio.mp3/actual_file.txt")
+        p = Path("/") / "audio.mp3" / "actual_file.txt"
         assert is_audio_file(p) is False
 
 

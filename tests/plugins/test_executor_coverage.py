@@ -18,24 +18,24 @@ pytestmark = pytest.mark.unit
 
 class TestPluginExecutorInit:
     def test_default_name_from_path(self):
-        executor = PluginExecutor(plugin_path=Path("/plugins/my_plugin.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "plugins" / "my_plugin.py")
         assert executor._plugin_name == "my_plugin"
 
     def test_custom_name(self):
         executor = PluginExecutor(
-            plugin_path=Path("/plugins/foo.py"),
+            plugin_path=Path("/") / "plugins" / "foo.py",
             plugin_name="custom",
         )
         assert executor._plugin_name == "custom"
 
     def test_default_policy_is_unrestricted(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         assert executor._policy.allow_all_paths is True
 
 
 class TestPluginExecutorStart:
     def test_start_noop_when_already_started(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = MagicMock()
         executor.start()
         # Should not spawn another process
@@ -45,7 +45,7 @@ class TestPluginExecutorStart:
         mock_proc = MagicMock()
         mock_popen.return_value = mock_proc
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor.start()
 
         mock_popen.assert_called_once()
@@ -55,14 +55,14 @@ class TestPluginExecutorStart:
     def test_start_raises_plugin_load_error_on_os_error(self, mock_popen):
         mock_popen.side_effect = OSError("no such file")
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         with pytest.raises(PluginLoadError, match="Failed to spawn worker"):
             executor.start()
 
 
 class TestPluginExecutorStop:
     def test_stop_noop_when_not_started(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor.stop()
         assert executor._proc is None
 
@@ -73,7 +73,7 @@ class TestPluginExecutorStop:
         mock_proc.stdout = MagicMock()
         mock_proc.stderr = MagicMock()
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = mock_proc
 
         executor.stop()
@@ -88,7 +88,7 @@ class TestPluginExecutorStop:
         mock_proc.stdout = MagicMock()
         mock_proc.stderr = MagicMock()
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = mock_proc
 
         executor.stop()
@@ -105,7 +105,7 @@ class TestPluginExecutorStop:
         mock_proc.stdout = MagicMock()
         mock_proc.stderr = MagicMock()
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = mock_proc
 
         # Should not raise
@@ -123,7 +123,7 @@ class TestPluginExecutorContextManager:
         mock_proc.stderr = MagicMock()
         mock_popen.return_value = mock_proc
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         with executor as ex:
             assert ex is executor
             assert executor._proc is not None
@@ -133,12 +133,12 @@ class TestPluginExecutorContextManager:
 
 class TestPluginExecutorCall:
     def test_call_raises_when_not_started(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         with pytest.raises(RuntimeError, match="not started"):
             executor.call("on_load")
 
     def test_call_raises_when_pipes_closed(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = MagicMock()
         executor._proc.stdin = None
         executor._proc.stdout = None
@@ -147,7 +147,7 @@ class TestPluginExecutorCall:
             executor.call("on_load")
 
     def test_call_raises_on_broken_pipe(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         mock_proc = MagicMock()
         mock_proc.stdin.write.side_effect = BrokenPipeError("broken")
         executor._proc = mock_proc
@@ -158,7 +158,7 @@ class TestPluginExecutorCall:
     @patch.object(PluginExecutor, "_readline_with_timeout")
     def test_call_raises_on_empty_response(self, mock_readline):
         mock_readline.return_value = b""
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         mock_proc = MagicMock()
         mock_proc.stderr.read.return_value = b"error output"
         executor._proc = mock_proc
@@ -172,7 +172,7 @@ class TestPluginExecutorCall:
         mock_readline.return_value = b"bad json\n"
         mock_decode.side_effect = ValueError("invalid")
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = MagicMock()
 
         with pytest.raises(PluginError, match="Corrupt IPC response"):
@@ -184,7 +184,7 @@ class TestPluginExecutorCall:
         mock_readline.return_value = b'{"ok":true}\n'
         mock_decode.return_value = PluginResult(success=True, return_value=42)
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = MagicMock()
 
         result = executor.call("method")
@@ -196,7 +196,7 @@ class TestPluginExecutorCall:
         mock_readline.return_value = b'{"ok":false}\n'
         mock_decode.return_value = PluginResult(success=False, error="something went wrong")
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = MagicMock()
 
         with pytest.raises(PluginError, match="raised an error"):
@@ -208,7 +208,7 @@ class TestPluginExecutorCall:
         mock_readline.return_value = b'{"ok":false}\n'
         mock_decode.return_value = PluginResult(success=False, error="init failed")
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"), plugin_name="test")
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = MagicMock()
 
         with pytest.raises(PluginLoadError, match="raised an error"):
@@ -217,14 +217,14 @@ class TestPluginExecutorCall:
 
 class TestReadlineWithTimeout:
     def test_raises_when_proc_none(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = None
 
         with pytest.raises(PluginError, match="not running"):
             executor._readline_with_timeout()
 
     def test_raises_when_stdout_none(self):
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         executor._proc = MagicMock()
         executor._proc.stdout = None
 
@@ -234,7 +234,7 @@ class TestReadlineWithTimeout:
     @patch("file_organizer.plugins.executor.sys")
     def test_windows_timeout_raises(self, mock_sys):
         mock_sys.platform = "win32"
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         mock_proc = MagicMock()
         mock_stdout = MagicMock()
 
@@ -260,7 +260,7 @@ class TestReadlineWithTimeout:
         mock_sys.platform = "linux"
         mock_select.return_value = ([], [], [])
 
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         mock_proc = MagicMock()
         executor._proc = mock_proc
 
@@ -271,7 +271,7 @@ class TestReadlineWithTimeout:
     @patch("file_organizer.plugins.executor.select.select")
     def test_unix_success(self, mock_select, mock_sys):
         mock_sys.platform = "linux"
-        executor = PluginExecutor(plugin_path=Path("/x.py"))
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         mock_proc = MagicMock()
         mock_proc.stdout.readline.return_value = b"data\n"
         executor._proc = mock_proc

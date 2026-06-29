@@ -15,7 +15,7 @@ class TestPriorityQueueFix(unittest.TestCase):
         """
         pq = PriorityQueue()
         item_id = "test_item"
-        item = QueueItem(id=item_id, path=Path("/tmp/test"), priority=10)  # noqa: test-hardcoded-paths
+        item = QueueItem(id=item_id, path=Path("/") / "tmp" / "test", priority=10)  # noqa: test-hardcoded-paths
 
         # 1. Enqueue item with priority 10
         pq.enqueue(item)

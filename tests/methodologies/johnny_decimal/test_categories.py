@@ -300,13 +300,13 @@ class TestNumberingResult:
         """Test creating a valid numbering result."""
         number = JohnnyDecimalNumber(area=10, category=1)
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.85,
             reasons=["Matched keywords", "High confidence"],
         )
 
-        assert result.file_path == Path("/test/file.txt")
+        assert result.file_path == Path("/") / "test" / "file.txt"
         assert result.number == number
         assert result.confidence == 0.85
         assert result.is_confident
@@ -319,7 +319,7 @@ class TestNumberingResult:
 
         with pytest.raises(ValueError, match=r"confidence must be between 0.0 and 1.0"):
             NumberingResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 number=number,
                 confidence=1.5,
                 reasons=["Test"],
@@ -327,7 +327,7 @@ class TestNumberingResult:
 
         with pytest.raises(ValueError, match="reasons list cannot be empty"):
             NumberingResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 number=number,
                 confidence=0.8,
                 reasons=[],
@@ -338,7 +338,7 @@ class TestNumberingResult:
         number = JohnnyDecimalNumber(area=10)
 
         high_confidence = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.85,
             reasons=["High"],
@@ -347,7 +347,7 @@ class TestNumberingResult:
         assert not high_confidence.requires_review
 
         low_confidence = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.5,
             reasons=["Low"],
@@ -359,7 +359,7 @@ class TestNumberingResult:
         """Test conflict handling."""
         number = JohnnyDecimalNumber(area=10)
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.8,
             reasons=["Test"],
@@ -373,7 +373,7 @@ class TestNumberingResult:
         """Test dictionary conversion."""
         number = JohnnyDecimalNumber(area=10, category=1, name="Test")
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.8,
             reasons=["Reason 1"],

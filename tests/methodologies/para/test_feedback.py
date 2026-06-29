@@ -45,7 +45,7 @@ class TestFeedbackEvent:
     def test_creation_with_defaults(self) -> None:
         """Should create event with derived fields."""
         event = FeedbackEvent(
-            file_path=Path("/docs/report.pdf"),
+            file_path=Path("/") / "docs" / "report.pdf",
             suggested=PARACategory.PROJECT,
             actual=PARACategory.PROJECT,
             confidence=0.85,
@@ -57,7 +57,7 @@ class TestFeedbackEvent:
     def test_to_dict_roundtrip(self) -> None:
         """Should serialize and deserialize losslessly."""
         event = FeedbackEvent(
-            file_path=Path("/docs/report.pdf"),
+            file_path=Path("/") / "docs" / "report.pdf",
             suggested=PARACategory.PROJECT,
             actual=PARACategory.AREA,
             confidence=0.65,
@@ -88,7 +88,7 @@ class TestFeedbackEvent:
     def test_rejection_event_fields(self) -> None:
         """Rejected event should have different suggested vs actual."""
         event = FeedbackEvent(
-            file_path=Path("/docs/notes.md"),
+            file_path=Path("/") / "docs" / "notes.md",
             suggested=PARACategory.PROJECT,
             actual=PARACategory.AREA,
             confidence=0.55,
@@ -115,7 +115,7 @@ class TestFeedbackCollector:
     def test_record_acceptance(self, collector: FeedbackCollector) -> None:
         """Should record an acceptance event."""
         suggestion = _make_suggestion()
-        collector.record_acceptance(Path("/test/file.pdf"), suggestion)
+        collector.record_acceptance(Path("/") / "test" / "file.pdf", suggestion)
         events = collector.get_events()
         assert len(events) == 1
         assert events[0].accepted is True
@@ -126,7 +126,7 @@ class TestFeedbackCollector:
         """Should record a rejection with correct category."""
         suggestion = _make_suggestion(PARACategory.PROJECT)
         collector.record_rejection(
-            Path("/test/file.pdf"),
+            Path("/") / "test" / "file.pdf",
             suggestion,
             correct_category=PARACategory.RESOURCE,
         )
@@ -149,8 +149,8 @@ class TestFeedbackCollector:
 
         # Write events
         c1 = FeedbackCollector(storage_dir=storage)
-        c1.record_acceptance(Path("/test/a.txt"), _make_suggestion())
-        c1.record_acceptance(Path("/test/b.txt"), _make_suggestion())
+        c1.record_acceptance(Path("/") / "test" / "a.txt", _make_suggestion())
+        c1.record_acceptance(Path("/") / "test" / "b.txt", _make_suggestion())
 
         # Read from new instance
         c2 = FeedbackCollector(storage_dir=storage)
@@ -159,7 +159,7 @@ class TestFeedbackCollector:
 
     def test_clear_removes_all_events(self, collector: FeedbackCollector) -> None:
         """clear() should remove all events."""
-        collector.record_acceptance(Path("/test/file.txt"), _make_suggestion())
+        collector.record_acceptance(Path("/") / "test" / "file.txt", _make_suggestion())
         assert len(collector.get_events()) == 1
         collector.clear()
         assert len(collector.get_events()) == 0
@@ -220,13 +220,13 @@ class TestFeedbackCollector:
             )
         # 1 rejected project
         collector.record_rejection(
-            Path("/test/pr.txt"),
+            Path("/") / "test" / "pr.txt",
             _make_suggestion(PARACategory.PROJECT),
             correct_category=PARACategory.AREA,
         )
         # 1 accepted resource
         collector.record_acceptance(
-            Path("/test/res.txt"),
+            Path("/") / "test" / "res.txt",
             _make_suggestion(PARACategory.RESOURCE),
         )
 
@@ -240,11 +240,11 @@ class TestFeedbackCollector:
     ) -> None:
         """Should compute average confidence correctly."""
         collector.record_acceptance(
-            Path("/test/a.txt"),
+            Path("/") / "test" / "a.txt",
             _make_suggestion(confidence=0.90),
         )
         collector.record_rejection(
-            Path("/test/b.txt"),
+            Path("/") / "test" / "b.txt",
             _make_suggestion(confidence=0.50),
             correct_category=PARACategory.ARCHIVE,
         )
@@ -302,7 +302,7 @@ class TestFeedbackCollector:
             raise OSError("Disk full")
 
         monkeypatch.setattr(json, "dump", mock_dump)
-        collector.record_acceptance(Path("/test/file.txt"), _make_suggestion())
+        collector.record_acceptance(Path("/") / "test" / "file.txt", _make_suggestion())
 
         assert dump_called is True
         assert len(collector.get_events()) == 1
@@ -406,7 +406,7 @@ class TestPatternLearner:
         """Should capture override patterns from rejections."""
         events = [
             FeedbackEvent(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.AREA,
                 confidence=0.6,

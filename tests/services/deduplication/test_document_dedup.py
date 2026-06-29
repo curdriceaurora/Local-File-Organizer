@@ -59,9 +59,9 @@ class TestDocumentDeduplicator(unittest.TestCase):
 
         # Mock extractor
         dedup.extractor.supports_format.return_value = True
-        dedup.extractor.extract_batch.return_value = {Path("/a.txt"): "short"}
+        dedup.extractor.extract_batch.return_value = {Path("/") / "a.txt": "short"}
 
-        result = dedup.find_duplicates([Path("/a.txt")], min_text_length=100)
+        result = dedup.find_duplicates([Path("/") / "a.txt"], min_text_length=100)
         self.assertEqual(result["duplicate_groups"], [])
         self.assertEqual(result["total_documents"], 1)
         self.assertEqual(result["analyzed_documents"], 0)
@@ -78,9 +78,9 @@ class TestDocumentDeduplicator(unittest.TestCase):
 
         dedup = DocumentDeduplicator()
 
-        p1 = Path("/doc1.txt")
-        p2 = Path("/doc2.txt")
-        p3 = Path("/doc3.txt")
+        p1 = Path("/") / "doc1.txt"
+        p2 = Path("/") / "doc2.txt"
+        p3 = Path("/") / "doc3.txt"
 
         # supports_format returns True for all
         dedup.extractor.supports_format.return_value = True
@@ -129,7 +129,7 @@ class TestDocumentDeduplicator(unittest.TestCase):
         dedup.extractor.supports_format.side_effect = lambda f: f.suffix == ".txt"
         dedup.extractor.extract_batch.return_value = {}
 
-        dedup.find_duplicates([Path("/a.txt"), Path("/b.exe")], min_text_length=100)
+        dedup.find_duplicates([Path("/") / "a.txt", Path("/") / "b.exe"], min_text_length=100)
         # Only .txt should be passed to extract_batch
         args = dedup.extractor.extract_batch.call_args[0][0]
         self.assertEqual(len(args), 1)
@@ -154,7 +154,7 @@ class TestDocumentDeduplicator(unittest.TestCase):
         dedup.embedder.fit_transform.return_value = mock_embeddings
         dedup.analyzer.compute_similarity.return_value = 0.87
 
-        result = dedup.compare_documents(Path("/a.txt"), Path("/b.txt"))
+        result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertAlmostEqual(result, 0.87)
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
@@ -169,7 +169,7 @@ class TestDocumentDeduplicator(unittest.TestCase):
         dedup = DocumentDeduplicator()
         dedup.extractor.extract_text.side_effect = ["", "some text"]
 
-        result = dedup.compare_documents(Path("/a.txt"), Path("/b.txt"))
+        result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertIsNone(result)
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
@@ -184,7 +184,7 @@ class TestDocumentDeduplicator(unittest.TestCase):
         dedup = DocumentDeduplicator()
         dedup.extractor.extract_text.side_effect = ValueError("boom")
 
-        result = dedup.compare_documents(Path("/a.txt"), Path("/b.txt"))
+        result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertIsNone(result)
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")

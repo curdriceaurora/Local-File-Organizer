@@ -90,7 +90,7 @@ class TestJohnnyDecimalGenerator:
     def test_register_existing_number(self, generator):
         """Test registering an existing number."""
         number = JohnnyDecimalNumber(area=10, category=1)
-        file_path = Path("/test/file.txt")
+        file_path = Path("/") / "test" / "file.txt"
 
         generator.register_existing_number(number, file_path)
 
@@ -100,8 +100,8 @@ class TestJohnnyDecimalGenerator:
     def test_register_duplicate_number(self, generator):
         """Test that registering duplicate number raises error."""
         number = JohnnyDecimalNumber(area=10, category=1)
-        file1 = Path("/test/file1.txt")
-        file2 = Path("/test/file2.txt")
+        file1 = Path("/") / "test" / "file1.txt"
+        file2 = Path("/") / "test" / "file2.txt"
 
         generator.register_existing_number(number, file1)
 
@@ -113,7 +113,7 @@ class TestJohnnyDecimalGenerator:
         number = JohnnyDecimalNumber(area=10, category=1)
         assert generator.is_number_available(number)
 
-        generator.register_existing_number(number, Path("/test/file.txt"))
+        generator.register_existing_number(number, Path("/") / "test" / "file.txt")
         assert not generator.is_number_available(number)
 
     def test_get_next_available_area(self, generator):
@@ -233,7 +233,7 @@ class TestJohnnyDecimalGenerator:
     def test_validate_number_already_used(self, generator):
         """Test validating an already used number."""
         number = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(number, Path("/test/file.txt"))
+        generator.register_existing_number(number, Path("/") / "test" / "file.txt")
 
         is_valid, errors = generator.validate_number(number)
 
@@ -254,7 +254,7 @@ class TestJohnnyDecimalGenerator:
     def test_find_conflicts_exact(self, generator):
         """Test finding exact number conflicts."""
         number = JohnnyDecimalNumber(area=10, category=1)
-        file_path = Path("/test/file.txt")
+        file_path = Path("/") / "test" / "file.txt"
 
         generator.register_existing_number(number, file_path)
 
@@ -267,7 +267,7 @@ class TestJohnnyDecimalGenerator:
         """Test finding parent conflicts."""
         # Register parent (area only)
         parent = JohnnyDecimalNumber(area=10)
-        generator.register_existing_number(parent, Path("/test/parent.txt"))
+        generator.register_existing_number(parent, Path("/") / "test" / "parent.txt")
 
         # Try to use child (category)
         child = JohnnyDecimalNumber(area=10, category=1)
@@ -281,8 +281,8 @@ class TestJohnnyDecimalGenerator:
         # Register children (categories)
         child1 = JohnnyDecimalNumber(area=10, category=1)
         child2 = JohnnyDecimalNumber(area=10, category=2)
-        generator.register_existing_number(child1, Path("/test/child1.txt"))
-        generator.register_existing_number(child2, Path("/test/child2.txt"))
+        generator.register_existing_number(child1, Path("/") / "test" / "child1.txt")
+        generator.register_existing_number(child2, Path("/") / "test" / "child2.txt")
 
         # Try to use parent (area)
         parent = JohnnyDecimalNumber(area=10)
@@ -323,15 +323,15 @@ class TestJohnnyDecimalGenerator:
         # Register some numbers
         generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file1.txt"),
+            Path("/") / "test" / "file1.txt",
         )
         generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=2),
-            Path("/test/file2.txt"),
+            Path("/") / "test" / "file2.txt",
         )
         generator.register_existing_number(
             JohnnyDecimalNumber(area=20, category=1),
-            Path("/test/file3.txt"),
+            Path("/") / "test" / "file3.txt",
         )
 
         stats = generator.get_usage_statistics()
@@ -345,7 +345,7 @@ class TestJohnnyDecimalGenerator:
         # Register some numbers
         generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file.txt"),
+            Path("/") / "test" / "file.txt",
         )
 
         assert len(generator._used_numbers) == 1
@@ -389,9 +389,9 @@ class TestAdvancedScenarios:
         category = JohnnyDecimalNumber(area=16, category=1)
         item = JohnnyDecimalNumber(area=17, category=1, item_id=5)
 
-        generator.register_existing_number(area, Path("/test/area.txt"))
-        generator.register_existing_number(category, Path("/test/category.txt"))
-        generator.register_existing_number(item, Path("/test/item.txt"))
+        generator.register_existing_number(area, Path("/") / "test" / "area.txt")
+        generator.register_existing_number(category, Path("/") / "test" / "category.txt")
+        generator.register_existing_number(item, Path("/") / "test" / "item.txt")
 
         # All should be registered
         assert "15" in generator._used_numbers
@@ -402,7 +402,7 @@ class TestAdvancedScenarios:
         """Test fallback when preferred number is taken."""
         # Register preferred number
         preferred = JohnnyDecimalNumber(area=10, category=5)
-        generator.register_existing_number(preferred, Path("/test/existing.txt"))
+        generator.register_existing_number(preferred, Path("/") / "test" / "existing.txt")
 
         # Try to generate with same preference
         new_number = generator.generate_category_number(

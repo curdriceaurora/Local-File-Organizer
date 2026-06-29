@@ -56,7 +56,7 @@ class TestOperationHistory:
         operation_id = history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=temp_file,
-            destination_path=Path("/test/dest"),
+            destination_path=Path("/") / "test" / "dest",
             metadata={"test": "data"},
         )
 
@@ -148,9 +148,9 @@ class TestOperationHistory:
     def test_get_operations_by_type(self, history):
         """Test filtering operations by type."""
         # Log different operation types
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
-        history.log_operation(OperationType.RENAME, Path("/test/path2"))
-        history.log_operation(OperationType.DELETE, Path("/test/path3"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
+        history.log_operation(OperationType.RENAME, Path("/") / "test" / "path2")
+        history.log_operation(OperationType.DELETE, Path("/") / "test" / "path3")
 
         # Filter by type
         move_ops = history.get_operations(operation_type=OperationType.MOVE)
@@ -163,14 +163,14 @@ class TestOperationHistory:
 
         # Log operations in transaction
         history.log_operation(
-            OperationType.MOVE, Path("/test/path1"), transaction_id=transaction_id
+            OperationType.MOVE, Path("/") / "test" / "path1", transaction_id=transaction_id
         )
         history.log_operation(
-            OperationType.MOVE, Path("/test/path2"), transaction_id=transaction_id
+            OperationType.MOVE, Path("/") / "test" / "path2", transaction_id=transaction_id
         )
 
         # Log operation outside transaction
-        history.log_operation(OperationType.MOVE, Path("/test/path3"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path3")
 
         # Filter by transaction
         txn_ops = history.get_operations(transaction_id=transaction_id)
@@ -180,11 +180,11 @@ class TestOperationHistory:
         """Test filtering operations by status."""
         # Log operations with different statuses
         history.log_operation(
-            OperationType.MOVE, Path("/test/path1"), status=OperationStatus.COMPLETED
+            OperationType.MOVE, Path("/") / "test" / "path1", status=OperationStatus.COMPLETED
         )
         history.log_operation(
             OperationType.MOVE,
-            Path("/test/path2"),
+            Path("/") / "test" / "path2",
             status=OperationStatus.FAILED,
             error_message="Test error",
         )
@@ -201,7 +201,7 @@ class TestOperationHistory:
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
 
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
 
         # Filter by date range
         ops = history.get_operations(start_date=yesterday, end_date=tomorrow)
@@ -256,7 +256,7 @@ class TestOperationHistory:
     def test_context_manager(self, temp_db_path):
         """Test OperationHistory as context manager."""
         with OperationHistory(temp_db_path) as history:
-            history.log_operation(OperationType.MOVE, Path("/test/path"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / "path")
 
         # Should close cleanly
 
@@ -264,7 +264,7 @@ class TestOperationHistory:
         """Test logging a failed operation."""
         history.log_operation(
             operation_type=OperationType.MOVE,
-            source_path=Path("/test/source"),
+            source_path=Path("/") / "test" / "source",
             status=OperationStatus.FAILED,
             error_message="Permission denied",
         )

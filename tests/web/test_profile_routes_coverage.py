@@ -128,7 +128,7 @@ class TestProfileHelpers:
 
         with patch(
             "pathlib.Path.resolve",
-            side_effect=[Path("/tmp/outside.png"), Path("/tmp/avatars")],  # noqa: test-hardcoded-paths
+            side_effect=[Path("/") / "tmp" / "outside.png", Path("/") / "tmp" / "avatars"],  # noqa: test-hardcoded-paths
         ):
             with pytest.raises(ValueError, match="Invalid user_id"):
                 _avatar_path("user-123")

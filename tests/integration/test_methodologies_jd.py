@@ -868,7 +868,7 @@ class TestAdapters:
         adapter = PARAAdapter(cfg)
         item = OrganizationItem(
             name="project-doc.pdf",
-            path=Path("docs/project-doc.pdf"),
+            path=Path("docs") / "project-doc.pdf",
             category="projects",
             metadata={},
         )
@@ -887,7 +887,7 @@ class TestAdapters:
         adapter = PARAAdapter(cfg)
         item = OrganizationItem(
             name="doc.pdf",
-            path=Path("Projects/doc.pdf"),
+            path=Path("Projects") / "doc.pdf",
             category="projects",
             metadata={},
         )

@@ -140,8 +140,8 @@ class TestCorrectionGetPatternKey:
 
         c = Correction(
             correction_type=CorrectionType.FILE_MOVE,
-            source=Path("/a/b.txt"),
-            destination=Path("/docs/b.txt"),
+            source=Path("/") / "a" / "b.txt",
+            destination=Path("/") / "docs" / "b.txt",
             timestamp=datetime.now(UTC),
         )
         key = c.get_pattern_key()
@@ -157,8 +157,8 @@ class TestCorrectionGetPatternKey:
 
         c = Correction(
             correction_type=CorrectionType.FILE_RENAME,
-            source=Path("/a/makefile"),
-            destination=Path("/b/makefile"),
+            source=Path("/") / "a" / "makefile",
+            destination=Path("/") / "b" / "makefile",
             timestamp=datetime.now(UTC),
         )
         key = c.get_pattern_key()
@@ -174,7 +174,7 @@ class TestCorrectionGetPatternKey:
         c = Correction(
             correction_type=CorrectionType.FILE_MOVE,
             source=Path("file.pdf"),
-            destination=Path("/docs/reports/file.pdf"),
+            destination=Path("/") / "docs" / "reports" / "file.pdf",
             timestamp=datetime.now(UTC),
         )
         key = c.get_pattern_key()
@@ -190,8 +190,8 @@ class TestCorrectionGetPatternKey:
         ts = datetime.now(UTC)
         c = Correction(
             correction_type=CorrectionType.CATEGORY_CHANGE,
-            source=Path("/a/x.txt"),
-            destination=Path("/b/x.txt"),
+            source=Path("/") / "a" / "x.txt",
+            destination=Path("/") / "b" / "x.txt",
             timestamp=ts,
             context={"key": "value"},
         )
@@ -215,8 +215,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/src/file.pdf"),
-            destination=Path("/docs/archive/file.pdf"),
+            source=Path("/") / "src" / "file.pdf",
+            destination=Path("/") / "docs" / "archive" / "file.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
@@ -232,8 +232,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/src/old_name.txt"),
-            destination=Path("/src/new_name.txt"),
+            source=Path("/") / "src" / "old_name.txt",
+            destination=Path("/") / "src" / "new_name.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         prefs = tracker.get_all_preferences(PreferenceType.NAMING_PATTERN)
@@ -249,8 +249,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/src/x.pdf"),
-            destination=Path("/src/x.pdf"),
+            source=Path("/") / "src" / "x.pdf",
+            destination=Path("/") / "src" / "x.pdf",
             correction_type=CorrectionType.CATEGORY_CHANGE,
             context={"new_category": "legal"},
         )
@@ -267,8 +267,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/src/x.pdf"),
-            destination=Path("/src/x.pdf"),
+            source=Path("/") / "src" / "x.pdf",
+            destination=Path("/") / "src" / "x.pdf",
             correction_type=CorrectionType.CATEGORY_CHANGE,
         )
         prefs = tracker.get_all_preferences(PreferenceType.CATEGORY_OVERRIDE)
@@ -283,8 +283,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/b.txt"),
-            destination=Path("/docs/b.txt"),
+            source=Path("/") / "a" / "b.txt",
+            destination=Path("/") / "docs" / "b.txt",
             correction_type=CorrectionType.FOLDER_CREATION,
         )
         prefs = tracker.get_all_preferences(PreferenceType.CUSTOM)
@@ -299,8 +299,8 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/x/y.txt"),
-            destination=Path("/z/y.txt"),
+            source=Path("/") / "x" / "y.txt",
+            destination=Path("/") / "z" / "y.txt",
             correction_type=CorrectionType.MANUAL_OVERRIDE,
         )
         prefs = tracker.get_all_preferences(PreferenceType.CUSTOM)
@@ -315,13 +315,13 @@ class TestExtractPreferencesFromCorrection:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/report.pdf"),
-            destination=Path("/docs/report.pdf"),
+            source=Path("/") / "a" / "report.pdf",
+            destination=Path("/") / "docs" / "report.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/a/report.pdf"),
-            destination=Path("/docs/report.pdf"),
+            source=Path("/") / "a" / "report.pdf",
+            destination=Path("/") / "docs" / "report.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
@@ -344,15 +344,15 @@ class TestExtractPreferencesFromCorrection:
         tracker = _tracker()
         # First correction — creates preference: key=file_move|.txt|docs, value=/storage/docs
         tracker.track_correction(
-            source=Path("/a/file.txt"),
-            destination=Path("/storage/docs/file.txt"),
+            source=Path("/") / "a" / "file.txt",
+            destination=Path("/") / "storage" / "docs" / "file.txt",
             correction_type=CorrectionType.FILE_MOVE,
         )
         # Second correction — same key (parent name still "docs") but different full path
         # → value changes from /storage/docs to /archive/docs
         tracker.track_correction(
-            source=Path("/a/file.txt"),
-            destination=Path("/archive/docs/file.txt"),
+            source=Path("/") / "a" / "file.txt",
+            destination=Path("/") / "archive" / "docs" / "file.txt",
             correction_type=CorrectionType.FILE_MOVE,
         )
         prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
@@ -369,8 +369,8 @@ class TestExtractPreferencesFromCorrection:
         tracker = _tracker()
         for _ in range(2):
             tracker.track_correction(
-                source=Path("/a/file.txt"),
-                destination=Path("/docs/file.txt"),
+                source=Path("/") / "a" / "file.txt",
+                destination=Path("/") / "docs" / "file.txt",
                 correction_type=CorrectionType.FILE_MOVE,
             )
         prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
@@ -388,7 +388,7 @@ class TestGetPreference:
         from file_organizer.services.intelligence.preference_tracker import PreferenceType
 
         tracker = _tracker()
-        result = tracker.get_preference(Path("/a/file.pdf"), PreferenceType.FOLDER_MAPPING)
+        result = tracker.get_preference(Path("/") / "a" / "file.pdf", PreferenceType.FOLDER_MAPPING)
         assert result is None
 
     def test_get_folder_mapping_returns_best_match(self) -> None:
@@ -400,11 +400,13 @@ class TestGetPreference:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/report.pdf"),
-            destination=Path("/docs/report.pdf"),
+            source=Path("/") / "a" / "report.pdf",
+            destination=Path("/") / "docs" / "report.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
-        result = tracker.get_preference(Path("/a/invoice.pdf"), PreferenceType.FOLDER_MAPPING)
+        result = tracker.get_preference(
+            Path("/") / "a" / "invoice.pdf", PreferenceType.FOLDER_MAPPING
+        )
         assert result is not None
         assert result.preference_type == PreferenceType.FOLDER_MAPPING
 
@@ -413,7 +415,7 @@ class TestGetPreference:
         from file_organizer.services.intelligence.preference_tracker import PreferenceType
 
         tracker = _tracker()
-        result = tracker.get_preference(Path("/a/file.txt"), PreferenceType.NAMING_PATTERN)
+        result = tracker.get_preference(Path("/") / "a" / "file.txt", PreferenceType.NAMING_PATTERN)
         assert result is None
 
     def test_get_naming_pattern_returns_match(self) -> None:
@@ -425,13 +427,15 @@ class TestGetPreference:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         # Same parent + same extension → same pattern key, so lookup must hit
         # and must return the naming pattern recorded from the prior correction.
-        result = tracker.get_preference(Path("/a/another.txt"), PreferenceType.NAMING_PATTERN)
+        result = tracker.get_preference(
+            Path("/") / "a" / "another.txt", PreferenceType.NAMING_PATTERN
+        )
         assert result is not None
         assert result.preference_type == PreferenceType.NAMING_PATTERN
         assert result.value == "new.txt"
@@ -441,7 +445,7 @@ class TestGetPreference:
         from file_organizer.services.intelligence.preference_tracker import PreferenceType
 
         tracker = _tracker()
-        result = tracker.get_preference(Path("/x/f.pdf"), PreferenceType.CATEGORY_OVERRIDE)
+        result = tracker.get_preference(Path("/") / "x" / "f.pdf", PreferenceType.CATEGORY_OVERRIDE)
         assert result is None
 
     def test_get_custom_no_match(self) -> None:
@@ -449,7 +453,7 @@ class TestGetPreference:
         from file_organizer.services.intelligence.preference_tracker import PreferenceType
 
         tracker = _tracker()
-        result = tracker.get_preference(Path("/x/f.txt"), PreferenceType.CUSTOM)
+        result = tracker.get_preference(Path("/") / "x" / "f.txt", PreferenceType.CUSTOM)
         assert result is None
 
     def test_get_folder_mapping_updates_last_used(self) -> None:
@@ -461,11 +465,11 @@ class TestGetPreference:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
-        result = tracker.get_preference(Path("/a/y.pdf"), PreferenceType.FOLDER_MAPPING)
+        result = tracker.get_preference(Path("/") / "a" / "y.pdf", PreferenceType.FOLDER_MAPPING)
         assert result is not None
         assert result.metadata.last_used is not None
 
@@ -482,13 +486,13 @@ class TestGetAllPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/f.pdf"),
-            destination=Path("/docs/f.pdf"),
+            source=Path("/") / "a" / "f.pdf",
+            destination=Path("/") / "docs" / "f.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         all_prefs = tracker.get_all_preferences()
@@ -503,13 +507,13 @@ class TestGetAllPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/f.pdf"),
-            destination=Path("/docs/f.pdf"),
+            source=Path("/") / "a" / "f.pdf",
+            destination=Path("/") / "docs" / "f.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         folder_prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
@@ -526,8 +530,8 @@ class TestGetAllPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/f.pdf"),
-            destination=Path("/docs/f.pdf"),
+            source=Path("/") / "a" / "f.pdf",
+            destination=Path("/") / "docs" / "f.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         naming_prefs = tracker.get_all_preferences(PreferenceType.NAMING_PATTERN)
@@ -549,8 +553,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -570,8 +574,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -591,8 +595,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -609,8 +613,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -627,8 +631,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -645,8 +649,8 @@ class TestUpdatePreferenceConfidence:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         pref = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)[0]
@@ -675,8 +679,8 @@ class TestGetStatistics:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         stats = tracker.get_statistics()
@@ -712,13 +716,13 @@ class TestClearPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         cleared = tracker.clear_preferences()
@@ -734,13 +738,13 @@ class TestClearPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         cleared = tracker.clear_preferences(PreferenceType.FOLDER_MAPPING)
@@ -758,8 +762,8 @@ class TestClearPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         # Clear the only preference type → no preferences remain
@@ -779,8 +783,8 @@ class TestClearPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         cleared = tracker.clear_preferences(PreferenceType.NAMING_PATTERN)
@@ -795,8 +799,8 @@ class TestClearPreferences:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.clear_preferences(PreferenceType.FOLDER_MAPPING)
@@ -816,8 +820,8 @@ class TestExportImportData:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         data = tracker.export_data()
@@ -837,8 +841,8 @@ class TestExportImportData:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         data = tracker.export_data()
@@ -859,8 +863,8 @@ class TestExportImportData:
         tracker = _tracker()
         # Add a rename preference
         tracker.track_correction(
-            source=Path("/a/old.txt"),
-            destination=Path("/a/new.txt"),
+            source=Path("/") / "a" / "old.txt",
+            destination=Path("/") / "a" / "new.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         # Import data that only has folder_mapping
@@ -949,15 +953,15 @@ class TestCorrectionQueries:
         from file_organizer.services.intelligence.preference_tracker import CorrectionType
 
         tracker = _tracker()
-        target = Path("/a/x.pdf")
+        target = Path("/") / "a" / "x.pdf"
         tracker.track_correction(
             source=target,
-            destination=Path("/docs/x.pdf"),
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
         tracker.track_correction(
-            source=Path("/other/y.txt"),
-            destination=Path("/other/z.txt"),
+            source=Path("/") / "other" / "y.txt",
+            destination=Path("/") / "other" / "z.txt",
             correction_type=CorrectionType.FILE_RENAME,
         )
         results = tracker.get_corrections_for_file(target)
@@ -969,9 +973,9 @@ class TestCorrectionQueries:
         from file_organizer.services.intelligence.preference_tracker import CorrectionType
 
         tracker = _tracker()
-        dest = Path("/docs/x.pdf")
+        dest = Path("/") / "docs" / "x.pdf"
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
             destination=dest,
             correction_type=CorrectionType.FILE_MOVE,
         )
@@ -984,11 +988,11 @@ class TestCorrectionQueries:
 
         tracker = _tracker()
         tracker.track_correction(
-            source=Path("/a/x.pdf"),
-            destination=Path("/docs/x.pdf"),
+            source=Path("/") / "a" / "x.pdf",
+            destination=Path("/") / "docs" / "x.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
-        results = tracker.get_corrections_for_file(Path("/unrelated/file.txt"))
+        results = tracker.get_corrections_for_file(Path("/") / "unrelated" / "file.txt")
         assert results == []
 
     def test_get_recent_corrections_sorted(self) -> None:
@@ -1049,7 +1053,7 @@ class TestConvenienceFunctions:
         )
 
         t = create_tracker()
-        track_file_move(t, Path("/a/x.pdf"), Path("/docs/x.pdf"))
+        track_file_move(t, Path("/") / "a" / "x.pdf", Path("/") / "docs" / "x.pdf")
         assert len(t.get_all_preferences(PreferenceType.FOLDER_MAPPING)) == 1
 
     def test_track_file_rename(self) -> None:
@@ -1061,7 +1065,7 @@ class TestConvenienceFunctions:
         )
 
         t = create_tracker()
-        track_file_rename(t, Path("/a/old.txt"), Path("/a/new.txt"))
+        track_file_rename(t, Path("/") / "a" / "old.txt", Path("/") / "a" / "new.txt")
         assert len(t.get_all_preferences(PreferenceType.NAMING_PATTERN)) == 1
 
     def test_track_category_change(self) -> None:
@@ -1073,7 +1077,7 @@ class TestConvenienceFunctions:
         )
 
         t = create_tracker()
-        track_category_change(t, Path("/a/f.pdf"), "old_cat", "new_cat")
+        track_category_change(t, Path("/") / "a" / "f.pdf", "old_cat", "new_cat")
         prefs = t.get_all_preferences(PreferenceType.CATEGORY_OVERRIDE)
         assert len(prefs) == 1
         assert prefs[0].value == "new_cat"
@@ -1087,6 +1091,6 @@ class TestConvenienceFunctions:
         )
 
         t = create_tracker()
-        track_category_change(t, Path("/a/f.pdf"), "old", "new", context={"user": "alice"})
+        track_category_change(t, Path("/") / "a" / "f.pdf", "old", "new", context={"user": "alice"})
         prefs = t.get_all_preferences(PreferenceType.CATEGORY_OVERRIDE)
         assert len(prefs) == 1

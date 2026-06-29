@@ -23,7 +23,7 @@ def _make_record(name: str = "demo") -> PluginRecord:
     return PluginRecord(
         name=name,
         version="1.0.0",
-        plugin_dir=Path("/fake"),
+        plugin_dir=Path("/") / "fake",
         policy=MagicMock(),
         manifest={"name": name, "version": "1.0.0"},
         executor=executor,
@@ -46,10 +46,10 @@ class TestLifecycleLoad:
         registry.load_plugin.return_value = record
 
         mgr = PluginLifecycleManager(registry)
-        result = mgr.load(Path("/fake"), policy=None)
+        result = mgr.load(Path("/") / "fake", policy=None)
 
         assert result is record
-        registry.load_plugin.assert_called_once_with(Path("/fake"), policy=None)
+        registry.load_plugin.assert_called_once_with(Path("/") / "fake", policy=None)
         assert mgr.get_state(record.name) == PluginState.LOADED
 
     def test_load_with_explicit_policy(self):
@@ -59,8 +59,8 @@ class TestLifecycleLoad:
         policy = MagicMock()
 
         mgr = PluginLifecycleManager(registry)
-        mgr.load(Path("/p"), policy=policy)
-        registry.load_plugin.assert_called_once_with(Path("/p"), policy=policy)
+        mgr.load(Path("/") / "p", policy=policy)
+        registry.load_plugin.assert_called_once_with(Path("/") / "p", policy=policy)
 
 
 class TestLifecycleEnable:

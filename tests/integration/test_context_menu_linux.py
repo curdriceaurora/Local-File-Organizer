@@ -7,7 +7,9 @@ from pathlib import Path
 
 class TestNautilusScript(unittest.TestCase):
     def setUp(self):
-        self.script = Path("desktop/context-menus/nautilus/Organize with File Organizer")
+        self.script = (
+            Path("desktop") / "context-menus" / "nautilus" / "Organize with File Organizer"
+        )
 
     def test_nautilus_script_exists(self):
         self.assertTrue(self.script.exists())
@@ -35,7 +37,7 @@ class TestNautilusScript(unittest.TestCase):
 
 class TestDolphinServiceFile(unittest.TestCase):
     def setUp(self):
-        self.desktop_file = Path("desktop/context-menus/dolphin/file-organizer.desktop")
+        self.desktop_file = Path("desktop") / "context-menus" / "dolphin" / "file-organizer.desktop"
 
     def test_desktop_file_exists(self):
         self.assertTrue(self.desktop_file.exists())
@@ -59,7 +61,7 @@ class TestDolphinServiceFile(unittest.TestCase):
 
 class TestInstallScript(unittest.TestCase):
     def setUp(self):
-        self.install_script = Path("desktop/context-menus/install-linux.sh")
+        self.install_script = Path("desktop") / "context-menus" / "install-linux.sh"
 
     def test_install_script_exists(self):
         self.assertTrue(self.install_script.exists())

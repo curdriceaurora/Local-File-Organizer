@@ -143,37 +143,43 @@ class TestEvaluationContext:
     """Test EvaluationContext properties — lines 187, 192, 197-204."""
 
     def test_file_extension(self) -> None:
-        ctx = EvaluationContext(file_path=Path("/doc/report.PDF"))
+        ctx = EvaluationContext(file_path=Path("/") / "doc" / "report.PDF")
         assert ctx.file_extension == ".pdf"
 
     def test_file_name(self) -> None:
-        ctx = EvaluationContext(file_path=Path("/doc/report.pdf"))
+        ctx = EvaluationContext(file_path=Path("/") / "doc" / "report.pdf")
         assert ctx.file_name == "report.pdf"
 
     def test_file_age_days_no_stat(self) -> None:
-        ctx = EvaluationContext(file_path=Path("/doc/x.txt"), file_stat=None)
+        ctx = EvaluationContext(file_path=Path("/") / "doc" / "x.txt", file_stat=None)
         assert ctx.file_age_days is None
 
     def test_file_age_days_no_created(self) -> None:
-        ctx = EvaluationContext(file_path=Path("/doc/x.txt"), file_stat={"size": 100})
+        ctx = EvaluationContext(file_path=Path("/") / "doc" / "x.txt", file_stat={"size": 100})
         assert ctx.file_age_days is None
 
     def test_file_age_days_with_datetime(self) -> None:
         created = datetime(2020, 1, 1, tzinfo=UTC)
-        ctx = EvaluationContext(file_path=Path("/doc/x.txt"), file_stat={"created": created})
+        ctx = EvaluationContext(
+            file_path=Path("/") / "doc" / "x.txt", file_stat={"created": created}
+        )
         age = ctx.file_age_days
         assert age is not None
         assert age > 0
 
     def test_file_age_days_naive_datetime(self) -> None:
         created = datetime(2020, 1, 1)  # noqa: DTZ001
-        ctx = EvaluationContext(file_path=Path("/doc/x.txt"), file_stat={"created": created})
+        ctx = EvaluationContext(
+            file_path=Path("/") / "doc" / "x.txt", file_stat={"created": created}
+        )
         age = ctx.file_age_days
         assert age is not None
         assert age > 0
 
     def test_file_age_days_non_datetime(self) -> None:
-        ctx = EvaluationContext(file_path=Path("/doc/x.txt"), file_stat={"created": "2020-01-01"})
+        ctx = EvaluationContext(
+            file_path=Path("/") / "doc" / "x.txt", file_stat={"created": "2020-01-01"}
+        )
         assert ctx.file_age_days is None
 
 
@@ -204,7 +210,7 @@ class TestRuleEngine:
     def test_load_rules(self) -> None:
         engine, parser, *_ = self._make_engine()
         parser.parse_file.return_value = [self._make_rule()]
-        count = engine.load_rules(Path("/rules.yaml"))
+        count = engine.load_rules(Path("/") / "rules.yaml")
         assert count == 1
         assert len(engine.rules) == 1
 
@@ -224,14 +230,14 @@ class TestRuleEngine:
 
     def test_evaluate_file_no_rules(self) -> None:
         engine, *_ = self._make_engine()
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is None
 
     def test_evaluate_file_disabled_rule_skipped(self) -> None:
         engine, _, evaluator, *_ = self._make_engine()
         engine.rules = [self._make_rule(enabled=False)]
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is None
         evaluator.evaluate_condition.assert_not_called()
@@ -240,7 +246,7 @@ class TestRuleEngine:
         engine, _, evaluator, _, resolver, _ = self._make_engine()
         evaluator.evaluate_condition.return_value = True
         engine.rules = [self._make_rule()]
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is not None
         assert result.matched is True
@@ -251,7 +257,7 @@ class TestRuleEngine:
         engine, _, evaluator, *_ = self._make_engine()
         evaluator.evaluate_condition.return_value = False
         engine.rules = [self._make_rule()]
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is None
 
@@ -263,7 +269,7 @@ class TestRuleEngine:
         engine.rules = [r1, r2]
         resolved = RuleMatchResult(rule=r1, matched=True, confidence=0.9, category="project")
         resolver.resolve.return_value = resolved
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is resolved
         resolver.resolve.assert_called_once()
@@ -273,7 +279,7 @@ class TestRuleEngine:
         evaluator.evaluate_condition.return_value = True
         engine.rules = [self._make_rule()]
         scorer.calculate_category_scores.return_value = {"project": 0.9}
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         scores = engine.get_category_scores(ctx)
         assert scores == {"project": 0.9}
 
@@ -281,7 +287,7 @@ class TestRuleEngine:
         engine, _, evaluator, _, _, scorer = self._make_engine()
         engine.rules = [self._make_rule(enabled=False)]
         scorer.calculate_category_scores.return_value = {}
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         engine.get_category_scores(ctx)
         evaluator.evaluate_condition.assert_not_called()
 
@@ -297,7 +303,7 @@ class TestRuleEngine:
             actions=[RuleAction(type=ActionType.FLAG_REVIEW)],
         )
         engine.rules = [rule]
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is not None
         assert result.matched is True
@@ -319,7 +325,7 @@ class TestRuleEngine:
             ],
         )
         engine.rules = [rule]
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         result = engine.evaluate_file(ctx)
         assert result is not None
         assert result.matched is True
@@ -361,7 +367,7 @@ class TestRuleEngine:
 
         evaluator.evaluate_condition.side_effect = eval_side_effect
         scorer.calculate_category_scores.return_value = {"project": 0.8}
-        ctx = EvaluationContext(file_path=Path("/test.txt"))
+        ctx = EvaluationContext(file_path=Path("/") / "test.txt")
         scores = engine.get_category_scores(ctx)
         assert scores == {"project": 0.8}
         # Both rules' conditions are evaluated (r1 passes, r2 fails and continues loop)

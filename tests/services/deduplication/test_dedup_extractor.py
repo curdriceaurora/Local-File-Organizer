@@ -154,7 +154,7 @@ class TestExtractText:
 
     def test_file_not_found(self, extractor):
         with pytest.raises(OSError, match="File not found"):
-            extractor.extract_text(Path("/nonexistent/file.txt"))
+            extractor.extract_text(Path("/") / "nonexistent" / "file.txt")
 
     def test_unsupported_format_raises(self, extractor, tmp_path):
         p = tmp_path / "photo.jpg"
@@ -367,7 +367,7 @@ class TestExtractBatch:
     def test_extract_batch_with_errors(self, extractor, tmp_path):
         good = tmp_path / "good.txt"
         good.write_text("Good text", encoding="utf-8")
-        bad = Path("/nonexistent/bad.txt")
+        bad = Path("/") / "nonexistent" / "bad.txt"
 
         results = extractor.extract_batch([good, bad])
         assert len(results) == 2

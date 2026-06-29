@@ -11,7 +11,7 @@ import pytest
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test")
 class TestMacOSQuickAction(unittest.TestCase):
     def setUp(self):
-        self.macos_dir = Path("desktop/context-menus/macos")
+        self.macos_dir = Path("desktop") / "context-menus" / "macos"
         self.quick_action_sh = self.macos_dir / "organize-quick-action.sh"
         self.workflow_dir = self.macos_dir / "OrganizeWithFileOrganizer.workflow"
         self.info_plist = self.workflow_dir / "Contents" / "Info.plist"
@@ -58,7 +58,7 @@ class TestMacOSQuickAction(unittest.TestCase):
         self.assertIn("servicesMenu", content)
 
     def test_install_script_exists(self):
-        install_sh = Path("desktop/context-menus/install-macos.sh")
+        install_sh = Path("desktop") / "context-menus" / "install-macos.sh"
         self.assertTrue(install_sh.exists())
 
 

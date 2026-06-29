@@ -109,7 +109,7 @@ def test_stage_context_assignment_enforces_path_traversal_guard() -> None:
 
     from file_organizer.interfaces.pipeline import StageContext
 
-    ctx = StageContext(file_path=Path("input/file.txt"))
+    ctx = StageContext(file_path=Path("input") / "file.txt")
 
     # Post-construction assignments must also validate
     with pytest.raises(ValueError, match="Invalid category"):

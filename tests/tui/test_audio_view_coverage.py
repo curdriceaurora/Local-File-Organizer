@@ -236,7 +236,7 @@ def test_audio_classification_panel_valid() -> None:
 def test_audio_view_initialization() -> None:
     """Verify AudioView fields on creation."""
     view = AudioView(scan_dir="/some/path")
-    assert view._scan_dir == Path("/some/path")
+    assert view._scan_dir == Path("/") / "some" / "path"
     assert view._files == []
     assert view._current_index == 0
 

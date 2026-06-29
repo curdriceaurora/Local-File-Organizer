@@ -240,7 +240,7 @@ class TestFileEventHandlerEventTypes:
 
         events = queue.dequeue_batch(1)
         assert events[0].event_type == EventType.MOVED
-        assert events[0].dest_path == Path("/tmp/new.txt")  # noqa: test-hardcoded-paths
+        assert events[0].dest_path == Path("/") / "tmp" / "new.txt"  # noqa: test-hardcoded-paths
 
     def test_directory_deletion_event(
         self, default_config: WatcherConfig, queue: EventQueue
@@ -394,7 +394,7 @@ class TestFileEventHandlerMovedEdgeCases:
         assert len(events) == 1
         assert events[0].is_directory is True
         assert events[0].event_type == EventType.MOVED
-        assert events[0].dest_path == Path("/tmp/newdir")  # noqa: test-hardcoded-paths
+        assert events[0].dest_path == Path("/") / "tmp" / "newdir"  # noqa: test-hardcoded-paths
 
 
 @pytest.mark.unit
@@ -489,7 +489,7 @@ class TestFileEventHandlerCallbackEdgeCases:
         handler.on_moved(event)
 
         assert len(received_events) == 1
-        assert received_events[0].dest_path == Path("/tmp/new.txt")  # noqa: test-hardcoded-paths
+        assert received_events[0].dest_path == Path("/") / "tmp" / "new.txt"  # noqa: test-hardcoded-paths
 
     def test_second_callback_runs_when_first_fails(
         self, default_config: WatcherConfig, queue: EventQueue

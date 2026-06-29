@@ -44,7 +44,7 @@ class FakeNamingPattern:
 
 @dataclass
 class FakeLocationPattern:
-    directory: Path = field(default_factory=lambda: Path("/docs"))
+    directory: Path = field(default_factory=lambda: Path("/") / "docs")
     file_types: set[str] = field(default_factory=lambda: {".pdf", ".txt"})
     naming_patterns: list[str] = field(default_factory=lambda: ["report_*"])
     file_count: int = 10
@@ -65,7 +65,7 @@ class FakeContentCluster:
 
 @dataclass
 class FakePatternAnalysis:
-    directory: Path = field(default_factory=lambda: Path("/root"))
+    directory: Path = field(default_factory=lambda: Path("/") / "root")
     naming_patterns: list[FakeNamingPattern] = field(default_factory=list)
     location_patterns: list[FakeLocationPattern] = field(default_factory=list)
     content_clusters: list[FakeContentCluster] = field(default_factory=list)
@@ -87,7 +87,9 @@ class TestConfidenceScorerUserHistory:
 
     def test_no_target_returns_50(self):
         scorer = ConfidenceScorer()
-        result = scorer._calculate_user_history_score(Path("/a.txt"), None, {"move_history": {}})
+        result = scorer._calculate_user_history_score(
+            Path("/") / "a.txt", None, {"move_history": {}}
+        )
         assert result == 50.0
 
     def test_target_with_history(self, tmp_path):
@@ -155,15 +157,17 @@ class TestConfidenceScorerNamingMatch:
 
     def test_no_analysis(self):
         scorer = ConfidenceScorer()
-        result = scorer._calculate_naming_match(Path("/a.txt"), Path("/dest"), None)
+        result = scorer._calculate_naming_match(Path("/") / "a.txt", Path("/") / "dest", None)
         assert result == 50.0
 
     def test_no_target_patterns(self):
         scorer = ConfidenceScorer()
         analysis = FakePatternAnalysis(
-            location_patterns=[FakeLocationPattern(directory=Path("/other"))]
+            location_patterns=[FakeLocationPattern(directory=Path("/") / "other")]
         )
-        result = scorer._calculate_naming_match(Path("/a.txt"), Path("/dest/a.txt"), analysis)
+        result = scorer._calculate_naming_match(
+            Path("/") / "a.txt", Path("/") / "dest" / "a.txt", analysis
+        )
         assert result == 40.0
 
     def test_with_naming_patterns(self, tmp_path):
@@ -183,15 +187,17 @@ class TestConfidenceScorerFileTypeMatch:
 
     def test_no_analysis(self):
         scorer = ConfidenceScorer()
-        result = scorer._calculate_file_type_match(Path("/a.txt"), Path("/dest"), None)
+        result = scorer._calculate_file_type_match(Path("/") / "a.txt", Path("/") / "dest", None)
         assert result == 50.0
 
     def test_no_target_patterns(self):
         scorer = ConfidenceScorer()
         analysis = FakePatternAnalysis(
-            location_patterns=[FakeLocationPattern(directory=Path("/other"))]
+            location_patterns=[FakeLocationPattern(directory=Path("/") / "other")]
         )
-        result = scorer._calculate_file_type_match(Path("/a.txt"), Path("/dest/a.txt"), analysis)
+        result = scorer._calculate_file_type_match(
+            Path("/") / "a.txt", Path("/") / "dest" / "a.txt", analysis
+        )
         assert result == 40.0
 
     def test_matching_type(self, tmp_path):
@@ -335,7 +341,7 @@ class TestSuggestionEngineExplain:
         suggestion = Suggestion(
             suggestion_id="test",
             suggestion_type=SuggestionType.MOVE,
-            file_path=Path("/a.txt"),
+            file_path=Path("/") / "a.txt",
             confidence=70.0,
             reasoning="test reason",
             metadata={"factors": factors.to_dict()},
@@ -350,7 +356,7 @@ class TestSuggestionEngineExplain:
         suggestion = Suggestion(
             suggestion_id="test",
             suggestion_type=SuggestionType.RENAME,
-            file_path=Path("/a.txt"),
+            file_path=Path("/") / "a.txt",
             confidence=50.0,
             reasoning="rename reason",
             metadata={},
@@ -366,31 +372,31 @@ class TestSuggestionEngineMoveReasoning:
     def test_high_pattern_strength(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(pattern_strength=80.0)
-        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
+        result = engine._generate_move_reasoning(Path("/") / "a.txt", Path("/") / "dest", factors)
         assert "pattern" in result
 
     def test_high_file_type_match(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(file_type_match=80.0)
-        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
+        result = engine._generate_move_reasoning(Path("/") / "a.txt", Path("/") / "dest", factors)
         assert "file type" in result
 
     def test_high_content_similarity(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(content_similarity=80.0)
-        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
+        result = engine._generate_move_reasoning(Path("/") / "a.txt", Path("/") / "dest", factors)
         assert "similar files" in result
 
     def test_high_user_history(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(user_history=80.0)
-        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
+        result = engine._generate_move_reasoning(Path("/") / "a.txt", Path("/") / "dest", factors)
         assert "moved similar" in result
 
     def test_no_reasons_fallback(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors()
-        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
+        result = engine._generate_move_reasoning(Path("/") / "a.txt", Path("/") / "dest", factors)
         assert "improve organization" in result
 
 
@@ -458,13 +464,13 @@ class TestSuggestionEngineRank:
         s1 = Suggestion(
             suggestion_id="1",
             suggestion_type=SuggestionType.MOVE,
-            file_path=Path("/a"),
+            file_path=Path("/") / "a",
             confidence=50.0,
         )
         s2 = Suggestion(
             suggestion_id="2",
             suggestion_type=SuggestionType.MOVE,
-            file_path=Path("/b"),
+            file_path=Path("/") / "b",
             confidence=90.0,
         )
         ranked = engine.rank_suggestions([s1, s2])
@@ -475,13 +481,13 @@ class TestSuggestionEngineRank:
         s1 = Suggestion(
             suggestion_id="1",
             suggestion_type=SuggestionType.RENAME,
-            file_path=Path("/a"),
+            file_path=Path("/") / "a",
             confidence=70.0,
         )
         s2 = Suggestion(
             suggestion_id="2",
             suggestion_type=SuggestionType.RESTRUCTURE,
-            file_path=Path("/b"),
+            file_path=Path("/") / "b",
             confidence=70.0,
         )
         ranked = engine.rank_suggestions([s1, s2])
@@ -725,7 +731,7 @@ class TestSuggestionFeedback:
             suggestion_id="test1",
             suggestion_type=SuggestionType.MOVE,
             file_path=Path("test.jpg"),
-            target_path=Path("images/test.jpg"),
+            target_path=Path("images") / "test.jpg",
             confidence=75.0,
             reasoning="Test",
         )

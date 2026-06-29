@@ -356,7 +356,7 @@ class TestFolderCreationResult:
     def test_success_result(self):
         """Test successful creation result."""
         result = FolderCreationResult(
-            created_folders=[Path("/test/Projects")],
+            created_folders=[Path("/") / "test" / "Projects"],
             skipped_folders=[],
             errors=[],
             success=True,
@@ -370,8 +370,8 @@ class TestFolderCreationResult:
     def test_partial_success_result(self):
         """Test result with both created and skipped folders."""
         result = FolderCreationResult(
-            created_folders=[Path("/test/Projects")],
-            skipped_folders=[Path("/test/Areas")],
+            created_folders=[Path("/") / "test" / "Projects"],
+            skipped_folders=[Path("/") / "test" / "Areas"],
             errors=[],
             success=True,
         )
@@ -385,7 +385,7 @@ class TestFolderCreationResult:
         result = FolderCreationResult(
             created_folders=[],
             skipped_folders=[],
-            errors=[(Path("/test/Projects"), "Permission denied")],
+            errors=[(Path("/") / "test" / "Projects", "Permission denied")],
             success=False,
         )
 

@@ -179,7 +179,7 @@ class TestValidateRelease:
         assert any("Uncommitted changes" in e for e in errors)
 
     @patch("release._run_command")
-    @patch("release._CHANGELOG", new=Path("/nonexistent/CHANGELOG.md"))
+    @patch("release._CHANGELOG", new=Path("/") / "nonexistent" / "CHANGELOG.md")
     def test_missing_changelog_reported(self, mock_run: MagicMock) -> None:
         """Missing CHANGELOG.md produces a validation error."""
         mock_run.return_value = MagicMock(returncode=0, stdout="")

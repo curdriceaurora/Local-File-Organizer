@@ -155,7 +155,7 @@ class TestHistoryCleanup:
         history.start_transaction()
 
         # Add operations without transaction
-        history.log_operation(OperationType.MOVE, Path("/test/path"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path")
 
         # Cleanup orphaned transactions
         deleted = cleanup._cleanup_orphaned_transactions()
@@ -207,18 +207,20 @@ class TestHistoryCleanup:
     def test_get_statistics(self, history, cleanup):
         """Test getting history statistics."""
         # Add various operations
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
-        history.log_operation(OperationType.RENAME, Path("/test/path2"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
+        history.log_operation(OperationType.RENAME, Path("/") / "test" / "path2")
         history.log_operation(
             OperationType.DELETE,
-            Path("/test/path3"),
+            Path("/") / "test" / "path3",
             status=OperationStatus.FAILED,
             error_message="Error",
         )
 
         # Start a transaction
         txn_id = history.start_transaction()
-        history.log_operation(OperationType.COPY, Path("/test/path4"), transaction_id=txn_id)
+        history.log_operation(
+            OperationType.COPY, Path("/") / "test" / "path4", transaction_id=txn_id
+        )
         history.commit_transaction(txn_id)
 
         stats = cleanup.get_statistics()

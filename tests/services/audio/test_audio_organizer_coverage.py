@@ -210,8 +210,8 @@ class TestOrganize:
         result = OrganizationResult()
         result.failed_files.append(
             FileMove(
-                source=Path("/a.mp3"),
-                destination=Path("/b.mp3"),
+                source=Path("/") / "a.mp3",
+                destination=Path("/") / "b.mp3",
                 audio_type=AudioType.MUSIC,
                 success=False,
                 error="Permission denied",

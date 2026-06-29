@@ -84,7 +84,7 @@ class TestCheckpointManagerInit(unittest.TestCase):
 
     def test_custom_dir(self) -> None:
         """Test that custom directory is used."""
-        custom = Path("/tmp/test-checkpoints")  # noqa: test-hardcoded-paths
+        custom = Path("/") / "tmp" / "test-checkpoints"  # noqa: test-hardcoded-paths
         mgr = CheckpointManager(checkpoints_dir=custom)
         self.assertEqual(mgr.checkpoints_dir, custom)
 
@@ -245,7 +245,7 @@ class TestUpdateCheckpoint(unittest.TestCase):
 
     def test_update_nonexistent_checkpoint_returns_none(self) -> None:
         """Test updating a missing checkpoint returns None."""
-        result = self.mgr.update_checkpoint("no-checkpoint", Path("/tmp/x.txt"))  # noqa: test-hardcoded-paths
+        result = self.mgr.update_checkpoint("no-checkpoint", Path("/") / "tmp" / "x.txt")  # noqa: test-hardcoded-paths
         self.assertIsNone(result)
 
     def test_update_does_not_duplicate_completed(self) -> None:

@@ -123,7 +123,7 @@ class TestCreateBackup:
 
     def test_file_not_found(self, manager):
         with pytest.raises(FileNotFoundError, match="Source file not found"):
-            manager.create_backup(Path("/nonexistent/file.txt"))
+            manager.create_backup(Path("/") / "nonexistent" / "file.txt")
 
     def test_not_a_file(self, manager, tmp_path):
         with pytest.raises(ValueError, match="not a file"):
@@ -168,7 +168,7 @@ class TestRestoreBackup:
 
     def test_backup_not_found(self, manager):
         with pytest.raises(FileNotFoundError, match="Backup file not found"):
-            manager.restore_backup(Path("/nonexistent/backup.txt"))
+            manager.restore_backup(Path("/") / "nonexistent" / "backup.txt")
 
     def test_backup_not_in_manifest(self, manager, tmp_path):
         fake_backup = tmp_path / "fake_backup.txt"
@@ -239,7 +239,7 @@ class TestGetBackupInfo:
         assert "original_path" in info
 
     def test_nonexistent_backup(self, manager):
-        info = manager.get_backup_info(Path("/nonexistent/backup.txt"))
+        info = manager.get_backup_info(Path("/") / "nonexistent" / "backup.txt")
         assert info is None
 
 

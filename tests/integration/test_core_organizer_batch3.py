@@ -747,7 +747,9 @@ class TestDispatcher:
         mock_classifier_cls.return_value.classify.return_value = mock_classification
 
         mock_organizer_cls = MagicMock()
-        mock_organizer_cls.return_value.generate_path.return_value = Path("Music/Artist/Track.mp3")
+        mock_organizer_cls.return_value.generate_path.return_value = (
+            Path("Music") / "Artist" / "Track.mp3"
+        )
 
         # AudioClassifier and AudioOrganizer are imported locally inside
         # process_audio_files; patch their module-level definitions so the

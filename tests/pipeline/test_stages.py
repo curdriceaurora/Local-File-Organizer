@@ -51,38 +51,38 @@ class TestStageContext:
 
     def test_rejects_path_traversal_in_category(self) -> None:
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="../etc")
+            StageContext(file_path=Path("input") / "file.txt", category="../etc")
 
     def test_rejects_path_traversal_in_filename(self) -> None:
         with pytest.raises(ValueError, match="Invalid filename"):
-            StageContext(file_path=Path("input/file.txt"), filename="../../etc/passwd")
+            StageContext(file_path=Path("input") / "file.txt", filename="../../etc/passwd")
 
     def test_rejects_windows_drive_in_category(self) -> None:
         # Regression for #760: "C:" has no slash but still escapes output_dir / category
         # on Windows via PureWindowsPath.drive being non-empty.
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="C:")
+            StageContext(file_path=Path("input") / "file.txt", category="C:")
 
     def test_rejects_windows_drive_with_path_in_category(self) -> None:
         # Drive-qualified path without a separator also escapes containment.
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="C:docs")
+            StageContext(file_path=Path("input") / "file.txt", category="C:docs")
 
     def test_rejects_windows_drive_in_filename(self) -> None:
         with pytest.raises(ValueError, match="Invalid filename"):
-            StageContext(file_path=Path("input/file.txt"), filename="C:")
+            StageContext(file_path=Path("input") / "file.txt", filename="C:")
 
     def test_rejects_windows_drive_in_filename_via_setattr(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"))
+        ctx = StageContext(file_path=Path("input") / "file.txt")
         with pytest.raises(ValueError, match="Invalid filename"):
             ctx.filename = "C:evil"
 
     def test_accepts_normal_category(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"), category="Documents")
+        ctx = StageContext(file_path=Path("input") / "file.txt", category="Documents")
         assert ctx.category == "Documents"
 
     def test_accepts_normal_filename(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"), filename="report_2026")
+        ctx = StageContext(file_path=Path("input") / "file.txt", filename="report_2026")
         assert ctx.filename == "report_2026"
 
 
@@ -116,7 +116,7 @@ class TestPreprocessorStage:
         assert result.filename == "hello"
 
     def test_file_not_found(self) -> None:
-        ctx = StageContext(file_path=Path("nonexistent/file.txt"))
+        ctx = StageContext(file_path=Path("nonexistent") / "file.txt")
         result = PreprocessorStage().process(ctx)
         assert result.failed
         assert result.error is not None
@@ -234,7 +234,7 @@ class TestPostprocessorStage:
     def test_builds_destination(self, tmp_path: Path) -> None:
         stage = PostprocessorStage(output_directory=tmp_path / "out")
         ctx = StageContext(
-            file_path=Path("input/report.pdf"),
+            file_path=Path("input") / "report.pdf",
             category="Documents",
             filename="quarterly_report",
         )
@@ -244,7 +244,7 @@ class TestPostprocessorStage:
 
     def test_defaults_to_uncategorized(self, tmp_path: Path) -> None:
         stage = PostprocessorStage(output_directory=tmp_path / "out")
-        ctx = StageContext(file_path=Path("input/file.txt"))
+        ctx = StageContext(file_path=Path("input") / "file.txt")
         result = stage.process(ctx)
 
         assert "uncategorized" in str(result.destination)
@@ -256,7 +256,7 @@ class TestPostprocessorStage:
 
         stage = PostprocessorStage(output_directory=tmp_path / "out")
         ctx = StageContext(
-            file_path=Path("input/file.txt"),
+            file_path=Path("input") / "file.txt",
             category="Docs",
             filename="file",
         )
@@ -277,7 +277,7 @@ class TestPostprocessorStage:
         out = tmp_path / "out"
         stage = PostprocessorStage(output_directory=out)
         ctx = StageContext(
-            file_path=Path("input/report.pdf"),
+            file_path=Path("input") / "report.pdf",
             category="Documents",
             filename="q3",
         )
@@ -286,7 +286,7 @@ class TestPostprocessorStage:
         assert result.output_root == out
         assert result.destination is not None
         # destination is reachable as a relative path under output_root
-        assert result.destination.relative_to(result.output_root) == Path("Documents/q3.pdf")
+        assert result.destination.relative_to(result.output_root) == Path("Documents") / "q3.pdf"
 
 
 # ---------------------------------------------------------------------------
@@ -417,7 +417,7 @@ class TestWriterStage:
     def test_skips_when_already_failed(self) -> None:
         ctx = StageContext(
             file_path=Path("x.txt"),
-            destination=Path("out/x.txt"),
+            destination=Path("out") / "x.txt",
             error="prior",
             dry_run=False,
         )
