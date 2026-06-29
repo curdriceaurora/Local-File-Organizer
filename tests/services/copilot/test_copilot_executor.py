@@ -185,7 +185,7 @@ class TestHandleMove:
     """Test the move handler."""
 
     def test_missing_source_param(self, executor):
-        result = executor.execute(_intent(IntentType.MOVE, destination="/tmp/x"))
+        result = executor.execute(_intent(IntentType.MOVE, destination="/tmp/x"))  # noqa: test-hardcoded-paths
         assert not result.success
         assert "specify" in result.message.lower()
 

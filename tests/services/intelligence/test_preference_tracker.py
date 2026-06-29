@@ -125,7 +125,7 @@ def test_correction_get_pattern_key_no_extension():
     """Test pattern key generation for a file without an extension."""
     correction = Correction(
         correction_type=CorrectionType.FILE_RENAME,
-        source=Path("/tmp/Makefile"),
+        source=Path("/tmp/Makefile"),  # noqa: test-hardcoded-paths
         destination=Path("/build/Makefile"),
         timestamp=datetime.now(UTC),
     )

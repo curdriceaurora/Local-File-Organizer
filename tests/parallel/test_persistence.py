@@ -39,7 +39,7 @@ class TestJobPersistenceInit(unittest.TestCase):
 
     def test_custom_jobs_dir(self, tmp_path: Path | None = None) -> None:
         """Test that custom directory is used."""
-        custom = Path("/tmp/test-jobs")
+        custom = Path("/tmp/test-jobs")  # noqa: test-hardcoded-paths
         persistence = JobPersistence(jobs_dir=custom)
         self.assertEqual(persistence.jobs_dir, custom)
 

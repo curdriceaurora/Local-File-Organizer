@@ -41,7 +41,7 @@ class TestResolveDatabaseUrl:
         assert result == "sqlite+pysqlite:///data/app.db"
 
     def test_absolute_path(self):
-        result = resolve_database_url("/tmp/app.db")
+        result = resolve_database_url("/tmp/app.db")  # noqa: test-hardcoded-paths
         assert result == "sqlite+pysqlite:////tmp/app.db"
 
     def test_backslash_normalized(self):

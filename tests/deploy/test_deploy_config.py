@@ -100,9 +100,9 @@ class TestDeploymentConfigValidation:
 
     def test_string_data_directory_converted_to_path(self) -> None:
         """Verify string data_directory is converted to Path."""
-        config = DeploymentConfig(data_directory="/tmp/test")  # type: ignore[arg-type]
+        config = DeploymentConfig(data_directory="/tmp/test")  # type: ignore[arg-type]  # noqa: test-hardcoded-paths
         assert isinstance(config.data_directory, Path)
-        assert config.data_directory == Path("/tmp/test")
+        assert config.data_directory == Path("/tmp/test")  # noqa: test-hardcoded-paths
 
     def test_all_valid_environments_accepted(self) -> None:
         """Verify all defined valid environments are accepted."""

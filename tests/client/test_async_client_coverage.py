@@ -371,31 +371,31 @@ class TestAsyncClientDedupe:
     async def test_dedupe_scan(self):
         """Test dedupe scan."""
         client = AsyncFileOrganizerClient()
-        resp = _ok({"path": "/tmp", "duplicates": [], "stats": {"total": 0}})
+        resp = _ok({"path": "/tmp", "duplicates": [], "stats": {"total": 0}})  # noqa: test-hardcoded-paths
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.dedupe_scan("/tmp", max_file_size=1000)
-        assert result.path == "/tmp"
+        result = await client.dedupe_scan("/tmp", max_file_size=1000)  # noqa: test-hardcoded-paths
+        assert result.path == "/tmp"  # noqa: test-hardcoded-paths
 
     async def test_dedupe_preview(self):
         """Test dedupe preview."""
         client = AsyncFileOrganizerClient()
-        resp = _ok({"path": "/tmp", "preview": [], "stats": {"total": 0}})
+        resp = _ok({"path": "/tmp", "preview": [], "stats": {"total": 0}})  # noqa: test-hardcoded-paths
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.dedupe_preview("/tmp")
-        assert result.path == "/tmp"
+        result = await client.dedupe_preview("/tmp")  # noqa: test-hardcoded-paths
+        assert result.path == "/tmp"  # noqa: test-hardcoded-paths
 
     async def test_dedupe_execute(self):
         """Test dedupe execute."""
         client = AsyncFileOrganizerClient()
-        resp = _ok({"path": "/tmp", "removed": [], "dry_run": True, "stats": {"total": 0}})
+        resp = _ok({"path": "/tmp", "removed": [], "dry_run": True, "stats": {"total": 0}})  # noqa: test-hardcoded-paths
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.dedupe_execute("/tmp")
+        result = await client.dedupe_execute("/tmp")  # noqa: test-hardcoded-paths
         assert result.dry_run is True
 
 

@@ -23,7 +23,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
     settings = ApiSettings(
         environment="test",
         auth_enabled=False,
-        allowed_paths=["/tmp"],
+        allowed_paths=["/tmp"],  # noqa: test-hardcoded-paths
         auth_jwt_secret="test-secret",
         rate_limit_enabled=False,
     )

@@ -22,7 +22,7 @@ def dev_config() -> DeploymentConfig:
     return DeploymentConfig(
         environment="dev",
         redis_url="redis://localhost:6379/0",
-        data_directory=Path("/tmp/fo-test-data"),
+        data_directory=Path("/tmp/fo-test-data"),  # noqa: test-hardcoded-paths
     )
 
 

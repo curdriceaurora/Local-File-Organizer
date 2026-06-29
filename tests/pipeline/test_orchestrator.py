@@ -155,7 +155,7 @@ class TestProcessingResult:
             file_path=Path("test.txt"),
             success=True,
             category="documents",
-            destination=Path("/tmp/organized/documents/test.txt"),
+            destination=Path("/tmp/organized/documents/test.txt"),  # noqa: test-hardcoded-paths
             duration_ms=150.5,
         )
         assert result.success is True

@@ -32,11 +32,11 @@ class TestFileEvent:
         now = datetime.now(UTC)
         event = FileEvent(
             event_type=EventType.CREATED,
-            path=Path("/tmp/test.txt"),
+            path=Path("/tmp/test.txt"),  # noqa: test-hardcoded-paths
             timestamp=now,
         )
         assert event.event_type == EventType.CREATED
-        assert event.path == Path("/tmp/test.txt")
+        assert event.path == Path("/tmp/test.txt")  # noqa: test-hardcoded-paths
         assert event.timestamp == now
         assert event.is_directory is False
         assert event.dest_path is None
@@ -45,7 +45,7 @@ class TestFileEvent:
         """Test FileEvent for directory events."""
         event = FileEvent(
             event_type=EventType.CREATED,
-            path=Path("/tmp/newdir"),
+            path=Path("/tmp/newdir"),  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
             is_directory=True,
         )
@@ -55,17 +55,17 @@ class TestFileEvent:
         """Test FileEvent for move events with destination."""
         event = FileEvent(
             event_type=EventType.MOVED,
-            path=Path("/tmp/old.txt"),
+            path=Path("/tmp/old.txt"),  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
-            dest_path=Path("/tmp/new.txt"),
+            dest_path=Path("/tmp/new.txt"),  # noqa: test-hardcoded-paths
         )
-        assert event.dest_path == Path("/tmp/new.txt")
+        assert event.dest_path == Path("/tmp/new.txt")  # noqa: test-hardcoded-paths
 
     def test_file_event_is_frozen(self) -> None:
         """Test that FileEvent instances are immutable."""
         event = FileEvent(
             event_type=EventType.CREATED,
-            path=Path("/tmp/test.txt"),
+            path=Path("/tmp/test.txt"),  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
         with pytest.raises(AttributeError):
@@ -94,7 +94,7 @@ class TestEventQueue:
         """Helper to create a FileEvent."""
         return FileEvent(
             event_type=event_type,
-            path=Path(f"/tmp/{name}"),
+            path=Path(f"/tmp/{name}"),  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
 
@@ -252,7 +252,7 @@ class TestEventQueueEdgeCases:
         """Helper to create a FileEvent."""
         return FileEvent(
             event_type=event_type,
-            path=Path(f"/tmp/{name}"),
+            path=Path(f"/tmp/{name}"),  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
 
@@ -370,15 +370,15 @@ class TestEventQueueEdgeCases:
     def test_file_event_equality(self) -> None:
         """Test that identical FileEvent instances are equal (frozen dataclass)."""
         ts = datetime.now(UTC)
-        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
-        e2 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
+        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)  # noqa: test-hardcoded-paths
+        e2 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)  # noqa: test-hardcoded-paths
         assert e1 == e2
 
     def test_file_event_inequality(self) -> None:
         """Test that different FileEvent instances are not equal."""
         ts = datetime.now(UTC)
-        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
-        e2 = FileEvent(event_type=EventType.DELETED, path=Path("/tmp/a.txt"), timestamp=ts)
+        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)  # noqa: test-hardcoded-paths
+        e2 = FileEvent(event_type=EventType.DELETED, path=Path("/tmp/a.txt"), timestamp=ts)  # noqa: test-hardcoded-paths
         assert e1 != e2
 
     def test_event_type_is_str_enum(self) -> None:

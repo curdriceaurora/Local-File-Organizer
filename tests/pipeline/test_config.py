@@ -68,9 +68,9 @@ class TestPipelineConfigValidation:
 
     def test_output_directory_normalized_to_path(self) -> None:
         """Output directory is converted to Path."""
-        config = PipelineConfig(output_directory=Path("/tmp/test"))
+        config = PipelineConfig(output_directory=Path("/tmp/test"))  # noqa: test-hardcoded-paths
         assert isinstance(config.output_directory, Path)
-        assert config.output_directory == Path("/tmp/test")
+        assert config.output_directory == Path("/tmp/test")  # noqa: test-hardcoded-paths
 
     def test_extensions_normalized_with_dots(self) -> None:
         """Extensions without leading dots get them added."""

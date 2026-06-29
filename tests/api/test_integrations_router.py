@@ -167,7 +167,7 @@ class TestUpdateIntegrationSettings:
         mock_manager.get.return_value = MagicMock()
 
         # Path outside allowed_paths should be rejected
-        payload = {"settings": {"vault_path": "/etc/passwd"}}
+        payload = {"settings": {"vault_path": "/etc/passwd"}}  # noqa: test-hardcoded-paths
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
         resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
@@ -302,7 +302,7 @@ class TestSendFileToIntegration:
         mock_manager = MagicMock()
         mock_manager.get.return_value = MagicMock()
 
-        payload = {"path": "/etc/passwd", "metadata": {}}
+        payload = {"path": "/etc/passwd", "metadata": {}}  # noqa: test-hardcoded-paths
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
         resp = client.post("/api/v1/integrations/obsidian/send", json=payload)
@@ -468,7 +468,7 @@ class TestSubdirValidation:
     @pytest.mark.parametrize(
         "subdir_val",
         [
-            "/tmp/outside",
+            "/tmp/outside",  # noqa: test-hardcoded-paths
             "../outside",
             "a//b",
             "a\\\\b",

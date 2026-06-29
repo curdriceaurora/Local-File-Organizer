@@ -333,7 +333,7 @@ class TestAuthRequiredRoutesUnauthenticated:
     def test_workspaces_create_returns_200(self, profile_client: TestClient) -> None:
         r = profile_client.post(
             "/ui/profile/workspaces/create",
-            data={"name": "My WS", "root_path": "/tmp", "description": "desc"},
+            data={"name": "My WS", "root_path": "/tmp", "description": "desc"},  # noqa: test-hardcoded-paths
             headers=csrf_headers(profile_client),
         )
         assert r.status_code == 200

@@ -275,7 +275,7 @@ class TestFilesErrorHandling:
         # from the real /etc/passwd should leak into the rendered page, and the
         # rejected path string itself shouldn't be echoed back as the active path.
         assert "root:x:0:0" not in response.text
-        assert "/etc/passwd" not in response.text
+        assert "/etc/passwd" not in response.text  # noqa: test-hardcoded-paths
 
     def test_files_unicode_filename_handling(self, tmp_path: Path, web_client_builder) -> None:
         """Should correctly handle files with unicode characters in names."""

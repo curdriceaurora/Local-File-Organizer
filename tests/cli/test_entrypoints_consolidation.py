@@ -116,7 +116,7 @@ class TestDocsSubcommand:
         self, mock_shutil_which: MagicMock, tmp_path: Path
     ) -> None:
         """Verify fo docs fails gracefully if mkdocs.yml is not found."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
 
         # Run from a temporary directory without mkdocs.yml
         with patch("pathlib.Path.exists", return_value=False):
@@ -128,7 +128,7 @@ class TestDocsSubcommand:
         self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         """Verify fo docs --build compiles documentation to HTML."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
 
         # Mock mkdocs.yml presence check
         with patch("pathlib.Path.exists", return_value=True):
@@ -139,13 +139,13 @@ class TestDocsSubcommand:
 
             mock_subprocess_run.assert_called_once()
             args = mock_subprocess_run.call_args[0][0]
-            assert args == ["/usr/local/bin/mkdocs", "build"]
+            assert args == ["/usr/local/bin/mkdocs", "build"]  # noqa: test-hardcoded-paths
 
     def test_docs_command_build_error(
         self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         """Verify fo docs --build handles compilation failure cleanly."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
         mock_subprocess_run.return_value.returncode = 1
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -157,7 +157,7 @@ class TestDocsSubcommand:
         self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         """Verify fo docs serves documentation with default options."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
 
         with patch("pathlib.Path.exists", return_value=True):
             result = runner.invoke(app, ["docs", "--host", "0.0.0.0", "--port", "9000"])
@@ -166,13 +166,13 @@ class TestDocsSubcommand:
 
             mock_subprocess_run.assert_called_once()
             args = mock_subprocess_run.call_args[0][0]
-            assert args == ["/usr/local/bin/mkdocs", "serve", "--dev-addr", "0.0.0.0:9000"]
+            assert args == ["/usr/local/bin/mkdocs", "serve", "--dev-addr", "0.0.0.0:9000"]  # noqa: test-hardcoded-paths
 
     def test_docs_command_serve_error(
         self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         """Verify fo docs reports an error when the serve process exits non-zero."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
         mock_subprocess_run.return_value.returncode = 1
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -184,7 +184,7 @@ class TestDocsSubcommand:
         self, mock_shutil_which: MagicMock, mock_subprocess_run: MagicMock
     ) -> None:
         """Verify fo docs exits cleanly when the serve process is interrupted."""
-        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"
+        mock_shutil_which.return_value = "/usr/local/bin/mkdocs"  # noqa: test-hardcoded-paths
         mock_subprocess_run.side_effect = KeyboardInterrupt
 
         with patch("pathlib.Path.exists", return_value=True):

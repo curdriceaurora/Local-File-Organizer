@@ -380,25 +380,25 @@ class TestPathId:
 
     def test_returns_string(self):
         """Should return a 10-character hex string."""
-        result = path_id(Path("/tmp/test"))
+        result = path_id(Path("/tmp/test"))  # noqa: test-hardcoded-paths
         assert isinstance(result, str) and len(result) == 10
 
     def test_returns_short_hash(self):
         """Should return a 10-character hash."""
-        result = path_id(Path("/tmp/test"))
+        result = path_id(Path("/tmp/test"))  # noqa: test-hardcoded-paths
         assert len(result) == 10
 
     def test_same_path_same_id(self):
         """Same path should produce same ID."""
-        path = Path("/tmp/test")
+        path = Path("/tmp/test")  # noqa: test-hardcoded-paths
         id1 = path_id(path)
         id2 = path_id(path)
         assert id1 == id2
 
     def test_different_paths_different_ids(self):
         """Different paths should produce different IDs."""
-        id1 = path_id(Path("/tmp/test1"))
-        id2 = path_id(Path("/tmp/test2"))
+        id1 = path_id(Path("/tmp/test1"))  # noqa: test-hardcoded-paths
+        id2 = path_id(Path("/tmp/test2"))  # noqa: test-hardcoded-paths
         assert id1 != id2
 
 

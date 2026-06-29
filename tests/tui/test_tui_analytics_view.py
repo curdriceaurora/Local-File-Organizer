@@ -128,8 +128,8 @@ class TestAnalyticsView:
         assert str(view._directory) == "."
 
     def test_custom_directory(self) -> None:
-        view = AnalyticsView(directory="/tmp/data", id="view")
-        assert str(view._directory) == "/tmp/data"
+        view = AnalyticsView(directory="/tmp/data", id="view")  # noqa: test-hardcoded-paths
+        assert str(view._directory) == "/tmp/data"  # noqa: test-hardcoded-paths
 
 
 @pytest.mark.asyncio

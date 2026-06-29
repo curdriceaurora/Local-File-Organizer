@@ -135,7 +135,7 @@ def test_repo_registry_loads_registered_rails() -> None:
         "atomic-write": "enforce",
         "cli-path-validation": "enforce",
         "defusedxml-fallback": "enforce",
-        "test-hardcoded-paths": "advisory",
+        "test-hardcoded-paths": "enforce",
         "test-separator-paths": "advisory",
         "pytest-raises-hygiene": "advisory",
         "safedir-valueerror": "enforce",

@@ -219,7 +219,7 @@ class TestOperation:
         op = Operation(
             operation_type=OperationType.DELETE,
             timestamp=now,
-            source_path=Path("/tmp/gone.txt"),
+            source_path=Path("/tmp/gone.txt"),  # noqa: test-hardcoded-paths
             status=OperationStatus.FAILED,
             error_message="Permission denied",
         )

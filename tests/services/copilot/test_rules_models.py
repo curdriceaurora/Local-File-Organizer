@@ -107,7 +107,7 @@ class TestRuleCondition:
         assert cond.negate is False
 
     def test_from_dict_with_negate(self) -> None:
-        cond = RuleCondition.from_dict({"type": "path_matches", "value": "/tmp/*", "negate": True})
+        cond = RuleCondition.from_dict({"type": "path_matches", "value": "/tmp/*", "negate": True})  # noqa: test-hardcoded-paths
         assert cond.negate is True
         assert cond.condition_type == ConditionType.PATH_MATCHES
 

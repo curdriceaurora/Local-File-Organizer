@@ -151,8 +151,8 @@ class TestSettingsSectionSaves:
         response = client.post(
             "/ui/settings/general",
             data={
-                "default_input_dir": "/tmp/input",
-                "default_output_dir": "/tmp/output",
+                "default_input_dir": "/tmp/input",  # noqa: test-hardcoded-paths
+                "default_output_dir": "/tmp/output",  # noqa: test-hardcoded-paths
             },
             headers=csrf_headers(client),
         )
@@ -161,8 +161,8 @@ class TestSettingsSectionSaves:
 
         # Verify persisted
         data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_input_dir"] == "/tmp/input"
-        assert data["default_output_dir"] == "/tmp/output"
+        assert data["default_input_dir"] == "/tmp/input"  # noqa: test-hardcoded-paths
+        assert data["default_output_dir"] == "/tmp/output"  # noqa: test-hardcoded-paths
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_model_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:

@@ -462,7 +462,7 @@ class TestRulesPreview:
         mock_mgr.load_rule_set.return_value = rs
 
         with patch(_RULE_MGR_PATH, return_value=mock_mgr):
-            result = runner.invoke(rules_app, ["preview", "/tmp"])
+            result = runner.invoke(rules_app, ["preview", "/tmp"])  # noqa: test-hardcoded-paths
         assert result.exit_code == 0
         assert "No enabled rules" in result.output
 

@@ -37,12 +37,12 @@ repos:
       # Use tmp_path fixture in tests; ConfigManager in source.
       # Note: expanduser() is intentionally allowed — it is the correct
       # way to resolve home-directory paths throughout the codebase.
-      # Only checks added lines that are not pure comments.
+      # Only checks added lines that are not pure comments or have noqa exemption.
       # ----------------------------------------------------------------
       - id: no-absolute-paths
         name: no absolute paths in Python files (G1)
         entry: >
-          bash -c "git diff --cached -- '*.py' | grep -E '^\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\+\s*#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
+          bash -c "git diff --cached -- '*.py' | grep -E '^\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\+\s*#' | grep -v 'noqa: test-hardcoded-paths' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 

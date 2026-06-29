@@ -444,7 +444,7 @@ class TestIsinstanceTupleForm:
 
     def test_isinstance_path_types(self) -> None:
         """isinstance with Path types should work."""
-        p = Path("/tmp/test")
+        p = Path("/tmp/test")  # noqa: test-hardcoded-paths
         assert isinstance(p, (str, Path))
         assert not isinstance(42, (str, Path))
 

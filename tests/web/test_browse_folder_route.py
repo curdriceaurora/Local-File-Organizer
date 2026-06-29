@@ -105,7 +105,7 @@ class TestBrowseFolderMacOS:
         return result
 
     def test_returns_path_on_success(self, client: TestClient) -> None:
-        mock_result = self._make_run_result("/Users/rahul/Documents/\n")
+        mock_result = self._make_run_result("/Users/testuser/Documents/\n")  # noqa: test-hardcoded-paths
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(
@@ -116,12 +116,12 @@ class TestBrowseFolderMacOS:
             resp = client.get("/api/setup/browse-folder")
         data = resp.json()
         assert data["available"] is True
-        assert data["path"] == "/Users/rahul/Documents/"
+        assert data["path"] == "/Users/testuser/Documents/"  # noqa: test-hardcoded-paths
         assert data.get("cancelled") is False
 
     def test_path_is_stripped(self, client: TestClient) -> None:
         """Trailing newline from osascript must be stripped."""
-        mock_result = self._make_run_result("/Users/rahul/Desktop/\n")
+        mock_result = self._make_run_result("/Users/testuser/Desktop/\n")  # noqa: test-hardcoded-paths
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
             patch(
@@ -130,7 +130,7 @@ class TestBrowseFolderMacOS:
             ),
         ):
             resp = client.get("/api/setup/browse-folder")
-        assert resp.json()["path"] == "/Users/rahul/Desktop/"
+        assert resp.json()["path"] == "/Users/testuser/Desktop/"  # noqa: test-hardcoded-paths
 
     def test_calls_absolute_osascript_path(self, client: TestClient) -> None:
         """Must call /usr/bin/osascript (absolute path) with POSIX path of (choose folder)."""
@@ -145,7 +145,7 @@ class TestBrowseFolderMacOS:
             client.get("/api/setup/browse-folder")
         args, kwargs = mock_run.call_args
         cmd = args[0]
-        assert cmd[0] == "/usr/bin/osascript"
+        assert cmd[0] == "/usr/bin/osascript"  # noqa: test-hardcoded-paths
         assert "POSIX path of (choose folder)" in " ".join(cmd)
         assert kwargs["capture_output"] is True
         assert kwargs["text"] is True

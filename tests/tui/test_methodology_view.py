@@ -258,14 +258,14 @@ class TestMethodologyView:
 
     def test_initialization_with_custom_directory(self) -> None:
         """Test MethodologyView initialization with custom directory."""
-        test_path = Path("/tmp/test")
+        test_path = Path("/tmp/test")  # noqa: test-hardcoded-paths
         view = MethodologyView(scan_dir=test_path)
         assert view._scan_dir == test_path
 
     def test_initialization_with_string_directory(self) -> None:
         """Test MethodologyView initialization with string directory."""
-        view = MethodologyView(scan_dir="/tmp/test")
-        assert view._scan_dir == Path("/tmp/test")
+        view = MethodologyView(scan_dir="/tmp/test")  # noqa: test-hardcoded-paths
+        assert view._scan_dir == Path("/tmp/test")  # noqa: test-hardcoded-paths
 
     def test_has_compose_method(self) -> None:
         """Test that compose method is defined."""

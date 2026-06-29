@@ -247,7 +247,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_select_linux_x64(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-linux-x86_64.AppImage",
@@ -262,7 +262,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Darwin")
     @patch("platform.machine", return_value="arm64")
     def test_select_macos_arm(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-macos-universal.tar.gz",
@@ -276,7 +276,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Windows")
     @patch("platform.machine", return_value="AMD64")
     def test_select_windows(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-windows-amd64.exe",
@@ -290,7 +290,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_no_matching_asset(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = self._make_release(["app-macos-arm64.zip"])
         asset = inst.select_asset(release)
         assert asset is None
@@ -298,7 +298,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_skips_checksum_files(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-linux-x86_64.sha256",
@@ -321,7 +321,7 @@ class TestFindChecksum:
 
     @patch.object(UpdateInstaller, "_download_text", return_value="abc123  app.bin")
     def test_dedicated_checksum_file(self, mock_dl):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -339,7 +339,7 @@ class TestFindChecksum:
         return_value="def456  app.bin\nghi789  other.bin",
     )
     def test_sha256sums_file(self, mock_dl):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -352,7 +352,7 @@ class TestFindChecksum:
         assert result == "def456"
 
     def test_no_checksum_file(self):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -385,9 +385,9 @@ class TestResolveTarget:
 
     def test_appimage_target(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
-        inst._appimage_path = Path("/opt/app.AppImage")
+        inst._appimage_path = Path("/opt/app.AppImage")  # noqa: test-hardcoded-paths
         target = inst._resolve_target("my-app")
-        assert target == Path("/opt/app.AppImage")
+        assert target == Path("/opt/app.AppImage")  # noqa: test-hardcoded-paths
 
 
 # ---------------------------------------------------------------------------
@@ -613,7 +613,7 @@ class TestFindChecksumEdgeCases:
     )
     def test_sha256sums_no_match(self, mock_dl):
         """find_checksum returns empty string when SHA256SUMS exists but asset not listed."""
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -632,7 +632,7 @@ class TestFindChecksumEdgeCases:
     )
     def test_sha256sums_short_lines(self, mock_dl):
         """find_checksum handles SHA256SUMS lines with < 2 parts."""
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/tmp"))  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",

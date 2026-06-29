@@ -215,7 +215,7 @@ class TestSyncClientFiles:
         resp = _mock_response(200, {"items": [], "total": 0, "skip": 0, "limit": 100})
         client._client.get = MagicMock(return_value=resp)
 
-        result = client.list_files("/tmp", file_type="pdf")
+        result = client.list_files("/tmp", file_type="pdf")  # noqa: test-hardcoded-paths
         assert hasattr(result, "items")
         client.close()
 

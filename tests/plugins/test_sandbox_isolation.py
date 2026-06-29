@@ -345,7 +345,7 @@ class TestExecutorInterface:
 
         executor = PluginExecutor(plugin_path=str(plugin_src))
         with executor:
-            result = executor.call("on_file", "/tmp/test.txt", {})
+            result = executor.call("on_file", "/tmp/test.txt", {})  # noqa: test-hardcoded-paths
 
         assert isinstance(result, dict), "on_file() must return a dict via IPC"
         assert result.get("tag") == "injected", (
@@ -416,7 +416,7 @@ class TestIPCProtocol:
         """encode_call/decode_call roundtrip preserves all fields faithfully."""
         call = PluginCall(
             method="on_file",
-            args=["/tmp/photo.jpg", {"size": 1024}],
+            args=["/tmp/photo.jpg", {"size": 1024}],  # noqa: test-hardcoded-paths
             kwargs={},
         )
 

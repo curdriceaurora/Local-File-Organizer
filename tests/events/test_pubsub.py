@@ -136,7 +136,7 @@ class TestPubSubPublish:
         self, pubsub: PubSubManager, mock_manager: MagicMock
     ) -> None:
         """publish() returns the Redis message ID."""
-        msg_id = pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        msg_id = pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         assert msg_id == "1234567890-0"
         assert pubsub.publish_count == 1
 
@@ -144,7 +144,7 @@ class TestPubSubPublish:
         self, pubsub: PubSubManager, mock_manager: MagicMock
     ) -> None:
         """publish() writes to the correct Redis stream."""
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         mock_manager.publish.assert_called_once()
         call_args = mock_manager.publish.call_args
         # publish is called with positional args: (stream_name, event_data)
@@ -154,21 +154,21 @@ class TestPubSubPublish:
         """publish() invokes matching handlers synchronously."""
         handler = MagicMock()
         pubsub.subscribe("file.created", handler)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         handler.assert_called_once()
 
     def test_publish_dispatches_to_wildcard_handler(self, pubsub: PubSubManager) -> None:
         """Wildcard subscribers receive matching events."""
         handler = MagicMock()
         pubsub.subscribe("file.*", handler)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         handler.assert_called_once()
 
     def test_publish_does_not_dispatch_to_non_matching(self, pubsub: PubSubManager) -> None:
         """Non-matching handlers are not invoked."""
         handler = MagicMock()
         pubsub.subscribe("scan.*", handler)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         handler.assert_not_called()
 
     def test_publish_with_filter_passes(self, pubsub: PubSubManager) -> None:
@@ -198,7 +198,7 @@ class TestPubSubPublish:
         h1, h2 = MagicMock(), MagicMock()
         pubsub.subscribe("file.created", h1)
         pubsub.subscribe("file.*", h2)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         h1.assert_called_once()
         h2.assert_called_once()
 
@@ -208,7 +208,7 @@ class TestPubSubPublish:
         h2 = MagicMock()
         pubsub.subscribe("file.created", h1)
         pubsub.subscribe("file.created", h2)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         h1.assert_called_once()
         h2.assert_called_once()
 
@@ -217,7 +217,7 @@ class TestPubSubPublish:
     ) -> None:
         """When Redis publish fails, returns None."""
         mock_manager.publish.return_value = None
-        msg_id = pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        msg_id = pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         assert msg_id is None
         assert pubsub.publish_count == 0
 
@@ -239,7 +239,7 @@ class TestPubSubPublish:
         handler = MagicMock()
         pubsub.subscribe("file.created", handler)
         pubsub.unsubscribe("file.created", handler)
-        pubsub.publish("file.created", {"path": "/tmp/f.txt"})
+        pubsub.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         handler.assert_not_called()
 
 
@@ -262,7 +262,7 @@ class TestPubSubMiddleware:
         pipeline = MiddlewarePipeline()
         pipeline.add(CancelMiddleware())
         ps = PubSubManager(stream_manager=mock_manager, pipeline=pipeline)
-        result = ps.publish("file.created", {"path": "/tmp/f.txt"})
+        result = ps.publish("file.created", {"path": "/tmp/f.txt"})  # noqa: test-hardcoded-paths
         assert result is None
         mock_manager.publish.assert_not_called()
 

@@ -279,7 +279,7 @@ class TestImportProfileBranches:
             "included_preferences": ["global"],
             "preferences": {
                 "global": {"key": "value"},
-                "directory_specific": {"/home": {"sort_by": "name"}},
+                "directory_specific": {"/home": {"sort_by": "name"}},  # noqa: test-hardcoded-paths
             },
             "learned_patterns": {"pat1": "data"},
             "confidence_data": {"conf1": 0.9},

@@ -201,7 +201,7 @@ class TestJournalUtf8RoundTrip:
 
         journal = tmp_path / "u.journal"
         unicode_src = "/trash/файл-café-日本語.txt"
-        unicode_dst = "/home/файл-café-日本語.txt"
+        unicode_dst = "/home/файл-café-日本語.txt"  # noqa: test-hardcoded-paths
         line = json.dumps(
             {
                 "schema": 2,
