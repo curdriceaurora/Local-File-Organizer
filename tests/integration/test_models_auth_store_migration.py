@@ -280,6 +280,43 @@ class TestAuthDb:
         factory = get_session_factory(db_path)
         assert callable(factory)
 
+    def test_create_session_creates_default_auth_db_directory(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from file_organizer.api.auth_db import create_session, get_engine, get_session_factory
+        from file_organizer.config.path_manager import get_config_dir
+
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+        get_engine.cache_clear()
+        get_session_factory.cache_clear()
+
+        db_path = str(get_config_dir() / "auth.db")
+        session = create_session(db_path)
+        try:
+            assert Path(db_path).parent.is_dir()
+        finally:
+            session.close()
+            get_engine.cache_clear()
+            get_session_factory.cache_clear()
+
+    def test_create_session_does_not_create_parent_for_custom_auth_db_path(
+        self, tmp_path: Path
+    ) -> None:
+        from sqlalchemy.exc import OperationalError
+
+        from file_organizer.api.auth_db import create_session, get_engine, get_session_factory
+
+        db_path = tmp_path / "custom-root" / "nested" / "auth.db"
+        get_engine.cache_clear()
+        get_session_factory.cache_clear()
+
+        with pytest.raises(OperationalError):
+            create_session(str(db_path))
+
+        assert not db_path.parent.exists()
+        get_engine.cache_clear()
+        get_session_factory.cache_clear()
+
 
 # ---------------------------------------------------------------------------
 # config/path_migration.py — resolve_active_dir branches
