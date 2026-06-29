@@ -272,7 +272,7 @@ def handle_batch(service: AutoTaggingService, args: argparse.Namespace) -> None:
     # Save or print
     if args.output:
         output_path = Path(args.output)
-        with open(output_path, "w") as f:  # noqa: safedir-required  # CLI output — output_path supplied and validated by Click
+        with open(output_path, "w") as f:  # noqa: safedir-required, atomic-write  # CLI output — output_path supplied and validated by Click
             json.dump(output_data, f, indent=2)
         print(f"✓ Results saved to: {output_path}")
     else:

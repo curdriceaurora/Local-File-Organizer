@@ -254,7 +254,8 @@ def test_my_check(tmp_path: Path) -> None:
 ## Atomic-Write Rule (WP-6.1)
 
 Issue `#1351` adds the `atomic-write` CI rail, which flags raw file writes in
-production source. The rail is declared in `scripts/ci/rails.toml`, runs via
+Python modules under `src/file_organizer/`. The rail is declared in
+`scripts/ci/rails.toml`, runs via
 `scripts/ci/guardrails/check_atomic_write.py`, and is enforced by the CI-rails
 runner and pre-commit hook.
 
