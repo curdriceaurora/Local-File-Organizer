@@ -87,7 +87,7 @@ class TestDockerfileStructure:
 
     def test_dockerfile_installs_to_opt_venv(self, dockerfile_content: str) -> None:
         """Verify dependencies are installed into /opt/venv."""
-        assert "/opt/venv" in dockerfile_content, "Dependencies should be installed to /opt/venv"
+        assert "/opt/venv" in dockerfile_content, "Dependencies should be installed to /opt/venv"  # noqa: test-hardcoded-paths
 
     def test_dockerfile_runtime_installs_ffmpeg(self, dockerfile_content: str) -> None:
         """Verify runtime stage installs ffmpeg."""

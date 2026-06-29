@@ -62,7 +62,7 @@ class TestProcessedFile:
     def test_all_fields(self) -> None:
         """Verify all fields are stored correctly."""
         pf = ProcessedFile(
-            file_path=Path("/tmp/b.pdf"),
+            file_path=Path("/tmp/b.pdf"),  # noqa: test-hardcoded-paths
             description="A summary",
             folder_name="science",
             filename="research_paper",
@@ -70,7 +70,7 @@ class TestProcessedFile:
             processing_time=1.23,
             error="some error",
         )
-        assert pf.file_path == Path("/tmp/b.pdf")
+        assert pf.file_path == Path("/tmp/b.pdf")  # noqa: test-hardcoded-paths
         assert pf.description == "A summary"
         assert pf.folder_name == "science"
         assert pf.filename == "research_paper"

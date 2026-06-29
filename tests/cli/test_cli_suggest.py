@@ -33,8 +33,8 @@ def mock_engine_with_suggestions():
     suggestion = MagicMock()
     suggestion.suggestion_id = "s1"
     suggestion.suggestion_type = _MockSuggestionType.MOVE
-    suggestion.file_path = Path("/tmp/doc.txt")
-    suggestion.target_path = Path("/tmp/Documents/doc.txt")
+    suggestion.file_path = Path("/tmp/doc.txt")  # noqa: test-hardcoded-paths
+    suggestion.target_path = Path("/tmp/Documents/doc.txt")  # noqa: test-hardcoded-paths
     suggestion.confidence = 75.0
     suggestion.reasoning = "Matches document pattern"
     suggestion.new_name = None

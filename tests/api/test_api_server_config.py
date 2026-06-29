@@ -209,7 +209,7 @@ class TestLoadSettings:
     def test_env_allowed_paths(self, monkeypatch):
         monkeypatch.setenv("FO_API_ALLOWED_PATHS", "/tmp,/home")
         settings = load_settings()
-        assert settings.allowed_paths == ["/tmp", "/home"]
+        assert settings.allowed_paths == ["/tmp", "/home"]  # noqa: test-hardcoded-paths
 
     def test_env_ws_ping_interval_valid(self, monkeypatch):
         monkeypatch.setenv("FO_API_WS_PING_INTERVAL", "15")
@@ -237,9 +237,9 @@ class TestLoadSettings:
         assert settings.auth_enabled is False
 
     def test_env_auth_db_path(self, monkeypatch):
-        monkeypatch.setenv("FO_API_AUTH_DB_PATH", "/tmp/auth.db")
+        monkeypatch.setenv("FO_API_AUTH_DB_PATH", "/tmp/auth.db")  # noqa: test-hardcoded-paths
         settings = load_settings()
-        assert settings.auth_db_path == "/tmp/auth.db"
+        assert settings.auth_db_path == "/tmp/auth.db"  # noqa: test-hardcoded-paths
 
     def test_env_auth_jwt_secret(self, monkeypatch):
         monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "my-secret-key")
@@ -531,7 +531,7 @@ class TestLoadSettings:
         assert settings.port == 7777
 
     def test_yaml_config_missing_path(self, monkeypatch):
-        monkeypatch.setenv("FO_API_CONFIG_PATH", "/tmp/nonexistent_config_12345.yaml")
+        monkeypatch.setenv("FO_API_CONFIG_PATH", "/tmp/nonexistent_config_12345.yaml")  # noqa: test-hardcoded-paths
         settings = load_settings()
         # Should fall back to defaults
         assert settings.app_name == "File Organizer API"

@@ -245,7 +245,7 @@ class TestResolvePath:
         subdir = tmp_path / "subdir"
         subdir.mkdir()
         with pytest.raises(ApiError) as exc_info:
-            resolve_path("/etc/passwd", allowed_paths=[str(subdir)])
+            resolve_path("/etc/passwd", allowed_paths=[str(subdir)])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
     def test_no_allowed_paths_raises_api_error(self, tmp_path: Path) -> None:

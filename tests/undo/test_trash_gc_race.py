@@ -62,21 +62,21 @@ class TestIsPathInFlight:
 
     def test_exact_src_match_in_flight(self) -> None:
         """A path that is the exact src of an active move is in-flight."""
-        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_STARTED)]
+        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_STARTED)]  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(Path("/trash/a.txt"), entries) is True
 
     def test_exact_dst_match_in_flight(self) -> None:
         """A path that is the exact dst of an active move is in-flight."""
-        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_COPIED)]
-        assert _path_in_flight_from_entries(Path("/home/a.txt"), entries) is True
+        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_COPIED)]  # noqa: test-hardcoded-paths
+        assert _path_in_flight_from_entries(Path("/home/a.txt"), entries) is True  # noqa: test-hardcoded-paths
 
     def test_unrelated_path_not_in_flight(self) -> None:
-        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_STARTED)]
+        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_STARTED)]  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(Path("/trash/b.txt"), entries) is False
 
     def test_done_state_not_in_flight(self) -> None:
         """A completed move no longer protects its paths."""
-        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_DONE)]
+        entries = [_move_entry("/trash/a.txt", "/home/a.txt", STATE_DONE)]  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(Path("/trash/a.txt"), entries) is False
 
     def test_latest_state_wins_done_collapses(self) -> None:
@@ -96,38 +96,38 @@ class TestIsPathInFlight:
         """#1248 #4: a child of an in-flight ``dir_move`` directory is
         in-flight. Without the fix, only the exact directory matched and
         a GC could delete ``trash/dir/child.txt`` mid-restore."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]  # noqa: test-hardcoded-paths
         child = Path("/trash/dir/child.txt")
         assert _path_in_flight_from_entries(child, entries) is True
 
     def test_dir_move_protects_nested_descendant(self) -> None:
         """Deeply nested descendants are protected too."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]  # noqa: test-hardcoded-paths
         nested = Path("/trash/dir/sub/deep/file.txt")
         assert _path_in_flight_from_entries(nested, entries) is True
 
     def test_dir_move_protects_dst_descendant(self) -> None:
         """Descendants of the dir_move DESTINATION are protected too."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]
-        dst_child = Path("/home/dir/child.txt")
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]  # noqa: test-hardcoded-paths
+        dst_child = Path("/home/dir/child.txt")  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(dst_child, entries) is True
 
     def test_dir_move_exact_directory_match(self) -> None:
         """The exact dir_move directory itself is in-flight (regression)."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(Path("/trash/dir"), entries) is True
 
     def test_dir_move_sibling_prefix_not_in_flight(self) -> None:
         """A sibling sharing a name PREFIX is NOT a descendant: the
         separator-anchored check must reject ``/trash/dirXYZ`` against
         ancestor ``/trash/dir``."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_STARTED)]  # noqa: test-hardcoded-paths
         sibling = Path("/trash/dirXYZ/file.txt")
         assert _path_in_flight_from_entries(sibling, entries) is False
 
     def test_dir_move_done_does_not_protect_descendant(self) -> None:
         """A completed dir_move no longer protects descendants."""
-        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_DONE)]
+        entries = [_dir_move_entry("/trash/dir", "/home/dir", STATE_DONE)]  # noqa: test-hardcoded-paths
         child = Path("/trash/dir/child.txt")
         assert _path_in_flight_from_entries(child, entries) is False
 
@@ -135,7 +135,7 @@ class TestIsPathInFlight:
         """A single-file ``move`` (not dir_move) keeps exact-match only —
         a regular file has no descendants, so prefix matching must NOT
         leak in and over-protect unrelated paths."""
-        entries = [_move_entry("/trash/file", "/home/file", STATE_STARTED)]
+        entries = [_move_entry("/trash/file", "/home/file", STATE_STARTED)]  # noqa: test-hardcoded-paths
         # A path that would be a "descendant" of the file path string must
         # not match for a single-file move.
         assert _path_in_flight_from_entries(Path("/trash/file/child"), entries) is False
@@ -144,5 +144,5 @@ class TestIsPathInFlight:
         """The predicate normalizes the query path so a relative path
         equivalent to a stored absolute path still matches."""
         abs_src = os.path.abspath("rel_a.txt")
-        entries = [_move_entry(abs_src, "/home/a.txt", STATE_STARTED)]
+        entries = [_move_entry(abs_src, "/home/a.txt", STATE_STARTED)]  # noqa: test-hardcoded-paths
         assert _path_in_flight_from_entries(Path("rel_a.txt"), entries) is True

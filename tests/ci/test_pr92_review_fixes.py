@@ -104,7 +104,7 @@ class TestPARAKeywordMatching:
     def test_evaluate_with_word_boundaries(self):
         """Test full evaluate() uses word boundary matching."""
         # Path with "projection" should not match "project" keyword
-        test_path = Path("/home/user/projection_analysis/data.txt")
+        test_path = Path("/home/user/projection_analysis/data.txt")  # noqa: test-hardcoded-paths
 
         result = self.heuristic.evaluate(test_path)
 
@@ -126,14 +126,14 @@ class TestTemporalHeuristicOldYearDetection:
     def test_contains_old_year_detects_old_paths(self):
         """Test _contains_old_year() detects old years."""
         old_year = self.current_year - 4  # 4 years ago
-        path_str = f"/home/user/Projects/{old_year}/report.pdf"
+        path_str = f"/home/user/Projects/{old_year}/report.pdf"  # noqa: test-hardcoded-paths
 
         result = self.heuristic._contains_old_year(path_str, self.current_year)
         assert result is True
 
     def test_contains_old_year_doesnt_flag_current_year(self):
         """Test _contains_old_year() doesn't flag current year."""
-        path_str = f"/home/user/Projects/{self.current_year}/report.pdf"
+        path_str = f"/home/user/Projects/{self.current_year}/report.pdf"  # noqa: test-hardcoded-paths
 
         result = self.heuristic._contains_old_year(path_str, self.current_year)
         assert result is False
@@ -141,7 +141,7 @@ class TestTemporalHeuristicOldYearDetection:
     def test_contains_old_year_doesnt_flag_recent_years(self):
         """Test _contains_old_year() doesn't flag recent years."""
         recent_year = self.current_year - 2  # Within 3-year threshold
-        path_str = f"/home/user/Projects/{recent_year}/report.pdf"
+        path_str = f"/home/user/Projects/{recent_year}/report.pdf"  # noqa: test-hardcoded-paths
 
         result = self.heuristic._contains_old_year(path_str, self.current_year)
         assert result is False
@@ -149,7 +149,7 @@ class TestTemporalHeuristicOldYearDetection:
     def test_contains_old_year_respects_threshold(self):
         """Test _contains_old_year() respects threshold parameter."""
         year_5_ago = self.current_year - 5
-        path_str = f"/home/user/Projects/{year_5_ago}/report.pdf"
+        path_str = f"/home/user/Projects/{year_5_ago}/report.pdf"  # noqa: test-hardcoded-paths
 
         # With threshold=3, 5 years ago is old
         assert (
@@ -167,7 +167,7 @@ class TestTemporalHeuristicOldYearDetection:
         """Test _contains_old_year() uses word boundaries."""
         # Year embedded in larger number should not match
         old_year = self.current_year - 4
-        path_with_embedded_year = f"/home/user/file{old_year}123.txt"
+        path_with_embedded_year = f"/home/user/file{old_year}123.txt"  # noqa: test-hardcoded-paths
 
         result = self.heuristic._contains_old_year(path_with_embedded_year, self.current_year)
 

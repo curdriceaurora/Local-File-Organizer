@@ -58,10 +58,10 @@ def api() -> DesktopAPI:
 class TestBrowseFile:
     def test_browse_file_returns_selected_path(self, api: DesktopAPI) -> None:
         """When the dialog returns a path, browse_file returns that exact path."""
-        wv = _make_webview(dialog_result=["/Users/demo/file.txt"])
+        wv = _make_webview(dialog_result=["/Users/demo/file.txt"])  # noqa: test-hardcoded-paths
         with patch.dict("sys.modules", {"webview": wv}):
             result = api.browse_file()
-        assert result == "/Users/demo/file.txt"
+        assert result == "/Users/demo/file.txt"  # noqa: test-hardcoded-paths
 
     def test_browse_file_passes_open_dialog_constant(self, api: DesktopAPI) -> None:
         """browse_file must call create_file_dialog with OPEN_DIALOG, not another constant."""

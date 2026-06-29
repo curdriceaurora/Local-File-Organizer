@@ -51,7 +51,7 @@ class TestWatchLoop:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return [FakeEvent(path=Path("/tmp/test.txt"))]
+                return [FakeEvent(path=Path("/tmp/test.txt"))]  # noqa: test-hardcoded-paths
             # Stop the loop
             orch._running = False
             return []
@@ -60,7 +60,7 @@ class TestWatchLoop:
 
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
-            mock_process.assert_called_once_with(Path("/tmp/test.txt"))
+            mock_process.assert_called_once_with(Path("/tmp/test.txt"))  # noqa: test-hardcoded-paths
 
     @pytest.mark.skipif(sys.platform == "win32", reason="symlinks require admin on Windows")
     def test_watch_loop_resolves_symlinked_watch_root_for_trusted_root(self, tmp_path: Path):
@@ -115,7 +115,7 @@ class TestWatchLoop:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return [FakeEvent(path=Path("/tmp/somedir"), is_directory=True)]
+                return [FakeEvent(path=Path("/tmp/somedir"), is_directory=True)]  # noqa: test-hardcoded-paths
             orch._running = False
             return []
 
@@ -142,8 +142,8 @@ class TestWatchLoop:
             call_count += 1
             if call_count == 1:
                 return [
-                    FakeEvent(path=Path("/tmp/vanished.txt")),
-                    FakeEvent(path=Path("/tmp/exists.txt")),
+                    FakeEvent(path=Path("/tmp/vanished.txt")),  # noqa: test-hardcoded-paths
+                    FakeEvent(path=Path("/tmp/exists.txt")),  # noqa: test-hardcoded-paths
                 ]
             orch._running = False
             return []
@@ -180,7 +180,7 @@ class TestWatchLoop:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return [FakeEvent(path=Path("/tmp/bad.txt"))]
+                return [FakeEvent(path=Path("/tmp/bad.txt"))]  # noqa: test-hardcoded-paths
             orch._running = False
             return []
 
@@ -233,7 +233,7 @@ class TestWatchLoopExecutor:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return [FakeEvent(path=Path("/tmp/test.txt"))]
+                return [FakeEvent(path=Path("/tmp/test.txt"))]  # noqa: test-hardcoded-paths
             orch._running = False
             return []
 
@@ -242,7 +242,7 @@ class TestWatchLoopExecutor:
         with patch.object(orch._executor, "submit") as mock_submit:
             orch._watch_loop()
             # submit should have been called with process_file and the path
-            mock_submit.assert_called_once_with(orch.process_file, Path("/tmp/test.txt"))
+            mock_submit.assert_called_once_with(orch.process_file, Path("/tmp/test.txt"))  # noqa: test-hardcoded-paths
 
     def test_executor_max_workers_matches_config(self):
         """Executor should be created with max_workers from config.max_concurrent."""

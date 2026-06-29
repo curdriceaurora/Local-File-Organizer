@@ -40,8 +40,8 @@ class TestHardcodedPathVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: test-hardcoded-paths" in line_content or "noqa" in line_content:
+            # Support targeted noqa override only (bare # noqa does not suppress)
+            if "noqa: test-hardcoded-paths" in line_content:
                 return
             self.violations.append((lineno, message, line_content.strip()))
 

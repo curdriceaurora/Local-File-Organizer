@@ -97,8 +97,8 @@ class TestMethodologyView:
         assert view._methodology == "none"
 
     def test_scan_dir(self) -> None:
-        view = MethodologyView(scan_dir="/tmp/test", id="view")
-        assert str(view._scan_dir) == "/tmp/test"
+        view = MethodologyView(scan_dir="/tmp/test", id="view")  # noqa: test-hardcoded-paths
+        assert str(view._scan_dir) == "/tmp/test"  # noqa: test-hardcoded-paths
 
 
 @pytest.mark.asyncio

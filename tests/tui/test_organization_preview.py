@@ -82,9 +82,9 @@ class TestBeforeAfterPanel:
         panel = BeforeAfterPanel()
         panel.update = MagicMock()
         structure = {"Docs": ["file.pdf"]}
-        panel.set_structure(structure, input_dir="/home/user/files")
+        panel.set_structure(structure, input_dir="/home/user/files")  # noqa: test-hardcoded-paths
         rendered = panel.update.call_args[0][0]
-        assert "/home/user/files/file.pdf" in rendered
+        assert "/home/user/files/file.pdf" in rendered  # noqa: test-hardcoded-paths
 
     def test_set_structure_truncates_long_lists(self) -> None:
         """Test that large file lists are truncated."""
@@ -238,8 +238,8 @@ class TestOrganizationPreviewView:
 
     def test_initialization_with_custom_directories(self) -> None:
         """Test OrganizationPreviewView with custom directories."""
-        input_path = Path("/home/user/files")
-        output_path = Path("/home/user/organized")
+        input_path = Path("/home/user/files")  # noqa: test-hardcoded-paths
+        output_path = Path("/home/user/organized")  # noqa: test-hardcoded-paths
         view = OrganizationPreviewView(input_dir=input_path, output_dir=output_path)
         assert view._input_dir == input_path
         assert view._output_dir == output_path
@@ -247,11 +247,11 @@ class TestOrganizationPreviewView:
     def test_initialization_with_string_directories(self) -> None:
         """Test OrganizationPreviewView with string directories."""
         view = OrganizationPreviewView(
-            input_dir="/tmp/input",
-            output_dir="/tmp/output",
+            input_dir="/tmp/input",  # noqa: test-hardcoded-paths
+            output_dir="/tmp/output",  # noqa: test-hardcoded-paths
         )
-        assert view._input_dir == Path("/tmp/input")
-        assert view._output_dir == Path("/tmp/output")
+        assert view._input_dir == Path("/tmp/input")  # noqa: test-hardcoded-paths
+        assert view._output_dir == Path("/tmp/output")  # noqa: test-hardcoded-paths
 
     def test_has_compose_method(self) -> None:
         """Test that compose method is defined."""

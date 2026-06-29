@@ -46,11 +46,11 @@ class TestWorkspaceModel:
             id="ws-1",
             name="Test",
             owner_id="user-1",
-            root_path="/tmp/test",
+            root_path="/tmp/test",  # noqa: test-hardcoded-paths
         )
         assert ws.name == "Test"
         assert ws.owner_id == "user-1"
-        assert ws.root_path == "/tmp/test"
+        assert ws.root_path == "/tmp/test"  # noqa: test-hardcoded-paths
         assert ws.description is None
 
     def test_repr(self):

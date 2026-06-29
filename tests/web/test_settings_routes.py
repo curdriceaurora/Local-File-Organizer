@@ -65,7 +65,7 @@ def mock_request():
 def settings():
     """Return an ApiSettings mock."""
     s = MagicMock(spec=ApiSettings)
-    s.allowed_paths = ["/tmp/test"]
+    s.allowed_paths = ["/tmp/test"]  # noqa: test-hardcoded-paths
     s.app_name = "File Organizer"
     s.version = "2.0.0"
     return s

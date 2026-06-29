@@ -347,13 +347,13 @@ class TestPlanStore:
             _store_organize_plan,
         )
 
-        record = _store_organize_plan({"input_dir": "/tmp", "files": []})
+        record = _store_organize_plan({"input_dir": "/tmp", "files": []})  # noqa: test-hardcoded-paths
         plan_id = record["plan_id"]
         assert plan_id in _ORGANIZE_PLAN_STORE
 
         retrieved = _get_organize_plan(plan_id)
         assert retrieved is not None
-        assert retrieved["input_dir"] == "/tmp"
+        assert retrieved["input_dir"] == "/tmp"  # noqa: test-hardcoded-paths
 
         _delete_organize_plan(plan_id)
         assert _get_organize_plan(plan_id) is None

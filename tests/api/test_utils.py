@@ -109,7 +109,7 @@ class TestResolvePath:
         allowed = tmp_path / "allowed"
         allowed.mkdir()
         with pytest.raises(ApiError) as exc_info:
-            resolve_path(r"C:\Windows\System32", allowed_paths=[str(allowed)])
+            resolve_path(r"C:\Windows\System32", allowed_paths=[str(allowed)])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
         assert exc_info.value.error == "path_not_allowed"
 

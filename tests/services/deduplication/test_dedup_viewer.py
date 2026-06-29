@@ -47,7 +47,7 @@ def viewer(console: Console) -> ComparisonViewer:
 def sample_metadata() -> ImageMetadata:
     """Return a representative ImageMetadata object."""
     return ImageMetadata(
-        path=Path("/tmp/image1.png"),
+        path=Path("/tmp/image1.png"),  # noqa: test-hardcoded-paths
         width=1920,
         height=1080,
         format="PNG",
@@ -61,7 +61,7 @@ def sample_metadata() -> ImageMetadata:
 def sample_metadata_small() -> ImageMetadata:
     """Return a smaller / lower-quality ImageMetadata object."""
     return ImageMetadata(
-        path=Path("/tmp/image2.jpg"),
+        path=Path("/tmp/image2.jpg"),  # noqa: test-hardcoded-paths
         width=640,
         height=480,
         format="JPEG",
@@ -212,7 +212,7 @@ class TestShowComparison:
                 return_value=DuplicateReview([sample_metadata.path], []),
             ) as mock_process,
         ):
-            result = viewer.show_comparison([Path("/tmp/image1.png")], similarity_score=95.0)
+            result = viewer.show_comparison([Path("/tmp/image1.png")], similarity_score=95.0)  # noqa: test-hardcoded-paths
             assert result.files_to_keep == [sample_metadata.path]
             mock_process.assert_called_once()
 
@@ -265,7 +265,7 @@ class TestBatchReview:
 
     def test_manual_review_mode(self, viewer: ComparisonViewer, sample_metadata):
         """auto_select_best=False uses show_comparison."""
-        review = DuplicateReview([sample_metadata.path], [Path("/tmp/image2.jpg")])
+        review = DuplicateReview([sample_metadata.path], [Path("/tmp/image2.jpg")])  # noqa: test-hardcoded-paths
         with (
             patch.object(viewer, "show_comparison", return_value=review),
             patch.object(viewer, "_display_review_summary"),
@@ -273,7 +273,7 @@ class TestBatchReview:
             groups = {"hash1": [Path("/a.png"), Path("/b.png")]}
             decisions = viewer.batch_review(groups, auto_select_best=False)
             assert decisions[sample_metadata.path] == "keep"
-            assert decisions[Path("/tmp/image2.jpg")] == "delete"
+            assert decisions[Path("/tmp/image2.jpg")] == "delete"  # noqa: test-hardcoded-paths
 
     def test_quit_early_via_confirm(self, viewer: ComparisonViewer):
         """When user skips and declines continue, batch stops."""

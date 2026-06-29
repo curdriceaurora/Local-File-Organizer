@@ -69,7 +69,7 @@ class TestWebCSRFProtection:
         assert middleware._is_exempt("/api/v1/users") is True
         assert middleware._is_exempt("/auth") is True
         assert middleware._is_exempt("/auth/login") is True
-        assert middleware._is_exempt("/home") is False
+        assert middleware._is_exempt("/home") is False  # noqa: test-hardcoded-paths
 
     def test_csrf_middleware_flow(self) -> None:
         app = FastAPI()

@@ -38,7 +38,7 @@ _NOW_STR = "2026-01-15T10:30:00Z"
 def _file_info_data(**overrides):
     """Return a minimal valid dict for FileInfo."""
     base = {
-        "path": "/tmp/test.txt",
+        "path": "/tmp/test.txt",  # noqa: test-hardcoded-paths
         "name": "test.txt",
         "size": 1024,
         "created": _NOW_STR,
@@ -111,7 +111,7 @@ class TestHealthResponse:
 class TestFileInfo:
     def test_valid_construction(self):
         fi = FileInfo(**_file_info_data())
-        assert fi.path == "/tmp/test.txt"
+        assert fi.path == "/tmp/test.txt"  # noqa: test-hardcoded-paths
         assert fi.name == "test.txt"
         assert fi.size == 1024
         assert fi.file_type == "text"
@@ -190,13 +190,13 @@ class TestFileListResponse:
 class TestFileContentResponse:
     def test_valid_construction(self):
         resp = FileContentResponse(
-            path="/tmp/f.txt",
+            path="/tmp/f.txt",  # noqa: test-hardcoded-paths
             content="hello",
             encoding="utf-8",
             truncated=False,
             size=5,
         )
-        assert resp.path == "/tmp/f.txt"
+        assert resp.path == "/tmp/f.txt"  # noqa: test-hardcoded-paths
         assert resp.content == "hello"
         assert resp.encoding == "utf-8"
         assert resp.truncated is False
@@ -274,11 +274,11 @@ class TestDeleteFileResponse:
 class TestScanResponse:
     def test_valid_construction(self):
         resp = ScanResponse(
-            input_dir="/home/user/docs",
+            input_dir="/home/user/docs",  # noqa: test-hardcoded-paths
             total_files=42,
             counts={"pdf": 10, "txt": 32},
         )
-        assert resp.input_dir == "/home/user/docs"
+        assert resp.input_dir == "/home/user/docs"  # noqa: test-hardcoded-paths
         assert resp.total_files == 42
         assert resp.counts == {"pdf": 10, "txt": 32}
 

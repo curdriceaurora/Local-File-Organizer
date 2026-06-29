@@ -104,7 +104,7 @@ class TestApiFiles:
         with patch("file_organizer.cli.api._build_client", return_value=(client, err_cls)):
             result = runner.invoke(
                 api_app,
-                ["files", "/tmp", "--token", "fake-token"],
+                ["files", "/tmp", "--token", "fake-token"],  # noqa: test-hardcoded-paths
             )
 
         assert result.exit_code == 1

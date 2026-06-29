@@ -39,7 +39,7 @@ description = "Enforces using defusedxml instead of standard library xml (WP-6.1
 [[rail]]
 name = "test-hardcoded-paths"
 command = ["python", "scripts/ci/guardrails/check_test_hardcoded_paths.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags hardcoded absolute system paths in tests, promoting tmp_path instead (WP-6.2)."
 
 [[rail]]

@@ -212,7 +212,7 @@ class TestPluginInstallerExtractArchive:
     def test_extract_absolute_path_raises(self, tmp_path):
         archive_path = tmp_path / "bad.zip"
         with zipfile.ZipFile(archive_path, "w") as zf:
-            zf.writestr("/etc/passwd", "malicious")
+            zf.writestr("/etc/passwd", "malicious")  # noqa: test-hardcoded-paths
         dest = tmp_path / "extract"
         dest.mkdir()
         repo = MagicMock()

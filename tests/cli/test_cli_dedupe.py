@@ -800,7 +800,7 @@ class TestDedupeCommandDuplicates:
         mock_detector.get_duplicate_groups.return_value = {"hash1": grp}
 
         mock_bkp = MagicMock()
-        mock_bkp.create_backup.return_value = Path("/tmp/backup")
+        mock_bkp.create_backup.return_value = Path("/tmp/backup")  # noqa: test-hardcoded-paths
 
         with (
             patch(_DETECTOR_PATH, return_value=mock_detector),
@@ -828,7 +828,7 @@ class TestDedupeCommandDuplicates:
         # Make the second file's path a MagicMock so unlink() raises
         grp.files[1].path = MagicMock()
         grp.files[1].path.unlink.side_effect = PermissionError("denied")
-        grp.files[1].path.__str__ = lambda self: "/tmp/b.txt"
+        grp.files[1].path.__str__ = lambda self: "/tmp/b.txt"  # noqa: test-hardcoded-paths
 
         mock_detector = MagicMock()
         mock_detector.scan_directory.return_value = None

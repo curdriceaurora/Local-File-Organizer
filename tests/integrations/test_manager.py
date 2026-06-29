@@ -52,4 +52,4 @@ def test_manager_handles_missing_integrations_gracefully() -> None:
     assert manager.update_settings("missing", {"x": 1}) is False
     assert asyncio.run(manager.connect("missing")) is False
     assert asyncio.run(manager.disconnect("missing")) is False
-    assert asyncio.run(manager.send_file("missing", "/tmp/nope")) is False
+    assert asyncio.run(manager.send_file("missing", "/tmp/nope")) is False  # noqa: test-hardcoded-paths

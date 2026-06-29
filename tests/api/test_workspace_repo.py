@@ -19,7 +19,7 @@ class TestWorkspaceRepositoryCreate:
     def test_create_minimal(self):
         session = MagicMock(spec=Session)
 
-        WorkspaceRepository.create(session, "My Workspace", "user-1", "/home/user/docs")
+        WorkspaceRepository.create(session, "My Workspace", "user-1", "/home/user/docs")  # noqa: test-hardcoded-paths
 
         session.add.assert_called_once()
         session.flush.assert_called_once()
@@ -27,7 +27,7 @@ class TestWorkspaceRepositoryCreate:
         assert isinstance(added, Workspace)
         assert added.name == "My Workspace"
         assert added.owner_id == "user-1"
-        assert added.root_path == "/home/user/docs"
+        assert added.root_path == "/home/user/docs"  # noqa: test-hardcoded-paths
         assert added.description is None
 
     def test_create_with_description(self):

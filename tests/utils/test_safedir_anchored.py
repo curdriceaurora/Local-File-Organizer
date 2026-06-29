@@ -126,7 +126,7 @@ class TestOpenAnchoredReader:
         """Absolute relative_path is a programmer error — reject early."""
         with SafeDir.open_root(tmp_path) as root:
             with pytest.raises(ValueError, match="relative"):
-                root.open_anchored_reader(Path("/etc/passwd"))
+                root.open_anchored_reader(Path("/etc/passwd"))  # noqa: test-hardcoded-paths
 
     def test_parent_traversal_rejected(self, tmp_path: Path) -> None:
         """``..`` components would escape — must be refused before any open."""
@@ -321,7 +321,7 @@ class TestOpenAnchoredWriter:
     def test_absolute_path_rejected(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as root:
             with pytest.raises(ValueError, match="relative"):
-                root.open_anchored_writer(Path("/etc/passwd"))
+                root.open_anchored_writer(Path("/etc/passwd"))  # noqa: test-hardcoded-paths
 
     def test_parent_traversal_rejected(self, tmp_path: Path) -> None:
         (tmp_path / "child").mkdir()

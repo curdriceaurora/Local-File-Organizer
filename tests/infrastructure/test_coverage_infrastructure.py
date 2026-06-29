@@ -2604,7 +2604,7 @@ class TestPARARulesEngine:
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
         ctx = EvaluationContext(
-            file_path=Path("/home/user/doc.pdf"),
+            file_path=Path("/home/user/doc.pdf"),  # noqa: test-hardcoded-paths
             file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},
         )
         assert ctx.file_extension == ".pdf"
@@ -2614,7 +2614,7 @@ class TestPARARulesEngine:
     def test_evaluation_context_no_stat(self):
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
-        ctx = EvaluationContext(file_path=Path("/home/user/doc.pdf"))
+        ctx = EvaluationContext(file_path=Path("/home/user/doc.pdf"))  # noqa: test-hardcoded-paths
         assert ctx.file_age_days is None
 
     def test_evaluation_context_naive_datetime(self):

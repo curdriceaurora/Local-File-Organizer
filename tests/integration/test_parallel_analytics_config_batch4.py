@@ -1497,7 +1497,7 @@ class TestIntentParser:
         result = IntentParser._extract_paths("move /home/user/docs")
 
         assert len(result) == 1
-        assert "/home/user/docs" in result[0]
+        assert "/home/user/docs" in result[0]  # noqa: test-hardcoded-paths
 
 
 # ===========================================================================

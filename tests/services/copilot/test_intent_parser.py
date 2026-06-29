@@ -355,7 +355,7 @@ class TestParameterExtraction:
     def test_windows_path_extraction(self, parser: IntentParser) -> None:
         intent = parser.parse(r"move C:\Users\test\file.txt somewhere")
         paths = intent.parameters.get("paths", [])
-        assert any("C:\\" in p for p in paths)
+        assert any("C:\\" in p for p in paths)  # noqa: test-hardcoded-paths
 
     def test_no_params_for_simple_text(self, parser: IntentParser) -> None:
         intent = parser.parse("hello there")

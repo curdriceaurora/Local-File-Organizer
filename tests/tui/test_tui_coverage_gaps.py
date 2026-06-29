@@ -111,7 +111,7 @@ class TestAnalyticsViewMountCompose:
         """compose() must yield StaticWidgets — test by verifying it's iterable."""
         from file_organizer.tui.analytics_view import AnalyticsView
 
-        view = AnalyticsView(directory="/tmp")
+        view = AnalyticsView(directory="/tmp")  # noqa: test-hardcoded-paths
         result = list(view.compose())
         # Should yield 5 widgets (header + 4 panels)
         assert len(result) == 5

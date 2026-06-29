@@ -71,7 +71,7 @@ class TestPARAConfigLoadFromYaml:
             "manual_review_threshold": 0.5,
             "auto_categorize": False,
             "preserve_user_overrides": False,
-            "default_root": "/tmp/para_root",
+            "default_root": "/tmp/para_root",  # noqa: test-hardcoded-paths
             "project_dir": "Proj",
             "area_dir": "Ar",
             "resource_dir": "Res",
@@ -88,7 +88,7 @@ class TestPARAConfigLoadFromYaml:
         assert cfg.temporal_thresholds.project_max_age == 15
         assert cfg.enable_ai_heuristic is True
         assert cfg.auto_categorize is False
-        assert cfg.default_root == Path("/tmp/para_root")
+        assert cfg.default_root == Path("/tmp/para_root")  # noqa: test-hardcoded-paths
         assert cfg.project_dir == "Proj"
 
     def test_load_invalid_yaml_returns_defaults(self, tmp_path: Path) -> None:
