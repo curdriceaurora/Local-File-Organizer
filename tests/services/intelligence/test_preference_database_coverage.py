@@ -88,7 +88,7 @@ class TestTransaction:
                 )
                 raise ValueError("boom")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="boom"):
             _insert_then_fail()
         # The row written inside the transaction must not be visible after rollback
         assert db.get_preference("test", "rollback_key") is None

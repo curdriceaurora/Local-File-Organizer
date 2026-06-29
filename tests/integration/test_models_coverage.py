@@ -104,7 +104,7 @@ def test_vision_helpers_variations(tmp_path: Path) -> None:
     assert b64_def == "cG5n"
 
     # Malformed data URL raises ValueError
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match="Not a valid base64 data URL") as exc:
         split_data_url("http://not-a-data-url")
     assert "Not a valid base64 data URL" in str(exc.value)
 
@@ -148,13 +148,13 @@ class TestClaudeClientAndResponse:
 
             # Constructor error handling
             mock_anthropic.side_effect = ValueError("invalid client setup")
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="invalid client setup"):
                 create_claude_client(config, "text")
 
     def test_create_claude_client_import_error(self) -> None:
         config = ModelConfig(name="claude", model_type=ModelType.TEXT, provider="claude")
         with patch("file_organizer.models._claude_client.ANTHROPIC_AVAILABLE", False):
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="anthropic") as exc:
                 create_claude_client(config, "text")
             assert "The 'anthropic' package is not installed" in str(exc.value)
 
@@ -192,14 +192,14 @@ class TestLlamaCppTextModel:
         # 1. Missing package ImportError
         with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", False):
             config = ModelConfig(name="m", model_type=ModelType.TEXT, provider="llama_cpp")
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="llama-cpp-python") as exc:
                 LlamaCppTextModel(config)
             assert "llama-cpp-python" in str(exc.value)
 
         # 2. Invalid model type
         with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
             config = ModelConfig(name="m", model_type=ModelType.VISION, provider="llama_cpp")
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="only supports ModelType.TEXT") as exc:
                 LlamaCppTextModel(config)
             assert "only supports ModelType.TEXT" in str(exc.value)
 
@@ -208,7 +208,7 @@ class TestLlamaCppTextModel:
             config = ModelConfig(
                 name="m", model_type=ModelType.TEXT, provider="llama_cpp", model_path=""
             )
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="model_path must be a non-empty path") as exc:
                 LlamaCppTextModel(config)
             assert "model_path must be a non-empty path" in str(exc.value)
 
@@ -254,7 +254,7 @@ class TestLlamaCppTextModel:
             # Load exception handling
             mock_llama.side_effect = RuntimeError("binary load error")
             m_err = LlamaCppTextModel(c_mps)
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="Could not load GGUF model") as exc:
                 m_err.initialize()
             assert "Could not load GGUF model" in str(exc.value)
 
@@ -276,7 +276,7 @@ class TestLlamaCppTextModel:
             model = LlamaCppTextModel(config)
 
         # Guard check before init
-        with pytest.raises(RuntimeError) as exc_init:
+        with pytest.raises(RuntimeError, match="Model not initialized") as exc_init:
             model.generate("test")
         assert "Model not initialized" in str(exc_init.value)
 
@@ -341,21 +341,21 @@ class TestMLXTextModel:
         # 1. Missing package ImportError
         with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", False):
             config = ModelConfig(name="m", model_type=ModelType.TEXT, provider="mlx")
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="mlx-lm") as exc:
                 MLXTextModel(config)
             assert "mlx-lm" in str(exc.value)
 
         # 2. Invalid model type
         with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
             config = ModelConfig(name="m", model_type=ModelType.VISION, provider="mlx")
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="only supports ModelType.TEXT") as exc:
                 MLXTextModel(config)
             assert "only supports ModelType.TEXT" in str(exc.value)
 
         # 3. Missing model_path
         with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
             config = ModelConfig(name="m", model_type=ModelType.TEXT, provider="mlx", model_path="")
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="model_path must be a non-empty path") as exc:
                 MLXTextModel(config)
             assert "model_path must be a non-empty path" in str(exc.value)
 
@@ -385,7 +385,7 @@ class TestMLXTextModel:
             # Load returning bad tuple shape
             mock_load.return_value = "not-a-tuple"
             model_bad = MLXTextModel(config)
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="expected \\(model, tokenizer\\)") as exc:
                 model_bad.initialize()
             assert "expected (model, tokenizer)" in str(exc.value)
 
@@ -442,7 +442,7 @@ class TestMLXTextModel:
         mock_generate.reset_mock()
         mock_generate.side_effect = TypeError("argument must be string, got int")
         model._working_variant_idx = None  # reset
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(TypeError, match="argument must be string") as exc:
             model.generate("hello")
         assert "argument must be string" in str(exc.value)
 
@@ -552,13 +552,15 @@ class TestClaudeModels:
             assert content_blocks[1]["type"] == "text"
 
             # Mutually exclusive paths validation
-            with pytest.raises(ValueError) as exc_excl:
+            with pytest.raises(
+                ValueError, match="Provide exactly one of image_path or image_data"
+            ) as exc_excl:
                 model.generate("prompt", image_path=img_file, image_data=b"bytes")
             assert "Provide exactly one of image_path or image_data" in str(exc_excl.value)
 
             # Vision constructor type validation
             config_text = ModelConfig(name="claude-3", model_type=ModelType.TEXT, provider="claude")
-            with pytest.raises(ValueError) as exc_type:
+            with pytest.raises(ValueError, match="Expected VISION or VIDEO") as exc_type:
                 ClaudeVisionModel(config_text)
             assert "Expected VISION or VIDEO" in str(exc_type.value)
 
@@ -622,18 +624,18 @@ class TestAudioTranscriber:
 
         # 1. ImportError when faster-whisper is not available
         with patch("file_organizer.models.audio_transcriber._FASTER_WHISPER_AVAILABLE", False):
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="faster-whisper is required") as exc:
                 AudioTranscriber()
             assert "faster-whisper is required" in str(exc.value)
 
         # 2. Invalid model size
         with patch("file_organizer.models.audio_transcriber._FASTER_WHISPER_AVAILABLE", True):
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="Invalid model size") as exc:
                 AudioTranscriber(model_size="invalid-size")
             assert "Invalid model size" in str(exc.value)
 
             # 3. Invalid compute type
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="Invalid compute type") as exc:
                 AudioTranscriber(compute_type="invalid-compute")
             assert "Invalid compute type" in str(exc.value)
 
@@ -726,13 +728,13 @@ class TestAudioTranscriber:
 
             # Language detection exception path
             mock_whisper.transcribe.side_effect = ValueError("transcribe crash")
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="Language detection failed") as exc:
                 transcriber.detect_language(dummy_audio)
             assert "Language detection failed" in str(exc.value)
             mock_whisper.transcribe.side_effect = None  # reset
 
             # File not found error
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="missing.wav"):
                 transcriber.detect_language(tmp_path / "missing.wav")
 
             # 2. Transcription
@@ -749,12 +751,12 @@ class TestAudioTranscriber:
             assert res.duration == 10.0
 
             # Transcription missing file
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="missing_transcribe.wav"):
                 transcriber.transcribe(tmp_path / "missing_transcribe.wav")
 
             # Transcription model is None
             transcriber.model = None
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="Model not loaded") as exc:
                 transcriber.transcribe(dummy_audio)
             assert "Model not loaded" in str(exc.value)
             # reload model
@@ -784,7 +786,7 @@ class TestAudioTranscriber:
             # Test model load failure
             mock_whisper_cls.side_effect = RuntimeError("Failed to load weight binary")
             transcriber_err = AudioTranscriber(model_size=ModelSize.TINY, device="cpu")
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="Model loading failed") as exc:
                 transcriber_err.transcribe(dummy_audio)
             assert "Model loading failed" in str(exc.value)
 
@@ -793,6 +795,6 @@ class TestAudioTranscriber:
             mock_whisper_cls.return_value = mock_whisper
             mock_whisper.transcribe.side_effect = ValueError("Inference crash")
             transcriber_crash = AudioTranscriber(model_size=ModelSize.TINY, device="cpu")
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(RuntimeError, match="Transcription failed") as exc:
                 transcriber_crash.transcribe(dummy_audio)
             assert "Transcription failed" in str(exc.value)

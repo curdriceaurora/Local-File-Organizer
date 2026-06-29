@@ -228,7 +228,7 @@ class TestOperationTransaction:
         """Test that logging operation outside context raises error."""
         txn = OperationTransaction(history)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Cannot log operation outside"):
             txn.log_operation(OperationType.MOVE, Path("/") / "test" / "source")
 
     def test_nested_transactions_not_supported(self, history):

@@ -58,7 +58,7 @@ class TestModelType:
 
     def test_invalid_value(self) -> None:
         """Test invalid enum value raises ValueError."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not a valid"):
             ModelType("invalid")
 
 

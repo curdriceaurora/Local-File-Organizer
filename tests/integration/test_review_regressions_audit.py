@@ -145,19 +145,19 @@ class TestCoerceDetectors:
         from file_organizer.review_regressions.audit import _coerce_detectors
 
         d = _make_detector()
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="detector instances"):
             _coerce_detectors([d, "not_a_detector"])
 
     def test_non_iterable_non_detector_raises_type_error(self) -> None:
         from file_organizer.review_regressions.audit import _coerce_detectors
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="detector, detector iterable"):
             _coerce_detectors(42)
 
     def test_string_raises_type_error(self) -> None:
         from file_organizer.review_regressions.audit import _coerce_detectors
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="detector, detector iterable"):
             _coerce_detectors("module:attr")
 
 

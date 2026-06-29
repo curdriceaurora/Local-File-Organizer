@@ -166,7 +166,7 @@ class TestAnalyzeDirectory:
         """Test analyzing non-existent directory raises error."""
         analyzer = PatternAnalyzer()
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid directory"):
             analyzer.analyze_directory(Path("/") / "nonexistent" / "path")
 
     def test_analyze_file_instead_of_directory(self):
@@ -177,7 +177,7 @@ class TestAnalyzeDirectory:
 
             analyzer = PatternAnalyzer()
 
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="Invalid directory"):
                 analyzer.analyze_directory(file_path)
 
     def test_analyze_respects_max_depth(self):

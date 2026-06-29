@@ -49,7 +49,7 @@ class TestRuleActionCategoryValidation:
 
     def test_error_message_lists_valid_categories(self) -> None:
         """ValueError message enumerates all valid PARA categories."""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="Invalid PARA category") as exc_info:
             RuleAction(
                 type=ActionType.CATEGORIZE,
                 category="bad_value",

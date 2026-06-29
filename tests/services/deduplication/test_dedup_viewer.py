@@ -342,7 +342,7 @@ class TestGetImageMetadata:
         assert isinstance(meta.modified_time, datetime)
 
     def test_raises_on_invalid_path(self, viewer: ComparisonViewer):
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="No such file or directory"):
             viewer._get_image_metadata(Path("/") / "nonexistent" / "img.png")
 
 

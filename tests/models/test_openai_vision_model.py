@@ -97,7 +97,7 @@ class TestImageToDataUrl:
     def test_raises_file_not_found_for_missing_path(self, tmp_path: Path) -> None:
         missing = tmp_path / "nonexistent.png"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             _image_to_data_url(missing)
 
     @pytest.mark.parametrize(
@@ -285,7 +285,7 @@ class TestOpenAIVisionModelGenerateWithPath:
         model = self._make_initialized(openai_vision_config, mock_openai_client)
         missing = tmp_path / "does_not_exist.png"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             model.generate("prompt", image_path=missing)
 
     def test_generate_sends_correct_model_name(

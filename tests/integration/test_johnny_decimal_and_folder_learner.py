@@ -47,19 +47,19 @@ class TestJohnnyDecimalNumber:
         assert n.level.value == "id"
 
     def test_area_out_of_range_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Area must be between 0 and 99"):
             JohnnyDecimalNumber(area=100)
 
     def test_category_out_of_range_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Category must be between 0 and 99"):
             JohnnyDecimalNumber(area=10, category=100)
 
     def test_item_id_without_category_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot have item_id without category"):
             JohnnyDecimalNumber(area=10, item_id=5)
 
     def test_item_id_out_of_range_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Item ID must be between 0 and 999"):
             JohnnyDecimalNumber(area=10, category=1, item_id=1000)
 
     def test_parent_area_is_none(self) -> None:
@@ -121,7 +121,7 @@ class TestJohnnyDecimalNumber:
         assert n.item_id == 5
 
     def test_from_string_invalid_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid Johnny Decimal format"):
             JohnnyDecimalNumber.from_string("10.01.001.001")
 
     def test_repr_contains_formatted(self) -> None:
@@ -136,7 +136,7 @@ class TestJohnnyDecimalNumber:
 
 class TestNumberingScheme:
     def test_empty_name_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Scheme name cannot be empty"):
             NumberingScheme(name="", description="desc")
 
     def test_add_and_get_area(self) -> None:

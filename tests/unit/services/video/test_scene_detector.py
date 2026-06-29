@@ -26,7 +26,7 @@ class TestSceneDetector:
 
     def test_detect_scenes_file_not_found(self):
         detector = SceneDetector()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Video file not found"):
             detector.detect_scenes("non_existent_file.mp4")
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._detect_with_scenedetect")

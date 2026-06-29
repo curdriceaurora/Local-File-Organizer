@@ -210,7 +210,7 @@ class TestPluginMetadata:
 
     def test_frozen_raises_on_assignment(self) -> None:
         meta = PluginMetadata(name="p", version="1.0", author="a", description="d")
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             meta.name = "changed"  # type: ignore[misc]
 
     def test_all_fields_set(self) -> None:
@@ -257,7 +257,7 @@ class TestPluginBase:
 
     def test_abstract_methods_enforced(self) -> None:
         """Cannot instantiate Plugin directly — abstract methods must exist."""
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
             Plugin()  # type: ignore[abstract]
 
     def test_sandbox_default_created(self) -> None:

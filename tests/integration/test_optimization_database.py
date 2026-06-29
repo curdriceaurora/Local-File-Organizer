@@ -154,19 +154,19 @@ class TestValidateIdentifier:
     def test_space_in_name_raises_value_error(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="only ASCII letters, digits, and underscores"):
             DatabaseOptimizer._validate_identifier("bad name")
 
     def test_hyphen_in_name_raises_value_error(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="only ASCII letters, digits, and underscores"):
             DatabaseOptimizer._validate_identifier("bad-name")
 
     def test_semicolon_raises_value_error(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="only ASCII letters, digits, and underscores"):
             DatabaseOptimizer._validate_identifier("name;drop")
 
 
@@ -189,7 +189,7 @@ class TestValidatePragmaValue:
     def test_invalid_journal_mode_raises(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unsafe PRAGMA value"):
             DatabaseOptimizer._validate_pragma_value("journal_mode", "INVALID")
 
     def test_integer_pragma_valid(self) -> None:
@@ -200,7 +200,7 @@ class TestValidatePragmaValue:
     def test_integer_pragma_non_integer_raises(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="requires an integer value"):
             DatabaseOptimizer._validate_pragma_value("cache_size", "notanint")
 
     def test_unknown_pragma_integer_passes(self) -> None:
@@ -211,7 +211,7 @@ class TestValidatePragmaValue:
     def test_unknown_pragma_non_integer_raises(self) -> None:
         from file_organizer.optimization.database import DatabaseOptimizer
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="has no allowlist entry"):
             DatabaseOptimizer._validate_pragma_value("unknown_pragma", "bad_value")
 
 
@@ -257,7 +257,7 @@ class TestCreateIndexes:
     def test_extra_index_invalid_name_raises(self) -> None:
         opt = _optimizer()
         _create_test_table(opt)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="only ASCII letters, digits, and underscores"):
             opt.create_indexes(extra_indexes=[("bad-name", "test_table", "name", False)])
 
 
@@ -372,10 +372,10 @@ class TestOptimizePragmas:
 
     def test_invalid_journal_mode_raises_value_error(self) -> None:
         opt = _optimizer()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unsafe PRAGMA value"):
             opt.optimize_pragmas(journal_mode="INVALID_MODE")
 
     def test_invalid_synchronous_raises_value_error(self) -> None:
         opt = _optimizer()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unsafe PRAGMA value"):
             opt.optimize_pragmas(synchronous="WRONG")

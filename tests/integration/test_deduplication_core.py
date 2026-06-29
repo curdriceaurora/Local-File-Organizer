@@ -319,7 +319,7 @@ class TestImageDeduplicator:
 
     def test_compute_hamming_distance_invalid_raises(self) -> None:
         dedup = self._make_deduplicator()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid hash format"):
             dedup.compute_hamming_distance("zzzz", "1234")
 
     def test_get_image_hash_missing_file(self, tmp_path: Path) -> None:
@@ -386,7 +386,7 @@ class TestImageDeduplicator:
 
     def test_find_duplicates_directory_not_found(self, tmp_path: Path) -> None:
         dedup = self._make_deduplicator()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
             dedup.find_duplicates(tmp_path / "nonexistent")
 
     def test_find_duplicates_not_a_directory(self, tmp_path: Path) -> None:
@@ -1026,7 +1026,7 @@ class TestImageUtils:
     def test_find_images_in_directory_not_found(self, tmp_path: Path) -> None:
         from file_organizer.services.deduplication.image_utils import find_images_in_directory
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
             find_images_in_directory(tmp_path / "nonexistent")
 
     def test_find_images_in_directory_not_a_dir(self, tmp_path: Path) -> None:

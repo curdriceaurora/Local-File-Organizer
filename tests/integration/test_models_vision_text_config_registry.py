@@ -364,7 +364,7 @@ class TestVisionModelGenerate:
 
     def test_generate_raises_file_not_found(self) -> None:
         model = _make_vision_model()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Image not found"):
             model.generate("p", image_path=Path("/") / "nonexistent" / "image.png")
 
     def test_generate_raises_on_empty_response(self, tmp_path: Path) -> None:

@@ -410,7 +410,7 @@ class TestDataclassCompatibility:
             y: int
 
         p = ImmutablePoint(x=1, y=2)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             p.x = 3  # type: ignore[misc]
 
 

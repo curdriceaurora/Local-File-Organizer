@@ -103,7 +103,7 @@ class TestServiceRequest:
     def test_frozen(self) -> None:
         """ServiceRequest is immutable."""
         req = ServiceRequest(id="r", source="a", target="b", action="c")
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             req.id = "new"  # type: ignore[misc]
 
     def test_to_dict_timestamp_is_isoformat(self) -> None:
@@ -164,7 +164,7 @@ class TestServiceResponse:
     def test_frozen(self) -> None:
         """ServiceResponse is immutable."""
         resp = ServiceResponse(request_id="r", success=True)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             resp.success = False  # type: ignore[misc]
 
     def test_default_duration_ms(self) -> None:

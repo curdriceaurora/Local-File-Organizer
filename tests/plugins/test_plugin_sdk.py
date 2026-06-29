@@ -122,5 +122,5 @@ def test_plugin_client_error_paths() -> None:
         error_client.get_metadata(path="./demo/demo.txt")
     error_client.close()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must be a valid URL"):
         PluginClient(base_url="plugins.local", token="token")

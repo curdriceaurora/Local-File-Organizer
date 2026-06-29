@@ -403,7 +403,7 @@ class TestMergeAudioFiles:
             raise ImportError
 
         with patch("builtins.__import__", side_effect=fake_import):
-            with pytest.raises(ImportError):
+            with pytest.raises(ImportError):  # noqa: pytest-raises-hygiene — ImportError re-raised with no message from fake stub
                 merge_audio_files([], out)
 
 

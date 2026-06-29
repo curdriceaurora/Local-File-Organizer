@@ -150,7 +150,7 @@ class TestIntegrationStatus:
             enabled=True,
             connected=False,
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             status.name = "changed"  # type: ignore[misc]
 
 

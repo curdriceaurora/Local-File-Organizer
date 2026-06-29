@@ -64,7 +64,7 @@ class TestPublishConfig:
     def test_config_is_frozen(self) -> None:
         """PublishConfig instances are immutable."""
         config = PublishConfig()
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             config.pypi_url = "https://other.url/"  # type: ignore[misc]
 
     def test_default_dist_dir(self) -> None:
@@ -179,7 +179,7 @@ class TestPublishPypi:
 
     def test_publish_nonexistent_dir_raises(self) -> None:
         """Non-existent dist directory raises FileNotFoundError."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             publish_pypi(Path("/") / "nonexistent" / "dist")
 
     @patch("publish._run_command")

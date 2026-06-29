@@ -64,7 +64,9 @@ class TestTextModel:
 
             with patch("file_organizer.models.text_model.ollama.Client", return_value=mock_client):
                 model.initialize()
-                with pytest.raises(Exception) as excinfo:
+                with pytest.raises(
+                    Exception, match="Failed to generate text|Ollama error"
+                ) as excinfo:
                     model.generate("Process this file")
 
                 assert "Failed to generate text" in str(excinfo.value) or "Ollama error" in str(

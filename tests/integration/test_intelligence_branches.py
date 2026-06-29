@@ -358,7 +358,7 @@ class TestPatternLearnerBranches:
         learner = self._make_learner(tmp_path)
         original = Path("/") / "src" / "MyFile.txt"
         corrected = Path("/") / "src" / "my_file.txt"
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="case_style"):
             learner.learn_from_correction(original, corrected)
 
     def test_learn_from_correction_different_parents(self, tmp_path: Path) -> None:
@@ -375,7 +375,7 @@ class TestPatternLearnerBranches:
         original = Path("/") / "docs" / "OldName.txt"
         corrected = Path("/") / "reports" / "new_name.txt"
         # Same note: _learn_naming_pattern raises KeyError due to 'case_style' bug
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="case_style"):
             learner.learn_from_correction(original, corrected)
 
     def test_get_pattern_suggestion_with_name_and_type(self, tmp_path: Path) -> None:

@@ -105,7 +105,7 @@ def test_desktop_launch_installs_redaction(monkeypatch: pytest.MonkeyPatch) -> N
     # server; install_on_root runs first, before the import.
     monkeypatch.setitem(sys.modules, "webview", None)
 
-    with pytest.raises(ImportError):
+    with pytest.raises(ImportError, match="pywebview is required for the desktop UI"):
         desk.launch()
 
     assert calls == [True]

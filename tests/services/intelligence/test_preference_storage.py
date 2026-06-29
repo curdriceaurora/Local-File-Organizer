@@ -775,10 +775,8 @@ class TestUpdateConfidenceErrorAtomicity:
             original_confidence = pref.metadata.confidence
             original_last_used = pref.metadata.last_used
 
-            with pytest.raises(KeyError):
+            with pytest.raises(KeyError, match="No persisted preference"):
                 storage.update_preference_confidence(pref, success=True)
-
-            # Dataclass is unchanged — no mutation before the raise
             assert pref.metadata.confidence == original_confidence
             assert pref.metadata.last_used == original_last_used
 
@@ -793,7 +791,7 @@ class TestUpdateConfidenceErrorAtomicity:
             assert storage.get_statistics()["successful_applications"] == 1
 
             # Now attempt update on the unsaved one — must not bump
-            with pytest.raises(KeyError):
+            with pytest.raises(KeyError, match="No persisted preference"):
                 storage.update_preference_confidence(pref_unsaved, success=True)
 
             # Counter unchanged

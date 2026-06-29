@@ -133,7 +133,7 @@ class TestFileHasherComputeHash:
     def test_compute_hash_file_not_found(self):
         """Test that computing hash of non-existent file raises error."""
         hasher = FileHasher()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="File not found"):
             hasher.compute_hash(Path("/") / "nonexistent" / "file.txt")
 
     def test_compute_hash_directory(self, tmp_path):
@@ -232,7 +232,7 @@ class TestFileHasherGetFileSize:
     def test_get_file_size_not_found(self):
         """Test getting size of non-existent file."""
         hasher = FileHasher()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="File not found"):
             hasher.get_file_size(Path("/") / "nonexistent" / "file.txt")
 
 

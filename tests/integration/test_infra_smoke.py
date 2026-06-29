@@ -93,7 +93,7 @@ class TestFakeTextModelFixture:
         """``cleanup()`` marks the model as shut down and subsequent ``generate()`` raises."""
         fake_text_model.cleanup()
         assert fake_text_model.is_initialized is False
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Model is shutting down"):
             fake_text_model.generate("any prompt")
 
     def test_uninitialized_model_is_not_initialized(self) -> None:

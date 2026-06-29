@@ -79,7 +79,7 @@ class TestJDSystemInit:
 
 class TestJDSystemInitFromDir:
     def test_nonexistent_dir_raises(self, jd_system: JohnnyDecimalSystem, tmp_path: Path) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Directory does not exist"):
             jd_system.initialize_from_directory(tmp_path / "nonexistent")
 
     def test_empty_dir_initializes(self, jd_system: JohnnyDecimalSystem, tmp_path: Path) -> None:
@@ -258,7 +258,7 @@ class TestJDSystemReports:
 
 class TestJDSystemConfig:
     def test_save_requires_path(self, jd_system: JohnnyDecimalSystem) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="No configuration path provided"):
             jd_system.save_configuration()
 
     def test_save_and_load_roundtrip(
@@ -276,11 +276,11 @@ class TestJDSystemConfig:
 
     def test_load_nonexistent_raises(self, tmp_path: Path) -> None:
         sys = JohnnyDecimalSystem()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
             sys.load_configuration(tmp_path / "nonexistent.json")
 
     def test_load_requires_path(self, jd_system: JohnnyDecimalSystem) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Range cannot span multiple areas"):
             jd_system.load_configuration()
 
 
@@ -336,7 +336,7 @@ class TestJDSystemReserveRange:
     def test_reserve_range_different_levels_raises(self, jd_system: JohnnyDecimalSystem) -> None:
         start = JohnnyDecimalNumber(area=10)
         end = JohnnyDecimalNumber(area=10, category=1)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Start and end must be at same hierarchy level"):
             jd_system.reserve_number_range(start, end)
 
     def test_reserve_category_range(self, jd_system: JohnnyDecimalSystem) -> None:

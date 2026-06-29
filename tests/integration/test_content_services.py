@@ -75,7 +75,7 @@ class TestDocumentExtractorTxt:
     def test_extract_nonexistent_file_raises(
         self, extractor: DocumentExtractor, tmp_path: Path
     ) -> None:
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="missing.txt"):
             extractor.extract_text(tmp_path / "missing.txt")
 
     def test_extract_unsupported_format_raises(
@@ -83,7 +83,7 @@ class TestDocumentExtractorTxt:
     ) -> None:
         f = tmp_path / "video.mp4"
         f.touch()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unsupported format"):
             extractor.extract_text(f)
 
     def test_extract_empty_txt_returns_empty_string(

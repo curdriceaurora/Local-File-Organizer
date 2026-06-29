@@ -419,7 +419,7 @@ class TestFindImagesInDirectory:
     """Tests for find_images_in_directory."""
 
     def test_nonexistent_dir(self):
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
             find_images_in_directory(Path("/") / "nonexistent")
 
     def test_not_a_directory(self, tmp_path):

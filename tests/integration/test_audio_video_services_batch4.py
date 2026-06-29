@@ -386,7 +386,7 @@ class TestAudioMetadataExtractor:
         from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
 
         extractor = AudioMetadataExtractor()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             extractor.extract(tmp_path / "nonexistent.mp3")
 
     def test_extract_with_mutagen_mock(self, tmp_path: Path) -> None:
@@ -810,7 +810,7 @@ class TestVideoMetadataExtractor:
     def test_extract_raises_file_not_found(self, tmp_path: Path) -> None:
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Video file not found"):
             VideoMetadataExtractor().extract(tmp_path / "missing.mp4")
 
     def test_extract_returns_video_metadata(self, tmp_path: Path) -> None:

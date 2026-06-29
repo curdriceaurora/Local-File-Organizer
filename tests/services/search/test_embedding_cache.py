@@ -79,7 +79,7 @@ class TestGetOrCompute:
 
     def test_missing_file_raises(self, tmp_path: Path) -> None:
         cache = EmbeddingCache(tmp_path / "cache.db")
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="File not found"):
             cache.get_or_compute(tmp_path / "nonexistent.txt", compute=_dummy_compute)
         cache.close()
 
@@ -97,7 +97,7 @@ class TestGetOrCompute:
             raise FileNotFoundError(f"File not found: {f}")
 
         with patch.object(type(f), "read_text", _raise_on_read_text):
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="File not found"):
                 cache.get_or_compute(f, compute=_dummy_compute)
         cache.close()
         _ = original_stat  # suppress unused variable warning
@@ -111,7 +111,7 @@ class TestGetOrCompute:
         cache = EmbeddingCache(tmp_path / "cache.db")
 
         with patch.object(type(f), "stat", side_effect=OSError("permission denied")):
-            with pytest.raises(OSError):
+            with pytest.raises(OSError, match="Cannot access"):
                 cache.get_or_compute(f, compute=_dummy_compute)
         cache.close()
 

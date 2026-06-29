@@ -28,7 +28,7 @@ class TestRateLimitResult:
 
     def test_frozen(self):
         result = RateLimitResult(allowed=True, remaining=9, reset_at=1000)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             result.allowed = False  # type: ignore[misc]
 
 

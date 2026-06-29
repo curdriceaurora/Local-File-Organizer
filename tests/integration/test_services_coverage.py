@@ -121,7 +121,7 @@ class TestAudioPreprocessor:
         )
 
         # Missing input file
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             preprocessor.convert_to_wav(tmp_path / "missing.mp3")
 
     @patch("subprocess.run")
@@ -134,7 +134,7 @@ class TestAudioPreprocessor:
         # 1. Ffmpeg run returns non-zero code -> raises RuntimeError
         mock_run.return_value = MagicMock(returncode=1, stderr="unsupported codec")
         preprocessor = AudioPreprocessor()
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(RuntimeError, match="ffmpeg conversion failed") as exc:
             preprocessor.convert_to_wav(dummy_input)
         assert "ffmpeg conversion failed" in str(exc.value)
 
@@ -159,7 +159,9 @@ class TestAudioPreprocessor:
 
         with patch("subprocess.run", side_effect=FileNotFoundError()):
             with patch.dict("sys.modules", {"pydub": None}):
-                with pytest.raises(ImportError) as exc:
+                with pytest.raises(
+                    ImportError, match="Neither ffmpeg nor pydub is available"
+                ) as exc:
                     preprocessor.convert_to_wav(dummy_input)
                 assert "Neither ffmpeg nor pydub is available" in str(exc.value)
 
@@ -306,7 +308,7 @@ class TestSceneDetector:
 
     def test_detect_scenes_file_not_found(self) -> None:
         detector = SceneDetector()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Video file not found"):
             detector.detect_scenes("missing_video.mp4")
 
     def test_detect_with_scenedetect(self, tmp_path: Path) -> None:
@@ -395,7 +397,7 @@ class TestSceneDetector:
 
             # Test VideoCapture fail to open
             mock_cap.isOpened.return_value = False
-            with pytest.raises(ValueError) as exc:
+            with pytest.raises(ValueError, match="Failed to open video") as exc:
                 detector.detect_scenes(dummy_video)
             assert "Failed to open video" in str(exc.value)
 
@@ -580,7 +582,7 @@ class TestServiceAudioTranscriber:
         dummy_file.write_bytes(b"dummy")
         with patch.dict("sys.modules", {"faster_whisper": None}):
             transcriber = ServiceAudioTranscriber(device="cpu")
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="faster-whisper is required") as exc:
                 transcriber.transcribe(dummy_file)
             assert "faster-whisper is required" in str(exc.value)
 
@@ -660,7 +662,7 @@ class TestServiceAudioTranscriber:
             transcriber = ServiceAudioTranscriber(device="cpu")
 
             # File not found
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="Audio file not found"):
                 transcriber.transcribe(tmp_path / "missing.wav")
 
             options = ServiceTranscriptionOptions(
@@ -733,7 +735,7 @@ class TestServiceAudioTranscriber:
         mock_model.transcribe.side_effect = ValueError("Mocked error")
         transcriber._load_model.return_value = mock_model
 
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match="Mocked error") as exc:
             transcriber.transcribe(dummy_audio)
         assert "Mocked error" in str(exc.value)
 
@@ -798,7 +800,7 @@ class TestServiceAudioTranscriber:
 class TestDocumentEmbedder:
     def test_document_embedder_constructor_import_error(self) -> None:
         with patch("sklearn.feature_extraction.text.TfidfVectorizer", side_effect=ImportError()):
-            with pytest.raises(ImportError) as exc:
+            with pytest.raises(ImportError, match="scikit-learn is required") as exc:
                 DocumentEmbedder()
             assert "scikit-learn is required" in str(exc.value)
 
@@ -829,11 +831,11 @@ class TestDocumentEmbedder:
 
         # Test NotFittedError trigger
         unfitted_embedder = DocumentEmbedder(max_features=10)
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(RuntimeError, match="Vectorizer not fitted") as exc:
             unfitted_embedder.transform(doc)
         assert "Vectorizer not fitted" in str(exc.value)
 
-        with pytest.raises(RuntimeError) as exc_batch:
+        with pytest.raises(RuntimeError, match="Vectorizer not fitted") as exc_batch:
             unfitted_embedder.transform_batch([doc])
         assert "Vectorizer not fitted" in str(exc_batch.value)
 
@@ -860,11 +862,11 @@ class TestDocumentEmbedder:
         embedder = DocumentEmbedder(max_features=10, max_df=1.0, ngram_range=(1, 1))
 
         # Fit fitted checks
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Vectorizer not fitted"):
             embedder.get_feature_names()
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Vectorizer not fitted"):
             embedder.get_vocabulary()
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Vectorizer not fitted"):
             embedder.get_top_terms(np.zeros(5))
 
         # Fit
@@ -932,7 +934,7 @@ class TestDocumentEmbedder:
 
         # 2. fit_transform raising ValueError
         embedder.vectorizer.fit_transform = MagicMock(side_effect=ValueError("Fit error"))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Fit error"):
             embedder.fit_transform(["apple"])
 
         # 3. get_feature_names raising AttributeError (fallback test)
@@ -957,7 +959,7 @@ class TestDocumentEmbedder:
         # 6. load_model raising unpickling errors
         with patch("builtins.open", side_effect=OSError("Load failed")):
             with patch("logging.Logger.error") as mock_err:
-                with pytest.raises(OSError):
+                with pytest.raises(OSError, match="Load failed"):
                     embedder.load_model(tmp_path / "fail.pkl")
                 mock_err.assert_called_once()
 

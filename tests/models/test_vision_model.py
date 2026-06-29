@@ -85,14 +85,10 @@ class TestVisionModel:
             ):
                 with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
-                    with pytest.raises(Exception) as excinfo:
+                    with pytest.raises(Exception, match="Failed to analyze image|Ollama error"):
                         model.generate(
                             prompt="Describe this image", image_path="/path/to/image.jpg"
                         )
-
-                    assert "Failed to analyze image" in str(excinfo.value) or "Ollama error" in str(
-                        excinfo.value
-                    )
 
 
 @pytest.mark.unit

@@ -175,7 +175,7 @@ class TestDaemonServiceLifecycle:
         daemon = DaemonService(DaemonConfig())
         daemon.start_background()
         try:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(RuntimeError, match="Daemon is already running"):
                 daemon.start_background()
         finally:
             daemon.stop()

@@ -561,7 +561,7 @@ class TestAddDirectoryConfigSync:
         mon.start()
         try:
             missing = tmp_path / "nope"
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="No such file|not found"):
                 mon.add_directory(missing)
             # Scheduling failed → the config append is rolled back.
             assert missing.resolve() not in config.watch_directories
