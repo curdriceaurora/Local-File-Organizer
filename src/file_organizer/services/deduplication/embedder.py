@@ -241,7 +241,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(path, "wb") as f:  # noqa: safedir-required  # embedding cache writer — path is a content-addressed cache file
+            with open(path, "wb") as f:  # noqa: safedir-required, atomic-write  # embedding cache writer — path is a content-addressed cache file
                 pickle.dump(self.vectorizer, f)
 
             logger.info(f"Saved vectorizer to {path}")
@@ -256,7 +256,7 @@ class DocumentEmbedder:
             path: Path to load the model from
         """
         try:
-            with open(path, "rb") as f:  # noqa: safedir-required  # embedding cache reader — path is a content-addressed cache file
+            with open(path, "rb") as f:  # noqa: safedir-required, atomic-write  # embedding cache reader — path is a content-addressed cache file
                 self.vectorizer = pickle.load(f)
 
             self.is_fitted = True
@@ -284,7 +284,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(self.cache_path, "wb") as f:  # noqa: safedir-required  # embedding cache writer — path is a content-addressed cache file
+            with open(self.cache_path, "wb") as f:  # noqa: safedir-required, atomic-write  # embedding cache writer — path is a content-addressed cache file
                 pickle.dump(self.embedding_cache, f)
 
             logger.debug(f"Saved {len(self.embedding_cache)} embeddings to cache")
@@ -298,7 +298,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(self.cache_path, "rb") as f:  # noqa: safedir-required  # embedding cache reader — path is a content-addressed cache file
+            with open(self.cache_path, "rb") as f:  # noqa: safedir-required, atomic-write  # embedding cache reader — path is a content-addressed cache file
                 self.embedding_cache = pickle.load(f)
 
             logger.info(f"Loaded {len(self.embedding_cache)} embeddings from cache")

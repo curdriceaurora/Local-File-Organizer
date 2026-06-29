@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.utils.atomic_write import atomic_write_text
+
 logger = logging.getLogger(__name__)
 
 # Default registry path relative to working directory
@@ -134,10 +136,7 @@ class ServiceDiscovery:
         """Persist the current registry to disk."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = {name: info.to_dict() for name, info in self._services.items()}
-        self._path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
+        atomic_write_text(self._path, json.dumps(payload, indent=2, sort_keys=True))
         logger.debug("Saved %d services to %s", len(self._services), self._path)
 
     # ------------------------------------------------------------------

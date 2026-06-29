@@ -33,6 +33,7 @@ from file_organizer.api.dependencies import get_settings
 from file_organizer.api.repositories.settings_repo import SettingsRepository
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
+from file_organizer.utils.atomic_write import atomic_write_bytes
 from file_organizer.web._helpers import base_context, templates
 
 profile_router = APIRouter(tags=["web"])
@@ -602,7 +603,7 @@ async def profile_avatar_upload(
     except ValueError:
         return HTMLResponse('<p class="error-text">Invalid user ID.</p>', status_code=400)
     _AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(raw)
+    atomic_write_bytes(dest, raw)
     return HTMLResponse('<p class="success-text">Avatar updated.</p>')
 
 

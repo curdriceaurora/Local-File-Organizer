@@ -70,7 +70,7 @@ class JobPersistence:
         # Atomic write: write to temp file, fsync, rename, then fsync directory
         temp_path = path.with_suffix(".tmp")
         try:
-            with open(temp_path, "w", encoding="utf-8") as f:  # noqa: safedir-required  # persistence writer — path is an internally managed temp file
+            with open(temp_path, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # persistence writer — path is an internally managed temp file
                 f.write(json.dumps(data, indent=2, default=str))
                 f.flush()
                 os.fsync(f.fileno())

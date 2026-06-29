@@ -13,6 +13,7 @@ from file_organizer.integrations.base import (
     IntegrationStatus,
     IntegrationType,
 )
+from file_organizer.utils.atomic_write import atomic_write_text
 
 
 class WorkflowIntegration(Integration):
@@ -83,12 +84,8 @@ class WorkflowIntegration(Integration):
         alfred_path = output_dir / f"alfred-{stem}-{stamp}.json"
         raycast_path = output_dir / f"raycast-{stem}-{stamp}.json"
 
-        alfred_path.write_text(
-            json.dumps(alfred, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
-        raycast_path.write_text(
-            json.dumps(raycast, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+        atomic_write_text(alfred_path, json.dumps(alfred, indent=2, sort_keys=True) + "\n")
+        atomic_write_text(raycast_path, json.dumps(raycast, indent=2, sort_keys=True) + "\n")
         return True
 
     async def get_status(self) -> IntegrationStatus:

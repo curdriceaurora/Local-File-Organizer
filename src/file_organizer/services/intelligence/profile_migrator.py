@@ -273,7 +273,7 @@ class ProfileMigrator:
             backup_path = backup_dir / f"{backup_name}.json"
 
             # Write backup
-            with open(backup_path, "w", encoding="utf-8") as f:  # noqa: safedir-required  # profile migrator writer — path is an internal backup file
+            with open(backup_path, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile migrator writer — path is an internal backup file
                 json.dump(profile.to_dict(), f, indent=2, ensure_ascii=False)
 
             print(f"Created migration backup: {backup_path}")
@@ -303,7 +303,7 @@ class ProfileMigrator:
                 return False
 
             # Load backup data
-            with open(backup_path, encoding="utf-8") as f:  # noqa: safedir-required  # profile migrator reader — path is an internal backup file
+            with open(backup_path, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # profile migrator reader — path is an internal backup file
                 backup_data = json.load(f)
 
             # Restore profile

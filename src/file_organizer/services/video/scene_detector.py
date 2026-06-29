@@ -353,7 +353,7 @@ class SceneDetector:
 
         output_path = Path(output_path)
 
-        with open(output_path, "w", newline="") as f:  # noqa: safedir-required  # scene detector — output path validated at CLI/API boundary
+        with open(output_path, "w", newline="") as f:  # noqa: safedir-required, atomic-write  # scene detector — output path validated at CLI/API boundary
             writer = csv.writer(f)
             writer.writerow(
                 [

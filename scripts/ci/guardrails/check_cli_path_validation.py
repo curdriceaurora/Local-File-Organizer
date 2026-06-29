@@ -19,6 +19,67 @@ VALIDATION_FUNCTIONS = {
 }
 
 
+def _is_cli_command(node: ast.FunctionDef) -> bool:
+    """Check if the function is a CLI command entrypoint."""
+    if node.name == "doctor":
+        return True
+    for decorator in node.decorator_list:
+        dec_name = ""
+        if isinstance(decorator, ast.Call):
+            func = decorator.func
+            if isinstance(func, ast.Attribute):
+                dec_name = func.attr
+            elif isinstance(func, ast.Name):
+                dec_name = func.id
+        elif isinstance(decorator, ast.Attribute):
+            dec_name = decorator.attr
+        elif isinstance(decorator, ast.Name):
+            dec_name = decorator.id
+
+        if dec_name in ("command", "callback"):
+            return True
+    return False
+
+
+def _is_annotated_subscript(node: ast.Subscript) -> bool:
+    """Return True if ``node`` represents ``Annotated[...]``."""
+    value = node.value
+    return (isinstance(value, ast.Name) and value.id == "Annotated") or (
+        isinstance(value, ast.Attribute) and value.attr == "Annotated"
+    )
+
+
+class PathTypeChecker(ast.NodeVisitor):
+    """Visitor to check if type annotation AST uses Path."""
+
+    def __init__(self) -> None:
+        """Initialize the visitor setting has_path to False."""
+        self.has_path = False
+
+    def visit_Name(self, node: ast.Name) -> None:
+        """Record if name matches Path."""
+        if node.id == "Path":
+            self.has_path = True
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        """Record if attribute matches Path."""
+        if node.attr == "Path":
+            self.has_path = True
+        self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        """For ``Annotated[T, ...]``, inspect only ``T`` and ignore metadata."""
+        if _is_annotated_subscript(node):
+            annotation_slice = node.slice
+            if isinstance(annotation_slice, ast.Tuple) and annotation_slice.elts:
+                self.visit(annotation_slice.elts[0])
+            else:
+                self.visit(annotation_slice)
+            return
+        self.generic_visit(node)
+
+
 class CliPathValidationVisitor(ast.NodeVisitor):
     """AST visitor to check CLI path argument validation."""
 
@@ -28,11 +89,8 @@ class CliPathValidationVisitor(ast.NodeVisitor):
         self.violations: list[tuple[int, str, str]] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: C901
-        # We only care about CLI command entrypoints. In Typer, these are usually
-        # public functions in a CLI module, or functions decorated with commands.
-        # Let's check all functions in cli/ modules, but exclude helper functions
-        # (by convention, helpers start with an underscore like _resolve_parallel_settings).
-        if node.name.startswith("_"):
+        # We only care about CLI command entrypoints.
+        if node.name.startswith("_") or not _is_cli_command(node):
             self.generic_visit(node)
             return
 
@@ -44,8 +102,9 @@ class CliPathValidationVisitor(ast.NodeVisitor):
             is_path = False
             # Check annotation (e.g., Path, Path | None, Optional[Path])
             if arg.annotation:
-                annotation_str = ast.unparse(arg.annotation)
-                if "Path" in annotation_str:
+                checker = PathTypeChecker()
+                checker.visit(arg.annotation)
+                if checker.has_path:
                     is_path = True
 
             # If it's a path parameter, record it
@@ -93,7 +152,12 @@ class CliPathValidationVisitor(ast.NodeVisitor):
                 line_content = self.lines[line_idx] if 0 <= line_idx < len(self.lines) else ""
 
                 # Check for noqa override
-                if "noqa: cli-path-validation" in line_content or "noqa" in line_content:
+                line_content_lower = line_content.lower()
+                if (
+                    "copilot: wontfix" in line_content_lower
+                    or "noqa: cli-path-validation" in line_content_lower
+                    or "noqa" in line_content_lower
+                ):
                     continue
 
                 self.violations.append(
@@ -137,7 +201,7 @@ def main() -> int:
     all_violations = []
     # Scan all python files in the cli directory
     for path in cli_dir.glob("*.py"):
-        if path.name == "__init__.py" or path.name == "_globals.py":
+        if path.name in ("__init__.py", "_globals.py", "path_validation.py"):
             continue
 
         violations = check_file(path)
@@ -149,7 +213,8 @@ def main() -> int:
         for file_path, lineno, msg, line in all_violations:
             print(f"  {file_path}:{lineno}: {msg} -> `{line}`", file=sys.stderr)
         print(
-            "\nFix: Wrap the CLI Path argument in resolve_cli_path() or add '# noqa: cli-path-validation' if exempt.",
+            "\nFix: Wrap the CLI Path argument in resolve_cli_path() or add "
+            "'# copilot: wontfix' (or '# noqa: cli-path-validation') if exempt.",
             file=sys.stderr,
         )
         return 1

@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.utils.atomic_write import atomic_write_text
+
 
 def detect_legacy_paths(home: Path, config_home: Path, data_home: Path) -> list[Path]:
     """Detect legacy path locations that need migration.
@@ -100,7 +102,7 @@ class PathMigrator:
         # Persist log to audit trail for data integrity and compliance
         self.canonical_path.mkdir(parents=True, exist_ok=True)
         audit_file = self.canonical_path / ".migration-audit.json"
-        audit_file.write_text(json.dumps(log, indent=2, default=str))
+        atomic_write_text(audit_file, json.dumps(log, indent=2, default=str))
 
         # Could optionally remove legacy path here
         # For now, leave it with backup created for safety

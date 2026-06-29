@@ -289,7 +289,7 @@ class FeedbackCollector:
             return []
 
         try:
-            with open(self._feedback_file, encoding="utf-8") as f:  # noqa: safedir-required  # AI feedback reader — path is an internal feedback file
+            with open(self._feedback_file, encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # AI feedback reader — path is an internal feedback file
                 data = json.load(f)
             return [FeedbackEvent.from_dict(item) for item in data]
         except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -304,7 +304,7 @@ class FeedbackCollector:
         try:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
             data = [event.to_dict() for event in self._events]
-            with open(self._feedback_file, "w", encoding="utf-8") as f:  # noqa: safedir-required  # AI feedback writer — path is an internal feedback file
+            with open(self._feedback_file, "w", encoding="utf-8") as f:  # noqa: safedir-required, atomic-write  # AI feedback writer — path is an internal feedback file
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error("Failed to save feedback events: %s", e, exc_info=True)

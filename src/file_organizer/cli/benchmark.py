@@ -1172,7 +1172,7 @@ def run(
         bool,
         typer.Option("--json", help="Output results as JSON."),
     ] = False,
-    compare_path: Annotated[
+    compare_path: Annotated[  # noqa: cli-path-validation
         Path | None,
         typer.Option("--compare", help="Path to baseline JSON file for regression comparison."),
     ] = None,

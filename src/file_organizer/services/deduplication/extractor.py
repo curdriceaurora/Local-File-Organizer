@@ -114,7 +114,7 @@ class DocumentExtractor:
         # SafeDir-unavailable case (which would double-yield → RuntimeError).
         fd = DocumentExtractor._open_reader_fd(file_path, scan_root)
         if fd is None:
-            with open(file_path, "rb") as handle:  # noqa: safedir-required  # content extractor — path is a user file read for hash/content analysis
+            with open(file_path, "rb") as handle:  # noqa: safedir-required, atomic-write  # content extractor — path is a user file read for hash/content analysis
                 yield handle
             return
         # Close the raw fd if fdopen itself fails (e.g. EMFILE under fd
@@ -232,10 +232,13 @@ class DocumentExtractor:
         try:
             import pypdf
 
+            pypdf_error: type[Exception] = Exception
             try:
                 from pypdf.errors import PyPdfError
+
+                pypdf_error = PyPdfError
             except (ImportError, AttributeError):
-                PyPdfError = Exception
+                pass
 
             text_parts = []
 
@@ -257,7 +260,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
-        except (PyPdfError, OSError, ValueError, KeyError, IndexError) as e:
+        except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
 
@@ -384,13 +387,17 @@ class DocumentExtractor:
         Returns:
             Extracted text
         """
+        # Keep an always-defined fallback type in case defusedxml import fails
+        # before ParseError is bound in local scope.
+        _parse_error_type: type[BaseException] = SyntaxError
         try:
-            from xml.etree.ElementTree import ParseError
-
             # ``content.xml`` comes from an untrusted document; use defusedxml to
             # reject entity-expansion / external-entity (XXE) payloads that the
             # stdlib parser would otherwise process.
+            from defusedxml.ElementTree import ParseError as _DefusedParseError
             from defusedxml.ElementTree import fromstring as _xml_fromstring
+
+            _parse_error_type = _DefusedParseError
 
             # ODT files are ZIP archives; open through SafeDir (symlink-safe).
             with self._open_binary(file_path, scan_root) as f, zipfile.ZipFile(f, "r") as odt_zip:
@@ -426,7 +433,14 @@ class DocumentExtractor:
 
             return full_text
 
-        except (OSError, KeyError, ValueError, zipfile.BadZipFile, ParseError, ImportError) as e:
+        except (
+            OSError,
+            KeyError,
+            ValueError,
+            zipfile.BadZipFile,
+            _parse_error_type,
+            ImportError,
+        ) as e:
             # ParseError (malformed content.xml — a SyntaxError subclass) and
             # ImportError (defusedxml unavailable) are handled here so a bad or
             # untrusted ODT degrades to "" rather than crashing the dedup flow.

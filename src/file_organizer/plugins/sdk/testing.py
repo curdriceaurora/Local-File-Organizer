@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from file_organizer.utils.atomic_write import atomic_write_text
+
 
 class PluginTestCase(unittest.TestCase):
     """Base unittest test case with isolated filesystem helpers."""
@@ -25,7 +27,7 @@ class PluginTestCase(unittest.TestCase):
         """Create a UTF-8 text fixture file under the test directory."""
         destination = self.test_dir / relative_path
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(content, encoding="utf-8")
+        atomic_write_text(destination, content)
         return destination
 
     def assert_file_exists(self, path: Path) -> None:

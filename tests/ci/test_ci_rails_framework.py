@@ -2,8 +2,8 @@
 
 Exercises ``scripts/ci/ci_rails.py``: registry parsing, advisory vs.
 enforce semantics, the ``--enforce-all`` override, and the empty-registry
-no-op. No real rails exist yet (WP-6.x adds them), so these tests register
-synthetic rails whose commands deterministically pass/fail.
+no-op. The repo registry now includes a real enforced rail, but these tests
+still register synthetic rails whose commands deterministically pass/fail.
 """
 
 from __future__ import annotations
@@ -132,9 +132,9 @@ def test_repo_registry_loads_registered_rails() -> None:
     rails = ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY)
     expected_modes = {
         "safedir-required": "enforce",
-        "atomic-write": "advisory",
-        "cli-path-validation": "advisory",
-        "defusedxml-fallback": "advisory",
+        "atomic-write": "enforce",
+        "cli-path-validation": "enforce",
+        "defusedxml-fallback": "enforce",
         "test-hardcoded-paths": "advisory",
         "test-separator-paths": "advisory",
         "pytest-raises-hygiene": "advisory",

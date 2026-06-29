@@ -363,6 +363,10 @@ def doctor(
     if not json_output and _get_state().json_output:
         json_output = True
 
+    from file_organizer.cli.path_validation import resolve_cli_path
+
+    path = resolve_cli_path(path, must_exist=True, must_be_dir=True)
+
     # Scan the directory
     extension_counts = scan_directory(path)
 

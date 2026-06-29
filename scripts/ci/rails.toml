@@ -21,19 +21,19 @@ description = "Flags raw open(), Path.open(), and shutil copy/move functions on 
 [[rail]]
 name = "atomic-write"
 command = ["python", "scripts/ci/guardrails/check_atomic_write.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags raw file write operations, enforcing the use of atomic_write (WP-6.1)."
 
 [[rail]]
 name = "cli-path-validation"
 command = ["python", "scripts/ci/guardrails/check_cli_path_validation.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Ensures all CLI command path arguments are validated before use (WP-6.1)."
 
 [[rail]]
 name = "defusedxml-fallback"
 command = ["python", "scripts/ci/guardrails/check_defusedxml_fallback.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Enforces using defusedxml instead of standard library xml (WP-6.1)."
 
 [[rail]]

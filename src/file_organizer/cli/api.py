@@ -15,6 +15,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from file_organizer.utils.atomic_write import atomic_write_text
+
 api_app = typer.Typer(
     help="Remote API operations via the official Python client.",
     no_args_is_help=True,
@@ -105,8 +107,13 @@ def login(
         tokens = client.login(username, password)
         payload = tokens.model_dump()
         if save_to is not None:
+            from file_organizer.cli.path_validation import resolve_cli_path
+
+            save_to = resolve_cli_path(save_to, must_exist=False, must_be_dir=False)
+            if save_to.exists() and not save_to.is_file():
+                raise typer.BadParameter(f"Token output path is not a regular file: {save_to!s}")
             save_to.parent.mkdir(parents=True, exist_ok=True)
-            save_to.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            atomic_write_text(save_to, json.dumps(payload, indent=2) + "\n")
             console.print(f"[green]Saved tokens to[/green] {save_to}")
         if as_json:
             _print_json(payload)
