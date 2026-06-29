@@ -48,6 +48,10 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `scripts/dev/pre-commit-validation.sh`.
 
+The MECE backlog for review anti-patterns that should become remediation and
+enforcement issues lives in
+[`guardrail-promotion-backlog.md`](guardrail-promotion-backlog.md).
+
 ## Blocking Guardrails
 
 Once a rail's backlog reaches zero, flip its registry mode to `enforce`.

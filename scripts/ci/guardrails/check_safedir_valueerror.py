@@ -31,6 +31,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 _SAFEDIR_METHODS = {
     "open_child",
     "open_for_reader",
@@ -171,8 +176,7 @@ class _Visitor(ast.NodeVisitor):
                         line_idx = handler.lineno - 1
                         if 0 <= line_idx < len(self.lines):
                             line_content = self.lines[line_idx]
-                            # Support noqa override
-                            if "noqa: safedir-valueerror" in line_content or "noqa" in line_content:
+                            if has_targeted_noqa(line_content, "safedir-valueerror"):
                                 continue
                         self.violations.append(
                             (

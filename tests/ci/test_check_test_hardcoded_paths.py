@@ -70,6 +70,15 @@ def test_targeted_noqa_suppresses_violation(tmp_path: Path) -> None:
     assert checker.check_file(src) == []
 
 
+def test_targeted_noqa_after_type_ignore_suppresses_violation(tmp_path: Path) -> None:
+    src = tmp_path / "type_ignore_exempt.py"
+    src.write_text(
+        'path = Path("/home/user/docs")  # type: ignore[arg-type]  # noqa: test-hardcoded-paths\n',
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
 def test_bare_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
     src = tmp_path / "bare.py"
     src.write_text('path = Path("/home/user/docs")  # noqa\n', encoding="utf-8")

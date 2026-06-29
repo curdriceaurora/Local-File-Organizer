@@ -8,9 +8,13 @@ operations except in designated primitive/utility modules.
 from __future__ import annotations
 
 import ast
-import re
 import sys
 from pathlib import Path
+
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
 
 # Paths that are allowed to perform raw write operations (the primitives themselves)
 ALLOWED_PATHS = {
@@ -67,20 +71,9 @@ class AtomicWriteVisitor(ast.NodeVisitor):
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
             # Only allow targeted suppression for this rail.
-            if _has_atomic_write_noqa(line_content):
+            if has_targeted_noqa(line_content, "atomic-write"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
-
-
-def _has_atomic_write_noqa(line_content: str) -> bool:
-    """Return True when the line has an explicit noqa for atomic-write."""
-    match = re.search(r"#\s*noqa(?::\s*([a-z0-9_\-,\s]+))?", line_content.lower())
-    if match is None:
-        return False
-    codes = match.group(1)
-    if not codes:
-        return False
-    return "atomic-write" in {code.strip() for code in codes.split(",")}
 
 
 def check_file(filepath: Path) -> list[tuple[int, str, str]]:

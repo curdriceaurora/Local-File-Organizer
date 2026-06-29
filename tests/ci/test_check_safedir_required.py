@@ -151,13 +151,22 @@ def test_noqa_safedir_required_suppresses_open(tmp_path: Path) -> None:
     assert checker.check_file(src) == []
 
 
-def test_bare_noqa_suppresses_open(tmp_path: Path) -> None:
-    src = tmp_path / "exempt_bare.py"
+def test_bare_noqa_does_not_suppress_open(tmp_path: Path) -> None:
+    src = tmp_path / "bare.py"
     src.write_text(
         "with open('file.txt') as f:  # noqa\n    pass\n",
         encoding="utf-8",
     )
-    assert checker.check_file(src) == []
+    assert len(checker.check_file(src)) == 1
+
+
+def test_string_literal_noqa_does_not_suppress_open(tmp_path: Path) -> None:
+    src = tmp_path / "string_literal.py"
+    src.write_text(
+        "msg = 'noqa: safedir-required'\nwith open('file.txt') as f:\n    pass\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1
 
 
 # ---------------------------------------------------------------------------

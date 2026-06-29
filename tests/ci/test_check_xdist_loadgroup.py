@@ -68,3 +68,14 @@ def test_noqa_suppresses_violation(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert checker.check_file(src) == []
+
+
+def test_bare_noqa_does_not_suppress_violation(tmp_path: Path) -> None:
+    src = tmp_path / "bare.py"
+    src.write_text(
+        "def test_x(tmp_path_factory):  # noqa\n"
+        "    base = tmp_path_factory.getbasetemp()\n"
+        "    assert base.exists()\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1

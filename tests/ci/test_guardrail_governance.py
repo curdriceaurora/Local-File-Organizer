@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shlex
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PRE_PR_SCRIPT = PROJECT_ROOT / "scripts" / "dev" / "pre-commit-validation.sh"
 GUARDRAIL_DOC = PROJECT_ROOT / "docs" / "developer" / "guardrails.md"
 CONTRIBUTING_DOC = PROJECT_ROOT / "CONTRIBUTING.md"
+RAILS_REGISTRY = PROJECT_ROOT / "scripts" / "ci" / "rails.toml"
+SECURITY_DOC = PROJECT_ROOT / "SECURITY.md"
 
 pytestmark = pytest.mark.ci
 
@@ -115,6 +118,32 @@ def test_contributing_points_to_guardrail_workflow() -> None:
 
     assert "docs/developer/guardrails.md" in source
     assert "canonical pre-PR guardrail orchestrator" in source
+
+
+def test_security_rail_status_table_matches_registry() -> None:
+    assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
+    assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
+
+    registry = tomllib.loads(RAILS_REGISTRY.read_text(encoding="utf-8"))
+    expected_modes = {rail["name"]: rail["mode"] for rail in registry["rail"]}
+
+    source = SECURITY_DOC.read_text(encoding="utf-8")
+    section_match = re.search(
+        r"## CI-Enforced Lint Rails\n(?P<section>.*?)(?:\n\n[A-Z#]|\Z)",
+        source,
+        flags=re.DOTALL,
+    )
+    assert section_match, "SECURITY.md must define a CI-Enforced Lint Rails section"
+
+    table_modes = {
+        name: ("enforce" if status == "enforced" else status)
+        for name, status in re.findall(
+            r"^\| `([^`]+)` \| [^|]+ \| (advisory|enforced) \|$",
+            section_match.group("section"),
+            flags=re.MULTILINE,
+        )
+    }
+    assert table_modes == expected_modes
 
 
 def test_api_compat_rules_are_not_duplicated_in_shell_orchestrator() -> None:

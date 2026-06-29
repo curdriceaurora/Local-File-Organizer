@@ -8,10 +8,13 @@ Ensures cross-platform compatibility by discouraging hardcoded path separators
 from __future__ import annotations
 
 import ast
-import io
 import sys
-import tokenize
 from pathlib import Path
+
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
 
 
 class TestSeparatorPathVisitor(ast.NodeVisitor):
@@ -48,27 +51,9 @@ class TestSeparatorPathVisitor(ast.NodeVisitor):
             line_content = self.lines[line_idx]
             # Support targeted override only by parsing actual comment tokens.
             # This avoids treating '#' inside string literals as comments.
-            if _has_targeted_noqa(line_content):
+            if has_targeted_noqa(line_content, "test-separator-paths"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
-
-
-def _has_targeted_noqa(line_content: str) -> bool:
-    try:
-        tokens = tokenize.generate_tokens(io.StringIO(line_content).readline)
-    except (tokenize.TokenError, IndentationError):
-        return False
-    for token in tokens:
-        if token.type != tokenize.COMMENT:
-            continue
-        comment_body = token.string.lstrip("#").strip()
-        if not comment_body.lower().startswith("noqa:"):
-            continue
-        _, _, code_list = comment_body.partition(":")
-        codes = [code.strip() for code in code_list.split(",")]
-        if "test-separator-paths" in codes:
-            return True
-    return False
 
 
 def _extract_path_literal(arg: ast.AST) -> str | None:
