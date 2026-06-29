@@ -235,10 +235,10 @@ class DocumentExtractor:
             pypdf_error: type[Exception] = Exception
             try:
                 from pypdf.errors import PyPdfError
+
+                pypdf_error = PyPdfError
             except (ImportError, AttributeError):
                 pass
-            else:
-                pypdf_error = PyPdfError
 
             text_parts = []
 
@@ -260,6 +260,7 @@ class DocumentExtractor:
         except ImportError:
             logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
+        except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
         except (pypdf_error, OSError, ValueError, KeyError, IndexError) as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
             return ""
@@ -391,7 +392,8 @@ class DocumentExtractor:
             # ``content.xml`` comes from an untrusted document; use defusedxml to
             # reject entity-expansion / external-entity (XXE) payloads that the
             # stdlib parser would otherwise process.
-            from defusedxml.ElementTree import ParseError, fromstring as _xml_fromstring
+            from defusedxml.ElementTree import ParseError
+            from defusedxml.ElementTree import fromstring as _xml_fromstring
 
             # ODT files are ZIP archives; open through SafeDir (symlink-safe).
             with self._open_binary(file_path, scan_root) as f, zipfile.ZipFile(f, "r") as odt_zip:
