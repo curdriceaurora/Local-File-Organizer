@@ -322,6 +322,26 @@ Run the rail directly to verify it exits 0:
 python scripts/ci/guardrails/check_test_separator_paths.py
 ```
 
+## Pytest-Raises-Hygiene Rule (WP-6.2)
+
+Issue `#1369` promotes `pytest-raises-hygiene` to an enforced CI rail. The rail
+is declared in `scripts/ci/rails.toml`, runs via
+`scripts/ci/guardrails/check_pytest_raises_hygiene.py`, and is executed by both
+the `ci-rails` pre-commit hook and `scripts/ci/ci_rails.py` in CI.
+
+The rail is now **enforced** — commits and CI runs fail when violations are
+found.
+
+Prefer `pytest.raises(..., match=...)` whenever the exception message is part
+of the contract. Use `# noqa: pytest-raises-hygiene` only for cases that are
+explicitly message-agnostic.
+
+Run the rail directly to verify it exits 0:
+
+```bash
+python scripts/ci/guardrails/check_pytest_raises_hygiene.py
+```
+
 ## GitHub-Environment Branching Helpers
 
 Guardrail code that branches on `GITHUB_*` variables is CI-first code. Treat it

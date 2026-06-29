@@ -51,7 +51,7 @@ description = "Flags hardcoded path separators in Path() calls in tests, promoti
 [[rail]]
 name = "pytest-raises-hygiene"
 command = ["python", "scripts/ci/guardrails/check_pytest_raises_hygiene.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Ensures pytest.raises on generic/built-in exceptions specifies a match regex (WP-6.2)."
 
 [[rail]]

@@ -52,8 +52,8 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | enforced |
 | `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | enforced |
 | `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | enforced |
-| `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | advisory |
-| `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | advisory |
+| `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | enforced |
+| `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | enforced |
 | `safedir-valueerror` | A broad `except Exception`/bare `except` around a `SafeDir` call that doesn't re-raise or catch `ValueError` explicitly | enforced |
 | `textiowrapper-detach` | An `io.TextIOWrapper` that is never `.detach()`-ed before going out of scope (use-after-close risk on the wrapped buffer/fd) | enforced |
 | `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | enforced |
@@ -95,11 +95,8 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").
   New files get full enforcement; the 41 existing ones are fixed
   incrementally — remove an entry as its file is cleaned up.
-- **Two lint rails above are still advisory.** The remaining advisory
-  rails (`test-separator-paths` and `pytest-raises-hygiene`) each have
-  pre-existing violations that predate enforcement. Flipping a rail to
-  `enforce` requires first reducing its violation count to zero (or to an
-  explicitly accepted/`noqa`-tagged remainder).
+- **No lint rails above are still advisory.** The remaining enforcement
+  gaps are tracked elsewhere (for example, non-blocking bandit findings).
 
 ## Reporting a Vulnerability
 

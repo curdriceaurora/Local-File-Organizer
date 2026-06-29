@@ -137,7 +137,7 @@ def test_repo_registry_loads_registered_rails() -> None:
         "defusedxml-fallback": "enforce",
         "test-hardcoded-paths": "enforce",
         "test-separator-paths": "enforce",
-        "pytest-raises-hygiene": "advisory",
+        "pytest-raises-hygiene": "enforce",
         "safedir-valueerror": "enforce",
         "textiowrapper-detach": "enforce",
         "called-attribute-assertion": "enforce",
