@@ -46,7 +46,7 @@ def _assert_authenticated_template_response(response: HTMLResponse, templates_mo
     """Ensure the authenticated route path rendered a template response."""
     assert response.status_code == 200
     assert b"Not authenticated" not in response.content
-    assert templates_mock.TemplateResponse.called
+    templates_mock.TemplateResponse.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

@@ -47,16 +47,16 @@ are **enforced**; rails with pre-existing violation backlogs remain
 
 | Rail | What it flags | Status |
 |---|---|---|
-| `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | advisory |
-| `atomic-write` | Raw file-write operations bypassing `atomic_write()` | advisory |
-| `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | advisory |
+| `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | enforced |
+| `atomic-write` | Raw file-write operations bypassing `atomic_write()` | enforced |
+| `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | enforced |
 | `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | enforced |
 | `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | advisory |
 | `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | advisory |
 | `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | advisory |
 | `safedir-valueerror` | A broad `except Exception`/bare `except` around a `SafeDir` call that doesn't re-raise or catch `ValueError` explicitly | enforced |
 | `textiowrapper-detach` | An `io.TextIOWrapper` that is never `.detach()`-ed before going out of scope (use-after-close risk on the wrapped buffer/fd) | enforced |
-| `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | advisory |
+| `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | enforced |
 | `xdist-loadgroup` | A test using the xdist-wide `tmp_path_factory.getbasetemp()` without an `xdist_group` marker | enforced |
 
 Per-file coverage floors (`check-integration-floors.py` for the
@@ -95,12 +95,12 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").
   New files get full enforcement; the 41 existing ones are fixed
   incrementally — remove an entry as its file is cleaned up.
-- **Most lint rails above are advisory, not enforced.** Each advisory
-  rail still has pre-existing violations that predate the rail's
-  enforcement. Flipping a rail to `enforce` requires first reducing its
-  violation count to zero (or to an explicitly accepted/`noqa`-tagged
-  remainder). The remaining advisory rails are tracked individually in
-  #1363 through #1370.
+- **Three lint rails above are still advisory.** The remaining advisory
+  rails (`test-hardcoded-paths`, `test-separator-paths`, and
+  `pytest-raises-hygiene`) each have pre-existing violations that
+  predate enforcement. Flipping a rail to `enforce` requires first
+  reducing its violation count to zero (or to an explicitly
+  accepted/`noqa`-tagged remainder).
 
 ## Reporting a Vulnerability
 
