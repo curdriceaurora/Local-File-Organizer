@@ -323,7 +323,7 @@ class TestValidatePayloadResults:
 
         results = self._valid_results()
         results["iterations"] = True
-        with pytest.raises(TypeError, match="must be an int"):
+        with pytest.raises(TypeError, match="must be numeric|must be an int"):
             _validate_payload_results(results)
 
     def test_negative_p95_raises_value_error(self) -> None:

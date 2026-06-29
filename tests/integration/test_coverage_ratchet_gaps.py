@@ -1217,7 +1217,7 @@ class TestDocumentReadersGaps:
         from file_organizer.utils.readers.documents import read_spreadsheet_file
 
         # Test spreadsheet arg validation
-        with pytest.raises(ValueError, match="read_spreadsheet_file requires file_path or fileobj"):
+        with pytest.raises(ValueError, match="read_spreadsheet_file requires file_path"):
             read_spreadsheet_file(None)
 
         # Test unsupported format

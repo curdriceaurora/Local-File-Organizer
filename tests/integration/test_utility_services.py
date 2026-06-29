@@ -300,7 +300,7 @@ class TestStorageAnalyzerInit:
 
 class TestStorageAnalyzerDirectory:
     def test_invalid_path_raises(self, sa: StorageAnalyzer, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="Directory not found"):
+        with pytest.raises(ValueError, match="Invalid directory"):
             sa.analyze_directory(tmp_path / "nonexistent")
 
     def test_file_path_raises(self, sa: StorageAnalyzer, tmp_path: Path) -> None:

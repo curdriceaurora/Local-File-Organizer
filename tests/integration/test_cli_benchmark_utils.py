@@ -224,13 +224,13 @@ class TestValidateBenchmarkPayload:
     def test_degraded_true_empty_reasons_raises(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError, match="must be non-empty when degraded is True"):
+        with pytest.raises(ValueError, match=r"when 'degraded' is True.*must be non-empty"):
             validate_benchmark_payload(_valid_payload(degraded=True, degradation_reasons=[]))
 
     def test_degraded_false_nonempty_reasons_raises(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError, match="must be empty when degraded is False"):
+        with pytest.raises(ValueError, match=r"when 'degraded' is False.*must be empty"):
             validate_benchmark_payload(
                 _valid_payload(degraded=False, degradation_reasons=["reason"])
             )
@@ -279,7 +279,7 @@ class TestValidateBenchmarkPayload:
     def test_degradation_reason_empty_string_raises_value_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError, match="degradation reason entries must be non-empty"):
+        with pytest.raises(ValueError, match="must be a non-empty string"):
             validate_benchmark_payload(_valid_payload(degraded=True, degradation_reasons=[""]))
 
 

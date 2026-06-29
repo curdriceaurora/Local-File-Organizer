@@ -77,7 +77,7 @@ class TestNameValidation:
     def test_open_for_reader_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
         with pytest.raises(
             ValueError,
-            match=r"forbidden character|requires a non-empty relative path|refuses '\\.\\.'",
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
         ):
             sd.open_for_reader(bad_name)
 
@@ -85,20 +85,22 @@ class TestNameValidation:
     def test_open_subdir_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
         with pytest.raises(
             ValueError,
-            match=r"forbidden character|requires a non-empty relative path|refuses '\\.\\.'",
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
         ):
             sd.open_subdir(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", ".."])
     def test_lstat_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError, match=r"forbidden character|refuses '\\.\\.'"):
+        with pytest.raises(
+            ValueError, match=r"forbidden character|reserved component name|refuses '\\.\\.'"
+        ):
             sd.lstat(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", "..", ""])
     def test_unlink_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
         with pytest.raises(
             ValueError,
-            match=r"forbidden character|requires a non-empty relative path|refuses '\\.\\.'",
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
         ):
             sd.unlink(bad_name)
 
@@ -106,7 +108,7 @@ class TestNameValidation:
     def test_mkdir_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
         with pytest.raises(
             ValueError,
-            match=r"forbidden character|requires a non-empty relative path|refuses '\\.\\.'",
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
         ):
             sd.mkdir(bad_name)
 

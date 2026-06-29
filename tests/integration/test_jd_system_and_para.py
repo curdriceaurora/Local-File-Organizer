@@ -280,7 +280,7 @@ class TestJDSystemConfig:
             sys.load_configuration(tmp_path / "nonexistent.json")
 
     def test_load_requires_path(self, jd_system: JohnnyDecimalSystem) -> None:
-        with pytest.raises(ValueError, match="Range cannot span multiple areas"):
+        with pytest.raises(ValueError, match="No configuration path provided"):
             jd_system.load_configuration()
 
 

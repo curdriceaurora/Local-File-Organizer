@@ -224,14 +224,14 @@ class TestAreaDefinition:
         """Verify an empty name raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import AreaDefinition
 
-        with pytest.raises(ValueError, match="Area must be 0-99"):
+        with pytest.raises(ValueError, match="Area name cannot be empty"):
             AreaDefinition(area_range_start=10, area_range_end=19, name="", description="d")
 
     def test_start_gt_end_raises(self) -> None:
         """Verify start > end raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import AreaDefinition
 
-        with pytest.raises(ValueError, match="Range cannot span multiple areas"):
+        with pytest.raises(ValueError, match=r"Area start \(\d+\) must be <= end"):
             AreaDefinition(area_range_start=19, area_range_end=10, name="X", description="d")
 
 
@@ -283,7 +283,7 @@ class TestJDCategoryDefinition:
         """Verify an empty name raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import CategoryDefinition
 
-        with pytest.raises(ValueError, match="Area name cannot be empty"):
+        with pytest.raises(ValueError, match="Category name cannot be empty"):
             CategoryDefinition(area=11, category=1, name="", description="d")
 
 
