@@ -50,6 +50,18 @@ def test_flags_etc_path(tmp_path: Path) -> None:
     assert len(violations) == 1
 
 
+def test_string_literal_noqa_directive_does_not_suppress(tmp_path: Path) -> None:
+    """Verify that 'noqa: test-hardcoded-paths' inside string literal doesn't suppress violation."""
+    src = tmp_path / "string_literal_false_positive.py"
+    src.write_text(  # noqa: test-hardcoded-paths
+        'msg = "some text with noqa: test-hardcoded-paths in it"\npath = Path("/tmp/test")\n',
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "/tmp/test" in violations[0][1]  # noqa: test-hardcoded-paths
+
+
 def test_targeted_noqa_suppresses_violation(tmp_path: Path) -> None:
     src = tmp_path / "exempt.py"
     src.write_text(
