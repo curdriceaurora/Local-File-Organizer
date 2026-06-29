@@ -134,6 +134,7 @@ def test_repo_registry_loads_registered_rails() -> None:
         "safedir-required": "enforce",
         "atomic-write": "enforce",
         "cli-path-validation": "enforce",
+        "cli-file-kind-validation": "advisory",
         "defusedxml-fallback": "enforce",
         "test-hardcoded-paths": "enforce",
         "test-separator-paths": "enforce",

@@ -110,6 +110,49 @@ def resolve_cli_path(
     return resolved
 
 
+def validate_regular_file(path: Path, param_name: str = "path") -> None:
+    """Validate that an existing path is a regular file (not a directory or special file).
+
+    Called after ``resolve_cli_path(must_be_dir=False)`` to enforce that file
+    arguments (read or write) reject directories, sockets, FIFOs, and other
+    non-regular files. Surfaces filesystem-kind errors as ``typer.BadParameter``
+    rather than letting later I/O operations fail with generic errors.
+
+    Args:
+        path: The resolved ``Path`` to validate. Typically already resolved and
+            checked for existence by the caller.
+        param_name: Friendly parameter name for error messages (e.g., ``"output"``,
+            ``"token path"``). Defaults to ``"path"``.
+
+    Raises:
+        typer.BadParameter: If ``path`` exists but is not a regular file
+            (i.e., is a directory, symlink, socket, FIFO, device file, etc.).
+    """
+    if path.exists() and not path.is_file():
+        raise typer.BadParameter(f"{param_name.capitalize()} is not a regular file: {path!s}")
+
+
+def validate_is_dir(path: Path, param_name: str = "path") -> None:
+    """Validate that an existing path is a directory (not a file or special file).
+
+    Called after ``resolve_cli_path(must_be_dir=False)`` when the context requires
+    a directory but the path was not explicitly validated. Surfaces filesystem-kind
+    errors as ``typer.BadParameter`` rather than letting later operations fail.
+
+    Args:
+        path: The resolved ``Path`` to validate. Typically already resolved and
+            checked for existence by the caller.
+        param_name: Friendly parameter name for error messages (e.g., ``"input"``,
+            ``"watch directory"``). Defaults to ``"path"``.
+
+    Raises:
+        typer.BadParameter: If ``path`` exists but is not a directory
+            (i.e., is a regular file, symlink, socket, FIFO, etc.).
+    """
+    if path.exists() and not path.is_dir():
+        raise typer.BadParameter(f"{param_name.capitalize()} is not a directory: {path!s}")
+
+
 def validate_pair(input_dir: Path, output_dir: Path) -> None:
     """Reject incoherent input/output directory pairs at the CLI boundary.
 

@@ -50,6 +50,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | enforced |
 | `atomic-write` | Raw file-write operations bypassing `atomic_write()` | enforced |
 | `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | enforced |
+| `cli-file-kind-validation` | A CLI path resolved with `must_be_dir=False` without a subsequent file/directory kind check | advisory |
 | `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | enforced |
 | `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | enforced |
 | `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | enforced |

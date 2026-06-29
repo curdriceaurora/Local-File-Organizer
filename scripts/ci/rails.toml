@@ -31,6 +31,12 @@ mode = "enforce"
 description = "Ensures all CLI command path arguments are validated before use (WP-6.1)."
 
 [[rail]]
+name = "cli-file-kind-validation"
+command = ["python", "scripts/ci/guardrails/check_cli_file_kind_validation.py"]
+mode = "advisory"
+description = "Ensures file/directory kind is validated at CLI boundaries after resolve_cli_path (WP-6.1)."
+
+[[rail]]
 name = "defusedxml-fallback"
 command = ["python", "scripts/ci/guardrails/check_defusedxml_fallback.py"]
 mode = "enforce"
