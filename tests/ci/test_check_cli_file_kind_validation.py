@@ -72,6 +72,27 @@ def run(dir_path: Path) -> None:
     assert len(violations) == 0
 
 
+def test_flags_noop_is_file_check_without_rejecting_guard(tmp_path: Path) -> None:
+    """Verify no-op kind checks are still flagged when they do not reject."""
+    src = tmp_path / "app.py"
+    src.write_text(
+        """
+from file_organizer.cli.path_validation import resolve_cli_path
+
+@app.command()
+def run(file_path: Path) -> None:
+    resolved = resolve_cli_path(file_path, must_exist=True, must_be_dir=False)
+    resolved.is_file()  # no-op: result ignored, wrong kind not rejected
+    process_file(resolved)
+""",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "function 'run'" in violations[0][1]
+    assert "resolved" in violations[0][1]
+
+
 def test_allows_validate_regular_file_helper(tmp_path: Path) -> None:
     """Verify that validate_regular_file() call satisfies the guardrail."""
     src = tmp_path / "app.py"

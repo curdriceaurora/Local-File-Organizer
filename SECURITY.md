@@ -96,8 +96,9 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").
   New files get full enforcement; the 41 existing ones are fixed
   incrementally — remove an entry as its file is cleaned up.
-- **No lint rails above are still advisory.** The remaining enforcement
-  gaps are tracked elsewhere (for example, non-blocking bandit findings).
+- **One lint rail above remains advisory (`cli-file-kind-validation`).**
+  It is intentionally non-blocking while remediation and detector tuning
+  continue prior to promotion to enforced.
 
 ## Reporting a Vulnerability
 

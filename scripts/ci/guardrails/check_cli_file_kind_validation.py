@@ -160,7 +160,7 @@ class CliFileKindValidationVisitor(ast.NodeVisitor):
                 self.current_lineno = resolve_lineno
 
             def visit_Call(self, node: ast.Call) -> None:
-                """Check for validation calls."""
+                """Check for unconditional validation helper calls."""
                 if self.validated or node.lineno < resolve_lineno:
                     self.generic_visit(node)
                     return
@@ -182,15 +182,10 @@ class CliFileKindValidationVisitor(ast.NodeVisitor):
                         if isinstance(arg, ast.Name) and arg.id == var_name:
                             self.validated = True
 
-                # Check for is_file() or is_dir() calls on the variable
-                if isinstance(node.func, ast.Attribute) and node.func.attr in ("is_file", "is_dir"):
-                    if isinstance(node.func.value, ast.Name) and node.func.value.id == var_name:
-                        self.validated = True
-
                 self.generic_visit(node)
 
             def visit_If(self, node: ast.If) -> None:
-                """Check for conditional kind checks like if not var.is_file(): raise ..."""
+                """Check for rejecting guards like if not var.is_file(): raise ..."""
                 if self.validated or node.lineno < resolve_lineno:
                     self.generic_visit(node)
                     return
@@ -199,44 +194,72 @@ class CliFileKindValidationVisitor(ast.NodeVisitor):
                     self.generic_visit(node)
                     return
 
-                # Check test for is_file/is_dir patterns
-                if self._has_kind_check(node.test, var_name):
+                if self._is_rejecting_kind_guard(node, var_name):
                     self.validated = True
 
                 self.generic_visit(node)
 
-            def _has_kind_check(self, test_node: ast.expr, var_name: str) -> bool:
-                """Check if a test expression validates file/dir kind."""
-                # Handle: not x.is_file() or x.is_dir(), etc.
-                if isinstance(test_node, ast.UnaryOp):
-                    return self._has_kind_check(test_node.operand, var_name)
+            def _is_rejecting_kind_guard(self, node: ast.If, var_name: str) -> bool:
+                """Return True when wrong-kind branch is explicitly rejecting."""
+                polarities = self._collect_kind_check_polarities(node.test, var_name)
+                if not polarities:
+                    return False
+
+                return (True in polarities and self._branch_rejects(node.body)) or (
+                    False in polarities and self._branch_rejects(node.orelse)
+                )
+
+            def _collect_kind_check_polarities(
+                self, test_node: ast.expr, var_name: str, negated: bool = False
+            ) -> set[bool]:
+                """Collect wrong-kind polarities from kind checks in a test expression.
+
+                True means the "wrong kind" branch is entered when the condition is true
+                (e.g. ``if not path.is_file():``). False means wrong kind is on the else
+                branch (e.g. ``if path.is_file(): ... else: raise``).
+                """
+                if isinstance(test_node, ast.UnaryOp) and isinstance(test_node.op, ast.Not):
+                    return self._collect_kind_check_polarities(
+                        test_node.operand, var_name, not negated
+                    )
 
                 if isinstance(test_node, ast.BoolOp):
-                    # Check both sides of and/or
-                    return any(self._has_kind_check(v, var_name) for v in test_node.values)
+                    polarities: set[bool] = set()
+                    for value in test_node.values:
+                        polarities.update(
+                            self._collect_kind_check_polarities(value, var_name, negated)
+                        )
+                    return polarities
 
                 if isinstance(test_node, ast.Compare):
-                    # Handle: x and not x.is_file()
-                    if self._has_kind_check(test_node.left, var_name):
-                        return True
+                    polarities = self._collect_kind_check_polarities(
+                        test_node.left, var_name, negated
+                    )
                     for comparator in test_node.comparators:
-                        if self._has_kind_check(comparator, var_name):
+                        polarities.update(
+                            self._collect_kind_check_polarities(comparator, var_name, negated)
+                        )
+                    return polarities
+
+                if (
+                    isinstance(test_node, ast.Call)
+                    and isinstance(test_node.func, ast.Attribute)
+                    and test_node.func.attr in ("is_file", "is_dir")
+                    and isinstance(test_node.func.value, ast.Name)
+                    and test_node.func.value.id == var_name
+                ):
+                    return {negated}
+
+                return set()
+
+            def _branch_rejects(self, stmts: list[ast.stmt]) -> bool:
+                """Return True if the branch rejects execution for wrong-kind input."""
+                for stmt in stmts:
+                    if isinstance(stmt, (ast.Raise, ast.Return)):
+                        return True
+                    for nested in ast.walk(stmt):
+                        if isinstance(nested, (ast.Raise, ast.Return)):
                             return True
-
-                if isinstance(test_node, ast.Call):
-                    # Handle: validate_regular_file(x) in condition (less common)
-                    if isinstance(test_node.func, ast.Name):
-                        if test_node.func.id in ("validate_regular_file", "validate_is_dir"):
-                            for arg in test_node.args:
-                                if isinstance(arg, ast.Name) and arg.id == var_name:
-                                    return True
-
-                if isinstance(test_node, ast.Attribute):
-                    # Handle: x.is_file(), x.is_dir()
-                    if test_node.attr in ("is_file", "is_dir"):
-                        if isinstance(test_node.value, ast.Name) and test_node.value.id == var_name:
-                            return True
-
                 return False
 
         validator = KindValidator()
