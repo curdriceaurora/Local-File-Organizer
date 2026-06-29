@@ -92,9 +92,7 @@ def test_non_path_root_not_flagged(tmp_path: Path) -> None:
 
 def test_multiple_violations_reported(tmp_path: Path) -> None:
     src = tmp_path / "multi.py"
-    src.write_text(
-        'a = Path("/tmp/a.txt")\nb = Path("/home/user/b.txt")\n', encoding="utf-8"
-    )
+    src.write_text('a = Path("/tmp/a.txt")\nb = Path("/home/user/b.txt")\n', encoding="utf-8")
     violations = checker.check_file(src)
     assert len(violations) == 2
 

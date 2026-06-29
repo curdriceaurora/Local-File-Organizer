@@ -106,7 +106,10 @@ class TestWorkspaceRepository:
 
     def test_get_by_id(self, db_session: Session, user: User) -> None:
         ws = WorkspaceRepository.create(
-            db_session, name="Find Me", owner_id=user.id, root_path="/tmp/find"  # noqa: test-hardcoded-paths
+            db_session,
+            name="Find Me",
+            owner_id=user.id,
+            root_path="/tmp/find",  # noqa: test-hardcoded-paths
         )
         found = WorkspaceRepository.get_by_id(db_session, ws.id)
         assert found is not None

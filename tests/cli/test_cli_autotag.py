@@ -138,7 +138,11 @@ class TestHandleAutotagCommand:
 
     def test_route_batch(self, mock_service):
         args = Namespace(
-            autotag_command="batch", directory="/tmp", pattern="*", recursive=False, output=None  # noqa: test-hardcoded-paths
+            autotag_command="batch",
+            directory="/tmp",
+            pattern="*",
+            recursive=False,
+            output=None,  # noqa: test-hardcoded-paths
         )
         with patch("file_organizer.cli.autotag.AutoTaggingService", return_value=mock_service):
             with patch("file_organizer.cli.autotag.handle_batch") as mock_handler:
