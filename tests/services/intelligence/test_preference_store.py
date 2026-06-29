@@ -510,7 +510,7 @@ class TestImportExport:
         """Test importing preferences from JSON"""
         # Use a platform-native resolved key so the round-trip via
         # get_preference (which calls path.resolve()) works on all OSes.
-        import_key = str(Path("/") / "imported" / "path".resolve())
+        import_key = str((Path("/") / "imported" / "path").resolve())
         # Create export file
         data = {
             "version": "1.0",
@@ -542,7 +542,7 @@ class TestImportExport:
         assert result is True
         assert store._preferences["user_id"] == "imported"
         pref = store.get_preference(
-            Path("/") / "imported" / "path".resolve(), fallback_to_parent=False
+            (Path("/") / "imported" / "path").resolve(), fallback_to_parent=False
         )
         assert pref["folder_mappings"] == {"*.md": "Notes"}
 
