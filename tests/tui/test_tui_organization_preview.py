@@ -84,6 +84,7 @@ class TestOrganizationSummary:
 class TestOrganizationPreviewView:
     """Tests for OrganizationPreviewView composition."""
 
+    @pytest.mark.keep_default_paths
     def test_default_init(self) -> None:
         view = OrganizationPreviewView(id="view")
         assert str(view._input_dir) == "."

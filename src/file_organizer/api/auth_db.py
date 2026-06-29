@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import cache
+from pathlib import Path
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -19,11 +20,18 @@ from file_organizer.api.database import (
 )
 
 
+def _ensure_db_dir(db_path: str) -> None:
+    """Create the parent directory for a SQLite file DB if it doesn't exist."""
+    if db_path != ":memory:":
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)  # codeql[py/path-injection]
+
+
 @cache
 def get_engine(db_path: str) -> Engine:
     """Return a cached SQLAlchemy engine for the auth database."""
     # Keep auth defaults conservative; feature-specific callers can use
     # file_organizer.api.database directly for custom pool tuning.
+    _ensure_db_dir(db_path)
     engine = get_db_engine(
         db_path,
         pool_size=5,
