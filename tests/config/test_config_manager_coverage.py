@@ -209,7 +209,7 @@ class TestConfigManagerModuleDelegation:
             }
         )
         result = mgr.to_daemon_config(cfg)
-        assert Path("/tmp/a") in result.watch_directories  # noqa: test-hardcoded-paths
+        assert Path("/") / "tmp" / "a" in result.watch_directories  # noqa: test-hardcoded-paths
 
     def test_config_to_dict_includes_overrides(self):
         mgr = ConfigManager()

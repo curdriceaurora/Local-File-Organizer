@@ -58,14 +58,14 @@ def _make_mock_index(groups: dict | None = None, stats: dict | None = None):
         # Default: one group with 2 duplicate files
         now = datetime(2025, 1, 1, tzinfo=UTC)
         fm1 = FileMetadata(
-            path=Path("/tmp/a.txt"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / "a.txt",  # noqa: test-hardcoded-paths
             size=100,
             modified_time=now,
             accessed_time=now,
             hash_value="abc123",
         )
         fm2 = FileMetadata(
-            path=Path("/tmp/b.txt"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / "b.txt",  # noqa: test-hardcoded-paths
             size=100,
             modified_time=now,
             accessed_time=now,

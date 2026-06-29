@@ -47,7 +47,7 @@ def viewer(console: Console) -> ComparisonViewer:
 def sample_metadata() -> ImageMetadata:
     """Return a representative ImageMetadata object."""
     return ImageMetadata(
-        path=Path("/tmp/image1.png"),  # noqa: test-hardcoded-paths
+        path=Path("/") / "tmp" / "image1.png",  # noqa: test-hardcoded-paths
         width=1920,
         height=1080,
         format="PNG",
@@ -61,7 +61,7 @@ def sample_metadata() -> ImageMetadata:
 def sample_metadata_small() -> ImageMetadata:
     """Return a smaller / lower-quality ImageMetadata object."""
     return ImageMetadata(
-        path=Path("/tmp/image2.jpg"),  # noqa: test-hardcoded-paths
+        path=Path("/") / "tmp" / "image2.jpg",  # noqa: test-hardcoded-paths
         width=640,
         height=480,
         format="JPEG",
@@ -148,8 +148,8 @@ class TestDuplicateReview:
         assert review.skipped is True
 
     def test_keep_and_delete_lists(self):
-        k = [Path("/a")]
-        d = [Path("/b"), Path("/c")]
+        k = [Path("/") / "a"]
+        d = [Path("/") / "b", Path("/") / "c"]
         review = DuplicateReview(files_to_keep=k, files_to_delete=d)
         assert review.files_to_keep == k
         assert review.files_to_delete == d
@@ -196,7 +196,9 @@ class TestShowComparison:
     def test_all_images_fail_to_load(self, viewer: ComparisonViewer):
         """When every image fails to load, result is skipped."""
         with patch.object(viewer, "_get_image_metadata", side_effect=ValueError("bad")):
-            result = viewer.show_comparison([Path("/fake/a.png"), Path("/fake/b.png")])
+            result = viewer.show_comparison(
+                [Path("/") / "fake" / "a.png", Path("/") / "fake" / "b.png"]
+            )
         assert result.skipped is True
 
     def test_delegates_to_prompt_and_process(self, viewer: ComparisonViewer, sample_metadata):
@@ -212,7 +214,9 @@ class TestShowComparison:
                 return_value=DuplicateReview([sample_metadata.path], []),
             ) as mock_process,
         ):
-            result = viewer.show_comparison([Path("/tmp/image1.png")], similarity_score=95.0)  # noqa: test-hardcoded-paths
+            result = viewer.show_comparison(
+                [Path("/") / "tmp" / "image1.png"], similarity_score=95.0
+            )  # noqa: test-hardcoded-paths
             assert result.files_to_keep == [sample_metadata.path]
             mock_process.assert_called_once()
 
@@ -238,7 +242,7 @@ class TestShowComparison:
                 return_value=DuplicateReview([], [], skipped=True),
             ),
         ):
-            result = viewer.show_comparison([Path("/a.png"), Path("/b.png")])
+            result = viewer.show_comparison([Path("/") / "a.png", Path("/") / "b.png"])
             assert result.skipped is True
 
 
@@ -258,22 +262,22 @@ class TestBatchReview:
             patch.object(viewer, "_auto_select_best", return_value=review) as mock_auto,
             patch.object(viewer, "_display_review_summary"),
         ):
-            groups = {"hash1": [Path("/a.png"), Path("/b.png")]}
+            groups = {"hash1": [Path("/") / "a.png", Path("/") / "b.png"]}
             decisions = viewer.batch_review(groups, auto_select_best=True)
             mock_auto.assert_called_once()
             assert decisions[sample_metadata.path] == "keep"
 
     def test_manual_review_mode(self, viewer: ComparisonViewer, sample_metadata):
         """auto_select_best=False uses show_comparison."""
-        review = DuplicateReview([sample_metadata.path], [Path("/tmp/image2.jpg")])  # noqa: test-hardcoded-paths
+        review = DuplicateReview([sample_metadata.path], [Path("/") / "tmp" / "image2.jpg"])  # noqa: test-hardcoded-paths
         with (
             patch.object(viewer, "show_comparison", return_value=review),
             patch.object(viewer, "_display_review_summary"),
         ):
-            groups = {"hash1": [Path("/a.png"), Path("/b.png")]}
+            groups = {"hash1": [Path("/") / "a.png", Path("/") / "b.png"]}
             decisions = viewer.batch_review(groups, auto_select_best=False)
             assert decisions[sample_metadata.path] == "keep"
-            assert decisions[Path("/tmp/image2.jpg")] == "delete"  # noqa: test-hardcoded-paths
+            assert decisions[Path("/") / "tmp" / "image2.jpg"] == "delete"  # noqa: test-hardcoded-paths
 
     def test_quit_early_via_confirm(self, viewer: ComparisonViewer):
         """When user skips and declines continue, batch stops."""
@@ -283,7 +287,7 @@ class TestBatchReview:
             patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=False),
             patch.object(viewer, "_display_review_summary"),
         ):
-            groups = {"h1": [Path("/a.png")], "h2": [Path("/b.png")]}
+            groups = {"h1": [Path("/") / "a.png"], "h2": [Path("/") / "b.png"]}
             decisions = viewer.batch_review(groups, auto_select_best=False)
             # Only the first group is processed; second is skipped entirely.
             assert len(decisions) == 0
@@ -299,7 +303,7 @@ class TestBatchReview:
             patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=True),
             patch.object(viewer, "_display_review_summary"),
         ):
-            groups = {"h1": [Path("/a.png")], "h2": [Path("/b.png")]}
+            groups = {"h1": [Path("/") / "a.png"], "h2": [Path("/") / "b.png"]}
             decisions = viewer.batch_review(groups, auto_select_best=False)
             assert decisions.get(sample_metadata.path) == "keep"
 
@@ -311,7 +315,7 @@ class TestBatchReview:
             patch("file_organizer.services.deduplication.viewer.Confirm.ask") as mock_confirm,
             patch.object(viewer, "_display_review_summary"),
         ):
-            groups = {"h1": [Path("/a.png")]}
+            groups = {"h1": [Path("/") / "a.png"]}
             viewer.batch_review(groups, auto_select_best=False)
             mock_confirm.assert_not_called()
 
@@ -339,7 +343,7 @@ class TestGetImageMetadata:
 
     def test_raises_on_invalid_path(self, viewer: ComparisonViewer):
         with pytest.raises(OSError):
-            viewer._get_image_metadata(Path("/nonexistent/img.png"))
+            viewer._get_image_metadata(Path("/") / "nonexistent" / "img.png")
 
 
 # ===========================================================================
@@ -436,7 +440,7 @@ class TestGenerateAsciiPreview:
     """
 
     def test_returns_none_on_nonexistent_file(self, viewer: ComparisonViewer):
-        result = viewer._generate_ascii_preview(Path("/nonexistent/img.png"))
+        result = viewer._generate_ascii_preview(Path("/") / "nonexistent" / "img.png")
         assert result is None
 
     def test_real_image_returns_none_or_string(self, tmp_path: Path, viewer: ComparisonViewer):
@@ -476,7 +480,7 @@ class TestGenerateAsciiPreview:
             return_value=mock_open_cm,
         ):
             result = viewer._generate_ascii_preview(
-                Path("/fake/img.png"), max_width=40, max_height=15
+                Path("/") / "fake" / "img.png", max_width=40, max_height=15
             )
 
         assert result is not None
@@ -524,7 +528,7 @@ class TestGenerateAsciiPreview:
             return_value=mock_cm,
         ):
             result = viewer._generate_ascii_preview(
-                Path("/fake/wide.png"), max_width=20, max_height=10
+                Path("/") / "fake" / "wide.png", max_width=20, max_height=10
             )
         assert result is not None
 
@@ -538,7 +542,7 @@ class TestGenerateAsciiPreview:
             return_value=mock_cm2,
         ):
             result = viewer._generate_ascii_preview(
-                Path("/fake/tall.png"), max_width=20, max_height=10
+                Path("/") / "fake" / "tall.png", max_width=20, max_height=10
             )
         assert result is not None
 
@@ -691,7 +695,7 @@ class TestAutoSelectBest:
 
     def test_handles_load_error(self, viewer: ComparisonViewer):
         with patch.object(viewer, "_get_image_metadata", side_effect=ValueError("boom")):
-            result = viewer._auto_select_best([Path("/fake/a.png")])
+            result = viewer._auto_select_best([Path("/") / "fake" / "a.png"])
         assert result.skipped is True
 
     def test_single_image(self, tmp_path: Path, viewer: ComparisonViewer):
@@ -719,7 +723,7 @@ class TestCalculateQualityScore:
 
     def test_png_preferred_over_gif(self, viewer: ComparisonViewer):
         png_meta = ImageMetadata(
-            path=Path("/x.png"),
+            path=Path("/") / "x.png",
             width=100,
             height=100,
             format="PNG",
@@ -728,7 +732,7 @@ class TestCalculateQualityScore:
             mode="RGB",
         )
         gif_meta = ImageMetadata(
-            path=Path("/x.gif"),
+            path=Path("/") / "x.gif",
             width=100,
             height=100,
             format="GIF",
@@ -740,7 +744,7 @@ class TestCalculateQualityScore:
 
     def test_unknown_format_gets_low_multiplier(self, viewer: ComparisonViewer):
         meta = ImageMetadata(
-            path=Path("/x.xyz"),
+            path=Path("/") / "x.xyz",
             width=100,
             height=100,
             format="XYZ",
@@ -766,7 +770,7 @@ class TestCalculateQualityScore:
     def test_format_scores(self, viewer: ComparisonViewer, fmt, expected_multiplier):
         """Each known format maps to the expected multiplier."""
         meta = ImageMetadata(
-            path=Path("/x"),
+            path=Path("/") / "x",
             width=1000,
             height=1000,
             format=fmt,
@@ -799,7 +803,10 @@ class TestDisplayReviewSummary:
 
     def test_delete_file_does_not_exist(self, viewer: ComparisonViewer):
         """If a file-to-delete no longer exists, summary should still work."""
-        decisions = {Path("/nonexistent/gone.png"): "delete", Path("/fake/keep.png"): "keep"}
+        decisions = {
+            Path("/") / "nonexistent" / "gone.png": "delete",
+            Path("/") / "fake" / "keep.png": "keep",
+        }
         viewer._display_review_summary(decisions)  # should not raise
 
     def test_space_savings_displayed(self, tmp_path: Path, viewer: ComparisonViewer):
@@ -826,7 +833,7 @@ class TestDisplayMetadata:
         viewer.display_metadata(img)  # should not raise
 
     def test_invalid_path(self, viewer: ComparisonViewer):
-        viewer.display_metadata(Path("/nonexistent/nope.png"))  # prints error, no raise
+        viewer.display_metadata(Path("/") / "nonexistent" / "nope.png")  # prints error, no raise
 
 
 # ===========================================================================
@@ -871,7 +878,7 @@ class TestInteractiveSelect:
         self, tmp_path: Path, viewer: ComparisonViewer
     ):
         """If metadata load fails for an image, fallback text is shown."""
-        imgs = [Path("/nonexistent/bad.png")]
+        imgs = [Path("/") / "nonexistent" / "bad.png"]
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"):
             result = viewer.interactive_select(imgs)
         assert result == imgs

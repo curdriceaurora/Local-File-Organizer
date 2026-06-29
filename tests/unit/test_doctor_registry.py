@@ -280,50 +280,50 @@ def test_get_missing_groups_empty_input(mock_is_installed):
 
 def test_normalized_extension_simple():
     """_normalized_extension returns lowercase simple extension."""
-    path = Path("/test/file.MP3")
+    path = Path("/") / "test" / "file.MP3"
     assert _normalized_extension(path) == ".mp3"
 
 
 def test_normalized_extension_compound_tar_gz():
     """_normalized_extension preserves .tar.gz compound extension."""
-    path = Path("/test/archive.tar.gz")
+    path = Path("/") / "test" / "archive.tar.gz"
     assert _normalized_extension(path) == ".tar.gz"
 
 
 def test_normalized_extension_compound_tar_bz2():
     """_normalized_extension preserves .tar.bz2 compound extension."""
-    path = Path("/test/archive.tar.bz2")
+    path = Path("/") / "test" / "archive.tar.bz2"
     assert _normalized_extension(path) == ".tar.bz2"
 
 
 def test_normalized_extension_no_extension():
     """_normalized_extension returns empty string for files without extension."""
-    path = Path("/test/README")
+    path = Path("/") / "test" / "README"
     assert _normalized_extension(path) == ""
 
 
 def test_normalized_extension_multiple_dots_non_compound():
     """_normalized_extension returns last suffix for non-compound multi-dot files."""
-    path = Path("/test/my.file.name.txt")
+    path = Path("/") / "test" / "my.file.name.txt"
     assert _normalized_extension(path) == ".txt"
 
 
 def test_normalized_extension_uppercase_compound():
     """_normalized_extension normalizes compound extensions to lowercase."""
-    path = Path("/test/archive.TAR.GZ")
+    path = Path("/") / "test" / "archive.TAR.GZ"
     assert _normalized_extension(path) == ".tar.gz"
 
 
 def test_normalized_extension_hidden_file():
     """_normalized_extension handles hidden files correctly."""
-    path = Path("/test/.hidden")
+    path = Path("/") / "test" / ".hidden"
     # Hidden files without a real extension return empty string
     assert _normalized_extension(path) == ""
 
 
 def test_normalized_extension_hidden_file_with_extension():
     """_normalized_extension handles hidden files with extensions."""
-    path = Path("/test/.gitignore.txt")
+    path = Path("/") / "test" / ".gitignore.txt"
     assert _normalized_extension(path) == ".txt"
 
 

@@ -38,9 +38,9 @@ class TestRegisterExisting:
 
     def test_register_conflict_raises(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         with pytest.raises(NumberConflictError, match="already registered"):
-            generator.register_existing_number(num, Path("/b"))
+            generator.register_existing_number(num, Path("/") / "b")
 
 
 class TestIsNumberAvailable:
@@ -48,7 +48,7 @@ class TestIsNumberAvailable:
 
     def test_used_number_not_available(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         assert generator.is_number_available(num) is False
 
 
@@ -80,7 +80,7 @@ class TestGenerateNumbers:
     def test_generate_area_preferred_unavailable(self, generator: JohnnyDecimalGenerator) -> None:
         """Preferred area occupied falls back to next available."""
         taken = JohnnyDecimalNumber(area=20)
-        generator.register_existing_number(taken, Path("/a"))
+        generator.register_existing_number(taken, Path("/") / "a")
         num = generator.generate_area_number("Finance", preferred_area=20)
         assert num.area != 20 or num.name == "Finance"
 
@@ -92,7 +92,7 @@ class TestGenerateNumbers:
         self, generator: JohnnyDecimalGenerator
     ) -> None:
         taken = JohnnyDecimalNumber(area=10, category=5)
-        generator.register_existing_number(taken, Path("/a"))
+        generator.register_existing_number(taken, Path("/") / "a")
         num = generator.generate_category_number(10, "Budgets", preferred_category=5)
         assert num.category != 5
 
@@ -102,7 +102,7 @@ class TestGenerateNumbers:
 
     def test_generate_id_preferred_unavailable(self, generator: JohnnyDecimalGenerator) -> None:
         taken = JohnnyDecimalNumber(area=10, category=1, item_id=42)
-        generator.register_existing_number(taken, Path("/a"))
+        generator.register_existing_number(taken, Path("/") / "a")
         num = generator.generate_id_number(10, 1, "Doc", preferred_id=42)
         assert num.item_id != 42
 
@@ -141,7 +141,7 @@ class TestValidateNumber:
 
     def test_validate_used_number(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         is_valid, errors = generator.validate_number(num)
         assert is_valid is False
         assert any("already used" in e for e in errors)
@@ -152,14 +152,14 @@ class TestFindConflicts:
 
     def test_find_exact_conflict(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         conflicts = generator.find_conflicts(num)
         assert len(conflicts) >= 1
 
     def test_find_parent_conflict(self, generator: JohnnyDecimalGenerator) -> None:
         """Category number conflicts with existing area (line 461)."""
         area_num = JohnnyDecimalNumber(area=10)
-        generator.register_existing_number(area_num, Path("/a"))
+        generator.register_existing_number(area_num, Path("/") / "a")
         cat_num = JohnnyDecimalNumber(area=10, category=1)
         conflicts = generator.find_conflicts(cat_num)
         parent_conflicts = [c for c in conflicts if c[0] == "10"]
@@ -168,7 +168,7 @@ class TestFindConflicts:
     def test_find_child_conflict(self, generator: JohnnyDecimalGenerator) -> None:
         """Area number conflicts with existing category (lines 469-471)."""
         cat_num = JohnnyDecimalNumber(area=10, category=1)
-        generator.register_existing_number(cat_num, Path("/a"))
+        generator.register_existing_number(cat_num, Path("/") / "a")
         area_num = JohnnyDecimalNumber(area=10)
         conflicts = generator.find_conflicts(area_num)
         child_conflicts = [c for c in conflicts if "10." in c[0]]
@@ -180,37 +180,37 @@ class TestResolveConflict:
 
     def test_resolve_increment_id(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1, item_id=1, name="Doc")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="increment")
         assert resolved.item_id != 1
 
     def test_resolve_increment_category(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1, name="Cat")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="increment")
         assert resolved.category != 1
 
     def test_resolve_increment_area(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, name="Area")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="increment")
         assert resolved is not None
 
     def test_resolve_skip_id(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1, item_id=1, name="Doc")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="skip")
         assert resolved.item_id != 1
 
     def test_resolve_skip_category(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, category=1, name="Cat")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="skip")
         assert resolved is not None
 
     def test_resolve_skip_area(self, generator: JohnnyDecimalGenerator) -> None:
         num = JohnnyDecimalNumber(area=10, name="Area")
-        generator.register_existing_number(num, Path("/a"))
+        generator.register_existing_number(num, Path("/") / "a")
         resolved = generator.resolve_conflict(num, strategy="skip")
         assert resolved is not None
 
@@ -228,10 +228,12 @@ class TestGetUsageStatistics:
         assert stats["total_numbers"] == 0
 
     def test_stats_with_numbers(self, generator: JohnnyDecimalGenerator) -> None:
-        generator.register_existing_number(JohnnyDecimalNumber(area=10), Path("/a"))
-        generator.register_existing_number(JohnnyDecimalNumber(area=10, category=1), Path("/b"))
+        generator.register_existing_number(JohnnyDecimalNumber(area=10), Path("/") / "a")
         generator.register_existing_number(
-            JohnnyDecimalNumber(area=10, category=1, item_id=1), Path("/c")
+            JohnnyDecimalNumber(area=10, category=1), Path("/") / "b"
+        )
+        generator.register_existing_number(
+            JohnnyDecimalNumber(area=10, category=1, item_id=1), Path("/") / "c"
         )
         stats = generator.get_usage_statistics()
         assert stats["total_numbers"] == 3
@@ -242,7 +244,7 @@ class TestGetUsageStatistics:
 
 class TestClearRegistrations:
     def test_clear(self, generator: JohnnyDecimalGenerator) -> None:
-        generator.register_existing_number(JohnnyDecimalNumber(area=10), Path("/a"))
+        generator.register_existing_number(JohnnyDecimalNumber(area=10), Path("/") / "a")
         generator.clear_registrations()
         assert generator.get_usage_statistics()["total_numbers"] == 0
 

@@ -53,7 +53,7 @@ class TestStorageAnalyzer:
         analyzer = StorageAnalyzer()
 
         with pytest.raises(ValueError, match="Invalid directory"):
-            analyzer.analyze_directory(Path("/nonexistent/path"))
+            analyzer.analyze_directory(Path("/") / "nonexistent" / "path")
 
     def test_analyze_file_instead_of_directory(self, temp_directory):
         """Test error handling when given a file instead of directory."""

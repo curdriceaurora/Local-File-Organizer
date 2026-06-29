@@ -33,7 +33,7 @@ def _make_config(**kwargs) -> DaemonConfig:
     """
     defaults = {
         "watch_directories": [],
-        "output_directory": Path("tmp/organized"),
+        "output_directory": Path("tmp") / "organized",
         "pid_file": None,
         "poll_interval": 0.05,
     }

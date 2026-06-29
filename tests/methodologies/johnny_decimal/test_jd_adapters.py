@@ -45,7 +45,9 @@ class TestPARAAdapter:
     def test_adapt_to_jd_invalid_category_raises(self, jd_config: MagicMock) -> None:
         """Unknown PARA category raises ValueError (line 128)."""
         adapter = PARAAdapter(jd_config)
-        item = OrganizationItem(name="test", path=Path("/x"), category="unknown_cat", metadata={})
+        item = OrganizationItem(
+            name="test", path=Path("/") / "x", category="unknown_cat", metadata={}
+        )
         with pytest.raises(ValueError, match="Cannot determine PARA category"):
             adapter.adapt_to_jd(item)
 
@@ -54,7 +56,10 @@ class TestPARAAdapter:
         adapter = PARAAdapter(jd_config)
         adapter.bridge.para_to_jd_area = MagicMock(return_value=10)
         item = OrganizationItem(
-            name="test", path=Path("/x"), category="projects", metadata={"subcategory": "not_int"}
+            name="test",
+            path=Path("/") / "x",
+            category="projects",
+            metadata={"subcategory": "not_int"},
         )
         result = adapter.adapt_to_jd(item)
         assert result.category == 1
@@ -70,7 +75,7 @@ class TestPARAAdapter:
     def test_can_adapt_false(self, jd_config: MagicMock) -> None:
         """Non-PARA item returns False."""
         adapter = PARAAdapter(jd_config)
-        item = OrganizationItem(name="x", path=Path("/x"), category="random", metadata={})
+        item = OrganizationItem(name="x", path=Path("/") / "x", category="random", metadata={})
         assert adapter.can_adapt(item) is False
 
 
@@ -96,7 +101,7 @@ class TestFileSystemAdapter:
         """Depth 2 => category level (line 221-225)."""
         adapter = FileSystemAdapter(jd_config)
         item = OrganizationItem(
-            name="Budgets", path=Path("Finance/Budgets"), category="fs", metadata={}
+            name="Budgets", path=Path("Finance") / "Budgets", category="fs", metadata={}
         )
         result = adapter.adapt_to_jd(item)
         assert result.level == NumberLevel.CATEGORY
@@ -105,7 +110,7 @@ class TestFileSystemAdapter:
         """Depth 3+ => ID level (line 226-231)."""
         adapter = FileSystemAdapter(jd_config)
         item = OrganizationItem(
-            name="Q1", path=Path("Finance/Budgets/Q1"), category="fs", metadata={}
+            name="Q1", path=Path("Finance") / "Budgets" / "Q1", category="fs", metadata={}
         )
         result = adapter.adapt_to_jd(item)
         assert result.level == NumberLevel.ID
@@ -133,7 +138,7 @@ class TestFileSystemAdapter:
 
     def test_can_adapt_always_true(self, jd_config: MagicMock) -> None:
         adapter = FileSystemAdapter(jd_config)
-        item = OrganizationItem(name="any", path=Path("/any"), category="any", metadata={})
+        item = OrganizationItem(name="any", path=Path("/") / "any", category="any", metadata={})
         assert adapter.can_adapt(item) is True
 
     def test_suggest_area_from_name_with_number(self, jd_config: MagicMock) -> None:
@@ -172,13 +177,13 @@ class TestAdapterRegistry:
 
     def test_get_adapter_returns_none_when_empty(self) -> None:
         registry = AdapterRegistry()
-        item = OrganizationItem(name="x", path=Path("/x"), category="x", metadata={})
+        item = OrganizationItem(name="x", path=Path("/") / "x", category="x", metadata={})
         assert registry.get_adapter(item) is None
 
     def test_adapt_to_jd_no_adapter(self) -> None:
         """adapt_to_jd returns None when no adapter matches (line 347)."""
         registry = AdapterRegistry()
-        item = OrganizationItem(name="x", path=Path("/x"), category="x", metadata={})
+        item = OrganizationItem(name="x", path=Path("/") / "x", category="x", metadata={})
         assert registry.adapt_to_jd(item) is None
 
     def test_adapt_from_jd_para(self, jd_config: MagicMock) -> None:
@@ -187,7 +192,7 @@ class TestAdapterRegistry:
         adapter = PARAAdapter(jd_config)
         adapter.adapt_from_jd = MagicMock(
             return_value=OrganizationItem(
-                name="x", path=Path("/x"), category="project", metadata={}
+                name="x", path=Path("/") / "x", category="project", metadata={}
             )
         )
         registry.register(adapter)

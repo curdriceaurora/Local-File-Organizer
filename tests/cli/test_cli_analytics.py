@@ -127,7 +127,7 @@ class TestDisplayStorageStats:
         file_info = MagicMock()
         file_info.size = 1024 * 1024
         file_info.type = ".pdf"
-        file_info.path = Path("/docs/big.pdf")
+        file_info.path = Path("/") / "docs" / "big.pdf"
 
         stats = MagicMock()
         stats.formatted_total_size = "1.5 GB"

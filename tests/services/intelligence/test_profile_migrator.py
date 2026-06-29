@@ -182,7 +182,9 @@ def test_rollback_migration_missing_backup(migrator, profile_manager):
     """Test rollback returns False when backup file does not exist."""
     profile_manager.create_profile("rollback_test2", "Test")
 
-    result = migrator.rollback_migration("rollback_test2", Path("/nonexistent/backup.json"))
+    result = migrator.rollback_migration(
+        "rollback_test2", Path("/") / "nonexistent" / "backup.json"
+    )
     assert result is False
 
 

@@ -197,7 +197,7 @@ class TestGetImageMetadata:
     """Tests for get_image_metadata."""
 
     def test_nonexistent_file(self):
-        result = get_image_metadata(Path("/nonexistent/img.png"))
+        result = get_image_metadata(Path("/") / "nonexistent" / "img.png")
         assert result is None
 
     def test_successful_extraction(self, tmp_path):
@@ -332,7 +332,7 @@ class TestValidateImageFile:
     """Tests for validate_image_file."""
 
     def test_file_not_found(self):
-        is_valid, msg = validate_image_file(Path("/nonexistent/img.png"))
+        is_valid, msg = validate_image_file(Path("/") / "nonexistent" / "img.png")
         assert not is_valid
         assert "not found" in msg
 
@@ -420,7 +420,7 @@ class TestFindImagesInDirectory:
 
     def test_nonexistent_dir(self):
         with pytest.raises(FileNotFoundError):
-            find_images_in_directory(Path("/nonexistent"))
+            find_images_in_directory(Path("/") / "nonexistent")
 
     def test_not_a_directory(self, tmp_path):
         p = tmp_path / "file.txt"

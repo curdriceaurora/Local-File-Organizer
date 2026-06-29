@@ -135,7 +135,7 @@ class TestCategorizationResult:
     def test_valid_result(self):
         """Test creating valid categorization result."""
         result = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.85,
             reasons=["Has deadline", "Time-bound"],
@@ -150,7 +150,7 @@ class TestCategorizationResult:
         """Test that invalid confidence raises error."""
         with pytest.raises(ValueError, match="confidence"):
             CategorizationResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 category=PARACategory.PROJECT,
                 confidence=1.5,  # Invalid
                 reasons=["Reason"],
@@ -160,7 +160,7 @@ class TestCategorizationResult:
         """Test that empty reasons list raises error."""
         with pytest.raises(ValueError, match="reasons"):
             CategorizationResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 category=PARACategory.PROJECT,
                 confidence=0.8,
                 reasons=[],  # Empty
@@ -169,13 +169,13 @@ class TestCategorizationResult:
     def test_is_confident_property(self):
         """Test confidence threshold check."""
         high_confidence = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.80,
             reasons=["Reason"],
         )
         low_confidence = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.70,
             reasons=["Reason"],
@@ -187,13 +187,13 @@ class TestCategorizationResult:
     def test_requires_review_property(self):
         """Test manual review requirement check."""
         needs_review = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.50,
             reasons=["Reason"],
         )
         no_review = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.70,
             reasons=["Reason"],
@@ -205,7 +205,7 @@ class TestCategorizationResult:
     def test_to_dict_conversion(self):
         """Test converting result to dictionary."""
         result = CategorizationResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             category=PARACategory.PROJECT,
             confidence=0.85,
             reasons=["Reason 1"],
@@ -447,7 +447,7 @@ class TestHeuristicEngine:
         )
 
         with pytest.raises(ValueError, match="No heuristics enabled"):
-            engine.evaluate(Path("/test/file.txt"))
+            engine.evaluate(Path("/") / "test" / "file.txt")
 
     def test_combined_evaluation(self, tmp_path):
         """Test combining multiple heuristics."""

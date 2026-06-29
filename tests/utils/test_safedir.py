@@ -517,7 +517,7 @@ class TestResourceLifetime:
         """Return the number of open fds for this process, or None on platforms
         where ``/proc/self/fd`` is unavailable (e.g. macOS).
         """
-        proc = Path("/proc/self/fd")
+        proc = Path("/") / "proc" / "self" / "fd"
         if not proc.is_dir():
             return None
         return len(list(proc.iterdir()))

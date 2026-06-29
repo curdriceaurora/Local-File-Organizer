@@ -1017,7 +1017,7 @@ class TestAudioOrganizer:
 
         rel_path = organizer.generate_path(AudioType.MUSIC, meta_music)
         # Expect: Rock/The Band/First Album/03 - Song One.mp3
-        assert rel_path == Path("Rock/The Band/First Album/03 - Song One.mp3")
+        assert rel_path == Path("Rock") / "The Band" / "First Album" / "03 - Song One.mp3"
 
         # Podcast type path generation
         meta_pod = AudioMetadata(
@@ -1035,7 +1035,7 @@ class TestAudioOrganizer:
         rel_path_pod = organizer.generate_path(AudioType.PODCAST, meta_pod)
         # Expect: Tech Show/2026/Episode 42 - Episode 42.mp3 (Show/Year/Episode - Title)
         # Episode fallback is title, Show fallback is album_artist
-        assert rel_path_pod == Path("Tech Show/2026/Episode 42 - Episode 42.mp3")
+        assert rel_path_pod == Path("Tech Show") / "2026" / "Episode 42 - Episode 42.mp3"
 
     def test_preview_and_organize_dry_run(self, tmp_path: Path) -> None:
         source_file = tmp_path / "song.mp3"

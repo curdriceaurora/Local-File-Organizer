@@ -182,7 +182,7 @@ class TestGenerateReport:
             failed_count=0,
             skipped_count=0,
             duration_seconds=1.5,
-            backup_path=Path("/backup/loc"),
+            backup_path=Path("/") / "backup" / "loc",
         )
         report = migrator.generate_report(result)
         assert "Backup" in report
@@ -195,7 +195,7 @@ class TestGenerateReport:
             failed_count=2,
             skipped_count=0,
             duration_seconds=2.0,
-            failed_paths=[(Path("/a"), "err1"), (Path("/b"), "err2")],
+            failed_paths=[(Path("/") / "a", "err1"), (Path("/") / "b", "err2")],
         )
         report = migrator.generate_report(result)
         assert "Failures" in report
@@ -209,7 +209,7 @@ class TestGenerateReport:
             failed_count=0,
             skipped_count=15,
             duration_seconds=0.5,
-            skipped_paths=[Path(f"/skip/{i}") for i in range(15)],
+            skipped_paths=[Path("/") / "skip" / f"{i}" for i in range(15)],
         )
         report = migrator.generate_report(result)
         assert "Skipped" in report
@@ -269,12 +269,12 @@ class TestMigratorCoverage:
     # Branch 359->365: generate_preview with no patterns
     def test_generate_preview_no_patterns(self, migrator: JohnnyDecimalMigrator) -> None:
         plan = TransformationPlan(
-            root_path=Path("/tmp"),  # noqa: test-hardcoded-paths
+            root_path=Path("/") / "tmp",  # noqa: test-hardcoded-paths
             rules=[],
             estimated_changes=0,
         )
         scan = ScanResult(
-            root_path=Path("/tmp"),  # noqa: test-hardcoded-paths
+            root_path=Path("/") / "tmp",  # noqa: test-hardcoded-paths
             folder_tree=[],
             total_folders=0,
             total_files=0,
@@ -288,12 +288,12 @@ class TestMigratorCoverage:
     # Branch 375->387: generate_preview with validation
     def test_generate_preview_with_validation(self, migrator: JohnnyDecimalMigrator) -> None:
         plan = TransformationPlan(
-            root_path=Path("/tmp"),  # noqa: test-hardcoded-paths
+            root_path=Path("/") / "tmp",  # noqa: test-hardcoded-paths
             rules=[],
             estimated_changes=0,
         )
         scan = ScanResult(
-            root_path=Path("/tmp"),  # noqa: test-hardcoded-paths
+            root_path=Path("/") / "tmp",  # noqa: test-hardcoded-paths
             folder_tree=[],
             total_folders=0,
             total_files=0,
@@ -314,8 +314,8 @@ class TestMigratorCoverage:
             failed_count=1,
             skipped_count=15,
             duration_seconds=1.0,
-            failed_paths=[(Path("/tmp/bad"), "error")],  # noqa: test-hardcoded-paths
-            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(15)],  # noqa: test-hardcoded-paths
+            failed_paths=[(Path("/") / "tmp" / "bad", "error")],  # noqa: test-hardcoded-paths
+            skipped_paths=[Path("/") / "tmp" / f"skip_{i}" for i in range(15)],  # noqa: test-hardcoded-paths
         )
         report = migrator.generate_report(result)
         assert "and 5 more" in report
@@ -329,7 +329,7 @@ class TestMigratorCoverage:
             failed_count=0,
             skipped_count=3,
             duration_seconds=0.5,
-            skipped_paths=[Path(f"/tmp/skip_{i}") for i in range(3)],  # noqa: test-hardcoded-paths
+            skipped_paths=[Path("/") / "tmp" / f"skip_{i}" for i in range(3)],  # noqa: test-hardcoded-paths
         )
         report = migrator.generate_report(result)
         assert "Skipped (3 folders)" in report

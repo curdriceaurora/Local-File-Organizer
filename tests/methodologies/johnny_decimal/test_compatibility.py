@@ -309,7 +309,7 @@ class TestPARAAdapter:
         """Test adapting Projects item to JD."""
         item = OrganizationItem(
             name="Website Redesign",
-            path=Path("Projects/Website Redesign"),
+            path=Path("Projects") / "Website Redesign",
             category="projects",
             metadata={"subcategory": 1},
         )
@@ -323,7 +323,7 @@ class TestPARAAdapter:
         """Test adapting Areas item to JD."""
         item = OrganizationItem(
             name="Personal Finance",
-            path=Path("Areas/Personal Finance"),
+            path=Path("Areas") / "Personal Finance",
             category="areas",
             metadata={"subcategory": 2},
         )
@@ -337,7 +337,7 @@ class TestPARAAdapter:
         """Test adapting Resources item to JD."""
         item = OrganizationItem(
             name="Code Snippets",
-            path=Path("Resources/Code Snippets"),
+            path=Path("Resources") / "Code Snippets",
             category="resources",
             metadata={},
         )
@@ -350,7 +350,7 @@ class TestPARAAdapter:
         """Test adapting Archive item to JD."""
         item = OrganizationItem(
             name="2023 Projects",
-            path=Path("Archive/2023 Projects"),
+            path=Path("Archive") / "2023 Projects",
             category="archive",
             metadata={},
         )
@@ -391,7 +391,7 @@ class TestPARAAdapter:
         """Test adapter compatibility checking."""
         para_item = OrganizationItem(
             name="Project",
-            path=Path("Projects/Project"),
+            path=Path("Projects") / "Project",
             category="projects",
             metadata={},
         )
@@ -450,7 +450,7 @@ class TestPARAIntegration:
         # Original item
         original = OrganizationItem(
             name="Website Project",
-            path=Path("Projects/Website"),
+            path=Path("Projects") / "Website",
             category="projects",
             metadata={},
         )
@@ -487,7 +487,7 @@ class TestEdgeCases:
         """Test adapter with custom metadata."""
         item = OrganizationItem(
             name="Complex Project",
-            path=Path("Projects/Complex"),
+            path=Path("Projects") / "Complex",
             category="projects",
             metadata={"subcategory": 5, "priority": "high"},
         )

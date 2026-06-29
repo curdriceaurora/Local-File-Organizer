@@ -22,9 +22,9 @@ class TestQueueItem(unittest.TestCase):
 
     def test_create_with_defaults(self) -> None:
         """Test creating a QueueItem with default values."""
-        item = QueueItem(id="item-1", path=Path("/tmp/test.txt"))  # noqa: test-hardcoded-paths
+        item = QueueItem(id="item-1", path=Path("/") / "tmp" / "test.txt")  # noqa: test-hardcoded-paths
         self.assertEqual(item.id, "item-1")
-        self.assertEqual(item.path, Path("/tmp/test.txt"))  # noqa: test-hardcoded-paths
+        self.assertEqual(item.path, Path("/") / "tmp" / "test.txt")  # noqa: test-hardcoded-paths
         self.assertEqual(item.priority, 0)
         self.assertEqual(item.metadata, {})
         self.assertIsInstance(item.enqueued_at, float)
@@ -33,7 +33,7 @@ class TestQueueItem(unittest.TestCase):
         """Test creating a QueueItem with all fields specified."""
         item = QueueItem(
             id="item-2",
-            path=Path("/tmp/doc.pdf"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / "doc.pdf",  # noqa: test-hardcoded-paths
             priority=5,
             metadata={"type": "document"},
             enqueued_at=100.0,
@@ -44,8 +44,8 @@ class TestQueueItem(unittest.TestCase):
 
     def test_metadata_isolation(self) -> None:
         """Test that default metadata dicts are independent."""
-        item1 = QueueItem(id="a", path=Path("/a"))
-        item2 = QueueItem(id="b", path=Path("/b"))
+        item1 = QueueItem(id="a", path=Path("/") / "a")
+        item2 = QueueItem(id="b", path=Path("/") / "b")
         item1.metadata["key"] = "value"
         self.assertNotIn("key", item2.metadata)
 
@@ -62,7 +62,7 @@ class TestPriorityQueue(unittest.TestCase):
         """Helper to create a QueueItem."""
         return QueueItem(
             id=item_id,
-            path=Path(f"/tmp/{item_id}.txt"),  # noqa: test-hardcoded-paths
+            path=Path("/") / "tmp" / f"{item_id}.txt",  # noqa: test-hardcoded-paths
             priority=priority,
         )
 

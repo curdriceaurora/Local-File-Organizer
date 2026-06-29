@@ -222,7 +222,7 @@ class TestFullPipeline:
                 confidence=0.8,
                 reasoning=["reference document"],
             )
-            collector.record_acceptance(Path(f"/docs/ref_{i}.pdf"), suggestion)
+            collector.record_acceptance(Path("/") / "docs" / f"ref_{i}.pdf", suggestion)
 
         learner = PatternLearner(min_occurrences=3)
         events = collector.get_events()

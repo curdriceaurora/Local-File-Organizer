@@ -39,7 +39,7 @@ class TestProcessedImage:
     def test_defaults(self) -> None:
         """Test ProcessedImage default values."""
         result = ProcessedImage(
-            file_path=Path("/img.jpg"),
+            file_path=Path("/") / "img.jpg",
             description="desc",
             folder_name="folder",
             filename="name",
@@ -52,7 +52,7 @@ class TestProcessedImage:
     def test_custom_values(self) -> None:
         """Test ProcessedImage with all fields set."""
         result = ProcessedImage(
-            file_path=Path("/img.jpg"),
+            file_path=Path("/") / "img.jpg",
             description="A photo",
             folder_name="nature",
             filename="sunset",

@@ -145,7 +145,7 @@ class TestDirEntry:
         assert entry["kind"] == "folder"
 
     def test_oserror_fallback(self) -> None:
-        missing = Path("/nonexistent/dir")
+        missing = Path("/") / "nonexistent" / "dir"
         entry = _dir_entry(missing)
         assert entry["name"] == "dir"
         assert entry["is_dir"] is True

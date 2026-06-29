@@ -22,7 +22,7 @@ class TestReadHdf5:
             from file_organizer.utils.readers.scientific import read_hdf5_file
 
             with pytest.raises(ImportError, match="h5py"):
-                read_hdf5_file(Path("/test.h5"))
+                read_hdf5_file(Path("/") / "test.h5")
 
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.H5PY_AVAILABLE", True):
@@ -36,7 +36,7 @@ class TestReadHdf5:
                 from file_organizer.utils.readers.scientific import read_hdf5_file
 
                 with pytest.raises(FileReadError):
-                    read_hdf5_file(Path("/test.h5"))
+                    read_hdf5_file(Path("/") / "test.h5")
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ class TestReadNetcdf:
             from file_organizer.utils.readers.scientific import read_netcdf_file
 
             with pytest.raises(ImportError, match="netCDF4"):
-                read_netcdf_file(Path("/test.nc"))
+                read_netcdf_file(Path("/") / "test.nc")
 
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", True):
@@ -64,7 +64,7 @@ class TestReadNetcdf:
                 from file_organizer.utils.readers.scientific import read_netcdf_file
 
                 with pytest.raises(FileReadError):
-                    read_netcdf_file(Path("/test.nc"))
+                    read_netcdf_file(Path("/") / "test.nc")
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ class TestReadMat:
             from file_organizer.utils.readers.scientific import read_mat_file
 
             with pytest.raises(ImportError, match="scipy"):
-                read_mat_file(Path("/test.mat"))
+                read_mat_file(Path("/") / "test.mat")
 
     def test_file_error_raises(self):
         with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True):
@@ -91,7 +91,7 @@ class TestReadMat:
                 from file_organizer.utils.readers.scientific import read_mat_file
 
                 with pytest.raises(FileReadError):
-                    read_mat_file(Path("/test.mat"))
+                    read_mat_file(Path("/") / "test.mat")
 
     def test_successful_read(self):
         # Use a lightweight fake instead of numpy to avoid an undeclared dependency.
@@ -119,7 +119,7 @@ class TestReadMat:
             ):
                 from file_organizer.utils.readers.scientific import read_mat_file
 
-                result = read_mat_file(Path("/test.mat"))
+                result = read_mat_file(Path("/") / "test.mat")
                 assert "MATLAB File" in result
                 assert "matrix" in result
                 assert "scalar" in result

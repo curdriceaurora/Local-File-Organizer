@@ -25,7 +25,7 @@ def extractor():
 class TestExtractText:
     def test_nonexistent_file_raises(self, extractor):
         with pytest.raises(OSError, match="File not found"):
-            extractor.extract_text(Path("/no/such/file.pdf"))
+            extractor.extract_text(Path("/") / "no" / "such" / "file.pdf")
 
     def test_unsupported_format_raises(self, extractor, tmp_path):
         f = tmp_path / "file.xyz"

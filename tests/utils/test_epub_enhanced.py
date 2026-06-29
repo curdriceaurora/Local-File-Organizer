@@ -174,7 +174,7 @@ class TestEnhancedEPUBReader:
         reader = EnhancedEPUBReader()
 
         with pytest.raises(FileNotFoundError):
-            reader.read_epub(Path("/nonexistent/file.epub"))
+            reader.read_epub(Path("/") / "nonexistent" / "file.epub")
 
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_metadata(self, mock_read, mock_epub_book, tmp_path):

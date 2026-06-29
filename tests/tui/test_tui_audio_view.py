@@ -51,7 +51,7 @@ def _make_metadata(
     m.sample_rate = sample_rate
     m.channels = channels
     m.format = fmt
-    m.file_path = Path("/audio/test.mp3")
+    m.file_path = Path("/") / "audio" / "test.mp3"
     m.file_size = 5_000_000
     return m
 
@@ -218,9 +218,9 @@ def test_audio_view_navigation() -> None:
         view = AudioView(scan_dir=".")
         # Simulate having files loaded (no panels to query, just test index logic)
         view._files = [
-            (Path("/a.mp3"), _make_metadata(), _make_classification()),
-            (Path("/b.mp3"), _make_metadata(), _make_classification()),
-            (Path("/c.mp3"), _make_metadata(), _make_classification()),
+            (Path("/") / "a.mp3", _make_metadata(), _make_classification()),
+            (Path("/") / "b.mp3", _make_metadata(), _make_classification()),
+            (Path("/") / "c.mp3", _make_metadata(), _make_classification()),
         ]
         # Patch _show_file_details to avoid query_one calls outside app context
         with patch.object(view, "_show_file_details"):

@@ -27,7 +27,7 @@ class TestFileMetadata:
     def test_create_file_metadata(self):
         """Test creating file metadata."""
         now = datetime.now(UTC)
-        path = Path("/test/file.txt")
+        path = Path("/") / "test" / "file.txt"
         metadata = FileMetadata(
             path=path,
             size=1024,
@@ -51,7 +51,7 @@ class TestFileMetadata:
         )
 
         assert isinstance(metadata.path, Path)
-        assert metadata.path == Path("/test/file.txt")
+        assert metadata.path == Path("/") / "test" / "file.txt"
 
 
 @pytest.mark.unit
@@ -72,14 +72,14 @@ class TestDuplicateGroup:
         group = DuplicateGroup(hash_value="hash123")
 
         file1 = FileMetadata(
-            path=Path("/file1.txt"),
+            path=Path("/") / "file1.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
             hash_value="hash123",
         )
         file2 = FileMetadata(
-            path=Path("/file2.txt"),
+            path=Path("/") / "file2.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
@@ -98,14 +98,14 @@ class TestDuplicateGroup:
         group = DuplicateGroup(hash_value="hash123")
 
         file1 = FileMetadata(
-            path=Path("/file1.txt"),
+            path=Path("/") / "file1.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
             hash_value="hash123",
         )
         file2 = FileMetadata(
-            path=Path("/file2.txt"),
+            path=Path("/") / "file2.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
@@ -121,21 +121,21 @@ class TestDuplicateGroup:
         group = DuplicateGroup(hash_value="hash123")
 
         file1 = FileMetadata(
-            path=Path("/file1.txt"),
+            path=Path("/") / "file1.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
             hash_value="hash123",
         )
         file2 = FileMetadata(
-            path=Path("/file2.txt"),
+            path=Path("/") / "file2.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
             hash_value="hash123",
         )
         file3 = FileMetadata(
-            path=Path("/file3.txt"),
+            path=Path("/") / "file3.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
@@ -152,7 +152,7 @@ class TestDuplicateGroup:
         group = DuplicateGroup(hash_value="hash123")
 
         file1 = FileMetadata(
-            path=Path("/file1.txt"),
+            path=Path("/") / "file1.txt",
             size=1000,
             modified_time=now,
             accessed_time=now,
@@ -532,7 +532,7 @@ class TestEdgeCases:
         now = datetime.now(UTC)
 
         file_metadata = FileMetadata(
-            path=Path("/test.txt"),
+            path=Path("/") / "test.txt",
             size=1_000_000_000_000,
             modified_time=now,
             accessed_time=now,
@@ -546,7 +546,7 @@ class TestEdgeCases:
         now = datetime.now(UTC)
 
         file_metadata = FileMetadata(
-            path=Path("/empty.txt"),
+            path=Path("/") / "empty.txt",
             size=0,
             modified_time=now,
             accessed_time=now,

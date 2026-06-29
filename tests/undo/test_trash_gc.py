@@ -97,11 +97,11 @@ class TestTrashDeleteOutcome:
 
         outcome = TrashDeleteOutcome(
             result=TrashDeleteResult.DELETED,
-            path=Path("/some/path"),
+            path=Path("/") / "some" / "path",
             reason="cleaned",
         )
         assert outcome.result is TrashDeleteResult.DELETED
-        assert outcome.path == Path("/some/path")
+        assert outcome.path == Path("/") / "some" / "path"
         assert outcome.reason == "cleaned"
         assert outcome.error is None
 
@@ -114,7 +114,7 @@ class TestTrashDeleteOutcome:
         exc = OSError(13, "Permission denied")
         outcome = TrashDeleteOutcome(
             result=TrashDeleteResult.PERMISSION_ERROR,
-            path=Path("/p"),
+            path=Path("/") / "p",
             reason="unlink raised",
             error=exc,
         )
@@ -135,7 +135,7 @@ class TestTrashDeleteOutcome:
 
         outcome = TrashDeleteOutcome(
             result=TrashDeleteResult.DELETED,
-            path=Path("/p"),
+            path=Path("/") / "p",
             reason="ok",
         )
         with pytest.raises(dataclasses.FrozenInstanceError):

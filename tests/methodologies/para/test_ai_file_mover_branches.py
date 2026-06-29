@@ -54,7 +54,7 @@ class TestComputeTargetPath:
         config = PARAConfig()
         mover = PARAFileMover(config, root_dir=tmp_path)
 
-        file_path = Path("/some/path/document.txt")
+        file_path = Path("/") / "some" / "path" / "document.txt"
         suggestion = PARASuggestion(
             category=PARACategory.PROJECT,
             confidence=0.8,
@@ -81,18 +81,18 @@ class TestMoveSuggestionValidation:
     def test_confidence_too_high(self) -> None:
         with pytest.raises(ValueError, match=r"between 0.0 and 1.0"):
             MoveSuggestion(
-                file_path=Path("/x.txt"),
+                file_path=Path("/") / "x.txt",
                 target_category=PARACategory.PROJECT,
-                target_path=Path("/dst/x.txt"),
+                target_path=Path("/") / "dst" / "x.txt",
                 confidence=1.5,
             )
 
     def test_confidence_too_low(self) -> None:
         with pytest.raises(ValueError, match=r"between 0.0 and 1.0"):
             MoveSuggestion(
-                file_path=Path("/x.txt"),
+                file_path=Path("/") / "x.txt",
                 target_category=PARACategory.PROJECT,
-                target_path=Path("/dst/x.txt"),
+                target_path=Path("/") / "dst" / "x.txt",
                 confidence=-0.1,
             )
 
@@ -153,7 +153,7 @@ class TestMoveFile:
         suggestion = MoveSuggestion(
             file_path=src,
             target_category=PARACategory.PROJECT,
-            target_path=Path("/proc/impossible/dst.txt"),
+            target_path=Path("/") / "proc" / "impossible" / "dst.txt",
             confidence=0.8,
         )
         result = mover.move_file(suggestion, dry_run=False)

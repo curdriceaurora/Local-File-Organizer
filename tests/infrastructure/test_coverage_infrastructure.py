@@ -222,7 +222,7 @@ class TestHealthEndpoint:
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
 
-        cfg = DeploymentConfig(data_directory=Path("/nonexistent/path"))
+        cfg = DeploymentConfig(data_directory=Path("/") / "nonexistent" / "path")
         ep = HealthEndpoint(config=cfg, min_disk_space_mb=1)
         # Falls back to "/" - should still work
         result = ep._check_disk_space()
@@ -232,7 +232,7 @@ class TestHealthEndpoint:
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
 
-        cfg = DeploymentConfig(data_directory=Path("/nonexistent"))
+        cfg = DeploymentConfig(data_directory=Path("/") / "nonexistent")
         ep = HealthEndpoint(config=cfg)
         with patch("shutil.disk_usage", side_effect=OSError("disk error")):
             status = ep._check_disk_space()
@@ -2604,7 +2604,7 @@ class TestPARARulesEngine:
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
         ctx = EvaluationContext(
-            file_path=Path("/home/user/doc.pdf"),  # noqa: test-hardcoded-paths
+            file_path=Path("/") / "home" / "user" / "doc.pdf",  # noqa: test-hardcoded-paths
             file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},
         )
         assert ctx.file_extension == ".pdf"
@@ -2614,7 +2614,7 @@ class TestPARARulesEngine:
     def test_evaluation_context_no_stat(self):
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
-        ctx = EvaluationContext(file_path=Path("/home/user/doc.pdf"))  # noqa: test-hardcoded-paths
+        ctx = EvaluationContext(file_path=Path("/") / "home" / "user" / "doc.pdf")  # noqa: test-hardcoded-paths
         assert ctx.file_age_days is None
 
     def test_evaluation_context_naive_datetime(self):

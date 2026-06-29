@@ -8,7 +8,9 @@ Ensures cross-platform compatibility by discouraging hardcoded path separators
 from __future__ import annotations
 
 import ast
+import io
 import sys
+import tokenize
 from pathlib import Path
 
 
@@ -24,18 +26,19 @@ class TestSeparatorPathVisitor(ast.NodeVisitor):
         # Check for Path("foo/bar") or Path("foo\\bar")
         if isinstance(node.func, ast.Name) and node.func.id == "Path":
             for arg in node.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    val = arg.value
-                    # Flag if it contains path separators (excluding root "/" and URL schemes)
-                    if (
-                        ("/" in val or "\\" in val)
-                        and val != "/"
-                        and not val.startswith(("http://", "https://"))
-                    ):
-                        self.add_violation(
-                            node,
-                            f"hardcoded path separator in Path('{val}'). Use division operator (/) instead.",
-                        )
+                val = _extract_path_literal(arg)
+                if val is None:
+                    continue
+                # Flag if it contains path separators (excluding root "/" and URL schemes)
+                if (
+                    ("/" in val or "\\" in val)
+                    and val != "/"
+                    and not val.startswith(("http://", "https://"))
+                ):
+                    self.add_violation(
+                        node,
+                        f"hardcoded path separator in Path('{val}'). Use division operator (/) instead.",
+                    )
         self.generic_visit(node)
 
     def add_violation(self, node: ast.AST, message: str) -> None:
@@ -43,10 +46,42 @@ class TestSeparatorPathVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: test-separator-paths" in line_content or "noqa" in line_content:
+            # Support targeted override only by parsing actual comment tokens.
+            # This avoids treating '#' inside string literals as comments.
+            if _has_targeted_noqa(line_content):
                 return
             self.violations.append((lineno, message, line_content.strip()))
+
+
+def _has_targeted_noqa(line_content: str) -> bool:
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(line_content).readline)
+    except (tokenize.TokenError, IndentationError):
+        return False
+    for token in tokens:
+        if token.type != tokenize.COMMENT:
+            continue
+        comment_body = token.string.lstrip("#").strip()
+        if not comment_body.lower().startswith("noqa:"):
+            continue
+        _, _, code_list = comment_body.partition(":")
+        codes = [code.strip() for code in code_list.split(",")]
+        if "test-separator-paths" in codes:
+            return True
+    return False
+
+
+def _extract_path_literal(arg: ast.AST) -> str | None:
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return arg.value
+    if isinstance(arg, ast.JoinedStr):
+        literal_parts = []
+        for value in arg.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                literal_parts.append(value.value)
+        if literal_parts:
+            return "".join(literal_parts)
+    return None
 
 
 def check_file(filepath: Path) -> list[tuple[int, str, str]]:

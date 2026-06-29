@@ -82,7 +82,7 @@ class TestRollbackOperationDispatch:
 
     def test_dispatch_exception_caught(self, env):
         _, _, executor = env
-        op = _op(OperationType.MOVE, Path("/nope"), Path("/nope2"))
+        op = _op(OperationType.MOVE, Path("/") / "nope", Path("/") / "nope2")
         # rollback_move will fail because file doesn't exist → returns False
         result = executor.rollback_operation(op)
         assert result is False
@@ -117,7 +117,10 @@ class TestRedoOperationDispatch:
     def test_dispatch_exception_caught(self, env):
         _, _, executor = env
         op = _op(
-            OperationType.RENAME, Path("/nope"), Path("/nope2"), status=OperationStatus.ROLLED_BACK
+            OperationType.RENAME,
+            Path("/") / "nope",
+            Path("/") / "nope2",
+            status=OperationStatus.ROLLED_BACK,
         )
         result = executor.redo_operation(op)
         assert result is False
@@ -155,7 +158,7 @@ class TestRedoCreate:
     def test_redo_create_exception(self, env):
         _, _, executor = env
         # Provide a path whose parent can't be created
-        target = Path("/dev/null/impossible/file.txt")
+        target = Path("/") / "dev" / "null" / "impossible" / "file.txt"
         op = _op(OperationType.CREATE, target, status=OperationStatus.ROLLED_BACK)
         result = executor.redo_create(op)
         assert result is False
@@ -303,8 +306,8 @@ class TestRollbackTransactionEdges:
             _op(OperationType.MOVE, file1, dst1, op_id=1, txn_id="txn"),
             _op(
                 OperationType.MOVE,
-                Path("/nonexistent"),
-                Path("/also_nonexistent"),
+                Path("/") / "nonexistent",
+                Path("/") / "also_nonexistent",
                 op_id=2,
                 txn_id="txn",
             ),
@@ -362,6 +365,6 @@ class TestRollbackExceptionPaths:
     @pytest.mark.skipif(sys.platform == "win32", reason="/dev/null is writable on Windows")
     def test_rollback_create_exception(self, env):
         _, _, executor = env
-        op = _op(OperationType.CREATE, Path("/dev/null/impossible"))
+        op = _op(OperationType.CREATE, Path("/") / "dev" / "null" / "impossible")
         result = executor.rollback_create(op)
         assert result is False

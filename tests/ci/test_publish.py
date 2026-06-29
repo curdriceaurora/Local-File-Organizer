@@ -143,7 +143,7 @@ class TestCheckPackage:
     def test_check_nonexistent_dir_raises(self) -> None:
         """Non-existent directory raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError, match="Distribution directory not found"):
-            check_package(Path("/nonexistent/dist"))
+            check_package(Path("/") / "nonexistent" / "dist")
 
     def test_check_empty_dir_raises(self, tmp_path: Path) -> None:
         """Empty dist directory raises FileNotFoundError."""
@@ -180,7 +180,7 @@ class TestPublishPypi:
     def test_publish_nonexistent_dir_raises(self) -> None:
         """Non-existent dist directory raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
-            publish_pypi(Path("/nonexistent/dist"))
+            publish_pypi(Path("/") / "nonexistent" / "dist")
 
     @patch("publish._run_command")
     def test_publish_test_pypi_uses_test_url(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -255,7 +255,7 @@ class TestGetDistFiles:
 
     def test_nonexistent_dir_returns_empty(self) -> None:
         """Non-existent directory returns empty list."""
-        result = get_dist_files(Path("/nonexistent/dist"))
+        result = get_dist_files(Path("/") / "nonexistent" / "dist")
         assert result == []
 
     def test_lists_tar_and_whl_files(self, tmp_path: Path) -> None:

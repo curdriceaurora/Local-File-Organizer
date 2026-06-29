@@ -37,7 +37,7 @@ class TestScanDirectory:
 
     def test_nonexistent_path_raises(self, scanner: FolderScanner) -> None:
         with pytest.raises(ValueError, match="does not exist"):
-            scanner.scan_directory(Path("/nonexistent"))
+            scanner.scan_directory(Path("/") / "nonexistent")
 
     def test_not_a_dir_raises(self, scanner: FolderScanner, tmp_path: Path) -> None:
         f = tmp_path / "file.txt"

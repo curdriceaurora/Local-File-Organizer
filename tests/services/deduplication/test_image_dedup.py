@@ -367,7 +367,7 @@ class TestFindDuplicates:
         """Test FileNotFoundError for missing directory."""
         dedup = _make_dedup()
         with pytest.raises(FileNotFoundError, match="Directory not found"):
-            dedup.find_duplicates(Path("/no/such/dir"))
+            dedup.find_duplicates(Path("/") / "no" / "such" / "dir")
 
     def test_not_a_directory(self, tmp_path: Path):
         """Test ValueError for path that is a file, not a directory."""

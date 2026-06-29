@@ -223,8 +223,8 @@ class TestFileRouterCustomRules:
             lambda p: "screenshots" in p.parts,
             ProcessorType.IMAGE,
         )
-        assert router.route(Path("screenshots/data.csv")) == ProcessorType.IMAGE
-        assert router.route(Path("documents/data.csv")) == ProcessorType.TEXT
+        assert router.route(Path("screenshots") / "data.csv") == ProcessorType.IMAGE
+        assert router.route(Path("documents") / "data.csv") == ProcessorType.TEXT
 
 
 class TestFileRouterEdgeCases:

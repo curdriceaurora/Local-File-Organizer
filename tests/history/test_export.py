@@ -65,7 +65,7 @@ class TestHistoryExporter:
         """Test exporting operations to JSON."""
         # Add some operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         output_path = temp_output_dir / "export.json"
         stats = exporter.export_to_json(output_path)
@@ -86,8 +86,12 @@ class TestHistoryExporter:
         """Test exporting operations with transaction details."""
         # Create transaction with operations
         txn_id = history.start_transaction()
-        history.log_operation(OperationType.MOVE, Path("/test/path1"), transaction_id=txn_id)
-        history.log_operation(OperationType.MOVE, Path("/test/path2"), transaction_id=txn_id)
+        history.log_operation(
+            OperationType.MOVE, Path("/") / "test" / "path1", transaction_id=txn_id
+        )
+        history.log_operation(
+            OperationType.MOVE, Path("/") / "test" / "path2", transaction_id=txn_id
+        )
         history.commit_transaction(txn_id)
 
         output_path = temp_output_dir / "export.json"
@@ -104,9 +108,9 @@ class TestHistoryExporter:
     def test_export_to_json_filter_by_type(self, history, exporter, temp_output_dir):
         """Test exporting with operation type filter."""
         # Add different operation types
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
-        history.log_operation(OperationType.RENAME, Path("/test/path2"))
-        history.log_operation(OperationType.DELETE, Path("/test/path3"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
+        history.log_operation(OperationType.RENAME, Path("/") / "test" / "path2")
+        history.log_operation(OperationType.DELETE, Path("/") / "test" / "path3")
 
         output_path = temp_output_dir / "export.json"
         stats = exporter.export_to_json(output_path, operation_type=OperationType.MOVE)
@@ -122,7 +126,7 @@ class TestHistoryExporter:
         """Test exporting operations to CSV."""
         # Add some operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         output_path = temp_output_dir / "export.csv"
         count = exporter.export_to_csv(output_path)
@@ -143,9 +147,9 @@ class TestHistoryExporter:
     def test_export_to_csv_filter_by_type(self, history, exporter, temp_output_dir):
         """Test CSV export with operation type filter."""
         # Add different operation types
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
-        history.log_operation(OperationType.RENAME, Path("/test/path2"))
-        history.log_operation(OperationType.DELETE, Path("/test/path3"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
+        history.log_operation(OperationType.RENAME, Path("/") / "test" / "path2")
+        history.log_operation(OperationType.DELETE, Path("/") / "test" / "path3")
 
         output_path = temp_output_dir / "export.csv"
         count = exporter.export_to_csv(output_path, operation_type=OperationType.MOVE)
@@ -171,7 +175,9 @@ class TestHistoryExporter:
         # Create transactions
         for i in range(3):
             txn_id = history.start_transaction()
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"), transaction_id=txn_id)
+            history.log_operation(
+                OperationType.MOVE, Path("/") / "test" / f"path{i}", transaction_id=txn_id
+            )
             history.commit_transaction(txn_id)
 
         output_path = temp_output_dir / "transactions.csv"
@@ -193,9 +199,9 @@ class TestHistoryExporter:
     def test_export_statistics(self, history, exporter, temp_output_dir):
         """Test exporting database statistics."""
         # Add various operations
-        history.log_operation(OperationType.MOVE, Path("/test/path1"))
-        history.log_operation(OperationType.RENAME, Path("/test/path2"))
-        history.log_operation(OperationType.DELETE, Path("/test/path3"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path1")
+        history.log_operation(OperationType.RENAME, Path("/") / "test" / "path2")
+        history.log_operation(OperationType.DELETE, Path("/") / "test" / "path3")
 
         output_path = temp_output_dir / "stats.json"
         result = exporter.export_statistics(output_path)
@@ -218,7 +224,7 @@ class TestHistoryExporter:
     def test_export_creates_parent_directory(self, history, exporter, temp_output_dir):
         """Test that export creates parent directories if needed."""
         # Add operation
-        history.log_operation(OperationType.MOVE, Path("/test/path"))
+        history.log_operation(OperationType.MOVE, Path("/") / "test" / "path")
 
         # Use nested path that doesn't exist
         output_path = temp_output_dir / "nested" / "dir" / "export.json"
@@ -231,7 +237,7 @@ class TestHistoryExporter:
         """Test exporting with date range filter."""
         # Add operations (will have current timestamp)
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
+            history.log_operation(OperationType.MOVE, Path("/") / "test" / f"path{i}")
 
         # Export with date range that includes current time
         from datetime import timedelta

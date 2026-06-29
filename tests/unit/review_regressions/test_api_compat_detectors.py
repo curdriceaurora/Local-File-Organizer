@@ -25,7 +25,7 @@ def test_api_compat_detector_flags_legacy_positional_prefix_changes() -> None:
     detector = PublicApiCompatibilityDetector(
         contracts=(
             PublicCallableContract(
-                path=Path("src/file_organizer/public/constructor_prefix_positive.py"),
+                path=Path("src") / "file_organizer" / "public" / "constructor_prefix_positive.py",
                 qualname="PipelineOrchestrator.__init__",
                 legacy_positional_params=("config", "stages", "prefetch_depth"),
             ),
@@ -47,7 +47,7 @@ def test_api_compat_detector_flags_new_optional_positional_params() -> None:
     detector = PublicApiCompatibilityDetector(
         contracts=(
             PublicCallableContract(
-                path=Path("src/file_organizer/public/optional_positional_positive.py"),
+                path=Path("src") / "file_organizer" / "public" / "optional_positional_positive.py",
                 qualname="FileOrganizer.__init__",
                 legacy_positional_params=("dry_run", "prefetch_depth"),
             ),
@@ -69,12 +69,12 @@ def test_api_compat_detector_allows_keyword_only_optional_extension() -> None:
     detector = PublicApiCompatibilityDetector(
         contracts=(
             PublicCallableContract(
-                path=Path("src/file_organizer/public/keyword_only_safe.py"),
+                path=Path("src") / "file_organizer" / "public" / "keyword_only_safe.py",
                 qualname="FileOrganizer.__init__",
                 legacy_positional_params=("dry_run", "prefetch_depth"),
             ),
             PublicCallableContract(
-                path=Path("src/file_organizer/public/process_batch_safe.py"),
+                path=Path("src") / "file_organizer" / "public" / "process_batch_safe.py",
                 qualname="PipelineOrchestrator.process_batch",
                 legacy_positional_params=("files",),
             ),
@@ -96,12 +96,12 @@ def test_api_compat_detector_flags_missing_allowlisted_targets() -> None:
     detector = PublicApiCompatibilityDetector(
         contracts=(
             PublicCallableContract(
-                path=Path("src/file_organizer/public/does_not_exist.py"),
+                path=Path("src") / "file_organizer" / "public" / "does_not_exist.py",
                 qualname="PipelineOrchestrator.__init__",
                 legacy_positional_params=("config",),
             ),
             PublicCallableContract(
-                path=Path("src/file_organizer/public/process_batch_safe.py"),
+                path=Path("src") / "file_organizer" / "public" / "process_batch_safe.py",
                 qualname="PipelineOrchestrator.missing_method",
                 legacy_positional_params=("files",),
             ),

@@ -52,13 +52,13 @@ class TestIsHidden:
     """Covers is_hidden."""
 
     def test_hidden_file(self) -> None:
-        assert is_hidden(Path("/home/user/.config"))  # noqa: test-hardcoded-paths
+        assert is_hidden(Path("/") / "home" / "user" / ".config")  # noqa: test-hardcoded-paths
 
     def test_non_hidden_file(self) -> None:
-        assert not is_hidden(Path("/home/user/documents/file.txt"))  # noqa: test-hardcoded-paths
+        assert not is_hidden(Path("/") / "home" / "user" / "documents" / "file.txt")  # noqa: test-hardcoded-paths
 
     def test_hidden_parent(self) -> None:
-        assert is_hidden(Path("/home/user/.hidden/file.txt"))  # noqa: test-hardcoded-paths
+        assert is_hidden(Path("/") / "home" / "user" / ".hidden" / "file.txt")  # noqa: test-hardcoded-paths
 
 
 class TestFileInfoFromPath:

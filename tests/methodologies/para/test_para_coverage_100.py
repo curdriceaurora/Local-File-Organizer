@@ -222,9 +222,9 @@ class TestFeedbackWeightAdjustment:
 
             events.append(
                 FeedbackEvent(
-                    file_path=Path(f"/{parent_dir}/file{i}.txt")
+                    file_path=Path("/") / f"{parent_dir}" / f"file{i}.txt"
                     if parent_dir
-                    else Path(f"/file{i}.txt"),
+                    else Path("/") / f"file{i}.txt",
                     suggested=PARACategory.PROJECT,
                     actual=cat,
                     confidence=0.8,
@@ -287,7 +287,7 @@ class TestFeedbackPatternLearningEdges:
 
         events = [
             FeedbackEvent(
-                file_path=Path("/noext"),
+                file_path=Path("/") / "noext",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.8,
@@ -307,7 +307,7 @@ class TestFeedbackPatternLearningEdges:
 
         events = [
             FeedbackEvent(
-                file_path=Path("/file.txt"),
+                file_path=Path("/") / "file.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.8,

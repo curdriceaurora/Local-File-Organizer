@@ -81,7 +81,7 @@ class TestFeedbackEvent:
 
         before = datetime.now(UTC)
         event = FeedbackEvent(
-            file_path=Path("/mock/file.txt"),
+            file_path=Path("/") / "mock" / "file.txt",
             suggested=PARACategory.AREA,
             actual=PARACategory.AREA,
             confidence=0.5,
@@ -97,7 +97,7 @@ class TestFeedbackEvent:
         from file_organizer.methodologies.para.categories import PARACategory
 
         event = FeedbackEvent(
-            file_path=Path("/mock/projects/budget.xlsx"),
+            file_path=Path("/") / "mock" / "projects" / "budget.xlsx",
             suggested=PARACategory.PROJECT,
             actual=PARACategory.PROJECT,
             confidence=0.9,
@@ -111,7 +111,7 @@ class TestFeedbackEvent:
         from file_organizer.methodologies.para.categories import PARACategory
 
         event = FeedbackEvent(
-            file_path=Path("/mock/invoices/q3.pdf"),
+            file_path=Path("/") / "mock" / "invoices" / "q3.pdf",
             suggested=PARACategory.RESOURCE,
             actual=PARACategory.RESOURCE,
             confidence=0.75,
@@ -125,7 +125,7 @@ class TestFeedbackEvent:
         from file_organizer.methodologies.para.categories import PARACategory
 
         event = FeedbackEvent(
-            file_path=Path("/mock/data/file.pdf"),
+            file_path=Path("/") / "mock" / "data" / "file.pdf",
             suggested=PARACategory.AREA,
             actual=PARACategory.AREA,
             confidence=0.6,
@@ -180,7 +180,7 @@ class TestFeedbackCollector:
         collector = FeedbackCollector(storage_dir=tmp_path)
         suggestion = _make_suggestion(PARACategory.PROJECT, confidence=0.85)
 
-        collector.record_acceptance(Path("/mock/sprint.md"), suggestion)
+        collector.record_acceptance(Path("/") / "mock" / "sprint.md", suggestion)
 
         events = collector.get_events()
         assert len(events) == 1
@@ -198,7 +198,7 @@ class TestFeedbackCollector:
         suggestion = _make_suggestion(PARACategory.PROJECT, confidence=0.65)
 
         collector.record_rejection(
-            Path("/mock/reference.pdf"),
+            Path("/") / "mock" / "reference.pdf",
             suggestion,
             correct_category=PARACategory.RESOURCE,
         )
@@ -219,9 +219,9 @@ class TestFeedbackCollector:
 
         # 3 acceptances, 1 rejection
         for _ in range(3):
-            collector.record_acceptance(Path("/mock/file.txt"), sugg)
+            collector.record_acceptance(Path("/") / "mock" / "file.txt", sugg)
         collector.record_rejection(
-            Path("/mock/other.txt"), sugg, correct_category=PARACategory.RESOURCE
+            Path("/") / "mock" / "other.txt", sugg, correct_category=PARACategory.RESOURCE
         )
 
         stats = collector.get_accuracy_stats()
@@ -248,7 +248,7 @@ class TestFeedbackCollector:
 
         collector = FeedbackCollector(storage_dir=tmp_path)
         sugg = _make_suggestion(PARACategory.PROJECT)
-        collector.record_acceptance(Path("/mock/file.txt"), sugg)
+        collector.record_acceptance(Path("/") / "mock" / "file.txt", sugg)
         assert len(collector.get_events()) == 1
 
         collector.clear()
@@ -264,7 +264,7 @@ class TestFeedbackCollector:
 
         collector1 = FeedbackCollector(storage_dir=tmp_path)
         sugg = _make_suggestion(PARACategory.ARCHIVE, confidence=0.9)
-        collector1.record_acceptance(Path("/mock/old.pdf"), sugg)
+        collector1.record_acceptance(Path("/") / "mock" / "old.pdf", sugg)
 
         # New instance pointing to same directory
         collector2 = FeedbackCollector(storage_dir=tmp_path)
@@ -282,7 +282,7 @@ class TestFeedbackCollector:
         # Seed storage with one event
         seed = FeedbackCollector(storage_dir=tmp_path)
         sugg = _make_suggestion(PARACategory.PROJECT)
-        seed.record_acceptance(Path("/mock/seed.txt"), sugg)
+        seed.record_acceptance(Path("/") / "mock" / "seed.txt", sugg)
 
         collector = FeedbackCollector(storage_dir=tmp_path)
         assert collector._loaded is False  # not yet loaded
@@ -305,11 +305,11 @@ class TestFeedbackCollector:
         sugg_proj = _make_suggestion(PARACategory.PROJECT, confidence=0.8)
         sugg_res = _make_suggestion(PARACategory.RESOURCE, confidence=0.6)
 
-        collector.record_acceptance(Path("/mock/plan.md"), sugg_proj)
+        collector.record_acceptance(Path("/") / "mock" / "plan.md", sugg_proj)
         collector.record_rejection(
-            Path("/mock/ref.pdf"), sugg_proj, correct_category=PARACategory.RESOURCE
+            Path("/") / "mock" / "ref.pdf", sugg_proj, correct_category=PARACategory.RESOURCE
         )
-        collector.record_acceptance(Path("/mock/guide.txt"), sugg_res)
+        collector.record_acceptance(Path("/") / "mock" / "guide.txt", sugg_res)
 
         loaded = FeedbackCollector(storage_dir=tmp_path)
         events = loaded.get_events()
@@ -328,7 +328,7 @@ class TestFeedbackCollector:
         storage = tmp_path / "subdir"
         collector = FeedbackCollector(storage_dir=storage)
         sugg = _make_suggestion(PARACategory.AREA)
-        collector.record_acceptance(Path("/mock/notes.txt"), sugg)
+        collector.record_acceptance(Path("/") / "mock" / "notes.txt", sugg)
 
         assert (storage / "feedback_events.json").exists()
 
@@ -341,9 +341,9 @@ class TestFeedbackCollector:
         sugg_high = _make_suggestion(PARACategory.PROJECT, confidence=0.9)
         sugg_low = _make_suggestion(PARACategory.PROJECT, confidence=0.3)
 
-        collector.record_acceptance(Path("/mock/a.txt"), sugg_high)
+        collector.record_acceptance(Path("/") / "mock" / "a.txt", sugg_high)
         collector.record_rejection(
-            Path("/mock/b.txt"), sugg_low, correct_category=PARACategory.AREA
+            Path("/") / "mock" / "b.txt", sugg_low, correct_category=PARACategory.AREA
         )
 
         stats = collector.get_accuracy_stats()
@@ -360,8 +360,8 @@ class TestFeedbackCollector:
         sugg = _make_suggestion(PARACategory.RESOURCE, confidence=0.8)
 
         # 2 acceptances for RESOURCE
-        collector.record_acceptance(Path("/mock/r1.pdf"), sugg)
-        collector.record_acceptance(Path("/mock/r2.pdf"), sugg)
+        collector.record_acceptance(Path("/") / "mock" / "r1.pdf", sugg)
+        collector.record_acceptance(Path("/") / "mock" / "r2.pdf", sugg)
 
         stats = collector.get_accuracy_stats()
         assert "resource" in stats.per_category_accuracy
@@ -389,7 +389,7 @@ class TestPatternLearner:
 
         return [
             FeedbackEvent(
-                file_path=Path(f"/mock/{parent_dir}/file_{i}{extension}"),
+                file_path=Path("/") / "mock" / f"{parent_dir}" / f"file_{i}{extension}",
                 suggested=category,
                 actual=category,
                 confidence=0.75,
@@ -461,7 +461,7 @@ class TestPatternLearner:
         # 4 acceptances: .pdf → PROJECT (actual = PROJECT)
         acc_events = [
             FeedbackEvent(
-                file_path=Path(f"/mock/work/doc{i}.pdf"),
+                file_path=Path("/") / "mock" / "work" / f"doc{i}.pdf",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.PROJECT,
                 confidence=0.8,
@@ -474,7 +474,7 @@ class TestPatternLearner:
         # 4 rejections: suggested=PROJECT, actual=RESOURCE
         rej_events = [
             FeedbackEvent(
-                file_path=Path(f"/mock/work/ref{i}.pdf"),
+                file_path=Path("/") / "mock" / "work" / f"ref{i}.pdf",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.5,
@@ -527,7 +527,7 @@ class TestPatternLearner:
         learner = PatternLearner()
         events = [
             FeedbackEvent(
-                file_path=Path("/mock/docs/ref.pdf"),
+                file_path=Path("/") / "mock" / "docs" / "ref.pdf",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.5,

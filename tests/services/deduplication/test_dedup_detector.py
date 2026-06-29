@@ -88,7 +88,7 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test scanning non-existent directory."""
         detector = DuplicateDetector()
         with self.assertRaises(ValueError):
-            detector.scan_directory(Path("/nonexistent_path_xyz"))
+            detector.scan_directory(Path("/") / "nonexistent_path_xyz")
 
     def test_scan_directory_not_a_dir(self):
         """Test scanning a file instead of directory."""
@@ -271,7 +271,7 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test find_duplicates_of_file raises for missing file."""
         detector = DuplicateDetector()
         with self.assertRaises(FileNotFoundError):
-            detector.find_duplicates_of_file(Path("/nonexistent.txt"), self.test_dir)
+            detector.find_duplicates_of_file(Path("/") / "nonexistent.txt", self.test_dir)
 
     def test_find_duplicates_of_file_success(self):
         """Test find_duplicates_of_file with real files."""

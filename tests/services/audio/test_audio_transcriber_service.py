@@ -202,12 +202,12 @@ class TestAudioTranscriberInit:
                 model_size=ModelSize.LARGE_V3,
                 device="cpu",
                 compute_type=ComputeType.FLOAT32,
-                cache_dir=Path("/tmp/cache"),  # noqa: test-hardcoded-paths
+                cache_dir=Path("/") / "tmp" / "cache",  # noqa: test-hardcoded-paths
                 num_workers=4,
             )
         assert t.model_size == ModelSize.LARGE_V3
         assert t.compute_type == ComputeType.FLOAT32
-        assert t.cache_dir == Path("/tmp/cache")  # noqa: test-hardcoded-paths
+        assert t.cache_dir == Path("/") / "tmp" / "cache"  # noqa: test-hardcoded-paths
         assert t.num_workers == 4
 
 

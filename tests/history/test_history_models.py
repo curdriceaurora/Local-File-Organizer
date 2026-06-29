@@ -125,7 +125,7 @@ class TestOperation:
         return Operation(
             operation_type=OperationType.MOVE,
             timestamp=now,
-            source_path=Path("/src/file.txt"),
+            source_path=Path("/") / "src" / "file.txt",
         )
 
     @pytest.fixture()
@@ -135,8 +135,8 @@ class TestOperation:
             id=42,
             operation_type=OperationType.COPY,
             timestamp=now,
-            source_path=Path("/src/file.txt"),
-            destination_path=Path("/dst/file.txt"),
+            source_path=Path("/") / "src" / "file.txt",
+            destination_path=Path("/") / "dst" / "file.txt",
             file_hash="abc123",
             metadata={"size": 1024, "type": "text"},
             transaction_id="txn-001",
@@ -149,7 +149,7 @@ class TestOperation:
 
     def test_minimal_construction(self, minimal_op: Operation) -> None:
         assert minimal_op.operation_type is OperationType.MOVE
-        assert minimal_op.source_path == Path("/src/file.txt")
+        assert minimal_op.source_path == Path("/") / "src" / "file.txt"
         assert minimal_op.id is None
         assert minimal_op.destination_path is None
         assert minimal_op.file_hash is None
@@ -163,7 +163,7 @@ class TestOperation:
         assert full_op.id == 42
         assert full_op.operation_type is OperationType.COPY
         assert full_op.timestamp == now
-        assert full_op.destination_path == Path("/dst/file.txt")
+        assert full_op.destination_path == Path("/") / "dst" / "file.txt"
         assert full_op.file_hash == "abc123"
         assert full_op.metadata == {"size": 1024, "type": "text"}
         assert full_op.transaction_id == "txn-001"
@@ -176,12 +176,12 @@ class TestOperation:
         op1 = Operation(
             operation_type=OperationType.MOVE,
             timestamp=now,
-            source_path=Path("/a"),
+            source_path=Path("/") / "a",
         )
         op2 = Operation(
             operation_type=OperationType.MOVE,
             timestamp=now,
-            source_path=Path("/b"),
+            source_path=Path("/") / "b",
         )
         op1.metadata["key"] = "val"
         assert "key" not in op2.metadata
@@ -219,7 +219,7 @@ class TestOperation:
         op = Operation(
             operation_type=OperationType.DELETE,
             timestamp=now,
-            source_path=Path("/tmp/gone.txt"),  # noqa: test-hardcoded-paths
+            source_path=Path("/") / "tmp" / "gone.txt",  # noqa: test-hardcoded-paths
             status=OperationStatus.FAILED,
             error_message="Permission denied",
         )
@@ -232,7 +232,7 @@ class TestOperation:
         op = Operation(
             operation_type=OperationType.MOVE,
             timestamp=now,
-            source_path=Path("/a"),
+            source_path=Path("/") / "a",
         )
         # Force plain-string values to exercise the isinstance branches
         op.operation_type = "move"  # type: ignore[assignment]
@@ -256,7 +256,7 @@ class TestOperation:
         op = Operation.from_dict(data)
         assert op.operation_type is OperationType.RENAME
         assert isinstance(op.timestamp, datetime)
-        assert op.source_path == Path("/src/old.txt")
+        assert op.source_path == Path("/") / "src" / "old.txt"
         assert op.destination_path is None
         assert op.status is OperationStatus.COMPLETED
         assert op.metadata == {}
@@ -278,7 +278,7 @@ class TestOperation:
         op = Operation.from_dict(data)
         assert op.id == 7
         assert op.operation_type is OperationType.DELETE
-        assert op.destination_path == Path("/dst/file.txt")
+        assert op.destination_path == Path("/") / "dst" / "file.txt"
         assert op.file_hash == "deadbeef"
         assert op.metadata == {"permissions": "0644"}
         assert op.transaction_id == "txn-abc"
@@ -415,7 +415,7 @@ class TestOperation:
         op = Operation.from_row(mock_row)
         assert op.id == 1
         assert op.operation_type is OperationType.MOVE
-        assert op.source_path == Path("/src/file.txt")
+        assert op.source_path == Path("/") / "src" / "file.txt"
 
     # -- Edge cases ---------------------------------------------------------
 
@@ -425,7 +425,7 @@ class TestOperation:
             op = Operation(
                 operation_type=op_type,
                 timestamp=now,
-                source_path=Path("/test"),
+                source_path=Path("/") / "test",
             )
             restored = Operation.from_dict(op.to_dict())
             assert restored.operation_type is op_type
@@ -436,7 +436,7 @@ class TestOperation:
             op = Operation(
                 operation_type=OperationType.MOVE,
                 timestamp=now,
-                source_path=Path("/test"),
+                source_path=Path("/") / "test",
                 status=status,
             )
             restored = Operation.from_dict(op.to_dict())

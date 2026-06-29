@@ -87,9 +87,9 @@ class TestMoveSuggestion:
     def test_valid_creation(self) -> None:
         """Should create a valid suggestion."""
         s = MoveSuggestion(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             target_category=PARACategory.PROJECT,
-            target_path=Path("/para/Projects/file.txt"),
+            target_path=Path("/") / "para" / "Projects" / "file.txt",
             confidence=0.85,
         )
         assert s.confidence == 0.85
@@ -98,9 +98,9 @@ class TestMoveSuggestion:
         """Should reject out-of-range confidence."""
         with pytest.raises(ValueError, match="confidence"):
             MoveSuggestion(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 target_category=PARACategory.PROJECT,
-                target_path=Path("/para/Projects/file.txt"),
+                target_path=Path("/") / "para" / "Projects" / "file.txt",
                 confidence=1.5,
             )
 
@@ -229,7 +229,7 @@ class TestMoveFile:
     ) -> None:
         """Moving a non-existent file should fail."""
         suggestion = MoveSuggestion(
-            file_path=Path("/nonexistent/file.txt"),
+            file_path=Path("/") / "nonexistent" / "file.txt",
             target_category=PARACategory.PROJECT,
             target_path=mover.root_dir / "Projects" / "file.txt",
             confidence=0.8,
@@ -329,7 +329,7 @@ class TestBulkOrganize:
         mover: PARAFileMover,
     ) -> None:
         """Non-existent directory should return empty report."""
-        report = mover.bulk_organize(Path("/nonexistent/dir"))
+        report = mover.bulk_organize(Path("/") / "nonexistent" / "dir")
         assert report.total_files == 0
 
     def test_dry_run_counts_files(
@@ -469,7 +469,7 @@ class TestSuggestArchive:
         mover: PARAFileMover,
     ) -> None:
         """Non-existent directory should return empty list."""
-        result = mover.suggest_archive(Path("/nonexistent"))
+        result = mover.suggest_archive(Path("/") / "nonexistent")
         assert result == []
 
     def test_archive_reasoning_includes_days(

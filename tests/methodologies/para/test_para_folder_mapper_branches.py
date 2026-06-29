@@ -35,13 +35,13 @@ class TestFolderMapperBranches:
         rule_engine = MagicMock()
         rule_engine.evaluate_file.side_effect = RuntimeError("rule error")
         mapper = CategoryFolderMapper(config, rule_engine=rule_engine)
-        result = mapper._evaluate_rules(Path("/fake/file.txt"))
+        result = mapper._evaluate_rules(Path("/") / "fake" / "file.txt")
         assert result is None
 
     def test_evaluate_rules_no_engine_returns_none(self, config: PARAConfig) -> None:
         """_evaluate_rules returns None when no rule engine (line 189)."""
         mapper = CategoryFolderMapper(config, rule_engine=None)
-        result = mapper._evaluate_rules(Path("/fake/file.txt"))
+        result = mapper._evaluate_rules(Path("/") / "fake" / "file.txt")
         assert result is None
 
     def test_extract_reasoning_none_category(self, config: PARAConfig) -> None:
@@ -77,20 +77,20 @@ class TestFolderMapperBranches:
         """_match_keyword_folder returns None when keyword_mapping is None (line 299)."""
         strategy = MappingStrategy(use_keyword_folders=True, keyword_mapping=None)
         mapper = CategoryFolderMapper(config, strategy=strategy)
-        result = mapper._match_keyword_folder(Path("/some/file.txt"))
+        result = mapper._match_keyword_folder(Path("/") / "some" / "file.txt")
         assert result is None
 
     def test_match_keyword_folder_no_match(self, config: PARAConfig) -> None:
         """_match_keyword_folder returns None when no keyword matches (line 308)."""
         strategy = MappingStrategy(use_keyword_folders=True, keyword_mapping={"budget": "Finance"})
         mapper = CategoryFolderMapper(config, strategy=strategy)
-        result = mapper._match_keyword_folder(Path("/some/report.txt"))
+        result = mapper._match_keyword_folder(Path("/") / "some" / "report.txt")
         assert result is None
 
     def test_create_target_folders_error(self, config: PARAConfig, tmp_path: Path) -> None:
         """create_target_folders handles mkdir failure (lines 334-336)."""
         mapper = CategoryFolderMapper(config)
-        bad_folder = Path("/proc/fake/folder")
+        bad_folder = Path("/") / "proc" / "fake" / "folder"
         results = [
             MappingResult(
                 source_path=tmp_path / "a.txt",
@@ -110,9 +110,9 @@ class TestFolderMapperBranches:
         mapper = CategoryFolderMapper(config)
         results = [
             MappingResult(
-                source_path=Path(f"/src/file{i}.txt"),
+                source_path=Path("/") / "src" / f"file{i}.txt",
                 target_category=PARACategory.RESOURCE,
-                target_folder=Path("/dst/Resources"),
+                target_folder=Path("/") / "dst" / "Resources",
                 confidence=0.7,
                 reasoning=["reason"],
             )
@@ -319,14 +319,14 @@ class TestFolderMapperBranches:
     def test_get_date_folder_nonexistent_file(self, config: PARAConfig) -> None:
         """_get_date_folder handles stat error (lines 286-288)."""
         mapper = CategoryFolderMapper(config)
-        result = mapper._get_date_folder(Path("/nonexistent/file.txt"))
+        result = mapper._get_date_folder(Path("/") / "nonexistent" / "file.txt")
         assert result is None
 
     def test_match_keyword_folder_success(self, config: PARAConfig) -> None:
         """_match_keyword_folder returns folder when keyword matches (line 307)."""
         strategy = MappingStrategy(use_keyword_folders=True, keyword_mapping={"invoice": "Billing"})
         mapper = CategoryFolderMapper(config, strategy=strategy)
-        result = mapper._match_keyword_folder(Path("/path/to/invoice_2024.pdf"))
+        result = mapper._match_keyword_folder(Path("/") / "path" / "to" / "invoice_2024.pdf")
 
         assert result == "Billing"
 
@@ -373,9 +373,9 @@ class TestFolderMapperBranches:
         mapper = CategoryFolderMapper(config)
         results = [
             MappingResult(
-                source_path=Path("/src/test.txt"),
+                source_path=Path("/") / "src" / "test.txt",
                 target_category=PARACategory.PROJECT,
-                target_folder=Path("/dst/Projects"),
+                target_folder=Path("/") / "dst" / "Projects",
                 confidence=0.85,
                 reasoning=["Contains project keywords", "High priority"],
             )
@@ -490,9 +490,9 @@ class TestFolderMapperBranches:
         mapper = CategoryFolderMapper(config)
         results = [
             MappingResult(
-                source_path=Path("/src/test.txt"),
+                source_path=Path("/") / "src" / "test.txt",
                 target_category=PARACategory.PROJECT,
-                target_folder=Path("/dst/Projects"),
+                target_folder=Path("/") / "dst" / "Projects",
                 confidence=0.85,
                 reasoning=[],  # Empty reasoning
             )
@@ -510,7 +510,9 @@ class TestFolderMapperBranches:
         mapper = CategoryFolderMapper(config, strategy=strategy)
 
         # Use nonexistent file so _get_date_folder returns None
-        result = mapper._determine_subfolder(Path("/nonexistent/file.txt"), PARACategory.PROJECT)
+        result = mapper._determine_subfolder(
+            Path("/") / "nonexistent" / "file.txt", PARACategory.PROJECT
+        )
 
         assert result is None
 

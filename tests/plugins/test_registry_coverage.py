@@ -127,7 +127,7 @@ class TestRegistryUnloadPlugin:
         record = PluginRecord(
             name="demo",
             version="1.0",
-            plugin_dir=Path("/fake"),
+            plugin_dir=Path("/") / "fake",
             policy=MagicMock(),
             manifest={},
             executor=executor,
@@ -147,7 +147,7 @@ class TestRegistryUnloadPlugin:
         record = PluginRecord(
             name="demo",
             version="1.0",
-            plugin_dir=Path("/fake"),
+            plugin_dir=Path("/") / "fake",
             policy=MagicMock(),
             manifest={},
             executor=executor,
@@ -167,7 +167,7 @@ class TestRegistryEnableDisable:
         record = PluginRecord(
             name="demo",
             version="1.0",
-            plugin_dir=Path("/fake"),
+            plugin_dir=Path("/") / "fake",
             policy=MagicMock(),
             manifest={},
             executor=executor,
@@ -183,7 +183,7 @@ class TestRegistryEnableDisable:
         record = PluginRecord(
             name="demo",
             version="1.0",
-            plugin_dir=Path("/fake"),
+            plugin_dir=Path("/") / "fake",
             policy=MagicMock(),
             manifest={},
             executor=executor,

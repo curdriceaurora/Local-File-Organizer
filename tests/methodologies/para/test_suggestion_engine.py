@@ -281,7 +281,7 @@ class TestSuggest:
         suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Should handle non-existent file paths gracefully."""
-        result = suggestion_engine.suggest(Path("/nonexistent/path/file.txt"))
+        result = suggestion_engine.suggest(Path("/") / "nonexistent" / "path" / "file.txt")
         assert isinstance(result, PARASuggestion)
 
     def test_structural_hint_influences_category(

@@ -224,7 +224,7 @@ class TestLoadSave:
         store.load_preferences()
 
         # Add some data
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
         store.add_preference(
             test_path, {"folder_mappings": {"*.txt": "Documents"}, "confidence": 0.9}
         )
@@ -248,7 +248,7 @@ class TestLoadSave:
         store.save_preferences()
 
         # Modify and save again
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
         store.add_preference(test_path, {"folder_mappings": {"*.txt": "Docs"}})
         store.save_preferences()
 
@@ -259,7 +259,7 @@ class TestLoadSave:
         """Test that corrupted JSON falls back to backup"""
         # Create valid preferences
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
         store.add_preference(test_path, {"folder_mappings": {"*.txt": "Docs"}})
         store.save_preferences()
 
@@ -298,7 +298,7 @@ class TestPreferenceOperations:
     def test_add_preference_new_directory(self, store):
         """Test adding preference for new directory"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         store.add_preference(
             test_path,
@@ -317,7 +317,7 @@ class TestPreferenceOperations:
     def test_add_preference_updates_existing(self, store):
         """Test adding preference updates existing directory"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         # Add initial
         store.add_preference(test_path, {"folder_mappings": {"*.jpg": "Photos"}, "confidence": 0.7})
@@ -332,7 +332,7 @@ class TestPreferenceOperations:
     def test_get_preference_exact_match(self, store):
         """Test getting preference with exact path match"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         store.add_preference(test_path, {"folder_mappings": {"*.txt": "Docs"}})
 
@@ -343,8 +343,8 @@ class TestPreferenceOperations:
     def test_get_preference_parent_fallback(self, store):
         """Test getting preference falls back to parent"""
         store.load_preferences()
-        parent_path = Path("/test")
-        child_path = Path("/test/child/grandchild")
+        parent_path = Path("/") / "test"
+        child_path = Path("/") / "test" / "child" / "grandchild"
 
         # Add preference to parent
         store.add_preference(parent_path, {"folder_mappings": {"*.txt": "ParentDocs"}})
@@ -357,7 +357,7 @@ class TestPreferenceOperations:
     def test_get_preference_no_fallback(self, store):
         """Test getting preference without fallback returns global"""
         store.load_preferences()
-        test_path = Path("/test/nonexistent")
+        test_path = Path("/") / "test" / "nonexistent"
 
         # Should return global preferences
         pref = store.get_preference(test_path, fallback_to_parent=False)
@@ -367,7 +367,7 @@ class TestPreferenceOperations:
     def test_update_confidence_success(self, store):
         """Test updating confidence on success"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         store.add_preference(test_path, {"confidence": 0.5})
 
@@ -380,7 +380,7 @@ class TestPreferenceOperations:
     def test_update_confidence_failure(self, store):
         """Test updating confidence on failure"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         store.add_preference(test_path, {"confidence": 0.8})
 
@@ -393,7 +393,7 @@ class TestPreferenceOperations:
     def test_update_confidence_clamped(self, store):
         """Test confidence is clamped to [0, 1]"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
 
         store.add_preference(test_path, {"confidence": 0.99})
 
@@ -491,7 +491,7 @@ class TestImportExport:
     def test_export_json(self, store, temp_storage):
         """Test exporting preferences to JSON"""
         store.load_preferences()
-        test_path = Path("/test/directory")
+        test_path = Path("/") / "test" / "directory"
         store.add_preference(test_path, {"folder_mappings": {"*.txt": "Docs"}})
 
         export_path = temp_storage / "export.json"
@@ -510,7 +510,7 @@ class TestImportExport:
         """Test importing preferences from JSON"""
         # Use a platform-native resolved key so the round-trip via
         # get_preference (which calls path.resolve()) works on all OSes.
-        import_key = str(Path("/imported/path").resolve())
+        import_key = str((Path("/") / "imported" / "path").resolve())
         # Create export file
         data = {
             "version": "1.0",
@@ -541,7 +541,9 @@ class TestImportExport:
 
         assert result is True
         assert store._preferences["user_id"] == "imported"
-        pref = store.get_preference(Path("/imported/path").resolve(), fallback_to_parent=False)
+        pref = store.get_preference(
+            (Path("/") / "imported" / "path").resolve(), fallback_to_parent=False
+        )
         assert pref["folder_mappings"] == {"*.md": "Notes"}
 
     def test_import_invalid_json(self, store, temp_storage):
@@ -605,7 +607,7 @@ class TestStatistics:
 
         # Add multiple preferences
         for i in range(3):
-            path = Path(f"/test/dir{i}")
+            path = Path("/") / "test" / f"dir{i}"
             store.add_preference(path, {"confidence": 0.5 + i * 0.1, "correction_count": i + 1})
 
         stats = store.get_statistics()
@@ -618,7 +620,7 @@ class TestStatistics:
         """Test listing all directory preferences"""
         store.load_preferences()
 
-        paths = [Path(f"/test/dir{i}") for i in range(3)]
+        paths = [Path("/") / "test" / f"dir{i}" for i in range(3)]
         for path in paths:
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{path}"}})
 
@@ -639,7 +641,7 @@ class TestThreadSafety:
 
         def add_preferences(thread_id):
             for i in range(10):
-                path = Path(f"/test/thread{thread_id}/dir{i}")
+                path = Path("/") / "test" / f"thread{thread_id}" / f"dir{i}"
                 store.add_preference(
                     path, {"folder_mappings": {f"*.{thread_id}": f"Thread{thread_id}"}}
                 )
@@ -659,7 +661,7 @@ class TestThreadSafety:
         """Test concurrent reads and writes"""
         store.load_preferences()
 
-        test_path = Path("/test/concurrent")
+        test_path = Path("/") / "test" / "concurrent"
         store.add_preference(test_path, {"confidence": 0.5})
 
         results = []
@@ -718,11 +720,11 @@ class TestPerformance:
 
         # Add 100 preferences
         for i in range(100):
-            path = Path(f"/test/perf/dir{i}")
+            path = Path("/") / "test" / "perf" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Measure lookup time
-        test_path = Path("/test/perf/dir50")
+        test_path = Path("/") / "test" / "perf" / "dir50"
         start = time.time()
         for _ in range(100):
             store.get_preference(test_path, fallback_to_parent=False)
@@ -737,7 +739,7 @@ class TestPerformance:
 
         # Add 100 preferences
         for i in range(100):
-            path = Path(f"/test/perf/dir{i}")
+            path = Path("/") / "test" / "perf" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Measure save time
@@ -781,7 +783,7 @@ class TestClearPreferences:
 
         # Add some preferences
         for i in range(5):
-            path = Path(f"/test/dir{i}")
+            path = Path("/") / "test" / f"dir{i}"
             store.add_preference(path, {"folder_mappings": {"*.txt": f"Docs{i}"}})
 
         # Clear
@@ -797,7 +799,7 @@ class TestClearPreferences:
         store.load_preferences()
 
         # Add preferences
-        path = Path("/test/dir")
+        path = Path("/") / "test" / "dir"
         store.add_preference(path, {"folder_mappings": {"*.txt": "Docs"}})
 
         # Clear

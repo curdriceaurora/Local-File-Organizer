@@ -51,10 +51,10 @@ def sample_embeddings():
 def sample_paths():
     """Create sample file paths."""
     return [
-        Path("/docs/a.txt"),
-        Path("/docs/b.txt"),
-        Path("/docs/c.txt"),
-        Path("/docs/d.txt"),
+        Path("/") / "docs" / "a.txt",
+        Path("/") / "docs" / "b.txt",
+        Path("/") / "docs" / "c.txt",
+        Path("/") / "docs" / "d.txt",
     ]
 
 

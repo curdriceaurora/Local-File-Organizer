@@ -187,8 +187,8 @@ class TestCheckpointModel:
         """Verify to_dict/from_dict preserves completed paths, pending paths, and hashes."""
         from file_organizer.parallel.models import Checkpoint
 
-        completed = [Path("/a/b.txt"), Path("/c/d.txt")]
-        pending = [Path("/e/f.txt")]
+        completed = [Path("/") / "a" / "b.txt", Path("/") / "c" / "d.txt"]
+        pending = [Path("/") / "e" / "f.txt"]
         cp = Checkpoint(
             job_id="cp-test",
             completed_paths=completed,

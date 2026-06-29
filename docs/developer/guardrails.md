@@ -287,6 +287,41 @@ Run the rail directly to verify it exits 0:
 python scripts/ci/guardrails/check_atomic_write.py
 ```
 
+## Test-Separator-Paths Rule (WP-6.2)
+
+Issue `#1368` promotes `test-separator-paths` to an enforced CI rail. The rail
+is declared in `scripts/ci/rails.toml`, runs via
+`scripts/ci/guardrails/check_test_separator_paths.py`, and is executed by both
+the `ci-rails` pre-commit hook and `scripts/ci/ci_rails.py` in CI.
+
+The rail is now **enforced** — commits and CI runs fail when violations are
+found.
+
+### What is flagged
+
+- `Path("foo/bar")`
+- `Path("foo\\bar")`
+
+Prefer segment composition with the division operator:
+
+```python
+Path("foo") / "bar"
+```
+
+### Inline exemptions
+
+Use only targeted, line-local exemptions for true edge cases:
+
+```python
+value = Path("payload/that/must/stay/literal")  # noqa: test-separator-paths
+```
+
+Run the rail directly to verify it exits 0:
+
+```bash
+python scripts/ci/guardrails/check_test_separator_paths.py
+```
+
 ## GitHub-Environment Branching Helpers
 
 Guardrail code that branches on `GITHUB_*` variables is CI-first code. Treat it

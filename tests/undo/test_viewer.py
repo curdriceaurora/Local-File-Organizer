@@ -400,7 +400,7 @@ class TestHistoryViewer(unittest.TestCase):
         from unittest.mock import MagicMock
 
         mock_op = MagicMock()
-        mock_op.source_path = Path("/some/dir/file.txt")
+        mock_op.source_path = Path("/") / "some" / "dir" / "file.txt"
         mock_op.destination_path = None
 
         formatted = self.viewer._format_path(mock_op)

@@ -139,10 +139,10 @@ class TestIsHidden:
         assert is_hidden(Path(".bashrc")) is True
 
     def test_dotdir_is_hidden(self) -> None:
-        assert is_hidden(Path(".config/settings.json")) is True
+        assert is_hidden(Path(".config") / "settings.json") is True
 
     def test_normal_path_not_hidden(self) -> None:
-        assert is_hidden(Path("documents/report.pdf")) is False
+        assert is_hidden(Path("documents") / "report.pdf") is False
 
     def test_root_path_not_hidden(self) -> None:
         assert is_hidden(Path("toplevel")) is False
@@ -151,7 +151,7 @@ class TestIsHidden:
         assert is_hidden(Path(".env")) is True
 
     def test_nested_normal_path(self) -> None:
-        assert is_hidden(Path("src/file_organizer/api/utils.py")) is False
+        assert is_hidden(Path("src") / "file_organizer" / "api" / "utils.py") is False
 
 
 # ---------------------------------------------------------------------------

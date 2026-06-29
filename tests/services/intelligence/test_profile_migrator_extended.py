@@ -351,7 +351,7 @@ class TestRollbackMigrationExtended:
     def test_rollback_exception(self, migrator, profile_manager, temp_storage):
         """Test rollback handles exceptions gracefully."""
         profile_manager.create_profile("rb_exc", "Rollback exception")
-        result = migrator.rollback_migration("rb_exc", Path("/nonexistent/backup.json"))
+        result = migrator.rollback_migration("rb_exc", Path("/") / "nonexistent" / "backup.json")
         assert result is False
 
 

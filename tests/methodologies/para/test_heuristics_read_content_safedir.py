@@ -169,7 +169,7 @@ class TestReadContentBytesTrustedRoot:
 
         assert result == b"anchored content"
         mock_open_root.assert_called_once_with(root)
-        fake_safe_dir.open_anchored_reader.assert_called_once_with(Path("nested/doc.txt"))
+        fake_safe_dir.open_anchored_reader.assert_called_once_with(Path("nested") / "doc.txt")
 
     def test_relative_to_falls_back_to_resolve_across_symlinked_root(self, tmp_path: Path) -> None:
         """Mirrors the macOS ``/tmp`` vs ``/private/tmp``-style mismatch: the

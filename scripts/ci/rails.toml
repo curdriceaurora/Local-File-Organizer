@@ -45,7 +45,7 @@ description = "Flags hardcoded absolute system paths in tests, promoting tmp_pat
 [[rail]]
 name = "test-separator-paths"
 command = ["python", "scripts/ci/guardrails/check_test_separator_paths.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags hardcoded path separators in Path() calls in tests, promoting the / operator (WP-6.2)."
 
 [[rail]]

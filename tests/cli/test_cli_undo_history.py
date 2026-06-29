@@ -17,7 +17,7 @@ def _make_operation(op_id: int = 1, op_type: str = "move", dst: str | None = "/d
     op.id = op_id
     op.operation_type = MagicMock()
     op.operation_type.value = op_type
-    op.source_path = Path("/src/file.txt")
+    op.source_path = Path("/") / "src" / "file.txt"
     op.destination_path = Path(dst) if dst else None
     return op
 

@@ -15,7 +15,7 @@ import os
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -1124,7 +1124,7 @@ class TestDurableMoveFailureModes:
         # ``os.path.normcase`` is a no-op on POSIX (where this test runs),
         # so we assert against the exact ``str(tmp_path / "target.txt")``.
         # On Windows the assertion uses normcase on both sides.
-        result = _normalized_path_str(Path("./sub/../target.txt"))
+        result = _normalized_path_str(Path("sub") / ".." / "target.txt")
         expected = os.path.normcase(str(tmp_path / "target.txt"))
         assert result == expected, result
 
@@ -1145,15 +1145,15 @@ class TestDurableMoveFailureModes:
 
         # POSIX no-op contract: a mixed-case path normalizes to itself.
         if os.name != "nt":
-            mixed = _normalized_path_str(Path("/Tmp/MixedCase/File.TXT"))
+            mixed = _normalized_path_str(Path("/") / "Tmp" / "MixedCase" / "File.TXT")
             assert mixed == "/Tmp/MixedCase/File.TXT", (
                 "os.path.normcase must be a no-op on POSIX so the wrapper "
                 "doesn't break case-sensitive paths"
             )
         else:  # pragma: no cover - exercised on Windows CI only
             # Windows: case-fold to lowercase + normalize separators.
-            mixed_a = _normalized_path_str(Path("C:/Foo/Bar.txt"))
-            mixed_b = _normalized_path_str(Path("c:/foo/BAR.TXT"))
+            mixed_a = _normalized_path_str(PureWindowsPath("C:/Foo/Bar.txt"))
+            mixed_b = _normalized_path_str(PureWindowsPath("c:/foo/BAR.TXT"))
             assert mixed_a == mixed_b, (
                 "Windows case-insensitive paths must normalize identically "
                 "(codex hp2G); journal lookups depend on it"
@@ -1904,7 +1904,7 @@ class TestIsPathInFlightSharedLock:
         def _reader() -> None:
             reader_entered.set()
             try:
-                result_holder[0] = is_path_in_flight(Path("/x"), journal=journal)
+                result_holder[0] = is_path_in_flight(Path("/") / "x", journal=journal)
             finally:
                 reader_done.set()
 
@@ -2612,7 +2612,7 @@ class TestJournalLockFile:
 
         def _reader() -> None:
             try:
-                result[0] = is_path_in_flight(Path("/x"), journal=journal)
+                result[0] = is_path_in_flight(Path("/") / "x", journal=journal)
             finally:
                 reader_done.set()
 

@@ -45,12 +45,12 @@ def _make_pattern_analysis(directory: Path, location_patterns=None, clusters=Non
 class TestDataclasses:
     def test_misplaced_file_to_dict(self):
         mf = MisplacedFile(
-            file_path=Path("/a/b.txt"),
-            current_location=Path("/a"),
-            suggested_location=Path("/c"),
+            file_path=Path("/") / "a" / "b.txt",
+            current_location=Path("/") / "a",
+            suggested_location=Path("/") / "c",
             mismatch_score=75.0,
             reasons=["type mismatch"],
-            similar_files=[Path("/c/d.txt")],
+            similar_files=[Path("/") / "c" / "d.txt"],
         )
         d = mf.to_dict()
         assert d["mismatch_score"] == 75.0
@@ -81,7 +81,7 @@ class TestDataclasses:
 class TestDetectMisplaced:
     def test_invalid_directory(self, detector):
         with pytest.raises(ValueError, match="Invalid directory"):
-            detector.detect_misplaced(Path("/nonexistent"))
+            detector.detect_misplaced(Path("/") / "nonexistent")
 
     def test_empty_directory(self, detector, tmp_path):
         result = detector.detect_misplaced(tmp_path)

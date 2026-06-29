@@ -55,7 +55,7 @@ def _make_metadata(
 ) -> AudioMetadata:
     """Helper to create AudioMetadata."""
     return AudioMetadata(
-        file_path=file_path or Path("/tmp/test.mp3"),  # noqa: test-hardcoded-paths
+        file_path=file_path or Path("/") / "tmp" / "test.mp3",  # noqa: test-hardcoded-paths
         file_size=5_000_000,
         format="MP3",
         duration=duration,

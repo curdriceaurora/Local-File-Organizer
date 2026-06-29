@@ -112,8 +112,8 @@ def test_correction_get_pattern_key_with_extension():
     """Test pattern key generation for a file with an extension."""
     correction = Correction(
         correction_type=CorrectionType.FILE_MOVE,
-        source=Path("/docs/report.pdf"),
-        destination=Path("/archive/2024/report.pdf"),
+        source=Path("/") / "docs" / "report.pdf",
+        destination=Path("/") / "archive" / "2024" / "report.pdf",
         timestamp=datetime.now(UTC),
     )
     key = correction.get_pattern_key()
@@ -125,8 +125,8 @@ def test_correction_get_pattern_key_no_extension():
     """Test pattern key generation for a file without an extension."""
     correction = Correction(
         correction_type=CorrectionType.FILE_RENAME,
-        source=Path("/tmp/Makefile"),  # noqa: test-hardcoded-paths
-        destination=Path("/build/Makefile"),
+        source=Path("/") / "tmp" / "Makefile",  # noqa: test-hardcoded-paths
+        destination=Path("/") / "build" / "Makefile",
         timestamp=datetime.now(UTC),
     )
     key = correction.get_pattern_key()
@@ -156,14 +156,14 @@ def test_tracker_init_empty(tracker):
 def test_track_correction_file_move(tracker):
     """Test tracking a FILE_MOVE correction creates a FOLDER_MAPPING preference."""
     tracker.track_correction(
-        source=Path("/downloads/photo.jpg"),
-        destination=Path("/pictures/vacation/photo.jpg"),
+        source=Path("/") / "downloads" / "photo.jpg",
+        destination=Path("/") / "pictures" / "vacation" / "photo.jpg",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
     prefs = tracker.get_all_preferences(PreferenceType.FOLDER_MAPPING)
     assert len(prefs) == 1
-    assert prefs[0].value == str(Path("/pictures/vacation"))
+    assert prefs[0].value == str(Path("/") / "pictures" / "vacation")
     assert prefs[0].metadata.confidence == 0.5
     assert prefs[0].metadata.frequency == 1
 
@@ -176,8 +176,8 @@ def test_track_correction_file_move(tracker):
 def test_track_correction_file_rename(tracker):
     """Test tracking a FILE_RENAME correction creates a NAMING_PATTERN preference."""
     tracker.track_correction(
-        source=Path("/docs/old_name.txt"),
-        destination=Path("/docs/new_name.txt"),
+        source=Path("/") / "docs" / "old_name.txt",
+        destination=Path("/") / "docs" / "new_name.txt",
         correction_type=CorrectionType.FILE_RENAME,
     )
 
@@ -194,8 +194,8 @@ def test_track_correction_file_rename(tracker):
 def test_track_correction_category_change(tracker):
     """Test tracking a CATEGORY_CHANGE correction creates a CATEGORY_OVERRIDE preference."""
     tracker.track_correction(
-        source=Path("/files/readme.md"),
-        destination=Path("/files/readme.md"),
+        source=Path("/") / "files" / "readme.md",
+        destination=Path("/") / "files" / "readme.md",
         correction_type=CorrectionType.CATEGORY_CHANGE,
         context={"old_category": "misc", "new_category": "documentation"},
     )
@@ -213,8 +213,8 @@ def test_track_correction_category_change(tracker):
 def test_track_correction_default_type(tracker):
     """Test tracking other correction types creates a CUSTOM preference."""
     tracker.track_correction(
-        source=Path("/a/file.log"),
-        destination=Path("/b/file.log"),
+        source=Path("/") / "a" / "file.log",
+        destination=Path("/") / "b" / "file.log",
         correction_type=CorrectionType.FOLDER_CREATION,
     )
 
@@ -234,8 +234,8 @@ def test_repeated_correction_increases_confidence(tracker):
     """Test that repeating the same correction increases confidence."""
     for _ in range(5):
         tracker.track_correction(
-            source=Path("/downloads/report.pdf"),
-            destination=Path("/archive/reports/report.pdf"),
+            source=Path("/") / "downloads" / "report.pdf",
+            destination=Path("/") / "archive" / "reports" / "report.pdf",
             correction_type=CorrectionType.FILE_MOVE,
         )
 
@@ -255,25 +255,25 @@ def test_repeated_correction_increases_confidence(tracker):
 def test_get_preference_folder_mapping(tracker):
     """Test getting a FOLDER_MAPPING preference by extension match."""
     tracker.track_correction(
-        source=Path("/downloads/image.png"),
-        destination=Path("/pictures/image.png"),
+        source=Path("/") / "downloads" / "image.png",
+        destination=Path("/") / "pictures" / "image.png",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
-    pref = tracker.get_preference(Path("/other/photo.png"), PreferenceType.FOLDER_MAPPING)
+    pref = tracker.get_preference(Path("/") / "other" / "photo.png", PreferenceType.FOLDER_MAPPING)
     assert pref is not None
-    assert pref.value == str(Path("/pictures"))
+    assert pref.value == str(Path("/") / "pictures")
 
 
 def test_get_preference_folder_mapping_no_match(tracker):
     """Test get_preference returns None when no matching extension exists."""
     tracker.track_correction(
-        source=Path("/downloads/image.png"),
-        destination=Path("/pictures/image.png"),
+        source=Path("/") / "downloads" / "image.png",
+        destination=Path("/") / "pictures" / "image.png",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
-    pref = tracker.get_preference(Path("/docs/readme.txt"), PreferenceType.FOLDER_MAPPING)
+    pref = tracker.get_preference(Path("/") / "docs" / "readme.txt", PreferenceType.FOLDER_MAPPING)
     assert pref is None
 
 
@@ -285,13 +285,13 @@ def test_get_preference_folder_mapping_no_match(tracker):
 def test_get_all_preferences_unfiltered(tracker):
     """Test getting all preferences without filter."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.txt"),
-        destination=Path("/a/renamed.txt"),
+        source=Path("/") / "a" / "g.txt",
+        destination=Path("/") / "a" / "renamed.txt",
         correction_type=CorrectionType.FILE_RENAME,
     )
 
@@ -302,13 +302,13 @@ def test_get_all_preferences_unfiltered(tracker):
 def test_get_all_preferences_filtered(tracker):
     """Test getting preferences filtered by type."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.txt"),
-        destination=Path("/a/renamed.txt"),
+        source=Path("/") / "a" / "g.txt",
+        destination=Path("/") / "a" / "renamed.txt",
         correction_type=CorrectionType.FILE_RENAME,
     )
 
@@ -325,8 +325,8 @@ def test_get_all_preferences_filtered(tracker):
 def test_update_preference_confidence_success(tracker):
     """Test that success increases confidence capped at 0.98."""
     tracker.track_correction(
-        source=Path("/a/f.pdf"),
-        destination=Path("/b/f.pdf"),
+        source=Path("/") / "a" / "f.pdf",
+        destination=Path("/") / "b" / "f.pdf",
         correction_type=CorrectionType.FILE_MOVE,
     )
     pref = tracker.get_all_preferences()[0]
@@ -344,8 +344,8 @@ def test_update_preference_confidence_success(tracker):
 def test_update_preference_confidence_failure(tracker):
     """Test that failure decreases confidence with floor at 0.1."""
     tracker.track_correction(
-        source=Path("/a/f.pdf"),
-        destination=Path("/b/f.pdf"),
+        source=Path("/") / "a" / "f.pdf",
+        destination=Path("/") / "b" / "f.pdf",
         correction_type=CorrectionType.FILE_MOVE,
     )
     pref = tracker.get_all_preferences()[0]
@@ -363,8 +363,8 @@ def test_update_preference_confidence_failure(tracker):
 def test_update_preference_confidence_cap_and_floor(tracker):
     """Test that confidence stays within [0.1, 0.98] boundaries."""
     tracker.track_correction(
-        source=Path("/a/f.pdf"),
-        destination=Path("/b/f.pdf"),
+        source=Path("/") / "a" / "f.pdf",
+        destination=Path("/") / "b" / "f.pdf",
         correction_type=CorrectionType.FILE_MOVE,
     )
     pref = tracker.get_all_preferences()[0]
@@ -396,13 +396,13 @@ def test_get_statistics_empty(tracker):
 def test_get_statistics_populated(tracker):
     """Test statistics after tracking corrections."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.pdf"),
-        destination=Path("/c/g.pdf"),
+        source=Path("/") / "a" / "g.pdf",
+        destination=Path("/") / "c" / "g.pdf",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
@@ -421,13 +421,13 @@ def test_get_statistics_populated(tracker):
 def test_clear_preferences_all(tracker):
     """Test clearing all preferences."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.txt"),
-        destination=Path("/a/renamed.txt"),
+        source=Path("/") / "a" / "g.txt",
+        destination=Path("/") / "a" / "renamed.txt",
         correction_type=CorrectionType.FILE_RENAME,
     )
 
@@ -439,13 +439,13 @@ def test_clear_preferences_all(tracker):
 def test_clear_preferences_by_type(tracker):
     """Test clearing preferences filtered by type."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.txt"),
-        destination=Path("/a/renamed.txt"),
+        source=Path("/") / "a" / "g.txt",
+        destination=Path("/") / "a" / "renamed.txt",
         correction_type=CorrectionType.FILE_RENAME,
     )
 
@@ -465,13 +465,13 @@ def test_clear_preferences_by_type(tracker):
 def test_export_import_round_trip(tracker):
     """Test that export then import restores the same state."""
     tracker.track_correction(
-        source=Path("/a/f.txt"),
-        destination=Path("/b/f.txt"),
+        source=Path("/") / "a" / "f.txt",
+        destination=Path("/") / "b" / "f.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
     tracker.track_correction(
-        source=Path("/a/g.pdf"),
-        destination=Path("/c/g.pdf"),
+        source=Path("/") / "a" / "g.pdf",
+        destination=Path("/") / "c" / "g.pdf",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
@@ -496,10 +496,10 @@ def test_export_import_round_trip(tracker):
 
 def test_get_corrections_for_file_source_match(tracker):
     """Test getting corrections that match by source path."""
-    src = Path("/downloads/file.txt")
+    src = Path("/") / "downloads" / "file.txt"
     tracker.track_correction(
         source=src,
-        destination=Path("/docs/file.txt"),
+        destination=Path("/") / "docs" / "file.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
@@ -510,9 +510,9 @@ def test_get_corrections_for_file_source_match(tracker):
 
 def test_get_corrections_for_file_destination_match(tracker):
     """Test getting corrections that match by destination path."""
-    dst = Path("/archive/report.pdf")
+    dst = Path("/") / "archive" / "report.pdf"
     tracker.track_correction(
-        source=Path("/docs/report.pdf"),
+        source=Path("/") / "docs" / "report.pdf",
         destination=dst,
         correction_type=CorrectionType.FILE_MOVE,
     )
@@ -525,12 +525,12 @@ def test_get_corrections_for_file_destination_match(tracker):
 def test_get_corrections_for_file_no_match(tracker):
     """Test getting corrections for a file with no related corrections."""
     tracker.track_correction(
-        source=Path("/a/x.txt"),
-        destination=Path("/b/x.txt"),
+        source=Path("/") / "a" / "x.txt",
+        destination=Path("/") / "b" / "x.txt",
         correction_type=CorrectionType.FILE_MOVE,
     )
 
-    corrections = tracker.get_corrections_for_file(Path("/unrelated/z.txt"))
+    corrections = tracker.get_corrections_for_file(Path("/") / "unrelated" / "z.txt")
     assert corrections == []
 
 
@@ -543,8 +543,8 @@ def test_get_recent_corrections_ordering_and_limit(tracker):
     """Test that recent corrections are ordered newest-first and respect limit."""
     for i in range(5):
         tracker.track_correction(
-            source=Path(f"/a/file{i}.txt"),
-            destination=Path(f"/b/file{i}.txt"),
+            source=Path("/") / "a" / f"file{i}.txt",
+            destination=Path("/") / "b" / f"file{i}.txt",
             correction_type=CorrectionType.FILE_MOVE,
         )
 
@@ -571,7 +571,7 @@ def test_create_tracker():
 def test_track_file_move_convenience():
     """Test the track_file_move convenience function."""
     t = create_tracker()
-    track_file_move(t, Path("/a/f.jpg"), Path("/b/f.jpg"))
+    track_file_move(t, Path("/") / "a" / "f.jpg", Path("/") / "b" / "f.jpg")
 
     prefs = t.get_all_preferences(PreferenceType.FOLDER_MAPPING)
     assert len(prefs) == 1
@@ -580,7 +580,7 @@ def test_track_file_move_convenience():
 def test_track_file_rename_convenience():
     """Test the track_file_rename convenience function."""
     t = create_tracker()
-    track_file_rename(t, Path("/a/old.txt"), Path("/a/new.txt"))
+    track_file_rename(t, Path("/") / "a" / "old.txt", Path("/") / "a" / "new.txt")
 
     prefs = t.get_all_preferences(PreferenceType.NAMING_PATTERN)
     assert len(prefs) == 1
@@ -589,7 +589,7 @@ def test_track_file_rename_convenience():
 def test_track_category_change_convenience():
     """Test the track_category_change convenience function."""
     t = create_tracker()
-    track_category_change(t, Path("/f/readme.md"), "misc", "docs")
+    track_category_change(t, Path("/") / "f" / "readme.md", "misc", "docs")
 
     prefs = t.get_all_preferences(PreferenceType.CATEGORY_OVERRIDE)
     assert len(prefs) == 1
