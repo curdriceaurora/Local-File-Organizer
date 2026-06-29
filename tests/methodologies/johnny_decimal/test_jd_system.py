@@ -405,5 +405,5 @@ class TestSystemCoverage:
     # load_configuration file not found
     def test_load_config_file_not_found(self, system: JohnnyDecimalSystem, tmp_path: Path) -> None:
         missing_config = tmp_path / "missing_config.json"
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
             system.load_configuration(missing_config)

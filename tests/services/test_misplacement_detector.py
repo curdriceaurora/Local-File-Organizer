@@ -309,7 +309,7 @@ class TestEdgeCases:
         """Test that invalid directory raises error."""
         detector = MisplacementDetector()
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid directory"):
             detector.detect_misplaced(Path("/") / "nonexistent" / "path")
 
     def test_file_instead_of_directory_raises_error(self):
@@ -321,5 +321,5 @@ class TestEdgeCases:
 
             detector = MisplacementDetector()
 
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="Invalid directory"):
                 detector.detect_misplaced(file_path)

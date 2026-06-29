@@ -693,7 +693,7 @@ class TestMigrationManagerEdgeCases:
         monkeypatch.setattr("builtins.open", mock_open)
 
         # Should raise and cleanup
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="Simulated write error"):
             migration_manager._create_backup(plan)
 
     def test_rollback_missing_manifest(self, migration_manager, tmp_path):
@@ -1226,7 +1226,7 @@ class TestMigrationManagerEdgeCases:
         monkeypatch.setattr(migration_manager, "_calculate_manifest_checksum", mock_checksum)
 
         # Should raise and cleanup
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Simulated checksum"):
             migration_manager._create_backup(plan)
 
         # Verify cleanup was called

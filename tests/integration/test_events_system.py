@@ -143,14 +143,14 @@ class TestFileEvent:
             "file_path": "/x.txt",
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="not.real"):
             FileEvent.from_dict(d)
 
     def test_from_dict_missing_required_field_raises(self) -> None:
         """Verify from_dict raises KeyError when event_type is absent."""
         from file_organizer.events.types import FileEvent
 
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="event_type"):
             FileEvent.from_dict({"file_path": "/x.txt"})
 
     def test_default_empty_metadata(self) -> None:

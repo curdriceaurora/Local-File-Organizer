@@ -110,7 +110,7 @@ class TestJohnnyDecimalNumber:
         with pytest.raises(ValueError, match="Invalid Johnny Decimal format"):
             JohnnyDecimalNumber.from_string("10.01.005.001")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid Johnny Decimal format"):
             JohnnyDecimalNumber.from_string("invalid")
 
     def test_equality(self):

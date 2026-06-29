@@ -1178,7 +1178,7 @@ class TestDurableMoveFailureModes:
     def test_missing_source_raises_file_not_found(self, tmp_path: Path) -> None:
         from file_organizer.undo.durable_move import durable_move
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Source does not exist"):
             durable_move(
                 tmp_path / "ghost.txt",
                 tmp_path / "dst.txt",
@@ -1200,7 +1200,7 @@ class TestDurableMoveFailureModes:
 
         src = tmp_path / "src.txt"
         src.write_text("x")
-        with pytest.raises(PermissionError):
+        with pytest.raises(PermissionError, match="not allowed"):
             durable_move(src, tmp_path / "dst.txt", journal=tmp_path / "j")
 
     def test_copystat_failure_is_non_fatal(

@@ -105,7 +105,7 @@ def test_webhook_register_dedupe_and_trigger() -> None:
 
 def test_webhook_url_validation() -> None:
     manager = PluginHookManager()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Callback URL must"):
         manager.register_webhook(
             plugin_id="plugin-a",
             event=HookEvent.FILE_SCANNED,

@@ -68,7 +68,7 @@ class TestFileEvent:
             path=Path("/") / "tmp" / "test.txt",  # noqa: test-hardcoded-paths
             timestamp=datetime.now(UTC),
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             event.event_type = EventType.DELETED  # type: ignore[misc]
 
     def test_event_type_values(self) -> None:

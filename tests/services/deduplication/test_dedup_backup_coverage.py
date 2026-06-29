@@ -36,7 +36,7 @@ class TestCreateBackup:
         assert backup_path.read_text() == "sample content"
 
     def test_backup_nonexistent_raises(self, bm):
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Source file not found"):
             bm.create_backup(Path("no") / "such" / "file.txt")
 
     def test_backup_directory_raises(self, bm, tmp_path):
@@ -73,7 +73,7 @@ class TestRestoreBackup:
         assert restored.read_text() == "sample content"
 
     def test_restore_nonexistent_backup(self, bm):
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Backup file not found"):
             bm.restore_backup(Path("no") / "such" / "backup.txt")
 
     def test_restore_not_in_manifest(self, bm, tmp_path):

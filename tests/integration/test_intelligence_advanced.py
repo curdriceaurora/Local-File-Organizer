@@ -351,7 +351,7 @@ class TestConflictResolverInit:
         assert abs(total - 1.0) < 1e-9
 
     def test_all_zero_weights_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Weights cannot all be zero"):
             ConflictResolver(recency_weight=0, frequency_weight=0, confidence_weight=0)
 
 
@@ -363,7 +363,7 @@ class TestConflictResolverResolve:
 
     def test_empty_list_raises(self) -> None:
         r = ConflictResolver()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot resolve empty preference list"):
             r.resolve([])
 
     def test_higher_confidence_wins(self) -> None:

@@ -119,7 +119,7 @@ class TestParseVersion:
             parse_version("not-a-version")
 
     def test_missing_patch_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid version string"):
             parse_version("1.2")
 
     def test_strips_whitespace(self) -> None:

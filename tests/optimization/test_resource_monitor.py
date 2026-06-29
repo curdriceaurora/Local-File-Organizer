@@ -29,7 +29,7 @@ class TestMemoryInfo:
     def test_memory_info_frozen(self) -> None:
         """Test that MemoryInfo is immutable (frozen dataclass)."""
         info = MemoryInfo(rss=1024, vms=2048, percent=1.0)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             info.rss = 999  # type: ignore[misc]
 
     def test_memory_info_equality(self) -> None:
@@ -59,7 +59,7 @@ class TestGpuMemoryInfo:
     def test_gpu_memory_info_frozen(self) -> None:
         """Test that GpuMemoryInfo is immutable."""
         info = GpuMemoryInfo(total=1024, used=512, free=512, percent=50.0, device_name="GPU")
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             info.total = 999  # type: ignore[misc]
 
 

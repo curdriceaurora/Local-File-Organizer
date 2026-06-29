@@ -60,7 +60,7 @@ class TestOperationType:
         assert OperationType.MOVE == "move"
 
     def test_invalid_value_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not a valid"):
             OperationType("invalid")
 
 

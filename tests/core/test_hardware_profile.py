@@ -96,7 +96,7 @@ class TestHardwareProfile:
 
     def test_frozen_dataclass(self) -> None:
         profile = self._make_profile()
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             profile.cpu_cores = 99  # type: ignore[misc]
 
 

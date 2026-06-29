@@ -206,7 +206,7 @@ class TestRequirePayloadFields:
     def test_missing_multiple_fields_lists_them(self) -> None:
         from file_organizer.cli.benchmark import _require_payload_fields
 
-        with pytest.raises(KeyError) as exc_info:
+        with pytest.raises(KeyError, match="Missing benchmark payload fields") as exc_info:
             _require_payload_fields({})
         msg = str(exc_info.value)
         assert "suite" in msg
@@ -263,7 +263,7 @@ class TestValidatePayloadDegradationReasons:
 
         payload = _make_valid_payload()
         payload["degraded"] = "yes"
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="degraded' to be a bool"):
             _validate_payload_degradation_reasons(payload)
 
     def test_degraded_true_no_reasons_raises_value_error(self) -> None:
@@ -284,7 +284,7 @@ class TestValidatePayloadDegradationReasons:
         from file_organizer.cli.benchmark import _validate_payload_degradation_reasons
 
         payload = _make_valid_payload(degraded=True, degradation_reasons=[""])
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must be a non-empty string"):
             _validate_payload_degradation_reasons(payload)
 
     def test_reasons_not_list_raises_type_error(self) -> None:
@@ -292,7 +292,7 @@ class TestValidatePayloadDegradationReasons:
 
         payload = _make_valid_payload()
         payload["degradation_reasons"] = "not a list"
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be a list"):
             _validate_payload_degradation_reasons(payload)
 
 
@@ -315,7 +315,7 @@ class TestValidatePayloadResults:
 
         results = self._valid_results()
         del results["median_ms"]
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="Missing benchmark payload results fields"):
             _validate_payload_results(results)
 
     def test_bool_iterations_raises_type_error(self) -> None:
@@ -323,7 +323,7 @@ class TestValidatePayloadResults:
 
         results = self._valid_results()
         results["iterations"] = True
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be numeric|must be an int"):
             _validate_payload_results(results)
 
     def test_negative_p95_raises_value_error(self) -> None:
@@ -340,7 +340,7 @@ class TestValidatePayloadResults:
         # float passes _require_non_negative_numeric_field but fails the int check
         results = self._valid_results()
         results["iterations"] = 1.5
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be an int"):
             _validate_payload_results(results)
 
 
@@ -360,7 +360,7 @@ class TestValidateBenchmarkPayload:
 
         payload = _make_valid_payload()
         del payload["hardware_profile"]
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="Missing benchmark payload fields"):
             validate_benchmark_payload(payload)
 
     def test_files_count_bool_raises_type_error(self) -> None:

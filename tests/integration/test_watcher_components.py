@@ -55,11 +55,11 @@ class TestWatcherConfigInit:
         assert ".pdf" in cfg.file_types
 
     def test_negative_debounce_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="debounce_seconds must be non-negative"):
             WatcherConfig(debounce_seconds=-1.0)
 
     def test_zero_batch_size_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="batch_size must be at least 1"):
             WatcherConfig(batch_size=0)
 
     def test_custom_values(self, tmp_path: Path) -> None:

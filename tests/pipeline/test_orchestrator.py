@@ -184,7 +184,7 @@ class TestProcessingResult:
             file_path=Path("test.txt"),
             success=True,
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             result.success = False  # type: ignore[misc]
 
 

@@ -49,7 +49,7 @@ class TestEvent:
     def test_event_is_frozen(self):
         """Test that Event is immutable."""
         event = Event(id="1-0", stream="s", data={})
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             event.id = "2-0"  # type: ignore[misc]
 
 

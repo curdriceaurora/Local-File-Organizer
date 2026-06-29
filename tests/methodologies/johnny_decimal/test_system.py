@@ -438,7 +438,7 @@ class TestConfiguration:
 
     def test_load_nonexistent_file(self, system):
         """Test loading from non-existent file."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
             system.load_configuration(Path("/") / "nonexistent" / "config.json")
 
 

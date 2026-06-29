@@ -626,7 +626,7 @@ class TestClaimPidFile:
         # Remove write permission from the directory
         locked_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
         try:
-            with pytest.raises(OSError):
+            with pytest.raises(OSError, match="Permission denied"):
                 pid_manager.claim_pid_file(pid_path)
         finally:
             locked_dir.chmod(stat.S_IRWXU)  # restore so tmp_path cleanup works

@@ -87,7 +87,7 @@ def test_logs_error_field_on_exception(tmp_path: Path) -> None:
     f.write_bytes(b"")
 
     with patch("file_organizer.services.inference_timer.logger") as mock_logger:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="bad input"):
             with time_inference("vision", f):
                 # No mark_invoked() — but the exception still triggers
                 # the log because it's interpreted as a started-then-

@@ -150,11 +150,11 @@ class TestJohnnyDecimalEdgeCases:
     def test_invalid_number_ranges(self, system):
         """Test handling invalid number ranges."""
         # Try to create number with invalid area
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Area must be between"):
             JohnnyDecimalNumber(area=100)  # Must be 0-99
 
         # Try to create number with invalid category
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Category must be between"):
             JohnnyDecimalNumber(area=10, category=100)  # Must be 0-99
 
     def test_number_exhaustion(self, system, tmp_path):

@@ -1268,7 +1268,7 @@ class TestStorageAnalyzer:
 
         analyzer = StorageAnalyzer()
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
             list(analyzer.walk_directory(tmp_path / "no_such_dir"))
 
     def test_walk_directory_raises_for_file(self, tmp_path: Path) -> None:
@@ -1398,7 +1398,7 @@ class TestAudioUtils:
     def test_get_audio_duration_file_not_found(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.utils import get_audio_duration
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             get_audio_duration(tmp_path / "nonexistent.mp3")
 
     def test_get_audio_duration_returns_float_when_no_libs(self, tmp_path: Path) -> None:

@@ -221,7 +221,7 @@ class TestTextModelLifecycle:
         config = TextModel.get_default_config()
         with (
             patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="Ollama is not installed"),
         ):
             TextModel(config)
 
@@ -263,7 +263,7 @@ class TestVisionModelGenerate:
 
     def test_generate_raises_if_image_path_missing(self, tmp_path: Path) -> None:
         model = _make_vision_model()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Image not found"):
             model.generate("Describe", image_path=tmp_path / "nonexistent.jpg")
 
     def test_generate_token_exhaustion_retries(self, tmp_path: Path) -> None:
@@ -371,6 +371,6 @@ class TestVisionModelLifecycle:
         config = VisionModel.get_default_config()
         with (
             patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="Ollama is not installed"),
         ):
             VisionModel(config)

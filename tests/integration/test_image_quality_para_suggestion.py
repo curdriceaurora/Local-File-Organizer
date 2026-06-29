@@ -128,7 +128,7 @@ class TestImageQualityAnalyzerInit:
 
     def test_invalid_weights_raise(self) -> None:
         bad = {"resolution": 0.9}
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Weights must sum to 1"):
             ImageQualityAnalyzer(weights=bad)
 
 

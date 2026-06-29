@@ -60,7 +60,7 @@ class TestMigration:
 
 class TestTransaction:
     def test_rollback_on_error(self, db):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="boom"):
             with db.transaction():
                 raise ValueError("boom")
 

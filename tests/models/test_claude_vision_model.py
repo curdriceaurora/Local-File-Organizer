@@ -303,7 +303,7 @@ class TestClaudeVisionModelGenerateWithPath:
         model = self._make_initialized(claude_vision_config, mock_claude_client)
         missing = tmp_path / "does_not_exist.png"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             model.generate("prompt", image_path=missing)
 
 

@@ -211,7 +211,7 @@ class TestTrashGCConstructor:
 
         trash = tmp_path / "trash"
         journal = tmp_path / "j"
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="takes .* positional"):
             TrashGC(trash, journal)  # type: ignore[misc]
 
 

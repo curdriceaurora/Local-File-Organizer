@@ -51,12 +51,12 @@ class TestStageContext:
 
     def test_category_traversal_rejected(self, tmp_path: Path) -> None:
         ctx = StageContext(file_path=tmp_path / "f.txt")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid category:"):
             ctx.category = "../evil"
 
     def test_filename_slash_rejected(self, tmp_path: Path) -> None:
         ctx = StageContext(file_path=tmp_path / "f.txt")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid filename:"):
             ctx.filename = "a/b"
 
     def test_valid_category_accepted(self, tmp_path: Path) -> None:

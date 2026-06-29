@@ -322,7 +322,7 @@ class TestOperationTransaction:
                 txn2.log_move(Path("/") / "s2.txt", Path("/") / "d2.txt")
                 raise RuntimeError("abort txn2")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="abort txn2"):
             _log_and_abort()
 
         txn2_id = txn2.get_transaction_id()

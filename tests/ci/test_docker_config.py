@@ -455,7 +455,7 @@ class TestValidateDockerfile:
 
     def test_validate_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing Dockerfile."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             validate_dockerfile("/nonexistent/Dockerfile")
 
     def test_validate_detects_no_from(self, tmp_path: Path) -> None:
@@ -506,7 +506,7 @@ class TestParseDockerCompose:
 
     def test_parse_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing compose file."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             parse_docker_compose("/nonexistent/docker-compose.yml")
 
     def test_parse_invalid_yaml(self, tmp_path: Path) -> None:
@@ -542,7 +542,7 @@ class TestGetImageSizeEstimate:
 
     def test_estimate_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing Dockerfile."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             get_image_size_estimate("/nonexistent/Dockerfile")
 
     def test_estimate_returns_positive_int(self) -> None:

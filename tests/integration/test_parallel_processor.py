@@ -444,7 +444,7 @@ class TestComputeFileHash:
         """Verify compute_file_hash raises OSError for a nonexistent file."""
         from file_organizer.parallel.checkpoint import compute_file_hash
 
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="No such file or directory"):
             compute_file_hash(tmp_path / "does_not_exist.txt")
 
 

@@ -173,7 +173,7 @@ class TestEnhancedEPUBReader:
         """Test reading non-existent file raises FileNotFoundError."""
         reader = EnhancedEPUBReader()
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="File not found"):
             reader.read_epub(Path("/") / "nonexistent" / "file.epub")
 
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")

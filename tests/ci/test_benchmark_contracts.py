@@ -161,7 +161,7 @@ def test_baseline_schema_validator_rejects_missing_metric() -> None:
         },
     }
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="p95_ms"):
         _assert_baseline_schema_contract(bad_payload)
 
 

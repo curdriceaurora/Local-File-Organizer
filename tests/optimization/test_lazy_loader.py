@@ -109,7 +109,7 @@ class TestLazyModelLoaderLoading:
 
         lazy = LazyModelLoader(config, loader=loader)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Failed to load model"):
             lazy.model  # noqa: B018
 
         assert lazy.is_loaded is False

@@ -70,7 +70,7 @@ class TestApiErrorRaiseCatch:
         assert exc_info.value.error == "conflict"
 
     def test_catch_as_exception(self) -> None:
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception, match="500 boom") as exc_info:
             raise ApiError(status_code=500, error="boom", message="Unexpected")
         assert isinstance(exc_info.value, ApiError)
 
