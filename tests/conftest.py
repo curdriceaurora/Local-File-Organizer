@@ -40,6 +40,23 @@ try:
 except ImportError:
     collect_ignore_glob.append("playwright/**")
 
+# cv2 (opencv-python) is imported lazily inside video service functions, so the
+# first real `import cv2` in a test run can land at an arbitrary point in
+# collection/execution order. Several tests mock `sys.modules["cv2"]` (and run
+# on background threads via executor/watch-loop tests), and a first cold
+# import racing against that sys.modules mutation can abort cv2's own package
+# init partway through — leaving `cv2.dnn` cached as a real submodule while
+# the top-level `cv2` entry is evicted, so every later `import cv2` in the
+# same process repeats the same failure
+# (AttributeError: module 'cv2.dnn' has no attribute 'DictValue').
+# Importing it for real here, before any test can mock or race it, ensures
+# `sys.modules["cv2"]` is always the fully-initialized real module that
+# `unittest.mock.patch.dict` restores after each test.
+try:
+    import cv2  # noqa: F401
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
 # ---------------------------------------------------------------------------
