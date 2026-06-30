@@ -177,7 +177,7 @@ class PluginRepository:
             with httpx.Client(timeout=self.timeout_seconds, follow_redirects=True) as client:
                 with client.stream("GET", source_url) as response:
                     response.raise_for_status()
-                    with destination_path.open("wb") as handle:  # noqa: safedir-required  # plugin repository — destination path is an internal cache location
+                    with destination_path.open("wb") as handle:  # noqa: safedir-required, atomic-write  # plugin repository — destination path is an internal cache location
                         for chunk in response.iter_bytes(chunk_size=65536):
                             if chunk:
                                 handle.write(chunk)

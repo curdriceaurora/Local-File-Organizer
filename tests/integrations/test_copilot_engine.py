@@ -245,7 +245,8 @@ class TestCopilotEngine:
         mock_model.generate.return_value = "Sure, I can help with that!"
         engine = CopilotEngine(text_model=mock_model)
         response = engine.chat("what can you do?")
-        assert mock_model.generate.called or len(response) > 0
+        mock_model.generate.assert_called_once()
+        assert len(response) > 0
 
     def test_template_fallback_on_model_error(self) -> None:
         mock_model = MagicMock()

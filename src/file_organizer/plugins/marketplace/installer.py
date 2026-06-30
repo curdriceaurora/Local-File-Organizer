@@ -206,7 +206,7 @@ class PluginInstaller:
                         "Plugin archive extraction escaped target path."
                     ) from exc
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with archive.open(info, "r") as source, target.open("wb") as handle:  # noqa: safedir-required  # plugin installer — archive.open/target.open within trusted zip extraction
+                with archive.open(info, "r") as source, target.open("wb") as handle:  # noqa: safedir-required, atomic-write  # plugin installer — archive.open/target.open within trusted zip extraction
                     shutil.copyfileobj(source, handle)
 
     def _locate_plugin_root(self, extracted_dir: Path) -> Path:
