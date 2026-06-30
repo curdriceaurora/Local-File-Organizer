@@ -156,21 +156,23 @@ class JohnnyDecimalNumber:
             ValueError: If string format is invalid
         """
         parts = number_str.split(".")
-
-        if len(parts) == 1:
-            # Area only
-            return cls(area=int(parts[0]))
-        elif len(parts) == 2:
-            # Area and category
-            return cls(area=int(parts[0]), category=int(parts[1]))
-        elif len(parts) == 3:
-            # Full number with ID
-            return cls(area=int(parts[0]), category=int(parts[1]), item_id=int(parts[2]))
-        else:
+        if len(parts) not in (1, 2, 3):
             raise ValueError(
                 f"Invalid Johnny Decimal format: {number_str}. "
                 "Expected formats: '10', '11.01', or '11.01.001'"
             )
+
+        try:
+            if len(parts) == 1:
+                return cls(area=int(parts[0]))
+            if len(parts) == 2:
+                return cls(area=int(parts[0]), category=int(parts[1]))
+            return cls(area=int(parts[0]), category=int(parts[1]), item_id=int(parts[2]))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid Johnny Decimal format: {number_str}. "
+                "Expected formats: '10', '11.01', or '11.01.001'"
+            ) from exc
 
 
 @dataclass
