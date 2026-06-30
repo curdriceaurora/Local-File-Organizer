@@ -55,6 +55,7 @@ def test_string_literal_noqa_does_not_suppress_violation(tmp_path: Path) -> None
 
 
 def test_flags_path_open_write_modes(tmp_path: Path) -> None:
+    """Verify that Path.open() write/append modes are correctly flagged."""
     for mode in ["w", "wb", "a", "ab", "x", "w+", "r+"]:
         src = tmp_path / f"bad_open_{mode}.py"
         src.write_text(f"Path('x').open('{mode}')\n", encoding="utf-8")
@@ -71,6 +72,7 @@ def test_flags_path_open_write_modes(tmp_path: Path) -> None:
 
 
 def test_allows_path_open_read_modes(tmp_path: Path) -> None:
+    """Verify that Path.open() read/binary-read modes are allowed."""
     # No args (default is read)
     src_default = tmp_path / "default_open.py"
     src_default.write_text("Path('x').open()\n", encoding="utf-8")
@@ -87,6 +89,7 @@ def test_allows_path_open_read_modes(tmp_path: Path) -> None:
 
 
 def test_path_open_noqa_suppressions(tmp_path: Path) -> None:
+    """Verify that noqa comments on Path.open() work as expected."""
     # Bare noqa on Path.open
     src_bare = tmp_path / "open_bare.py"
     src_bare.write_text("Path('x').open('w')  # noqa\n", encoding="utf-8")
