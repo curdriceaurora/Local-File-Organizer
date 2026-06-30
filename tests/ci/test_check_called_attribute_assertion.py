@@ -167,6 +167,17 @@ def test_allows_negative_assertion(tmp_path: Path) -> None:
     assert checker.check_file(src) == []
 
 
+def test_flags_non_direct_negative_assertion(tmp_path: Path) -> None:
+    src = tmp_path / "non_direct_negative.py"
+    src.write_text(
+        "def test_x(mock_fn):\n    assert not (mock_fn.called and x)\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert ".called" in violations[0][1]
+
+
 def test_allows_comparison_operations(tmp_path: Path) -> None:
     src = tmp_path / "comparison.py"
     src.write_text(

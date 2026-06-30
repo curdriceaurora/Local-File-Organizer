@@ -20,28 +20,25 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
 _WEAK_ATTRS = {"called", "call_count"}
 
 
-def _is_weak_attribute_expr(node: ast.AST) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr in _WEAK_ATTRS
-
-
 def _find_weak_attributes(node: ast.AST) -> list[ast.Attribute]:
     violations: list[ast.Attribute] = []
 
-    def walk(n: ast.AST, in_compare: bool = False, in_not: bool = False) -> None:
+    def walk(n: ast.AST, in_compare: bool = False) -> None:
         if isinstance(n, ast.Attribute) and n.attr in _WEAK_ATTRS:
-            if not in_compare and not in_not:
+            if not in_compare:
                 violations.append(n)
             return
 
         if isinstance(n, ast.Compare):
             for child in ast.iter_child_nodes(n):
-                walk(child, in_compare=True, in_not=in_not)
+                walk(child, in_compare=True)
         elif isinstance(n, ast.UnaryOp) and isinstance(n.op, ast.Not):
-            for child in ast.iter_child_nodes(n):
-                walk(child, in_compare=in_compare, in_not=True)
+            if isinstance(n.operand, ast.Attribute) and n.operand.attr in _WEAK_ATTRS:
+                return
+            walk(n.operand, in_compare=in_compare)
         else:
             for child in ast.iter_child_nodes(n):
-                walk(child, in_compare=in_compare, in_not=in_not)
+                walk(child, in_compare=in_compare)
 
     walk(node)
     return violations
