@@ -15,13 +15,36 @@ from pathlib import Path
 try:
     from scripts.ci.guardrails.suppressions import has_targeted_noqa
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
-    from suppressions import has_targeted_noqa
+    from suppressions import has_targeted_noqa  # type: ignore[no-redef]
 
 _WEAK_ATTRS = {"called", "call_count"}
 
 
-def _is_weak_attribute_expr(node: ast.expr) -> bool:
+def _is_weak_attribute_expr(node: ast.AST) -> bool:
     return isinstance(node, ast.Attribute) and node.attr in _WEAK_ATTRS
+
+
+def _find_weak_attributes(node: ast.AST) -> list[ast.Attribute]:
+    violations: list[ast.Attribute] = []
+
+    def walk(n: ast.AST, in_compare: bool = False, in_not: bool = False) -> None:
+        if isinstance(n, ast.Attribute) and n.attr in _WEAK_ATTRS:
+            if not in_compare and not in_not:
+                violations.append(n)
+            return
+
+        if isinstance(n, ast.Compare):
+            for child in ast.iter_child_nodes(n):
+                walk(child, in_compare=True, in_not=in_not)
+        elif isinstance(n, ast.UnaryOp) and isinstance(n.op, ast.Not):
+            for child in ast.iter_child_nodes(n):
+                walk(child, in_compare=in_compare, in_not=True)
+        else:
+            for child in ast.iter_child_nodes(n):
+                walk(child, in_compare=in_compare, in_not=in_not)
+
+    walk(node)
+    return violations
 
 
 class _Visitor(ast.NodeVisitor):
@@ -30,25 +53,31 @@ class _Visitor(ast.NodeVisitor):
         self.violations: list[tuple[int, str]] = []
 
     def visit_Assert(self, node: ast.Assert) -> None:
-        test = node.test
-        # `assert x.called` / `assert x.call_count` — bare attribute access,
-        # no comparison. ast.Compare (e.g. `== 2`) is a different node type
-        # and is intentionally not flagged.
-        if _is_weak_attribute_expr(test):
-            line_idx = node.lineno - 1
-            if 0 <= line_idx < len(self.lines) and has_targeted_noqa(
-                self.lines[line_idx], "called-attribute-assertion"
-            ):
+        weak_attrs = _find_weak_attributes(node.test)
+        if weak_attrs:
+            start_line = node.lineno
+            end_line = getattr(node, "end_lineno", node.lineno)
+            has_noqa = False
+            for line_idx in range(start_line - 1, end_line):
+                if 0 <= line_idx < len(self.lines) and has_targeted_noqa(
+                    self.lines[line_idx], "called-attribute-assertion"
+                ):
+                    has_noqa = True
+                    break
+
+            if has_noqa:
                 self.generic_visit(node)
                 return
-            self.violations.append(
-                (
-                    node.lineno,
-                    f"assert on bare '.{test.attr}' only proves the mock was called, "
-                    "not that it was called correctly — use assert_called_with(...) "
-                    "or compare call_count to an exact value",
+
+            for attr_node in weak_attrs:
+                self.violations.append(
+                    (
+                        attr_node.lineno,
+                        f"assert on bare '.{attr_node.attr}' only proves the mock was called, "
+                        "not that it was called correctly — use assert_called_with(...) "
+                        "or compare call_count to an exact value",
+                    )
                 )
-            )
         self.generic_visit(node)
 
 
