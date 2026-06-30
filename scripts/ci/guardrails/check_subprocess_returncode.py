@@ -108,7 +108,19 @@ def _is_subprocess_run(node: ast.Call) -> bool:
 
 
 class SubprocessReturncodeVisitor(ast.NodeVisitor):
-    """Walk a module AST and collect non-compliant subprocess.run() sites."""
+    """Walk a module AST and collect non-compliant subprocess.run() sites.
+
+    Compliance rules (see issue #1408 comment):
+    - ``check=True`` with CalledProcessError propagating to the caller: compliant.
+    - Assigned result with ``.returncode`` accessed in the **same enclosing block**
+      (including a try body): compliant.
+    - ``# noqa: subprocess-returncode`` on the call line: accepted exception.
+    - Discarded result (no assignment): always flagged unless noqa is present.
+    - Result assigned but ``.returncode`` never inspected: flagged.
+    - Compound statements (try/if/for/while/with) are recursed into as
+      independent blocks, so a ``returncode`` check in a sibling branch does
+      NOT satisfy the requirement.
+    """
 
     def __init__(self, filepath: Path, lines: list[str]) -> None:
         self.filepath = filepath
@@ -116,7 +128,7 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
         self.violations: list[tuple[int, str, str]] = []
 
     # ------------------------------------------------------------------
-    # Helpers to find the enclosing block for a given statement index
+    # Core block checker
     # ------------------------------------------------------------------
 
     def _check_block(self, block: list[ast.stmt]) -> None:
@@ -138,9 +150,12 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
             if call_node is not None and _is_subprocess_run(call_node):
                 # 1. check=True → compliant
                 if _has_check_true(call_node):
-                    pass  # compliant; still recurse into nested scopes below
+                    pass  # compliant
 
-                # 2. .returncode accessed on the assigned variable → compliant
+                # 2. .returncode accessed on the assigned variable within this
+                #    block → compliant.  Scanning the full block (not just the
+                #    suffix) handles try/finally patterns where the check may
+                #    appear before the call in a textual sense.
                 elif assigned_name and _block_accesses_returncode(block, assigned_name):
                     pass  # compliant
 
@@ -167,16 +182,50 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
                             )
                         )
 
-            # Recurse into nested scopes using visit() so visit_FunctionDef /
-            # visit_AsyncFunctionDef / visit_ClassDef are dispatched correctly.
-            # (generic_visit() only traverses children, it does NOT dispatch to
-            # the typed visitor for the node itself.)
-            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                self.visit(stmt)
-            else:
-                # For control-flow blocks (if/for/while/try/with) recurse into
-                # their sub-blocks so we catch nested subprocess.run() calls.
-                self.generic_visit(stmt)
+            # Recurse into nested scopes.
+            self._check_compound(stmt)
+
+    def _check_try_like(
+        self,
+        stmt: ast.Try,
+    ) -> None:  # pragma: no branch
+        """Recurse into every sub-block of a try/except/else/finally node."""
+        self._check_block(stmt.body)
+        for handler in stmt.handlers:
+            self._check_block(handler.body)
+        if stmt.orelse:
+            self._check_block(stmt.orelse)
+        if stmt.finalbody:
+            self._check_block(stmt.finalbody)
+
+    def _check_compound(self, stmt: ast.stmt) -> None:
+        """Recurse into compound statement sub-blocks.
+
+        Each sub-block is treated as an independent scope: a ``returncode``
+        check in one branch does NOT satisfy the requirement for a call in a
+        sibling branch.
+
+        Function/class definitions create a new named scope and are dispatched
+        via ``self.visit()`` so the normal ``visit_FunctionDef`` / ``visit_ClassDef``
+        entry-points fire.  All other compound statements are handled inline by
+        iterating their body/handler/orelse/finalbody lists.
+        """
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            # Named scope — dispatch to the typed visitor so the correct
+            # entry-point fires (avoids double-processing).
+            self.visit(stmt)
+        elif isinstance(stmt, (ast.Try, ast.TryStar)):
+            self._check_try_like(stmt)  # type: ignore[arg-type]
+        elif isinstance(stmt, ast.If):
+            self._check_block(stmt.body)
+            if stmt.orelse:
+                self._check_block(stmt.orelse)
+        elif isinstance(stmt, (ast.For, ast.AsyncFor, ast.While)):
+            self._check_block(stmt.body)
+            if stmt.orelse:
+                self._check_block(stmt.orelse)
+        elif isinstance(stmt, (ast.With, ast.AsyncWith)):
+            self._check_block(stmt.body)
 
     # ------------------------------------------------------------------
     # Entry points for different AST scopes

@@ -174,6 +174,79 @@ def test_flags_subprocess_run_in_function_with_no_returncode_check(tmp_path: Pat
 
 
 # ---------------------------------------------------------------------------
+# Try-block scope: subprocess.run() inside try/except bodies (issue #1408 addendum)
+# ---------------------------------------------------------------------------
+
+
+def test_flags_discarded_result_inside_try_block(tmp_path: Path) -> None:
+    """A discarded subprocess.run() inside a try body is a violation."""
+    src = tmp_path / "try_discard.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    try:\n"
+        "        subprocess.run(['ls'])\n"
+        "        return True\n"
+        "    except Exception:\n"
+        "        return False\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_flags_assigned_result_in_try_body_without_returncode_check(tmp_path: Path) -> None:
+    """Result assigned in try body with no returncode check is a violation."""
+    src = tmp_path / "try_assign_no_rc.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    try:\n"
+        "        result = subprocess.run(['ls'])\n"
+        "        return True\n"
+        "    except Exception:\n"
+        "        return False\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_allows_check_true_inside_try_block(tmp_path: Path) -> None:
+    """check=True inside a try block is compliant (CalledProcessError propagates)."""
+    src = tmp_path / "try_check_true.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    try:\n"
+        "        subprocess.run(['ls'], check=True)\n"
+        "    except subprocess.CalledProcessError:\n"
+        "        return False\n"
+        "    return True\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_allows_returncode_check_inside_try_body(tmp_path: Path) -> None:
+    """returncode inspected within the same try body is compliant."""
+    src = tmp_path / "try_rc_in_body.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    try:\n"
+        "        result = subprocess.run(['ls'])\n"
+        "        if result.returncode != 0:\n"
+        "            raise RuntimeError('failed')\n"
+        "        return True\n"
+        "    except RuntimeError:\n"
+        "        return False\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+# ---------------------------------------------------------------------------
 # End-to-end: the production src/ tree has zero violations after noqa annotations
 # ---------------------------------------------------------------------------
 
