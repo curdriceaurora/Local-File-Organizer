@@ -12,6 +12,7 @@ from file_organizer.review_regressions.framework import (
     run_audit,
 )
 from file_organizer.review_regressions.security import SECURITY_DETECTORS
+from file_organizer.review_regressions.template_js import TEMPLATE_JS_DETECTORS
 from file_organizer.review_regressions.test_quality import TEST_QUALITY_DETECTORS
 
 pytestmark = pytest.mark.ci
@@ -21,6 +22,7 @@ FIXTURES_ROOT = FO_ROOT / "tests" / "fixtures" / "review_regressions"
 ALL_FIRST_WAVE_DETECTORS = (
     *CORRECTNESS_DETECTORS,
     *SECURITY_DETECTORS,
+    *TEMPLATE_JS_DETECTORS,
     *TEST_QUALITY_DETECTORS,
 )
 EXPECTED_FIRST_WAVE_DETECTOR_IDS = {
@@ -28,6 +30,7 @@ EXPECTED_FIRST_WAVE_DETECTOR_IDS = {
     "correctness.stage-context-validation-bypass",
     "security.guarded-context-direct-path",
     "security.validated-path-bypass",
+    "template-js.unsafe-inline-interpolation",
     "test-quality.weak-mock-call-count-lower-bound",
 }
 FORMATTED_VIOLATION_PATTERN = re.compile(
@@ -87,6 +90,7 @@ def test_first_wave_repo_enforcement_reports_zero_findings() -> None:
     [
         ("security", "security", SECURITY_DETECTORS),
         ("correctness", "correctness", CORRECTNESS_DETECTORS),
+        ("template-js", "template_js", TEMPLATE_JS_DETECTORS),
         ("test-quality", "test_quality", TEST_QUALITY_DETECTORS),
     ],
 )

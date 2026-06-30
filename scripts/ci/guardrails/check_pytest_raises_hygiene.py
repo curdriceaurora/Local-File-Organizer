@@ -11,6 +11,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 # Exceptions that are too generic to raise without a match pattern
 GENERIC_EXCEPTIONS = {
     "Exception",
@@ -77,8 +82,7 @@ class PytestRaisesHygieneVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: pytest-raises-hygiene" in line_content or "noqa" in line_content:
+            if has_targeted_noqa(line_content, "pytest-raises-hygiene"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
 

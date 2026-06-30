@@ -187,6 +187,22 @@ Implementation detail:
 - Guardrail logic lives in `tests/ci/test_search_code_quality.py` (function `_find_unguarded_traversals`).
 - Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
 
+## Template JavaScript Rule Index
+
+Issue `#1407` adds a semantic template check for inline JavaScript contexts.
+The detector lives in `src/file_organizer/review_regressions/template_js.py`
+and is exercised by `tests/unit/review_regressions/test_template_js_detectors.py`
+plus the repo-wide CI enforcement test.
+
+| Rule ID | Canonical home | What it flags |
+|---------|----------------|---------------|
+| `unsafe-js-interpolation` | `tests/ci/test_first_wave_repo_enforcement.py` | Jinja `{{ ... }}` interpolation or `{% include ... %}` inside `<script>` blocks / inline `on*=` handlers unless the value is emitted as a direct `tojson` JS value outside quotes/backticks |
+
+Safe patterns:
+- `{{ value|tojson }}` used directly as a JavaScript value
+- inert `data-*` attributes plus external JS that reads `dataset`
+- static inline handlers with no template interpolation
+
 ## T10 Predicate Negative-Case Rule Index
 
 Issues `#930` and `#931` add two enforcement layers for the T10 pattern: every

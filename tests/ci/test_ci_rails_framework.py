@@ -143,5 +143,6 @@ def test_repo_registry_loads_registered_rails() -> None:
         "textiowrapper-detach": "enforce",
         "called-attribute-assertion": "enforce",
         "xdist-loadgroup": "enforce",
+        "subprocess-returncode": "advisory",
     }
     assert {rail.name: rail.mode for rail in rails} == expected_modes

@@ -282,7 +282,10 @@ def browse_folder(
         return BrowseFolderResponse(path="", available=False)
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: subprocess-returncode
+            # returncode is checked in the outer function body after this
+            # try/except block; the detector treats the try body as a separate
+            # scope so cannot follow the cross-block reference.
             ["/usr/bin/osascript", "-e", "POSIX path of (choose folder)"],
             capture_output=True,
             text=True,

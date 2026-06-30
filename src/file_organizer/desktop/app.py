@@ -161,13 +161,17 @@ class DesktopAPI:
         try:
             resolved = str(Path(path).resolve())
             if sys.platform == "darwin":
-                proc = subprocess.run(
+                proc = subprocess.run(  # noqa: subprocess-returncode
+                    # proc.returncode is checked at the bottom of the enclosing
+                    # try body; detector can't follow the cross-branch reference.
                     ["open", "-R", resolved],
                     check=False,
                     timeout=5,
                 )
             elif sys.platform == "win32":
-                proc = subprocess.run(
+                proc = subprocess.run(  # noqa: subprocess-returncode
+                    # proc.returncode is checked at the bottom of the enclosing
+                    # try body; detector can't follow the cross-branch reference.
                     ["explorer", f"/select,{resolved}"],
                     check=False,
                     timeout=5,
@@ -175,7 +179,9 @@ class DesktopAPI:
             elif sys.platform.startswith("linux"):
                 # Open the directory itself; fall back to parent for files.
                 target = resolved if Path(resolved).is_dir() else str(Path(resolved).parent)
-                proc = subprocess.run(
+                proc = subprocess.run(  # noqa: subprocess-returncode
+                    # proc.returncode is checked at the bottom of the enclosing
+                    # try body; detector can't follow the cross-branch reference.
                     ["xdg-open", target],
                     check=False,
                     timeout=5,

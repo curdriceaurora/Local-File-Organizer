@@ -81,7 +81,10 @@ class ModelManager:
     def _parse_ollama_list_text(self) -> set[str]:
         """Fallback: parse ``ollama list`` plain text output."""
         try:
-            result = subprocess.run(
+            # Accepted fire-and-forget: non-zero exit leaves stdout empty,
+            # so the loop yields an empty set — the correct fallback behaviour.
+            # returncode is intentionally not checked here.
+            result = subprocess.run(  # noqa: subprocess-returncode
                 ["ollama", "list"],
                 capture_output=True,
                 text=True,

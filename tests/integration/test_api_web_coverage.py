@@ -319,12 +319,12 @@ class TestRealtimeWebSocket:
         client = TestClient(app)
 
         # 1. Connect without token -> should fail
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
             with client.websocket_connect("/ws/client_1") as websocket:
                 pass
 
         # 2. Connect with invalid token -> should fail
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
             with client.websocket_connect("/ws/client_1?token=wrong") as websocket:
                 pass
 
@@ -376,14 +376,14 @@ class TestRealtimeWebSocket:
 
                 # Invalid User or inactive
                 mock_user.is_active = False
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
                     with client.websocket_connect("/ws/client_1?token=valid_jwt") as websocket:
                         pass
 
                 # Revoked token
                 mock_user.is_active = True
                 mock_token_store.is_access_revoked.return_value = True
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
                     with client.websocket_connect("/ws/client_1?token=valid_jwt") as websocket:
                         pass
 
