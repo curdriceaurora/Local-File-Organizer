@@ -70,6 +70,48 @@ def _is_patch_dict_context(expr: ast.AST) -> bool:
     return isinstance(expr, ast.Call) and _call_name(expr.func).endswith("patch.dict")
 
 
+def _constant_key(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return repr(node.value)
+    return None
+
+
+def _mapping_item_keys(node: ast.AST) -> set[str]:
+    if isinstance(node, ast.Dict):
+        return {key for item in node.keys if (key := _constant_key(item)) is not None}
+    return set()
+
+
+def _subscript_key(base: ast.AST, key: str) -> str | None:
+    base_key = _target_key(base)
+    if base_key is None:
+        return None
+    return f"{base_key}[{key}]"
+
+
+def _patch_dict_targets(expr: ast.AST) -> set[str]:
+    if not isinstance(expr, ast.Call) or not _is_patch_dict_context(expr):
+        return set()
+    if not expr.args:
+        return set()
+
+    mapping = expr.args[0]
+    targets: set[str] = set()
+    if len(expr.args) > 1:
+        targets.update(
+            target
+            for key in _mapping_item_keys(expr.args[1])
+            if (target := _subscript_key(mapping, key)) is not None
+        )
+    for keyword in expr.keywords:
+        if keyword.arg is None:
+            continue
+        target = _subscript_key(mapping, repr(keyword.arg))
+        if target is not None:
+            targets.add(target)
+    return targets
+
+
 def _patch_object_target(expr: ast.AST) -> str | None:
     if not isinstance(expr, ast.Call):
         return None
@@ -90,6 +132,40 @@ def _is_addfinalizer_call(stmt: ast.stmt) -> bool:
     if not isinstance(stmt, ast.Expr) or not isinstance(stmt.value, ast.Call):
         return False
     return _call_name(stmt.value.func).endswith(".addfinalizer")
+
+
+def _addfinalizer_targets(stmt: ast.stmt) -> set[str]:
+    if not _is_addfinalizer_call(stmt):
+        return set()
+    assert isinstance(stmt, ast.Expr)
+    call = stmt.value
+    assert isinstance(call, ast.Call)
+    if not call.args:
+        return set()
+
+    finalizer = call.args[0]
+    if isinstance(finalizer, ast.Lambda):
+        return _restoration_call_targets(finalizer.body)
+    return set()
+
+
+def _restoration_call_targets(node: ast.AST) -> set[str]:
+    if not isinstance(node, ast.Call):
+        return set()
+    name = _call_name(node.func)
+    if name == "setattr" and len(node.args) >= 2:
+        obj_key = _target_key(node.args[0])
+        attr_arg = node.args[1]
+        if obj_key is not None and isinstance(attr_arg, ast.Constant):
+            if isinstance(attr_arg.value, str):
+                return {f"{obj_key}.{attr_arg.value}"}
+    if name.endswith(".pop") and node.args:
+        mapping = node.func.value if isinstance(node.func, ast.Attribute) else None
+        key = _constant_key(node.args[0])
+        if mapping is not None and key is not None:
+            target = _subscript_key(mapping, key)
+            return {target} if target is not None else set()
+    return set()
 
 
 def _is_sys_modules(node: ast.AST) -> bool:
@@ -193,9 +269,8 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
         self.lines = lines
         self.violations: list[tuple[int, str, str]] = []
         self._test_scope_depth = 0
-        self._patch_dict_depth = 0
         self._safe_target_stack: list[set[str]] = []
-        self._finalizer_registered_stack: list[bool] = []
+        self._finalizer_target_stack: list[set[str]] = []
         self._fixture_yield_mutation_lines: set[int] = set()
         self._imported_names: set[str] = set()
 
@@ -214,20 +289,20 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
                 for decorator in node.decorator_list
                 if (target := _patch_object_target(decorator)) is not None
             }
-            patch_dict_count = sum(
-                1 for decorator in node.decorator_list if _is_patch_dict_context(decorator)
-            )
+            patch_dict_targets = {
+                target
+                for decorator in node.decorator_list
+                for target in _patch_dict_targets(decorator)
+            }
             self._test_scope_depth += 1
-            self._patch_dict_depth += patch_dict_count
-            self._safe_target_stack.append(patch_targets)
-            self._finalizer_registered_stack.append(False)
+            self._safe_target_stack.append(patch_targets | patch_dict_targets)
+            self._finalizer_target_stack.append(set())
             try:
                 self._check_fixture_yield_cleanup(node)
                 self._visit_block(node.body)
             finally:
-                self._finalizer_registered_stack.pop()
+                self._finalizer_target_stack.pop()
                 self._safe_target_stack.pop()
-                self._patch_dict_depth -= patch_dict_count
                 self._test_scope_depth -= 1
             return
         self.generic_visit(node)
@@ -247,16 +322,14 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
             for item in node.items
             if (target := _patch_object_target(item.context_expr)) is not None
         }
-        patch_dict_count = sum(
-            1 for item in node.items if _is_patch_dict_context(item.context_expr)
-        )
-        self._patch_dict_depth += patch_dict_count
-        self._safe_target_stack.append(patch_targets)
+        patch_dict_targets = {
+            target for item in node.items for target in _patch_dict_targets(item.context_expr)
+        }
+        self._safe_target_stack.append(patch_targets | patch_dict_targets)
         try:
             self._visit_block(node.body)
         finally:
             self._safe_target_stack.pop()
-            self._patch_dict_depth -= patch_dict_count
 
     visit_AsyncWith = visit_With
 
@@ -288,8 +361,8 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
             self._safe_target_stack.pop()
 
     def visit_Expr(self, node: ast.Expr) -> None:
-        if self._test_scope_depth and _is_addfinalizer_call(node):
-            self._finalizer_registered_stack[-1] = True
+        if self._test_scope_depth:
+            self._finalizer_target_stack[-1].update(_addfinalizer_targets(node))
         self.generic_visit(node)
 
     visit_TryStar = visit_Try
@@ -306,49 +379,63 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
         self._check_assignment(node, [node.target])
         self.generic_visit(node)
 
+    def visit_Delete(self, node: ast.Delete) -> None:
+        self._check_assignment(node, node.targets)
+        self.generic_visit(node)
+
     def _visit_block(self, block: list[ast.stmt]) -> None:
-        for idx, stmt in enumerate(block):
-            next_stmt = block[idx + 1] if idx + 1 < len(block) else None
-            if isinstance(next_stmt, (ast.Try, ast.TryStar)):
+        idx = 0
+        while idx < len(block):
+            try_index = idx
+            while try_index < len(block) and not isinstance(
+                block[try_index], (ast.Try, ast.TryStar)
+            ):
+                try_index += 1
+            if try_index < len(block) and try_index > idx:
+                try_stmt = block[try_index]
                 restored = {
                     key
+                    for stmt in block[idx:try_index]
                     for target in _stmt_targets(stmt)
                     if (key := _target_key(target)) is not None
-                    and _restores_target(next_stmt.finalbody, target)
+                    and _restores_target(try_stmt.finalbody, target)
                 }
                 self._safe_target_stack.append(restored)
                 try:
-                    self.visit(stmt)
+                    for stmt in block[idx:try_index]:
+                        self.visit(stmt)
                 finally:
                     self._safe_target_stack.pop()
+                self.visit(try_stmt)
+                idx = try_index + 1
                 continue
-            self.visit(stmt)
+            self.visit(block[idx])
+            idx += 1
 
     def _check_fixture_yield_cleanup(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         if not _is_fixture(node):
             return
+        finalizer_targets: set[str] = set()
         for idx, stmt in enumerate(node.body):
             if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Yield):
                 for prior in node.body[:idx]:
-                    if _stmt_has_direct_mutation(prior, self._imported_names):
-                        self._fixture_yield_mutation_lines.update(
-                            child.lineno
-                            for child in ast.walk(prior)
-                            if isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign))
-                        )
+                    if _is_addfinalizer_call(prior):
+                        finalizer_targets.update(_addfinalizer_targets(prior))
+                        continue
+                    mutation_targets = _stmt_mutation_targets(prior, self._imported_names)
+                    unsafe_targets = mutation_targets - finalizer_targets
+                    if unsafe_targets:
+                        self._fixture_yield_mutation_lines.update(_stmt_mutation_lines(prior))
                         self._add_violation(
                             prior,
                             "fixture mutates shared state before yield without try/finally or pre-registered finalizer",
                         )
                 for later in node.body[idx + 1 :]:
-                    self._fixture_yield_mutation_lines.update(
-                        child.lineno
-                        for child in ast.walk(later)
-                        if isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign))
-                    )
+                    self._fixture_yield_mutation_lines.update(_stmt_mutation_lines(later))
                 return
             if _is_addfinalizer_call(stmt):
-                return
+                finalizer_targets.update(_addfinalizer_targets(stmt))
+                continue
             if isinstance(stmt, ast.Try):
                 continue
 
@@ -357,16 +444,14 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
             return
         if getattr(node, "lineno", 0) in self._fixture_yield_mutation_lines:
             return
-        if self._finalizer_registered_stack and self._finalizer_registered_stack[-1]:
-            return
         for target in targets:
             kind = _mutation_kind(target, self._imported_names)
             if kind is None:
                 continue
-            if _is_sys_modules_target(target) and self._patch_dict_depth:
-                continue
             key = _target_key(target)
             if key is not None and any(key in safe for safe in self._safe_target_stack):
+                continue
+            if key is not None and any(key in safe for safe in self._finalizer_target_stack):
                 continue
             self._add_violation(node, kind)
 
@@ -378,20 +463,30 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
         self.violations.append((lineno, message, line.strip()))
 
 
-def _stmt_has_direct_mutation(stmt: ast.stmt, imported_names: set[str]) -> bool:
+def _stmt_mutation_targets(stmt: ast.stmt, imported_names: set[str]) -> set[str]:
     if isinstance(stmt, (ast.With, ast.AsyncWith)):
         if any(_is_patch_context(item.context_expr) for item in stmt.items):
-            return False
+            return set()
         if any(_is_patch_dict_context(item.context_expr) for item in stmt.items):
-            return False
+            return set()
+    targets: set[str] = set()
     for child in ast.walk(stmt):
-        if isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-            if any(
-                _mutation_kind(target, imported_names) is not None
+        if isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Delete)):
+            targets.update(
+                key
                 for target in _stmt_targets(child)
-            ):
-                return True
-    return False
+                if _mutation_kind(target, imported_names) is not None
+                if (key := _target_key(target)) is not None
+            )
+    return targets
+
+
+def _stmt_mutation_lines(stmt: ast.stmt) -> set[int]:
+    return {
+        child.lineno
+        for child in ast.walk(stmt)
+        if isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Delete))
+    }
 
 
 def check_file(filepath: Path) -> list[tuple[int, str, str]]:

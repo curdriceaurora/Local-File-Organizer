@@ -125,6 +125,26 @@ def test_allows_immediate_try_finally_restoration_after_mutation(tmp_path: Path)
     assert checker.check_file(src) == []
 
 
+def test_allows_multiple_setup_mutations_restored_by_following_finally(tmp_path: Path) -> None:
+    src = _write(
+        tmp_path,
+        "class First:\n"
+        "    value = 'old'\n\n"
+        "class Second:\n"
+        "    value = 'old'\n\n"
+        "def test_multi_setup_restore():\n"
+        "    First.value = 'new'\n"
+        "    Second.value = 'new'\n"
+        "    try:\n"
+        "        assert First.value == 'new'\n"
+        "    finally:\n"
+        "        First.value = 'old'\n"
+        "        Second.value = 'old'\n",
+    )
+
+    assert checker.check_file(src) == []
+
+
 def test_allows_patch_dict_for_sys_modules(tmp_path: Path) -> None:
     src = _write(
         tmp_path,
@@ -136,6 +156,23 @@ def test_allows_patch_dict_for_sys_modules(tmp_path: Path) -> None:
     )
 
     assert checker.check_file(src) == []
+
+
+def test_unrelated_patch_dict_does_not_hide_sys_modules_mutation(tmp_path: Path) -> None:
+    src = _write(
+        tmp_path,
+        "import os\n"
+        "import sys\n"
+        "from unittest.mock import patch\n\n"
+        "def test_unrelated_patch_dict():\n"
+        "    with patch.dict(os.environ, {'FLAG': '1'}):\n"
+        "        sys.modules['optional_dep'] = object()\n",
+    )
+
+    violations = checker.check_file(src)
+
+    assert len(violations) == 1
+    assert "sys.modules" in violations[0][1]
 
 
 def test_allows_nested_patch_object_contexts(tmp_path: Path) -> None:
@@ -220,6 +257,27 @@ def test_allows_fixture_finalizer_registered_before_mutation(tmp_path: Path) -> 
     assert checker.check_file(src) == []
 
 
+def test_unrelated_fixture_finalizer_does_not_hide_later_mutation(tmp_path: Path) -> None:
+    src = _write(
+        tmp_path,
+        "import pytest\n\n"
+        "class Target:\n"
+        "    value = 'old'\n\n"
+        "class Other:\n"
+        "    value = 'old'\n\n"
+        "@pytest.fixture\n"
+        "def leaky_fixture(request):\n"
+        "    request.addfinalizer(lambda: setattr(Other, 'value', 'old'))\n"
+        "    Target.value = 'new'\n"
+        "    yield\n",
+    )
+
+    violations = checker.check_file(src)
+
+    assert len(violations) == 1
+    assert "fixture mutates shared state before yield" in violations[0][1]
+
+
 def test_flags_global_statement_mutation(tmp_path: Path) -> None:
     src = _write(
         tmp_path,
@@ -230,6 +288,31 @@ def test_flags_global_statement_mutation(tmp_path: Path) -> None:
 
     assert len(violations) == 1
     assert "global statement" in violations[0][1]
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_message"),
+    [
+        ("del sys.modules['optional_dep']", "sys.modules"),
+        ("del globals()['STATE']", "globals()"),
+        ("del imported_mod.flag", "class/global attribute"),
+    ],
+)
+def test_flags_delete_based_state_mutation(
+    tmp_path: Path, statement: str, expected_message: str
+) -> None:
+    src = _write(
+        tmp_path,
+        "import sys\n"
+        "import package.config as imported_mod\n\n"
+        "def test_delete_leaks_state():\n"
+        f"    {statement}\n",
+    )
+
+    violations = checker.check_file(src)
+
+    assert len(violations) == 1
+    assert expected_message in violations[0][1]
 
 
 def test_targeted_noqa_suppresses_intentional_exception(tmp_path: Path) -> None:
