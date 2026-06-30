@@ -66,7 +66,9 @@ class DefusedXmlVisitor(ast.NodeVisitor):
                 for name in self._target_names(node.target):
                     self.stdlib_xml_aliases.add(name)
                 self._reported_dynamic_imports.add(id(node.value))
-                self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
+                self.add_violation(
+                    node, f"dynamic standard library import '{xml_module}' is unsafe"
+                )
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
@@ -74,7 +76,9 @@ class DefusedXmlVisitor(ast.NodeVisitor):
         if xml_module is not None and id(node) not in self._reported_dynamic_imports:
             self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
         elif self._uses_stdlib_xml_parser_alias(node):
-            self.add_violation(node, "standard library XML parser constructed through alias is unsafe")
+            self.add_violation(
+                node, "standard library XML parser constructed through alias is unsafe"
+            )
         self.generic_visit(node)
 
     def _stdlib_xml_dynamic_import(self, node: ast.AST) -> str | None:
@@ -106,7 +110,9 @@ class DefusedXmlVisitor(ast.NodeVisitor):
             return False
         if node.func.attr not in {"XMLParser", "XML", "fromstring", "parse", "iterparse"}:
             return False
-        return isinstance(node.func.value, ast.Name) and node.func.value.id in self.stdlib_xml_aliases
+        return (
+            isinstance(node.func.value, ast.Name) and node.func.value.id in self.stdlib_xml_aliases
+        )
 
     def _target_names(self, target: ast.AST) -> set[str]:
         if isinstance(target, ast.Name):

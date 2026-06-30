@@ -58,8 +58,7 @@ def test_flags_defusedxml_importerror_fallback_to_stdlib_xml(tmp_path: Path) -> 
 def test_flags_dynamic_importlib_stdlib_xml_import(tmp_path: Path) -> None:
     src = tmp_path / "dynamic_import.py"
     src.write_text(
-        "import importlib as imports\n"
-        "ET = imports.import_module('xml.etree.ElementTree')\n",
+        "import importlib as imports\nET = imports.import_module('xml.etree.ElementTree')\n",
         encoding="utf-8",
     )
     violations = checker.check_file(src)
