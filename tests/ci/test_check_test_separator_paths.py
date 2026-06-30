@@ -140,3 +140,98 @@ def test_check_file_returns_line_number(tmp_path: Path) -> None:
     assert lineno == 2
     assert "docs/report.pdf" in msg  # noqa: test-separator-paths
     assert line == 'y = Path("docs/report.pdf")'
+
+
+def test_add_violation_line_bounds() -> None:
+    import ast
+
+    visitor = checker.TestSeparatorPathVisitor(Path("dummy.py"), ["line1", "line2"])
+    # lineno=10 is out of bounds
+    node = ast.Call(
+        func=ast.Name(id="Path", ctx=ast.Load()),
+        args=[ast.Constant(value="foo/bar")],
+        keywords=[],
+        lineno=10,
+    )
+    visitor.add_violation(node, "dummy error")
+    assert len(visitor.violations) == 0
+
+
+def test_check_file_os_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def mock_read_text(*args, **kwargs):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+    violations = checker.check_file(Path("dummy.py"))
+    assert violations == []
+
+
+def test_visit_call_non_path(tmp_path: Path) -> None:
+    src = tmp_path / "non_path.py"
+    src.write_text('other_func("docs/report.pdf")\n', encoding="utf-8")
+    assert checker.check_file(src) == []
+
+
+def test_visit_call_variable_arg(tmp_path: Path) -> None:
+    src = tmp_path / "var_path.py"
+    src.write_text('x = "docs/report.pdf"\nvalue = Path(x)\n', encoding="utf-8")
+    assert checker.check_file(src) == []
+
+
+def test_visit_call_fstring_no_literal(tmp_path: Path) -> None:
+    src = tmp_path / "fstring_no_lit.py"
+    src.write_text('x = "docs/report.pdf"\nvalue = Path(f"{x}")\n', encoding="utf-8")
+    assert checker.check_file(src) == []
+
+
+def test_main_no_tests_directory(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(Path, "exists", lambda self: False)
+    exit_code = checker.main()
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Error: tests directory not found" in captured.out
+
+
+def test_main_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    orig_path = Path
+
+    def mock_path(*args, **kwargs):
+        if args and args[0] == "tests":
+            return tmp_path
+        return orig_path(*args, **kwargs)
+
+    monkeypatch.setattr(checker, "Path", mock_path)
+
+    ok_file = tmp_path / "test_ok.py"
+    ok_file.write_text("x = 1\n", encoding="utf-8")
+
+    exit_code = checker.main()
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "No violations found" in captured.out
+
+
+def test_main_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    orig_path = Path
+
+    def mock_path(*args, **kwargs):
+        if args and args[0] == "tests":
+            return tmp_path
+        return orig_path(*args, **kwargs)
+
+    monkeypatch.setattr(checker, "Path", mock_path)
+
+    bad_file = tmp_path / "test_bad.py"
+    bad_file.write_text('path = Path("a/b")\n', encoding="utf-8")
+
+    exit_code = checker.main()
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Violations found" in captured.err
+    assert "test_bad.py" in captured.err

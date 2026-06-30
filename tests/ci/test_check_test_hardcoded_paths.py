@@ -143,3 +143,75 @@ def test_check_file_returns_line_number(tmp_path: Path) -> None:
     lineno, msg, line = violations[0]
     assert lineno == 2
     assert "/tmp/foo.txt" in msg  # noqa: test-hardcoded-paths
+
+
+def test_add_violation_line_bounds() -> None:
+    import ast
+
+    visitor = checker.TestHardcodedPathVisitor(Path("dummy.py"), ["line1", "line2"])
+    # lineno=10 is out of bounds
+    node = ast.Constant(value="/tmp", lineno=10)  # noqa: test-hardcoded-paths
+    visitor.add_violation(node, "dummy error")
+    assert len(visitor.violations) == 0
+
+
+def test_check_file_os_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def mock_read_text(*args, **kwargs):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr(Path, "read_text", mock_read_text)
+    violations = checker.check_file(Path("dummy.py"))
+    assert violations == []
+
+
+def test_main_no_tests_directory(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(Path, "exists", lambda self: False)
+    exit_code = checker.main()
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Error: tests directory not found" in captured.out
+
+
+def test_main_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    orig_path = Path
+
+    def mock_path(*args, **kwargs):
+        if args and args[0] == "tests":
+            return tmp_path
+        return orig_path(*args, **kwargs)
+
+    monkeypatch.setattr(checker, "Path", mock_path)
+
+    ok_file = tmp_path / "test_ok.py"
+    ok_file.write_text("x = 1\n", encoding="utf-8")
+
+    exit_code = checker.main()
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "No violations found" in captured.out
+
+
+def test_main_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    orig_path = Path
+
+    def mock_path(*args, **kwargs):
+        if args and args[0] == "tests":
+            return tmp_path
+        return orig_path(*args, **kwargs)
+
+    monkeypatch.setattr(checker, "Path", mock_path)
+
+    bad_file = tmp_path / "test_bad.py"
+    bad_file.write_text('path = Path("/tmp/foo.txt")\n', encoding="utf-8")  # noqa: test-hardcoded-paths
+
+    exit_code = checker.main()
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "Violations found" in captured.err
+    assert "test_bad.py" in captured.err
