@@ -244,7 +244,10 @@ def _parse_ollama_list_text() -> list[InstalledModel]:
         List of InstalledModel objects with minimal metadata.
     """
     try:
-        result = subprocess.run(
+        # Accepted fire-and-forget: non-zero exit leaves stdout empty or
+        # truncated, so the loop below silently yields [] — the correct
+        # fallback.  returncode is intentionally not checked here.
+        result = subprocess.run(  # noqa: subprocess-returncode
             ["ollama", "list"],
             capture_output=True,
             text=True,

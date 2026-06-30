@@ -32,6 +32,10 @@ from file_organizer.review_regressions.security import (
     GuardedContextDirectPathDetector,
     ValidatedPathBypassDetector,
 )
+from file_organizer.review_regressions.template_js import (
+    TEMPLATE_JS_DETECTORS,
+    TemplateJavaScriptInterpolationDetector,
+)
 from file_organizer.review_regressions.test_quality import (
     TEST_QUALITY_DETECTORS,
     WeakMockCallCountAssertionDetector,
@@ -52,11 +56,13 @@ __all__ = [
     "LegacyAcquireReleaseWithoutConsumeDetector",
     "MEMORY_LIFECYCLE_DETECTORS",
     "PooledBufferOwnershipViaLengthDetector",
+    "TEMPLATE_JS_DETECTORS",
     "TEST_QUALITY_DETECTORS",
     "ValidatedPathBypassDetector",
     "StageContextValidationBypassDetector",
     "PublicApiCompatibilityDetector",
     "SECURITY_DETECTORS",
+    "TemplateJavaScriptInterpolationDetector",
     "WeakMockCallCountAssertionDetector",
     "changed_test_quality_detectors",
     "fingerprint_ast_node",

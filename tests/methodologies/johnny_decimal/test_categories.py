@@ -20,7 +20,7 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     get_default_scheme,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.mark.unit
