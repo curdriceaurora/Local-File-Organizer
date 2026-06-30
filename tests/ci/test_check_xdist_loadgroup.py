@@ -237,3 +237,21 @@ def test_allows_wrapper_call_with_xdist_group_marker(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert checker.check_file(src) == []
+
+
+def test_wrapper_name_collision_across_classes_still_detected(tmp_path: Path) -> None:
+    src = tmp_path / "collision.py"
+    src.write_text(
+        "class ClassA:\n"
+        "    def helper(self, tmp_path_factory):\n"
+        "        return tmp_path_factory.getbasetemp()\n"
+        "class ClassB:\n"
+        "    def helper(self, x):\n"
+        "        return x + 1\n"
+        "def test_x(tmp_path_factory):\n"
+        "    a = ClassA()\n"
+        "    base = a.helper(tmp_path_factory)\n"
+        "    assert base.exists()\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1

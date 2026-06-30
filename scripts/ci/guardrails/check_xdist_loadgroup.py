@@ -37,20 +37,22 @@ def _calls_getbasetemp(node: ast.AST, wrapper_names: frozenset[str] = frozenset(
 def _collect_wrapper_names(tree: ast.AST) -> frozenset[str]:
     """Find same-file functions/methods that call getbasetemp() directly,
     then expand to functions that call those wrappers, fixed-point style,
-    so chained helpers are also caught."""
-    defs: dict[str, ast.AST] = {}
+    so chained helpers are also caught. Same-named defs in different scopes
+    (e.g. two classes with a like-named method) are tracked separately so one
+    doesn't shadow and silently drop another."""
+    defs_by_name: dict[str, list[ast.AST]] = {}
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            defs[node.name] = node
+            defs_by_name.setdefault(node.name, []).append(node)
 
     wrapper_names: set[str] = set()
     changed = True
     while changed:
         changed = False
-        for name, node in defs.items():
+        for name, nodes in defs_by_name.items():
             if name in wrapper_names:
                 continue
-            if _calls_getbasetemp(node, frozenset(wrapper_names)):
+            if any(_calls_getbasetemp(node, frozenset(wrapper_names)) for node in nodes):
                 wrapper_names.add(name)
                 changed = True
     return frozenset(wrapper_names)
