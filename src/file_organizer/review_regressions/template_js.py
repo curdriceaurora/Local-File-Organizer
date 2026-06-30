@@ -11,7 +11,7 @@ from file_organizer.review_regressions.framework import (
 )
 
 _TEMPLATE_ROOT = Path("src/file_organizer/web/templates")
-_SCRIPT_BLOCK_RE = re.compile(r"(?is)<script\b[^>]*>(?P<body>.*?)</script>")
+_SCRIPT_BLOCK_RE = re.compile(r"(?is)<script\b[^>]*>(?P<body>.*?)</script\s*>")
 _INLINE_HANDLER_RE = re.compile(
     r"""(?is)\bon[a-z][\w-]*\s*=\s*(?P<quote>["'])(?P<body>.*?)(?P=quote)"""
 )

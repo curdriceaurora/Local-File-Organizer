@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions.template_js import (
     TEMPLATE_JS_DETECTORS,
     TemplateJavaScriptInterpolationDetector,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _write_template(root: Path, rel_path: str, source: str) -> Path:
