@@ -841,6 +841,7 @@ DEP002 = [
 "src/file_organizer/review_regressions/framework.py" = 80
 "src/file_organizer/review_regressions/memory_lifecycle.py" = 90
 "src/file_organizer/review_regressions/security.py" = 80
+"src/file_organizer/review_regressions/template_js.py" = 20
 "src/file_organizer/services/__init__.py" = 100
 "src/file_organizer/services/analytics/__init__.py" = 100
 "src/file_organizer/services/analytics/analytics_service.py" = 95
