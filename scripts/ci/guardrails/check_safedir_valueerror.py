@@ -32,8 +32,10 @@ import sys
 from pathlib import Path
 
 try:
+    from scripts.ci.guardrails.ast_helpers import extract_name_targets
     from scripts.ci.guardrails.suppressions import has_targeted_noqa
 except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from ast_helpers import extract_name_targets
     from suppressions import has_targeted_noqa
 
 _SAFEDIR_METHODS = {
@@ -71,17 +73,6 @@ def _collect_safedir_aliases(tree: ast.AST) -> set[str]:
     return aliases
 
 
-def _extract_names(node: ast.AST) -> set[str]:
-    """Recursively extract all Name ID targets from a binding pattern."""
-    names: set[str] = set()
-    if isinstance(node, ast.Name):
-        names.add(node.id)
-    elif isinstance(node, (ast.Tuple, ast.List)):
-        for elt in node.elts:
-            names.update(_extract_names(elt))
-    return names
-
-
 def _collect_local_binders(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
     """Collect all local binder names in the function scope (excluding nested functions)."""
     binders: set[str] = set()
@@ -100,15 +91,15 @@ def _collect_local_binders(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[
     for node in _walk_excluding_nested_functions(func):
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                binders.update(_extract_names(target))
+                binders.update(extract_name_targets(target))
         elif isinstance(node, ast.AnnAssign):
-            binders.update(_extract_names(node.target))
+            binders.update(extract_name_targets(node.target))
         elif isinstance(node, (ast.For, ast.AsyncFor)):
-            binders.update(_extract_names(node.target))
+            binders.update(extract_name_targets(node.target))
         elif isinstance(node, (ast.With, ast.AsyncWith)):
             for item in node.items:
                 if item.optional_vars:
-                    binders.update(_extract_names(item.optional_vars))
+                    binders.update(extract_name_targets(item.optional_vars))
     return binders
 
 

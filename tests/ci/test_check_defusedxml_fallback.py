@@ -66,6 +66,55 @@ def test_flags_dynamic_importlib_stdlib_xml_import(tmp_path: Path) -> None:
     assert "dynamic standard library import 'xml.etree.ElementTree'" in violations[0][1]
 
 
+def test_flags_dynamic_importlib_variable_module_name(tmp_path: Path) -> None:
+    src = tmp_path / "dynamic_import_variable.py"
+    src.write_text(
+        "import importlib\n"
+        "mod_name = 'xml.etree.ElementTree'\n"
+        "ET = importlib.import_module(mod_name)\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "dynamic standard library import 'xml.etree.ElementTree'" in violations[0][1]
+
+
+def test_flags_dynamic_importlib_composed_module_name(tmp_path: Path) -> None:
+    src = tmp_path / "dynamic_import_composed.py"
+    src.write_text(
+        "import importlib\n"
+        "root = 'xml.etree'\n"
+        "ET = importlib.import_module(f'{root}.ElementTree')\n"
+        "DOM = importlib.import_module('xml.' + 'dom.minidom')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 2
+    assert all("dynamic standard library import" in violation[1] for violation in violations)
+
+
+def test_flags_dynamic_importlib_keyword_module_name(tmp_path: Path) -> None:
+    src = tmp_path / "dynamic_import_keyword.py"
+    src.write_text(
+        "import importlib\nET = importlib.import_module(name='xml.etree.ElementTree')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "dynamic standard library import 'xml.etree.ElementTree'" in violations[0][1]
+
+
+def test_flags_importlib_submodule_alias(tmp_path: Path) -> None:
+    src = tmp_path / "dynamic_import_submodule_alias.py"
+    src.write_text(
+        "import importlib.util as iu\nET = iu.import_module('xml.etree.ElementTree')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "dynamic standard library import 'xml.etree.ElementTree'" in violations[0][1]
+
+
 def test_flags_aliased_import_module_stdlib_xml_import(tmp_path: Path) -> None:
     src = tmp_path / "dynamic_import_alias.py"
     src.write_text(
@@ -97,6 +146,75 @@ def test_flags_parser_construction_through_resolved_alias(tmp_path: Path) -> Non
     violations = checker.check_file(src)
     assert len(violations) == 2
     assert "XML parser constructed through alias" in violations[1][1]
+
+
+def test_flags_multi_level_parser_call_through_suppressed_alias(tmp_path: Path) -> None:
+    src = tmp_path / "multi_level_parser_alias.py"
+    src.write_text(
+        "from xml import etree  # noqa: defusedxml-fallback\n"
+        "etree.ElementTree.parse('untrusted.xml')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "XML parser constructed through alias" in violations[0][1]
+
+
+def test_flags_attribute_target_parser_alias(tmp_path: Path) -> None:
+    src = tmp_path / "attribute_target.py"
+    src.write_text(
+        "import importlib\n"
+        "class Parser:\n"
+        "    def parse(self):\n"
+        "        self.mod = importlib.import_module('xml.etree.ElementTree')\n"
+        "        return self.mod.parse('untrusted.xml')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 2
+    assert "XML parser constructed through alias" in violations[1][1]
+
+
+def test_flags_walrus_target_parser_alias(tmp_path: Path) -> None:
+    src = tmp_path / "walrus_target.py"
+    src.write_text(
+        "import importlib\n"
+        "if ET := importlib.import_module('xml.etree.ElementTree'):\n"
+        "    ET.parse('untrusted.xml')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 2
+    assert "XML parser constructed through alias" in violations[1][1]
+
+
+def test_flags_wrapper_reexported_parser_alias(tmp_path: Path) -> None:
+    src = tmp_path / "wrapper_reexport.py"
+    src.write_text(
+        "import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "def get_parser():\n"
+        "    return ET\n"
+        "mod = get_parser()\n"
+        "mod.parse('untrusted.xml')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "XML parser constructed through alias" in violations[0][1]
+
+
+def test_alias_tracking_does_not_cross_function_scope(tmp_path: Path) -> None:
+    src = tmp_path / "scoped_aliases.py"
+    src.write_text(
+        "def unsafe():\n"
+        "    import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "\n"
+        "def safe(json_parser):\n"
+        "    ET = json_parser\n"
+        "    return ET.parse('{}')\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
 
 
 def test_allows_defusedxml_import(tmp_path: Path) -> None:
