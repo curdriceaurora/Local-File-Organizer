@@ -147,6 +147,7 @@ therefore belong in CI tests, not shell-script heuristics.
 
 | Rule ID | Canonical enforced layer | Why this home |
 |---------|--------------------------|---------------|
+| `daemon.pid-claim-atomic-exclusive-create` | `tests/ci/test_daemon_pid_guardrails.py` | Requires atomic `O_CREAT|O_EXCL` PID-file claims to close startup check-then-act races |
 | `daemon.pid-record-create-time` | `tests/ci/test_daemon_pid_guardrails.py` | Ensures PID records include creation time where available |
 | `daemon.pid-remove-revalidates-expected-record` | `tests/ci/test_daemon_pid_guardrails.py` | Requires PID file removal to re-read and compare the on-disk record before unlinking |
 | `daemon.start-background-propagates-startup-failure` | `tests/ci/test_daemon_pid_guardrails.py` | Ensures background startup failures reach callers instead of being swallowed |
@@ -164,6 +165,7 @@ invariants and therefore belong in CI tests, not shell-script heuristics.
 |---------|--------------------------|---------------|
 | `filesystem.resolve-conflict-revalidates-before-unlink` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Keeps unlink operations behind current existence/symlink checks |
 | `filesystem.copy-destination-atomic-reservation` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Requires exclusive destination reservation for copy operations |
+| `filesystem.link-helpers-route-through-conflict-resolution` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Ensures hardlink/symlink helpers route through shared conflict handling before mutation |
 | `filesystem.target-root-containment` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Revalidates destination paths stay inside the intended root |
 | `filesystem.move-identity-verification` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Requires post-mutation identity checks in rollback move helpers |
 
