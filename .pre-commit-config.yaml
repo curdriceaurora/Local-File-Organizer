@@ -104,6 +104,40 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
+      # Diff-coverage gate: changed lines must have ≥80% test coverage.
+      # Mirrors the CI gate in .github/workflows/ci.yml ("Diff coverage gate").
+      #
+      # Prerequisites:
+      #   git fetch-depth: 0 is required so that origin/main is resolvable
+      #   as a merge base. Shallow clones (fetch-depth: 1) will cause
+      #   "fatal: no merge base" and the hook gracefully skips rather than
+      #   blocking the commit.
+      #
+      # The hook only fires when src/ or tests/ Python files are staged,
+      # so documentation-only or config-only commits are unaffected.
+      # ----------------------------------------------------------------
+      - id: diff-cover
+        name: diff-cover gate (80%)
+        entry: >
+          bash -c '
+          CHANGED=$(git diff --cached --name-only -- "src/**/*.py" "src/*.py" "tests/**/*.py" "tests/*.py")
+          if [ -z "$CHANGED" ]; then exit 0; fi
+          MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null) || {
+            echo "diff-cover: skipping — origin/main merge base unavailable (shallow clone or offline)." >&2
+            exit 0
+          }
+          pytest tests/ -q --override-ini="addopts=" \
+            --cov=file_organizer --cov-report=xml:coverage.xml \
+            --no-header -m "not benchmark and not e2e and not integration" \
+            2>/dev/null
+          diff-cover coverage.xml --compare-branch="$MERGE_BASE" --fail-under=80 --quiet
+          '
+        language: system
+        pass_filenames: false
+        files: ^(src|tests)/.*\.py$
+        stages: [pre-commit]
+
+      # ----------------------------------------------------------------
       # Spelling
       # ----------------------------------------------------------------
       - id: codespell
