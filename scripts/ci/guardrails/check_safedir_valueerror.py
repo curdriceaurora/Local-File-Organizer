@@ -49,17 +49,77 @@ _SAFEDIR_METHODS = {
 }
 
 
-def _is_safedir_constructor_call(call: ast.Call) -> bool:
-    return isinstance(call.func, ast.Name) and call.func.id == "SafeDir"
+def _is_safedir_constructor_call(call: ast.Call, aliases: set[str]) -> bool:
+    return isinstance(call.func, ast.Name) and call.func.id in aliases
 
 
-def _is_annotated_safedir(annotation: ast.expr | None) -> bool:
-    return isinstance(annotation, ast.Name) and annotation.id == "SafeDir"
+def _is_annotated_safedir(annotation: ast.expr | None, aliases: set[str]) -> bool:
+    return isinstance(annotation, ast.Name) and annotation.id in aliases
 
 
-def _collect_safedir_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    """Collect local names within `func` that are plausibly SafeDir instances."""
-    safedir_names: set[str] = set()
+def _collect_safedir_aliases(tree: ast.AST) -> set[str]:
+    aliases = {"SafeDir"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "SafeDir":
+                    aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "SafeDir":
+                    aliases.add(alias.asname or alias.name)
+    return aliases
+
+
+def _extract_names(node: ast.AST) -> set[str]:
+    """Recursively extract all Name ID targets from a binding pattern."""
+    names: set[str] = set()
+    if isinstance(node, ast.Name):
+        names.add(node.id)
+    elif isinstance(node, (ast.Tuple, ast.List)):
+        for elt in node.elts:
+            names.update(_extract_names(elt))
+    return names
+
+
+def _collect_local_binders(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """Collect all local binder names in the function scope (excluding nested functions)."""
+    binders: set[str] = set()
+    # 1. Parameters
+    all_args = (
+        func.args.posonlyargs
+        + func.args.args
+        + func.args.kwonlyargs
+        + ([func.args.vararg] if func.args.vararg else [])
+        + ([func.args.kwarg] if func.args.kwarg else [])
+    )
+    for arg in all_args:
+        binders.add(arg.arg)
+
+    # 2. Local bindings in body (assignments, for loops, with statements)
+    for node in _walk_excluding_nested_functions(func):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                binders.update(_extract_names(target))
+        elif isinstance(node, ast.AnnAssign):
+            binders.update(_extract_names(node.target))
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            binders.update(_extract_names(node.target))
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                if item.optional_vars:
+                    binders.update(_extract_names(item.optional_vars))
+    return binders
+
+
+def _collect_safedir_and_other_names(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    aliases: set[str],
+    non_shadowed_inherited: set[str],
+) -> tuple[set[str], set[str]]:
+    """Collect local names within `func` that are SafeDir instances and other assigned names."""
+    safedir_names: set[str] = set(non_shadowed_inherited)
+    local_binders = _collect_local_binders(func)
 
     # Parameters annotated as SafeDir.
     all_args = (
@@ -70,10 +130,9 @@ def _collect_safedir_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[
         + ([func.args.kwarg] if func.args.kwarg else [])
     )
     for arg in all_args:
-        if _is_annotated_safedir(arg.annotation):
+        if _is_annotated_safedir(arg.annotation, aliases):
             safedir_names.add(arg.arg)
 
-    # Assignments: `x = SafeDir(...)` or `x = <tracked>.open_subdir(...)`.
     # Walk repeatedly so one level of open_subdir() propagation from a
     # newly discovered name is picked up regardless of statement order.
     changed = True
@@ -89,7 +148,7 @@ def _collect_safedir_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[
                 continue
             value = node.value
             if isinstance(value, ast.Call):
-                if _is_safedir_constructor_call(value):
+                if _is_safedir_constructor_call(value, aliases):
                     safedir_names.add(target.id)
                     changed = True
                 elif (
@@ -101,17 +160,12 @@ def _collect_safedir_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[
                     safedir_names.add(target.id)
                     changed = True
 
-    return safedir_names
+    other_assigned_names = local_binders - safedir_names
+    return safedir_names, other_assigned_names
 
 
 def _walk_excluding_nested_functions(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.AST]:
-    """Like ast.walk(func), but does not descend into nested function defs.
-
-    Prevents a nested function's `try` blocks from being attributed to (and
-    checked against) the *outer* function's SafeDir-name tracking, and from
-    being visited twice (once here, once when the nested def is visited
-    directly by the NodeVisitor).
-    """
+    """Like ast.walk(func), but does not descend into nested function defs."""
     seen: list[ast.AST] = []
     stack: list[ast.AST] = list(ast.iter_child_nodes(func))
     while stack:
@@ -154,24 +208,50 @@ def _handler_reraises(handler: ast.ExceptHandler) -> bool:
     return bool(handler.body) and isinstance(handler.body[0], ast.Raise)
 
 
+def _has_explicit_valueerror_handler(try_node: ast.Try) -> bool:
+    for handler in try_node.handlers:
+        names = _handler_names(handler)
+        catches_broadly = "Exception" in names or "bare" in names
+        if catches_broadly:
+            # Broad handler matched before explicit ValueError handler, meaning ValueError is swallowed
+            return False
+        if "ValueError" in names:
+            return True
+    return False
+
+
 class _Visitor(ast.NodeVisitor):
-    def __init__(self, lines: list[str]) -> None:
+    def __init__(self, lines: list[str], aliases: set[str]) -> None:
         self.lines = lines
+        self.aliases = aliases
         self.violations: list[tuple[int, str]] = []
+        self.safedir_scopes: list[set[str]] = []
 
     def _visit_function(self, func: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-        safedir_names = _collect_safedir_names(func)
+        # Inherit from outer/enclosing scopes
+        inherited_safedir: set[str] = set()
+        for scope_set in self.safedir_scopes:
+            inherited_safedir.update(scope_set)
+
+        local_binders = _collect_local_binders(func)
+        non_shadowed_inherited = inherited_safedir - local_binders
+
+        active_safedir_names, local_other = _collect_safedir_and_other_names(
+            func, self.aliases, non_shadowed_inherited
+        )
+
         for node in _walk_excluding_nested_functions(func):
             if isinstance(node, ast.Try) and _calls_safedir_method(
-                ast.Module(body=node.body, type_ignores=[]), safedir_names
+                ast.Module(body=node.body, type_ignores=[]), active_safedir_names
             ):
+                has_explicit_val_err = _has_explicit_valueerror_handler(node)
                 for handler in node.handlers:
                     names = _handler_names(handler)
                     catches_broadly = "Exception" in names or "bare" in names
                     if (
                         catches_broadly
-                        and "ValueError" not in names
                         and not _handler_reraises(handler)
+                        and not has_explicit_val_err
                     ):
                         line_idx = handler.lineno - 1
                         if 0 <= line_idx < len(self.lines):
@@ -186,10 +266,11 @@ class _Visitor(ast.NodeVisitor):
                                 "ValueError explicitly or re-raise",
                             )
                         )
-        # Recurse into nested function/class defs (but not back into `func`
-        # itself) so they get their own independent SafeDir-name tracking.
+        # Recurse with current active_safedir_names pushed on the stack
+        self.safedir_scopes.append(active_safedir_names)
         for child in ast.iter_child_nodes(func):
             self.visit(child)
+        self.safedir_scopes.pop()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._visit_function(node)
@@ -213,7 +294,8 @@ def check_file(filepath: Path) -> list[tuple[int, str]]:
         print(f"Syntax error in {filepath}: {exc}", file=sys.stderr)
         return []
 
-    visitor = _Visitor(lines)
+    aliases = _collect_safedir_aliases(tree)
+    visitor = _Visitor(lines, aliases)
     visitor.visit(tree)
     return visitor.violations
 
