@@ -102,6 +102,25 @@ def test_template_js_detector_allows_safe_tojson_and_data_attribute_patterns(
     assert detector.find_violations(tmp_path) == []
 
 
+def test_template_js_detector_flags_script_with_nonstandard_closing_tag(
+    tmp_path: Path,
+) -> None:
+    """Detector must catch script blocks closed by browser-accepted non-standard tags."""
+    detector = TemplateJavaScriptInterpolationDetector()
+
+    _write_template(
+        tmp_path,
+        "src/file_organizer/web/templates/nonstandard_close.html",
+        "<script>\nconst x = {{ value }};\n</script\t\n bar>",
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert [(finding.path, finding.rule_id) for finding in findings] == [
+        ("src/file_organizer/web/templates/nonstandard_close.html", "unsafe-js-interpolation"),
+    ]
+
+
 def test_template_js_detector_pack_exports_expected_detector() -> None:
     assert [detector.detector_id for detector in TEMPLATE_JS_DETECTORS] == [
         "template-js.unsafe-inline-interpolation",
