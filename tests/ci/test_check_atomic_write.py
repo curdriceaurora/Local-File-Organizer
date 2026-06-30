@@ -85,7 +85,9 @@ def test_allows_path_open_read_modes(tmp_path: Path) -> None:
 
         src_kw = tmp_path / f"good_open_kw_{mode}.py"
         src_kw.write_text(f"Path('x').open(mode='{mode}')\n", encoding="utf-8")
-        assert checker.check_file(src_kw) == [], f"Incorrectly flagged Path.open with mode kw {mode}"
+        assert checker.check_file(src_kw) == [], (
+            f"Incorrectly flagged Path.open with mode kw {mode}"
+        )
 
 
 def test_path_open_noqa_suppressions(tmp_path: Path) -> None:
@@ -109,4 +111,3 @@ def test_path_open_noqa_suppressions(tmp_path: Path) -> None:
     src_mixed = tmp_path / "open_mixed.py"
     src_mixed.write_text("Path('x').open('w')  # noqa: F401, atomic-write\n", encoding="utf-8")
     assert checker.check_file(src_mixed) == []
-
