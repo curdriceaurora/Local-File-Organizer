@@ -148,3 +148,97 @@ def test_string_literal_noqa_does_not_suppress_violation(tmp_path: Path) -> None
         encoding="utf-8",
     )
     assert len(checker.check_file(src)) == 1
+
+
+def test_flags_safedir_alias_import(tmp_path: Path) -> None:
+    src = tmp_path / "alias.py"
+    src.write_text(
+        "from file_organizer.utils.safedir import SafeDir as SD\n"
+        "def f(sd: SD):\n"
+        "    try:\n"
+        "        return sd.open_child('x')\n"
+        "    except Exception:\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_flags_nested_function_swallowing(tmp_path: Path) -> None:
+    src = tmp_path / "nested.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    def inner():\n"
+        "        try:\n"
+        "            return safedir.open_child('x')\n"
+        "            # swallowing ValueError in nested function\n"
+        "        except Exception:\n"
+        "            return None\n"
+        "    return inner\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_allows_nested_function_shadowing(tmp_path: Path) -> None:
+    src = tmp_path / "nested_shadow.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    def inner():\n"
+        "        safedir = 'not_a_safedir'\n"
+        "        try:\n"
+        "            # safedir is now just a string, so mkdir() is not SafeDir's\n"
+        "            return safedir.mkdir()\n"
+        "        except Exception:\n"
+        "            return None\n"
+        "    return inner\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 0
+
+
+def test_flags_tuple_with_broad_and_valueerror(tmp_path: Path) -> None:
+    src = tmp_path / "tuple_broad.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    try:\n"
+        "        return safedir.open_child('x')\n"
+        "    except (ValueError, Exception):\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_allows_tuple_with_specific_exceptions(tmp_path: Path) -> None:
+    src = tmp_path / "tuple_specific.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    try:\n"
+        "        return safedir.open_child('x')\n"
+        "    except (TypeError, ValueError):\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 0
+
+
+def test_allows_explicit_and_broad_handlers(tmp_path: Path) -> None:
+    src = tmp_path / "multi_handlers.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    try:\n"
+        "        return safedir.open_child('x')\n"
+        "    except ValueError:\n"
+        "        return 'val_err'\n"
+        "    except Exception:\n"
+        "        return 'other_err'\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 0

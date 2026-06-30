@@ -64,14 +64,58 @@ def _open_receiver_name(node: ast.Attribute) -> str | None:
 class SafeDirVisitor(ast.NodeVisitor):
     """AST visitor to find raw file operations."""
 
-    def __init__(self, filepath: Path, lines: list[str]) -> None:
+    def __init__(self, filepath: Path, lines: list[str], tree: ast.AST) -> None:
         self.filepath = filepath
         self.lines = lines
         self.violations: list[tuple[int, str, str]] = []
+        self.shutil_names = {"shutil"}
+        self.shutil_funcs = {}
+        self.open_names = {"open"}
+        self.builtins_names = {"builtins"}
+        self._collect_imports(tree)
+
+    def _collect_imports(self, tree: ast.AST) -> None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "shutil":
+                        self.shutil_names.add(alias.asname or alias.name)
+                    elif alias.name == "builtins":
+                        self.builtins_names.add(alias.asname or alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module == "shutil":
+                    for alias in node.names:
+                        name = alias.name
+                        local_name = alias.asname or name
+                        if name in {
+                            "copy",
+                            "copy2",
+                            "move",
+                            "copyfile",
+                            "copytree",
+                            "copymode",
+                            "copystat",
+                        }:
+                            self.shutil_funcs[local_name] = name
+                elif node.module == "builtins":
+                    for alias in node.names:
+                        if alias.name == "open":
+                            self.open_names.add(alias.asname or alias.name)
 
     def visit_Call(self, node: ast.Call) -> None:
-        # 1. Check for raw built-in open()
-        if isinstance(node.func, ast.Name) and node.func.id == "open":
+        # 1. Check for raw built-in open() or alias, or builtins.open()
+        is_raw_open = False
+        if isinstance(node.func, ast.Name) and node.func.id in self.open_names:
+            is_raw_open = True
+        elif (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in self.builtins_names
+            and node.func.attr == "open"
+        ):
+            is_raw_open = True
+
+        if is_raw_open:
             self.add_violation(node, "raw open() call")
 
         # 2. Check for Path.open() — but exclude known library namespaces whose
@@ -82,10 +126,12 @@ class SafeDirVisitor(ast.NodeVisitor):
                 self.add_violation(node, "raw Path.open() call")
 
         # 3. Check for shutil copy/move/etc.
-        elif (
+        is_shutil_call = False
+        shutil_func_name = None
+        if (
             isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "shutil"
+            and node.func.value.id in self.shutil_names
         ):
             if node.func.attr in {
                 "copy",
@@ -96,7 +142,14 @@ class SafeDirVisitor(ast.NodeVisitor):
                 "copymode",
                 "copystat",
             }:
-                self.add_violation(node, f"raw shutil.{node.func.attr}() call")
+                is_shutil_call = True
+                shutil_func_name = node.func.attr
+        elif isinstance(node.func, ast.Name) and node.func.id in self.shutil_funcs:
+            is_shutil_call = True
+            shutil_func_name = self.shutil_funcs[node.func.id]
+
+        if is_shutil_call:
+            self.add_violation(node, f"raw shutil.{shutil_func_name}() call")
 
         self.generic_visit(node)
 
@@ -125,7 +178,7 @@ def check_file(filepath: Path) -> list[tuple[int, str, str]]:
         print(f"Syntax error in {filepath}: {exc}", file=sys.stderr)
         return []
 
-    visitor = SafeDirVisitor(filepath, lines)
+    visitor = SafeDirVisitor(filepath, lines, tree)
     visitor.visit(tree)
     return visitor.violations
 
