@@ -24,17 +24,99 @@ class DefusedXmlVisitor(ast.NodeVisitor):
         self.filepath = filepath
         self.lines = lines
         self.violations: list[tuple[int, str, str]] = []
+        self.stdlib_xml_aliases: set[str] = set()
+        self.importlib_aliases: set[str] = {"importlib"}
+        self.import_module_aliases: set[str] = set()
+        self._reported_dynamic_imports: set[int] = set()
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             if alias.name == "xml" or alias.name.startswith("xml."):
+                self.stdlib_xml_aliases.add(alias.asname or alias.name.split(".", maxsplit=1)[0])
                 self.add_violation(node, f"standard library import '{alias.name}' is unsafe")
+            elif alias.name == "importlib":
+                self.importlib_aliases.add(alias.asname or alias.name)
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         if node.module == "xml" or (node.module and node.module.startswith("xml.")):
+            for alias in node.names:
+                self.stdlib_xml_aliases.add(alias.asname or alias.name)
             self.add_violation(node, f"standard library import from '{node.module}' is unsafe")
+        elif node.module == "importlib":
+            for alias in node.names:
+                if alias.name == "import_module":
+                    self.import_module_aliases.add(alias.asname or alias.name)
         self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        xml_module = self._stdlib_xml_dynamic_import(node.value)
+        if xml_module is not None:
+            for target in node.targets:
+                for name in self._target_names(target):
+                    self.stdlib_xml_aliases.add(name)
+            self._reported_dynamic_imports.add(id(node.value))
+            self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        if node.value is not None:
+            xml_module = self._stdlib_xml_dynamic_import(node.value)
+            if xml_module is not None:
+                for name in self._target_names(node.target):
+                    self.stdlib_xml_aliases.add(name)
+                self._reported_dynamic_imports.add(id(node.value))
+                self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        xml_module = self._stdlib_xml_dynamic_import(node)
+        if xml_module is not None and id(node) not in self._reported_dynamic_imports:
+            self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
+        elif self._uses_stdlib_xml_parser_alias(node):
+            self.add_violation(node, "standard library XML parser constructed through alias is unsafe")
+        self.generic_visit(node)
+
+    def _stdlib_xml_dynamic_import(self, node: ast.AST) -> str | None:
+        if not isinstance(node, ast.Call):
+            return None
+
+        module_arg: ast.AST | None = None
+        if isinstance(node.func, ast.Name) and node.func.id == "__import__":
+            module_arg = node.args[0] if node.args else None
+        elif isinstance(node.func, ast.Name) and node.func.id in self.import_module_aliases:
+            module_arg = node.args[0] if node.args else None
+        elif (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "import_module"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in self.importlib_aliases
+        ):
+            module_arg = node.args[0] if node.args else None
+
+        if not isinstance(module_arg, ast.Constant) or not isinstance(module_arg.value, str):
+            return None
+        module_name = module_arg.value
+        if module_name == "xml" or module_name.startswith("xml."):
+            return module_name
+        return None
+
+    def _uses_stdlib_xml_parser_alias(self, node: ast.Call) -> bool:
+        if not isinstance(node.func, ast.Attribute):
+            return False
+        if node.func.attr not in {"XMLParser", "XML", "fromstring", "parse", "iterparse"}:
+            return False
+        return isinstance(node.func.value, ast.Name) and node.func.value.id in self.stdlib_xml_aliases
+
+    def _target_names(self, target: ast.AST) -> set[str]:
+        if isinstance(target, ast.Name):
+            return {target.id}
+        if isinstance(target, (ast.Tuple, ast.List)):
+            names: set[str] = set()
+            for element in target.elts:
+                names.update(self._target_names(element))
+            return names
+        return set()
 
     def add_violation(self, node: ast.AST, message: str) -> None:
         lineno = node.lineno
