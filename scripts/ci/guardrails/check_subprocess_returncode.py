@@ -78,6 +78,18 @@ def _block_accesses_returncode(block: list[ast.stmt], name: str) -> bool:
                 self.found = True
             self.generic_visit(node)
 
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            pass  # Do not traverse into nested function definitions
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            pass  # Do not traverse into nested async function definitions
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            pass  # Do not traverse into nested class definitions
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            pass  # Do not traverse into nested lambda expressions
+
     checker = _ReturnCodeChecker()
     for stmt in block:
         checker.visit(stmt)
@@ -133,7 +145,7 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
 
     def _check_block(self, block: list[ast.stmt]) -> None:
         """Check every statement in *block* for unchecked subprocess.run()."""
-        for stmt in block:
+        for idx, stmt in enumerate(block):
             # Look for an Expr node (call result discarded) or an Assign/AnnAssign
             call_node: ast.Call | None = None
             assigned_name: str | None = None
@@ -153,10 +165,8 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
                     pass  # compliant
 
                 # 2. .returncode accessed on the assigned variable within this
-                #    block → compliant.  Scanning the full block (not just the
-                #    suffix) handles try/finally patterns where the check may
-                #    appear before the call in a textual sense.
-                elif assigned_name and _block_accesses_returncode(block, assigned_name):
+                #    block after the call statement → compliant.
+                elif assigned_name and _block_accesses_returncode(block[idx + 1 :], assigned_name):
                     pass  # compliant
 
                 else:
@@ -226,6 +236,9 @@ class SubprocessReturncodeVisitor(ast.NodeVisitor):
                 self._check_block(stmt.orelse)
         elif isinstance(stmt, (ast.With, ast.AsyncWith)):
             self._check_block(stmt.body)
+        elif hasattr(ast, "Match") and isinstance(stmt, ast.Match):
+            for case in stmt.cases:
+                self._check_block(case.body)
 
     # ------------------------------------------------------------------
     # Entry points for different AST scopes

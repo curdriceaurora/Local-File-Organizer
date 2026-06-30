@@ -247,6 +247,62 @@ def test_allows_returncode_check_inside_try_body(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Additional Edge Cases: nested scopes, statement order, and match/case blocks
+# ---------------------------------------------------------------------------
+
+
+def test_flags_if_returncode_accessed_only_in_nested_scope(tmp_path: Path) -> None:
+    """A subprocess.run() is a violation if the returncode is only checked in a nested scope (like an inner function or lambda)."""
+    src = tmp_path / "nested_scope_check.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    result = subprocess.run(['ls'])\n"
+        "    def check_later():\n"
+        "        print(result.returncode)\n"
+        "    return result\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_flags_if_returncode_accessed_before_subprocess_run(tmp_path: Path) -> None:
+    """A subprocess.run() is a violation if the returncode access is earlier in the block (associated with a previous assignment)."""
+    src = tmp_path / "before_check.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd():\n"
+        "    result = None\n"
+        "    print(result.returncode)\n"
+        "    result = subprocess.run(['ls'])\n"
+        "    return result\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+
+
+def test_checks_match_case_body(tmp_path: Path) -> None:
+    """A subprocess.run() inside a match/case body is checked and flagged if unchecked."""
+    src = tmp_path / "match_case.py"
+    src.write_text(
+        "import subprocess\n\n"
+        "def run_cmd(val):\n"
+        "    match val:\n"
+        "        case 1:\n"
+        "            subprocess.run(['ls'])\n"
+        "        case 2:\n"
+        "            subprocess.run(['ls'], check=True)\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    # The first case has unchecked subprocess.run(), the second is check=True (compliant)
+    assert len(violations) == 1
+    assert violations[0][0] == 6  # Line 6 should be the failure line
+
+
+# ---------------------------------------------------------------------------
 # End-to-end: the production src/ tree has zero violations after noqa annotations
 # ---------------------------------------------------------------------------
 
