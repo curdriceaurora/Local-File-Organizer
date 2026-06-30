@@ -43,6 +43,18 @@ _OPEN_EXEMPT_NAMESPACES: frozenset[str] = frozenset(
     }
 )
 
+_SHUTIL_RAW_FUNCS: frozenset[str] = frozenset(
+    {
+        "copy",
+        "copy2",
+        "move",
+        "copyfile",
+        "copytree",
+        "copymode",
+        "copystat",
+    }
+)
+
 
 def _open_receiver_name(node: ast.Attribute) -> str | None:
     """Return the simple name of the receiver of a `.open()` attribute call.
@@ -87,15 +99,7 @@ class SafeDirVisitor(ast.NodeVisitor):
                     for alias in node.names:
                         name = alias.name
                         local_name = alias.asname or name
-                        if name in {
-                            "copy",
-                            "copy2",
-                            "move",
-                            "copyfile",
-                            "copytree",
-                            "copymode",
-                            "copystat",
-                        }:
+                        if name in _SHUTIL_RAW_FUNCS:
                             self.shutil_funcs[local_name] = name
                 elif node.module == "builtins":
                     for alias in node.names:
@@ -133,15 +137,7 @@ class SafeDirVisitor(ast.NodeVisitor):
             and isinstance(node.func.value, ast.Name)
             and node.func.value.id in self.shutil_names
         ):
-            if node.func.attr in {
-                "copy",
-                "copy2",
-                "move",
-                "copyfile",
-                "copytree",
-                "copymode",
-                "copystat",
-            }:
+            if node.func.attr in _SHUTIL_RAW_FUNCS:
                 is_shutil_call = True
                 shutil_func_name = node.func.attr
         elif isinstance(node.func, ast.Name) and node.func.id in self.shutil_funcs:

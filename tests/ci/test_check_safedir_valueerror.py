@@ -181,6 +181,22 @@ def test_flags_nested_function_swallowing(tmp_path: Path) -> None:
     violations = checker.check_file(src)
     assert len(violations) == 1
 
+    # Also test nested child propagation from inherited SafeDir
+    src2 = tmp_path / "nested_subdir.py"
+    src2.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    def inner():\n"
+        "        child = safedir.open_subdir('sub')\n"
+        "        try:\n"
+        "            return child.open_child('x')\n"
+        "        except Exception:\n"
+        "            return None\n"
+        "    return inner\n",
+        encoding="utf-8",
+    )
+    violations2 = checker.check_file(src2)
+    assert len(violations2) == 1
+
 
 def test_allows_nested_function_shadowing(tmp_path: Path) -> None:
     src = tmp_path / "nested_shadow.py"
@@ -242,3 +258,19 @@ def test_allows_explicit_and_broad_handlers(tmp_path: Path) -> None:
     )
     violations = checker.check_file(src)
     assert len(violations) == 0
+
+
+def test_flags_exception_before_valueerror(tmp_path: Path) -> None:
+    src = tmp_path / "ordering_bad.py"
+    src.write_text(
+        "def f(safedir: SafeDir):\n"
+        "    try:\n"
+        "        return safedir.open_child('x')\n"
+        "    except Exception:\n"
+        "        return None\n"
+        "    except ValueError:\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
