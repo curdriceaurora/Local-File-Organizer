@@ -173,6 +173,22 @@ Implementation detail:
 
 - Guardrail logic lives in `tests/ci/test_filesystem_link_copy_guardrails.py`.
 
+## Test Environment Leakage Rule Index
+
+Issue `#1414` adds an advisory rail for test process state mutations. It starts
+advisory while current findings are classified, then can be promoted once the
+repo-wide finding count reaches zero.
+
+| Rail | Canonical home | What it flags |
+|------|----------------|---------------|
+| `test-environment-leakage` | `scripts/ci/guardrails/check_test_environment_leakage.py` plus `tests/ci/test_check_test_environment_leakage.py` | Direct class/global state mutation, `global` writes, `globals()[...]`, or `sys.modules[...]` changes in tests without `monkeypatch`, `patch`, `patch.dict`, fixture finalizer, or `try/finally` restoration |
+
+Safe patterns:
+- `monkeypatch.setattr` / `monkeypatch.setitem`
+- `patch`, `patch.object`, and `patch.dict` context managers or decorators
+- fixture finalizers registered before mutation
+- `try/finally` blocks that restore the same mutated target
+
 ## Search Guardrail Rule Index
 
 Issue `#869` adds corpus-safety checks for the search service. These are

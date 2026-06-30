@@ -59,6 +59,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `textiowrapper-detach` | An `io.TextIOWrapper` that is never `.detach()`-ed before going out of scope (use-after-close risk on the wrapped buffer/fd) | enforced |
 | `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | enforced |
 | `subprocess-returncode` | `subprocess.run()` call without `check=True` or `.returncode` inspection (issue #1408) | advisory |
+| `test-environment-leakage` | Tests mutating class/global state or `sys.modules` without scoped restoration (issue #1414) | advisory |
 | `xdist-loadgroup` | A test using the xdist-wide `tmp_path_factory.getbasetemp()` without an `xdist_group` marker | enforced |
 
 Per-file coverage floors (`check-integration-floors.py` for the
