@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from file_organizer.review_regressions.template_js import (
+from file_organizer.review_regressions import (
     TEMPLATE_JS_DETECTORS,
     TemplateJavaScriptInterpolationDetector,
 )
@@ -124,4 +124,44 @@ def test_template_js_detector_flags_script_with_nonstandard_closing_tag(
 def test_template_js_detector_pack_exports_expected_detector() -> None:
     assert [detector.detector_id for detector in TEMPLATE_JS_DETECTORS] == [
         "template-js.unsafe-inline-interpolation",
+    ]
+
+
+def test_template_js_detector_ignores_inert_script_types(tmp_path: Path) -> None:
+    """Detector must not flag inert script containers such as application/json."""
+    detector = TemplateJavaScriptInterpolationDetector()
+
+    _write_template(
+        tmp_path,
+        "src/file_organizer/web/templates/inert_json.html",
+        '<script type="application/json">{"key": "{{ value }}"}</script>',
+    )
+    _write_template(
+        tmp_path,
+        "src/file_organizer/web/templates/inert_ld_json.html",
+        '<script type="application/ld+json">{"@context": "{{ value }}"}</script>',
+    )
+    _write_template(
+        tmp_path,
+        "src/file_organizer/web/templates/inert_x_template.html",
+        '<script type="text/x-template">{{ template_content }}</script>',
+    )
+
+    assert detector.find_violations(tmp_path) == []
+
+
+def test_template_js_detector_still_scans_module_and_text_js_types(tmp_path: Path) -> None:
+    """type=module and type=text/javascript must still be scanned."""
+    detector = TemplateJavaScriptInterpolationDetector()
+
+    _write_template(
+        tmp_path,
+        "src/file_organizer/web/templates/unsafe_module.html",
+        '<script type="module">const x = {{ value }};</script>',
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert [(finding.path, finding.rule_id) for finding in findings] == [
+        ("src/file_organizer/web/templates/unsafe_module.html", "unsafe-js-interpolation"),
     ]

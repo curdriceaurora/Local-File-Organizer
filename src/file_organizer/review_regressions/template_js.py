@@ -11,7 +11,12 @@ from file_organizer.review_regressions.framework import (
 )
 
 _TEMPLATE_ROOT = Path("src/file_organizer/web/templates")
-_SCRIPT_BLOCK_RE = re.compile(r"(?is)<script\b[^>]*>(?P<body>.*?)</script[^>]*>")
+_SCRIPT_BLOCK_RE = re.compile(
+    r"(?is)<script\b(?P<attrs>[^>]*)>(?P<body>.*?)</script(?:\s[^>]*)?>",
+)
+_SCRIPT_TYPE_RE = re.compile(
+    r"""(?is)\btype\s*=\s*(?P<quote>["']?)(?P<type>[^"'\s>]+)(?P=quote)""",
+)
 _INLINE_HANDLER_RE = re.compile(
     r"""(?is)\bon[a-z][\w-]*\s*=\s*(?P<quote>["'])(?P<body>.*?)(?P=quote)"""
 )
@@ -28,6 +33,15 @@ def _iter_template_files(root: Path) -> list[Path]:
         (path for path in template_root.rglob("*.html") if path.is_file()),
         key=lambda path: path.as_posix(),
     )
+
+
+def _is_javascript_script(attrs: str) -> bool:
+    """Return True when the script tag represents an executable JavaScript context."""
+    match = _SCRIPT_TYPE_RE.search(attrs)
+    if match is None:
+        return True
+    script_type = match.group("type").strip().lower()
+    return script_type in {"text/javascript", "application/javascript", "module"}
 
 
 def _quote_state(text: str) -> str | None:
@@ -149,6 +163,8 @@ class TemplateJavaScriptInterpolationDetector:
             source = path.read_text(encoding="utf-8")
             script_spans = _script_spans(source)
             for match in _SCRIPT_BLOCK_RE.finditer(source):
+                if not _is_javascript_script(match.group("attrs")):
+                    continue
                 violations.extend(
                     _context_violations(
                         root=root,

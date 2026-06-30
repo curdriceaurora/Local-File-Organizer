@@ -32,7 +32,7 @@ class PluginClient:
         """Set up a plugin client targeting the given API base URL."""
         cleaned_url = base_url.rstrip("/")
         if not cleaned_url.startswith(("http://", "https://")):
-            raise ValueError("base_url must be a valid URL starting with http:// or https://")
+            raise ValueError("base_url must start with http:// or https://")
         cleaned_token = token.strip()
         if not cleaned_token:
             raise ValueError("token must not be empty")

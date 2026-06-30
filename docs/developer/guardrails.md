@@ -165,7 +165,7 @@ plus the repo-wide CI enforcement test.
 
 | Rule ID | Canonical home | What it flags |
 |---------|----------------|---------------|
-| `unsafe-js-interpolation` | `tests/ci/test_first_wave_repo_enforcement.py` | Jinja interpolation inside `<script>` blocks or inline `on*=` handlers unless the value is emitted as a direct `tojson` JS value outside quotes/backticks |
+| `unsafe-js-interpolation` | `tests/ci/test_first_wave_repo_enforcement.py` | Jinja `{{ ... }}` interpolation or `{% include ... %}` inside `<script>` blocks / inline `on*=` handlers unless the value is emitted as a direct `tojson` JS value outside quotes/backticks |
 
 Safe patterns:
 - `{{ value|tojson }}` used directly as a JavaScript value
