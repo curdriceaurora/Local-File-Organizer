@@ -56,7 +56,29 @@ class AtomicWriteVisitor(ast.NodeVisitor):
             if is_write:
                 self.add_violation(node, "raw open() with write/append/exclusive mode")
 
-        # 2. Check for Path.write_text() or Path.write_bytes()
+        # 2. Check for Path.open() with write/append/exclusive modes
+        elif isinstance(node.func, ast.Attribute) and node.func.attr == "open":
+            is_write = False
+            # Check positional args (first arg is usually the mode for Path.open())
+            if len(node.args) >= 1:
+                mode_arg = node.args[0]
+                if isinstance(mode_arg, ast.Constant) and isinstance(mode_arg.value, str):
+                    if any(char in mode_arg.value for char in "wax+"):
+                        is_write = True
+            # Check keyword args (mode=...)
+            for kw in node.keywords:
+                if (
+                    kw.arg == "mode"
+                    and isinstance(kw.value, ast.Constant)
+                    and isinstance(kw.value.value, str)
+                ):
+                    if any(char in kw.value.value for char in "wax+"):
+                        is_write = True
+
+            if is_write:
+                self.add_violation(node, "raw Path.open() with write/append/exclusive mode")
+
+        # 3. Check for Path.write_text() or Path.write_bytes()
         elif isinstance(node.func, ast.Attribute) and node.func.attr in {
             "write_text",
             "write_bytes",
