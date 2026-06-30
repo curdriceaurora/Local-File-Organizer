@@ -89,3 +89,9 @@ name = "subprocess-returncode"
 command = ["python", "scripts/ci/guardrails/check_subprocess_returncode.py"]
 mode = "advisory"
 description = "Flags subprocess.run() calls where returncode is not checked and check=True is absent (issue #1408)."
+
+[[rail]]
+name = "test-environment-leakage"
+command = ["python", "scripts/ci/guardrails/check_test_environment_leakage.py"]
+mode = "advisory"
+description = "Flags tests that mutate class/global state or sys.modules without scoped restoration (issue #1414)."
