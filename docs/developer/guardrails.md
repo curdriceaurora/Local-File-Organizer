@@ -181,7 +181,7 @@ repo-wide finding count reaches zero.
 
 | Rail | Canonical home | What it flags |
 |------|----------------|---------------|
-| `test-environment-leakage` | `scripts/ci/guardrails/check_test_environment_leakage.py` plus `tests/ci/test_check_test_environment_leakage.py` | Direct class/global state mutation, `global` writes, `globals()[...]`, or `sys.modules[...]` changes in tests without `monkeypatch`, `patch`, `patch.dict`, fixture finalizer, or `try/finally` restoration |
+| `test-environment-leakage` | `scripts/ci/guardrails/check_test_environment_leakage.py` plus `tests/ci/test_check_test_environment_leakage.py` | Direct class/global state mutation, `global` writes, dynamic `globals()` entries, or `sys.modules` entries in tests without `monkeypatch`, `patch`, `patch.dict`, fixture finalizer, or `try/finally` restoration |
 
 Safe patterns:
 - `monkeypatch.setattr` / `monkeypatch.setitem`

@@ -223,10 +223,7 @@ def test_allows_fixture_finalizer_registered_before_mutation(tmp_path: Path) -> 
 def test_flags_global_statement_mutation(tmp_path: Path) -> None:
     src = _write(
         tmp_path,
-        "STATE = False\n\n"
-        "def test_global_write():\n"
-        "    global STATE\n"
-        "    STATE = True\n",
+        "STATE = False\n\ndef test_global_write():\n    global STATE\n    STATE = True\n",
     )
 
     violations = checker.check_file(src)
@@ -258,10 +255,7 @@ def test_repo_environment_leakage_findings_are_zero() -> None:
         for lineno, msg, line in checker.check_file(path)
     ]
 
-    assert not violations, (
-        "test-environment-leakage findings remain:\n"
-        + "\n".join(
-            f"{path.relative_to(root)}:{lineno}: {msg} -> `{line}`"
-            for path, lineno, msg, line in violations
-        )
+    assert not violations, "test-environment-leakage findings remain:\n" + "\n".join(
+        f"{path.relative_to(root)}:{lineno}: {msg} -> `{line}`"
+        for path, lineno, msg, line in violations
     )

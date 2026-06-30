@@ -324,9 +324,7 @@ class TestEnvironmentLeakageVisitor(ast.NodeVisitor):
                 continue
             self.visit(stmt)
 
-    def _check_fixture_yield_cleanup(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> None:
+    def _check_fixture_yield_cleanup(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         if not _is_fixture(node):
             return
         for idx, stmt in enumerate(node.body):
