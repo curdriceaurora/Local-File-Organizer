@@ -75,7 +75,7 @@ class VSCodeIntegration(Integration):
             "metadata": metadata or {},
             "created_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
-        with output.open("a", encoding="utf-8") as handle:  # noqa: safedir-required  # VSCode integration — output path is an internal workspace file
+        with output.open("a", encoding="utf-8") as handle:  # noqa: safedir-required, atomic-write  # VSCode integration — output path is an internal workspace file
             handle.write(json.dumps(payload, sort_keys=True) + "\n")
         return True
 

@@ -25,6 +25,31 @@ ALLOWED_PATHS = {
 }
 
 
+def _is_write_mode(node: ast.Call, positional_index: int) -> bool:
+    """Check if the call node uses a write, append, or exclusive mode.
+
+    Inspects both positional arguments at the specified index and keyword
+    arguments for 'mode'. Returns True if any write-mode character ('w', 'a',
+    'x', or '+') is present.
+    """
+    # Check positional args
+    if len(node.args) > positional_index:
+        mode_arg = node.args[positional_index]
+        if isinstance(mode_arg, ast.Constant) and isinstance(mode_arg.value, str):
+            if any(char in mode_arg.value for char in "wax+"):
+                return True
+    # Check keyword args (mode=...)
+    for kw in node.keywords:
+        if (
+            kw.arg == "mode"
+            and isinstance(kw.value, ast.Constant)
+            and isinstance(kw.value.value, str)
+        ):
+            if any(char in kw.value.value for char in "wax+"):
+                return True
+    return False
+
+
 class AtomicWriteVisitor(ast.NodeVisitor):
     """AST visitor to find raw file write operations."""
 
@@ -34,29 +59,18 @@ class AtomicWriteVisitor(ast.NodeVisitor):
         self.violations: list[tuple[int, str, str]] = []
 
     def visit_Call(self, node: ast.Call) -> None:
+        """Visit Call AST nodes to inspect write operations."""
         # 1. Check for built-in open() with write/append/exclusive modes
         if isinstance(node.func, ast.Name) and node.func.id == "open":
-            is_write = False
-            # Check positional args (second arg is usually the mode)
-            if len(node.args) >= 2:
-                mode_arg = node.args[1]
-                if isinstance(mode_arg, ast.Constant) and isinstance(mode_arg.value, str):
-                    if any(char in mode_arg.value for char in "wax+"):
-                        is_write = True
-            # Check keyword args (mode=...)
-            for kw in node.keywords:
-                if (
-                    kw.arg == "mode"
-                    and isinstance(kw.value, ast.Constant)
-                    and isinstance(kw.value.value, str)
-                ):
-                    if any(char in kw.value.value for char in "wax+"):
-                        is_write = True
-
-            if is_write:
+            if _is_write_mode(node, positional_index=1):
                 self.add_violation(node, "raw open() with write/append/exclusive mode")
 
-        # 2. Check for Path.write_text() or Path.write_bytes()
+        # 2. Check for Path.open() with write/append/exclusive modes
+        elif isinstance(node.func, ast.Attribute) and node.func.attr == "open":
+            if _is_write_mode(node, positional_index=0):
+                self.add_violation(node, "raw Path.open() with write/append/exclusive mode")
+
+        # 3. Check for Path.write_text() or Path.write_bytes()
         elif isinstance(node.func, ast.Attribute) and node.func.attr in {
             "write_text",
             "write_bytes",
@@ -66,6 +80,7 @@ class AtomicWriteVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def add_violation(self, node: ast.AST, message: str) -> None:
+        """Record a raw file write violation if not suppressed by noqa."""
         lineno = node.lineno
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
