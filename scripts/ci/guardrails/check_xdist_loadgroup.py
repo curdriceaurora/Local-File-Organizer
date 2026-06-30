@@ -20,54 +20,155 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
     from suppressions import has_targeted_noqa
 
 
-def _calls_getbasetemp(node: ast.AST) -> bool:
+def _calls_getbasetemp(node: ast.AST, wrapper_names: frozenset[str] = frozenset()) -> bool:
+    """Return True if `node` calls `.getbasetemp()` directly or via a known wrapper name."""
     for child in ast.walk(node):
-        if (
-            isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Attribute)
-            and child.func.attr == "getbasetemp"
-        ):
+        if not isinstance(child, ast.Call):
+            continue
+        if isinstance(child.func, ast.Attribute) and child.func.attr == "getbasetemp":
+            return True
+        if isinstance(child.func, ast.Name) and child.func.id in wrapper_names:
+            return True
+        if isinstance(child.func, ast.Attribute) and child.func.attr in wrapper_names:
             return True
     return False
 
 
-def _has_xdist_group_marker(decorators: list[ast.expr]) -> bool:
+def _collect_wrapper_names(tree: ast.AST) -> frozenset[str]:
+    """Find same-file functions/methods that call getbasetemp() directly,
+    then expand to functions that call those wrappers, fixed-point style,
+    so chained helpers are also caught. Same-named defs in different scopes
+    (e.g. two classes with a like-named method) are tracked separately so one
+    doesn't shadow and silently drop another."""
+    defs_by_name: dict[str, list[ast.AST]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defs_by_name.setdefault(node.name, []).append(node)
+
+    wrapper_names: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for name, nodes in defs_by_name.items():
+            if name in wrapper_names:
+                continue
+            if any(_calls_getbasetemp(node, frozenset(wrapper_names)) for node in nodes):
+                wrapper_names.add(name)
+                changed = True
+    return frozenset(wrapper_names)
+
+
+def _has_xdist_group_marker(
+    decorators: list[ast.expr],
+    mark_aliases: frozenset[str] = frozenset(),
+    xdist_group_aliases: frozenset[str] = frozenset(),
+) -> bool:
+    """Return True if any decorator expr is an `xdist_group` marker, recognizing
+    `pytest.mark.xdist_group`, aliased `mark` imports, and aliased `xdist_group` imports."""
     for dec in decorators:
         call = dec if isinstance(dec, ast.Call) else None
         func = call.func if call is not None else dec
         if (
             isinstance(func, ast.Attribute)
             and func.attr == "xdist_group"
-            and isinstance(func.value, ast.Attribute)
-            and func.value.attr == "mark"
+            and (
+                (isinstance(func.value, ast.Attribute) and func.value.attr == "mark")
+                or (isinstance(func.value, ast.Name) and func.value.id in mark_aliases)
+            )
         ):
+            return True
+        if isinstance(func, ast.Name) and func.id in xdist_group_aliases:
             return True
     return False
 
 
+def _collect_mark_aliases(tree: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
+    """Track `from pytest import mark` and `from pytest.mark import xdist_group`
+    aliases so decorator/pytestmark detection isn't fooled by import style."""
+    mark_aliases: set[str] = set()
+    xdist_group_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module == "pytest":
+            for alias in node.names:
+                if alias.name == "mark":
+                    mark_aliases.add(alias.asname or alias.name)
+        elif node.module == "pytest.mark":
+            for alias in node.names:
+                if alias.name == "xdist_group":
+                    xdist_group_aliases.add(alias.asname or alias.name)
+    return frozenset(mark_aliases), frozenset(xdist_group_aliases)
+
+
+def _pytestmark_exprs(body: list[ast.stmt]) -> list[ast.expr]:
+    """Return marker expressions assigned via a `pytestmark = [...]` (or bare)
+    statement in a module or class body."""
+    exprs: list[ast.expr] = []
+    for stmt in body:
+        if not isinstance(stmt, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == "pytestmark" for target in stmt.targets
+        ):
+            continue
+        value = stmt.value
+        if isinstance(value, (ast.List, ast.Tuple)):
+            exprs.extend(value.elts)
+        else:
+            exprs.append(value)
+    return exprs
+
+
 class _Visitor(ast.NodeVisitor):
-    def __init__(self, lines: list[str]) -> None:
+    """Walks a test module, flagging test functions that reach `getbasetemp()`
+    (directly or via a wrapper) without an applicable `xdist_group` marker."""
+
+    def __init__(
+        self,
+        lines: list[str],
+        wrapper_names: frozenset[str] = frozenset(),
+        mark_aliases: frozenset[str] = frozenset(),
+        xdist_group_aliases: frozenset[str] = frozenset(),
+        module_has_marker: bool = False,
+    ) -> None:
         self.lines = lines
+        self.wrapper_names = wrapper_names
+        self.mark_aliases = mark_aliases
+        self.xdist_group_aliases = xdist_group_aliases
+        self.module_has_marker = module_has_marker
         self.violations: list[tuple[int, str]] = []
         self._class_has_marker: list[bool] = []
 
+    def _has_marker(self, exprs: list[ast.expr]) -> bool:
+        """Return True if any of `exprs` (decorators or pytestmark entries) is an
+        xdist_group marker, given this visitor's collected import aliases."""
+        return _has_xdist_group_marker(exprs, self.mark_aliases, self.xdist_group_aliases)
+
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self._class_has_marker.append(_has_xdist_group_marker(node.decorator_list))
+        """Track whether the enclosing class carries an xdist_group marker (via
+        decorator or class-level pytestmark) for nested test functions."""
+        class_marker = self._has_marker(node.decorator_list) or self._has_marker(
+            _pytestmark_exprs(node.body)
+        )
+        self._class_has_marker.append(class_marker)
         self.generic_visit(node)
         self._class_has_marker.pop()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """Check this function for the violation, then recurse into nested defs."""
         self._check_function(node)
         self.generic_visit(node)
 
     def _check_function(self, node: ast.FunctionDef) -> None:
+        """Record a violation if `node` is an unmarked test reaching getbasetemp()."""
         if not node.name.startswith("test_"):
             return
-        if not _calls_getbasetemp(node):
+        if not _calls_getbasetemp(node, self.wrapper_names):
             return
-        func_has_marker = _has_xdist_group_marker(node.decorator_list)
+        func_has_marker = self._has_marker(node.decorator_list)
         class_has_marker = any(self._class_has_marker)
-        if func_has_marker or class_has_marker:
+        if func_has_marker or class_has_marker or self.module_has_marker:
             return
 
         line_idx = node.lineno - 1
@@ -101,7 +202,18 @@ def check_file(filepath: Path) -> list[tuple[int, str]]:
         print(f"Syntax error in {filepath}: {exc}", file=sys.stderr)
         return []
 
-    visitor = _Visitor(lines)
+    wrapper_names = _collect_wrapper_names(tree)
+    mark_aliases, xdist_group_aliases = _collect_mark_aliases(tree)
+    module_has_marker = _has_xdist_group_marker(
+        _pytestmark_exprs(tree.body), mark_aliases, xdist_group_aliases
+    )
+    visitor = _Visitor(
+        lines,
+        wrapper_names,
+        mark_aliases,
+        xdist_group_aliases,
+        module_has_marker,
+    )
     visitor.visit(tree)
     return visitor.violations
 
