@@ -21,6 +21,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
 
 
 def _calls_getbasetemp(node: ast.AST, wrapper_names: frozenset[str] = frozenset()) -> bool:
+    """Return True if `node` calls `.getbasetemp()` directly or via a known wrapper name."""
     for child in ast.walk(node):
         if not isinstance(child, ast.Call):
             continue
@@ -60,6 +61,8 @@ def _has_xdist_group_marker(
     mark_aliases: frozenset[str] = frozenset(),
     xdist_group_aliases: frozenset[str] = frozenset(),
 ) -> bool:
+    """Return True if any decorator expr is an `xdist_group` marker, recognizing
+    `pytest.mark.xdist_group`, aliased `mark` imports, and aliased `xdist_group` imports."""
     for dec in decorators:
         call = dec if isinstance(dec, ast.Call) else None
         func = call.func if call is not None else dec
@@ -116,6 +119,9 @@ def _pytestmark_exprs(body: list[ast.stmt]) -> list[ast.expr]:
 
 
 class _Visitor(ast.NodeVisitor):
+    """Walks a test module, flagging test functions that reach `getbasetemp()`
+    (directly or via a wrapper) without an applicable `xdist_group` marker."""
+
     def __init__(
         self,
         lines: list[str],
@@ -133,9 +139,13 @@ class _Visitor(ast.NodeVisitor):
         self._class_has_marker: list[bool] = []
 
     def _has_marker(self, exprs: list[ast.expr]) -> bool:
+        """Return True if any of `exprs` (decorators or pytestmark entries) is an
+        xdist_group marker, given this visitor's collected import aliases."""
         return _has_xdist_group_marker(exprs, self.mark_aliases, self.xdist_group_aliases)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Track whether the enclosing class carries an xdist_group marker (via
+        decorator or class-level pytestmark) for nested test functions."""
         class_marker = self._has_marker(node.decorator_list) or self._has_marker(
             _pytestmark_exprs(node.body)
         )
@@ -144,10 +154,12 @@ class _Visitor(ast.NodeVisitor):
         self._class_has_marker.pop()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """Check this function for the violation, then recurse into nested defs."""
         self._check_function(node)
         self.generic_visit(node)
 
     def _check_function(self, node: ast.FunctionDef) -> None:
+        """Record a violation if `node` is an unmarked test reaching getbasetemp()."""
         if not node.name.startswith("test_"):
             return
         if not _calls_getbasetemp(node, self.wrapper_names):
