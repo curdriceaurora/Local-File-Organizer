@@ -69,6 +69,16 @@ pre-commit install
 | **codespell** | Spelling consistency | Typos, spelling inconsistencies |
 | **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
 | **pytest** (multiple) | CI guardrails, web UI, websocket tests | Test failures block commit |
+| **diff-cover** | Changed-line coverage gate (≥80%) | New/modified lines not covered by tests |
+
+> **Note — `diff-cover` and git history**: The `diff-cover` hook computes a
+> merge base against `origin/main`, which requires full git history.  If you
+> cloned with `--depth 1` (a shallow clone), the hook gracefully skips with a
+> warning rather than blocking the commit.  To enable it, run:
+>
+> ```bash
+> git fetch --unshallow
+> ```
 
 **Pre-PR Orchestration** (via `bash scripts/dev/pre-commit-validation.sh`):
 
