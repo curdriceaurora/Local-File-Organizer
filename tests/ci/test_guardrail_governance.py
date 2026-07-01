@@ -122,6 +122,26 @@ def test_contributing_points_to_guardrail_workflow() -> None:
     assert "canonical pre-PR guardrail orchestrator" in source
 
 
+def _parse_rail_status_table(source: str) -> dict[str, str]:
+    section_match = re.search(
+        r"## CI-Enforced Lint Rails\n(?P<section>.*?)(?:\n\n[A-Z#]|\Z)",
+        source,
+        flags=re.DOTALL,
+    )
+    assert section_match, "Doc must define a CI-Enforced Lint Rails section"
+
+    rows = re.findall(
+        r"^\| `([^`]+)` \| [^|]+ \| (advisory|enforced) \|$",
+        section_match.group("section"),
+        flags=re.MULTILINE,
+    )
+    names = [name for name, _ in rows]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    assert not duplicates, f"Rail status table has duplicate rows for: {duplicates}"
+
+    return {name: ("enforce" if status == "enforced" else status) for name, status in rows}
+
+
 def test_security_rail_status_table_matches_registry() -> None:
     assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
     assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
@@ -130,21 +150,7 @@ def test_security_rail_status_table_matches_registry() -> None:
     expected_modes = {rail["name"]: rail["mode"] for rail in registry["rail"]}
 
     source = SECURITY_DOC.read_text(encoding="utf-8")
-    section_match = re.search(
-        r"## CI-Enforced Lint Rails\n(?P<section>.*?)(?:\n\n[A-Z#]|\Z)",
-        source,
-        flags=re.DOTALL,
-    )
-    assert section_match, "SECURITY.md must define a CI-Enforced Lint Rails section"
-
-    table_modes = {
-        name: ("enforce" if status == "enforced" else status)
-        for name, status in re.findall(
-            r"^\| `([^`]+)` \| [^|]+ \| (advisory|enforced) \|$",
-            section_match.group("section"),
-            flags=re.MULTILINE,
-        )
-    }
+    table_modes = _parse_rail_status_table(source)
     assert table_modes == expected_modes
 
 
@@ -161,3 +167,38 @@ def test_api_compat_rules_are_not_duplicated_in_shell_orchestrator() -> None:
             "API-compat semantic policy must stay in tests/ci, not in the shell orchestrator. "
             f"Found rule id in script: {rule_id}"
         )
+
+
+def test_rail_status_table_rejects_duplicate_rows_for_same_rail() -> None:
+    source = (
+        "## CI-Enforced Lint Rails\n\n"
+        "| Rail | What it flags | Status |\n"
+        "|---|---|---|\n"
+        "| `rail-a` | thing | enforced |\n"
+        "| `rail-a` | thing again | advisory |\n"
+    )
+    with pytest.raises(AssertionError, match="duplicate"):
+        _parse_rail_status_table(source)
+
+
+def test_rail_status_table_ignores_prose_mentions_outside_table_rows() -> None:
+    source = (
+        "## CI-Enforced Lint Rails\n\n"
+        "| Rail | What it flags | Status |\n"
+        "|---|---|---|\n"
+        "| `rail-a` | thing | enforced |\n\n"
+        "Note: `rail-b` is advisory but has no table row yet.\n"
+    )
+    assert _parse_rail_status_table(source) == {"rail-a": "enforce"}
+
+
+def test_rail_status_table_detects_missing_row() -> None:
+    source = (
+        "## CI-Enforced Lint Rails\n\n"
+        "| Rail | What it flags | Status |\n"
+        "|---|---|---|\n"
+        "| `rail-a` | thing | enforced |\n"
+    )
+    table_modes = _parse_rail_status_table(source)
+    registry_modes = {"rail-a": "enforce", "rail-b": "advisory"}
+    assert table_modes != registry_modes
