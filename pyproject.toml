@@ -963,6 +963,7 @@ DEP002 = [
 "src/file_organizer/utils/cli_errors.py" = 90
 "src/file_organizer/utils/epub_enhanced.py" = 55
 "src/file_organizer/utils/file_readers.py" = 100
+"src/file_organizer/utils/file_times.py" = 69
 "src/file_organizer/utils/log_redact.py" = 100
 "src/file_organizer/utils/readers/__init__.py" = 80
 "src/file_organizer/utils/readers/_base.py" = 75

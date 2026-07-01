@@ -26,6 +26,7 @@ except ImportError:
     ollama = None  # type: ignore[assignment]
     OLLAMA_AVAILABLE = False
 
+from file_organizer.utils.file_times import creation_timestamp
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 from ..categories import PARACategory
@@ -156,14 +157,8 @@ class TemporalHeuristic(Heuristic):
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400
         days_since_accessed = (now - stat.st_atime) / 86400
-        # Cross-platform file age: use birth time if available (macOS/Windows),
-        # fall back to modification time on Linux (st_ctime is inode change time, not creation).
-        if hasattr(stat, "st_birthtime"):  # macOS
-            ref_time = stat.st_birthtime
-        elif os.name == "nt":  # Windows
-            ref_time = getattr(stat, "st_ctime", stat.st_mtime)
-        else:  # Linux — use mtime as best proxy for "last active"
-            ref_time = stat.st_mtime
+        # Cross-platform file age helper.
+        ref_time = creation_timestamp(stat)
         days_since_created = (now - ref_time) / 86400
 
         # Check for old year patterns in path (e.g., "/Projects/2020/...")
