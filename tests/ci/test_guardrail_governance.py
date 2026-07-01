@@ -186,8 +186,8 @@ def test_rail_status_table_ignores_prose_mentions_outside_table_rows() -> None:
         "## CI-Enforced Lint Rails\n\n"
         "| Rail | What it flags | Status |\n"
         "|---|---|---|\n"
-        "| `rail-a` | thing | enforced |\n\n"
-        "Note: `rail-b` is advisory but has no table row yet.\n"
+        "| `rail-a` | thing | enforced |\n"
+        "see also `rail-b`, which has no table row yet.\n"
     )
     assert _parse_rail_status_table(source) == {"rail-a": "enforce"}
 
@@ -200,5 +200,6 @@ def test_rail_status_table_detects_missing_row() -> None:
         "| `rail-a` | thing | enforced |\n"
     )
     table_modes = _parse_rail_status_table(source)
+    assert "rail-b" not in table_modes
     registry_modes = {"rail-a": "enforce", "rail-b": "advisory"}
     assert table_modes != registry_modes
