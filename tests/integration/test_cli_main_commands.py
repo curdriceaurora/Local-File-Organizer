@@ -283,6 +283,7 @@ class TestEntryPoint:
 
         _register_profile_command()  # should not raise
 
+    @pytest.mark.ci
     @patch("file_organizer.cli.main.typer.main.get_group")
     def test_register_profile_command_skips_existing_shim(self, mock_get_group) -> None:
         """The guidance shim remains authoritative if profile is already registered."""

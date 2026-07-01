@@ -180,3 +180,17 @@ def test_profile_legacy_command_accepts_extra_args():
     result = runner.invoke(app, ["profile", "list"])
     assert result.exit_code == 2
     assert "Received extra arguments: list" in result.stdout
+
+
+@pytest.mark.ci
+def test_register_profile_command_skips_when_already_registered():
+    """_register_profile_command is a no-op when 'profile' is already in commands."""
+    from file_organizer.cli.main import _register_profile_command
+
+    mock_group = MagicMock()
+    mock_group.commands = {"profile": MagicMock()}
+
+    with patch("typer.main.get_group", return_value=mock_group):
+        _register_profile_command()
+
+    mock_group.add_command.assert_not_called()
