@@ -8,8 +8,8 @@ from pathlib import Path
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import FileInfo
-from file_organizer.utils.file_times import creation_timestamp
 from file_organizer.utils import is_hidden as is_hidden
+from file_organizer.utils.file_times import creation_timestamp
 
 
 def resolve_path(path_value: str, allowed_paths: list[str] | None = None) -> Path:

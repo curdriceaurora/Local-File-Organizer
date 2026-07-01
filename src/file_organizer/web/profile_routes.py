@@ -258,7 +258,9 @@ def _resolve_avatar_for_read(user_id: str) -> Path:
         os.close(fd)
 
     try:
-        resolved = avatar_path.resolve(strict=True)
+        resolved = avatar_path.resolve(
+            strict=True
+        )  # codeql[py/path-injection]: user_id is constrained by _SAFE_USER_ID and SafeDir validation
     except OSError as exc:
         raise FileNotFoundError("Avatar not found") from exc
     if not resolved.is_relative_to(avatar_root):

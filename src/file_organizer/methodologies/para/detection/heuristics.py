@@ -26,8 +26,8 @@ except ImportError:
     ollama = None  # type: ignore[assignment]
     OLLAMA_AVAILABLE = False
 
-from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 from file_organizer.utils.file_times import creation_timestamp
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 from ..categories import PARACategory
 from ..config import AIHeuristicConfig, CategoryThresholds

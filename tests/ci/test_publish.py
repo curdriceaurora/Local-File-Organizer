@@ -37,8 +37,8 @@ class TestPublishConfig:
     def test_default_config_values(self) -> None:
         """Default config has standard PyPI URLs."""
         config = PublishConfig()
-        assert config.pypi_url == PublishConfig.pypi_url
-        assert config.test_pypi_url == PublishConfig.test_pypi_url
+        assert config.pypi_url == "https://upload.pypi.org/legacy/"
+        assert config.test_pypi_url == "https://test.pypi.org/legacy/"
 
     def test_default_token_env_var(self) -> None:
         """Default config uses PYPI_API_TOKEN env var."""

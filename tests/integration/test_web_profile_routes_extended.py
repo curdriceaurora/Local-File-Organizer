@@ -289,9 +289,12 @@ class TestProfileAvatar:
     def test_avatar_found_returns_200(self, profile_client: TestClient, tmp_path: Path) -> None:
         avatar_file = tmp_path / "test-avatar-user.png"
         avatar_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
-        with patch(
-            "file_organizer.web.profile_routes._avatar_path",
-            return_value=avatar_file,
+        with (
+            patch("file_organizer.web.profile_routes._AVATAR_DIR", tmp_path),
+            patch(
+                "file_organizer.web.profile_routes._avatar_path",
+                return_value=avatar_file,
+            ),
         ):
             r = profile_client.get("/ui/profile/avatar/test-avatar-user")
         assert r.status_code == 200

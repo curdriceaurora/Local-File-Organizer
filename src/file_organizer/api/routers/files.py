@@ -155,6 +155,7 @@ def list_files(
     elif sort_by == "size":
         files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
     elif sort_by == "created":
+
         def _creation_key(p: Path) -> float:
             """Sort key returning the file's creation time for ordering results."""
             return creation_timestamp(p.stat())
