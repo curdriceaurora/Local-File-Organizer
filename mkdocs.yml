@@ -91,7 +91,7 @@ nav:
       - File Management: web-ui/file-management.md
       - Organization Workflows: web-ui/organization.md
       - Analysis & Search: web-ui/analysis-search.md
-      - Settings & Configuration: web-ui/settings.md
+      - Settings & Profile: web-ui/settings.md
   - Setup & AI Providers:
       - AI Providers: setup/ai-providers.md
       - Models: setup/models.md

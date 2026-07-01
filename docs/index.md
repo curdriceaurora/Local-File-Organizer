@@ -12,14 +12,14 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
     - [Web UI Quick Start](web-ui/getting-started.md)
     - [CLI Reference](cli-reference.md)
 
-=== "🖥️ Web Interface"
+=== "🖥️ Web UI & Profile"
 
-    **Using the web browser interface?** Learn how to use all features.
+    **Using the web browser interface?** Start with implemented routes and surfaces.
 
     - [File Management](web-ui/file-management.md)
     - [Organization Workflows](web-ui/organization.md)
     - [Analysis & Search](web-ui/analysis-search.md)
-    - [Settings & Configuration](web-ui/settings.md)
+    - [Settings & Profile](web-ui/settings.md)
 
 === "🧭 Interfaces & Copilot"
 
