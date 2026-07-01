@@ -79,7 +79,9 @@ pip install -e ".[desktop]"
 
 ```bash
 ollama serve &
-file-organizer-desktop
+file-organizer desktop   # preferred
+# fo desktop             # short alias
+# file-organizer-desktop # compatibility script (still available)
 ```
 
 A native OS window opens automatically — no browser required.
@@ -259,45 +261,28 @@ For external integrations:
 
 ## Web Interface Overview
 
-Once logged in, the web interface has these main sections:
+Use the web interface at:
 
-### Dashboard
+```text
+http://localhost:8000/ui/
+```
 
-- Overview of recent activity
-- Quick access to main features
-- Storage statistics
+On first run, incomplete setup redirects to:
 
-### File Browser
+```text
+http://localhost:8000/ui/setup
+```
 
-- Browse and organize files
-- Upload new files
-- View file properties
+Current top navigation surfaces:
 
-### Organization
+- Home
+- Files
+- Organize
+- Marketplace
+- Settings
+- Profile
 
-- Select methodology
-- Configure options
-- Start organization jobs
-- Monitor progress
-
-### Analysis
-
-- Duplicate detection
-- Storage analysis
-- Metadata extraction
-
-### Search
-
-- Full-text search
-- Apply filters
-- Save searches
-- Export results
-
-### Settings
-
-- Workspace management
-- User preferences
-- API configuration
+Use `/docs` and `/redoc` for API documentation.
 
 ## Using the CLI
 

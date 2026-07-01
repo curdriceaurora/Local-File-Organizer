@@ -102,8 +102,10 @@ file-organizer organize ./Downloads ./Organized --dry-run
 # Launch the TUI
 file-organizer tui
 
-# Launch the native desktop window
-file-organizer-desktop
+# Launch the native desktop window (preferred unified command)
+file-organizer desktop
+# fo desktop
+# file-organizer-desktop  # compatibility script
 ```
 
 ### With OpenAI or compatible API

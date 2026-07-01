@@ -413,6 +413,7 @@ file-organizer serve --host 0.0.0.0 --port 9000
 ```
 
 Then open `http://localhost:8000/ui/` in your browser.
+If setup is incomplete, the web UI redirects to `http://localhost:8000/ui/setup`.
 
 ## Desktop UI
 
@@ -423,9 +424,13 @@ File Organizer includes a native desktop window application for managing files.
 ```bash
 # Launch with default settings
 file-organizer desktop
+# fo desktop
 
 # Specify custom window properties
 file-organizer desktop --title "My File Organizer" --width 1024 --height 768
+
+# Compatibility script (still available)
+file-organizer-desktop
 ```
 
 ## Project Documentation
