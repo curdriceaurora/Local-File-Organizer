@@ -21,6 +21,15 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
     - [Analysis & Search](web-ui/analysis-search.md)
     - [Settings & Configuration](web-ui/settings.md)
 
+=== "🧭 Interfaces & Copilot"
+
+    **Prefer desktop or terminal workflows?** Jump directly to interface-specific guides.
+
+    - [Terminal UI Guide](tui.md)
+    - [Desktop App Guide](desktop-app.md)
+    - [CLI Reference](cli-reference.md)
+    - [Copilot Chat & Assistant Commands](cli-reference.md)
+
 === "📚 API Reference"
 
     **Building integrations?** Use our REST API.
@@ -82,6 +91,8 @@ File Organizer processes **48+ file formats** including:
 ### User Guides
 
 - [Web UI Guide](web-ui/index.md) - Browser-based file management
+- [Terminal UI Guide](tui.md) - Keyboard-driven terminal interface
+- [Desktop App Guide](desktop-app.md) - Native OS desktop window
 - [Getting Started](getting-started.md) - Initial setup and overview
 - [CLI Reference](cli-reference.md) - Command-line interface guide
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
@@ -91,21 +102,39 @@ File Organizer processes **48+ file formats** including:
 - [AI Provider Setup](setup/ai-providers.md) - Configure Ollama, OpenAI, Claude, and more
 - [Dependencies](setup/dependencies.md) - Installation and dependencies
 - [Models](setup/models.md) - AI model configuration
+- [Audio & Video Processing](setup/audio-video.md) - Media analysis prerequisites and setup
 
 ### API & Integration
 
 - [API Reference](api/index.md) - Complete REST API documentation
 - [Authentication](api/authentication.md) - API key management
 - [WebSocket Events](api/websocket-api.md) - Real-time updates
+- [Plugin Development](developer/plugin-development.md) - Build and extend plugin capabilities
 
 ### Deployment & Administration
 
 - [Installation](admin/installation.md) - Setup instructions
 - [Deployment Guide](admin/deployment.md) - Production deployment
 - [Configuration](admin/configuration.md) - Environment setup
+- [File Format Reference](admin/file-format-reference.md) - Supported formats and handling details
 - [Audio & Video Processing](setup/audio-video.md) - Audio and video processing setup
 - [Security](admin/security.md) - Security best practices
 - [Monitoring](admin/monitoring.md) - Health checks and logging
+
+### Configuration & Migration
+
+- [Configuration Guide](CONFIGURATION.md) - Global and profile-level settings
+- [Path Standardization & Migration](config/path-standardization.md) - XDG path migration and compatibility
+- [Path Deprecation Notice](config/deprecation-notice.md) - Legacy path and config deprecations
+
+### CLI Feature Discoverability
+
+- [Search commands](cli-reference.md) - Pattern and semantic file search
+- [Duplicate detection (`dedupe`)](cli-reference.md) - Duplicate scan and management workflows
+- [Undo/Redo history (`history`)](cli-reference.md) - Operation history and rollback navigation
+- [Profiles (`profile`)](cli-reference.md) - Create, activate, merge, and migrate user profiles
+- [Plugin marketplace (`marketplace`)](cli-reference.md) - Discover and manage marketplace plugins
+- [Copilot assistant (`copilot`)](cli-reference.md) - Natural-language workflows in CLI/TUI contexts
 
 ### Development & Extension
 

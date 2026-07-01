@@ -18,7 +18,7 @@
 - [Features](#features)
 - [How It Works](#how-it-works)
 - [Quick Start](#quick-start)
-- [Web UI](#web-ui-preview)
+- [Web UI](#web-ui)
 - [Documentation](#documentation)
 - [Optional Feature Packs](#optional-feature-packs)
 - [Project Structure](#project-structure)
@@ -126,7 +126,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 file-organizer organize ./Downloads ./Organized --dry-run
 ```
 
-## Web UI (Preview)
+## Web UI
 
 Start the FastAPI server and open the UI:
 
@@ -138,11 +138,25 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Documentation
 
+- [Documentation Home](docs/index.md)
 - [Getting Started](docs/getting-started.md)
 - [User Guide](docs/USER_GUIDE.md)
+- [Web UI Guide](docs/web-ui/index.md)
+- [Terminal UI Guide](docs/tui.md)
 - [CLI Reference](docs/cli-reference.md)
+- [CLI Search Commands](docs/cli-reference.md)
+- [CLI Duplicate Detection (`dedupe`)](docs/cli-reference.md)
+- [CLI Undo/Redo History (`history`)](docs/cli-reference.md)
+- [CLI Profiles (`profile`)](docs/cli-reference.md)
+- [CLI Plugin Marketplace (`marketplace`)](docs/cli-reference.md)
+- [CLI Copilot Assistant (`copilot`)](docs/cli-reference.md)
 - [Desktop App Guide](docs/desktop-app.md)
+- [API Reference](docs/api/index.md)
+- [AI Provider Setup](docs/setup/ai-providers.md)
+- [Audio & Video Processing Guide](docs/setup/audio-video.md)
+- [File Format Reference](docs/admin/file-format-reference.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
+- [Path Standardization & Migration](docs/config/path-standardization.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
 ## Optional Feature Packs
