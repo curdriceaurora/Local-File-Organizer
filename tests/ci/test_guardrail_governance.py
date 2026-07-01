@@ -6,6 +6,7 @@ import re
 import shlex
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -162,14 +163,21 @@ def _parse_known_limitations_advisory_rails(source: str) -> set[str]:
     return set(re.findall(r"`([^`]+)`", remain_advisory_match.group("names")))
 
 
-def test_security_rail_status_table_matches_registry() -> None:
+@pytest.fixture
+def registry_and_doc_source() -> tuple[dict[str, Any], str]:
     assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
     assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
 
     registry = tomllib.loads(RAILS_REGISTRY.read_text(encoding="utf-8"))
-    expected_modes = {rail["name"]: rail["mode"] for rail in registry["rail"]}
-
     source = SECURITY_DOC.read_text(encoding="utf-8")
+    return registry, source
+
+
+def test_security_rail_status_table_matches_registry(
+    registry_and_doc_source: tuple[dict[str, Any], str],
+) -> None:
+    registry, source = registry_and_doc_source
+    expected_modes = {rail["name"]: rail["mode"] for rail in registry["rail"]}
     table_modes = _parse_rail_status_table(source)
     assert table_modes == expected_modes
 
@@ -225,14 +233,11 @@ def test_rail_status_table_detects_missing_row() -> None:
     assert table_modes != registry_modes
 
 
-def test_known_limitations_advisory_rails_match_registry() -> None:
-    assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
-    assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
-
-    registry = tomllib.loads(RAILS_REGISTRY.read_text(encoding="utf-8"))
+def test_known_limitations_advisory_rails_match_registry(
+    registry_and_doc_source: tuple[dict[str, Any], str],
+) -> None:
+    registry, source = registry_and_doc_source
     expected_advisory = {rail["name"] for rail in registry["rail"] if rail["mode"] == "advisory"}
-
-    source = SECURITY_DOC.read_text(encoding="utf-8")
     assert _parse_known_limitations_advisory_rails(source) == expected_advisory
 
 
