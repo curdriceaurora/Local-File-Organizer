@@ -97,6 +97,13 @@ nav:
       - Models: setup/models.md
       - Dependencies: setup/dependencies.md
       - Audio & Video Processing: setup/audio-video.md
+  - CLI Feature Discoverability:
+      - Search commands: cli-reference.md
+      - Duplicate detection (dedupe): cli-reference.md
+      - Undo/Redo history: cli-reference.md
+      - Profiles: cli-reference.md
+      - Plugin marketplace: cli-reference.md
+      - Copilot assistant: cli-reference.md
   - API Reference:
       - Overview: api/index.md
       - Error Reference: api/error-reference.md

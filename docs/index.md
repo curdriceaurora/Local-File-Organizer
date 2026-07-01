@@ -116,6 +116,7 @@ File Organizer processes **48+ file formats** including:
 - [Installation](admin/installation.md) - Setup instructions
 - [Deployment Guide](admin/deployment.md) - Production deployment
 - [Configuration](admin/configuration.md) - Environment setup
+- [File Format Reference](admin/file-format-reference.md) - Supported formats and handling details
 - [Audio & Video Processing](setup/audio-video.md) - Audio and video processing setup
 - [Security](admin/security.md) - Security best practices
 - [Monitoring](admin/monitoring.md) - Health checks and logging
