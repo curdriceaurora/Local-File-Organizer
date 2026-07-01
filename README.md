@@ -41,7 +41,7 @@
 - **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
 - **Web UI**: Browser-based interface via FastAPI and HTMX
 - **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
-- **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, profiles
+- **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, api-keys
 - **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
 
 ### Organization
@@ -147,7 +147,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 - [CLI Search Commands](docs/cli-reference.md)
 - [CLI Duplicate Detection (`dedupe`)](docs/cli-reference.md)
 - [CLI Undo/Redo History (`history`)](docs/cli-reference.md)
-- [CLI Profiles (`profile`)](docs/cli-reference.md)
+- [CLI API Keys (`api-keys`)](docs/cli-reference.md)
 - [CLI Plugin Marketplace (`marketplace`)](docs/cli-reference.md)
 - [CLI Copilot Assistant (`copilot`)](docs/cli-reference.md)
 - [Desktop App Guide](docs/desktop-app.md)

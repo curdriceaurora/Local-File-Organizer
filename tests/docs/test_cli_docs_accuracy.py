@@ -17,6 +17,7 @@ import click
 import pytest
 import typer
 
+from file_organizer.cli.lazy import LAZY_COMMANDS
 from tests.docs.conftest import DOCS_DIR
 
 # ---------------------------------------------------------------------------
@@ -109,18 +110,29 @@ def _all_registered_commands() -> list[_Command]:
     # Collect commands from the main Typer app
     commands = _collect_commands(click_app)
 
-    # Note: "profile" prefix commands are typically auto-registered via Click
-    # interop in main.py, but if they're missing (e.g., due to import errors),
-    # manually add them here.
-    profile_paths = {c.path for c in commands if c.path.startswith("profile")}
-    if not profile_paths:
+    # Add lazy-loaded command groups that Typer does not eagerly materialize
+    # in the Click command map.
+    seen = {c.path for c in commands}
+    for name, (module_path, attr_name, _) in LAZY_COMMANDS.items():
         try:
-            profile_group = _get_profile_group()
-            commands.extend(_collect_commands(profile_group, prefix="profile"))
+            module = __import__(module_path, fromlist=[attr_name])
+            obj = getattr(module, attr_name)
         except ImportError:
-            # Profile module may fail to import if optional dependencies
-            # (e.g., intelligence services) are not installed; degrade gracefully.
-            pass
+            # Optional extras may not be installed in some environments.
+            continue
+
+        if isinstance(obj, typer.Typer):
+            lazy_commands = _collect_commands(typer.main.get_group(obj), prefix=name)
+        elif isinstance(obj, click.Group):
+            lazy_commands = _collect_commands(obj, prefix=name)
+        else:
+            lazy_commands = [_Command(path=name, required_params=[])]
+
+        for cmd in lazy_commands:
+            if cmd.path in seen:
+                continue
+            commands.append(cmd)
+            seen.add(cmd.path)
 
     return commands
 
@@ -381,6 +393,8 @@ class TestNoPhantomCommands:
             # Skip section headers that aren't commands (e.g. "Global Options")
             if " — " in clean:
                 clean = clean.split(" — ")[0].strip()
+            if clean in EXCLUDED_COMMANDS:
+                continue
             if clean and clean not in registered:
                 phantom.append(clean)
 

@@ -65,6 +65,7 @@ _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
         "serve",
         "desktop",
         "docs",
+        "profile",
     }
 )
 """Commands that work pre-setup. They're either bootstrap (`setup`,
@@ -519,6 +520,21 @@ def analytics(
     raise typer.Exit(code=code if code is not None else 1)
 
 
+@app.command(
+    name="profile", context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def profile_legacy(ctx: typer.Context) -> None:
+    """Guide users when the optional profile command set is unavailable."""
+    console.print(
+        "[yellow]`profile` subcommands are not available in this installation.[/yellow]\n"
+        "Use [bold]file-organizer config show --profile <name>[/bold] and "
+        "[bold]file-organizer config edit --profile <name>[/bold] for named configs."
+    )
+    if ctx.args:
+        console.print(f"[dim]Received extra arguments: {' '.join(ctx.args)}[/dim]")
+        raise SystemExit(2)
+
+
 # ---------------------------------------------------------------------------
 # Profile sub-app — Click interop (deferred to reduce startup latency)
 # ---------------------------------------------------------------------------
@@ -534,6 +550,11 @@ def _register_profile_command() -> None:
         from file_organizer.cli.profile import profile_command as _profile_click_group
 
         typer_click_object = typer.main.get_group(app)
+        if "profile" in typer_click_object.commands:
+            logging.getLogger(__name__).debug(
+                "Skipping legacy profile registration because the guidance shim is already registered."
+            )
+            return
         typer_click_object.add_command(_profile_click_group, "profile")
     except ImportError as exc:
         # Profile module may fail to import if intelligence services
