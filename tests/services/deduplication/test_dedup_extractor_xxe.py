@@ -92,14 +92,14 @@ def test_extract_odt_fails_closed_when_defusedxml_is_missing(
 
     def fail_defusedxml_import(
         name: str,
-        globals: dict[str, object] | None = None,
-        locals: dict[str, object] | None = None,
+        globalns: dict[str, object] | None = None,
+        localns: dict[str, object] | None = None,
         fromlist: tuple[str, ...] = (),
         level: int = 0,
     ) -> object:
         if name.startswith("defusedxml"):
             raise ImportError("defusedxml intentionally unavailable")
-        return original_import(name, globals, locals, fromlist, level)
+        return original_import(name, globalns, localns, fromlist, level)
 
     monkeypatch.setattr(builtins, "__import__", fail_defusedxml_import)
 

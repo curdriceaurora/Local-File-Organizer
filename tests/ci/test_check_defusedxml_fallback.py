@@ -36,8 +36,18 @@ def test_flags_local_stdlib_xml_import(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     violations = checker.check_file(src)
-    assert len(violations) >= 1
-    assert "xml.etree.ElementTree" in violations[0][1]
+    assert violations == [
+        (
+            2,
+            "standard library import 'xml.etree.ElementTree' is unsafe",
+            "import xml.etree.ElementTree as ET",
+        ),
+        (
+            3,
+            "standard library XML parser constructed through alias is unsafe",
+            "return ET.fromstring(data)",
+        ),
+    ]
 
 
 def test_flags_defusedxml_importerror_fallback_to_stdlib_xml(tmp_path: Path) -> None:
@@ -212,6 +222,68 @@ def test_alias_tracking_does_not_cross_function_scope(tmp_path: Path) -> None:
         "def safe(json_parser):\n"
         "    ET = json_parser\n"
         "    return ET.parse('{}')\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_nested_return_does_not_mark_outer_function_as_xml_factory(tmp_path: Path) -> None:
+    src = tmp_path / "nested_return.py"
+    src.write_text(
+        "import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "def outer():\n"
+        "    def inner():\n"
+        "        return ET\n"
+        "mod = outer()\n"
+        "mod.parse('safe.json')\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_nested_binder_does_not_shadow_outer_xml_alias(tmp_path: Path) -> None:
+    src = tmp_path / "nested_binder.py"
+    src.write_text(
+        "import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "def outer():\n"
+        "    def inner():\n"
+        "        ET = object()\n"
+        "    return ET.fromstring('<x/>')\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "XML parser constructed through alias" in violations[0][1]
+
+
+def test_reassignment_clears_stale_xml_alias(tmp_path: Path) -> None:
+    src = tmp_path / "reassigned_alias.py"
+    src.write_text(
+        "import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "ET = object()\n"
+        "ET.parse('safe.json')\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_reassignment_clears_stale_dynamic_import_state(tmp_path: Path) -> None:
+    src = tmp_path / "reassigned_importlib.py"
+    src.write_text(
+        "import importlib\n"
+        "importlib = object()\n"
+        "importlib.import_module('xml.etree.ElementTree')\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []
+
+
+def test_walrus_reassignment_clears_stale_parser_alias(tmp_path: Path) -> None:
+    src = tmp_path / "walrus_reassigned_alias.py"
+    src.write_text(
+        "import xml.etree.ElementTree as ET  # noqa: defusedxml-fallback\n"
+        "if ET := object():\n"
+        "    ET.parse('safe.json')\n",
         encoding="utf-8",
     )
     assert checker.check_file(src) == []

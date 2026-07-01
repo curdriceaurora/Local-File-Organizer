@@ -67,20 +67,22 @@ class DefusedXmlVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> None:
         string_value = self._literal_string_value(node.value)
-        if string_value is not None:
-            for target in node.targets:
+        xml_module = self._stdlib_xml_dynamic_import(node.value)
+        uses_xml_alias = self._expr_uses_stdlib_xml_alias(node.value)
+        returns_xml_alias = self._returns_stdlib_xml_alias(node.value)
+
+        for target in node.targets:
+            self._clear_target_state(target)
+            if string_value is not None:
                 for name in extract_name_targets(target):
                     self.scope.string_bindings[name] = string_value
 
-        xml_module = self._stdlib_xml_dynamic_import(node.value)
         if xml_module is not None:
             for target in node.targets:
                 self.scope.stdlib_xml_aliases.update(self._target_keys(target))
             self._reported_dynamic_imports.add(id(node.value))
             self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
-        elif self._expr_uses_stdlib_xml_alias(node.value) or self._returns_stdlib_xml_alias(
-            node.value
-        ):
+        elif uses_xml_alias or returns_xml_alias:
             for target in node.targets:
                 self.scope.stdlib_xml_aliases.update(self._target_keys(target))
         self.generic_visit(node)
@@ -88,37 +90,41 @@ class DefusedXmlVisitor(ast.NodeVisitor):
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         if node.value is not None:
             string_value = self._literal_string_value(node.value)
+            xml_module = self._stdlib_xml_dynamic_import(node.value)
+            uses_xml_alias = self._expr_uses_stdlib_xml_alias(node.value)
+            returns_xml_alias = self._returns_stdlib_xml_alias(node.value)
+
+            self._clear_target_state(node.target)
             if string_value is not None:
                 for name in extract_name_targets(node.target):
                     self.scope.string_bindings[name] = string_value
 
-            xml_module = self._stdlib_xml_dynamic_import(node.value)
             if xml_module is not None:
                 self.scope.stdlib_xml_aliases.update(self._target_keys(node.target))
                 self._reported_dynamic_imports.add(id(node.value))
                 self.add_violation(
                     node, f"dynamic standard library import '{xml_module}' is unsafe"
                 )
-            elif self._expr_uses_stdlib_xml_alias(node.value) or self._returns_stdlib_xml_alias(
-                node.value
-            ):
+            elif uses_xml_alias or returns_xml_alias:
                 self.scope.stdlib_xml_aliases.update(self._target_keys(node.target))
         self.generic_visit(node)
 
     def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
         string_value = self._literal_string_value(node.value)
+        xml_module = self._stdlib_xml_dynamic_import(node.value)
+        uses_xml_alias = self._expr_uses_stdlib_xml_alias(node.value)
+        returns_xml_alias = self._returns_stdlib_xml_alias(node.value)
+
+        self._clear_target_state(node.target)
         if string_value is not None:
             for name in extract_name_targets(node.target):
                 self.scope.string_bindings[name] = string_value
 
-        xml_module = self._stdlib_xml_dynamic_import(node.value)
         if xml_module is not None:
             self.scope.stdlib_xml_aliases.update(self._target_keys(node.target))
             self._reported_dynamic_imports.add(id(node.value))
             self.add_violation(node, f"dynamic standard library import '{xml_module}' is unsafe")
-        elif self._expr_uses_stdlib_xml_alias(node.value) or self._returns_stdlib_xml_alias(
-            node.value
-        ):
+        elif uses_xml_alias or returns_xml_alias:
             self.scope.stdlib_xml_aliases.update(self._target_keys(node.target))
         self.generic_visit(node)
 
@@ -208,10 +214,7 @@ class DefusedXmlVisitor(ast.NodeVisitor):
     def _function_returns_stdlib_xml_alias(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> bool:
-        for child in ast.walk(node):
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-                if child is not node:
-                    continue
+        for child in self._walk_current_scope(node.body):
             if isinstance(child, ast.Return) and child.value is not None:
                 if self._expr_uses_stdlib_xml_alias(child.value):
                     return True
@@ -268,24 +271,52 @@ class DefusedXmlVisitor(ast.NodeVisitor):
             + ([node.args.kwarg] if node.args.kwarg else [])
         )
         binders.update(arg.arg for arg in args)
-        for child in node.body:
-            for nested in ast.walk(child):
-                if isinstance(nested, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-                    continue
-                if isinstance(nested, ast.Assign):
-                    for target in nested.targets:
-                        binders.update(extract_name_targets(target))
-                elif isinstance(nested, ast.AnnAssign):
-                    binders.update(extract_name_targets(nested.target))
-                elif isinstance(nested, ast.NamedExpr):
-                    binders.update(extract_name_targets(nested.target))
-                elif isinstance(nested, (ast.For, ast.AsyncFor)):
-                    binders.update(extract_name_targets(nested.target))
-                elif isinstance(nested, (ast.With, ast.AsyncWith)):
-                    for item in nested.items:
-                        if item.optional_vars is not None:
-                            binders.update(extract_name_targets(item.optional_vars))
+        for nested in self._walk_current_scope(node.body):
+            if isinstance(nested, ast.Assign):
+                for target in nested.targets:
+                    binders.update(extract_name_targets(target))
+            elif isinstance(nested, ast.AnnAssign):
+                binders.update(extract_name_targets(nested.target))
+            elif isinstance(nested, ast.NamedExpr):
+                binders.update(extract_name_targets(nested.target))
+            elif isinstance(nested, (ast.For, ast.AsyncFor)):
+                binders.update(extract_name_targets(nested.target))
+            elif isinstance(nested, (ast.With, ast.AsyncWith)):
+                for item in nested.items:
+                    if item.optional_vars is not None:
+                        binders.update(extract_name_targets(item.optional_vars))
         return binders
+
+    def _walk_current_scope(self, body: list[ast.stmt]) -> list[ast.AST]:
+        nodes: list[ast.AST] = []
+        stack: list[ast.AST] = list(reversed(body))
+        while stack:
+            node = stack.pop()
+            nodes.append(node)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+                continue
+            stack.extend(reversed(list(ast.iter_child_nodes(node))))
+        return nodes
+
+    def _clear_target_state(self, target: ast.AST) -> None:
+        target_keys = self._target_keys(target)
+        target_names = extract_name_targets(target)
+
+        for name in target_names:
+            self.scope.string_bindings.pop(name, None)
+            self.scope.import_module_aliases.discard(name)
+            self.scope.xml_alias_factories.discard(name)
+
+        self.scope.stdlib_xml_aliases = {
+            alias
+            for alias in self.scope.stdlib_xml_aliases
+            if not self._matches_target(alias, target_keys)
+        }
+        self.scope.importlib_aliases = {
+            alias
+            for alias in self.scope.importlib_aliases
+            if not self._matches_target(alias, target_keys)
+        }
 
     def _target_keys(self, target: ast.AST) -> set[str]:
         if isinstance(target, (ast.Name, ast.Attribute)):
@@ -320,6 +351,9 @@ class DefusedXmlVisitor(ast.NodeVisitor):
 
     def _root_name(self, key: str) -> str:
         return key.split(".", maxsplit=1)[0]
+
+    def _matches_target(self, alias: str, target_keys: set[str]) -> bool:
+        return any(alias == key or alias.startswith(f"{key}.") for key in target_keys)
 
     def add_violation(self, node: ast.AST, message: str) -> None:
         lineno = node.lineno
