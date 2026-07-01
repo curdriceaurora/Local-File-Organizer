@@ -65,6 +65,7 @@ _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
         "serve",
         "desktop",
         "docs",
+        "profile",
     }
 )
 """Commands that work pre-setup. They're either bootstrap (`setup`,
@@ -517,6 +518,20 @@ def analytics(
 
     code = analytics_command(args)
     raise typer.Exit(code=code if code is not None else 1)
+
+
+@app.command(
+    name="profile", context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def profile_legacy(ctx: typer.Context) -> None:
+    """Guide users when the optional profile command set is unavailable."""
+    console.print(
+        "[yellow]`profile` subcommands are not available in this installation.[/yellow]\n"
+        "Use [bold]file-organizer config show --profile <name>[/bold] and "
+        "[bold]file-organizer config edit --profile <name>[/bold] for named configs."
+    )
+    if ctx.args:
+        console.print(f"[dim]Received extra arguments: {' '.join(ctx.args)}[/dim]")
 
 
 # ---------------------------------------------------------------------------

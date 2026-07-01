@@ -495,6 +495,7 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
   - `e2e`: full `FileOrganizer.organize()` pass with real writes in an isolated temp workspace
 - `--json` — Output results as JSON instead of a Rich table
 - `--compare PATH` — Path to baseline JSON file for regression comparison
+- `--transcribe-smoke` — Run a single end-to-end audio transcription smoke test
 
 **Output Metrics (JSON schema):**
 
@@ -902,6 +903,42 @@ Options:
 - `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
 - `--max-files INTEGER` — Maximum files to scan (default: 500)
 
+#### `rules apply`
+
+Apply enabled rules to files in a directory.
+
+```bash
+file-organizer rules apply DIRECTORY [OPTIONS]
+```
+
+**Arguments:**
+- `DIRECTORY` — Directory to apply rules against
+
+**Options:**
+- `--set, -s TEXT` — Rule set to evaluate (default: `default`)
+- `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
+- `--max-files INTEGER` — Maximum files to scan (default: 500)
+- `--dry-run` — Preview actions only
+
+#### `rules watch`
+
+Continuously apply enabled rules to a directory.
+
+```bash
+file-organizer rules watch DIRECTORY [OPTIONS]
+```
+
+**Arguments:**
+- `DIRECTORY` — Directory to watch/apply rules against
+
+**Options:**
+- `--set, -s TEXT` — Rule set to evaluate (default: `default`)
+- `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
+- `--max-files INTEGER` — Maximum files to scan (default: 500)
+- `--interval FLOAT` — Seconds between apply runs (default: `10.0`)
+- `--once` — Run one watch cycle and exit
+- `--dry-run` — Preview actions only
+
 #### `rules export`
 
 Export a rule set to YAML.
@@ -1114,40 +1151,57 @@ Interact with a running File Organizer API server.
 Check API server health.
 
 ```bash
-file-organizer api health [--base-url URL] [--json]
+file-organizer api health [OPTIONS]
 ```
+
+**Options:**
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api login`
 
 Authenticate and store access tokens.
 
 ```bash
-file-organizer api login [--base-url URL] [--save-token PATH]
+file-organizer api login [OPTIONS]
 ```
 
 **Options:**
-- `--username` — Login username (prompted if not provided)
-- `--password` — Login password (prompted securely if not provided)
+- `--username TEXT` — Login username (required; prompted interactively)
+- `--password TEXT` — Login password (required; prompted securely)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--save-token PATH` — Optional path to save token JSON
+- `--json` — Print JSON output
 
 #### `api me`
 
 Show current authenticated user.
 
 ```bash
-file-organizer api me [--base-url URL] [--token TOKEN]
+file-organizer api me [OPTIONS]
 ```
+
+**Options:**
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api logout`
 
 Invalidate the current session token.
 
 ```bash
-file-organizer api logout [--base-url URL] [--token TOKEN]
+file-organizer api logout [OPTIONS]
 ```
 
 **Options:**
-- `--token` — Bearer token
-- `--refresh-token` — Refresh token to revoke
+- `--token TEXT` — Bearer token (required)
+- `--refresh-token TEXT` — Refresh token to revoke (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
 
 #### `api files`
 
@@ -1161,29 +1215,49 @@ file-organizer api files PATH [OPTIONS]
 - `PATH` — Directory to list
 
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--recursive/--no-recursive` — Include nested files (default: `--no-recursive`)
+- `--include-hidden/--no-include-hidden` — Include hidden files (default: `--no-include-hidden`)
+- `--limit INTEGER` — Maximum rows (default: `100`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api system-status`
 
 Show system status from the API server.
 
 ```bash
-file-organizer api system-status [--base-url URL]
+file-organizer api system-status [PATH] [OPTIONS]
 ```
 
+**Arguments:**
+- `PATH` — Path to inspect (default: `.`)
+
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api system-stats`
 
 Show system statistics from the API server.
 
 ```bash
-file-organizer api system-stats [--base-url URL]
+file-organizer api system-stats [PATH] [OPTIONS]
 ```
 
+**Arguments:**
+- `PATH` — Directory to analyze (default: `.`)
+
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--max-depth INTEGER` — Optional max depth
+- `--use-cache/--no-use-cache` — Use server-side cache (default: `--use-cache`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 **Default base URL:** `http://localhost:8000`
 
@@ -1194,6 +1268,31 @@ file-organizer api health
 file-organizer api health --base-url http://myserver:8000
 file-organizer api login
 file-organizer api system-status
+```
+
+---
+
+### `api-keys` — Local API Key Generation
+
+Generate and store local API keys.
+
+#### `api-keys generate`
+
+Generate a secure API key and print its bcrypt hash.
+
+```bash
+file-organizer api-keys generate --output PATH [--prefix PREFIX]
+```
+
+**Options:**
+- `--output, -o PATH` — Path to safely store the generated API key
+- `--prefix TEXT` — API key prefix (default: `fo`)
+
+**Examples:**
+
+```bash
+file-organizer api-keys generate -o api-key.txt
+file-organizer api-keys generate -o api-key.txt --prefix fo
 ```
 
 ---
@@ -1228,215 +1327,15 @@ file-organizer update rollback
 
 ---
 
-### `profile` — User Preference Profiles
+### `profile` — Legacy compatibility shim
 
-Manage user preference profiles (powered by the intelligence/learning system).
-
-#### `profile list`
-
-List all available profiles.
+`profile` is currently a compatibility command that prints guidance and exits.
+Use `file-organizer config show --profile <name>` and
+`file-organizer config edit --profile <name>` for named configuration profiles.
 
 ```bash
-file-organizer profile list
+file-organizer profile
 ```
-
-#### `profile create`
-
-Create a new profile.
-
-```bash
-file-organizer profile create PROFILE_NAME [OPTIONS]
-```
-
-#### `profile activate`
-
-Load and activate a profile.
-
-```bash
-file-organizer profile activate PROFILE_NAME
-```
-
-#### `profile delete`
-
-Delete a profile.
-
-```bash
-file-organizer profile delete PROFILE_NAME
-```
-
-#### `profile export`
-
-Export a profile to a file.
-
-```bash
-file-organizer profile export PROFILE_NAME [--output FILE]
-```
-
-#### `profile import`
-
-Import a profile from a file.
-
-```bash
-file-organizer profile import FILE [OPTIONS]
-```
-
-**Arguments:**
-- `FILE` — Profile file to import
-
-#### `profile current`
-
-Show the currently active profile and its statistics.
-
-```bash
-file-organizer profile current
-```
-
-Displays:
-- Active profile name
-- Description and version
-- Creation and update timestamps
-- Statistics (global preferences, directory-specific settings, learned patterns, confidence data)
-
-#### `profile merge`
-
-Merge multiple profiles into one.
-
-```bash
-file-organizer profile merge PROFILES... [OPTIONS]
-```
-
-Arguments:
-- `PROFILES...` — Profile names to merge (requires at least 2)
-
-Options:
-- `--output, -o TEXT` — Name for merged profile (required)
-- `--strategy, -s TEXT` — Merge strategy for conflicts: `recent`, `frequent`, `confident`, `first`, `last` (default: `confident`)
-- `--show-conflicts` — Show conflicts before merging
-
-**Examples:**
-
-```bash
-file-organizer profile merge work personal --output merged --strategy confident
-
-# Show conflicts before merging
-file-organizer profile merge work personal --output merged --show-conflicts
-```
-
-#### `profile migrate`
-
-Migrate a profile to a different version.
-
-```bash
-file-organizer profile migrate PROFILE_NAME [OPTIONS]
-```
-
-Arguments:
-- `PROFILE_NAME` — Name of the profile to migrate
-
-Options:
-- `--to-version TEXT` — Target version (required)
-- `--no-backup` — Skip backup before migration
-
-**Examples:**
-
-```bash
-file-organizer profile migrate work --to-version 2.0
-
-# Migrate without creating backup
-file-organizer profile migrate work --to-version 2.0 --no-backup
-```
-
-#### `profile validate`
-
-Validate a profile for integrity and compatibility.
-
-```bash
-file-organizer profile validate PROFILE_NAME
-```
-
-Arguments:
-- `PROFILE_NAME` — Name of the profile to validate
-
-**Examples:**
-
-```bash
-file-organizer profile validate work
-```
-
----
-
-### `profile template` — Profile Templates
-
-Manage profile templates for common configurations.
-
-#### `profile template list`
-
-List all available templates.
-
-```bash
-file-organizer profile template list
-```
-
-Displays all available templates with their descriptions.
-
-#### `profile template preview`
-
-Preview a template before applying it.
-
-```bash
-file-organizer profile template preview TEMPLATE_NAME
-```
-
-Arguments:
-- `TEMPLATE_NAME` — Name of the template to preview
-
-Displays:
-- Template description
-- Preferences summary (naming patterns, folder mappings, category overrides)
-- Learned patterns and confidence levels
-
-**Examples:**
-
-```bash
-file-organizer profile template preview default
-file-organizer profile template preview minimal
-```
-
-#### `profile template apply`
-
-Create a profile from a template.
-
-```bash
-file-organizer profile template apply TEMPLATE_NAME PROFILE_NAME [OPTIONS]
-```
-
-Arguments:
-- `TEMPLATE_NAME` — Name of the template to apply
-- `PROFILE_NAME` — Name for the new profile
-
-Options:
-- `--activate, -a` — Activate the profile immediately after creation
-
-**Examples:**
-
-```bash
-file-organizer profile template apply default myprofile
-
-# Apply template and activate it
-file-organizer profile template apply minimal myprofile --activate
-```
-
----
-
-**General Profile Examples:**
-
-```bash
-file-organizer profile list
-file-organizer profile create work --description "Work files config"
-file-organizer profile activate work
-```
-
-> **Note:** The `profile` command requires the intelligence/learning optional dependencies (`pip install -e ".[all]"`). It degrades gracefully if not installed.
 
 ---
 
@@ -1517,7 +1416,7 @@ file-organizer autotag batch ~/Documents --pattern "*.pdf" --json
 
 ---
 
-## `fo desktop` — Native Desktop Window
+## `desktop` — Native Desktop Window
 
 Launch the File Organizer desktop application as a native OS window powered by
 pywebview.
@@ -1566,7 +1465,7 @@ See [Desktop App Guide](desktop-app.md) for full documentation.
 
 ---
 
-## `fo docs` — Project Documentation
+## `docs` — Project Documentation
 
 Build or serve the local project documentation using mkdocs.
 

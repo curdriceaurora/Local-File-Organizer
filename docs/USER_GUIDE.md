@@ -91,7 +91,7 @@ File Organizer provides two equivalent entrypoints: `file-organizer` and the sho
 | `rules` | Manage custom organization rules |
 | `suggest` | Get smart file placement suggestions |
 | `update` | Check for and install application updates |
-| `profile` | Manage named configuration profiles |
+| `api-keys` | Generate local API keys |
 | `marketplace` | Browse and install community plugins |
 | `benchmark` | Run performance benchmarks |
 | `api` | Start the REST API server |
@@ -366,41 +366,22 @@ View storage analytics, file distribution, and organization metrics.
 file-organizer analytics
 ```
 
-## Profiles
+## Named Configuration Profiles
 
-Profiles allow you to save and switch between different configuration sets. This is useful for managing separate environments (e.g., work vs. personal).
-
-### Managing Profiles
+Use the `config` command to inspect or edit named profiles:
 
 ```bash
-# List all profiles
-file-organizer profile list
+# Show the current profile
+file-organizer config show
 
-# Show current active profile
-file-organizer profile current
+# Show a specific profile
+file-organizer config show --profile work
 
-# Create a new profile
-file-organizer profile create work
-
-# Activate a profile
-file-organizer profile activate work
-
-# Delete a profile
-file-organizer profile delete old-profile
+# Edit a specific profile
+file-organizer config edit --profile work --temperature 0.7
 ```
 
-### Exporting and Importing
-
-```bash
-# Export a profile (--output is required)
-file-organizer profile export work --output work-profile.json
-
-# Import a profile from a JSON file
-file-organizer profile import work-profile.json
-
-# Merge two or more profiles into a new one (--output is required)
-file-organizer profile merge work personal --output combined
-```
+For exhaustive CLI details, see the [CLI Reference](cli-reference.md).
 
 ## Undo and Redo
 
