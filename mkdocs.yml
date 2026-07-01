@@ -82,6 +82,9 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - User Guide: USER_GUIDE.md
+  - Interfaces:
+      - Terminal UI: tui.md
+      - Desktop App: desktop-app.md
   - Web UI Guide:
       - Overview: web-ui/index.md
       - Getting Started: web-ui/getting-started.md
@@ -89,6 +92,11 @@ nav:
       - Organization Workflows: web-ui/organization.md
       - Analysis & Search: web-ui/analysis-search.md
       - Settings & Configuration: web-ui/settings.md
+  - Setup & AI Providers:
+      - AI Providers: setup/ai-providers.md
+      - Models: setup/models.md
+      - Dependencies: setup/dependencies.md
+      - Audio & Video Processing: setup/audio-video.md
   - API Reference:
       - Overview: api/index.md
       - Error Reference: api/error-reference.md
@@ -119,6 +127,10 @@ nav:
       - API Clients: developer/api-clients.md
       - Contributing: developer/contributing.md
       - Testing: developer/testing.md
+  - Configuration & Migration:
+      - Configuration Guide: CONFIGURATION.md
+      - Path Standardization & Migration: config/path-standardization.md
+      - Deprecation Notice: config/deprecation-notice.md
   - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
