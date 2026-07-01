@@ -494,9 +494,11 @@ class TestWatchLoopExecutor:
         handler = Collector()
         target.addHandler(handler)
         prev_level = target.level
+        prev_disabled = target.disabled
         target.setLevel(logging.DEBUG)
+        target.disabled = False
         prev_disable = logging.root.manager.disable
-        logging.root.manager.disable = logging.NOTSET
+        logging.disable(logging.NOTSET)
 
         try:
             orch = self._make_orchestrator()
@@ -513,8 +515,9 @@ class TestWatchLoopExecutor:
             assert any("process_file boom" in record.getMessage() for record in records)
         finally:
             target.setLevel(prev_level)
+            target.disabled = prev_disabled
             target.removeHandler(handler)
-            logging.root.manager.disable = prev_disable
+            logging.disable(prev_disable)
 
     def test_on_watch_future_done_cancelled_future_not_logged(self):
         """A cancelled watch future is discarded without touching .exception()."""
@@ -533,9 +536,11 @@ class TestWatchLoopExecutor:
         handler = Collector()
         target.addHandler(handler)
         prev_level = target.level
+        prev_disabled = target.disabled
         target.setLevel(logging.DEBUG)
+        target.disabled = False
         prev_disable = logging.root.manager.disable
-        logging.root.manager.disable = logging.NOTSET
+        logging.disable(logging.NOTSET)
 
         try:
             orch = self._make_orchestrator()
@@ -550,8 +555,9 @@ class TestWatchLoopExecutor:
             assert records == []
         finally:
             target.setLevel(prev_level)
+            target.disabled = prev_disabled
             target.removeHandler(handler)
-            logging.root.manager.disable = prev_disable
+            logging.disable(prev_disable)
 
     def test_buffer_pool_init_does_not_block_on_lifecycle_lock(self):
         """Lazy buffer-pool init must not need the lifecycle lock.

@@ -8,6 +8,7 @@ without any cloud API dependencies.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -315,7 +316,7 @@ class FeatureExtractor:
 
         now = time.time()
 
-        creation_ref = creation_timestamp(stat)
+        creation_ref = creation_timestamp(stat, platform_name=os.name)
 
         # Convert timestamps to datetime
         creation_date = datetime.fromtimestamp(creation_ref, tz=UTC)
