@@ -150,6 +150,8 @@ def _parse_known_limitations_advisory_rails(source: str) -> set[str]:
     )
     assert section_match, "Doc must define a Known Limitations section"
 
+    # "remains?" tolerates both "remain advisory" (2+ rails) and "remains advisory"
+    # (exactly 1 rail) — the count-dependent verb shouldn't need a prose rewrite.
     remain_advisory_match = re.search(
         r"remains? advisory \((?P<names>.*?)\)",
         section_match.group("section"),
@@ -239,6 +241,7 @@ def test_known_limitations_detects_newly_added_advisory_rail() -> None:
         "## Known Limitations\n\n- Two lint rails above remain advisory (`rail-a` and `rail-b`).\n"
     )
     doc_advisory = _parse_known_limitations_advisory_rails(source)
+    assert doc_advisory == {"rail-a", "rail-b"}
     registry_advisory = {"rail-a", "rail-b", "rail-c"}
     assert doc_advisory != registry_advisory
 
@@ -246,5 +249,6 @@ def test_known_limitations_detects_newly_added_advisory_rail() -> None:
 def test_known_limitations_detects_newly_promoted_enforced_rail() -> None:
     source = "## Known Limitations\n\n- One lint rail above remains advisory (`rail-a`).\n"
     doc_advisory = _parse_known_limitations_advisory_rails(source)
+    assert doc_advisory == {"rail-a"}
     registry_advisory: set[str] = set()
     assert doc_advisory != registry_advisory
