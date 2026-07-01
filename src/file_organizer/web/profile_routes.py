@@ -258,7 +258,7 @@ def _resolve_avatar_for_read(user_id: str) -> Path:
             raise FileNotFoundError("Avatar not found") from None
         if not os.path.isfile(candidate_str):
             raise FileNotFoundError("Avatar not found") from None
-        return Path(candidate_str)
+        return candidate
     except (FileNotFoundError, SymlinkRejected) as exc:
         raise FileNotFoundError("Avatar not found") from exc
     else:
