@@ -22,11 +22,13 @@ state_dir = path_manager.state_dir            # ~/.local/state/file-organizer (X
 cache_dir = path_manager.cache_dir            # data_dir/cache
 
 # Access specific files
-config_file = path_manager.config_file        # config_dir/config.json
+config_file = path_manager.config_file        # config_dir/config.json (low-level helper)
 preferences_file = path_manager.preferences_file  # config_dir/preferences.json
 history_db = path_manager.history_db          # data_dir/history/operations.db
 undo_redo_db = path_manager.undo_redo_db      # state_dir/undo-redo.db
 ```
+
+> Note: Profile settings managed by `ConfigManager` are persisted as `config.yaml` in the same config directory.
 
 ### XDG Base Directory Specification
 
@@ -95,16 +97,18 @@ Replace hardcoded paths with PathManager:
 
 ```python
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "file-organizer"
-config_path = DEFAULT_CONFIG_DIR / "config.json"
+config_path = DEFAULT_CONFIG_DIR / "config.yaml"
 ```
 
 **After (New):**
 
 ```python
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.path_manager import PathManager
 
 path_manager = PathManager()
-config_path = path_manager.config_file
+config_mgr = ConfigManager(config_dir=path_manager.config_dir)
+config_path = config_mgr.config_dir / "config.yaml"
 ```
 
 #### Module Integration

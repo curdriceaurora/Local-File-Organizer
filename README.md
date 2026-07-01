@@ -114,7 +114,7 @@ file-organizer desktop
 pip install -e ".[cloud]"
 
 export FO_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
+export FO_OPENAI_API_KEY=sk-...  # OPENAI_API_KEY is also accepted as fallback
 file-organizer organize ./Downloads ./Organized --dry-run
 ```
 
@@ -124,7 +124,7 @@ file-organizer organize ./Downloads ./Organized --dry-run
 pip install -e ".[claude]"
 
 export FO_PROVIDER=claude
-export ANTHROPIC_API_KEY=sk-ant-...
+export FO_CLAUDE_API_KEY=sk-ant-...  # ANTHROPIC_API_KEY is also accepted as fallback
 file-organizer organize ./Downloads ./Organized --dry-run
 ```
 
@@ -133,7 +133,7 @@ file-organizer organize ./Downloads ./Organized --dry-run
 Start the FastAPI server and open the UI:
 
 ```bash
-uvicorn file_organizer.api.main:app --reload
+file-organizer serve --reload
 ```
 
 Then visit `http://localhost:8000/ui/` for the HTMX interface.
@@ -163,20 +163,17 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Optional Feature Packs
 
-| Pack | Install Command | Features |
-|------|----------------|----------|
-| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
-| Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
-| LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
-| Audio | `pip install -e ".[audio]"` | Speech-to-text (faster-whisper, torch) |
-| Video | `pip install -e ".[video]"` | Scene detection (OpenCV, scenedetect) |
-| Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
-| Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
-| Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB formats |
-| CAD | `pip install -e ".[cad]"` | DXF and CAD format support |
-| Desktop | `pip install -e ".[desktop]"` | Native desktop window via pywebview (uvicorn + WebKit/Edge) |
-| Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
-| All | `pip install -e ".[all]"` | Everything above |
+Canonical extras matrix:
+
+- [Dependencies & Optional Extras](docs/setup/dependencies.md#optional-extras-matrix)
+
+Common installs:
+
+```bash
+pip install -e ".[parsers,web]"
+pip install -e ".[cloud,claude]"
+pip install -e ".[all]"
+```
 
 ### Audio system dependencies
 

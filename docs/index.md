@@ -1,6 +1,6 @@
 # File Organizer Documentation
 
-Welcome to the **File Organizer** documentation! A privacy-first, AI-powered local file management system that organizes files intelligently using local LLMs with zero cloud dependencies.
+Welcome to the **File Organizer** documentation! A privacy-first, AI-powered local file management system that is local-first by default, with optional cloud provider integrations when explicitly configured.
 
 ## Quick Navigation
 
@@ -58,7 +58,7 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 
 ## Key Features
 
-- 🔒 **Privacy-First**: 100% local processing, zero cloud dependencies
+- 🔒 **Privacy-First**: Local-first defaults with optional cloud provider opt-in
 - 🤖 **AI-Powered**: Uses local LLMs for intelligent file organization
 - 🎯 **Methodologies**: Supports PARA, Johnny Decimal, and custom organization systems
 - 🔍 **Smart Search**: Full-text search with filters and saved searches
@@ -100,7 +100,7 @@ File Organizer processes **48+ file formats** including:
 ### Setup
 
 - [AI Provider Setup](setup/ai-providers.md) - Configure Ollama, OpenAI, Claude, and more
-- [Dependencies](setup/dependencies.md) - Installation and dependencies
+- [Dependencies & Optional Extras](setup/dependencies.md) - Canonical extras matrix and install groups
 - [Models](setup/models.md) - AI model configuration
 - [Audio & Video Processing](setup/audio-video.md) - Media analysis prerequisites and setup
 
@@ -126,6 +126,12 @@ File Organizer processes **48+ file formats** including:
 - [Configuration Guide](CONFIGURATION.md) - Global and profile-level settings
 - [Path Standardization & Migration](config/path-standardization.md) - XDG path migration and compatibility
 - [Path Deprecation Notice](config/deprecation-notice.md) - Legacy path and config deprecations
+
+### Canonical setup references
+
+- [Optional extras matrix](setup/dependencies.md#optional-extras-matrix)
+- [Provider matrix](setup/ai-providers.md#provider-comparison)
+- [Model/provider precedence](CONFIGURATION.md#modelprovider-precedence)
 
 ### CLI Feature Discoverability
 

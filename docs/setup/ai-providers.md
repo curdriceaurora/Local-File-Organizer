@@ -38,8 +38,8 @@ File Organizer supports **5 native AI providers** for text analysis, plus **2 Op
 | **Ollama** | `ollama` | Local | Free | Easy | No (CPU works) | ✅ Yes | Default choice, beginners, general use |
 | **OpenAI** | `openai` | Cloud | Paid (API) | Easy | No | ✅ Yes | Production quality, vision tasks, cloud OK |
 | **Claude** | `claude` | Cloud | Paid (API) | Easy | No | ✅ Yes | Strong reasoning, vision analysis, cloud OK |
-| **LLaMA.cpp** | `llama_cpp` | Local | Free | Medium | No (CPU works) | ⏳ Phase 2 | Advanced users, GGUF models, offline use |
-| **MLX** | `mlx` | Local | Free | Medium | Apple Silicon only | ⏳ Phase 3 | Mac users with M1/M2/M3 chips |
+| **LLaMA.cpp** | `llama_cpp` | Local | Free | Medium | No (CPU works) | ❌ Currently unsupported | Advanced users, GGUF models, offline use |
+| **MLX** | `mlx` | Local | Free | Medium | Apple Silicon only | ❌ Currently unsupported | Mac users with M1/M2/M3 chips |
 
 ### OpenAI-Compatible Services
 
@@ -336,7 +336,7 @@ file-organizer analyze ~/Downloads
 
 #### Known Limitations
 
-- Text-only support (vision coming in Phase 2)
+- Text-only support (vision currently unsupported)
 - Requires manual GGUF model download
 - Performance varies by quantization level
 - GPU layers must be tuned for your hardware
@@ -405,7 +405,7 @@ file-organizer analyze ~/Downloads
 #### Known Limitations
 
 - **macOS with Apple Silicon only** (M1/M2/M3 chips)
-- Text-only support (vision coming in Phase 3)
+- Text-only support (vision currently unsupported)
 - Requires unified memory (8GB minimum, 16GB recommended)
 - Model is downloaded on first use
 
@@ -605,8 +605,8 @@ For `openai` and `claude` providers, use the `FO_PROVIDER` environment variable 
 Configuration priority (highest wins):
 
 1. Explicit `ModelConfig` parameters passed to `FileOrganizer` (programmatic use)
-2. Environment variables (`FO_PROVIDER`, `FO_OPENAI_*`, etc.)
-3. Configuration profile (resolved via `platformdirs.user_config_dir`)
+2. If `FO_PROVIDER` is set, provider environment variables are used (`FO_OPENAI_*`, `FO_CLAUDE_*`, etc.)
+3. If `FO_PROVIDER` is not set, configuration profile is used (`FO_PROFILE`, default profile fallback)
 4. Hardcoded defaults (Ollama)
 
 ---
@@ -675,8 +675,8 @@ ollama serve
 
 Some providers only support text inference currently:
 
-- **LLaMA.cpp**: Vision support coming in Phase 2
-- **MLX**: Vision support coming in Phase 3
+- **LLaMA.cpp**: Vision support is currently unsupported
+- **MLX**: Vision support is currently unsupported
 - **Groq**: Check Groq docs for vision model availability
 
 Image files will fall back to extension-based organization.

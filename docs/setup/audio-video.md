@@ -410,7 +410,7 @@ transcriber = AudioTranscriber(device="cpu")
 
 ### Configuration
 
-Configure transcription settings in `~/.config/file-organizer/config.yaml`:
+Configure transcription settings in your profile `config.yaml` under the platform config directory (see [Configuration Guide](../CONFIGURATION.md#where-configuration-is-stored)):
 
 ```yaml
 audio:
@@ -940,7 +940,7 @@ SceneDetector.extract_scene_thumbnails(
 
 ### Configuration
 
-Configure video analysis settings in `~/.config/file-organizer/config.yaml`:
+Configure video analysis settings in your profile `config.yaml` under the platform config directory (see [Configuration Guide](../CONFIGURATION.md#where-configuration-is-stored)):
 
 ```yaml
 video:

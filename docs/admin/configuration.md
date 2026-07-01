@@ -1,165 +1,99 @@
 # Configuration Guide
 
-## Environment Configuration
+This page focuses on deployment-time configuration for the web/API runtime.
 
-### Core Settings
+For core app profile settings (`config.yaml`, `file-organizer config ...`, model defaults), see [Configuration Guide](../CONFIGURATION.md).
 
-```bash
-# Application
-APP_ENV=production
-DEBUG=false
-SECRET_KEY=your-secret-key-here
+## Configuration surfaces
 
-# Server
-HOST=0.0.0.0
-PORT=8000
-WORKERS=4
+1. **Core app profile config** (`config.yaml` under platform config dir)
+2. **Provider env vars** (`FO_PROVIDER`, `FO_OPENAI_*`, `FO_CLAUDE_*`, `FO_LLAMA_CPP_*`, `FO_MLX_*`)
+3. **API runtime env vars** (`FO_API_*`, plus `FO_REDIS_URL` / `OLLAMA_HOST` compatibility)
+4. **Optional API config file** via `FO_API_CONFIG_PATH` (YAML)
 
-# Database
-DATABASE_URL=postgresql://user:password@localhost/file_organizer
-DATABASE_POOL_SIZE=20
-DATABASE_ECHO=false
+## API runtime environment variables (`FO_API_*`)
 
-# Cache/Redis
-REDIS_URL=redis://localhost:6379/0
-CACHE_TTL=3600
+### Basic server settings
 
-# File Storage
-UPLOAD_DIR=/data/uploads
-MAX_UPLOAD_SIZE=500M  # 500 megabytes
-ALLOWED_EXTENSIONS=pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,png,gif,mp3,mp4,txt,md
-```
+| Variable | Description | Default |
+|---|---|---|
+| `FO_API_ENVIRONMENT` | Runtime environment (`development`, `test`, `production`) | `development` |
+| `FO_API_HOST` | Bind host | `0.0.0.0` |
+| `FO_API_PORT` | Bind port | `8000` |
+| `FO_API_LOG_LEVEL` | Log level | `INFO` |
+| `FO_API_ENABLE_DOCS` | Enable `/docs` and OpenAPI pages | `true` |
 
-### AI Models Configuration
+### CORS and WebSocket
 
-```bash
-# Ollama Settings
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL_TEXT=qwen2.5:3b-instruct-q4_K_M
-OLLAMA_MODEL_VISION=qwen2.5vl:7b-q4_K_M
+| Variable | Description |
+|---|---|
+| `FO_API_CORS_ORIGINS` | JSON array or comma-separated origins |
+| `FO_API_CORS_ALLOW_METHODS` | Allowed methods |
+| `FO_API_CORS_ALLOW_HEADERS` | Allowed headers |
+| `FO_API_CORS_ALLOW_CREDENTIALS` | Allow credentials (`true`/`false`) |
+| `FO_API_WS_PING_INTERVAL` | WebSocket ping interval seconds |
+| `FO_API_WEBSOCKET_TOKEN` | Optional WebSocket token |
 
-# Model Parameters
-MODEL_TEMPERATURE=0.5
-MODEL_MAX_TOKENS=3000
-MODEL_TIMEOUT=300
-```
+### Auth and API keys
 
-### Security Settings
+| Variable | Description |
+|---|---|
+| `FO_API_AUTH_ENABLED` | Enable auth |
+| `FO_API_AUTH_JWT_SECRET` | JWT secret (must be set outside development/test) |
+| `FO_API_AUTH_JWT_ALGORITHM` | JWT algorithm |
+| `FO_API_AUTH_ACCESS_MINUTES` | Access token lifetime |
+| `FO_API_AUTH_REFRESH_DAYS` | Refresh token lifetime |
+| `FO_API_API_KEY_ENABLED` | Enable API key auth |
+| `FO_API_API_KEY_HEADER` | API key header name |
+| `FO_API_API_KEYS` | Raw API keys (comma/JSON list; hashed at load time) |
+| `FO_API_API_KEY_HASHES` | Pre-hashed API keys |
 
-```bash
-# API Authentication
-API_KEY_PREFIX=fo_
-API_KEY_HEADER=X-API-Key
-JWT_SECRET=your-jwt-secret-here
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION=86400  # 24 hours
+### Data/cache/rate limit/security
 
-# CORS
-CORS_ORIGINS=["http://localhost:3000","https://example.com"]
+| Variable | Description |
+|---|---|
+| `FO_API_DATABASE_URL` | SQLAlchemy database URL |
+| `FO_API_DB_POOL_SIZE` | DB pool size |
+| `FO_API_CACHE_REDIS_URL` | Redis URL for cache |
+| `FO_API_CACHE_TTL_SECONDS` | Cache TTL |
+| `FO_API_RATE_LIMIT_ENABLED` | Enable rate limiting |
+| `FO_API_RATE_LIMIT_DEFAULT_REQUESTS` | Default max requests |
+| `FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS` | Default window size |
+| `FO_API_RATE_LIMIT_RULES` | JSON object of per-route rules |
+| `FO_API_SECURITY_HEADERS_ENABLED` | Enable security headers |
+| `FO_API_SECURITY_CSP` | CSP header |
 
-# Rate Limiting
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_REQUESTS=1000
-RATE_LIMIT_WINDOW=3600  # 1 hour
-```
+## Compatibility variables
 
-### Logging Configuration
+- `FO_REDIS_URL` is used as fallback for auth/cache Redis URLs.
+- `OLLAMA_HOST` is used as fallback for Ollama URL if `FO_OLLAMA_URL` is unset.
 
-```bash
-# Logging
-LOG_LEVEL=INFO
-LOG_FORMAT=json
-LOG_FILE=/var/log/file-organizer/app.log
-LOG_ROTATION=daily
-LOG_RETENTION=30  # days
-```
+## Provider configuration in deployments
 
-## Configuration File
+Use provider variables documented in [AI Provider Setup](../setup/ai-providers.md). Key points:
 
-Create `.env.production`:
+- `FO_PROVIDER` selects the provider mode.
+- `FO_OPENAI_API_KEY` and `FO_CLAUDE_API_KEY` are preferred.
+- SDK-native fallbacks are supported:
+  - `OPENAI_API_KEY`
+  - `ANTHROPIC_API_KEY`
 
-```env
-APP_ENV=production
-SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql://user:pass@db:5432/db
-REDIS_URL=redis://redis:6379
-OLLAMA_HOST=http://ollama:11434
-MAX_UPLOAD_SIZE=500M
-LOG_LEVEL=INFO
-```
-
-## Configuration Methods
-
-### 1. Environment Variables
+## Example (production-style)
 
 ```bash
-export DATABASE_URL="postgresql://user:pass@localhost/db"
-export OLLAMA_HOST="http://localhost:11434"
-./start_server.sh
+export FO_API_ENVIRONMENT=production
+export FO_API_HOST=0.0.0.0
+export FO_API_PORT=8000
+export FO_API_AUTH_JWT_SECRET='replace-with-strong-secret'
+export FO_API_CORS_ORIGINS='["https://app.example.com"]'
+export FO_API_RATE_LIMIT_ENABLED=true
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=sk-...
+export FO_OPENAI_MODEL=gpt-4o-mini
 ```
 
-### 2. .env File
+## See also
 
-Place `.env` in project root:
-
-```bash
-DATABASE_URL=postgresql://user:pass@localhost/db
-OLLAMA_HOST=http://localhost:11434
-```
-
-### 3. Configuration File
-
-Create `config/production.yml`:
-
-```yaml
-database:
-  url: postgresql://user:pass@localhost/db
-  pool_size: 20
-
-ollama:
-  host: http://localhost:11434
-  models:
-    text: qwen2.5:3b-instruct
-    vision: qwen2.5vl:7b
-
-server:
-  workers: 4
-  timeout: 300
-```
-
-## Advanced Configuration
-
-### Custom Methodologies
-
-Configure PARA and Johnny Decimal:
-
-```yaml
-methodologies:
-  para:
-    projects_folder: Projects
-    areas_folder: Areas
-    resources_folder: Resources
-    archives_folder: Archives
-  johnny_decimal:
-    enabled: true
-    system_name: "File Organizer"
-```
-
-### Plugin Configuration
-
-```yaml
-plugins:
-  enabled: true
-  directory: /app/plugins
-  auto_load: true
-  hooks:
-    - on_file_upload
-    - on_organize_complete
-    - on_duplicate_detected
-```
-
-## See Also
-
+- [Core Configuration Guide](../CONFIGURATION.md)
+- [AI Provider Setup](../setup/ai-providers.md)
 - [Installation Guide](installation.md)
-- [Deployment Guide](deployment.md)
-- [Monitoring Guide](monitoring.md)

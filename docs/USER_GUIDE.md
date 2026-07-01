@@ -2,7 +2,7 @@
 
 ## Introduction
 
-File Organizer v2 is an AI-powered local file management system built with a privacy-first architecture. It uses local LLMs through Ollama to analyze, categorize, rename, and organize your files without sending any data to the cloud.
+File Organizer v2 is an AI-powered local file management system built with a privacy-first architecture. It is local-first (Ollama by default) and also supports optional cloud providers when explicitly configured.
 
 ## Installation
 
@@ -37,28 +37,9 @@ file-organizer version
 
 ### Optional Feature Packs
 
-Extend functionality by installing optional dependency groups:
+Use the canonical extras matrix:
 
-!!! tip
-    For a complete feature-to-install matrix with platform-specific notes, see [Optional Features](getting-started.md#optional-features) in the Getting Started guide.
-
-| Pack | Install Command | Features |
-|------|----------------|----------|
-| Parsers | `pip install -e ".[parsers]"` | PDF, Word, Excel, PowerPoint, eBook, HTML parsing |
-| Web | `pip install -e ".[web]"` | Web interface, REST API server, WebSocket support |
-| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API providers (OpenAI, Groq, LM Studio, vLLM) |
-| Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
-| LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
-| MLX | `pip install -e ".[mlx]"` | Apple Silicon MLX acceleration for faster local inference |
-| Audio | `pip install -e ".[audio]"` | Speech-to-text transcription (faster-whisper, torch) |
-| Video | `pip install -e ".[video]"` | Scene detection, keyframe extraction (OpenCV) |
-| Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
-| Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
-| Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB file support |
-| CAD | `pip install -e ".[cad]"` | DXF and other CAD format support |
-| Search | `pip install -e ".[search]"` | BM25-based search ranking algorithms |
-| Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
-| All | `pip install -e ".[all]"` | All packs above, plus development tools and PyQt6 GUI dependencies |
+- [Dependencies & Optional Extras](setup/dependencies.md#optional-extras-matrix)
 
 !!! note
     The audio and video packs require FFmpeg and optionally a CUDA-capable GPU. See the [Audio & Video Setup Guide](setup/audio-video.md) for detailed installation instructions, model selection, and configuration.
