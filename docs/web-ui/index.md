@@ -7,7 +7,7 @@ This guide documents the currently implemented browser interface mounted at **`/
 - Start the app server: `file-organizer serve` (or `fo serve`)
 - Open: `http://localhost:8000/ui/`
 - On first run (when setup is incomplete), `/ui/` redirects to **`/ui/setup`**
-- API docs are available at **`/docs`** and **`/redoc`**
+- When API docs are enabled, they are available at **`/docs`** and **`/redoc`**
 
 ## Implemented top navigation
 

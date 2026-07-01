@@ -27,8 +27,8 @@ http://localhost:8000/ui/setup
 
 - Web UI: `/ui/`
 - API base: `/api/v1/`
-- API docs (Swagger): `/docs`
-- API docs (ReDoc): `/redoc`
+- API docs, when enabled (Swagger): `/docs`
+- API docs, when enabled (ReDoc): `/redoc`
 
 ## 4. Navigate core surfaces
 

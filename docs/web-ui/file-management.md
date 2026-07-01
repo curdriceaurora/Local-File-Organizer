@@ -23,7 +23,7 @@ The current Files view supports:
 
 Uploads are handled by `/ui/files/upload` and enforce validation:
 
-- empty filenames are rejected
+- empty filenames are skipped/ignored
 - unsafe/invalid names are normalized/rejected
 - hidden filenames are rejected by default in this flow
 - oversized files are rejected

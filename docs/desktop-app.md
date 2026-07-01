@@ -41,14 +41,13 @@ pip install -e ".[desktop]"
 
 ## pywebview JavaScript bridge
 
-When running in desktop mode, the UI can call:
+Templates should use the cross-context helpers from `desktop_api.js`:
 
-- `window.pywebview.api.browse_directory()`
-- `window.pywebview.api.browse_file(fileTypes)`
-- `window.pywebview.api.save_file(suggestedName, fileTypes)`
-- `window.pywebview.api.open_path(path)`
+- `window.desktopBrowseFile(inputId, fileTypes)`
+- `window.desktopSaveFile(suggestedName, fileTypes)`
+- `window.desktopOpenPath(path)`
 
-`desktop_api.js` wraps these with browser-safe fallbacks so templates can run in both desktop and normal browser contexts.
+These helpers wrap the desktop-only `window.pywebview.api.*` methods and add browser-safe fallbacks/no-ops so templates can run in both desktop and normal browser contexts. In desktop mode, the underlying pywebview implementation exposes `browse_directory()`, `browse_file(fileTypes)`, `save_file(suggestedName, fileTypes)`, and `open_path(path)`.
 
 ## Troubleshooting
 
