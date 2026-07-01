@@ -132,7 +132,7 @@ File Organizer processes **48+ file formats** including:
 - [Search commands](cli-reference.md) - Pattern and semantic file search
 - [Duplicate detection (`dedupe`)](cli-reference.md) - Duplicate scan and management workflows
 - [Undo/Redo history (`history`)](cli-reference.md) - Operation history and rollback navigation
-- [Profiles (`profile`)](cli-reference.md) - Create, activate, merge, and migrate user profiles
+- [Configuration (`config`)](CONFIGURATION.md) - Global and named-profile settings
 - [Plugin marketplace (`marketplace`)](cli-reference.md) - Discover and manage marketplace plugins
 - [Copilot assistant (`copilot`)](cli-reference.md) - Natural-language workflows in CLI/TUI contexts
 

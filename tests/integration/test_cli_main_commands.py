@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -282,6 +282,18 @@ class TestEntryPoint:
         from file_organizer.cli.main import _register_profile_command
 
         _register_profile_command()  # should not raise
+
+    @patch("file_organizer.cli.main.typer.main.get_group")
+    def test_register_profile_command_skips_existing_shim(self, mock_get_group) -> None:
+        """The guidance shim remains authoritative if profile is already registered."""
+        from file_organizer.cli.main import _register_profile_command
+
+        fake_group = SimpleNamespace(commands={"profile": object()}, add_command=MagicMock())
+        mock_get_group.return_value = fake_group
+
+        _register_profile_command()
+
+        fake_group.add_command.assert_not_called()
 
     def test_main_calls_register_and_app(self) -> None:
         """main() calls _register_profile_command then app()."""

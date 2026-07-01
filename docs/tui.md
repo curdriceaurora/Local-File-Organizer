@@ -26,9 +26,6 @@ file-organizer tui
 
 # Short alias
 fo tui
-
-# Launch with a specific directory
-file-organizer tui --path ~/Downloads
 ```
 
 ---
@@ -233,7 +230,7 @@ The TUI follows terminal accessibility standards:
 
 - Full keyboard navigation — no mouse required
 - Screen reader compatible via terminal emulator
-- High-contrast mode available (`--theme high-contrast`)
+- Use your terminal's own theme and contrast settings for accessibility
 - Configurable font size via terminal settings
 
 ---
@@ -262,9 +259,8 @@ TERM=xterm-256color file-organizer tui
 
 ### Slow Performance
 
-- Use `--no-preview` to disable file preview for large directories
 - Set `auto_preview: false` in config
-- Limit directory depth with `--max-depth 3`
+- Start with smaller directories when browsing very large trees
 
 ---
 

@@ -532,6 +532,7 @@ def profile_legacy(ctx: typer.Context) -> None:
     )
     if ctx.args:
         console.print(f"[dim]Received extra arguments: {' '.join(ctx.args)}[/dim]")
+        raise SystemExit(2)
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +550,11 @@ def _register_profile_command() -> None:
         from file_organizer.cli.profile import profile_command as _profile_click_group
 
         typer_click_object = typer.main.get_group(app)
+        if "profile" in typer_click_object.commands:
+            logging.getLogger(__name__).debug(
+                "Skipping legacy profile registration because the guidance shim is already registered."
+            )
+            return
         typer_click_object.add_command(_profile_click_group, "profile")
     except ImportError as exc:
         # Profile module may fail to import if intelligence services

@@ -426,10 +426,10 @@ Use the built-in deduplication tools to identify and manage duplicates:
 file-organizer dedupe scan /path/to/files
 
 # View deduplication report
-file-organizer dedupe report
+file-organizer dedupe report /path/to/files
 
 # Resolve duplicates interactively
-file-organizer dedupe resolve
+file-organizer dedupe resolve /path/to/files
 
 # Preview organization without moving files
 file-organizer organize /input /output --dry-run
@@ -728,10 +728,10 @@ pip install "local-file-organizer[dedup]"
 file-organizer dedupe scan /path/to/images
 
 # View the deduplication report
-file-organizer dedupe report
+file-organizer dedupe report /path/to/images
 
 # Resolve duplicates interactively
-file-organizer dedupe resolve
+file-organizer dedupe resolve /path/to/images
 ```
 
 ### Image Format Conversion Failed

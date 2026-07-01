@@ -176,7 +176,7 @@ def test_profile_legacy_command_guidance():
 
 @pytest.mark.ci
 def test_profile_legacy_command_accepts_extra_args():
-    """`profile` shim should still handle unknown subcommand-style args."""
+    """`profile list` should surface as unsupported, not as a successful command."""
     result = runner.invoke(app, ["profile", "list"])
-    assert result.exit_code == 0
+    assert result.exit_code == 2
     assert "Received extra arguments: list" in result.stdout
