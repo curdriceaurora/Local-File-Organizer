@@ -165,6 +165,7 @@ def test_preview_command_error(mock_organizer_cls, _mock_setup, tmp_path):
     assert "Error: Bad input" in result.stdout
 
 
+@pytest.mark.ci
 def test_profile_legacy_command_guidance():
     """`profile` should provide actionable guidance when unavailable."""
     result = runner.invoke(app, ["profile"])
@@ -173,6 +174,7 @@ def test_profile_legacy_command_guidance():
     assert "config show --profile" in result.stdout
 
 
+@pytest.mark.ci
 def test_profile_legacy_command_accepts_extra_args():
     """`profile` shim should still handle unknown subcommand-style args."""
     result = runner.invoke(app, ["profile", "list"])
