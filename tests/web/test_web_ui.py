@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings

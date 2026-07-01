@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from starlette.testclient import TestClient
 
 from file_organizer.api.auth_models import Base
 from file_organizer.api.config import ApiSettings

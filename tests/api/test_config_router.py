@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.auth_models import User
 from file_organizer.api.config import ApiSettings

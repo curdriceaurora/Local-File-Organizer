@@ -443,6 +443,10 @@ markers = [
 filterwarnings = [
     "error::DeprecationWarning:file_organizer",
     "error::PendingDeprecationWarning:file_organizer",
+    # Starlette's TestClient now warns that it prefers optional httpx2 support.
+    # The project still has first-party httpx usage pinned to 0.x; keep this scoped
+    # test-only warning ignored until a coordinated dependency migration is done.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead\\.:starlette.exceptions.StarletteDeprecationWarning",
     "ignore::DeprecationWarning:pkg_resources",
     "ignore::DeprecationWarning:google",
     "ignore::DeprecationWarning:importlib",

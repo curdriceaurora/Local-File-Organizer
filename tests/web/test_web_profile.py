@@ -6,7 +6,7 @@ import html
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.auth import hash_password
 from file_organizer.api.auth_db import create_session

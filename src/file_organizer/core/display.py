@@ -89,11 +89,12 @@ def show_summary(
 
 def create_progress(console: Console) -> Progress:
     """Create a standard Rich progress bar."""
+    progress_console = console if isinstance(console, Console) else Console(force_terminal=True)
     return Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TimeElapsedColumn(),
-        console=console,
+        console=progress_console,
     )

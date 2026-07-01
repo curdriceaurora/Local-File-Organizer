@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
@@ -26,7 +26,7 @@ def build_test_settings(
         "websocket_token": websocket_token,
         "auth_enabled": True,
         "auth_db_path": str(tmp_path / "auth.db"),
-        "auth_jwt_secret": "test-secret",
+        "auth_jwt_secret": "test-secret-32-bytes-minimum-key!!",
         "auth_access_token_minutes": 5,
         "auth_refresh_token_days": 1,
         "auth_redis_url": None,

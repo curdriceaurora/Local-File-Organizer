@@ -345,7 +345,6 @@ class DaemonService:
             self._start_exception = exc
             self._started_event.set()
             logger.exception("Daemon startup failed")
-            raise
         finally:
             self._cleanup()
 
