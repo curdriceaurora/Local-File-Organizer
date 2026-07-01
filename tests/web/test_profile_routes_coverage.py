@@ -770,7 +770,7 @@ class TestAvatarUpload:
         with (
             patch("file_organizer.web.profile_routes._AVATAR_DIR", avatar_dir),
             patch("file_organizer.web.profile_routes._avatar_path", return_value=outside),
-            pytest.raises(FileNotFoundError),
+            pytest.raises(FileNotFoundError, match="Avatar not found"),
         ):
             _resolve_avatar_for_read("u1")
 
@@ -798,7 +798,7 @@ class TestAvatarUpload:
                 "file_organizer.web.profile_routes.SafeDir.open_root",
                 return_value=_RejectingSafeDir(),
             ),
-            pytest.raises(FileNotFoundError),
+            pytest.raises(FileNotFoundError, match="Avatar not found"),
         ):
             _resolve_avatar_for_read("u1")
 
