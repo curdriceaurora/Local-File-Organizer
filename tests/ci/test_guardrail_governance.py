@@ -142,6 +142,24 @@ def _parse_rail_status_table(source: str) -> dict[str, str]:
     return {name: ("enforce" if status == "enforced" else status) for name, status in rows}
 
 
+def _parse_known_limitations_advisory_rails(source: str) -> set[str]:
+    section_match = re.search(
+        r"## Known Limitations\n(?P<section>.*?)(?:\n## |\Z)",
+        source,
+        flags=re.DOTALL,
+    )
+    assert section_match, "Doc must define a Known Limitations section"
+
+    remain_advisory_match = re.search(
+        r"remains? advisory \((?P<names>.*?)\)",
+        section_match.group("section"),
+        flags=re.DOTALL,
+    )
+    assert remain_advisory_match, "Known Limitations must name the rails that remain advisory"
+
+    return set(re.findall(r"`([^`]+)`", remain_advisory_match.group("names")))
+
+
 def test_security_rail_status_table_matches_registry() -> None:
     assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
     assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
@@ -203,3 +221,30 @@ def test_rail_status_table_detects_missing_row() -> None:
     assert "rail-b" not in table_modes
     registry_modes = {"rail-a": "enforce", "rail-b": "advisory"}
     assert table_modes != registry_modes
+
+
+def test_known_limitations_advisory_rails_match_registry() -> None:
+    assert RAILS_REGISTRY.exists(), f"Rail registry not found: {RAILS_REGISTRY}"
+    assert SECURITY_DOC.exists(), f"Security doc not found: {SECURITY_DOC}"
+
+    registry = tomllib.loads(RAILS_REGISTRY.read_text(encoding="utf-8"))
+    expected_advisory = {rail["name"] for rail in registry["rail"] if rail["mode"] == "advisory"}
+
+    source = SECURITY_DOC.read_text(encoding="utf-8")
+    assert _parse_known_limitations_advisory_rails(source) == expected_advisory
+
+
+def test_known_limitations_detects_newly_added_advisory_rail() -> None:
+    source = (
+        "## Known Limitations\n\n- Two lint rails above remain advisory (`rail-a` and `rail-b`).\n"
+    )
+    doc_advisory = _parse_known_limitations_advisory_rails(source)
+    registry_advisory = {"rail-a", "rail-b", "rail-c"}
+    assert doc_advisory != registry_advisory
+
+
+def test_known_limitations_detects_newly_promoted_enforced_rail() -> None:
+    source = "## Known Limitations\n\n- One lint rail above remains advisory (`rail-a`).\n"
+    doc_advisory = _parse_known_limitations_advisory_rails(source)
+    registry_advisory: set[str] = set()
+    assert doc_advisory != registry_advisory
