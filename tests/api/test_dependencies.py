@@ -33,6 +33,7 @@ def _make_settings(**overrides: Any) -> ApiSettings:
     """Create an ApiSettings with test-friendly defaults."""
     defaults: dict[str, Any] = {
         "environment": "test",
+        "auth_jwt_secret": "test-secret-32-bytes-minimum-key!!",
     }
     defaults.update(overrides)
     return ApiSettings(**defaults)

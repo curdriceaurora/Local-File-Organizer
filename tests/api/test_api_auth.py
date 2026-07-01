@@ -8,7 +8,7 @@ from typing import Any
 
 import jwt
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from file_organizer.api.realtime import realtime_manager

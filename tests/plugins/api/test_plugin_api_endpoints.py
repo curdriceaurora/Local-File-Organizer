@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.test_utils import create_auth_client
 from file_organizer.plugins.api import endpoints

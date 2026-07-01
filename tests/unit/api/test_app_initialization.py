@@ -253,7 +253,7 @@ class TestAppLifespan:
         """Entering the app's lifespan (e.g. via TestClient) calls
         reset_startup_time() — pins the wiring between create_app()'s
         lifespan and the health router's uptime tracking."""
-        from fastapi.testclient import TestClient
+        from starlette.testclient import TestClient
 
         from file_organizer.api.main import create_app
         from file_organizer.api.routers import health

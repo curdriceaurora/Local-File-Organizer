@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 if TYPE_CHECKING:
-    from fastapi.testclient import TestClient
+    from starlette.testclient import TestClient
 
 from file_organizer.api.realtime import realtime_manager
 from file_organizer.tui.app import FileOrganizerApp
@@ -469,7 +469,7 @@ def web_client_builder(tmp_path: Path):
     Returns:
         A callable that creates TestClient instances with specified options.
     """
-    from fastapi.testclient import TestClient
+    from starlette.testclient import TestClient
 
     from file_organizer.api.main import create_app
     from file_organizer.api.test_utils import build_test_settings

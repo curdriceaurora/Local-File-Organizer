@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.web.csrf import (
     CSRF_COOKIE_NAME,

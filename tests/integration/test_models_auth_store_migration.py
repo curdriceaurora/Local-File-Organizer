@@ -433,7 +433,7 @@ class TestSetupExceptionHandlers:
         """Directly test the handler logic for ApiError with details."""
 
         from fastapi import FastAPI
-        from fastapi.testclient import TestClient
+        from starlette.testclient import TestClient
 
         from file_organizer.api.exceptions import ApiError, setup_exception_handlers
 
@@ -459,7 +459,7 @@ class TestSetupExceptionHandlers:
     def test_api_error_handler_no_details(self) -> None:
         """ApiError without details → no 'details' key in response."""
         from fastapi import FastAPI
-        from fastapi.testclient import TestClient
+        from starlette.testclient import TestClient
 
         from file_organizer.api.exceptions import ApiError, setup_exception_handlers
 
@@ -478,7 +478,7 @@ class TestSetupExceptionHandlers:
     def test_unhandled_exception_returns_500(self) -> None:
         """Unhandled exception handler returns 500."""
         from fastapi import FastAPI
-        from fastapi.testclient import TestClient
+        from starlette.testclient import TestClient
 
         from file_organizer.api.exceptions import setup_exception_handlers
 
@@ -497,8 +497,8 @@ class TestSetupExceptionHandlers:
     def test_validation_error_handler_returns_422(self) -> None:
         """RequestValidationError is handled as 422."""
         from fastapi import FastAPI
-        from fastapi.testclient import TestClient
         from pydantic import BaseModel
+        from starlette.testclient import TestClient
 
         from file_organizer.api.exceptions import setup_exception_handlers
 

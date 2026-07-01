@@ -549,11 +549,11 @@ def test_read_dwg_non_existent_file_raises() -> None:
 
 class TestWebCSRFGaps:
     def test_csrf_receive_and_decode_error(self) -> None:
-        from fastapi.testclient import TestClient
         from starlette.applications import Starlette
         from starlette.requests import Request
         from starlette.responses import Response
         from starlette.routing import Route
+        from starlette.testclient import TestClient
 
         from file_organizer.web.csrf import CSRFMiddleware
 
