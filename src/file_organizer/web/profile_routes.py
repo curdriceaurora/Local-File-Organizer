@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -34,6 +35,7 @@ from file_organizer.api.repositories.settings_repo import SettingsRepository
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.utils.atomic_write import atomic_write_bytes
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 from file_organizer.web._helpers import base_context, templates
 
 profile_router = APIRouter(tags=["web"])
@@ -236,6 +238,32 @@ def _avatar_path(user_id: str) -> Path:
     if not result.resolve().is_relative_to(_AVATAR_DIR.resolve()):
         raise ValueError(f"Invalid user_id: {user_id!r}")
     return result
+
+
+def _resolve_avatar_for_read(user_id: str) -> Path:
+    """Return a validated avatar path that is safe to serve."""
+    avatar_path = _avatar_path(user_id)
+    avatar_name = avatar_path.name
+    avatar_root = _AVATAR_DIR.resolve()
+
+    try:
+        with SafeDir.open_root(avatar_root) as safe_dir:
+            fd = safe_dir.open_for_reader(avatar_name)
+    except NotImplementedError:
+        # SafeDir is POSIX-only; fall back to path checks below on other platforms.
+        pass
+    except (FileNotFoundError, SymlinkRejected) as exc:
+        raise FileNotFoundError("Avatar not found") from exc
+    else:
+        os.close(fd)
+
+    try:
+        resolved = avatar_path.resolve(strict=True)
+    except OSError as exc:
+        raise FileNotFoundError("Avatar not found") from exc
+    if not resolved.is_relative_to(avatar_root):
+        raise FileNotFoundError("Avatar not found")
+    return resolved
 
 
 def _cleanup_expired_reset_tokens() -> None:
@@ -575,10 +603,10 @@ def reset_password_submit(
 def profile_avatar(user_id: str) -> Response:
     """Serve the avatar image for *user_id*, or a placeholder PNG."""
     try:
-        path = _avatar_path(user_id)
+        path = _resolve_avatar_for_read(user_id)
     except ValueError:
         return HTMLResponse(status_code=400, content="Invalid user ID")
-    if not path.exists():
+    except FileNotFoundError:
         return HTMLResponse(status_code=404, content="Avatar not found")
     return FileResponse(path, media_type="image/png")
 

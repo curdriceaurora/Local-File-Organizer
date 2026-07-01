@@ -19,6 +19,7 @@ from PIL import Image, UnidentifiedImageError
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
+from file_organizer.utils.file_times import creation_timestamp
 from file_organizer.web._helpers import (
     MAX_THUMBNAIL_BYTES,
     MAX_UPLOAD_BYTES,
@@ -183,11 +184,7 @@ def _creation_sort_key(s: os.stat_result | None) -> float:
     """Return a file creation timestamp for sorting, with platform fallbacks."""
     if s is None:
         return 0.0
-    if hasattr(s, "st_birthtime"):
-        return s.st_birthtime
-    if os.name == "nt":
-        return getattr(s, "st_ctime", s.st_mtime)
-    return s.st_mtime
+    return creation_timestamp(s)
 
 
 def _dir_entry(entry: Path) -> dict[str, Any]:
