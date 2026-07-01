@@ -245,27 +245,25 @@ def _resolve_avatar_for_read(user_id: str) -> Path:
     avatar_path = _avatar_path(user_id)
     avatar_name = avatar_path.name
     avatar_root = _AVATAR_DIR.resolve()
+    candidate = avatar_root / avatar_name
 
     try:
         with SafeDir.open_root(avatar_root) as safe_dir:
             fd = safe_dir.open_for_reader(avatar_name)
-    except NotImplementedError:
-        # SafeDir is POSIX-only; fall back to path checks below on other platforms.
-        pass
+    except NotImplementedError:  # pragma: no cover - Windows fallback
+        # SafeDir is POSIX-only; validate normalized path containment explicitly.
+        avatar_root_str = str(avatar_root)
+        candidate_str = os.path.normpath(str(candidate))
+        if not candidate_str.startswith(f"{avatar_root_str}{os.sep}"):
+            raise FileNotFoundError("Avatar not found") from None
+        if not os.path.isfile(candidate_str):
+            raise FileNotFoundError("Avatar not found") from None
+        return Path(candidate_str)
     except (FileNotFoundError, SymlinkRejected) as exc:
         raise FileNotFoundError("Avatar not found") from exc
     else:
         os.close(fd)
-
-    try:
-        resolved = avatar_path.resolve(
-            strict=True
-        )  # codeql[py/path-injection]: user_id is constrained by _SAFE_USER_ID and SafeDir validation
-    except OSError as exc:
-        raise FileNotFoundError("Avatar not found") from exc
-    if not resolved.is_relative_to(avatar_root):
-        raise FileNotFoundError("Avatar not found")
-    return resolved
+    return candidate
 
 
 def _cleanup_expired_reset_tokens() -> None:
