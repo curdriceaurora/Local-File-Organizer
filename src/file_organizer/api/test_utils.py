@@ -103,8 +103,8 @@ def seed_csrf_token(client: TestClient) -> str:
 def csrf_headers(client: TestClient) -> dict[str, str]:
     """Return a headers dict containing the CSRF token for the given client.
 
-    Assumes :func:`seed_csrf_token` was called first (or a prior GET to /ui/
-    populated the cookie jar).
+    Calls :func:`seed_csrf_token` to ensure the token is populated and returned
+    via a typed response cookie path.
     """
-    token = client.cookies.get("_csrf_token") or ""
+    token = seed_csrf_token(client)
     return {"x-csrf-token": token}

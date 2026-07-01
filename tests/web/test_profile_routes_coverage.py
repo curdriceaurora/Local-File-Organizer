@@ -746,6 +746,62 @@ class TestApiKeys:
 class TestAvatarUpload:
     """Covers profile_avatar_upload route."""
 
+    def test_resolve_avatar_for_read_returns_contained_resolved_path(self, tmp_path) -> None:
+        from file_organizer.web.profile_routes import _resolve_avatar_for_read
+
+        avatar_dir = tmp_path / "avatars"
+        avatar_dir.mkdir(parents=True, exist_ok=True)
+        avatar_file = avatar_dir / "u1.png"
+        avatar_file.write_bytes(b"png-data")
+
+        with patch("file_organizer.web.profile_routes._AVATAR_DIR", avatar_dir):
+            resolved = _resolve_avatar_for_read("u1")
+
+        assert resolved == avatar_file.resolve()
+
+    def test_resolve_avatar_for_read_rejects_resolved_escape(self, tmp_path) -> None:
+        from file_organizer.web.profile_routes import _resolve_avatar_for_read
+
+        avatar_dir = tmp_path / "avatars"
+        avatar_dir.mkdir(parents=True, exist_ok=True)
+        outside = tmp_path / "outside.png"
+        outside.write_bytes(b"png-data")
+
+        with (
+            patch("file_organizer.web.profile_routes._AVATAR_DIR", avatar_dir),
+            patch("file_organizer.web.profile_routes._avatar_path", return_value=outside),
+            pytest.raises(FileNotFoundError, match="Avatar not found"),
+        ):
+            _resolve_avatar_for_read("u1")
+
+    def test_resolve_avatar_for_read_rejects_symlink_like_entry(self, tmp_path) -> None:
+        from file_organizer.utils.safedir import SymlinkRejected
+        from file_organizer.web.profile_routes import _resolve_avatar_for_read
+
+        avatar_dir = tmp_path / "avatars"
+        avatar_dir.mkdir(parents=True, exist_ok=True)
+        (avatar_dir / "u1.png").write_bytes(b"png-data")
+
+        class _RejectingSafeDir:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def open_for_reader(self, _name: str) -> int:
+                raise SymlinkRejected(40, "refused to open symlinked entry")
+
+        with (
+            patch("file_organizer.web.profile_routes._AVATAR_DIR", avatar_dir),
+            patch(
+                "file_organizer.web.profile_routes.SafeDir.open_root",
+                return_value=_RejectingSafeDir(),
+            ),
+            pytest.raises(FileNotFoundError, match="Avatar not found"),
+        ):
+            _resolve_avatar_for_read("u1")
+
     def test_avatar_route_invalid_user_id(self) -> None:
         from file_organizer.web.profile_routes import profile_avatar
 

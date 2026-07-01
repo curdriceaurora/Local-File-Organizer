@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -35,6 +34,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.utils.file_times import creation_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -155,15 +155,10 @@ def list_files(
     elif sort_by == "size":
         files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
     elif sort_by == "created":
-        # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
+
         def _creation_key(p: Path) -> float:
             """Sort key returning the file's creation time for ordering results."""
-            s = p.stat()
-            if hasattr(s, "st_birthtime"):
-                return s.st_birthtime
-            if os.name == "nt":
-                return getattr(s, "st_ctime", s.st_mtime)
-            return s.st_mtime
+            return creation_timestamp(p.stat())
 
         files.sort(key=_creation_key, reverse=reverse)
     else:

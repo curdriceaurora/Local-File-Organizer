@@ -8,12 +8,13 @@ without any cloud API dependencies.
 from __future__ import annotations
 
 import logging
-import os
 import re
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+from file_organizer.utils.file_times import creation_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -314,16 +315,7 @@ class FeatureExtractor:
 
         now = time.time()
 
-        # Cross-platform file creation time:
-        #   macOS  → st_birthtime (true birth time)
-        #   Windows → st_ctime    (creation time on NTFS)
-        #   Linux  → st_mtime     (st_ctime is inode-change time, not creation)
-        if hasattr(stat, "st_birthtime"):  # macOS
-            creation_ref = stat.st_birthtime
-        elif os.name == "nt":  # Windows
-            creation_ref = getattr(stat, "st_ctime", stat.st_mtime)
-        else:  # Linux — use mtime as best available proxy
-            creation_ref = stat.st_mtime
+        creation_ref = creation_timestamp(stat)
 
         # Convert timestamps to datetime
         creation_date = datetime.fromtimestamp(creation_ref, tz=UTC)
