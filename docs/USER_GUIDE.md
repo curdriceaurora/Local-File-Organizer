@@ -255,10 +255,9 @@ A numerical categorization system using `XX.YY` numbering:
 
 ### Quick workflow: choose a methodology
 
-1. Start with `content_based` if you do not already follow a folder system.
-2. Choose `para` when your primary organization is actionability (Projects/Areas/Resources/Archive).
-3. Choose `johnny_decimal` when stable numeric indexing and long-term scale matter most.
-4. Run a dry run and compare output quality before committing:
+1. **Web UI (`/ui/organize`) values:** start with `content_based` if you do not already follow a folder system; choose `para` for actionability; choose `johnny_decimal` for stable numeric indexing.
+2. **CLI config values (`file-organizer config edit --methodology ...`):** use `none` (content-based/default), `para`, or `jd`.
+3. Run a dry run and compare output quality before committing:
 
 ```bash
 file-organizer organize ~/Inbox ~/Organized --dry-run

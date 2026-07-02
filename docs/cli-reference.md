@@ -1355,21 +1355,7 @@ file-organizer --help
 file-organizer profile --help
 ```
 
-When those subcommands are present, the concise workflow is:
-
-```bash
-# Export
-file-organizer profile export work --output work-profile.json
-
-# Preview + import
-file-organizer profile import work-profile.json --preview
-file-organizer profile import work-profile.json --as work-copy
-
-# Merge
-file-organizer profile merge work personal --output merged-profile
-```
-
-If `profile` is not available in your runtime, use named config profiles (`config show/edit --profile`) and settings import/export in the Web UI.
+In the current default runtime wiring, `file-organizer profile` is a compatibility shim and does not expose export/import/merge subcommands. Use named config profiles (`config show/edit --profile`) and settings import/export in the Web UI.
 
 ```bash
 file-organizer profile
