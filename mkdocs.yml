@@ -95,7 +95,7 @@ nav:
   - Setup & AI Providers:
       - AI Providers: setup/ai-providers.md
       - Models: setup/models.md
-      - Dependencies: setup/dependencies.md
+      - Dependencies & Optional Extras: setup/dependencies.md
       - Audio & Video Processing: setup/audio-video.md
   - CLI Feature Discoverability:
       - Search commands: cli-reference.md

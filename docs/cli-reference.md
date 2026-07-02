@@ -219,7 +219,7 @@ file-organizer analyze ~/Documents/report.pdf --verbose
 file-organizer analyze ~/Documents/report.pdf --json
 ```
 
-> **Note:** Requires Ollama to be installed and running with a text model available.
+> **Note:** Requires an active model provider configuration (Ollama by default, or another provider configured via `FO_PROVIDER` and related vars).
 
 ---
 

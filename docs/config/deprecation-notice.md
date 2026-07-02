@@ -2,11 +2,11 @@
 
 ## Deprecated: Hardcoded Legacy Paths
 
-**Status**: Deprecated in v2.0 | Scheduled for Removal: v3.0
+**Status**: Deprecated in v2.x | Removal target: next major release
 
 ### Affected Paths
 
-The following hardcoded path patterns are **deprecated** and will be removed in v3.0:
+The following hardcoded path patterns are **deprecated** and will be removed in a future major release:
 
 ```python
 # DEPRECATED - Do not use in new code
@@ -28,9 +28,8 @@ The hardcoded paths were inflexible and non-standard:
 
 **Timeline**:
 
-- **v2.0** (Current): New PathManager available, legacy paths still functional
-- **v2.1-2.4**: Deprecation warnings when using legacy patterns
-- **v3.0**: Legacy path handling removed
+- **Current**: PathManager-based paths are the recommended approach.
+- **Future major release**: Legacy hardcoded path handling is expected to be removed.
 
 **Action Required**:
 
@@ -47,7 +46,7 @@ from pathlib import Path
 
 # ❌ DEPRECATED - Direct path construction
 config_dir = Path.home() / ".config" / "file-organizer"
-config_file = config_dir / "config.json"
+config_file = config_dir / "config.yaml"
 
 # Hard to test, not customizable
 if config_file.exists():
@@ -57,11 +56,13 @@ if config_file.exists():
 #### New Pattern (RECOMMENDED)
 
 ```python
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.path_manager import PathManager
 
-# ✅ NEW - Use centralized PathManager
+# ✅ NEW - Use centralized path/config managers
 path_manager = PathManager()
-config_file = path_manager.config_file
+config_manager = ConfigManager(config_dir=path_manager.config_dir)
+config_file = config_manager.config_dir / "config.yaml"
 
 # Testable, respects XDG, customizable
 if config_file.exists():
@@ -98,7 +99,7 @@ The following modules will be updated to use `PathManager`:
 ### FAQ
 
 **Q: Can I still use legacy paths?**
-A: Yes, v2.0 still supports them via automatic migration. v3.0 will remove this support.
+A: Yes, current versions still support legacy paths via automatic migration. This is planned to change in a future major release.
 
 **Q: Will my data be migrated automatically?**
 A: Yes, PathMigrator handles automatic migration with backups on first run.
@@ -110,7 +111,7 @@ A: See the [Path Standardization Guide](./path-standardization.md) for migration
 A: Use environment variables (XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_STATE_HOME) or pass PathManager to relevant classes.
 
 **Q: When will legacy support be removed?**
-A: v3.0 (estimated 3-6 months after v2.0 release).
+A: Planned for a future major release; follow release notes for the finalized schedule.
 
 ### Suppressing Deprecation Warnings
 
