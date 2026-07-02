@@ -1,5 +1,7 @@
 # Admin Troubleshooting Guide
 
+> For everyday user-facing issues (optional dependencies, AI providers, TUI/desktop, audio/video, search), see the [User Troubleshooting Guide](../troubleshooting.md).
+
 ## Common Issues
 
 ### Application Won't Start
@@ -16,11 +18,20 @@ ERROR: Failed to bind to port 8000
 # Find process using port 8000
 lsof -i :8000
 
-# Kill the process
+# Gracefully stop the process
+kill <PID>
+# If the process does not stop after a few seconds, force-kill it:
 kill -9 <PID>
 
-# Or use a different port
-PORT=8001 python app.py
+# Or start File Organizer on a different port
+file-organizer serve --port 8001
+
+# When using Docker Compose, edit the ports mapping in docker-compose.yml:
+#   ports:
+#     - "8001:8001"   # change both sides to match your chosen port
+# Then set FO_PORT so the app binds to the same port inside the container:
+echo "FO_PORT=8001" >> .env
+docker-compose up -d
 ```
 
 #### Problem: Database Connection Failed
@@ -332,6 +343,147 @@ docker stats ollama
 # Reduce concurrent requests
 # Check load on Ollama service
 ```
+
+## Redis Issues
+
+### Redis Connection Failed
+
+**Problem**: `ConnectionError: Error connecting to Redis` or session/cache features not working
+
+**Solution**:
+
+```bash
+# Check the configured Redis URL
+echo $FO_REDIS_URL
+
+# Verify the Redis container is running
+docker-compose ps redis
+
+# Restart the Redis container if it is stopped/unhealthy
+docker-compose restart redis
+
+# Test the connection directly from the Redis container.
+# REDISCLI_AUTH is already set in the container environment (docker-compose.yml),
+# so redis-cli authenticates automatically — no password argument needed.
+docker-compose exec redis redis-cli ping
+# Expected output: PONG
+```
+
+### Redis Memory Pressure / Eviction
+
+**Problem**: Cache misses increase, or Redis logs `maxmemory policy: allkeys-lru` evictions
+
+**Solution**:
+
+```bash
+# Check Redis memory usage
+docker-compose exec redis redis-cli info memory | grep used_memory_human
+
+# Check current eviction policy
+docker-compose exec redis redis-cli config get maxmemory-policy
+
+# If eviction is too aggressive, increase the memory limit in docker-compose.yml
+# or in your Redis configuration:
+#   maxmemory 512mb
+#   maxmemory-policy allkeys-lru
+
+docker-compose restart redis
+```
+
+### Clearing the Redis Cache (Safe)
+
+Only do this when debugging stale cache data. Flushing removes all cached sessions and data.
+
+```bash
+# Flush only the File Organizer database (default: db 0)
+docker-compose exec redis redis-cli -n 0 FLUSHDB
+
+# Restart the app after clearing
+docker-compose restart file-organizer
+```
+
+### Redis Auth / TLS Errors
+
+**Problem**: `NOAUTH Authentication required` or TLS handshake failure
+
+**Solution**:
+
+The Compose stack reads `REDIS_PASSWORD` from `.env` and injects it into both the Redis service and the app's `FO_REDIS_URL`. Exporting a shell variable will not reach the container — set it in `.env` instead:
+
+```bash
+# Edit .env (copy from .env.example if it doesn't exist yet)
+# Set a strong password — avoid special URI characters (@ : / # %)
+echo "REDIS_PASSWORD=your_strong_password" >> .env
+
+docker-compose up -d
+```
+
+For an external TLS-enabled Redis (e.g., Redis Cloud, Azure Cache for Redis), update `FO_REDIS_URL` in `docker-compose.yml` directly to use the `rediss://` scheme and external hostname:
+
+```yaml
+# docker-compose.yml — under the file-organizer service's environment:
+- FO_REDIS_URL=rediss://:your_password@hostname.redis.cloud:6380/0
+```
+
+Then redeploy:
+
+```bash
+docker-compose up -d
+```
+
+## Deployment Rollback
+
+> **Note**: This section covers rolling back the *application version* in a Docker deployment. To undo individual file organization operations, see [Operation Undo / Rollback](../troubleshooting.md#operation-undo--rollback-issues) in the User Troubleshooting Guide.
+
+### Roll Back to a Previous Source Version
+
+The default `docker-compose.yml` builds the image from source (`build: context: .`). To roll back to a previous release, check out the target git tag and rebuild:
+
+```bash
+# Identify the release tag to roll back to
+git tag --sort=-version:refname | head -10
+
+# Check out the previous release
+git checkout v2.0.0-alpha.2    # replace with the target tag
+
+# Rebuild and redeploy
+docker-compose build
+docker-compose up -d
+```
+
+If your deployment uses a pre-built registry image instead of a local build, edit the `image:` field directly in `docker-compose.yml`:
+
+```yaml
+# docker-compose.yml
+services:
+  file-organizer:
+    image: ghcr.io/curdriceaurora/local-file-organizer:2.0.0-alpha.2
+    # Remove or comment out the 'build:' block when pinning an image tag
+```
+
+Then redeploy:
+
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+### Database Migration Rollback
+
+If a new version ran Alembic migrations and you need to revert:
+
+```bash
+# Identify the previous migration revision
+docker-compose exec file-organizer alembic history --indicate-current
+
+# Downgrade one step
+docker-compose exec file-organizer alembic downgrade -1
+
+# Or downgrade to a specific revision ID
+docker-compose exec file-organizer alembic downgrade <revision_id>
+```
+
+Always take a database backup before rolling back migrations in production.
 
 ## Getting Help
 
