@@ -4,6 +4,21 @@
 
 File Organizer v2 is an AI-powered local file management system built with a privacy-first architecture. It is local-first (Ollama by default) and also supports optional cloud providers when explicitly configured.
 
+## Essentials First Run (CLI)
+
+Use this workflow to get a successful first organization run before exploring advanced features:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after at least one organize run has been recorded.
+
+Prefer a browser? Start with [Web UI Quick Start](web-ui/getting-started.md).
+
 ## Installation
 
 ### Prerequisites
@@ -50,6 +65,7 @@ Use this routing table to jump directly to a practical workflow.
 
 | Goal | Start here | Go deeper |
 |------|------------|-----------|
+| Complete your first CLI organization run safely | [Essentials first run](#essentials-first-run-cli) | [Core first run commands](cli-reference.md#core-first-run-commands) |
 | Run Copilot for a folder and get actionable output | [Copilot quick workflow](#quick-workflow-ask-verify-and-act) | [CLI `copilot` entry points](cli-reference.md#cli-copilot) |
 | Navigate TUI quickly | [Terminal UI](#terminal-ui-tui) | [TUI keyboard map](tui.md#keyboard-shortcuts) |
 | Do rules-based batch review before applying changes | [Rules batch review workflow](#rules-batch-review-workflow) | [CLI `rules` entry points](cli-reference.md#cli-rules) |
@@ -63,6 +79,8 @@ Use this routing table to jump directly to a practical workflow.
 ## CLI Commands Overview
 
 File Organizer provides two equivalent entrypoints: `file-organizer` and the short alias `fo`.
+
+If you're new, start with `setup`, `preview`, `organize`, and `undo` before exploring the full command catalog.
 
 | Command | Description |
 |---------|-------------|

@@ -80,24 +80,25 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - User Guide: USER_GUIDE.md
-  - Interfaces:
-      - Terminal UI: tui.md
-      - Desktop App: desktop-app.md
-  - Web UI Guide:
+  - Getting Started (Essentials): getting-started.md
+  - CLI Reference (Essentials): cli-reference.md
+  - User Guide (Essentials): USER_GUIDE.md
+  - Web UI Guide (Essentials):
       - Overview: web-ui/index.md
       - Getting Started: web-ui/getting-started.md
       - File Management: web-ui/file-management.md
       - Organization Workflows: web-ui/organization.md
       - Analysis & Search: web-ui/analysis-search.md
       - Settings & Profile: web-ui/settings.md
-  - Setup & AI Providers:
+  - Interfaces:
+      - Terminal UI: tui.md
+      - Desktop App: desktop-app.md
+  - Setup & AI Providers (Advanced):
       - AI Providers: setup/ai-providers.md
       - Models: setup/models.md
       - Dependencies & Optional Extras: setup/dependencies.md
       - Audio & Video Processing: setup/audio-video.md
-  - CLI Feature Discoverability:
+  - CLI Feature Discoverability (Advanced):
       - Search commands: cli-reference.md
       - Duplicate detection (dedupe): cli-reference.md
       - Undo/Redo history: cli-reference.md
@@ -145,7 +146,6 @@ nav:
       - Configuration Guide: CONFIGURATION.md
       - Path Standardization & Migration: config/path-standardization.md
       - Deprecation Notice: config/deprecation-notice.md
-  - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Blog:

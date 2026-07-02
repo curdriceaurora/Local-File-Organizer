@@ -2,6 +2,21 @@
 
 This guide will help you install and set up File Organizer quickly.
 
+## Essentials first run (CLI)
+
+If you're new, use this terminal-first path first:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after at least one organize run has been recorded.
+
+Prefer a browser? Start with [Web UI Quick Start](web-ui/getting-started.md).
+
 ## Installation Methods
 
 Choose the installation method that best fits your needs:
@@ -174,62 +189,27 @@ When you first access File Organizer, you'll see a welcome screen with:
 
 ### 2. AI Model Configuration
 
-File Organizer supports two provider modes:
+Use this decision rule:
 
-**Option A — Ollama (default, fully local):**
+1. **Use Ollama (default)** unless you specifically need a cloud model or a custom OpenAI-compatible endpoint.
+2. If you need cloud/remote providers, use [AI Provider Setup](setup/ai-providers.md).
 
-- **Text Model**: `qwen2.5:3b-instruct-q4_K_M` (~1.9 GB)
-- **Vision Model**: `qwen2.5vl:7b-q4_K_M` (~6.0 GB)
+Default local models:
 
-These are automatically pulled on first run if Ollama is available.
+- `qwen2.5:3b-instruct-q4_K_M` (text)
+- `qwen2.5vl:7b-q4_K_M` (vision)
 
-**Manual pull** (if needed):
+Manual model pull (if needed):
 
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
 ```
 
-**Option B — OpenAI-compatible endpoint (cloud or local API server):**
+For provider-specific environment variables, see:
 
-No Ollama required. Install the `[cloud]` extra and set environment variables:
-
-```bash
-pip install "local-file-organizer[cloud]"   # from PyPI
-# pip install -e ".[cloud]"           # from source checkout
-
-# Example: OpenAI
-export FO_PROVIDER=openai
-export FO_OPENAI_API_KEY=sk-...
-export FO_OPENAI_MODEL=gpt-4o-mini
-
-# Example: LM Studio (local, no key needed)
-export FO_PROVIDER=openai
-export FO_OPENAI_BASE_URL=http://localhost:1234/v1
-export FO_OPENAI_MODEL=your-loaded-model
-```
-
-**Option C — Anthropic Claude:**
-
-No Ollama required. Install the `[claude]` extra and set environment variables:
-
-```bash
-pip install "local-file-organizer[claude]"  # from PyPI
-# pip install -e ".[claude]"          # from source checkout
-
-export FO_PROVIDER=claude
-export FO_CLAUDE_API_KEY=sk-ant-...
-export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
-```
-
-Claude supports both text and vision tasks natively — no separate vision model configuration is required (though you can override with `FO_CLAUDE_VISION_MODEL`).
-
-SDK-native key fallbacks are also supported:
-
-- OpenAI mode: `OPENAI_API_KEY`
-- Claude mode: `ANTHROPIC_API_KEY`
-
-See [Configuration Guide](CONFIGURATION.md) for the full list of providers and options.
+- [AI Provider Setup](setup/ai-providers.md)
+- [Configuration Guide](CONFIGURATION.md)
 
 ### 3. Workspace Configuration
 
@@ -279,41 +259,17 @@ File Organizer also provides a command-line interface:
 ### Basic Commands
 
 ```bash
-# Start the web server and API
-file-organizer serve
+# Configure first-run defaults
+fo setup
+
+# Preview organization safely
+fo preview ~/Downloads
 
 # Organize files
-file-organizer organize ./Downloads ./Organized
+fo organize ~/Downloads ~/Organized
 
-# Preview without moving (dry run)
-file-organizer organize ./Downloads ./Organized --dry-run
-
-# Preview organisation plan
-file-organizer preview ./Downloads
-
-# Search for files
-file-organizer search "*.pdf" ~/Documents
-file-organizer search "report" ~/Documents --type text
-
-# Analyze a file with AI
-file-organizer analyze ./report.pdf
-file-organizer analyze ./report.pdf --verbose
-
-# Auto-tag files
-file-organizer autotag suggest ./Documents
-file-organizer autotag popular
-
-# Detect duplicates
-file-organizer dedupe scan ./Documents
-
-# Analyse storage
-file-organizer analytics ./Documents
-
-# View operation history
-file-organizer history
-
-# Interactive AI assistant
-file-organizer copilot chat
+# Undo the most recent organize operation (if needed)
+fo undo
 ```
 
 ### Short Alias
@@ -321,16 +277,13 @@ file-organizer copilot chat
 Use `fo` instead of `file-organizer`:
 
 ```bash
-fo serve
-fo organize ./Downloads ./Organized
+fo setup
 fo preview ./Downloads
-fo search "*.pdf" ~/Documents
-fo analyze ./report.pdf
-fo dedupe scan ./Documents
-fo analytics ./Documents
+fo organize ./Downloads ./Organized
+fo undo
 ```
 
-See [CLI Reference](cli-reference.md) for all commands.
+After your first run, use the full [CLI Reference](cli-reference.md) for search, analysis, dedupe, rules, marketplace, and other advanced commands.
 
 ## Choosing an Organization Methodology
 

@@ -2,6 +2,26 @@
 
 All commands are available via `file-organizer` or the short alias `fo`.
 
+## Core first run commands
+
+Start with this minimal workflow:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after at least one organize run has been recorded.
+
+See the canonical command sections:
+
+- [`setup`](#setup)
+- [`preview`](#preview)
+- [`organize`](#organize)
+- [`undo`](#undo)
+
 ## Global Options
 
 These options apply to every command and may be passed before or after the command name:
