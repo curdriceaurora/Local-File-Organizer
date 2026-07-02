@@ -20,6 +20,8 @@ pip install -e .
 
 ## Optional extras matrix
 
+These commands assume a source checkout. For PyPI installs, use `pip install "local-file-organizer[extra]"` instead of `-e`.
+
 | Extra | Install command | What it enables | Type |
 |------|---|---|---|
 | `parsers` | `pip install -e ".[parsers]"` | PDF/Office/eBook/HTML parsing | Runtime |
@@ -45,6 +47,8 @@ pip install -e .
 ## Common install combinations
 
 ```bash
+# Source checkout required for -e commands below
+
 # Local default workflow
 pip install -e ".[parsers,web]"
 
