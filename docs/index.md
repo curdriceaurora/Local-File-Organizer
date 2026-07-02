@@ -10,7 +10,7 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 
     - [Installation & Setup](getting-started.md)
     - [Web UI Quick Start](web-ui/getting-started.md)
-    - [CLI Reference](cli-reference.md)
+    - [Workflow Map](USER_GUIDE.md#workflow-map-quick-paths)
 
 === "🖥️ Web UI & Profile"
 
@@ -27,8 +27,18 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 
     - [Terminal UI Guide](tui.md)
     - [Desktop App Guide](desktop-app.md)
-    - [CLI Reference](cli-reference.md)
-    - [Copilot Chat & Assistant Commands](cli-reference.md)
+    - [Copilot workflow entry point](cli-reference.md#cli-copilot)
+    - [Rules batch review entry point](cli-reference.md#cli-rules)
+    - [Dedupe workflow entry point](cli-reference.md#cli-dedupe)
+
+=== "🗂️ Methodologies"
+
+    **Choosing PARA vs Johnny Decimal?** Use these workflow-oriented references.
+
+    - [Methodology selection workflow](USER_GUIDE.md#quick-workflow-choose-a-methodology)
+    - [Johnny Decimal User Guide](methodologies/johnny-decimal/user-guide.md#getting-started)
+    - [Johnny Decimal Migration Guide](methodologies/johnny-decimal/migration.md#step-by-step-migration)
+    - [Johnny Decimal + PARA Compatibility](methodologies/johnny-decimal/para-compatibility.md#integration-approaches)
 
 === "📚 API Reference"
 
@@ -127,6 +137,13 @@ File Organizer processes **48+ file formats** including:
 - [Path Standardization & Migration](config/path-standardization.md) - XDG path migration and compatibility
 - [Path Deprecation Notice](config/deprecation-notice.md) - Legacy path and config deprecations
 
+### Methodology Workflows
+
+- [Methodology selection workflow](USER_GUIDE.md#quick-workflow-choose-a-methodology) - Choose content-based vs PARA vs Johnny Decimal
+- [Johnny Decimal User Guide](methodologies/johnny-decimal/user-guide.md#getting-started) - Step-by-step setup
+- [Johnny Decimal Migration Guide](methodologies/johnny-decimal/migration.md#step-by-step-migration) - Migrate existing structures
+- [Johnny Decimal + PARA Compatibility](methodologies/johnny-decimal/para-compatibility.md#integration-approaches) - Hybrid approach patterns
+
 ### Canonical setup references
 
 - [Optional extras matrix](setup/dependencies.md#optional-extras-matrix)
@@ -135,12 +152,13 @@ File Organizer processes **48+ file formats** including:
 
 ### CLI Feature Discoverability
 
-- [Search commands](cli-reference.md) - Pattern and semantic file search
-- [Duplicate detection (`dedupe`)](cli-reference.md) - Duplicate scan and management workflows
-- [Undo/Redo history (`history`)](cli-reference.md) - Operation history and rollback navigation
+- [Search commands](cli-reference.md#cli-search) - Pattern and semantic file search
+- [Duplicate detection (`dedupe`)](cli-reference.md#cli-dedupe) - Duplicate scan and management workflows
+- [Undo/Redo history (`history`)](cli-reference.md#cli-history) - Operation history and rollback navigation
 - [Configuration (`config`)](CONFIGURATION.md) - Global and named-profile settings
-- [Plugin marketplace (`marketplace`)](cli-reference.md) - Discover and manage marketplace plugins
-- [Copilot assistant (`copilot`)](cli-reference.md) - Natural-language workflows in CLI/TUI contexts
+- [Plugin marketplace (`marketplace`)](cli-reference.md#cli-marketplace) - Discover and manage marketplace plugins
+- [Copilot assistant (`copilot`)](cli-reference.md#cli-copilot) - Natural-language workflows in CLI/TUI contexts
+- [Profile behavior and compatibility](cli-reference.md#cli-profile) - Runtime-specific profile command availability
 
 ### Development & Extension
 

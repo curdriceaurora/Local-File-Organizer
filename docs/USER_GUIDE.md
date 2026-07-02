@@ -44,6 +44,22 @@ Use the canonical extras matrix:
 !!! note
     The audio and video packs require FFmpeg and optionally a CUDA-capable GPU. See the [Audio & Video Setup Guide](setup/audio-video.md) for detailed installation instructions, model selection, and configuration.
 
+## Workflow Map (Quick Paths)
+
+Use this routing table to jump directly to a practical workflow.
+
+| Goal | Start here | Go deeper |
+|------|------------|-----------|
+| Run Copilot for a folder and get actionable output | [Copilot quick workflow](#quick-workflow-ask-verify-and-act) | [CLI `copilot` entry points](cli-reference.md#cli-copilot) |
+| Navigate TUI quickly | [Terminal UI](#terminal-ui-tui) | [TUI keyboard map](tui.md#keyboard-shortcuts) |
+| Do rules-based batch review before applying changes | [Rules batch review workflow](#rules-batch-review-workflow) | [CLI `rules` entry points](cli-reference.md#cli-rules) |
+| Scan and resolve duplicates safely | [Deduplication](#deduplication) | [CLI `dedupe` entry points](cli-reference.md#cli-dedupe) |
+| Manage profile-like setups across environments | [Profile workflow (current stable path)](#profile-workflow-current-stable-path) | [CLI profile behavior](cli-reference.md#cli-profile) |
+| Organize through the browser UI | [Web UI](#web-ui) | [Web organization workflow](web-ui/organization.md#quick-workflow-plan-review-run-export) |
+| Launch and tune desktop mode | [Desktop UI](#desktop-ui) | [Desktop launch workflow](desktop-app.md#quick-workflow-launch-configure-and-verify) |
+| Browse/install plugins | [Plugin Marketplace](#plugin-marketplace) | [CLI marketplace entry points](cli-reference.md#cli-marketplace) |
+| Pick PARA vs Johnny Decimal | [Methodology selection workflow](#quick-workflow-choose-a-methodology) | [Johnny Decimal user guide](methodologies/johnny-decimal/user-guide.md#getting-started) |
+
 ## CLI Commands Overview
 
 File Organizer provides two equivalent entrypoints: `file-organizer` and the short alias `fo`.
@@ -167,6 +183,21 @@ file-organizer copilot chat --dir ~/Documents
 file-organizer copilot chat "How many PDF files are in my Documents folder?"
 ```
 
+### Quick workflow: ask, verify, and act
+
+```bash
+# 1) Start a scoped REPL
+file-organizer copilot chat --dir ~/Documents
+
+# 2) Ask for an actionable plan
+# "Find duplicates and suggest cleanup order"
+
+# 3) Apply the suggested command path outside chat
+file-organizer dedupe scan ~/Documents
+```
+
+For additional command patterns, see [CLI `copilot` entry points](cli-reference.md#cli-copilot).
+
 ## Daemon and Background Processing
 
 The daemon watches directories for new files and organizes them automatically.
@@ -221,6 +252,19 @@ A numerical categorization system using `XX.YY` numbering:
 - **Areas** (10-19, 20-29, ...): Broad categories
 - **Categories** (X1, X2, ...): Specific sub-categories
 - **IDs** (XX.01, XX.02, ...): Individual items
+
+### Quick workflow: choose a methodology
+
+1. Start with `content_based` if you do not already follow a folder system.
+2. Choose `para` when your primary organization is actionability (Projects/Areas/Resources/Archive).
+3. Choose `johnny_decimal` when stable numeric indexing and long-term scale matter most.
+4. Run a dry run and compare output quality before committing:
+
+```bash
+file-organizer organize ~/Inbox ~/Organized --dry-run
+```
+
+Continue with [Johnny Decimal getting started](methodologies/johnny-decimal/user-guide.md#getting-started) when selecting a numeric methodology.
 
 ## Deduplication
 
@@ -318,6 +362,40 @@ file-organizer rules export --output rules-backup.yaml
 file-organizer rules import rules-backup.yaml
 ```
 
+### Rules batch review workflow
+
+```bash
+# 1) Preview rule effects against current files
+file-organizer rules preview ~/Documents --set default
+
+# 2) Review effect in dry-run apply mode
+file-organizer rules apply ~/Documents --set default --dry-run
+
+# 3) Run the real apply when satisfied
+file-organizer rules apply ~/Documents --set default
+```
+
+See [CLI `rules` entry points](cli-reference.md#cli-rules) for full command options.
+
+## Plugin Marketplace
+
+Use marketplace commands to discover and install plugins.
+
+```bash
+# Browse
+file-organizer marketplace list --page 1 --per-page 20
+
+# Inspect + install
+file-organizer marketplace info example-plugin
+file-organizer marketplace install example-plugin
+
+# Verify installation and updates
+file-organizer marketplace installed
+file-organizer marketplace updates
+```
+
+See [CLI `marketplace` entry points](cli-reference.md#cli-marketplace) for all subcommands.
+
 ## Smart Suggestions
 
 Get AI-powered suggestions for where to place files based on your existing directory structure and past organization patterns.
@@ -362,7 +440,20 @@ file-organizer config show --profile work
 file-organizer config edit --profile work --temperature 0.7
 ```
 
-For exhaustive CLI details, see the [CLI Reference](cli-reference.md).
+### Profile workflow (current stable path)
+
+In current mainstream installs, profile workflows are centered on named config profiles plus settings import/export.
+
+```bash
+# 1) Inspect profile-specific settings
+file-organizer config show --profile work
+
+# 2) Adjust profile behavior
+file-organizer config edit --profile work --temperature 0.7
+```
+
+Use [Web Settings import/export](web-ui/settings.md#settings-uisettings) for UI-based transfer flows.
+For runtime status of CLI `profile` subcommands, see [CLI profile behavior](cli-reference.md#cli-profile).
 
 ## Undo and Redo
 
@@ -396,6 +487,8 @@ file-organizer serve --host 0.0.0.0 --port 9000
 Then open `http://localhost:8000/ui/` in your browser.
 If setup is incomplete, the web UI redirects to `http://localhost:8000/ui/setup`.
 
+Quick path: [plan, review, run, and export from Web Organize](web-ui/organization.md#quick-workflow-plan-review-run-export).
+
 ## Desktop UI
 
 File Organizer includes a native desktop window application for managing files.
@@ -413,6 +506,8 @@ file-organizer desktop --title "My File Organizer" --width 1024 --height 768
 # Compatibility script (still available)
 file-organizer-desktop
 ```
+
+Quick path: [Desktop launch/configuration workflow](desktop-app.md#quick-workflow-launch-configure-and-verify).
 
 ## Project Documentation
 

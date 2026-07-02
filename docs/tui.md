@@ -12,6 +12,13 @@ file-organizer tui
 fo tui
 ```
 
+## Quick workflow: navigate, inspect, and adjust
+
+1. Launch the TUI and wait for the main layout (or finish setup wizard).
+2. Jump across main views with `1`–`8` to inspect files, organization results, history, settings, and copilot.
+3. Use `Tab` to move focus and `?` to confirm active bindings.
+4. Open the Methodology view (`4`) to verify current strategy before running large organization jobs.
+
 ## Overview
 
 ![TUI Overview](assets/tui-overview.svg)

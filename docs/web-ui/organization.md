@@ -11,6 +11,14 @@ The page is organized as:
 3. **Run/monitor job**
 4. **Review history and stats**
 
+## Quick workflow: plan, review, run, export
+
+1. Open `/ui/organize` and enter input/output directories.
+2. Select methodology (`content_based`, `johnny_decimal`, `para`, or `date_based`).
+3. Generate the plan and review proposed output paths before execution.
+4. Start the run and watch live progress/status updates.
+5. Export run output/history as JSON/CSV for follow-up or audit.
+
 ## Generate a plan
 
 Use the scan form to provide:
