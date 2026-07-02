@@ -95,9 +95,9 @@ File Organizer v2.0
 
 **Web Server**
 
-- `web_server/main.py` - FastAPI application
-- `web_server/routes/` - API endpoints
-- `web_server/models.py` - Pydantic models
+- `src/file_organizer/api/main.py` - FastAPI application
+- `src/file_organizer/api/routers/` - API endpoints
+- `src/file_organizer/api/models.py` - Pydantic models
 
 **Core Engine**
 
