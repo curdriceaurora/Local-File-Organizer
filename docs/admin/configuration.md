@@ -17,11 +17,14 @@ For core app profile settings (`config.yaml`, `file-organizer config ...`, model
 
 | Variable | Description | Default |
 |---|---|---|
+| `FO_API_APP_NAME` | API application name | `File Organizer API` |
+| `FO_API_VERSION` | API version string | package `__version__` |
 | `FO_API_ENVIRONMENT` | Runtime environment (`development`, `test`, `production`) | `development` |
 | `FO_API_HOST` | Bind host | `0.0.0.0` |
 | `FO_API_PORT` | Bind port | `8000` |
 | `FO_API_LOG_LEVEL` | Log level | `INFO` |
 | `FO_API_ENABLE_DOCS` | Enable `/docs` and OpenAPI pages | `true` |
+| `FO_API_ALLOWED_PATHS` | JSON array or comma-separated allowed root paths | current user home directory |
 
 ### CORS and WebSocket
 
