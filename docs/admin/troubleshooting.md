@@ -1,5 +1,7 @@
 # Admin Troubleshooting Guide
 
+> For everyday user-facing issues (optional dependencies, AI providers, TUI/desktop, audio/video, search), see the [User Troubleshooting Guide](../troubleshooting.md).
+
 ## Common Issues
 
 ### Application Won't Start
@@ -16,11 +18,17 @@ ERROR: Failed to bind to port 8000
 # Find process using port 8000
 lsof -i :8000
 
-# Kill the process
+# Gracefully stop the process
+kill <PID>
+# If the process does not stop after a few seconds, force-kill it:
 kill -9 <PID>
 
-# Or use a different port
-PORT=8001 python app.py
+# Or start File Organizer on a different port
+file-organizer serve --port 8001
+
+# When using Docker Compose, set the port in .env instead
+echo "APP_PORT=8001" >> .env
+docker-compose up -d
 ```
 
 #### Problem: Database Connection Failed
@@ -332,6 +340,122 @@ docker stats ollama
 # Reduce concurrent requests
 # Check load on Ollama service
 ```
+
+## Redis Issues
+
+### Redis Connection Failed
+
+**Problem**: `ConnectionError: Error connecting to Redis` or session/cache features not working
+
+**Solution**:
+
+```bash
+# Check the configured Redis URL
+echo $FO_REDIS_URL
+
+# Verify the Redis container is running
+docker-compose ps redis
+
+# Restart the Redis container if it is stopped/unhealthy
+docker-compose restart redis
+
+# Test the connection from the web container
+docker-compose exec web redis-cli -u "${FO_REDIS_URL:-redis://redis:6379/0}" ping
+# Expected output: PONG
+```
+
+### Redis Memory Pressure / Eviction
+
+**Problem**: Cache misses increase, or Redis logs `maxmemory policy: allkeys-lru` evictions
+
+**Solution**:
+
+```bash
+# Check Redis memory usage
+docker-compose exec redis redis-cli info memory | grep used_memory_human
+
+# Check current eviction policy
+docker-compose exec redis redis-cli config get maxmemory-policy
+
+# If eviction is too aggressive, increase the memory limit in docker-compose.yml
+# or in your Redis configuration:
+#   maxmemory 512mb
+#   maxmemory-policy allkeys-lru
+
+docker-compose restart redis
+```
+
+### Clearing the Redis Cache (Safe)
+
+Only do this when debugging stale cache data. Flushing removes all cached sessions and data.
+
+```bash
+# Flush only the File Organizer database (default: db 0)
+docker-compose exec redis redis-cli -n 0 FLUSHDB
+
+# Restart the app after clearing
+docker-compose restart web
+```
+
+### Redis Auth / TLS Errors
+
+**Problem**: `NOAUTH Authentication required` or TLS handshake failure
+
+**Solution**:
+
+```bash
+# Set credentials in the Redis URL
+export FO_REDIS_URL=redis://:your_password@redis:6379/0
+
+# For TLS-enabled Redis (e.g., Redis Cloud, Azure Cache for Redis)
+export FO_REDIS_URL=rediss://:your_password@hostname:6380/0  # note: rediss://
+
+docker-compose up -d
+```
+
+## Deployment Rollback
+
+> **Note**: This section covers rolling back the *application version* in a Docker deployment. To undo individual file organization operations, see [Operation Undo / Rollback](../troubleshooting.md#operation-undo--rollback-issues) in the User Troubleshooting Guide.
+
+### Roll Back to a Previous Docker Image Tag
+
+```bash
+# List recently used image tags (check your registry or release history)
+docker images ghcr.io/curdriceaurora/local-file-organizer --format "{{.Tag}}\t{{.CreatedAt}}"
+
+# Pin the previous version in .env
+echo "APP_IMAGE_TAG=2.0.0-alpha.2" >> .env  # replace with the target version
+
+# Redeploy
+docker-compose pull
+docker-compose up -d
+```
+
+If you do not use image tags in your compose file, pin the version explicitly:
+
+```yaml
+# docker-compose.yml
+services:
+  web:
+    image: ghcr.io/curdriceaurora/local-file-organizer:2.0.0-alpha.2
+```
+
+### Database Migration Rollback
+
+If a new version ran Alembic migrations and you need to revert:
+
+```bash
+# Identify the previous migration revision
+docker-compose exec web alembic history --indicate-current
+
+# Downgrade one step
+docker-compose exec web alembic downgrade -1
+
+# Or downgrade to a specific revision ID
+docker-compose exec web alembic downgrade <revision_id>
+```
+
+Always take a database backup before rolling back migrations in production.
 
 ## Getting Help
 

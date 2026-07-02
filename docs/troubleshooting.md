@@ -337,6 +337,132 @@ lsof -i :8000
 file-organizer serve --port 8001
 ```
 
+## AI Provider Issues
+
+### Provider Not Found / Missing Extra
+
+**Error**: `Unknown provider 'openai'. Registered providers: ['ollama']` or similar
+
+**Cause**: The required provider package is not installed.
+
+**Solution**:
+
+```bash
+# OpenAI, Groq, or LM Studio (OpenAI-compatible)
+pip install "local-file-organizer[cloud]"
+
+# Claude (Anthropic)
+pip install "local-file-organizer[claude]"
+
+# LLaMA.cpp
+pip install "local-file-organizer[llama]"
+
+# MLX (Apple Silicon)
+pip install "local-file-organizer[mlx]"
+```
+
+See [AI Provider Setup](setup/ai-providers.md) for full configuration details.
+
+### OpenAI-Compatible API: Auth Warning or 401
+
+**Error**: Warning `FO_PROVIDER=openai but neither FO_OPENAI_API_KEY nor FO_OPENAI_BASE_URL is set` or HTTP 401 from the API
+
+**Cause**: API key or base URL not set in the environment.
+
+**Solution**:
+
+```bash
+# For OpenAI
+export FO_OPENAI_API_KEY=sk-...
+export FO_OPENAI_MODEL=gpt-4o-mini
+
+# For LM Studio (no key needed, custom base URL)
+export FO_PROVIDER=openai
+export FO_OPENAI_BASE_URL=http://localhost:1234/v1
+export FO_OPENAI_MODEL=your-loaded-model
+
+# For Groq
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=gsk_...
+export FO_OPENAI_BASE_URL=https://api.groq.com/openai/v1
+export FO_OPENAI_MODEL=llama-3.3-70b-versatile
+```
+
+The standard `OPENAI_API_KEY` env var is also accepted as a fallback.
+
+### OpenAI-Compatible API: Model Not Found at Custom Endpoint
+
+**Error**: `404 Not Found` or `model not found` when using `FO_OPENAI_BASE_URL`
+
+**Cause**: The model name set in `FO_OPENAI_MODEL` is not available at the configured endpoint, or the endpoint URL is missing the `/v1` path.
+
+**Solution**:
+
+```bash
+# Verify your base URL ends with /v1
+export FO_OPENAI_BASE_URL=http://localhost:1234/v1   # correct
+# export FO_OPENAI_BASE_URL=http://localhost:1234    # missing /v1
+
+# List available models at the endpoint
+curl "${FO_OPENAI_BASE_URL}/models" -H "Authorization: Bearer ${FO_OPENAI_API_KEY:-none}"
+
+# Set the model to one returned by the above command
+export FO_OPENAI_MODEL=actual-model-id-from-list
+```
+
+### Claude / Anthropic: Auth Error or Missing Extra
+
+**Error**: `AuthenticationError` or `401 Unauthorized` from the Anthropic API
+
+**Cause**: `FO_CLAUDE_API_KEY` is not set, expired, or the `[claude]` extra is not installed.
+
+**Solution**:
+
+```bash
+# Install the Claude extra
+pip install "local-file-organizer[claude]"
+
+# Set your API key
+export FO_PROVIDER=claude
+export FO_CLAUDE_API_KEY=sk-ant-...
+export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
+```
+
+The standard `ANTHROPIC_API_KEY` env var is also accepted as a fallback.
+
+### Claude / Anthropic: Rate Limit
+
+**Error**: `RateLimitError` or HTTP 429 from the Anthropic API
+
+**Cause**: API request rate or token quota exceeded on your Anthropic account.
+
+**Solution**: Wait a moment before retrying. For batch processing large directories, process files sequentially to reduce concurrent API calls:
+
+```bash
+file-organizer organize /input /output --sequential
+```
+
+Check your usage and limits in the [Anthropic console](https://console.anthropic.com/).
+
+### LM Studio: Connection Refused
+
+**Error**: `ConnectionRefusedError` or `Failed to connect to http://localhost:1234`
+
+**Cause**: LM Studio's local server is not running, or no model is loaded.
+
+**Solution**:
+
+1. Open LM Studio and navigate to **Local Server** (left sidebar).
+2. Load a model — the server only becomes active once a model is selected.
+3. Click **Start Server** and confirm the port matches `FO_OPENAI_BASE_URL`.
+4. Verify the server is responding:
+
+```bash
+curl http://localhost:1234/v1/models
+```
+
+See [AI Provider Setup — LM Studio](setup/ai-providers.md) for full configuration.
+
 ## Audio Transcription Issues
 
 ### No GPU Available Warning
@@ -648,6 +774,88 @@ unzip -l suspicious.zip  # List only, don't extract
 
 Archive bomb detection is a built-in safety feature. If you trust the archive source, extract it manually before organizing its contents.
 
+## Scientific Format Errors
+
+### HDF5 / NetCDF / MATLAB File Not Processed
+
+**Error**: `ModuleNotFoundError: No module named 'h5py'`, `No module named 'netCDF4'`, or `No module named 'scipy'` when organizing `.h5`, `.nc`, `.mat`, or `.hdf` files
+
+**Cause**: Scientific file format dependencies are not installed.
+
+**Solution**:
+
+```bash
+# Install scientific format support
+pip install "local-file-organizer[scientific]"
+
+# Verify installation
+python -c "import h5py, netCDF4, scipy; print('Scientific extras OK')"
+
+# Then retry analysis
+file-organizer analyze data.h5 --verbose
+```
+
+Supported formats after install: HDF5 (`.h5`, `.hdf`, `.hdf5`), NetCDF (`.nc`, `.nc4`), MATLAB (`.mat`).
+
+### Scientific File Metadata Unreadable
+
+**Error**: `OSError: Unable to open file` or corrupt HDF5/NetCDF error
+
+**Cause**: File is truncated, written by an incompatible library version, or on a network filesystem with locking issues.
+
+**Solution**:
+
+```bash
+# Check file integrity with h5py
+python -c "import h5py; h5py.File('data.h5', 'r').close(); print('OK')"
+
+# For NetCDF files
+python -c "import netCDF4; netCDF4.Dataset('data.nc').close(); print('OK')"
+
+# Analyze the file directly for details
+file-organizer analyze data.h5 --verbose
+```
+
+If the file is intact but on a network drive, copy it locally before processing.
+
+## CAD Format Errors
+
+### DXF / DWG File Not Processed
+
+**Error**: `ModuleNotFoundError: No module named 'ezdxf'` when organizing `.dxf` files
+
+**Cause**: CAD file format dependencies are not installed.
+
+**Solution**:
+
+```bash
+# Install CAD format support
+pip install "local-file-organizer[cad]"
+
+# Verify installation
+python -c "import ezdxf; print('CAD extras OK')"
+```
+
+Note: `.dwg` support requires `ezdxf` (read-only) and is limited to DWG versions that ezdxf can parse. If a `.dwg` file fails, try exporting it to `.dxf` from your CAD application.
+
+### DXF Parse Error
+
+**Error**: `ezdxf.lldxf.const.DXFStructureError` or "DXF version not supported"
+
+**Cause**: The DXF file uses an older version (pre-R12) or is created by software that writes non-standard DXF.
+
+**Solution**:
+
+```bash
+# Analyze the file to see the detected DXF version
+file-organizer analyze drawing.dxf --verbose
+
+# Re-export from your CAD application as DXF R2010 or later
+# Most applications: Save As → DXF → select version R2010/R2013/R2018
+```
+
+
+
 ## Video Processing Errors
 
 ### Video Scene Detection Failed
@@ -825,6 +1033,53 @@ file-organizer analyze /path/to/files --verbose
 # Try with more files or use keyword-based search
 file-organizer search "query" --type all
 ```
+
+## Operation Undo / Rollback Issues
+
+> **Note**: This section covers *file operation undo* — reversing file moves, renames, or copies performed by `file-organizer organize` and related commands. For rolling back a Docker deployment to a previous app version, see [Deployment Rollback](admin/troubleshooting.md#deployment-rollback) in the Admin Troubleshooting Guide.
+
+### History Shows No Operations
+
+**Error**: `file-organizer history` returns an empty list
+
+**Cause**: No operations have been run yet in this workspace, or the workspace path has changed since the operations were recorded.
+
+**Solution**:
+
+```bash
+# Check current workspace configuration
+file-organizer config show
+
+# List history for a specific path if needed
+file-organizer history --path /path/to/workspace
+
+# Run an organize operation first, then check history
+file-organizer organize /input /output --dry-run
+```
+
+### Undo Fails or Reports "Nothing to Undo"
+
+**Error**: `file-organizer undo` reports "No operations to undo" or similar
+
+**Cause**: The operation history is empty, the last operation was already undone, or the files have been moved or deleted since the operation was recorded.
+
+**Solution**:
+
+```bash
+# Review the full operation history first
+file-organizer history
+
+# Undo the most recent operation
+file-organizer undo
+
+# Undo a specific operation by ID (shown in history output)
+file-organizer undo --id <operation-id>
+
+# Preview what undo would do without making changes
+file-organizer undo --dry-run
+```
+
+If files were manually moved after the organize operation, undo may not be able to locate them. In that case, you can review the history to see the original file paths and restore them manually.
 
 ## Getting Help
 

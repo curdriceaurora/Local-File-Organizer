@@ -430,6 +430,28 @@ ollama serve
 curl http://localhost:11434/api/version
 ```
 
+### OpenAI-Compatible API or Claude Not Connecting
+
+**Issue**: Provider fails to connect, returns 401, or "unknown provider" error.
+
+**Solutions**:
+
+```bash
+# Install the required extra
+pip install "local-file-organizer[cloud]"    # OpenAI / Groq / LM Studio
+pip install "local-file-organizer[claude]"   # Anthropic Claude
+
+# Set environment variables for your provider
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=sk-...
+
+# For Claude
+export FO_PROVIDER=claude
+export FO_CLAUDE_API_KEY=sk-ant-...
+```
+
+See [AI Provider Setup](setup/ai-providers.md) for full configuration details and provider-specific troubleshooting.
+
 ### Port Already in Use
 
 **Issue**: "Port 8000 is already in use"
@@ -472,7 +494,7 @@ ollama list
 - Reduce maximum file size
 - Use CPU-only mode (slower but uses less RAM)
 
-For more issues, see [Troubleshooting Guide](troubleshooting.md).
+For more issues, see the [Troubleshooting Guide](troubleshooting.md) — covers optional dependency failures, all AI providers, TUI/desktop issues, audio/video/FFmpeg, search, deduplication, and more.
 
 ## Next Steps
 
