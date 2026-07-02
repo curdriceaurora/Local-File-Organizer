@@ -54,9 +54,10 @@ file-organizer config edit --profile work --methodology para
 
 Model configs are resolved in this order:
 
-1. If `FO_PROVIDER` is set, environment provider config is used.
-2. Otherwise, profile config is loaded from `FO_PROFILE` (or `default`).
-3. Otherwise, built-in defaults are used.
+1. Explicit `ModelConfig` parameters passed to `FileOrganizer`.
+2. Environment variables (`FO_PROVIDER`, `FO_OPENAI_*`, `FO_LLAMA_CPP_*`, `FO_MLX_*`, `FO_CLAUDE_*`).
+3. Profile config loaded from `FO_PROFILE` (or `default`).
+4. Built-in defaults.
 
 ## Provider environment variables
 
