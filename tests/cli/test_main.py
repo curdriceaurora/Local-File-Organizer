@@ -64,7 +64,7 @@ def test_preview_requires_setup_completed(mock_cm):
 @pytest.mark.integration
 def test_organize_help_hides_advanced_flags_by_default():
     """Default organize help focuses on first-touch options."""
-    result = runner.invoke(app, ["organize", "--help"])
+    result = runner.invoke(app, ["organize", "--help"], terminal_width=120)
     assert result.exit_code == 0
     assert "--advanced-help" in result.stdout
     assert "--max-workers" not in result.stdout
