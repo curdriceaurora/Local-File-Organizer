@@ -433,7 +433,7 @@ docker-compose up -d
 
 ## Deployment Rollback
 
-> **Note**: This section covers rolling back the *application version* in a Docker deployment. To undo individual file organization operations, see [Operation Undo / Rollback](../troubleshooting.md#operation-undo--rollback-issues) in the User Troubleshooting Guide.
+> **Note**: This section covers rolling back the *application version* in a Docker deployment. To undo individual file organization operations, see [Operation Undo / Rollback](../troubleshooting.md#operation-undo-rollback-issues) in the User Troubleshooting Guide.
 
 ### Roll Back to a Previous Source Version
 

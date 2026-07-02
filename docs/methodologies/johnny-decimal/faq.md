@@ -458,7 +458,7 @@ See [API Reference](api-reference.md) for full automation options.
 
 Start simple, add detail as needed:
 
-**Phase 1**: Areas only
+**Stage 1**: Areas only
 
 ```text
 10 Finance
@@ -466,7 +466,7 @@ Start simple, add detail as needed:
 30 Operations
 ```
 
-**Phase 2**: Add categories
+**Stage 2**: Add categories
 
 ```text
 10 Finance
@@ -474,7 +474,7 @@ Start simple, add detail as needed:
   12 Invoices
 ```
 
-**Phase 3**: Add IDs if needed
+**Stage 3**: Add IDs if needed
 
 ```text
 11 Budgets

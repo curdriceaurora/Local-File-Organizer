@@ -6,7 +6,7 @@ Complete setup guide for File Organizer's AI provider support: 5 native provider
 
 ## Overview
 
-File Organizer supports **5 native AI providers** for text analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints. Three of the native providers (Ollama, OpenAI, Claude) also support vision analysis; LLaMA.cpp and MLX are text-only for now.
+File Organizer supports **5 native AI providers** for text analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints. Three of the native providers (Ollama, OpenAI, Claude) also support vision analysis; LLaMA.cpp and MLX are text-only.
 
 **Native Providers:**
 - **Ollama** (default)
@@ -38,8 +38,8 @@ File Organizer supports **5 native AI providers** for text analysis, plus **2 Op
 | **Ollama** | `ollama` | Local | Free | Easy | No (CPU works) | ✅ Yes | Default choice, beginners, general use |
 | **OpenAI** | `openai` | Cloud | Paid (API) | Easy | No | ✅ Yes | Production quality, vision tasks, cloud OK |
 | **Claude** | `claude` | Cloud | Paid (API) | Easy | No | ✅ Yes | Strong reasoning, vision analysis, cloud OK |
-| **LLaMA.cpp** | `llama_cpp` | Local | Free | Medium | No (CPU works) | ❌ Currently unsupported | Advanced users, GGUF models, offline use |
-| **MLX** | `mlx` | Local | Free | Medium | Apple Silicon only | ❌ Currently unsupported | Mac users with M1/M2/M3 chips |
+| **LLaMA.cpp** | `llama_cpp` | Local | Free | Medium | No (CPU works) | ❌ Unsupported | Advanced users, GGUF models, offline use |
+| **MLX** | `mlx` | Local | Free | Medium | Apple Silicon only | ❌ Unsupported | Mac users with M1/M2/M3 chips |
 
 ### OpenAI-Compatible Services
 
@@ -47,7 +47,7 @@ These services use `FO_PROVIDER=openai` with a custom `FO_OPENAI_BASE_URL`:
 
 | Service | Local/Cloud | Cost | Setup Difficulty | Vision Support | Best For |
 |---------|-------------|------|------------------|----------------|----------|
-| **Groq** | Cloud | Free/Paid | Easy | ❌ Not yet | Fast inference, low latency |
+| **Groq** | Cloud | Free/Paid | Easy | ❌ Limited by model availability | Fast inference, low latency |
 | **LM Studio** | Local | Free | Medium | Varies | GUI model management, local control |
 
 ---
@@ -673,10 +673,10 @@ ollama serve
 
 ### Vision Not Supported
 
-Some providers only support text inference currently:
+Some providers support text inference only:
 
-- **LLaMA.cpp**: Vision support is currently unsupported
-- **MLX**: Vision support is currently unsupported
+- **LLaMA.cpp**: Vision support is unsupported
+- **MLX**: Vision support is unsupported
 - **Groq**: Check Groq docs for vision model availability
 
 Image files will fall back to extension-based organization.
