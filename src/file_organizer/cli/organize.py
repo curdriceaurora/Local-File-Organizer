@@ -8,7 +8,6 @@ from typing import Annotated
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 from file_organizer.cli.path_validation import resolve_cli_path, validate_pair
 from file_organizer.cli.state import _get_state
@@ -85,23 +84,19 @@ def _print_organize_advanced_help() -> None:
             border_style="cyan",
         )
     )
-    table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("Flag", style="bold")
-    table.add_column("Purpose")
-    table.add_row("`--max-workers INTEGER`", "Cap parallel worker count.")
-    table.add_row("`--sequential`", "Force single-worker sequential processing.")
-    table.add_row(
-        "`--prefetch-depth INTEGER`",
-        "Tune queue-ahead depth per worker (`0` disables prefetch).",
+    console.print(
+        "\n".join(
+            [
+                "[bold]`--max-workers INTEGER`[/bold] — Cap parallel worker count.",
+                "[bold]`--sequential`[/bold] — Force single-worker sequential processing.",
+                "[bold]`--prefetch-depth INTEGER`[/bold] — Tune queue-ahead depth per worker (`0` disables prefetch).",
+                "[bold]`--no-prefetch`[/bold] — Backward-compatible alias for `--prefetch-depth 0`.",
+                "[bold]`--no-vision`, `--text-only`[/bold] — Disable vision model processing for images.",
+                "[bold]`--transcribe-audio`[/bold] — Enable transcription-based audio categorization.",
+                "[bold]`--max-transcribe-seconds FLOAT`[/bold] — Skip transcription for long audio files (`0` disables cap).",
+            ]
+        )
     )
-    table.add_row("`--no-prefetch`", "Backward-compatible alias for `--prefetch-depth 0`.")
-    table.add_row("`--no-vision`, `--text-only`", "Disable vision model processing for images.")
-    table.add_row("`--transcribe-audio`", "Enable transcription-based audio categorization.")
-    table.add_row(
-        "`--max-transcribe-seconds FLOAT`",
-        "Skip transcription for long audio files (`0` disables cap).",
-    )
-    console.print(table)
     console.print(
         "\n[bold]Example:[/bold] [cyan]fo organize INPUT_DIR OUTPUT_DIR "
         "--max-workers 2 --prefetch-depth 1[/cyan]"

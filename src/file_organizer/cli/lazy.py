@@ -251,7 +251,8 @@ class LazyTyperGroup(typer.core.TyperGroup):
             return
 
         max_len = max(len(name) for name, _ in command_rows)
-        limit = formatter.width - 6 - max_len
+        formatter_width = formatter.width or 80
+        limit = formatter_width - 6 - max_len
         if limit < 10:
             limit = 10
 

@@ -21,6 +21,8 @@ def test_version_command():
 
 
 @patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
 def test_start_command_runs_quick_start(mock_setup_run):
     """start routes to setup quick-start mode."""
     result = runner.invoke(app, ["start"])
@@ -29,6 +31,8 @@ def test_start_command_runs_quick_start(mock_setup_run):
 
 
 @patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
 def test_quickstart_alias_runs_quick_start(mock_setup_run):
     """quickstart alias routes to setup quick-start mode."""
     result = runner.invoke(app, ["quickstart", "--profile", "work", "--dry-run"])
@@ -56,6 +60,8 @@ def test_preview_requires_setup_completed(mock_cm):
     assert "setup" in result.stdout.lower()
 
 
+@pytest.mark.ci
+@pytest.mark.integration
 def test_organize_help_hides_advanced_flags_by_default():
     """Default organize help focuses on first-touch options."""
     result = runner.invoke(app, ["organize", "--help"])
@@ -67,6 +73,8 @@ def test_organize_help_hides_advanced_flags_by_default():
     assert "--transcribe-audio" not in result.stdout
 
 
+@pytest.mark.ci
+@pytest.mark.integration
 def test_organize_advanced_help_lists_hidden_tuning_flags():
     """Advanced help should expose full tuning controls without args."""
     result = runner.invoke(app, ["organize", "--advanced-help"])
