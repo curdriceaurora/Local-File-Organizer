@@ -104,6 +104,13 @@ nav:
       - Profiles: cli-reference.md
       - Plugin marketplace: cli-reference.md
       - Copilot assistant: cli-reference.md
+      - Rules batch review: cli-reference.md
+  - Methodologies:
+      - Selection workflow: USER_GUIDE.md
+      - Johnny Decimal User Guide: methodologies/johnny-decimal/user-guide.md
+      - Johnny Decimal Migration: methodologies/johnny-decimal/migration.md
+      - JD + PARA guide: methodologies/johnny-decimal/para-compatibility.md
+      - Johnny Decimal FAQ: methodologies/johnny-decimal/faq.md
   - API Reference:
       - Overview: api/index.md
       - Error Reference: api/error-reference.md

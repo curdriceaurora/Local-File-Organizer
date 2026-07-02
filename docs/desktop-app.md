@@ -18,6 +18,22 @@ Compatibility script (still available):
 file-organizer-desktop
 ```
 
+## Quick workflow: launch, configure, and verify
+
+```bash
+# 1) Ensure desktop dependencies are installed
+pip install -e ".[desktop]"
+
+# 2) Launch desktop mode
+file-organizer desktop
+
+# 3) If needed, tune the window
+file-organizer desktop --title "File Organizer" --width 1280 --height 820
+```
+
+After launch, validate navigation from Home -> Organize -> Settings in the desktop window.
+For UI behavior details, see [Web UI Guide](web-ui/index.md).
+
 ## Runtime model
 
 At launch, the desktop app:

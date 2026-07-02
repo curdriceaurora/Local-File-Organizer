@@ -138,6 +138,7 @@ file-organizer serve --workers 4
 
 ---
 
+<a id="cli-search"></a>
 ### `search`
 
 Search for files by name pattern with optional type filtering, or use hybrid
@@ -409,6 +410,7 @@ file-organizer recover --journal /path/to/durable_move.jsonl
 
 ---
 
+<a id="cli-history"></a>
 ### `history`
 
 View operation history.
@@ -642,9 +644,12 @@ file-organizer model cache
 
 ---
 
+<a id="cli-copilot"></a>
 ### `copilot` — AI Assistant
 
 Interactive AI copilot for file organisation.
+
+**Workflow entry point:** Start with `copilot chat --dir <DIR>` for scoped guidance, then run suggested concrete commands from other sections (for example `dedupe`, `rules`, or `organize`).
 
 #### `copilot chat`
 
@@ -778,9 +783,12 @@ file-organizer daemon stop
 
 ---
 
+<a id="cli-dedupe"></a>
 ### `dedupe` — Duplicate File Management
 
 Find and manage duplicate files.
+
+**Workflow entry point:** Use `scan` -> `report` -> `resolve` in that order so you can review before changing anything.
 
 #### `dedupe scan`
 
@@ -823,15 +831,18 @@ file-organizer dedupe resolve DIRECTORY [OPTIONS]
 
 ```bash
 file-organizer dedupe scan ~/Images
-file-organizer dedupe report
-file-organizer dedupe resolve
+file-organizer dedupe report ~/Images
+file-organizer dedupe resolve ~/Images
 ```
 
 ---
 
+<a id="cli-rules"></a>
 ### `rules` — Organisation Rules
 
 Manage copilot organisation rules and rule sets.
+
+**Workflow entry point:** Use `rules preview <DIR>` for batch review first, then `rules apply <DIR>` when the dry run matches expectations.
 
 #### `rules list`
 
@@ -1027,9 +1038,12 @@ file-organizer suggest patterns ~/Projects
 
 ---
 
+<a id="cli-marketplace"></a>
 ### `marketplace` — Plugin Marketplace
 
 Browse and manage plugins from the marketplace.
+
+**Workflow entry point:** `marketplace list/search` -> `marketplace info` -> `marketplace install` -> `marketplace installed/updates`.
 
 #### `marketplace list`
 
@@ -1327,11 +1341,21 @@ file-organizer update rollback
 
 ---
 
+<a id="cli-profile"></a>
 ### `profile` — Legacy compatibility shim
 
 `profile` is currently a compatibility command that prints guidance and exits.
 Use `file-organizer config show --profile <name>` and
 `file-organizer config edit --profile <name>` for named configuration profiles.
+
+If your runtime exposes `profile` subcommands, check availability first:
+
+```bash
+file-organizer --help
+file-organizer profile --help
+```
+
+In the current default runtime wiring, `file-organizer profile` is a compatibility shim and does not expose export/import/merge subcommands. Use named config profiles (`config show/edit --profile`) and settings import/export in the Web UI.
 
 ```bash
 file-organizer profile
