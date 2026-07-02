@@ -1042,7 +1042,7 @@ file-organizer search "query" --type all
 
 **Error**: `file-organizer history` returns an empty list
 
-**Cause**: No operations have been run yet in this workspace, or the workspace path has changed since the operations were recorded.
+**Cause**: No operations have been run yet in this workspace, or the history limit is hiding older entries.
 
 **Solution**:
 
@@ -1050,11 +1050,14 @@ file-organizer search "query" --type all
 # Check current workspace configuration
 file-organizer config show
 
-# List history for a specific path if needed
-file-organizer history --path /path/to/workspace
+# Show more history entries (default is 10)
+file-organizer history --limit 50
 
-# Run an organize operation first, then check history
-file-organizer organize /input /output --dry-run
+# Show all operation types with statistics
+file-organizer history --stats --verbose
+
+# Run an actual organize operation (not a dry run) to create history
+file-organizer organize /input /output
 ```
 
 ### Undo Fails or Reports "Nothing to Undo"
@@ -1067,16 +1070,16 @@ file-organizer organize /input /output --dry-run
 
 ```bash
 # Review the full operation history first
-file-organizer history
+file-organizer history --limit 20 --verbose
+
+# Preview what undo would do without making changes
+file-organizer undo --dry-run
 
 # Undo the most recent operation
 file-organizer undo
 
-# Undo a specific operation by ID (shown in history output)
-file-organizer undo --id <operation-id>
-
-# Preview what undo would do without making changes
-file-organizer undo --dry-run
+# Undo a specific operation by its numeric ID (shown in history output)
+file-organizer undo --operation-id <id>
 ```
 
 If files were manually moved after the organize operation, undo may not be able to locate them. In that case, you can review the history to see the original file paths and restore them manually.

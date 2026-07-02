@@ -359,8 +359,10 @@ docker-compose ps redis
 # Restart the Redis container if it is stopped/unhealthy
 docker-compose restart redis
 
-# Test the connection from the web container
-docker-compose exec web redis-cli -u "${FO_REDIS_URL:-redis://redis:6379/0}" ping
+# Test the connection directly from the Redis container.
+# REDISCLI_AUTH is already set in the container environment (docker-compose.yml),
+# so redis-cli authenticates automatically — no password argument needed.
+docker-compose exec redis redis-cli ping
 # Expected output: PONG
 ```
 
@@ -417,27 +419,37 @@ docker-compose up -d
 
 > **Note**: This section covers rolling back the *application version* in a Docker deployment. To undo individual file organization operations, see [Operation Undo / Rollback](../troubleshooting.md#operation-undo--rollback-issues) in the User Troubleshooting Guide.
 
-### Roll Back to a Previous Docker Image Tag
+### Roll Back to a Previous Source Version
+
+The default `docker-compose.yml` builds the image from source (`build: context: .`). To roll back to a previous release, check out the target git tag and rebuild:
 
 ```bash
-# List recently used image tags (check your registry or release history)
-docker images ghcr.io/curdriceaurora/local-file-organizer --format "{{.Tag}}\t{{.CreatedAt}}"
+# Identify the release tag to roll back to
+git tag --sort=-version:refname | head -10
 
-# Pin the previous version in .env
-echo "APP_IMAGE_TAG=2.0.0-alpha.2" >> .env  # replace with the target version
+# Check out the previous release
+git checkout v2.0.0-alpha.2    # replace with the target tag
 
-# Redeploy
-docker-compose pull
+# Rebuild and redeploy
+docker-compose build
 docker-compose up -d
 ```
 
-If you do not use image tags in your compose file, pin the version explicitly:
+If your deployment uses a pre-built registry image instead of a local build, edit the `image:` field directly in `docker-compose.yml`:
 
 ```yaml
 # docker-compose.yml
 services:
-  web:
+  file-organizer:
     image: ghcr.io/curdriceaurora/local-file-organizer:2.0.0-alpha.2
+    # Remove or comment out the 'build:' block when pinning an image tag
+```
+
+Then redeploy:
+
+```bash
+docker-compose pull
+docker-compose up -d
 ```
 
 ### Database Migration Rollback
@@ -446,13 +458,13 @@ If a new version ran Alembic migrations and you need to revert:
 
 ```bash
 # Identify the previous migration revision
-docker-compose exec web alembic history --indicate-current
+docker-compose exec file-organizer alembic history --indicate-current
 
 # Downgrade one step
-docker-compose exec web alembic downgrade -1
+docker-compose exec file-organizer alembic downgrade -1
 
 # Or downgrade to a specific revision ID
-docker-compose exec web alembic downgrade <revision_id>
+docker-compose exec file-organizer alembic downgrade <revision_id>
 ```
 
 Always take a database backup before rolling back migrations in production.
