@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import typing
+from collections import OrderedDict
 
 import click
 import typer
@@ -39,6 +40,48 @@ LAZY_COMMANDS: dict[str, tuple[str, str, str]] = {
         "Browse and manage marketplace plugins.",
     ),
 }
+
+COMMAND_CATEGORIES: dict[str, str] = {
+    # Core
+    "start": "Core",
+    "quickstart": "Core",
+    "setup": "Core",
+    "organize": "Core",
+    "preview": "Core",
+    "search": "Core",
+    "analyze": "Core",
+    # Interfaces
+    "serve": "Interfaces",
+    "desktop": "Interfaces",
+    "tui": "Interfaces",
+    "api": "Interfaces",
+    "api-keys": "Interfaces",
+    # Automation
+    "autotag": "Automation",
+    "dedupe": "Automation",
+    "rules": "Automation",
+    "daemon": "Automation",
+    "suggest": "Automation",
+    # Advanced
+    "analytics": "Advanced",
+    "benchmark": "Advanced",
+    "config": "Advanced",
+    "copilot": "Advanced",
+    "doctor": "Advanced",
+    "docs": "Advanced",
+    "hardware-info": "Advanced",
+    "history": "Advanced",
+    "marketplace": "Advanced",
+    "model": "Advanced",
+    "profile": "Advanced",
+    "recover": "Advanced",
+    "redo": "Advanced",
+    "undo": "Advanced",
+    "update": "Advanced",
+    "version": "Advanced",
+}
+
+HELP_CATEGORY_ORDER: tuple[str, ...] = ("Core", "Interfaces", "Automation", "Advanced")
 
 
 class LazyCommandProxy(click.Group):
@@ -182,7 +225,45 @@ class LazyTyperGroup(typer.core.TyperGroup):
         Returns:
             click.Command | None: A `LazyCommandProxy` or other `click.Command` when found, `None` if no command matches.
         """
+        command: click.Command | None
         if cmd_name in LAZY_COMMANDS:
             module_name, attr_name, help_text = LAZY_COMMANDS[cmd_name]
-            return LazyCommandProxy(cmd_name, module_name, attr_name, help_text)
-        return super().get_command(ctx, cmd_name)
+            command = LazyCommandProxy(cmd_name, module_name, attr_name, help_text)
+        else:
+            command = super().get_command(ctx, cmd_name)
+
+        if command is not None:
+            command.__dict__["rich_help_panel"] = (
+                f"{COMMAND_CATEGORIES.get(cmd_name, 'Advanced')} Commands"
+            )
+        return command
+
+    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        """Render top-level commands grouped by user-facing complexity tiers."""
+        command_rows: list[tuple[str, click.Command]] = []
+        for subcommand in self.list_commands(ctx):
+            cmd = self.get_command(ctx, subcommand)
+            if cmd is None or cmd.hidden:
+                continue
+            command_rows.append((subcommand, cmd))
+
+        if not command_rows:
+            return
+
+        max_len = max(len(name) for name, _ in command_rows)
+        limit = formatter.width - 6 - max_len
+        if limit < 10:
+            limit = 10
+
+        grouped: OrderedDict[str, list[tuple[str, str]]] = OrderedDict(
+            (category, []) for category in HELP_CATEGORY_ORDER
+        )
+        for name, cmd in sorted(command_rows, key=lambda item: item[0]):
+            category = COMMAND_CATEGORIES.get(name, "Advanced")
+            grouped.setdefault(category, []).append((name, cmd.get_short_help_str(limit)))
+
+        for category, rows in grouped.items():
+            if not rows:
+                continue
+            with formatter.section(f"{category} Commands"):
+                formatter.write_dl(rows)

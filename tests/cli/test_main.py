@@ -20,6 +20,22 @@ def test_version_command():
         assert "fo 1.2.3" in result.stdout
 
 
+@patch("file_organizer.cli.setup.setup_run")
+def test_start_command_runs_quick_start(mock_setup_run):
+    """start routes to setup quick-start mode."""
+    result = runner.invoke(app, ["start"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="default", dry_run=False)
+
+
+@patch("file_organizer.cli.setup.setup_run")
+def test_quickstart_alias_runs_quick_start(mock_setup_run):
+    """quickstart alias routes to setup quick-start mode."""
+    result = runner.invoke(app, ["quickstart", "--profile", "work", "--dry-run"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="work", dry_run=True)
+
+
 @pytest.mark.uses_setup_gate
 @patch("file_organizer.config.manager.ConfigManager")
 def test_organize_requires_setup_completed(mock_cm):
@@ -38,6 +54,27 @@ def test_preview_requires_setup_completed(mock_cm):
     result = runner.invoke(app, ["preview", "in_dir"])
     assert result.exit_code == 1
     assert "setup" in result.stdout.lower()
+
+
+def test_organize_help_hides_advanced_flags_by_default():
+    """Default organize help focuses on first-touch options."""
+    result = runner.invoke(app, ["organize", "--help"])
+    assert result.exit_code == 0
+    assert "--advanced-help" in result.stdout
+    assert "--max-workers" not in result.stdout
+    assert "--prefetch-depth" not in result.stdout
+    assert "--no-prefetch" not in result.stdout
+    assert "--transcribe-audio" not in result.stdout
+
+
+def test_organize_advanced_help_lists_hidden_tuning_flags():
+    """Advanced help should expose full tuning controls without args."""
+    result = runner.invoke(app, ["organize", "--advanced-help"])
+    assert result.exit_code == 0
+    assert "--max-workers" in result.stdout
+    assert "--prefetch-depth" in result.stdout
+    assert "--no-prefetch" in result.stdout
+    assert "--transcribe-audio" in result.stdout
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)

@@ -54,6 +54,8 @@ class TestHelpOutputs:
         "cmd",
         [
             ["--help"],
+            ["start", "--help"],
+            ["quickstart", "--help"],
             ["version", "--help"],
             ["organize", "--help"],
             ["preview", "--help"],
@@ -100,6 +102,18 @@ class TestHelpOutputs:
         result = runner.invoke(app, cmd)
         assert result.exit_code == 0
         assert "Usage" in result.output or "usage" in result.output.lower()
+
+    def test_top_level_help_is_grouped_and_unique(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        assert "Core Commands" in result.output
+        assert "Interfaces Commands" in result.output
+        assert "Automation Commands" in result.output
+        assert "Advanced Commands" in result.output
+
+        # Each command should appear once in grouped help rows.
+        for command in ("start", "quickstart", "organize", "serve", "dedupe", "update"):
+            assert result.output.count(f"│ {command}") == 1
 
 
 @pytest.mark.unit
