@@ -444,6 +444,8 @@ pip install "local-file-organizer[claude]"   # Anthropic Claude
 # Set environment variables for your provider
 export FO_PROVIDER=openai
 export FO_OPENAI_API_KEY=sk-...
+# For OpenAI-compatible endpoints (LM Studio, Groq, custom):
+# export FO_OPENAI_BASE_URL=http://localhost:1234/v1
 
 # For Claude
 export FO_PROVIDER=claude

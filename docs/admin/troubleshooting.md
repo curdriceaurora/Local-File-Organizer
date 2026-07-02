@@ -26,8 +26,11 @@ kill -9 <PID>
 # Or start File Organizer on a different port
 file-organizer serve --port 8001
 
-# When using Docker Compose, set the port in .env instead
-echo "APP_PORT=8001" >> .env
+# When using Docker Compose, edit the ports mapping in docker-compose.yml:
+#   ports:
+#     - "8001:8001"   # change both sides to match your chosen port
+# Then set FO_PORT so the app binds to the same port inside the container:
+echo "FO_PORT=8001" >> .env
 docker-compose up -d
 ```
 
@@ -396,7 +399,7 @@ Only do this when debugging stale cache data. Flushing removes all cached sessio
 docker-compose exec redis redis-cli -n 0 FLUSHDB
 
 # Restart the app after clearing
-docker-compose restart web
+docker-compose restart file-organizer
 ```
 
 ### Redis Auth / TLS Errors
@@ -405,13 +408,26 @@ docker-compose restart web
 
 **Solution**:
 
+The Compose stack reads `REDIS_PASSWORD` from `.env` and injects it into both the Redis service and the app's `FO_REDIS_URL`. Exporting a shell variable will not reach the container — set it in `.env` instead:
+
 ```bash
-# Set credentials in the Redis URL
-export FO_REDIS_URL=redis://:your_password@redis:6379/0
+# Edit .env (copy from .env.example if it doesn't exist yet)
+# Set a strong password — avoid special URI characters (@ : / # %)
+echo "REDIS_PASSWORD=your_strong_password" >> .env
 
-# For TLS-enabled Redis (e.g., Redis Cloud, Azure Cache for Redis)
-export FO_REDIS_URL=rediss://:your_password@hostname:6380/0  # note: rediss://
+docker-compose up -d
+```
 
+For an external TLS-enabled Redis (e.g., Redis Cloud, Azure Cache for Redis), update `FO_REDIS_URL` in `docker-compose.yml` directly to use the `rediss://` scheme and external hostname:
+
+```yaml
+# docker-compose.yml — under the file-organizer service's environment:
+- FO_REDIS_URL=rediss://:your_password@hostname.redis.cloud:6380/0
+```
+
+Then redeploy:
+
+```bash
 docker-compose up -d
 ```
 

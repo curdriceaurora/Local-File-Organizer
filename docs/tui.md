@@ -132,15 +132,28 @@ file-organizer tui
 
 **Solution**:
 
-In tmux, send a key sequence through directly with the prefix `Ctrl+b` then the key, or temporarily disable the tmux prefix for the TUI session:
+In **tmux**, use `send-keys` to inject the key directly into the foreground pane without going through tmux's binding layer:
 
 ```bash
-# In tmux: use send-prefix then the key
-# Or unbind the conflicting key just for this window
-tmux send-keys C-w   # sends Ctrl+W to the foreground pane
+# From another tmux window/pane, send Ctrl+W to the pane running the TUI
+tmux send-keys C-w
 ```
 
-For persistent conflicts, consider running the TUI in a dedicated terminal window outside of the multiplexer.
+If the shortcut conflicts with a tmux binding, unbind it for the copy-mode table (where `C-w` is most commonly bound):
+
+```bash
+# In ~/.tmux.conf
+unbind -T copy-mode C-w
+```
+
+In **GNU screen**, press `Ctrl+a` then `a` to send a literal `Ctrl+a`, or use `stuff` to inject keys programmatically. For `Ctrl+W` specifically:
+
+```bash
+# From the screen command line (Ctrl+a :)
+:stuff ^W
+```
+
+For persistent conflicts in either multiplexer, consider running the TUI in a dedicated terminal window outside the multiplexer.
 
 ## Related docs
 
