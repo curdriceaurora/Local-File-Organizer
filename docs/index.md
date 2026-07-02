@@ -2,69 +2,40 @@
 
 Welcome to the **File Organizer** documentation! A privacy-first, AI-powered local file management system that is local-first by default, with optional cloud provider integrations when explicitly configured.
 
+## Essentials (Start Here)
+
+Use this first-run terminal workflow:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after at least one organize run has been recorded.
+
+Prefer a browser? Start with [Web UI Quick Start](web-ui/getting-started.md).
+
 ## Quick Navigation
 
-=== "🚀 Getting Started"
+=== "🚀 Essentials"
 
-    **New to File Organizer?** Start here to understand the basics.
-
-    - [Installation & Setup](getting-started.md)
-    - [Web UI Quick Start](web-ui/getting-started.md)
+    - [Getting Started](getting-started.md)
+    - [Core first run commands](cli-reference.md#core-first-run-commands)
     - [Workflow Map](USER_GUIDE.md#workflow-map-quick-paths)
+    - [Web UI Quick Start](web-ui/getting-started.md)
+    - [Troubleshooting](troubleshooting.md)
 
-=== "🖥️ Web UI & Profile"
-
-    **Using the web browser interface?** Start with implemented routes and surfaces.
-
-    - [File Management](web-ui/file-management.md)
-    - [Organization Workflows](web-ui/organization.md)
-    - [Analysis & Search](web-ui/analysis-search.md)
-    - [Settings & Profile](web-ui/settings.md)
-
-=== "🧭 Interfaces & Copilot"
-
-    **Prefer desktop or terminal workflows?** Jump directly to interface-specific guides.
+=== "🧭 Advanced / Admin / Developer"
 
     - [Terminal UI Guide](tui.md)
     - [Desktop App Guide](desktop-app.md)
-    - [Copilot workflow entry point](cli-reference.md#cli-copilot)
-    - [Rules batch review entry point](cli-reference.md#cli-rules)
-    - [Dedupe workflow entry point](cli-reference.md#cli-dedupe)
-
-=== "🗂️ Methodologies"
-
-    **Choosing PARA vs Johnny Decimal?** Use these workflow-oriented references.
-
+    - [AI Provider Setup](setup/ai-providers.md)
+    - [API Reference](api/index.md)
+    - [Admin Guide](admin/index.md)
+    - [Developer Guide](developer/index.md)
     - [Methodology selection workflow](USER_GUIDE.md#quick-workflow-choose-a-methodology)
-    - [Johnny Decimal User Guide](methodologies/johnny-decimal/user-guide.md#getting-started)
-    - [Johnny Decimal Migration Guide](methodologies/johnny-decimal/migration.md#step-by-step-migration)
-    - [Johnny Decimal + PARA Compatibility](methodologies/johnny-decimal/para-compatibility.md#integration-approaches)
-
-=== "📚 API Reference"
-
-    **Building integrations?** Use our REST API.
-
-    - [Authentication](api/authentication.md)
-    - [File Endpoints](api/file-endpoints.md)
-    - [Organization Endpoints](api/organization-endpoints.md)
-    - [Search & Analysis](api/search-endpoints.md)
-
-=== "🔧 Deployment"
-
-    **Running your own instance?** Deploy and configure File Organizer.
-
-    - [Installation](admin/installation.md)
-    - [Deployment](admin/deployment.md)
-    - [Configuration](admin/configuration.md)
-    - [Monitoring](admin/monitoring.md)
-
-=== "👨‍💻 Development"
-
-    **Extending File Organizer?** Build plugins and integrations.
-
-    - [Architecture](developer/architecture.md)
-    - [Plugin Development](developer/plugin-development.md)
-    - [API Clients](developer/api-clients.md)
 
 ## Key Features
 
@@ -98,21 +69,24 @@ File Organizer processes **48+ file formats** including:
 
 ## Documentation Sections
 
-### User Guides
+### Essentials
 
-- [Web UI Guide](web-ui/index.md) - Browser-based file management
-- [Terminal UI Guide](tui.md) - Keyboard-driven terminal interface
-- [Desktop App Guide](desktop-app.md) - Native OS desktop window
-- [Getting Started](getting-started.md) - Initial setup and overview
-- [CLI Reference](cli-reference.md) - Command-line interface guide
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
+- [Getting Started](getting-started.md) - Install and complete your first run
+- [Core first run commands](cli-reference.md#core-first-run-commands) - `setup`, `preview`, `organize`, `undo`
+- [Workflow Map](USER_GUIDE.md#workflow-map-quick-paths) - Practical jump table by goal
+- [Web UI Quick Start](web-ui/getting-started.md) - Secondary browser-first path
+- [Troubleshooting](troubleshooting.md) - Common issues and fixes
 
-### Setup
+### Advanced Setup & Interfaces
 
-- [AI Provider Setup](setup/ai-providers.md) - Configure Ollama, OpenAI, Claude, and more
+- [AI Provider Setup](setup/ai-providers.md) - OpenAI-compatible, Claude, llama.cpp, MLX
 - [Dependencies & Optional Extras](setup/dependencies.md) - Canonical extras matrix and install groups
 - [Models](setup/models.md) - AI model configuration
 - [Audio & Video Processing](setup/audio-video.md) - Media analysis prerequisites and setup
+- [Web UI Guide](web-ui/index.md) - Browser-based file management
+- [Terminal UI Guide](tui.md) - Keyboard-driven terminal interface
+- [Desktop App Guide](desktop-app.md) - Native OS desktop window
+- [CLI Reference](cli-reference.md) - Full command-line reference
 
 ### API & Integration
 

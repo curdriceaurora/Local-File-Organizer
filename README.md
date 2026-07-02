@@ -85,47 +85,44 @@
 
 ![TUI demo](docs/assets/tui-demo.gif)
 
-## Quick Start
+## Quick Start (Essentials)
 
 ### With Ollama (local, default)
 
 ```bash
 pip install -e .
 
-# Pull models
-ollama pull qwen2.5:3b-instruct-q4_K_M
-ollama pull qwen2.5vl:7b-q4_K_M
+# 1) Configure defaults
+fo setup
 
-# Organize files (dry run first)
-file-organizer organize ./Downloads ./Organized --dry-run
+# 2) Preview a folder before changing anything
+fo preview ~/Downloads
 
-# Launch the TUI
-file-organizer tui
+# 3) Run organization
+fo organize ~/Downloads ~/Organized
 
-# Launch the native desktop window (preferred unified command)
-file-organizer desktop
-# fo desktop
-# file-organizer-desktop  # compatibility script
+# 4) Roll back the most recent organize run if needed
+fo undo
 ```
 
-### With OpenAI or compatible API
+### Prefer a browser?
 
 ```bash
-pip install -e ".[cloud]"
+file-organizer serve --reload
+```
 
+Then visit `http://localhost:8000/ui/`.
+
+### Need cloud providers instead of the default local flow?
+
+Use the [AI Provider Setup guide](docs/setup/ai-providers.md) for OpenAI-compatible endpoints and Claude.
+
+```bash
+# OpenAI-compatible providers
 export FO_PROVIDER=openai
-export FO_OPENAI_API_KEY=sk-...  # OPENAI_API_KEY is also accepted as fallback
-file-organizer organize ./Downloads ./Organized --dry-run
-```
 
-### With Anthropic Claude
-
-```bash
-pip install -e ".[claude]"
-
+# Anthropic Claude
 export FO_PROVIDER=claude
-export FO_CLAUDE_API_KEY=sk-ant-...  # ANTHROPIC_API_KEY is also accepted as fallback
-file-organizer organize ./Downloads ./Organized --dry-run
 ```
 
 ## Web UI
@@ -140,31 +137,28 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Documentation
 
+### Essentials
+
 - [Documentation Home](docs/index.md)
 - [Getting Started](docs/getting-started.md)
-- [User Guide](docs/USER_GUIDE.md)
-- [Workflow Map](docs/USER_GUIDE.md#workflow-map-quick-paths)
-- [Web UI Guide](docs/web-ui/index.md)
+- [CLI Reference](docs/cli-reference.md#core-first-run-commands)
+- [User Guide Workflow Map](docs/USER_GUIDE.md#workflow-map-quick-paths)
+- [Web UI Quick Start](docs/web-ui/getting-started.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+### Advanced / Admin / Developer
+
+- [Full CLI Reference](docs/cli-reference.md)
 - [Terminal UI Guide](docs/tui.md)
-- [CLI Reference](docs/cli-reference.md)
-- [CLI Search Commands](docs/cli-reference.md#cli-search)
-- [CLI Duplicate Detection (`dedupe`)](docs/cli-reference.md#cli-dedupe)
-- [CLI Undo/Redo History (`history`)](docs/cli-reference.md#cli-history)
-- [CLI API Keys (`api-keys`)](docs/cli-reference.md)
-- [CLI Plugin Marketplace (`marketplace`)](docs/cli-reference.md#cli-marketplace)
-- [CLI Copilot Assistant (`copilot`)](docs/cli-reference.md#cli-copilot)
-- [CLI Rules Batch Review (`rules`)](docs/cli-reference.md#cli-rules)
-- [CLI Profile Behavior](docs/cli-reference.md#cli-profile)
 - [Desktop App Guide](docs/desktop-app.md)
-- [API Reference](docs/api/index.md)
-- [Johnny Decimal User Guide](docs/methodologies/johnny-decimal/user-guide.md)
-- [Johnny Decimal Migration Guide](docs/methodologies/johnny-decimal/migration.md)
 - [AI Provider Setup](docs/setup/ai-providers.md)
 - [Audio & Video Processing Guide](docs/setup/audio-video.md)
-- [File Format Reference](docs/admin/file-format-reference.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
+- [API Reference](docs/api/index.md)
+- [File Format Reference](docs/admin/file-format-reference.md)
 - [Path Standardization & Migration](docs/config/path-standardization.md)
-- [Troubleshooting](docs/troubleshooting.md)
+- [Johnny Decimal User Guide](docs/methodologies/johnny-decimal/user-guide.md)
+- [Johnny Decimal Migration Guide](docs/methodologies/johnny-decimal/migration.md)
 
 ## Optional Feature Packs
 

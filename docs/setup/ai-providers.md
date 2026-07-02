@@ -8,6 +8,18 @@ Complete setup guide for File Organizer's AI provider support: 5 native provider
 
 File Organizer supports **5 native AI providers** for text analysis, plus **2 OpenAI-compatible services** (Groq, LM Studio) that use the `openai` provider with custom endpoints. Three of the native providers (Ollama, OpenAI, Claude) also support vision analysis; LLaMA.cpp and MLX are text-only.
 
+## Choose a provider quickly
+
+If you are unsure, use **Ollama** first. It is the local default and requires the least setup.
+
+Choose a different provider only when you specifically need:
+
+- Cloud-hosted models (OpenAI, Claude, Groq)
+- A local OpenAI-compatible endpoint you already run (LM Studio)
+- Advanced local model runtimes (LLaMA.cpp, MLX)
+
+For first-run setup guidance, see [Getting Started](../getting-started.md).
+
 **Native Providers:**
 - **Ollama** (default)
 - **OpenAI**
