@@ -241,7 +241,7 @@ def start_command(
     ] = False,
 ) -> None:
     """Run guided first-time setup with safe defaults."""
-    _run_quick_start_setup(profile=profile, dry_run=dry_run)
+    _run_quick_start_setup(profile=profile, dry_run=_merge_flag(dry_run, _get_state().dry_run))
 
 
 @app.command()

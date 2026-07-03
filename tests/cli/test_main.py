@@ -41,6 +41,16 @@ def test_start_command_runs_quick_start(mock_setup_run):
 @patch("file_organizer.cli.setup.setup_run")
 @pytest.mark.ci
 @pytest.mark.integration
+def test_start_command_merges_global_dry_run(mock_setup_run):
+    """Global --dry-run should propagate to start/quickstart setup."""
+    result = runner.invoke(app, ["--dry-run", "start"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="default", dry_run=True)
+
+
+@patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
 def test_quickstart_alias_runs_quick_start(mock_setup_run):
     """quickstart alias routes to setup quick-start mode."""
     result = runner.invoke(app, ["quickstart", "--profile", "work", "--dry-run"])
