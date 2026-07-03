@@ -19,7 +19,8 @@ from file_organizer.tui.file_browser import (
     _format_size,
 )
 
-pytestmark = pytest.mark.unit
+# ci: these tests carry the diff-coverage for file_browser.py in the PR suite.
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
