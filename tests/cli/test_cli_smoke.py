@@ -57,6 +57,7 @@ class TestOrganizeSmoke:
             no_prefetch=False,
             transcribe_audio=False,
             max_transcribe_seconds=600.0,
+            whisper_model="tiny",
         )
 
 

@@ -112,7 +112,7 @@ class TestExitIfTranscribeSmokeFailed:
         console.print.assert_called_once()
         msg = console.print.call_args.args[0]
         assert "transcribe-smoke" in msg.lower()
-        assert "media" in msg.lower()
+        assert "audio" in msg.lower()
 
     def test_json_mode_routes_error_to_stderr_keeping_stdout_console_silent(self) -> None:
         # When --json is requested, the JSON document is already on stdout by
@@ -240,7 +240,7 @@ class TestBenchmarkTranscribeSmoke:
         self, tmp_path: Path
     ) -> None:
         """When --transcribe-smoke is requested but AudioModel raises
-        ImportError (e.g. [media] missing), the run must exit non-zero so
+        ImportError (e.g. [audio] missing), the run must exit non-zero so
         CI doesn't treat the silently-skipped smoke as a passing audio
         benchmark."""
         audio_dir = tmp_path / "audio"

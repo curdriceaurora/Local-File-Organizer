@@ -108,7 +108,7 @@ class TestProcessAudioFiles:
         the transcriber, instead of falling back to metadata-only.
 
         ``_FASTER_WHISPER_AVAILABLE`` is forced True so this is deterministic
-        regardless of whether the optional ``[media]`` extra is installed.
+        regardless of whether the optional ``[audio]`` extra is installed.
         """
         audio = _make_audio_file(tmp_path)
         organizer = FileOrganizer(transcribe_audio=True)

@@ -176,7 +176,7 @@ def organize(
         typer.Option(
             "--transcribe-audio",
             help=(
-                "Transcribe audio files (requires the [media] extra) and use the "
+                "Transcribe audio files (requires the [audio] extra) and use the "
                 "transcript for content-aware categorization. Off by default — "
                 "transcription is the expensive operation in the audio pipeline."
             ),
@@ -195,6 +195,17 @@ def organize(
             hidden=True,
         ),
     ] = 600.0,
+    whisper_model: Annotated[
+        str,
+        typer.Option(
+            "--whisper-model",
+            help=(
+                "Whisper model size for --transcribe-audio: tiny, base, small, "
+                "medium, large-v2, or large-v3. Larger models transcribe more "
+                "accurately but are slower and need a bigger download."
+            ),
+        ),
+    ] = "tiny",
 ) -> None:
     """Organize files in a directory using AI models."""
     _ = advanced_help
@@ -229,6 +240,7 @@ def organize(
             # `--max-transcribe-seconds 0` is the documented "disable the cap"
             # value; convert to None for the organizer (None means uncapped).
             max_transcribe_seconds=max_transcribe_seconds if max_transcribe_seconds > 0 else None,
+            whisper_model=whisper_model,
         )
         result = organizer.organize(input_dir, output_dir)
         console.print(
@@ -287,7 +299,7 @@ def preview(
         typer.Option(
             "--transcribe-audio",
             help=(
-                "Transcribe audio files (requires the [media] extra) and use the "
+                "Transcribe audio files (requires the [audio] extra) and use the "
                 "transcript for content-aware categorization. Off by default."
             ),
         ),
@@ -303,6 +315,17 @@ def preview(
             ),
         ),
     ] = 600.0,
+    whisper_model: Annotated[
+        str,
+        typer.Option(
+            "--whisper-model",
+            help=(
+                "Whisper model size for --transcribe-audio: tiny, base, small, "
+                "medium, large-v2, or large-v3. Larger models transcribe more "
+                "accurately but are slower and need a bigger download."
+            ),
+        ),
+    ] = "tiny",
 ) -> None:
     """Preview how files would be organized (dry-run)."""
     # Setup gate moved to `cli.main.main_callback` (Step 3).
@@ -327,6 +350,7 @@ def preview(
             no_prefetch=no_prefetch,
             transcribe_audio=transcribe_audio,
             max_transcribe_seconds=max_transcribe_seconds if max_transcribe_seconds > 0 else None,
+            whisper_model=whisper_model,
         )
         result = organizer.organize(input_dir, input_dir)
         console.print(f"[green]Preview:[/green] {result.total_files} files would be organized")
