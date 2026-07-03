@@ -115,8 +115,11 @@ def _make_wav(
             audio.tags.add(TCON(encoding=3, text=tags.get("genre", "")))
             audio.tags.add(TDRC(encoding=3, text=tags.get("year", "")))
             audio.save()
-        except Exception:
-            pass  # tags are nice-to-have; the WAV itself is already valid
+        except Exception as exc:
+            # Broad catch is deliberate: tags are nice-to-have (mutagen may
+            # be absent), and the WAV itself is already valid — but say so
+            # instead of hiding tagging regressions.
+            print(f"warning: could not tag {path.name}: {exc}", file=sys.stderr)
 
 
 def build_workspace(home: Path) -> Path:
@@ -432,12 +435,14 @@ def build_gif(frames: list[tuple[str, int]], out_path: Path) -> None:
             browser = p.chromium.launch(
                 executable_path=os.environ.get("CAPTURE_CHROMIUM", "/opt/pw-browsers/chromium")
             )
-        page = browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=2)
-        for svg, _duration in frames:
-            page.set_content("<style>body{margin:0;background:#0f0f0f}</style>" + svg)
-            element = page.query_selector("svg")
-            pngs.append(element.screenshot())
-        browser.close()
+        try:
+            page = browser.new_page(viewport={"width": 1600, "height": 1200}, device_scale_factor=2)
+            for svg, _duration in frames:
+                page.set_content("<style>body{margin:0;background:#0f0f0f}</style>" + svg)
+                element = page.query_selector("svg")
+                pngs.append(element.screenshot())
+        finally:
+            browser.close()
 
     images = []
     for png in pngs:
@@ -481,9 +486,21 @@ def main() -> int:
     home: Path = args.home.resolve()
     out_dir: Path = args.out.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # The reset below is destructive and --home is user-controlled: only
+    # delete a directory this script previously created (identified by its
+    # marker file) or an empty one, so a typo like "--home ~" is refused
+    # instead of wiping a real home directory.
+    marker = home / ".fo-demo-home-marker"
     if home.exists():
+        if not marker.exists() and any(home.iterdir()):
+            parser.error(
+                f"refusing to delete {home}: it is not a demo home created "
+                "by this script; pass a new or empty directory"
+            )
         shutil.rmtree(home)
     home.mkdir(parents=True)
+    marker.write_text("created by scripts/capture_tui_assets.py\n", encoding="utf-8")
 
     # Isolate all app state under the demo home BEFORE importing the app.
     os.environ["HOME"] = str(home)
