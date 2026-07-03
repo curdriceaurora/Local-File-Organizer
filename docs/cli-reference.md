@@ -49,6 +49,45 @@ file-organizer version
 
 ---
 
+### `start`
+
+Guided first-run setup with safe defaults (recommended beginner path).
+
+**Usage:**
+
+```bash
+file-organizer start [OPTIONS]
+```
+
+**Options:**
+
+- `--profile, -p` — Profile name (default: `default`)
+- `--dry-run` — Preview setup choices without saving configuration
+
+**Examples:**
+
+```bash
+# Run quick-start setup
+file-organizer start
+
+# Configure a named profile
+file-organizer start --profile work
+```
+
+---
+
+### `quickstart`
+
+Alias of `start` for quick-start setup.
+
+**Usage:**
+
+```bash
+file-organizer quickstart [OPTIONS]
+```
+
+---
+
 ### `organize`
 
 Organize files in a directory using AI models.
@@ -68,11 +107,25 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
-- `--max-workers INTEGER` — Cap parallel worker count
-- `--sequential` — Force single-worker sequential processing
-- `--no-vision`, `--text-only` — Disable vision model loading and use extension fallback for images
-- `--prefetch-depth INTEGER` — Parallel task queue-ahead depth (`0` disables prefetch queueing)
-- `--no-prefetch` — Backward-compatible alias for `--prefetch-depth 0`
+- `--advanced-help` — Show advanced tuning options and exit
+
+**Advanced tuning options:**
+
+```bash
+file-organizer organize --advanced-help
+```
+
+Advanced help includes:
+
+- `--max-workers INTEGER`
+- `--sequential`
+- `--no-vision`, `--text-only`
+- `--prefetch-depth INTEGER`
+- `--no-prefetch`
+- `--transcribe-audio`
+- `--max-transcribe-seconds FLOAT`
+
+`--no-prefetch` is a backward-compatible alias for `--prefetch-depth 0`.
 
 **Examples:**
 
@@ -86,17 +139,8 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
 
-# Limit CPU/IO pressure on constrained machines
-file-organizer organize ~/Downloads ~/Organized --max-workers 2 --prefetch-depth 1
-
-# Strict sequential mode for deterministic debugging
-file-organizer organize ~/Downloads ~/Organized --sequential
-
-# Disable AI vision processing and use extension-based image fallback
-file-organizer organize ~/Downloads ~/Organized --no-vision
-
-# Backward-compatible alias
-file-organizer organize ~/Downloads ~/Organized --no-prefetch
+# Show advanced tuning flags
+file-organizer organize --advanced-help
 ```
 
 > **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.

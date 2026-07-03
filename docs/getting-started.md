@@ -259,17 +259,47 @@ File Organizer also provides a command-line interface:
 ### Basic Commands
 
 ```bash
-# Configure first-run defaults
-fo setup
+# Run guided quick-start setup (recommended first CLI command)
+file-organizer start
 
-# Preview organization safely
-fo preview ~/Downloads
+# Start the web server and API
+file-organizer serve
 
 # Organize files
 fo organize ~/Downloads ~/Organized
 
-# Undo the most recent organize operation (if needed)
-fo undo
+# Preview without moving (dry run)
+file-organizer organize ./Downloads ./Organized --dry-run
+
+# Preview organisation plan
+file-organizer preview ./Downloads
+
+# Show advanced tuning flags for organize
+file-organizer organize --advanced-help
+
+# Search for files
+file-organizer search "*.pdf" ~/Documents
+file-organizer search "report" ~/Documents --type text
+
+# Analyze a file with AI
+file-organizer analyze ./report.pdf
+file-organizer analyze ./report.pdf --verbose
+
+# Auto-tag files
+file-organizer autotag suggest ./Documents
+file-organizer autotag popular
+
+# Detect duplicates
+file-organizer dedupe scan ./Documents
+
+# Analyse storage
+file-organizer analytics ./Documents
+
+# View operation history
+file-organizer history
+
+# Interactive AI assistant
+file-organizer copilot chat
 ```
 
 ### Short Alias
@@ -277,9 +307,10 @@ fo undo
 Use `fo` instead of `file-organizer`:
 
 ```bash
-fo setup
-fo preview ./Downloads
+fo start
+fo serve
 fo organize ./Downloads ./Organized
+fo preview ./Downloads
 fo undo
 ```
 

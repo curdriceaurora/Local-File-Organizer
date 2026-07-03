@@ -56,6 +56,8 @@ def _version_callback(value: bool) -> None:
 _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
     {
         "setup",
+        "start",
+        "quickstart",
         "version",
         "doctor",
         "update",
@@ -220,6 +222,26 @@ app.command()(preview)
 app.command()(search)
 app.command()(analyze)
 app.command()(doctor)
+
+
+def _run_quick_start_setup(profile: str, dry_run: bool) -> None:
+    """Run the setup wizard in quick-start mode."""
+    from file_organizer.cli.setup import setup_run
+
+    setup_run(mode="quick-start", profile=profile, dry_run=dry_run)
+
+
+@app.command(name="quickstart")
+@app.command(name="start")
+def start_command(
+    profile: Annotated[str, typer.Option("--profile", "-p", help="Profile name.")] = "default",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview setup choices without saving configuration."),
+    ] = False,
+) -> None:
+    """Run guided first-time setup with safe defaults."""
+    _run_quick_start_setup(profile=profile, dry_run=_merge_flag(dry_run, _get_state().dry_run))
 
 
 @app.command()

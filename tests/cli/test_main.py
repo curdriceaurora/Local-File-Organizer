@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,13 @@ from file_organizer.cli.main import app
 
 runner = CliRunner()
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from *text* for portable string assertions."""
+    return _ANSI_RE.sub("", text)
+
 
 def test_version_command():
     """Test the version command output."""
@@ -18,6 +26,36 @@ def test_version_command():
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         assert "fo 1.2.3" in result.stdout
+
+
+@patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
+def test_start_command_runs_quick_start(mock_setup_run):
+    """start routes to setup quick-start mode."""
+    result = runner.invoke(app, ["start"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="default", dry_run=False)
+
+
+@patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
+def test_start_command_merges_global_dry_run(mock_setup_run):
+    """Global --dry-run should propagate to start/quickstart setup."""
+    result = runner.invoke(app, ["--dry-run", "start"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="default", dry_run=True)
+
+
+@patch("file_organizer.cli.setup.setup_run")
+@pytest.mark.ci
+@pytest.mark.integration
+def test_quickstart_alias_runs_quick_start(mock_setup_run):
+    """quickstart alias routes to setup quick-start mode."""
+    result = runner.invoke(app, ["quickstart", "--profile", "work", "--dry-run"])
+    assert result.exit_code == 0
+    mock_setup_run.assert_called_once_with(mode="quick-start", profile="work", dry_run=True)
 
 
 @pytest.mark.uses_setup_gate
@@ -38,6 +76,35 @@ def test_preview_requires_setup_completed(mock_cm):
     result = runner.invoke(app, ["preview", "in_dir"])
     assert result.exit_code == 1
     assert "setup" in result.stdout.lower()
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+def test_organize_help_hides_advanced_flags_by_default():
+    """Default organize help focuses on first-touch options."""
+    result = runner.invoke(app, ["organize", "--help"], terminal_width=120)
+    assert result.exit_code == 0
+    # Typer forces terminal colors when GITHUB_ACTIONS is set, and rich splits
+    # option names across ANSI style segments — strip styling before matching.
+    plain = _strip_ansi(result.stdout)
+    assert "--advanced-help" in plain
+    assert "--max-workers" not in plain
+    assert "--prefetch-depth" not in plain
+    assert "--no-prefetch" not in plain
+    assert "--transcribe-audio" not in plain
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+def test_organize_advanced_help_lists_hidden_tuning_flags():
+    """Advanced help should expose full tuning controls without args."""
+    result = runner.invoke(app, ["organize", "--advanced-help"])
+    assert result.exit_code == 0
+    plain = _strip_ansi(result.stdout)
+    assert "--max-workers" in plain
+    assert "--prefetch-depth" in plain
+    assert "--no-prefetch" in plain
+    assert "--transcribe-audio" in plain
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)

@@ -74,6 +74,43 @@ def _resolve_parallel_settings(
     return (1 if sequential else max_workers, 0 if (sequential or no_prefetch) else prefetch_depth)
 
 
+def _print_organize_advanced_help() -> None:
+    """Print advanced tuning options for ``fo organize`` and exit."""
+    console.print(
+        Panel.fit(
+            "[bold]Advanced tuning options for `fo organize`[/bold]\n"
+            "Use these only when you need tighter control over performance, "
+            "media processing, or deterministic execution.",
+            border_style="cyan",
+        )
+    )
+    console.print(
+        "\n".join(
+            [
+                "[bold]`--max-workers INTEGER`[/bold] — Cap parallel worker count.",
+                "[bold]`--sequential`[/bold] — Force single-worker sequential processing.",
+                "[bold]`--prefetch-depth INTEGER`[/bold] — Tune queue-ahead depth per worker (`0` disables prefetch).",
+                "[bold]`--no-prefetch`[/bold] — Backward-compatible alias for `--prefetch-depth 0`.",
+                "[bold]`--no-vision`, `--text-only`[/bold] — Disable vision model processing for images.",
+                "[bold]`--transcribe-audio`[/bold] — Enable transcription-based audio categorization.",
+                "[bold]`--max-transcribe-seconds FLOAT`[/bold] — Skip transcription for long audio files (`0` disables cap).",
+            ]
+        )
+    )
+    console.print(
+        "\n[bold]Example:[/bold] [cyan]fo organize INPUT_DIR OUTPUT_DIR "
+        "--max-workers 2 --prefetch-depth 1[/cyan]"
+    )
+
+
+def _advanced_help_callback(value: bool) -> None:
+    """Eager callback for ``--advanced-help``."""
+    if not value:
+        return
+    _print_organize_advanced_help()
+    raise typer.Exit()
+
+
 def organize(
     input_dir: Annotated[Path, typer.Argument(help="Directory containing files to organize.")],
     output_dir: Annotated[Path, typer.Argument(help="Destination directory for organized files.")],
@@ -81,17 +118,29 @@ def organize(
         bool, typer.Option("--dry-run", help="Preview without moving files.")
     ] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+    advanced_help: Annotated[
+        bool,
+        typer.Option(
+            "--advanced-help",
+            callback=_advanced_help_callback,
+            is_eager=True,
+            help="Show advanced tuning options and exit.",
+        ),
+    ] = False,
     max_workers: Annotated[
         int | None,
         typer.Option(
             "--max-workers",
             min=1,
             help="Maximum number of parallel workers for file processing.",
+            hidden=True,
         ),
     ] = None,
     sequential: Annotated[
         bool,
-        typer.Option("--sequential", help="Force single-worker sequential processing."),
+        typer.Option(
+            "--sequential", help="Force single-worker sequential processing.", hidden=True
+        ),
     ] = False,
     no_vision: Annotated[
         bool,
@@ -99,6 +148,7 @@ def organize(
             "--no-vision",
             "--text-only",
             help="Disable vision model usage and organize images by extension fallback.",
+            hidden=True,
         ),
     ] = False,
     prefetch_depth: Annotated[
@@ -110,11 +160,16 @@ def organize(
                 "Task scheduling prefetch depth per worker (0 disables queue-ahead and "
                 "uses strictly sequential submission)."
             ),
+            hidden=True,
         ),
     ] = 2,
     no_prefetch: Annotated[
         bool,
-        typer.Option("--no-prefetch", help="Backward-compatible alias for --prefetch-depth 0."),
+        typer.Option(
+            "--no-prefetch",
+            help="Backward-compatible alias for --prefetch-depth 0.",
+            hidden=True,
+        ),
     ] = False,
     transcribe_audio: Annotated[
         bool,
@@ -125,6 +180,7 @@ def organize(
                 "transcript for content-aware categorization. Off by default — "
                 "transcription is the expensive operation in the audio pipeline."
             ),
+            hidden=True,
         ),
     ] = False,
     max_transcribe_seconds: Annotated[
@@ -136,10 +192,12 @@ def organize(
                 "Skip transcription for audio files longer than this (seconds). "
                 "Default: 600 (10 min). Set to 0 to disable the cap entirely."
             ),
+            hidden=True,
         ),
     ] = 600.0,
 ) -> None:
     """Organize files in a directory using AI models."""
+    _ = advanced_help
     # First-run setup gate now lives in `cli.main.main_callback` and runs
     # for every non-allowlisted command. The previous inline call here
     # is removed (Step 3); leaving both would double-print the panel.

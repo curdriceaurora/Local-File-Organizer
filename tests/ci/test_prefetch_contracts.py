@@ -41,20 +41,25 @@ def test_no_prefetch_contract_matches_cli_runtime_and_docs() -> None:
     """Covered surfaces: CLI help, FileOrganizer runtime docs, CLI/admin docs."""
     from file_organizer.core.organizer import FileOrganizer
 
-    result = _RUNNER.invoke(app, ["organize", "--help"], terminal_width=120)
-    rendered_help = _rendered_text(result.output)
-    cli_help = _normalized(rendered_help)
+    default_help_result = _RUNNER.invoke(app, ["organize", "--help"], terminal_width=120)
+    default_help = _rendered_text(default_help_result.output)
+    advanced_help_result = _RUNNER.invoke(app, ["organize", "--advanced-help"], terminal_width=120)
+    advanced_help = _rendered_text(advanced_help_result.output)
+    normalized_advanced_help = _normalized(advanced_help)
     organizer_init_doc = _normalized(inspect.getdoc(FileOrganizer.__init__) or "")
     organizer_init_source = inspect.getsource(FileOrganizer.__init__)
     cli_reference = CLI_REFERENCE_DOC.read_text(encoding="utf-8")
     performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
 
-    assert result.exit_code == 0
-    assert "--no-prefetch" in rendered_help
-    assert "--prefetch-depth" in rendered_help
-    assert "Backward-compatible" in cli_help
-    assert "alias for" in cli_help
-    assert "--prefetch-depth 0." in cli_help
+    assert default_help_result.exit_code == 0
+    assert advanced_help_result.exit_code == 0
+    assert "--no-prefetch" not in default_help
+    assert "--prefetch-depth" not in default_help
+    assert "--no-prefetch" in advanced_help
+    assert "--prefetch-depth" in advanced_help
+    assert "Backward-compatible" in normalized_advanced_help
+    assert "alias for" in normalized_advanced_help
+    assert "--prefetch-depth 0" in normalized_advanced_help
     assert "Backward-compatible alias for ``prefetch_depth=0``." in organizer_init_doc
     assert "no_prefetch=True overrides prefetch_depth" in organizer_init_source
     assert "`--no-prefetch`" in cli_reference
