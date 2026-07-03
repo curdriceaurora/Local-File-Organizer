@@ -400,7 +400,8 @@ def capture_dedupe_svg(downloads: Path, out_dir: Path) -> None:
 
     console = Console(record=True, width=100, file=io.StringIO(), force_terminal=True)
     console.print(Text.from_ansi(buffer.getvalue()))
-    svg = console.export_svg(title="fo dedupe ~/Downloads --dry-run")
+    # Title must state the exact command that produced this output.
+    svg = console.export_svg(title="fo dedupe ~/Downloads --dry-run --strategy oldest --batch")
     _write_svg(out_dir / "dedupe-report.svg", svg)
 
 
