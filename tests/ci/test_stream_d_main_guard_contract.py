@@ -48,3 +48,11 @@ def test_stream_d_modules_do_not_define_standalone_main_guards(module_path: Path
         f"{module_path.relative_to(REPO_ROOT)} must not define "
         'if __name__ == "__main__" after Stream D cleanup.'
     )
+
+
+def test_api_keys_help_usage_matches_cli_command(capsys: pytest.CaptureFixture[str]) -> None:
+    from file_organizer.api.api_keys import _main
+
+    assert _main(["--help"]) == 0
+    captured = capsys.readouterr()
+    assert "Usage: fo api-keys generate --output PATH [--prefix PREFIX]" in captured.out
