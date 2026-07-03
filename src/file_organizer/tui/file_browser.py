@@ -147,11 +147,16 @@ class FileMetadataPanel(Static):
             self.update(f"[dim]Cannot read metadata for {path.name}[/dim]")
 
 
-class FilterInput(Input):
+class FilterInput(Input, can_focus=False):
     """Hidden filter input toggled with ``/``.
 
-    When the user presses Enter, posts a ``FilterInput.Submitted``
+    When the user presses Enter, posts a ``FilterInput.FilterApplied``
     message with the filter value, then hides itself.
+
+    Declared ``can_focus=False`` because the widget starts hidden: if it
+    could take the screen's initial auto-focus it would invisibly swallow
+    every keystroke, leaving the app-level ``1``-``8`` view bindings dead.
+    ``toggle_visibility`` grants focusability only while it is shown.
     """
 
     DEFAULT_CSS = """
@@ -165,11 +170,17 @@ class FilterInput(Input):
     }
     """
 
-    class Submitted(Message):
-        """Posted when the user submits a filter value."""
+    class FilterApplied(Message):
+        """Posted when the user submits a filter value.
+
+        This intentionally does NOT shadow ``Input.Submitted``:
+        ``Input.action_submit`` constructs ``self.Submitted(self, value,
+        validation_result)``, so overriding ``Submitted`` with a
+        different signature made pressing Enter raise ``TypeError``.
+        """
 
         def __init__(self, value: str) -> None:
-            """Create a submitted message carrying the input value."""
+            """Create a message carrying the submitted filter value."""
             super().__init__()
             self.value = value
 
@@ -177,15 +188,22 @@ class FilterInput(Input):
         """Show or hide the filter input."""
         self.toggle_class("-visible")
         if self.has_class("-visible"):
+            self.can_focus = True
             self.focus()
         else:
-            self.value = ""
+            self._hide()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key — post filter and hide."""
-        self.post_message(self.Submitted(event.value))
+        """Handle Enter key — post the filter value and hide."""
+        event.stop()
+        self.post_message(self.FilterApplied(event.value))
         self.remove_class("-visible")
+        self._hide()
+
+    def _hide(self) -> None:
+        """Clear and drop focusability so hidden state swallows no keys."""
         self.value = ""
+        self.can_focus = False
 
 
 class FileBrowserView(Vertical):
@@ -242,16 +260,21 @@ class FileBrowserView(Vertical):
             self.query_one(FileMetadataPanel).show_metadata(path)
             self.post_message(self.FileHighlighted(path))
 
-    @on(FilterInput.Submitted)
-    def _on_filter_submitted(self, event: FilterInput.Submitted) -> None:
-        """Apply the extension filter from the filter input."""
+    @on(FilterInput.FilterApplied)
+    def _on_filter_applied(self, event: FilterInput.FilterApplied) -> None:
+        """Apply the extension filter and return focus to the tree."""
         raw = event.value.strip()
         if raw:
             extensions = {tok.strip() for tok in raw.replace(",", " ").split() if tok.strip()}
         else:
             extensions = set()
-        self.query_one(FileBrowserTree).set_extension_filter(extensions)
+        tree = self.query_one(FileBrowserTree)
+        tree.set_extension_filter(extensions)
+        tree.focus()
 
     def action_toggle_filter(self) -> None:
-        """Show/hide the filter input."""
-        self.query_one(FilterInput).toggle_visibility()
+        """Show/hide the filter input, restoring tree focus on hide."""
+        filter_input = self.query_one(FilterInput)
+        filter_input.toggle_visibility()
+        if not filter_input.has_class("-visible"):
+            self.query_one(FileBrowserTree).focus()
