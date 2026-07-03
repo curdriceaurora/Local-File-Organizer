@@ -104,19 +104,19 @@ def dedupe_command(args: list[str] | None = None) -> int:
         epilog="""
 Examples:
   # Find duplicates in current directory (dry run)
-  python -m file_organizer.cli.dedupe . --dry-run
+  fo dedupe . --dry-run
 
   # Remove duplicates interactively
-  python -m file_organizer.cli.dedupe ~/Documents --strategy manual
+  fo dedupe ~/Documents --strategy manual
 
   # Auto-remove duplicates, keeping oldest files
-  python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
+  fo dedupe ~/Downloads --strategy oldest
 
   # Find duplicates with SHA256, non-recursive
-  python -m file_organizer.cli.dedupe . --algorithm sha256 --no-recursive
+  fo dedupe . --algorithm sha256 --no-recursive
 
   # Find large duplicate files only (>10MB)
-  python -m file_organizer.cli.dedupe ~/Videos --min-size 10485760
+  fo dedupe ~/Videos --min-size 10485760
         """,
     )
 

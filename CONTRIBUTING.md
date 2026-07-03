@@ -132,7 +132,7 @@ For first-wave review-regression CI parity, you can run the same audit command
 used by the standing enforcement checks:
 
 ```bash
-python3 -m file_organizer.review_regressions.audit \
+python scripts/audit.py \
   --root . \
   --detector file_organizer.review_regressions.security:SECURITY_DETECTORS \
   --detector file_organizer.review_regressions.correctness:CORRECTNESS_DETECTORS \

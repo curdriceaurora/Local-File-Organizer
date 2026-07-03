@@ -253,7 +253,7 @@ class TestAPIKeys:
         with patch("builtins.print") as mock_print:
             assert _main(["--help"]) == 0
             mock_print.assert_called_with(
-                "Usage: python -m file_organizer.api.api_keys --output PATH [--prefix PREFIX]"
+                "Usage: fo api-keys generate --output PATH [--prefix PREFIX]"
             )
 
         # 2. Missing output path
