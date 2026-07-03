@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +11,13 @@ from typer.testing import CliRunner
 from file_organizer.cli.main import app
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from *text* for portable string assertions."""
+    return _ANSI_RE.sub("", text)
 
 
 def test_version_command():
@@ -66,11 +74,14 @@ def test_organize_help_hides_advanced_flags_by_default():
     """Default organize help focuses on first-touch options."""
     result = runner.invoke(app, ["organize", "--help"], terminal_width=120)
     assert result.exit_code == 0
-    assert "--advanced-help" in result.stdout
-    assert "--max-workers" not in result.stdout
-    assert "--prefetch-depth" not in result.stdout
-    assert "--no-prefetch" not in result.stdout
-    assert "--transcribe-audio" not in result.stdout
+    # Typer forces terminal colors when GITHUB_ACTIONS is set, and rich splits
+    # option names across ANSI style segments — strip styling before matching.
+    plain = _strip_ansi(result.stdout)
+    assert "--advanced-help" in plain
+    assert "--max-workers" not in plain
+    assert "--prefetch-depth" not in plain
+    assert "--no-prefetch" not in plain
+    assert "--transcribe-audio" not in plain
 
 
 @pytest.mark.ci
@@ -79,10 +90,11 @@ def test_organize_advanced_help_lists_hidden_tuning_flags():
     """Advanced help should expose full tuning controls without args."""
     result = runner.invoke(app, ["organize", "--advanced-help"])
     assert result.exit_code == 0
-    assert "--max-workers" in result.stdout
-    assert "--prefetch-depth" in result.stdout
-    assert "--no-prefetch" in result.stdout
-    assert "--transcribe-audio" in result.stdout
+    plain = _strip_ansi(result.stdout)
+    assert "--max-workers" in plain
+    assert "--prefetch-depth" in plain
+    assert "--no-prefetch" in plain
+    assert "--transcribe-audio" in plain
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
