@@ -7,6 +7,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+# ci: run in the PR suite so the FilterInput focus/Submitted regressions
+# are exercised on every pull request.
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestFormatSize:
