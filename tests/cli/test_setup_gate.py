@@ -15,6 +15,7 @@ non-organize command crashes pre-setup with a cryptic stack trace.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -51,6 +52,20 @@ def test_allowlisted_commands_bypass_gate(cmd_args: list[str], fresh_config: Pat
     result = runner.invoke(app, cmd_args)
     assert result.exit_code == 0, result.output
     assert "First-time setup required" not in result.output
+
+
+@pytest.mark.unit
+@pytest.mark.ci
+@pytest.mark.uses_setup_gate
+@pytest.mark.parametrize("cmd", ["start", "quickstart"])
+@patch("file_organizer.cli.setup.setup_run")
+def test_beginner_commands_bypass_gate(mock_setup_run, cmd: str, fresh_config: Path) -> None:
+    """New beginner entry commands should be reachable pre-setup."""
+    runner = CliRunner()
+    result = runner.invoke(app, [cmd, "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "First-time setup required" not in result.output
+    mock_setup_run.assert_called_once()
 
 
 @pytest.mark.unit

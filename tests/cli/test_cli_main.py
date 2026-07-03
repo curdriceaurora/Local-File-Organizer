@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from *text* for portable string assertions."""
+    return _ANSI_RE.sub("", text)
 
 
 @pytest.mark.unit
@@ -54,6 +63,8 @@ class TestHelpOutputs:
         "cmd",
         [
             ["--help"],
+            ["start", "--help"],
+            ["quickstart", "--help"],
             ["version", "--help"],
             ["organize", "--help"],
             ["preview", "--help"],
@@ -100,6 +111,21 @@ class TestHelpOutputs:
         result = runner.invoke(app, cmd)
         assert result.exit_code == 0
         assert "Usage" in result.output or "usage" in result.output.lower()
+
+    def test_top_level_help_is_grouped_and_unique(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        # Typer forces terminal colors when GITHUB_ACTIONS is set — strip
+        # styling so the panel-row matching below works in CI too.
+        plain = _strip_ansi(result.output)
+        assert "Core Commands" in plain
+        assert "Interfaces Commands" in plain
+        assert "Automation Commands" in plain
+        assert "Advanced Commands" in plain
+
+        # Each command should appear once in grouped help rows.
+        for command in ("start", "quickstart", "organize", "serve", "dedupe", "update"):
+            assert plain.count(f"│ {command}") == 1
 
 
 @pytest.mark.unit
