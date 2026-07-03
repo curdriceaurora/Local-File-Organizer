@@ -21,9 +21,54 @@ fo tui
 
 ## Overview
 
+The Files view combines the directory tree, metadata panel, and a live
+type-aware preview of the highlighted file:
+
 ![TUI Overview](assets/tui-overview.svg)
 
+A quick walkthrough of the main views:
+
 ![TUI Demo](assets/tui-demo.gif)
+
+## View gallery
+
+### Organized (`2`)
+
+Dry-run preview of how the current directory would be organized:
+
+![Organization Preview](assets/organization-preview.svg)
+
+### Analytics (`3`)
+
+Storage overview, file-type distribution, quality score, and duplicate
+statistics for the current directory:
+
+![Analytics Dashboard](assets/analytics-dashboard.svg)
+
+### Methodology (`4`)
+
+Choose between flat, PARA, and Johnny Decimal organization systems:
+
+![Methodology View](assets/methodology-view.svg)
+
+### Audio (`5`)
+
+Scans the directory for audio files and shows tag metadata and
+classification for the selected file:
+
+![Audio Panel](assets/audio-panel.svg)
+
+### History (`6`)
+
+Recent operations with undo/redo stacks:
+
+![History View](assets/history-view.svg)
+
+### Copilot (`8`)
+
+Natural-language file management backed by the local intent engine:
+
+![Copilot Chat](assets/copilot-chat.svg)
 
 ## Keyboard shortcuts
 

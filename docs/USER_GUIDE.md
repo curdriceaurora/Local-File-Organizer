@@ -156,6 +156,8 @@ file-organizer analyze ~/Documents/report.pdf
 
 The TUI provides a rich, interactive terminal interface for managing your files.
 
+![TUI overview](assets/tui-overview.svg)
+
 ### Launching the TUI
 
 ```bash
@@ -183,6 +185,8 @@ Navigation: Use arrow keys to move, `Enter` to select, `q` to quit, `?` for help
 ## Copilot
 
 The Copilot is an AI assistant that can answer questions about your files and perform management tasks using natural language.
+
+![Copilot chat in the TUI](assets/copilot-chat.svg)
 
 ### Interactive Chat (REPL)
 
@@ -286,6 +290,8 @@ Continue with [Johnny Decimal getting started](methodologies/johnny-decimal/user
 ## Deduplication
 
 Find and resolve duplicate files using perceptual hashing (for images) and content-based comparison (for documents).
+
+![Dedupe dry-run report](assets/dedupe-report.svg)
 
 ### Scanning for Duplicates
 
