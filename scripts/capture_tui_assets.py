@@ -253,13 +253,20 @@ def seed_history(home: Path, downloads: Path) -> None:
         for name, dest_dir in moves:
             src = downloads / name
             dest = dest_dir / name
+            # Mutate first, log after: an operation is recorded as
+            # COMPLETED only once the move has actually happened, so a
+            # failed move aborts the staging (exception propagates and
+            # no capture is produced) instead of leaving a completed-
+            # looking record for a move that never occurred. Tradeoff:
+            # log_operation can no longer hash the (moved) source file;
+            # the History view does not display that field.
+            shutil.move(str(src), str(dest))
             history.log_operation(
                 OperationType.MOVE,
                 source_path=src,
                 destination_path=dest,
                 transaction_id=txn,
             )
-            shutil.move(str(src), str(dest))
         history.commit_transaction(txn)
     finally:
         history.close()
