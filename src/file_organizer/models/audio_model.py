@@ -8,6 +8,8 @@ with thread-safe initialize/generate/cleanup semantics.
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,12 +19,7 @@ from file_organizer.models.base import BaseModel, DeviceType, ModelConfig, Model
 
 # Probed locally (not imported from the services package) to avoid a circular
 # import: models/__init__ -> audio_model -> services/__init__ -> models.
-try:
-    import faster_whisper  # noqa: F401
-
-    _FASTER_WHISPER_AVAILABLE = True
-except ImportError:
-    _FASTER_WHISPER_AVAILABLE = False
+_FASTER_WHISPER_AVAILABLE = importlib.util.find_spec("faster_whisper") is not None
 
 if TYPE_CHECKING:
     from file_organizer.services.audio.transcriber import (
@@ -118,9 +115,9 @@ class AudioModel(BaseModel):
         requested = device.value if isinstance(device, DeviceType) else str(device)
         if requested == DeviceType.AUTO.value:
             try:
-                import torch
-
-                if torch.cuda.is_available():
+                torch_module = importlib.import_module("torch")
+                cuda = getattr(torch_module, "cuda", None)
+                if cuda is not None and cuda.is_available():
                     return "cuda"
             except ImportError:
                 pass
@@ -208,6 +205,7 @@ class AudioModel(BaseModel):
         try:
             if self._transcriber is None:
                 raise RuntimeError("Model not initialized. Call initialize() first.")
+            transcriber = self._transcriber
 
             from file_organizer.services.audio.transcriber import TranscriptionOptions
 
@@ -216,7 +214,7 @@ class AudioModel(BaseModel):
                 word_timestamps=word_timestamps,
                 **kwargs,
             )
-            return self._transcriber.transcribe(audio_path, options)
+            return transcriber.transcribe(audio_path, options)
         finally:
             self._exit_generate()
 

@@ -204,6 +204,7 @@ def organize(
                 "medium, large-v2, or large-v3. Larger models transcribe more "
                 "accurately but are slower and need a bigger download."
             ),
+            hidden=True,
         ),
     ] = "tiny",
 ) -> None:
