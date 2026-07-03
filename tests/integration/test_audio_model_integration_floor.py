@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -46,7 +45,9 @@ class TestAudioModelIntegrationFloor:
     @patch(_TRANSCRIBER_CLS)
     def test_initialize_auto_device_without_torch_uses_cpu(self, mock_cls: MagicMock) -> None:
         model = AudioModel(_audio_config(device=DeviceType.AUTO))
-        with patch("file_organizer.models.audio_model.importlib.import_module", side_effect=ImportError):
+        with patch(
+            "file_organizer.models.audio_model.importlib.import_module", side_effect=ImportError
+        ):
             model.initialize()
 
         assert model.is_initialized
