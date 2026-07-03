@@ -117,15 +117,14 @@ file-organizer organize --advanced-help
 
 Advanced help includes:
 
-- `--max-workers INTEGER`
-- `--sequential`
-- `--no-vision`, `--text-only`
-- `--prefetch-depth INTEGER`
-- `--no-prefetch`
-- `--transcribe-audio`
-- `--max-transcribe-seconds FLOAT`
-
-`--no-prefetch` is a backward-compatible alias for `--prefetch-depth 0`.
+- `--max-workers INTEGER` — Cap parallel worker count
+- `--sequential` — Force single-worker sequential processing
+- `--no-vision`, `--text-only` — Disable vision model loading and use extension fallback for images
+- `--prefetch-depth INTEGER` — Parallel task queue-ahead depth (`0` disables prefetch queueing)
+- `--no-prefetch` — Backward-compatible alias for `--prefetch-depth 0`
+- `--transcribe-audio` — Transcribe audio files with Whisper and use the transcript for content-aware categorization (requires the `[audio]` extra; off by default because transcription is the expensive step)
+- `--max-transcribe-seconds FLOAT` — Skip transcription for audio files longer than this (default: 600; `0` disables the cap)
+- `--whisper-model TEXT` — Whisper model size for `--transcribe-audio`: `tiny` (default), `base`, `small`, `medium`, `large-v2`, or `large-v3`. Larger models transcribe more accurately but are slower and need a bigger download
 
 **Examples:**
 
@@ -141,6 +140,24 @@ file-organizer organize ~/Downloads ~/Organized --verbose
 
 # Show advanced tuning flags
 file-organizer organize --advanced-help
+
+# Limit CPU/IO pressure on constrained machines
+file-organizer organize ~/Downloads ~/Organized --max-workers 2 --prefetch-depth 1
+
+# Strict sequential mode for deterministic debugging
+file-organizer organize ~/Downloads ~/Organized --sequential
+
+# Disable AI vision processing and use extension-based image fallback
+file-organizer organize ~/Downloads ~/Organized --no-vision
+
+# Backward-compatible alias
+file-organizer organize ~/Downloads ~/Organized --no-prefetch
+
+# Categorize audio by spoken content (podcasts vs. music vs. voice memos)
+file-organizer organize ~/Downloads ~/Organized --transcribe-audio
+
+# Higher-accuracy transcription with a larger Whisper model
+file-organizer organize ~/Downloads ~/Organized --transcribe-audio --whisper-model small
 ```
 
 > **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.
@@ -156,6 +173,8 @@ Preview how files would be organized without moving them (dry-run shortcut).
 ```bash
 file-organizer preview INPUT_DIR
 ```
+
+Supports the same processing options as `organize` (`--max-workers`, `--sequential`, `--no-vision`, `--prefetch-depth`, `--transcribe-audio`, `--max-transcribe-seconds`, `--whisper-model`).
 
 **Examples:**
 

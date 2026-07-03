@@ -95,7 +95,12 @@ class TestModelProtocolConformance:
         from file_organizer.models.audio_model import AudioModel
 
         cfg = _make_model_config(model_type="audio")
-        model = AudioModel(cfg)
+        # AudioModel validates the Whisper size at construction and requires
+        # faster-whisper importable; pin both so this stays a pure structural
+        # conformance check independent of the environment.
+        cfg.name = "whisper:base"
+        with patch("file_organizer.models.audio_model._FASTER_WHISPER_AVAILABLE", True):
+            model = AudioModel(cfg)
         assert isinstance(model, AudioModelProtocol)
 
     def test_text_model_also_satisfies_audio_protocol(self) -> None:

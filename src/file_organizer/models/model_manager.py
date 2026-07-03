@@ -127,7 +127,12 @@ class ModelManager:
             models = [m for m in get_all_models() if m.model_type == type_filter]
 
         for m in models:
-            m.installed = self._is_installed(m.name, installed)
+            if m.model_type == "audio":
+                # Whisper models are served by faster-whisper from the
+                # HuggingFace cache, not by Ollama.
+                m.installed = self._is_whisper_installed(m.name)
+            else:
+                m.installed = self._is_installed(m.name, installed)
         return models
 
     def display_models(self, type_filter: str | None = None) -> None:
@@ -314,6 +319,31 @@ class ModelManager:
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_whisper_installed(model_name: str) -> bool:
+        """Check whether a Whisper audio model is usable locally.
+
+        Requires faster-whisper to be importable (the ``[audio]`` extra) and
+        the model weights to be present in the HuggingFace hub cache, where
+        faster-whisper downloads them (``models--Systran--faster-whisper-<size>``).
+        """
+        try:
+            import faster_whisper  # noqa: F401
+        except ImportError:
+            return False
+
+        import os
+        from pathlib import Path
+
+        size = model_name.split(":", 1)[1] if ":" in model_name else model_name
+        hub_cache = os.environ.get("HF_HUB_CACHE")
+        if hub_cache:
+            hub = Path(hub_cache)
+        else:
+            hf_home = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+            hub = Path(hf_home) / "hub"
+        return (hub / f"models--Systran--faster-whisper-{size}").is_dir()
 
     @staticmethod
     def _is_installed(model_name: str, installed_names: set[str]) -> bool:

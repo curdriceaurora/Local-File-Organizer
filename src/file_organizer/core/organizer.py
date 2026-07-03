@@ -94,6 +94,7 @@ class FileOrganizer:
         enable_vision: bool = True,
         transcribe_audio: bool = False,
         max_transcribe_seconds: float | None = 600.0,
+        whisper_model: str = "tiny",
     ) -> None:
         """Initialize file organizer.
 
@@ -109,7 +110,7 @@ class FileOrganizer:
                 organize images with extension-based fallbacks.
             no_prefetch: Backward-compatible alias for ``prefetch_depth=0``.
             transcribe_audio: If True, run audio files through Whisper for
-                content-aware categorization. Requires the ``[media]``
+                content-aware categorization. Requires the ``[audio]``
                 extra; degrades gracefully (warning + metadata-only path)
                 when the dependency is missing. Default False because
                 transcription is the expensive operation in the audio
@@ -120,6 +121,11 @@ class FileOrganizer:
                 Whisper "tiny" is roughly 5-10x realtime on CPU; the 600s
                 default keeps a single file under ~2 minutes of CPU work.
                 ``None`` disables the cap.
+            whisper_model: Whisper model size for ``transcribe_audio``
+                (tiny, base, small, medium, large-v2, large-v3; a
+                ``whisper:`` prefix is accepted). Default "tiny" — the
+                fastest model; larger sizes improve transcript quality at
+                the cost of download size and inference time.
         """
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -162,6 +168,7 @@ class FileOrganizer:
                 f"max_transcribe_seconds must be >= 0 or None (got {max_transcribe_seconds!r})"
             )
         self.max_transcribe_seconds = max_transcribe_seconds
+        self.whisper_model = whisper_model
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
@@ -595,7 +602,7 @@ class FileOrganizer:
         an ``AudioModel`` here and forward it to the dispatcher so each
         file within ``max_transcribe_seconds`` gets a transcript attached
         for downstream content-aware categorization. Falls back to
-        metadata-only with a warning if the ``[media]`` extra is missing.
+        metadata-only with a warning if the ``[audio]`` extra is missing.
         """
         transcriber: Any = None
         if self.transcribe_audio:
@@ -603,20 +610,20 @@ class FileOrganizer:
                 from file_organizer.services.audio.transcriber import _FASTER_WHISPER_AVAILABLE
 
                 if not _FASTER_WHISPER_AVAILABLE:
-                    raise ImportError("faster_whisper is not installed (the [media] extra)")
+                    raise ImportError("faster_whisper is not installed (the [audio] extra)")
 
                 from file_organizer.models.audio_model import AudioModel
                 from file_organizer.models.base import ModelConfig, ModelType
 
                 if self._audio_model is None:
                     self._audio_model = AudioModel(
-                        ModelConfig(name="tiny", model_type=ModelType.AUDIO)
+                        ModelConfig(name=self.whisper_model, model_type=ModelType.AUDIO)
                     )
                     self._audio_model.initialize()
                 transcriber = self._audio_model
             except ImportError as exc:
                 self.console.print(
-                    f"[yellow]--transcribe-audio requires the \\[media] extra: {exc}. "
+                    f"[yellow]--transcribe-audio requires the \\[audio] extra: {exc}. "
                     "Falling back to metadata-only categorization.[/yellow]"
                 )
 

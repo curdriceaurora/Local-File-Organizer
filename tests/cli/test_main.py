@@ -133,6 +133,7 @@ def test_organize_command_live(mock_organizer_cls, _mock_setup, tmp_path):
         no_prefetch=False,
         transcribe_audio=False,
         max_transcribe_seconds=600.0,
+        whisper_model="tiny",
     )
     mock_instance.organize.assert_called_once_with(in_dir, out_dir)
 
@@ -163,6 +164,7 @@ def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
         no_prefetch=False,
         transcribe_audio=False,
         max_transcribe_seconds=600.0,
+        whisper_model="tiny",
     )
     # A.cli resolves the path args before dispatching; the service sees
     # the canonical absolute form.
@@ -211,6 +213,7 @@ def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
         no_prefetch=False,
         transcribe_audio=False,
         max_transcribe_seconds=600.0,
+        whisper_model="tiny",
     )
     resolved = in_dir.resolve()
     mock_instance.organize.assert_called_once_with(resolved, resolved)

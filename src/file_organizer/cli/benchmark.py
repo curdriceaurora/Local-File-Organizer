@@ -94,7 +94,7 @@ class _SuiteIterationOutcome:
     The smoke pair (``transcription_smoke_requested`` /
     ``transcription_smoke_passed``) lets ``_classify_audio_suite`` distinguish
     "smoke not asked for" from "smoke asked for but couldn't run" — required
-    so ``--transcribe-smoke`` doesn't silently succeed when the ``[media]``
+    so ``--transcribe-smoke`` doesn't silently succeed when the ``[audio]``
     extra is missing.
     """
 
@@ -392,12 +392,15 @@ class _BenchmarkModelStub:
 
     @property
     def is_initialized(self) -> bool:
+        """Whether the stub reports itself as initialized."""
         return self._initialized
 
     def initialize(self) -> None:
+        """Mark the stub as initialized (no real model is loaded)."""
         self._initialized = True
 
     def generate(self, prompt: str, **_: Any) -> str:
+        """Return the canned response matching *prompt* (default if none match)."""
         lowered = prompt.lower()
         for needle, response in self._prompt_responses.items():
             if needle in lowered:
@@ -405,6 +408,7 @@ class _BenchmarkModelStub:
         return self._default_response
 
     def cleanup(self) -> None:
+        """Mark the stub as torn down."""
         self._initialized = False
 
     def safe_cleanup(self) -> None:
@@ -556,7 +560,7 @@ def _run_audio_suite(
             # marks the run degraded; run() will surface a non-zero exit
             # at the end. The warning is for the human reading stderr.
             typer.echo(
-                f"Warning: --transcribe-smoke requires [media] extra: {exc}",
+                f"Warning: --transcribe-smoke requires [audio] extra: {exc}",
                 err=True,
             )
 
@@ -686,12 +690,14 @@ def _run_e2e_suite(files: list[Path]) -> _SuiteIterationOutcome:
 def _classify_io_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """IO suite never degrades — it has no model or candidate requirements."""
     return _SuiteExecutionClassification(effective_suite="io", degraded=False)
 
 
 def _classify_text_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Mark the text suite degraded when no text candidates were found."""
     candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -705,6 +711,7 @@ def _classify_text_suite(
 def _classify_vision_suite(
     files: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Mark the vision suite degraded when no image candidates were found."""
     candidates = _suite_candidates(files, _VISION_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -768,7 +775,7 @@ def _exit_if_transcribe_smoke_failed(
 ) -> None:
     """Exit non-zero when ``--transcribe-smoke`` ran but no smoke completed.
 
-    Requested but couldn't run end-to-end (typically because the ``[media]``
+    Requested but couldn't run end-to-end (typically because the ``[audio]``
     extra is missing). The benchmark output is already emitted by the time
     this fires, so JSON/human consumers see the degradation classification;
     this just propagates the failure to the shell exit code.
@@ -780,8 +787,8 @@ def _exit_if_transcribe_smoke_failed(
         return
     error_msg = (
         "[red]Error: --transcribe-smoke was requested but could not run "
-        "end-to-end (see warnings above). Install the [media] extra "
-        '(`pip install -e ".[media]"`) and retry.[/red]'
+        "end-to-end (see warnings above). Install the [audio] extra "
+        '(`pip install -e ".[audio]"`) and retry.[/red]'
     )
     if json_output:
         from rich.console import Console
@@ -795,6 +802,7 @@ def _exit_if_transcribe_smoke_failed(
 def _classify_audio_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Classify the audio run: no candidates → IO fallback; note metadata/smoke gaps."""
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         return _SuiteExecutionClassification(
@@ -807,7 +815,7 @@ def _classify_audio_suite(
         reasons.append("audio-synthesized-metadata-fallback")
     if outcome.transcription_smoke_requested and not outcome.transcription_smoke_passed:
         # --transcribe-smoke was requested but couldn't run end-to-end
-        # (typically [media] extra missing). Surface the gap to the JSON
+        # (typically [audio] extra missing). Surface the gap to the JSON
         # consumer; run() will also exit non-zero so CI / scripts treat
         # this as a real failure rather than a successful audio benchmark.
         reasons.append("audio-transcribe-smoke-skipped")
@@ -823,12 +831,14 @@ def _classify_audio_suite(
 def _classify_pipeline_suite(
     _: list[Path], _outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Pipeline suite never degrades — the orchestrator handles any file mix."""
     return _SuiteExecutionClassification(effective_suite="pipeline", degraded=False)
 
 
 def _classify_e2e_suite(
     files: list[Path], outcome: _SuiteIterationOutcome
 ) -> _SuiteExecutionClassification:
+    """Mark the e2e suite degraded when input files exist but none were processed."""
     if files and outcome.processed_count == 0:
         return _SuiteExecutionClassification(
             effective_suite="e2e",
@@ -1183,7 +1193,7 @@ def run(
             help=(
                 "Run AudioModel.generate() on one candidate file as an "
                 "end-to-end smoke test. Only meaningful with --suite audio. "
-                "Requires the [media] extra. Off by default to keep "
+                "Requires the [audio] extra. Off by default to keep "
                 "benchmark runs fast."
             ),
         ),

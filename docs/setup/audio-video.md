@@ -111,7 +111,58 @@ Control precision and performance with compute types:
 
 ### Basic Usage
 
-#### Programmatic API
+#### CLI: Content-Aware Audio Organization
+
+The simplest way to use transcription is through `organize` (or `preview`).
+With `--transcribe-audio`, each audio file within the duration cap is
+transcribed locally and the transcript feeds the audio classifier, so
+podcasts, voice memos, audiobooks, and music are told apart by what is
+*said* in them, not just their tags:
+
+```bash
+# Transcribe audio (Whisper "tiny" by default) during organization
+fo organize ~/Downloads ~/Organized --transcribe-audio
+
+# Trade speed for accuracy with a bigger model
+fo organize ~/Downloads ~/Organized --transcribe-audio --whisper-model small
+
+# Raise (or remove, with 0) the per-file duration cap — default 600s
+fo organize ~/Downloads ~/Organized --transcribe-audio --max-transcribe-seconds 1800
+```
+
+Notes:
+
+- Requires the `[audio]` extra; without it the organizer prints a warning
+  and falls back to metadata-only categorization.
+- Model weights download automatically from HuggingFace on first use and
+  are cached for later runs. `fo model list --type audio` shows which
+  Whisper sizes are available and whether their weights are already cached.
+- Transcription runs on CUDA when available, otherwise CPU
+  (faster-whisper's CTranslate2 backend does not support Apple MPS; Apple
+  Silicon Macs run quantized int8 inference on CPU).
+
+#### Programmatic API: AudioModel
+
+`AudioModel` wraps the transcription service behind the shared model
+lifecycle (initialize/generate/cleanup) — this is what the organizer and
+benchmark paths use:
+
+```python
+from file_organizer.models.audio_model import AudioModel
+
+model = AudioModel(AudioModel.get_default_config("whisper:base"))
+model.initialize()
+try:
+    result = model.transcribe("meeting.m4a")   # full result with segments
+    print(result.text, result.language)
+    text = model.generate("meeting.m4a")       # plain-text convenience
+finally:
+    model.safe_cleanup()
+```
+
+#### Programmatic API: AudioTranscriber
+
+For direct control over the transcription service:
 
 ```python
 from pathlib import Path

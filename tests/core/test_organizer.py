@@ -116,6 +116,26 @@ class TestFileOrganizer:
         mock_collect.assert_called_once()
         assert result.total_files == 0
 
+    def test_process_audio_files_falls_back_when_audio_extra_missing(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """When transcription is requested but faster-whisper is unavailable,
+        organizer should warn and fall back to metadata-only processing.
+        """
+        organizer.transcribe_audio = True
+        audio = tmp_path / "clip.mp3"
+        audio.write_bytes(b"fake audio bytes")
+
+        with (
+            patch("file_organizer.services.audio.transcriber._FASTER_WHISPER_AVAILABLE", False),
+            patch("file_organizer.core.organizer.dispatcher.process_audio_files") as mock_proc,
+            patch.object(organizer.console, "print") as mock_print,
+        ):
+            organizer._process_audio_files([audio])
+
+        assert mock_proc.call_args.kwargs["transcriber"] is None
+        mock_print.assert_called_once()
+
     @patch("file_organizer.core.organizer.dispatcher.process_text_files")
     @patch("file_organizer.core.file_ops.collect_files")
     def test_single_file_input_anchors_scan_root_at_parent(
