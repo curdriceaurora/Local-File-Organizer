@@ -336,11 +336,6 @@ async def capture_tui(out_dir: Path) -> list[tuple[str, int]]:
     async with app.run_test(size=TERM_SIZE) as pilot:
         await settle(pilot, 0.5)
 
-        # The hidden FilterInput takes initial focus and swallows keys;
-        # focus the tree so navigation and the 1-8 bindings work.
-        app.set_focus(app.query_one("#file-tree"))
-        await pilot.pause(0.2)
-
         # Files view: highlight the markdown report so the preview panel
         # shows real text content (13th entry in sorted order).
         for _ in range(13):
