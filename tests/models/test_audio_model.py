@@ -40,6 +40,7 @@ def _fake_transcription_result(text: str = "hello world"):
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestParseModelSize:
     """Model name normalization (plan item 1.6)."""
 
@@ -67,6 +68,7 @@ class TestParseModelSize:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestAudioModelConstruction:
     """Constructor validation."""
 
@@ -95,6 +97,7 @@ class TestAudioModelConstruction:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 @patch(_AVAILABLE_FLAG, True)
 class TestAudioModelLifecycle:
     """initialize / generate / transcribe / cleanup with a mocked transcriber."""
@@ -166,6 +169,7 @@ class TestAudioModelLifecycle:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 @patch(_AVAILABLE_FLAG, True)
 class TestDeviceAndComputeSelection:
     """Device auto-detection and compute-type defaults (plan items 1.1, 4.2)."""
@@ -226,6 +230,7 @@ class TestDeviceAndComputeSelection:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestDefaultConfig:
     """get_default_config contract (plan item 1.4)."""
 
