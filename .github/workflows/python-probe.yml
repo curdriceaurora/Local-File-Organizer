@@ -10,6 +10,9 @@ name: Deep Python Probe
 # Heavy by design (torch + llama.cpp build per cell) — runs weekly and on
 # demand via workflow_dispatch, not on every PR. PRs touching the probe kit
 # itself do trigger it so the probes stay honest.
+#
+# Windows cells double as the MSVC probes: on 3.13+ both imagededup and
+# llama-cpp-python compile from sdist there, which no other lane exercises.
 
 on:
   workflow_dispatch:
@@ -42,8 +45,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.13", "3.14"]
+    # Windows default shell is pwsh; every step here is written for bash
+    # (available on all runner images).
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Windows-only: makes the interpreter default to UTF-8, matching the
+      # test-windows job in ci-full.yml (harmless elsewhere).
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
@@ -53,8 +65,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install project with all risky extras
-        # llama builds llama.cpp from source (cmake is preinstalled on
-        # GitHub runners); mlx is Darwin-only by marker.
+        # llama builds llama.cpp from source (cmake + a C++ toolchain are
+        # preinstalled on all GitHub runner images, MSVC included); mlx is
+        # Darwin-only by marker. On 3.13+ imagededup also builds from sdist,
+        # which makes this step the MSVC/Cython probe on Windows.
         run: |
           EXTRAS="dev,audio,video,dedup,scientific,search,archive,parsers,cad,build,llama"
           if [ "$(uname)" = "Darwin" ]; then EXTRAS="$EXTRAS,mlx"; fi
@@ -82,4 +96,6 @@ jobs:
           printf 'import sys\nprint("bundle OK on", sys.version.split()[0])\n' > "$WORK/probe_hello.py"
           pyinstaller --onefile --distpath "$WORK/dist" --workpath "$WORK/build" \
             --specpath "$WORK" "$WORK/probe_hello.py" --log-level ERROR
-          "$WORK/dist/probe_hello"
+          BIN="$WORK/dist/probe_hello"
+          [ -f "$BIN.exe" ] && BIN="$BIN.exe"
+          "$BIN"
