@@ -93,15 +93,10 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert "python scripts/build.py --clean" in run_text
 
-    def test_playwright_browser_installed_before_tests(self) -> None:
-        """Build workflow must install Chromium for Playwright test execution."""
+    def test_build_test_command_uses_ci_smoke_subset(self) -> None:
+        """Build workflow should run stable CI/smoke tests in executable lanes."""
         run_text = _build_step_run_text()
-        assert "python -m playwright install chromium" in run_text
-
-    def test_build_test_command_excludes_playwright_e2e(self) -> None:
-        """Build workflow should avoid e2e browser tests in executable matrix lanes."""
-        run_text = _build_step_run_text()
-        assert 'not playwright and not e2e' in run_text
+        assert 'ci or smoke' in run_text
 
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
