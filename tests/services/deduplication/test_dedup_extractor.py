@@ -255,10 +255,19 @@ class TestExtractDocx:
         assert "Table cell" in result
 
     def test_extract_docx_import_error(self, extractor, tmp_path):
+        import builtins
+
         p = tmp_path / "doc.docx"
         p.write_bytes(b"fake docx")
 
-        with patch("builtins.__import__", side_effect=ImportError("no docx")):
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "docx":
+                raise ImportError("no docx")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
             result = extractor._extract_docx(p)
 
         assert result == ""
