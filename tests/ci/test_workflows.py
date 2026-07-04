@@ -158,7 +158,7 @@ class TestCIWorkflow:
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
+    def test_ci_uses_python_311_to_314(self, workflow: dict[str, Any]) -> None:
         """Verify the split PR/push test structure uses correct Python versions.
 
         ci.yml uses two separate jobs:
