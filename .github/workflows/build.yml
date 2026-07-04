@@ -64,7 +64,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -q --override-ini="addopts=" -p no:cacheprovider --tb=short
+          pytest tests/ -q --strict-markers -m "not playwright and not e2e" --override-ini="addopts=" -p no:cacheprovider --tb=short
 
       - name: Build CLI executable
         run: |

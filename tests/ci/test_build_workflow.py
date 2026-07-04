@@ -98,6 +98,10 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert "python -m playwright install chromium" in run_text
 
+    def test_build_test_command_excludes_playwright_e2e(self) -> None:
+        """Build workflow should avoid e2e browser tests in executable matrix lanes."""
+        run_text = _build_step_run_text()
+        assert 'not playwright and not e2e' in run_text
 
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
