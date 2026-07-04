@@ -628,12 +628,16 @@ class TestSafeDeleteFileFastPath:
         )
 
     def test_returns_outside_trash_for_symlink_loop_in_parent(self, tmp_path: Path) -> None:
-        """Codex P2 liBe: ``Path.resolve(strict=False)`` raises
-        ``RuntimeError`` (not ``OSError``) on symlink loops. A path
-        whose parent contains a self-referential symlink loop
-        (``loop -> loop``) MUST NOT propagate the exception out of
-        ``safe_delete``; it must return ``OUTSIDE_TRASH`` per the
-        outcome contract.
+        """Codex P2 liBe: a path whose parent contains a self-referential
+        symlink loop (``loop -> loop``) MUST NOT propagate an exception out
+        of ``safe_delete``; it must return a documented no-delete outcome.
+
+        The specific outcome is version-dependent: on Python <= 3.12,
+        ``Path.resolve(strict=False)`` raises ``RuntimeError`` on the loop,
+        which safe_delete maps to ``OUTSIDE_TRASH``. On 3.13+ pathlib was
+        reimplemented on ``os.path.realpath`` and no longer raises, so the
+        containment check passes and ``lexists`` on the loop path reports
+        the file absent — ``MISSING``. Both are safe: nothing is deleted.
         """
         if __import__("os").name == "nt":
             pytest.skip("POSIX symlinks")
@@ -653,9 +657,13 @@ class TestSafeDeleteFileFastPath:
         # MUST NOT raise; MUST return a documented outcome.
         outcome = gc.safe_delete(request)
 
-        assert outcome.result is TrashDeleteResult.OUTSIDE_TRASH, (
-            f"symlink loop in parent must produce OUTSIDE_TRASH, not "
-            f"propagate RuntimeError; got {outcome.result}"
+        assert outcome.result in (
+            TrashDeleteResult.OUTSIDE_TRASH,
+            TrashDeleteResult.MISSING,
+        ), (
+            f"symlink loop in parent must produce a documented no-delete "
+            f"outcome (OUTSIDE_TRASH on <=3.12, MISSING on 3.13+), not "
+            f"propagate an exception; got {outcome.result}"
         )
 
     def test_returns_outside_trash_for_traversal_attempt(self, tmp_path: Path) -> None:

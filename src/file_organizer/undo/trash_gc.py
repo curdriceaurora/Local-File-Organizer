@@ -330,10 +330,14 @@ class TrashGC:
         except (OSError, RuntimeError):
             # ``OSError`` covers permissions/IO errors; ``RuntimeError``
             # is what ``Path.resolve`` raises on symlink loops (codex P2
-            # liBe). Be conservative on either: a path whose parent we
-            # can't resolve cleanly is treated as outside trash so the
-            # outcome stays inside the documented contract instead of
-            # propagating a raw exception out of safe_delete.
+            # liBe) on Python <= 3.12. On 3.13+ pathlib resolves via
+            # ``os.path.realpath`` and no longer raises for loops — the
+            # loop path then falls through to the ``lexists`` check and
+            # produces MISSING, which is equally safe (nothing deleted).
+            # Be conservative on either exception: a parent we can't
+            # resolve cleanly is treated as outside trash so the outcome
+            # stays inside the documented contract instead of propagating
+            # a raw exception out of safe_delete.
             return False
         try:
             Path(os.path.normcase(resolved_parent)).relative_to(

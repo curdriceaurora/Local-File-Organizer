@@ -41,7 +41,11 @@ dependencies = [
     # numpy 1.26.4 is the last release with cp311 wheels but has none for 3.13+;
     # numpy 2.1+ is required for Python 3.13, 2.3+ for 3.14, and opencv-python
     # >=4.13 requires numpy>=2. Floor matches scipy>=1.17's own floor (1.26.4).
-    "numpy>=1.26.4,<3",  # Numerical computing (used in dedup, video, optimization)
+    # Capped <2.5 while requires-python is >=3.11: numpy 2.5 dropped 3.11 AND
+    # its stubs use PEP 695 `type` statements, which mypy rejects under
+    # python_version = "3.11" (our floor). numpy 2.4.x ships cp311-cp314
+    # wheels, so one version still covers the whole support matrix.
+    "numpy>=1.26.4,<2.5",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
     # Security: XXE/entity-expansion-safe XML parsing (dedup ODT content.xml).
