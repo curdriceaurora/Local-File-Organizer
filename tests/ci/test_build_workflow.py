@@ -152,3 +152,25 @@ class TestReleaseJob:
         assert "refs/tags/v" in cond, (
             f"release job must be guarded by tag condition, got if: {cond!r}"
         )
+
+    def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
+        """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+        release_step = next(
+            (
+                step
+                for step in steps
+                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+            ),
+            {},
+        )
+        with_config = release_step.get("with", {})
+        prerelease_expr = str(with_config.get("prerelease", ""))
+        draft_expr = str(with_config.get("draft", ""))
+        assert prerelease_expr, "build.yml release step must define prerelease expression"
+        assert draft_expr, "build.yml release step must define draft expression"
+        assert "contains(github.ref_name, '-')" in prerelease_expr
+        assert "contains(github.ref_name, 'a')" in prerelease_expr
+        assert "contains(github.ref_name, 'b')" in prerelease_expr
+        assert "contains(github.ref_name, 'rc')" in prerelease_expr

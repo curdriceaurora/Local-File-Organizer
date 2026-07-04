@@ -578,6 +578,28 @@ class TestReleaseWorkflow:
             "publish-pypi job must use the 'pypi' GitHub environment for OIDC"
         )
 
+    def test_release_marks_hyphen_and_pep440_tags_as_prerelease(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """Verify release.yml prerelease detection handles semver and PEP 440 tags."""
+        jobs = workflow.get("jobs", {})
+        release_job = jobs.get("github-release", {})
+        steps = release_job.get("steps", [])
+        release_step = next(
+            (
+                step
+                for step in steps
+                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+            ),
+            {},
+        )
+        prerelease_expr = str(release_step.get("with", {}).get("prerelease", ""))
+        assert prerelease_expr, "release.yml GitHub release step must define prerelease expression"
+        assert "contains(github.ref_name, '-')" in prerelease_expr
+        assert "contains(github.ref_name, 'a')" in prerelease_expr
+        assert "contains(github.ref_name, 'b')" in prerelease_expr
+        assert "contains(github.ref_name, 'rc')" in prerelease_expr
+
 
 @pytest.mark.unit
 class TestDockerWorkflow:

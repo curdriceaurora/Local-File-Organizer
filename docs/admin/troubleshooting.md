@@ -444,7 +444,7 @@ The default `docker-compose.yml` builds the image from source (`build: context: 
 git tag --sort=-version:refname | head -10
 
 # Check out the previous release
-git checkout v2.0.0-beta.1    # replace with the target tag
+git checkout v2.0.0-alpha.3    # replace with the target tag
 
 # Rebuild and redeploy
 docker-compose build
@@ -457,7 +457,7 @@ If your deployment uses a pre-built registry image instead of a local build, edi
 # docker-compose.yml
 services:
   file-organizer:
-    image: ghcr.io/curdriceaurora/local-file-organizer:2.0.0-beta.1
+    image: ghcr.io/curdriceaurora/local-file-organizer:2.0.0-alpha.3
     # Remove or comment out the 'build:' block when pinning an image tag
 ```
 
