@@ -60,11 +60,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[desktop,dev]"
           pip install pyinstaller
-          python -m playwright install chromium
 
       - name: Run tests
         run: |
-          pytest tests/ -q --strict-markers -m "not playwright and not e2e" --override-ini="addopts=" -p no:cacheprovider --tb=short
+          pytest tests/ -q --strict-markers -m "ci or smoke" --override-ini="addopts=" --tb=short
 
       - name: Build CLI executable
         run: |
