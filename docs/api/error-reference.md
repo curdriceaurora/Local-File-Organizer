@@ -1,6 +1,6 @@
 # API Error Reference
 
-This reference matches the alpha3 OpenAPI schema exposed at `/openapi.json`. Route decorators now include concrete `responses={...}` metadata for success payloads and the documented error cases below.
+This reference matches the beta1 OpenAPI schema exposed at `/openapi.json`. Route decorators now include concrete `responses={...}` metadata for success payloads and the documented error cases below.
 
 ## Error Response Shapes
 
