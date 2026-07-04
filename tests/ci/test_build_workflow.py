@@ -103,7 +103,6 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert 'not playwright and not e2e' in run_text
 
-
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
         """A Linux-conditional step must install GTK/WebKit pywebview deps."""
