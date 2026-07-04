@@ -176,7 +176,6 @@ class TestReleaseJob:
         )
         tag_name = str(release_step.get("with", {}).get("tag_name", ""))
         assert "RELEASE_TAG" in tag_name, "release step must publish against resolved release tag"
-
     def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
         """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
         jobs = _load_workflow().get("jobs", {})
