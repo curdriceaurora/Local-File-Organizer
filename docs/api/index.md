@@ -161,7 +161,7 @@ API keys have configurable expiration:
 
 ## Response Format
 
-The alpha3 API uses endpoint-specific response models for successful requests rather than a single `success/data/meta` envelope.
+The beta1 API uses endpoint-specific response models for successful requests rather than a single `success/data/meta` envelope.
 
 ### Success response example
 

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. 2.0.0-alpha.3)'
+        description: 'Version to build (e.g. 2.0.0-beta.1)'
         required: false
         default: ''
 
@@ -141,5 +141,6 @@ jobs:
           files: |
             artifacts/**/*
             artifacts/SHA256SUMS.txt
-          draft: true
+          draft: ${{ !contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true

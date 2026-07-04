@@ -55,4 +55,5 @@ jobs:
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           files: dist/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true

@@ -25,7 +25,7 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - OS: [e.g. iOS]
  - Python Version: [e.g. 3.11.0]
- - Version of Local-File-Organizer [e.g. 2.0.0-alpha.3]
+ - Version of Local-File-Organizer [e.g. 2.0.0-beta.1]
 
 **Additional context**
 Add any other context about the problem here.

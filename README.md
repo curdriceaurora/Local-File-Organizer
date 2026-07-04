@@ -4,7 +4,7 @@
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0--alpha.3-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0--beta.1-orange)](CHANGELOG.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
@@ -272,4 +272,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**Status**: Alpha 3 | **Version**: 2.0.0-alpha.3 | **Last Updated**: 2026-04-10
+**Status**: Beta 1 | **Version**: 2.0.0-beta.1 | **Last Updated**: 2026-07-04

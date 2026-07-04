@@ -50,7 +50,7 @@ router = APIRouter(
             "Returned runtime system status.",
             {
                 "app": "File Organizer",
-                "version": "2.0.0-alpha.3",
+                "version": "2.0.0-beta.1",
                 "environment": "production",
                 "disk_total": 1000000,
                 "disk_used": 400000,
