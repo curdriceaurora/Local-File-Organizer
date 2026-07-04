@@ -27,12 +27,13 @@ _XATTR_LIST_SKIP = frozenset({errno.ENOTSUP, errno.ENODATA, errno.EINVAL})
 _XATTR_SET_SKIP = frozenset({errno.EPERM, errno.EACCES, errno.ENOTSUP, errno.ENODATA, errno.EINVAL})
 
 # Destination open flags shared by both copy paths. WITHOUT O_TRUNC, WITH
-# O_NONBLOCK: a destination swapped to a reader-less FIFO returns ENXIO
-# immediately instead of blocking the worker; ``_finish_copy`` validates the
-# opened inode (S_ISREG / same-inode) before truncating. O_NOFOLLOW is added by
-# ``open_child`` itself. ``_DST_OPEN_MODE`` matches ``open()`` (0o644 under a
-# typical 022 umask), not os.open's 0o777 default.
-_DST_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_NONBLOCK
+# O_NONBLOCK where available: a destination swapped to a reader-less FIFO
+# returns ENXIO immediately instead of blocking the worker; ``_finish_copy``
+# validates the opened inode (S_ISREG / same-inode) before truncating.
+# O_NOFOLLOW is added by ``open_child`` itself. ``_DST_OPEN_MODE`` matches
+# ``open()`` (0o644 under a typical 022 umask), not os.open's 0o777 default.
+_O_NONBLOCK = getattr(os, "O_NONBLOCK", 0)
+_DST_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | _O_NONBLOCK
 _DST_OPEN_MODE = 0o666
 
 
@@ -79,7 +80,7 @@ def _open_source_nofollow(source: Path) -> tuple[BinaryIO, os.stat_result]:
         OSError: For other open failures.
     """
     with SafeDir.open_root(source.parent) as src_root:
-        src_fd = src_root.open_child(source.name, flags=os.O_RDONLY | os.O_NONBLOCK)
+        src_fd = src_root.open_child(source.name, flags=os.O_RDONLY | _O_NONBLOCK)
     try:
         src_handle: BinaryIO = os.fdopen(src_fd, "rb", closefd=True)
     except OSError:

@@ -93,6 +93,11 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert "python scripts/build.py --clean" in run_text
 
+    def test_playwright_browser_installed_before_tests(self) -> None:
+        """Build workflow must install Chromium for Playwright test execution."""
+        run_text = _build_step_run_text()
+        assert "python -m playwright install chromium" in run_text
+
 
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
@@ -145,13 +150,32 @@ class TestReleaseJob:
         assert needs == ["build"], f"release job must need only 'build', got: {needs}"
 
     def test_release_triggered_on_tags(self) -> None:
-        """release job must only run on tag pushes."""
+        """release job must support tag-triggered publishing."""
         jobs = _load_workflow().get("jobs", {})
         release = jobs.get("release", {})
         cond = release.get("if", "")
         assert "refs/tags/v" in cond, (
             f"release job must be guarded by tag condition, got if: {cond!r}"
         )
+
+    def test_release_can_publish_from_manual_version_dispatch(self) -> None:
+        """Manual dispatch with a version should be able to publish release assets."""
+        jobs = _load_workflow().get("jobs", {})
+        release = jobs.get("release", {})
+        cond = str(release.get("if", ""))
+        assert "workflow_dispatch" in cond
+        assert "inputs.version" in cond
+
+        release_step = next(
+            (
+                step
+                for step in release.get("steps", [])
+                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+            ),
+            {},
+        )
+        tag_name = str(release_step.get("with", {}).get("tag_name", ""))
+        assert "RELEASE_TAG" in tag_name, "release step must publish against resolved release tag"
 
     def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
         """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
@@ -170,7 +194,7 @@ class TestReleaseJob:
         draft_expr = str(with_config.get("draft", ""))
         assert prerelease_expr, "build.yml release step must define prerelease expression"
         assert draft_expr, "build.yml release step must define draft expression"
-        assert "contains(github.ref_name, '-')" in prerelease_expr
-        assert "contains(github.ref_name, 'a')" in prerelease_expr
-        assert "contains(github.ref_name, 'b')" in prerelease_expr
-        assert "contains(github.ref_name, 'rc')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, '-')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'a')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'b')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'rc')" in prerelease_expr
