@@ -204,10 +204,10 @@ video = [
 ]
 
 dedup = [
-    # Gated to <3.13: imagededup 0.3.3.post2 ships wheels only up to cp312 and its
-    # sdist needs to compile a Cython extension with no upstream 3.13+ support.
-    # Image-similarity dedup degrades gracefully when absent (lazy import).
-    "imagededup>=0.3.0; python_version < '3.13'",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
+    # No wheels past cp312, so 3.13+ builds from sdist — install-probed on
+    # 3.13.2 and 3.14.6 (2026-07): the Cython extension compiles and PHash
+    # round-trips. Validated continuously by the ci-extras matrix.
+    "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
     "scikit-learn~=1.4",  # ML-based text similarity for deduplication
     "pypdf>=4,<7",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
