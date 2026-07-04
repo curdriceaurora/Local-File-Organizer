@@ -357,10 +357,12 @@ class TestTrimAudio:
             assert result == audio_file
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError
-            raise ImportError
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = trim_audio(audio_file)

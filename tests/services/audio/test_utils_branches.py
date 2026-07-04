@@ -566,12 +566,15 @@ class TestDetectSilenceSegmentsBranches:
 
     def test_no_pydub_returns_empty_list(self, audio_file: Path) -> None:
         """Lines 221-223: ImportError → warning logged, returns []."""
+        import builtins
+
+        real_import = builtins.__import__
 
         def _no_pydub(name: str, *args: object, **kwargs: object) -> object:
             """Substitute __import__ that raises ImportError for any pydub import."""
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=_no_pydub):
             result = detect_silence_segments(audio_file)
