@@ -24,13 +24,22 @@ from pathlib import Path
 IS_DARWIN = platform.system() == "Darwin"
 
 
+def require(condition: bool, message: str) -> None:
+    """Raise AssertionError for failed probe invariants, even under python -O."""
+    if not condition:
+        raise AssertionError(message)
+
+
 def probe_numpy() -> str:
     import numpy as np
 
     arr = np.asarray([0.3, 0.1, 0.2], dtype=np.float64)
-    assert list(np.argsort(arr)) == [1, 2, 0]
+    require(list(np.argsort(arr)) == [1, 2, 0], "numpy argsort result mismatch")
     # NEP 50: scalar promotion must not upcast float32 arrays (numpy 2 behavior)
-    assert (np.zeros(2, dtype=np.float32) + 1.0).dtype == np.float32
+    require(
+        (np.zeros(2, dtype=np.float32) + 1.0).dtype == np.float32,
+        "numpy scalar promotion unexpectedly upcast float32",
+    )
     return f"numpy {np.__version__}"
 
 
@@ -39,8 +48,8 @@ def probe_pydub() -> str:
     from pydub import AudioSegment
 
     seg = AudioSegment.silent(duration=50)
-    assert seg.rms == 0
-    assert seg.set_channels(2).channels == 2
+    require(seg.rms == 0, "pydub silent segment RMS expected to be 0")
+    require(seg.set_channels(2).channels == 2, "pydub channel conversion failed")
     return "pydub silent-segment RMS via audioop OK"
 
 
@@ -55,7 +64,7 @@ def probe_imagededup() -> str:
             arr = rng.integers(0, 255, (64, 64, 3), dtype=np.uint8)
             Image.fromarray(arr, "RGB").save(Path(d) / name)
         hashes = PHash().encode_images(d)
-    assert len(hashes) == 2
+    require(len(hashes) == 2, "imagededup expected hashes for both probe images")
     # Prove the compiled extension exists (sdist-built on 3.13+):
     from imagededup.handlers.search.brute_force_cython import (  # noqa: F401
         BruteForceCython,
@@ -86,7 +95,7 @@ def probe_watchdog() -> str:
         finally:
             observer.stop()
             observer.join(timeout=10)
-    assert fired, "no filesystem event received within 10s"
+    require(fired, "no filesystem event received within 10s")
     return f"watchdog {type(observer).__name__} event round-trip OK"
 
 
@@ -106,7 +115,7 @@ def probe_torch() -> str:
     import torch
 
     t = torch.ones(2, 2)
-    assert (t @ t).sum().item() == 8.0
+    require((t @ t).sum().item() == 8.0, "torch matmul probe produced unexpected result")
     return f"torch {torch.__version__} matmul OK"
 
 
@@ -115,7 +124,7 @@ def probe_opencv() -> str:
     import numpy as np
 
     gray = cv2.cvtColor(np.zeros((8, 8, 3), dtype=np.uint8), cv2.COLOR_RGB2GRAY)
-    assert gray.shape == (8, 8)
+    require(gray.shape == (8, 8), "opencv grayscale conversion produced wrong shape")
     return f"opencv {cv2.__version__} cvtColor OK"
 
 
@@ -127,7 +136,10 @@ def probe_scipy() -> str:
         path = Path(d) / "probe.mat"
         savemat(path, {"x": np.arange(4)})
         loaded = loadmat(path)
-    assert list(loaded["x"].flatten()) == [0, 1, 2, 3]
+    require(
+        list(loaded["x"].flatten()) == [0, 1, 2, 3],
+        "scipy .mat round-trip values mismatch",
+    )
     import scipy
 
     return f"scipy {scipy.__version__} .mat round-trip OK"
@@ -142,7 +154,7 @@ def probe_h5py() -> str:
         with h5py.File(path, "w") as f:
             f.create_dataset("x", data=np.arange(4))
         with h5py.File(path, "r") as f:
-            assert list(f["x"][:]) == [0, 1, 2, 3]
+            require(list(f["x"][:]) == [0, 1, 2, 3], "h5py round-trip values mismatch")
     return f"h5py {h5py.__version__} round-trip OK"
 
 
@@ -156,7 +168,7 @@ def probe_netcdf4() -> str:
             var = ds.createVariable("v", "f8", ("t",))
             var[:] = [1.0, 2.0, 3.0]
         with netCDF4.Dataset(path, "r") as ds:
-            assert float(ds["v"][1]) == 2.0
+            require(float(ds["v"][1]) == 2.0, "netCDF4 round-trip values mismatch")
     return f"netCDF4 {netCDF4.__version__} round-trip OK"
 
 
@@ -165,7 +177,7 @@ def probe_sklearn() -> str:
     from sklearn.feature_extraction.text import TfidfVectorizer
 
     matrix = TfidfVectorizer().fit_transform(["alpha beta", "beta gamma"])
-    assert matrix.shape == (2, 3)
+    require(matrix.shape == (2, 3), "scikit-learn TF-IDF matrix shape mismatch")
     return f"scikit-learn {sklearn.__version__} TF-IDF OK"
 
 
@@ -181,7 +193,10 @@ def probe_py7zr() -> str:
             z.write(src, "payload.txt")
         with py7zr.SevenZipFile(archive, "r") as z:
             z.extractall(Path(d) / "out")
-        assert (Path(d) / "out" / "payload.txt").read_text() == "probe payload"
+        require(
+            (Path(d) / "out" / "payload.txt").read_text() == "probe payload",
+            "py7zr round-trip payload mismatch",
+        )
     return f"py7zr {py7zr.__version__} round-trip OK"
 
 
@@ -190,15 +205,15 @@ def probe_pymupdf() -> str:
 
     doc = fitz.open()
     doc.new_page()
-    assert doc.page_count == 1
-    return f"PyMuPDF {fitz.__doc__.split()[1] if fitz.__doc__ else 'OK'} page create OK"
+    require(doc.page_count == 1, "PyMuPDF page creation probe expected page_count == 1")
+    return f"PyMuPDF {fitz.VersionBind} page create OK"
 
 
 def probe_lxml() -> str:
     import lxml.etree as etree
 
     root = etree.fromstring("<r><c>x</c></r>")
-    assert root.findtext("c") == "x"
+    require(root.findtext("c") == "x", "lxml XML parse probe failed")
     return f"lxml {etree.__version__} parse OK"
 
 
@@ -206,14 +221,14 @@ def probe_bcrypt() -> str:
     import bcrypt
 
     hashed = bcrypt.hashpw(b"probe", bcrypt.gensalt(rounds=4))
-    assert bcrypt.checkpw(b"probe", hashed)
+    require(bcrypt.checkpw(b"probe", hashed), "bcrypt hash/check probe failed")
     return f"bcrypt {bcrypt.__version__} hash/check OK"
 
 
 def probe_psutil() -> str:
     import psutil
 
-    assert psutil.Process().memory_info().rss > 0
+    require(psutil.Process().memory_info().rss > 0, "psutil reported non-positive RSS")
     return f"psutil {psutil.__version__} process info OK"
 
 
@@ -229,14 +244,17 @@ def probe_llama_cpp() -> str:
     import llama_cpp
 
     # Native C API call — proves the compiled library loads and answers.
-    assert isinstance(llama_cpp.llama_supports_mmap(), bool)
+    require(
+        isinstance(llama_cpp.llama_supports_mmap(), bool),
+        "llama-cpp-python native bool probe failed",
+    )
     return f"llama-cpp-python {llama_cpp.__version__} native call OK"
 
 
 def probe_mlx() -> str:
     import mlx.core as mx
 
-    assert (mx.array([1, 2]) + 1).sum().item() == 5
+    require((mx.array([1, 2]) + 1).sum().item() == 5, "mlx array operation probe failed")
     return "mlx array op OK"
 
 
@@ -245,7 +263,7 @@ def probe_ezdxf() -> str:
 
     doc = ezdxf.new()
     doc.modelspace().add_line((0, 0), (1, 1))
-    assert len(doc.modelspace()) == 1
+    require(len(doc.modelspace()) == 1, "ezdxf entity creation probe failed")
     return f"ezdxf {ezdxf.__version__} entity create OK"
 
 

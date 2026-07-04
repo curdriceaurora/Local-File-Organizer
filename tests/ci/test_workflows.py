@@ -858,6 +858,10 @@ class TestDeepPythonProbeWorkflow:
         triggers = get_triggers(workflow)
         assert "schedule" in triggers, "deep-probe must keep its weekly schedule"
         assert "workflow_dispatch" in triggers, "deep-probe must stay manually dispatchable"
+        push = triggers.get("push") or {}
+        assert push.get("branches") == ["main", "epic/**"], (
+            "deep-probe push trigger must be scoped to main and epic/** branches"
+        )
         for event in ("pull_request", "push"):
             paths = (triggers.get(event) or {}).get("paths", [])
             assert "scripts/probe_python_support.py" in paths, (
@@ -865,4 +869,14 @@ class TestDeepPythonProbeWorkflow:
             )
         assert workflow.get("permissions") == {"contents": "read"}, (
             "deep-probe must run with read-only permissions"
+        )
+
+    def test_probe_timeout_accounts_for_slowest_windows_cell(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """Verify timeout budget covers the slowest cold-cache probe matrix cell."""
+        timeout = workflow["jobs"]["deep-probe"].get("timeout-minutes")
+        assert isinstance(timeout, int), "deep-probe timeout-minutes must be an integer"
+        assert timeout >= 90, (
+            "deep-probe timeout must allow the cold-cache Windows py3.14 install+probe sequence"
         )
