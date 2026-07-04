@@ -1512,14 +1512,17 @@ class TestMisplacementDetector:
         sibling = tmp_path / "other.txt"
         sibling.write_text("neighbor")
         detector = MisplacementDetector()
-        real_stat = Path.stat
+        real_is_file = Path.is_file
 
-        def flaky_stat(path: Path, *args: Any, **kwargs: Any) -> Any:
+        # Patch ``is_file`` (what analyze_context actually calls per sibling),
+        # not ``Path.stat``: on Python 3.14 pathlib's ``is_file`` no longer
+        # routes through ``Path.stat``, so a stat patch never fires there.
+        def flaky_is_file(path: Path, *args: Any, **kwargs: Any) -> Any:
             if path == sibling:
                 raise OSError("permission denied")
-            return real_stat(path, *args, **kwargs)
+            return real_is_file(path, *args, **kwargs)
 
-        with patch("pathlib.Path.stat", autospec=True, side_effect=flaky_stat):
+        with patch("pathlib.Path.is_file", autospec=True, side_effect=flaky_is_file):
             context = detector.analyze_context(f)
         assert context.file_path == f
         assert context.size > 0
