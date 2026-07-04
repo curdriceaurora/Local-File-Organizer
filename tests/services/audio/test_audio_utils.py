@@ -7,6 +7,7 @@ All external dependencies (pydub, tinytag) are mocked.
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -453,10 +454,12 @@ class TestGetAudioPeakAmplitude:
         assert result == -3.5
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError
-            raise ImportError
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = get_audio_peak_amplitude(audio_file)
