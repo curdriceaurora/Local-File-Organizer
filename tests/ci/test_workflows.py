@@ -748,3 +748,121 @@ class TestShardCoverage:
             f"scripts/ci_shard_paths.sh: {unassigned}. "
             f"Add them to an appropriate shard or to _EXCLUDED if intentional."
         )
+
+
+@pytest.mark.unit
+class TestExtrasMatrixWorkflow:
+    """Tests for the Extras Matrix workflow (ci-extras.yml).
+
+    ci-extras is the cheap install+import probe for every optional extra;
+    its matrix is part of the Python 3.13/3.14 migration evidence (#882).
+    """
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("ci-extras.yml")
+
+    def test_linux_matrix_covers_migration_pythons(self, workflow: dict[str, Any]) -> None:
+        """Verify the Linux extras job installs on 3.12 through 3.14."""
+        job = workflow["jobs"]["install-extra"]
+        matrix = job["strategy"]["matrix"]
+        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
+            f"install-extra must cover 3.12-3.14, got {matrix['python-version']}"
+        )
+        assert job["strategy"].get("fail-fast") is False, (
+            "install-extra must not fail-fast: each extra/python cell is independent evidence"
+        )
+
+    def test_linux_matrix_includes_llama_build_probe(self, workflow: dict[str, Any]) -> None:
+        """Verify the llama extra stays in the matrix.
+
+        llama-cpp-python publishes no wheels; this row is the only ongoing
+        cmake source-build probe in CI (#882).
+        """
+        matrix = workflow["jobs"]["install-extra"]["strategy"]["matrix"]
+        assert "llama" in matrix["extra"], (
+            "install-extra must include the llama extra — it is the cmake build probe"
+        )
+
+    def test_macos_lane_covers_darwin_extras(self, workflow: dict[str, Any]) -> None:
+        """Verify the Darwin lane exists and exercises what Linux cannot.
+
+        The mlx extra is Darwin-only by environment marker, so the Linux
+        matrix silently skips it; torch/opencv/h5py/netCDF4 also ship
+        separate macOS wheels that must not be assumed from Linux results.
+        """
+        job = workflow["jobs"].get("install-extra-macos")
+        assert job is not None, "ci-extras must keep the macOS lane (install-extra-macos)"
+        assert job["runs-on"] == "macos-latest"
+        matrix = job["strategy"]["matrix"]
+        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
+            f"install-extra-macos must cover 3.12-3.14, got {matrix['python-version']}"
+        )
+        assert "mlx" in matrix["extra"], (
+            "install-extra-macos must include mlx — no other lane can exercise it"
+        )
+
+
+@pytest.mark.unit
+class TestDeepPythonProbeWorkflow:
+    """Tests for the Deep Python Probe workflow (python-probe.yml).
+
+    The deep probe is the functional (beyond install+import) evidence for
+    the 3.13/3.14 migration: native extensions, stdlib shims, sdist builds,
+    numpy-2 behavior, and PyInstaller bundles (#882).
+    """
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("python-probe.yml")
+
+    def test_probe_script_exists(self) -> None:
+        """Verify the probe script the workflow runs is present."""
+        assert (PROJECT_ROOT / "scripts" / "probe_python_support.py").exists(), (
+            "python-probe.yml depends on scripts/probe_python_support.py"
+        )
+
+    def test_matrix_covers_all_platforms_and_pythons(self, workflow: dict[str, Any]) -> None:
+        """Verify the probe runs on all three OSes and migration Pythons."""
+        job = workflow["jobs"]["deep-probe"]
+        matrix = job["strategy"]["matrix"]
+        assert matrix["os"] == ["ubuntu-latest", "macos-latest", "windows-latest"], (
+            f"deep-probe must cover all three OSes, got {matrix['os']}"
+        )
+        assert matrix["python-version"] == ["3.11", "3.13", "3.14"], (
+            f"deep-probe must cover 3.11 (baseline), 3.13, 3.14 — got {matrix['python-version']}"
+        )
+        assert job["strategy"].get("fail-fast") is False, (
+            "deep-probe must not fail-fast: each OS/python cell is independent evidence"
+        )
+        assert job.get("timeout-minutes") is not None, (
+            "deep-probe must set timeout-minutes (llama.cpp builds can hang)"
+        )
+
+    def test_probe_stages_present(self, workflow: dict[str, Any]) -> None:
+        """Verify all three evidence stages exist: probes, numpy tests, bundle."""
+        steps = workflow["jobs"]["deep-probe"]["steps"]
+        runs = " ".join(step.get("run") or "" for step in steps)
+        assert "scripts/probe_python_support.py" in runs, (
+            "deep-probe must run the functional probe script"
+        )
+        assert "test_dedup_embedder.py" in runs, (
+            "deep-probe must run the numpy-2-sensitive test suites"
+        )
+        assert "pyinstaller --onefile" in runs, (
+            "deep-probe must build and execute a PyInstaller bundle"
+        )
+
+    def test_probe_triggers_and_permissions(self, workflow: dict[str, Any]) -> None:
+        """Verify schedule + dispatch + probe-kit path triggers, and read-only perms."""
+        triggers = get_triggers(workflow)
+        assert "schedule" in triggers, "deep-probe must keep its weekly schedule"
+        assert "workflow_dispatch" in triggers, "deep-probe must stay manually dispatchable"
+        for event in ("pull_request", "push"):
+            paths = (triggers.get(event) or {}).get("paths", [])
+            assert "scripts/probe_python_support.py" in paths, (
+                f"deep-probe {event} trigger must be scoped to the probe kit paths"
+            )
+        assert workflow.get("permissions") == {"contents": "read"}, (
+            "deep-probe must run with read-only permissions"
+        )
