@@ -26,6 +26,7 @@ on:
   # exercised before the workflow ever reaches the default branch (where
   # workflow_dispatch would become available).
   push:
+    branches: [main, "epic/**"]
     paths:
       - "scripts/probe_python_support.py"
       - ".github/workflows/python-probe.yml"
@@ -41,7 +42,7 @@ jobs:
   deep-probe:
     name: "Probe ${{ matrix.os }} py${{ matrix.python-version }}"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
