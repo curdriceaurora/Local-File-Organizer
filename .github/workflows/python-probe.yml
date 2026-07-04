@@ -19,6 +19,13 @@ on:
     paths:
       - "scripts/probe_python_support.py"
       - ".github/workflows/python-probe.yml"
+  # push runs from the branch's own copy of this file, so the probe can be
+  # exercised before the workflow ever reaches the default branch (where
+  # workflow_dispatch would become available).
+  push:
+    paths:
+      - "scripts/probe_python_support.py"
+      - ".github/workflows/python-probe.yml"
 
 permissions:
   contents: read
