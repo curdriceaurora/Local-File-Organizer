@@ -162,11 +162,12 @@ class TestCIWorkflow:
         """Verify the split PR/push test structure uses correct Python versions.
 
         ci.yml uses two separate jobs:
-        - 'test': PR-only, Python 3.11+3.12 (~2 400 tests, ci marker)
-        - 'test-full': push-only, 6 shards x Python 3.11+3.12 (~17 000 tests)
+        - 'test': PR-only, Python 3.11-3.14 (~2 400 tests, ci marker)
+        - 'test-full': push-only, 6 shards x Python 3.11-3.14 (~17 000 tests)
 
-        Both jobs cover 3.12 directly on PRs rather than waiting until after
-        merge (or the daily ci-full.yml run) to catch version-specific issues.
+        Both jobs cover every supported version directly on PRs rather than
+        waiting until after merge (or the daily ci-full.yml run) to catch
+        version-specific issues. 3.13/3.14 were added in issue #882.
         """
         jobs = workflow.get("jobs", {})
 
@@ -179,12 +180,12 @@ class TestCIWorkflow:
             "'test' job must have if: github.event_name == 'pull_request'"
         )
 
-        # Must run both Python versions so 3.12 is validated on every PR
+        # Must run all supported Python versions so each is validated on every PR
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert set(python_versions) == {"3.11", "3.12"}, (
-            f"'test' (PR) job must include both 3.11 and 3.12, got {python_versions}"
+        assert set(python_versions) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test' (PR) job must include 3.11-3.14, got {python_versions}"
         )
 
         # Must have a timeout to prevent indefinite hangs
@@ -199,12 +200,12 @@ class TestCIWorkflow:
             "'test-full' job must have if: github.event_name == 'push'"
         )
 
-        # Must run both Python versions
+        # Must run all supported Python versions
         full_strategy = full_job.get("strategy", {})
         full_matrix = full_strategy.get("matrix", {})
         full_python = full_matrix.get("python-version", [])
-        assert set(full_python) == {"3.11", "3.12"}, (
-            f"'test-full' job must include both 3.11 and 3.12, got {full_python}"
+        assert set(full_python) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test-full' job must include 3.11-3.14, got {full_python}"
         )
 
         # Must use 6 shards so the suite stays domain-shaped instead of
@@ -429,8 +430,8 @@ class TestCIFullWorkflow:
         strategy = job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert set(python_versions) == {"3.11", "3.12"}, (
-            f"'test-linux-full' must include both 3.11 and 3.12, got {python_versions}"
+        assert set(python_versions) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test-linux-full' must include 3.11-3.14, got {python_versions}"
         )
         shards = matrix.get("shard", [])
         assert shards == [1, 2, 3, 4, 5, 6], (

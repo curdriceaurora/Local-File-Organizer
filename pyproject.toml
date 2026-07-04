@@ -21,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Desktop Environment :: File Managers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -35,7 +37,11 @@ dependencies = [
     # NLP and data science
     # Deterministic, offline stemming (WP-4.4, #1234) — pure-Python, no corpus download.
     "snowballstemmer>=2.2",
-    "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
+    # Deliberately NOT ~= style — a ~= rewrite (#1037) would cap this <2.0 again:
+    # numpy 1.26.4 is the last release with cp311 wheels but has none for 3.13+;
+    # numpy 2.1+ is required for Python 3.13, 2.3+ for 3.14, and opencv-python
+    # >=4.13 requires numpy>=2. Floor matches scipy>=1.17's own floor (1.26.4).
+    "numpy>=1.26.4,<3",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
     # Security: XXE/entity-expansion-safe XML parsing (dedup ODT content.xml).
@@ -62,7 +68,7 @@ dependencies = [
     "jinja2~=3.1",
     "markupsafe~=3.0",  # Direct import in web csrf_input; also a jinja2 transitive dep
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
@@ -85,10 +91,13 @@ dependencies = [
     "email-validator~=2.1",
     "python-dotenv~=1.0",
     "click~=8.1",
-    "watchdog~=3.0",  # File system event handler
+    # Upper bound <7 (not ~=3.0): watchdog 3.0 ships no macOS wheels past cp311
+    # and no py3-none-any wheel, so macOS on Python 3.12+ falls back to an
+    # fsevents sdist build. watchdog 6.0 ships cp313+ macOS wheels.
+    "watchdog>=3.0,<7",  # File system event handler
 
     # System utilities
-    "psutil~=5.9",  # System resource monitoring
+    "psutil>=5.9,<8",  # System resource monitoring; 5.9.x abi3 wheels predate Python 3.13/3.14
 
     # Logging
     "loguru>=0.7.0",  # 0.x — unstable API, keep >=
@@ -109,7 +118,7 @@ web = [
     "fastapi~=0.109",
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
@@ -123,7 +132,7 @@ web = [
 dev = [
     "pytest~=9.0.3",
     "pytest-asyncio~=1.4",
-    "pytest-cov~=4.1",
+    "pytest-cov>=4.1,<8",  # 4.1 predates pytest 9 / Python 3.13+; allow current major
     "pytest-mock~=3.12",
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
     "pytest-xdist~=3.5",
@@ -136,7 +145,7 @@ dev = [
     "pre-commit~=3.6",
     "codespell~=2.2",
     "faker~=40.12",
-    "pytest-benchmark~=4.0",
+    "pytest-benchmark>=4.0,<6",  # 5.x drops benchmark_* ini keys; we pass them via CLI (see pytest note below)
     "interrogate~=1.5",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
     "deptry>=0.16.0",  # 0.x — unstable API, keep >=; Unused dependency detection
@@ -184,6 +193,9 @@ audio = [
     "mutagen~=1.47",  # Audio metadata extraction
     "tinytag>=1.10,<3.0",  # Lightweight audio metadata fallback
     "pydub>=0.25.0",  # 0.x — unstable API, keep >=; Audio manipulation
+    # pydub 0.25.x imports stdlib `audioop`, removed in Python 3.13 (PEP 594);
+    # audioop-lts is the PSF-blessed shim that restores it on 3.13+.
+    "audioop-lts; python_version >= '3.13'",
 ]
 
 video = [
@@ -192,7 +204,10 @@ video = [
 ]
 
 dedup = [
-    "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
+    # Gated to <3.13: imagededup 0.3.3.post2 ships wheels only up to cp312 and its
+    # sdist needs to compile a Cython extension with no upstream 3.13+ support.
+    # Image-similarity dedup degrades gracefully when absent (lazy import).
+    "imagededup>=0.3.0; python_version < '3.13'",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
     "scikit-learn~=1.4",  # ML-based text similarity for deduplication
     "pypdf>=4,<7",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
@@ -559,6 +574,8 @@ DEP002 = [
     "Pygments",
     # pywebview: desktop GUI wrapper; import name is 'webview' (mapped above); used in desktop/app.py
     "pywebview",
+    # audioop-lts: restores stdlib `audioop` on Python 3.13+ for pydub (never imported directly)
+    "audioop-lts",
 ]
 
 [tool.coverage.floors.integration]
