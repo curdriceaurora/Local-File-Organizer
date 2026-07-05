@@ -34,6 +34,7 @@ from file_organizer.api.openapi_responses import (
 from file_organizer.api.utils import file_info_from_path, resolve_path
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
+from file_organizer.version import __version__
 
 router = APIRouter(
     tags=["system"],
@@ -50,7 +51,7 @@ router = APIRouter(
             "Returned runtime system status.",
             {
                 "app": "File Organizer",
-                "version": "2.0.0",
+                "version": __version__,
                 "environment": "production",
                 "disk_total": 1000000,
                 "disk_used": 400000,
