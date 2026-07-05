@@ -55,7 +55,7 @@ class TestExtractSection:
         assert extract_section(SAMPLE, "v2.0.0") == extract_section(SAMPLE, "2.0.0")
 
     def test_missing_version_raises(self) -> None:
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="9.9.9"):
             extract_section(SAMPLE, "9.9.9")
 
     def test_heading_not_included(self) -> None:
@@ -85,9 +85,9 @@ class TestMainCLI:
 @pytest.mark.unit
 class TestAgainstRealChangelog:
     def test_real_changelog_has_ga_section(self) -> None:
-        changelog = (
-            Path(__file__).resolve().parent.parent.parent / "CHANGELOG.md"
-        ).read_text(encoding="utf-8")
+        changelog = (Path(__file__).resolve().parent.parent.parent / "CHANGELOG.md").read_text(
+            encoding="utf-8"
+        )
         section = extract_section(changelog, "2.0.0")
         assert section.strip()
         # The GA section's prose may reference "2.0.0-beta.1", but the next

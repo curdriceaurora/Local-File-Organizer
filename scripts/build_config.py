@@ -40,12 +40,7 @@ def _detect_version() -> str:
 
     # Fallback: read version.py directly without importing the full package
     # (keeps the build script importable with no runtime deps installed).
-    version_file = (
-        Path(__file__).resolve().parent.parent
-        / "src"
-        / "file_organizer"
-        / "version.py"
-    )
+    version_file = Path(__file__).resolve().parent.parent / "src" / "file_organizer" / "version.py"
     try:
         text = version_file.read_text(encoding="utf-8")
     except OSError:

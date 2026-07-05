@@ -152,7 +152,9 @@ class TestVersionResolution:
         assert APP_VERSION in cfg.output_name
         assert "0.0.0" not in cfg.output_name
 
-    def test_falls_back_to_version_py_when_dist_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_falls_back_to_version_py_when_dist_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import importlib.metadata as importlib_metadata
 
         import build_config
