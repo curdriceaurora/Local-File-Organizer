@@ -86,8 +86,8 @@ jobs:
             cli_exe=$(find dist -name "file-organizer-*" -not -name "*desktop*" -name "*.exe" -type f | head -1)
             desktop_exe=$(find dist -name "file-organizer-desktop-*.exe" -type f | head -1)
           else
-            cli_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-*" -not -name "*desktop*" -perm /111 | head -1)
-            desktop_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-desktop-*" -perm /111 | head -1)
+            cli_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-*" -not -name "*desktop*" | head -1)
+            desktop_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-desktop-*" | head -1)
           fi
 
           if [ -z "$cli_exe" ]; then
