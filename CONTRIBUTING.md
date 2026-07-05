@@ -442,3 +442,42 @@ If reviewers request changes:
 This single-pass approach prevents review churn and keeps PR history clean.
 
 Use the same single-pass approach for all PR review follow-up.
+
+---
+
+## Project Structure
+
+<details>
+<summary>Click to expand</summary>
+
+```
+src/file_organizer/
+├── api/              # FastAPI web backend
+├── cli/              # CLI commands and entry points
+├── client/           # HTTP client utilities
+├── config/           # Configuration management
+├── core/             # Organization engine and business logic
+├── daemon/           # Background file watcher daemon
+├── deploy/           # Deployment helpers
+├── desktop/          # Native desktop app (pywebview)
+├── events/           # Event system
+├── history/          # Operation history and undo/redo
+├── integrations/     # External service integrations
+├── interfaces/       # Abstract interfaces and protocols
+├── methodologies/    # PARA, Johnny Decimal implementations
+├── models/           # Data models
+├── optimization/     # Performance optimization
+├── parallel/         # Parallel processing
+├── pipeline/         # File processing pipeline
+├── plugins/          # Plugin system (audio, video, archives, etc.)
+├── review_regressions/ # Code quality detectors
+├── services/         # Core services (analytics, dedup, text, etc.)
+├── tui/              # Textual terminal UI (8 views)
+├── undo/             # Undo/redo infrastructure
+├── updater/          # Auto-update from GitHub Releases
+├── utils/            # Shared utilities
+├── watcher/          # File system watcher
+└── web/              # HTMX web UI templates and assets
+```
+
+</details>
