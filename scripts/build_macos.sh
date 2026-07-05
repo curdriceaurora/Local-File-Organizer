@@ -21,13 +21,15 @@ APP_NAME="File Organizer"
 BUNDLE_ID="com.fileorganizer.app"
 VERSION="$(python3 - <<'PY'
 import os
-import re
+import sys
 from pathlib import Path
 
-root = Path(os.environ["PROJECT_ROOT"]) / "pyproject.toml"
-text = root.read_text(encoding="utf-8")
-match = re.search(r'(?m)^version\\s*=\\s*\"([^\"]+)\"', text)
-print(match.group(1) if match else "0.0.0")
+# Reuse the shared version resolver so the DMG/artifact names match the
+# CLI/desktop executables (installed metadata -> version.py fallback).
+sys.path.insert(0, str(Path(os.environ.get("PROJECT_ROOT", ".")) / "scripts"))
+from build_config import _detect_version  # noqa: E402
+
+print(_detect_version())
 PY
 )"
 ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
