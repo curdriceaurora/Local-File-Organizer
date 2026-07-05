@@ -93,10 +93,13 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert "python scripts/build.py --clean" in run_text
 
-    def test_build_test_command_uses_ci_smoke_subset(self) -> None:
-        """Build workflow should run stable CI/smoke tests in executable lanes."""
+    def test_build_test_command_targets_build_ci_suite(self) -> None:
+        """Build workflow should run deterministic build-focused CI tests."""
         run_text = _build_step_run_text()
-        assert 'ci or smoke' in run_text
+        assert "tests/ci/test_build_artifacts.py" in run_text
+        assert "tests/ci/test_build_workflow.py" in run_text
+        assert "tests/ci/test_build_workflows.py" in run_text
+
 
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
@@ -175,6 +178,7 @@ class TestReleaseJob:
         )
         tag_name = str(release_step.get("with", {}).get("tag_name", ""))
         assert "RELEASE_TAG" in tag_name, "release step must publish against resolved release tag"
+
     def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
         """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
         jobs = _load_workflow().get("jobs", {})

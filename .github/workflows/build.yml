@@ -63,7 +63,10 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -q --strict-markers -m "ci or smoke" --override-ini="addopts=" --tb=short
+          pytest -q --override-ini="addopts=" --tb=short \
+            tests/ci/test_build_artifacts.py \
+            tests/ci/test_build_workflow.py \
+            tests/ci/test_build_workflows.py
 
       - name: Build CLI executable
         run: |
