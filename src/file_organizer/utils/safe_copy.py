@@ -90,9 +90,9 @@ def _finish_copy(
         dst_handle.flush()
         src_meta = os.fstat(src_handle.fileno())
         dst_target = dst_handle.fileno()
-        os.fchmod(dst_target, stat.S_IMODE(src_meta.st_mode))
         os.utime(dst_target, ns=(src_meta.st_atime_ns, src_meta.st_mtime_ns))
         _copy_fd_xattrs(src_handle.fileno(), dst_target)
+        os.fchmod(dst_target, stat.S_IMODE(src_meta.st_mode))
 
 
 def _copy_via_safedir(source: Path, destination: Path) -> None:
