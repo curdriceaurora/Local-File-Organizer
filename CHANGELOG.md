@@ -23,7 +23,7 @@ First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after 
 - **GitHub release notes come from the CHANGELOG** — the release body is now the curated CHANGELOG section for the tag (via `scripts/extract_changelog.py`), with the auto-generated PR list appended after it.
 - **Install & platform docs** — README and docs now lead with `pipx`/`pip install local-file-organizer` (with `pip install -e .` kept as a from-source note); the "macOS (DMG), Windows (installer)" wording is corrected to reflect that only a Linux AppImage is produced and macOS/Windows are pip/pipx installs; the auto-update description is scoped to the Linux AppImage, with pip self-update on macOS/Windows.
 - Package metadata `Development Status` promoted from `4 - Beta` to `5 - Production/Stable`.
-- **Docs & API-example cleanup for GA** — removed stale "beta1" phrasing from the architecture/API reference pages, and the `system`/`health` OpenAPI examples now source their version from `__version__` instead of a hardcoded string (#1483, #1484).
+- **Docs & API-version cleanup for GA** — removed stale "beta1" phrasing from the architecture/API reference pages, and the `system`/`health`/`config` API routers now source their version from `__version__` instead of hardcoded strings — including `ConfigResponse.version`/`app_version`, whose defaults were returned verbatim by `GET /config` and would otherwise drift on every bump (#1483, #1484).
 
 ### Removed
 

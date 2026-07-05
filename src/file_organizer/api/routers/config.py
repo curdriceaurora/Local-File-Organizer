@@ -14,6 +14,7 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
+from file_organizer.version import __version__
 
 router = APIRouter(tags=["config"], responses=INTERNAL_500_RESPONSE)
 
@@ -51,11 +52,11 @@ class ConfigUpdateRequest(BaseModel):
 class ConfigResponse(BaseModel):
     """Complete configuration response."""
 
-    version: str = "2.0.0"
+    version: str = __version__
     ai: AISettings = AISettings()
     storage: StorageSettings = StorageSettings()
     organization: OrganizationSettings = OrganizationSettings()
-    app_version: str = "2.0.0"
+    app_version: str = __version__
 
 
 # Global config store (in-memory for testing)
@@ -69,7 +70,7 @@ _config = ConfigResponse()
         success_response(
             "Returned application configuration.",
             {
-                "version": "2.0.0",
+                "version": __version__,
                 "ai": {
                     "model": "qwen2.5:3b-instruct-q4_K_M",
                     "temperature": 0.5,
@@ -77,7 +78,7 @@ _config = ConfigResponse()
                 },
                 "storage": {"base_path": "/default/path", "auto_backup": True},
                 "organization": {"method": "PARA", "auto_organize": False},
-                "app_version": "2.0.0",
+                "app_version": __version__,
             },
         ),
     ),
@@ -95,7 +96,7 @@ def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
         success_response(
             "Updated application configuration.",
             {
-                "version": "2.0.0",
+                "version": __version__,
                 "ai": {
                     "model": "qwen2.5:3b-instruct-q4_K_M",
                     "temperature": 0.5,
@@ -103,7 +104,7 @@ def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
                 },
                 "storage": {"base_path": "/default/path", "auto_backup": True},
                 "organization": {"method": "PARA", "auto_organize": True},
-                "app_version": "2.0.0",
+                "app_version": __version__,
             },
         ),
         ADMIN_403_RESPONSE,
@@ -138,7 +139,7 @@ def update_config(
         success_response(
             "Reset configuration to defaults.",
             {
-                "version": "2.0.0",
+                "version": __version__,
                 "ai": {
                     "model": "qwen2.5:3b-instruct-q4_K_M",
                     "temperature": 0.5,
@@ -146,7 +147,7 @@ def update_config(
                 },
                 "storage": {"base_path": "/default/path", "auto_backup": True},
                 "organization": {"method": "PARA", "auto_organize": False},
-                "app_version": "2.0.0",
+                "app_version": __version__,
             },
         ),
         ADMIN_403_RESPONSE,

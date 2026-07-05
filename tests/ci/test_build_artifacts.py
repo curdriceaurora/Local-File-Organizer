@@ -55,6 +55,10 @@ def test_build_shell_scripts_resolve_real_version() -> None:
     """
     for name in ("build_linux.sh", "build_macos.sh"):
         content = (PROJECT_ROOT / "scripts" / name).read_text(encoding="utf-8")
+        # The old bug embedded a Python raw-string regex in a shell heredoc, so
+        # the file literally carried TWO backslashes (``version\\s``, verified via
+        # git history). Guard against both one- and two-backslash reintroductions.
+        assert r"version\s" not in content, f"{name} reintroduced a regex-based version parse"
         assert r"version\\s" not in content, (
             f"{name} uses the broken `\\s` version regex (always yields 0.0.0)"
         )
