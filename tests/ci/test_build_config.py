@@ -152,22 +152,9 @@ class TestVersionResolution:
         assert APP_VERSION in cfg.output_name
         assert "0.0.0" not in cfg.output_name
 
-    def test_falls_back_to_version_py_when_dist_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        import importlib.metadata as importlib_metadata
-
+    @staticmethod
+    def _version_py_value() -> str:
         import build_config
-
-        def _not_found(name: str) -> str:
-            raise importlib_metadata.PackageNotFoundError(name)
-
-        # Force the installed-metadata lookup to miss so the source-tree
-        # fallback (reading version.py) is exercised.
-        monkeypatch.setattr(importlib_metadata, "version", _not_found)
-
-        result = _detect_version()
-        assert result != "0.0.0"
 
         version_py = (
             Path(build_config.__file__).resolve().parent.parent
@@ -177,7 +164,39 @@ class TestVersionResolution:
         ).read_text(encoding="utf-8")
         match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', version_py)
         assert match is not None
-        assert result == match.group(1)
+        return match.group(1)
+
+    def test_uses_version_py_when_dist_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import importlib.metadata as importlib_metadata
+
+        def _not_found(name: str) -> str:
+            raise importlib_metadata.PackageNotFoundError(name)
+
+        # Force the installed-metadata lookup to miss so the source-tree
+        # version.py path is exercised.
+        monkeypatch.setattr(importlib_metadata, "version", _not_found)
+
+        result = _detect_version()
+        assert result != "0.0.0"
+        assert result == self._version_py_value()
+
+    def test_version_py_wins_over_stale_installed_metadata(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import importlib.metadata as importlib_metadata
+
+        # A developer may have an older local-file-organizer installed while
+        # running packaging scripts from a fresh checkout. The checkout version
+        # must win so source builds are labeled from the code being packaged.
+        monkeypatch.setattr(
+            importlib_metadata,
+            "version",
+            lambda name: "1.2.3-stale" if name == "local-file-organizer" else "0.0.0",
+        )
+
+        assert _detect_version() == self._version_py_value()
 
 
 @pytest.mark.unit

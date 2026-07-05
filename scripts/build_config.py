@@ -21,12 +21,24 @@ APP_NAME = "file-organizer"
 def _detect_version() -> str:
     """Resolve the package version for build artifact naming.
 
-    Prefers the installed distribution metadata (the single source of truth in
-    the build/release CI, where the package is ``pip install``-ed before the
-    build runs), and falls back to reading the in-tree
-    ``src/file_organizer/version.py`` for a non-installed source checkout.
+    Prefers the in-tree ``src/file_organizer/version.py`` when this script is
+    running from a source checkout, so local/manual packaging cannot pick up a
+    stale globally installed distribution. Falls back to installed distribution
+    metadata for copied/out-of-tree use.
     Returns ``"0.0.0"`` only if neither source is available.
     """
+    # Read version.py directly without importing the full package (keeps the
+    # build script importable with no runtime deps installed).
+    version_file = Path(__file__).resolve().parent.parent / "src" / "file_organizer" / "version.py"
+    try:
+        text = version_file.read_text(encoding="utf-8")
+    except OSError:
+        pass
+    else:
+        match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', text)
+        if match:
+            return match.group(1)
+
     try:
         from importlib.metadata import PackageNotFoundError
         from importlib.metadata import version as _dist_version
@@ -38,15 +50,7 @@ def _detect_version() -> str:
     except ImportError:  # pragma: no cover - importlib.metadata is stdlib since Python 3.8
         pass
 
-    # Fallback: read version.py directly without importing the full package
-    # (keeps the build script importable with no runtime deps installed).
-    version_file = Path(__file__).resolve().parent.parent / "src" / "file_organizer" / "version.py"
-    try:
-        text = version_file.read_text(encoding="utf-8")
-    except OSError:
-        return "0.0.0"
-    match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', text)
-    return match.group(1) if match else "0.0.0"
+    return "0.0.0"
 
 
 APP_VERSION = _detect_version()
