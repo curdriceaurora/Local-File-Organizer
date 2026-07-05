@@ -133,9 +133,7 @@ class TestUpdateManagerUpdate:
 
     @patch("file_organizer.updater.manager.UpdateChecker")
     @patch("file_organizer.updater.manager.UpdateInstaller")
-    def test_no_compatible_asset_prints_pip_fallback(
-        self, mock_installer_cls, mock_checker_cls
-    ):
+    def test_no_compatible_asset_prints_pip_fallback(self, mock_installer_cls, mock_checker_cls):
         release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[])
         mock_checker = MagicMock()
         mock_checker.current_version = "1.0.0"

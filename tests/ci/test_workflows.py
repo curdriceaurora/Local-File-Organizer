@@ -601,7 +601,7 @@ class TestReleaseWorkflow:
             {},
         )
         run_script = str(release_step.get("run", ""))
-        assert "gh \"${args[@]}\"" in run_script
+        assert 'gh "${args[@]}"' in run_script
         assert "--prerelease" in run_script
         assert "--draft" in run_script
         assert '"${RELEASE_TAG}" != *-*' in run_script

@@ -445,8 +445,7 @@ def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) ->
         settings.auth_jwt_secret.get_secret_value()
     ):
         raise ValueError(
-            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value "
-            "when auth is enabled."
+            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value when auth is enabled."
         )
 
     if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:

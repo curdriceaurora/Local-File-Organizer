@@ -78,9 +78,9 @@ class TestInstallerInit:
         assert command is not None
         assert command[-4:] == ["-m", "pip", "install", "-U", "local-file-organizer"][-4:]
 
-    @patch.dict("os.environ", {"PIPX_HOME": "/tmp/pipx"})
     @patch("platform.system", return_value="Windows")
-    def test_pip_upgrade_command_pipx(self, _system):
+    def test_pip_upgrade_command_pipx(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setenv("PIPX_HOME", str(tmp_path / "pipx"))
         inst = UpdateInstaller()
         assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
 

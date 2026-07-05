@@ -36,24 +36,26 @@ class TestConfigGetEndpoint:
         response = client.get("/api/v1/config")
 
         if response.status_code == 200:
-            data = response.json()
-            assert "ai" in data or "model" in data or "models" in data
+            config = response.json()["config"]
+            assert "models" in config
+            assert isinstance(config["models"], dict)
 
     def test_config_includes_storage_settings(self, client):
-        """Config should include storage settings."""
+        """Config should include persisted config metadata."""
         response = client.get("/api/v1/config")
 
         if response.status_code == 200:
-            data = response.json()
-            assert "storage" in data or "paths" in data or "directories" in data
+            config = response.json()["config"]
+            assert "version" in config
+            assert "setup_completed" in config
 
     def test_config_includes_organization_settings(self, client):
         """Config should include organization settings."""
         response = client.get("/api/v1/config")
 
         if response.status_code == 200:
-            data = response.json()
-            assert "organization" in data or "rules" in data or "settings" in data
+            config = response.json()["config"]
+            assert "default_methodology" in config
 
     def test_config_response_structure(self, client):
         """Config response should have consistent structure."""
@@ -61,16 +63,17 @@ class TestConfigGetEndpoint:
 
         if response.status_code == 200:
             data = response.json()
-            # Should be a non-empty dict/object
-            assert isinstance(data, dict) and len(data) > 0
+            assert set(data) >= {"profile", "config", "profiles"}
+            assert isinstance(data["config"], dict)
+            assert isinstance(data["profiles"], list)
 
     def test_config_version_included(self, client):
         """Config should include application version."""
         response = client.get("/api/v1/config")
 
         if response.status_code == 200:
-            data = response.json()
-            assert "version" in data or "app_version" in data
+            config = response.json()["config"]
+            assert "version" in config
 
 
 class TestConfigUpdateEndpoint:
