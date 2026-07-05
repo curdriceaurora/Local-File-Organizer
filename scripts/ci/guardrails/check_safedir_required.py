@@ -19,6 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution path
 # Paths that are allowed to perform raw file operations (the primitives themselves)
 ALLOWED_PATHS = {
     "src/file_organizer/utils/safedir.py",
+    "src/file_organizer/utils/safe_copy.py",
     "src/file_organizer/utils/atomic_io.py",
     "src/file_organizer/utils/atomic_write.py",
     "src/file_organizer/core/path_guard.py",

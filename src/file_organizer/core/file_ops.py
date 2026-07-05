@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import datetime
 import os
-import shutil
 import sqlite3
 from pathlib import Path
 
@@ -28,6 +27,7 @@ from file_organizer.core.types import (
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
 from file_organizer.undo import UndoManager
+from file_organizer.utils.safe_copy import safe_copy2
 
 
 def collect_files(path: Path, console: Console) -> list[Path]:
@@ -154,7 +154,7 @@ def organize_files(
             if use_hardlinks:
                 os.link(result.file_path, new_path)
             else:
-                shutil.copy2(result.file_path, new_path)  # noqa: safedir-required  # core file op — file_path/new_path are SafeDir-validated by the caller
+                safe_copy2(result.file_path, new_path, output_path)
 
             if undo_manager is not None and transaction_id is not None:
                 try:

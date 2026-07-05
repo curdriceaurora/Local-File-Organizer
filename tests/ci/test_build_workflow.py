@@ -100,6 +100,7 @@ class TestDesktopBuildStep:
         assert "tests/ci/test_build_workflow.py" in run_text
         assert "tests/ci/test_build_workflows.py" in run_text
 
+
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
         """A Linux-conditional step must install GTK/WebKit pywebview deps."""
