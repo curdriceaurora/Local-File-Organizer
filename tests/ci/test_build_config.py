@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -19,6 +20,7 @@ from build_config import (
     HIDDEN_IMPORTS,
     BuildConfig,
     DesktopBuildConfig,
+    _detect_version,
     current_arch,
     current_platform,
 )
@@ -125,6 +127,74 @@ class TestConstants:
         # Should be semver-like
         parts = APP_VERSION.split(".")
         assert len(parts) >= 2
+
+
+@pytest.mark.unit
+class TestVersionResolution:
+    """Regression coverage for the version-labeling fix.
+
+    The previous ``_read_pyproject_version`` regex used ``\\s`` (a literal
+    backslash + ``s``) so it never matched, and every executable was mislabeled
+    ``0.0.0``. ``_detect_version`` must resolve a real version.
+    """
+
+    def test_app_version_is_not_placeholder(self) -> None:
+        assert APP_VERSION
+        assert APP_VERSION != "0.0.0"
+
+    def test_output_name_carries_real_version(self) -> None:
+        cfg = BuildConfig(platform="linux", arch="x86_64")
+        assert APP_VERSION in cfg.output_name
+        assert "0.0.0" not in cfg.output_name
+
+    def test_desktop_output_name_carries_real_version(self) -> None:
+        cfg = DesktopBuildConfig(platform="linux", arch="x86_64")
+        assert APP_VERSION in cfg.output_name
+        assert "0.0.0" not in cfg.output_name
+
+    @staticmethod
+    def _version_py_value() -> str:
+        import build_config
+
+        version_py = (
+            Path(build_config.__file__).resolve().parent.parent
+            / "src"
+            / "file_organizer"
+            / "version.py"
+        ).read_text(encoding="utf-8")
+        match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', version_py)
+        assert match is not None
+        return match.group(1)
+
+    def test_uses_version_py_when_dist_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import importlib.metadata as importlib_metadata
+
+        def _not_found(name: str) -> str:
+            raise importlib_metadata.PackageNotFoundError(name)
+
+        # Force the installed-metadata lookup to miss so the source-tree
+        # version.py path is exercised.
+        monkeypatch.setattr(importlib_metadata, "version", _not_found)
+
+        result = _detect_version()
+        assert result != "0.0.0"
+        assert result == self._version_py_value()
+
+    def test_version_py_wins_over_stale_installed_metadata(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import importlib.metadata as importlib_metadata
+
+        # A developer may have an older local-file-organizer installed while
+        # running packaging scripts from a fresh checkout. The checkout version
+        # must win so source builds are labeled from the code being packaged.
+        monkeypatch.setattr(
+            importlib_metadata,
+            "version",
+            lambda name: "1.2.3-stale" if name == "local-file-organizer" else "0.0.0",
+        )
+
+        assert _detect_version() == self._version_py_value()
 
 
 @pytest.mark.unit

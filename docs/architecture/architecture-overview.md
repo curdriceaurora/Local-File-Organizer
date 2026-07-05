@@ -65,4 +65,4 @@ Final Output: Organized files + Operation history
 
 ## Deep Dives
 
-- [Module Diagrams](module-diagrams.md) covers the current beta1 flows for `parallel/`, `pipeline/`, and `services/intelligence/`.
+- [Module Diagrams](module-diagrams.md) covers the current flows for `parallel/`, `pipeline/`, and `services/intelligence/`.

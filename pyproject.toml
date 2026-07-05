@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-file-organizer"
-version = "2.0.0-beta.1"
+version = "2.0.0"
 description = "AI-powered local file management with state-of-the-art models"
 authors = [
     {name = "Local File Organizer Team", email = "noreply@example.com"}
@@ -14,7 +14,7 @@ license = {text = "MIT OR Apache-2.0"}
 requires-python = ">=3.11"
 keywords = ["file-management", "ai", "organization", "local-llm", "privacy"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "License :: OSI Approved :: Apache Software License",

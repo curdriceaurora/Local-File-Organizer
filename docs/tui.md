@@ -1,6 +1,6 @@
 # Terminal User Interface (TUI)
 
-> **Version**: 2.0.0-beta.1
+> **Version**: 2.0.0
 
 The TUI is built with Textual and launched from the unified CLI.
 

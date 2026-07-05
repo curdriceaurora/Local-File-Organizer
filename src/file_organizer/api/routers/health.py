@@ -17,6 +17,7 @@ from file_organizer.api.openapi_responses import (
     merge_responses,
     success_response,
 )
+from file_organizer.version import __version__
 
 router = APIRouter(
     tags=["health"],
@@ -27,7 +28,7 @@ router = APIRouter(
             {
                 "status": "degraded",
                 "readiness": "starting",
-                "version": "2.0.0-beta.1",
+                "version": __version__,
                 "provider": "ollama",
                 "ollama": False,
                 "uptime": 2.14,

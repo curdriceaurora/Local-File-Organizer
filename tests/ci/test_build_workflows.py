@@ -16,18 +16,28 @@ def _read_workflow(name: str) -> str:
     return (WORKFLOWS_DIR / name).read_text(encoding="utf-8")
 
 
-def test_build_workflow_includes_macos() -> None:
-    """Test that build.yml includes macOS builds."""
+def test_build_workflow_is_linux_only() -> None:
+    """build.yml ships binaries for Linux only.
+
+    macOS/Windows are supported but not built here — their unsigned executables
+    carry Gatekeeper/SmartScreen friction, so those platforms install via
+    pip/pipx. Compatibility is verified by the full CI matrix instead
+    (see test_macos_and_windows_verified_in_ci).
+    """
     content = _read_workflow("build.yml")
-    assert "macos-latest" in content or "platform: macos" in content
-    assert "macos" in content
+    assert "ubuntu-latest" in content or "platform: linux" in content
+    assert "macos-latest" not in content
+    assert "macos-15-intel" not in content
+    assert "platform: macos" not in content
+    assert "windows-latest" not in content
+    assert "platform: windows" not in content
 
 
-def test_build_workflow_includes_windows() -> None:
-    """Test that build.yml includes Windows builds."""
-    content = _read_workflow("build.yml")
-    assert "windows-latest" in content or "platform: windows" in content
-    assert "windows" in content
+def test_macos_and_windows_verified_in_ci() -> None:
+    """macOS and Windows compatibility must stay covered by the full CI matrix."""
+    ci_full = _read_workflow("ci-full.yml")
+    assert "macos-latest" in ci_full
+    assert "windows-latest" in ci_full
 
 
 def test_build_workflow_includes_linux() -> None:
