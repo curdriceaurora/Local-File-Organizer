@@ -34,11 +34,9 @@ def test_readme_quickstart_uses_base_install() -> None:
     assert start != -1, "README missing '### With Ollama (local, default)' section heading"
     end = text.find("\n### ", start + 1)
     quickstart_block = text[start:end] if end != -1 else text[start:]
-    # Must not force any desktop extra on all users, in either the editable
-    # (`.[desktop]`) or PyPI (`local-file-organizer[desktop]`) form.
-    desktop_pattern = (
-        r'pip install\s+(?:-e\s+)?[\'"]?(?:\.|local-file-organizer)\[[^\]]*desktop[^\]]*\][\'"]?'
-    )
+    # Must not force any desktop extra on all users, in the editable
+    # (`.[desktop]`), pip, or pipx (`local-file-organizer[desktop]`) form.
+    desktop_pattern = r'pipx?\s+install\s+(?:-e\s+)?[\'"]?(?:\.|local-file-organizer)\[[^\]]*desktop[^\]]*\][\'"]?'
     assert not re.search(desktop_pattern, quickstart_block), (
         "README Ollama quickstart must use the base install, not force the desktop extra.\n"
         "Desktop users can opt in via the extras table below."

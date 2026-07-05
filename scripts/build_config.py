@@ -35,7 +35,7 @@ def _detect_version() -> str:
             return _dist_version("local-file-organizer")
         except PackageNotFoundError:
             pass
-    except ImportError:  # pragma: no cover - importlib.metadata ships on 3.11+
+    except ImportError:  # pragma: no cover - importlib.metadata is stdlib since Python 3.8
         pass
 
     # Fallback: read version.py directly without importing the full package

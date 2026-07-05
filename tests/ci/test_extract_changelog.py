@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -55,7 +56,7 @@ class TestExtractSection:
         assert extract_section(SAMPLE, "v2.0.0") == extract_section(SAMPLE, "2.0.0")
 
     def test_missing_version_raises(self) -> None:
-        with pytest.raises(KeyError, match="9.9.9"):
+        with pytest.raises(KeyError, match=re.escape("9.9.9")):
             extract_section(SAMPLE, "9.9.9")
 
     def test_heading_not_included(self) -> None:
