@@ -126,7 +126,7 @@ EXCLUDES: list[str] = [
 
 # Data files to include: (source_glob, destination_directory)
 DATA_FILES: list[tuple[str, str]] = [
-    ("src/file_organizer/config/*.yaml", "file_organizer/config"),
+    # Config is generated at runtime; no static YAML files are bundled from src/file_organizer/config.
 ]
 
 # Additional hidden imports for the pywebview desktop build.
