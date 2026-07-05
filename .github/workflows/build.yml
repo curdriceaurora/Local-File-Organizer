@@ -63,10 +63,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest -q --override-ini="addopts=" --tb=short \
-            tests/ci/test_build_artifacts.py \
-            tests/ci/test_build_workflow.py \
-            tests/ci/test_build_workflows.py
+          pytest -q --override-ini="addopts=" --tb=short tests/ci/test_build_artifacts.py tests/ci/test_build_workflow.py tests/ci/test_build_workflows.py
 
       - name: Build CLI executable
         run: |
