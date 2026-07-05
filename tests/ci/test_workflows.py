@@ -555,11 +555,21 @@ class TestReleaseWorkflow:
         has_publish = any("publish" in job_name for job_name in jobs)
         assert has_publish, "Release workflow should have a publish job"
 
-    def test_release_has_github_release_job(self, workflow: dict[str, Any]) -> None:
-        """Verify release workflow creates a GitHub release."""
-        jobs = workflow.get("jobs", {})
-        has_release = any("release" in job_name for job_name in jobs)
-        assert has_release, "Release workflow should create a GitHub release"
+    def test_github_release_owned_by_build_workflow(self) -> None:
+        """The GitHub Release is created by build.yml, not release.yml.
+
+        The two tag-triggered workflows were consolidated so they don't race to
+        create the same release: release.yml is PyPI-only, and build.yml
+        ("Build Executables") is the sole owner of the GitHub Release.
+        """
+        release_wf = load_workflow("release.yml")
+        assert "github-release" not in release_wf.get("jobs", {}), (
+            "release.yml must not create a GitHub release; build.yml owns it"
+        )
+        build_wf = load_workflow("build.yml")
+        assert "release" in build_wf.get("jobs", {}), (
+            "build.yml must define the 'release' job that creates the GitHub release"
+        )
 
     def test_release_uses_oidc_for_pypi(self, workflow: dict[str, Any]) -> None:
         """Verify release uses OIDC trusted publishing for PyPI (no API token needed)."""
@@ -578,13 +588,10 @@ class TestReleaseWorkflow:
             "publish-pypi job must use the 'pypi' GitHub environment for OIDC"
         )
 
-    def test_release_marks_hyphen_and_pep440_tags_as_prerelease(
-        self, workflow: dict[str, Any]
-    ) -> None:
-        """Verify release.yml prerelease detection handles semver and PEP 440 tags."""
-        jobs = workflow.get("jobs", {})
-        release_job = jobs.get("github-release", {})
-        steps = release_job.get("steps", [])
+    def test_prerelease_detection_handles_pep440_tags(self) -> None:
+        """The GitHub-release step (now in build.yml) marks hyphen/PEP 440 tags as prereleases."""
+        build_wf = load_workflow("build.yml")
+        steps = build_wf.get("jobs", {}).get("release", {}).get("steps", [])
         release_step = next(
             (
                 step
@@ -594,11 +601,11 @@ class TestReleaseWorkflow:
             {},
         )
         prerelease_expr = str(release_step.get("with", {}).get("prerelease", ""))
-        assert prerelease_expr, "release.yml GitHub release step must define prerelease expression"
-        assert "contains(github.ref_name, '-')" in prerelease_expr
-        assert "contains(github.ref_name, 'a')" in prerelease_expr
-        assert "contains(github.ref_name, 'b')" in prerelease_expr
-        assert "contains(github.ref_name, 'rc')" in prerelease_expr
+        assert prerelease_expr, "build.yml GitHub release step must define prerelease expression"
+        assert "contains(env.RELEASE_TAG, '-')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'a')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'b')" in prerelease_expr
+        assert "contains(env.RELEASE_TAG, 'rc')" in prerelease_expr
 
 
 @pytest.mark.unit
