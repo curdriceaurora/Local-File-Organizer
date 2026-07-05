@@ -442,3 +442,13 @@ If reviewers request changes:
 This single-pass approach prevents review churn and keeps PR history clean.
 
 Use the same single-pass approach for all PR review follow-up.
+
+---
+
+## Project Structure
+
+<details>
+<summary>Click to expand</summary>
+
+
+</details>

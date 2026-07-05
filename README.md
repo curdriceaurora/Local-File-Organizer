@@ -1,15 +1,10 @@
-# File Organizer v2.0
+# Local File Organizer
 
-[![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](CHANGELOG.md)
+[![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-> AI-powered local file management. Local-first by default (Ollama, no cloud required) --
-> or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
-
-**840 tests** | **408 modules** | **39 file types**
+AI-powered local file management. Local-first by default (Ollama, no cloud required)—or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
 ![TUI overview](docs/assets/tui-overview.svg)
 
@@ -17,11 +12,10 @@
 
 - [Features](#features)
 - [How It Works](#how-it-works)
-- [Quick Start](#quick-start)
-- [Web UI](#web-ui)
+- [Interfaces](#interfaces-visuals)
+- [Quick Start (Essentials)](#quick-start-essentials)
 - [Documentation](#documentation)
 - [Optional Feature Packs](#optional-feature-packs)
-- [Project Structure](#project-structure)
 - [Development](#development)
 - [Contributing](#contributing)
 - [Configuration](#configuration)
@@ -46,6 +40,7 @@
 
 ### Organization
 
+- **Extensive Support**: Handles 840 tests, 408 modules, and 39 distinct file types natively
 - **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
 - **PARA + Johnny Decimal**: Built-in organizational methodologies
 - **Deduplication**: Hash and semantic duplicate detection
@@ -55,25 +50,31 @@
 
 ## How It Works
 
-```
- Source Directory          AI Analysis              Organized Output
-┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  ./Downloads │     │  Content         │     │  ./Organized     │
-│              │     │  Extraction      │     │                  │
-│  report.pdf  │────>│  (text, vision,  │────>│  Work/           │
-│  photo.jpg   │     │   audio, video)  │     │    Reports/      │
-│  meeting.mp3 │     │                  │     │  Photos/         │
-│  clip.mp4    │     │  AI Categorize   │     │    Vacation/     │
-│  notes.txt   │     │  (Ollama/OpenAI/ │     │  Audio/          │
-│              │     │   Claude)        │     │    Meetings/     │
-└──────────────┘     └──────────────────┘     └──────────────────┘
-                              │
-                     ┌────────┴────────┐
-                     │  Learn & Adapt  │
-                     │  (patterns,     │
-                     │   preferences,  │
-                     │   rules)        │
-                     └─────────────────┘
+```mermaid
+flowchart LR
+    subgraph Source["Source Directory"]
+        direction TB
+        A[report.pdf]
+        B[photo.jpg]
+        C[meeting.mp3]
+        D[clip.mp4]
+    end
+
+    subgraph AI["AI Analysis"]
+        direction TB
+        E[Content Extraction]
+        F[AI Categorize]
+    end
+
+    subgraph Output["Organized Output"]
+        direction TB
+        G[Work/Reports/]
+        H[Photos/Vacation/]
+        I[Audio/Meetings/]
+    end
+
+    Source --> E --> F --> Output
+    F -.-> |Learn Patterns| F
 ```
 
 1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (80+ formats supported)
@@ -81,9 +82,19 @@
 3. **Organize** — Moves or copies files into a structured folder hierarchy with AI-generated names
 4. **Learn** — Tracks your patterns and preferences over time for smarter future suggestions
 
-## Screenshots
+## Interfaces (Visuals)
 
+### Terminal UI
 ![TUI demo](docs/assets/tui-demo.gif)
+
+### Web UI (Preview)
+Start the FastAPI server and open the UI:
+
+```bash
+file-organizer serve --reload
+```
+
+Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Quick Start (Essentials)
 
@@ -107,14 +118,6 @@ fo organize ~/Downloads ~/Organized
 fo undo
 ```
 
-### Prefer a browser?
-
-```bash
-file-organizer serve --reload
-```
-
-Then visit `http://localhost:8000/ui/`.
-
 ### Need cloud providers instead of the default local flow?
 
 Use the [AI Provider Setup guide](docs/setup/ai-providers.md) for OpenAI-compatible endpoints and Claude.
@@ -127,16 +130,6 @@ export FO_PROVIDER=openai
 export FO_PROVIDER=claude
 ```
 
-## Web UI
-
-Start the FastAPI server and open the UI:
-
-```bash
-file-organizer serve --reload
-```
-
-Then visit `http://localhost:8000/ui/` for the HTMX interface.
-
 ## Documentation
 
 ### Essentials
@@ -147,6 +140,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 - [User Guide Workflow Map](docs/USER_GUIDE.md#workflow-map-quick-paths)
 - [Web UI Quick Start](docs/web-ui/getting-started.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Installation Guide](docs/admin/installation.md) (Advanced dependencies and audio setup)
 
 ### Advanced / Admin / Developer
 
@@ -211,43 +205,6 @@ python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
 
 See the [Installation Guide](docs/admin/installation.md) for troubleshooting and advanced configuration.
 
-## Project Structure
-
-<details>
-<summary>Click to expand</summary>
-
-```
-src/file_organizer/
-├── api/              # FastAPI web backend
-├── cli/              # CLI commands and entry points
-├── client/           # HTTP client utilities
-├── config/           # Configuration management
-├── core/             # Organization engine and business logic
-├── daemon/           # Background file watcher daemon
-├── deploy/           # Deployment helpers
-├── desktop/          # Native desktop app (pywebview)
-├── events/           # Event system
-├── history/          # Operation history and undo/redo
-├── integrations/     # External service integrations
-├── interfaces/       # Abstract interfaces and protocols
-├── methodologies/    # PARA, Johnny Decimal implementations
-├── models/           # Data models
-├── optimization/     # Performance optimization
-├── parallel/         # Parallel processing
-├── pipeline/         # File processing pipeline
-├── plugins/          # Plugin system (audio, video, archives, etc.)
-├── review_regressions/ # Code quality detectors
-├── services/         # Core services (analytics, dedup, text, etc.)
-├── tui/              # Textual terminal UI (8 views)
-├── undo/             # Undo/redo infrastructure
-├── updater/          # Auto-update from GitHub Releases
-├── utils/            # Shared utilities
-├── watcher/          # File system watcher
-└── web/              # HTMX web UI templates and assets
-```
-
-</details>
-
 ## Development
 
 ```bash
@@ -258,9 +215,11 @@ pytest
 ruff check src/
 ```
 
+*(For a full breakdown of the project structure, see [CONTRIBUTING.md](CONTRIBUTING.md))*
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit changes.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, project structure, and how to submit changes.
 
 ## Configuration
 
