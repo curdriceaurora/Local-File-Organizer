@@ -166,9 +166,7 @@ class TestVersionResolution:
         assert match is not None
         return match.group(1)
 
-    def test_uses_version_py_when_dist_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_uses_version_py_when_dist_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import importlib.metadata as importlib_metadata
 
         def _not_found(name: str) -> str:
