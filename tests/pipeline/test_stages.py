@@ -300,7 +300,7 @@ class TestCopyFdXattrs:
     """Branch coverage for the best-effort xattr helper (no real FS needed)."""
 
     def test_noop_when_listxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.delattr(w.os, "listxattr", raising=False)
         w._copy_fd_xattrs(0, 1)  # returns early, no syscalls
@@ -308,7 +308,7 @@ class TestCopyFdXattrs:
     def test_listxattr_unsupported_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.ENOTSUP, "unsupported")
@@ -319,7 +319,7 @@ class TestCopyFdXattrs:
     def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.EIO, "io error")
@@ -331,7 +331,7 @@ class TestCopyFdXattrs:
     def test_setxattr_permission_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
         monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
@@ -345,7 +345,7 @@ class TestCopyFdXattrs:
     def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
         monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
@@ -458,12 +458,12 @@ class TestWriterStage:
         dest = tmp_path / "dest.txt"
 
         # Mock _copy_via_safedir to raise NotImplementedError
-        from file_organizer.pipeline.stages import writer
+        from file_organizer.utils import safe_copy
 
         def mock_copy_via_safedir(source, destination):
             raise NotImplementedError("SafeDir not implemented on this platform")
 
-        monkeypatch.setattr(writer, "_copy_via_safedir", mock_copy_via_safedir)
+        monkeypatch.setattr(safe_copy, "_copy_via_safedir", mock_copy_via_safedir)
 
         ctx = StageContext(file_path=src, destination=dest, dry_run=False)
         result = WriterStage().process(ctx)

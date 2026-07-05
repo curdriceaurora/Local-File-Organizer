@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -282,3 +283,60 @@ class TestPipelineOrchestratorOrganize:
 
         renamed = dest_dir / "source_1.txt"
         assert renamed.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_file_refuses_dangling_symlink_destination(self, tmp_path):
+        src = tmp_path / "source.txt"
+        src.write_text("payload")
+        out = tmp_path / "out"
+        out.mkdir()
+        escaped = tmp_path / "escaped.txt"
+        dest = out / "source.txt"
+        try:
+            dest.symlink_to(escaped)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        pipeline = PipelineOrchestrator(PipelineConfig(output_directory=out))
+        with pytest.raises(OSError, match=r"(Symlink|symlink|Too many levels)"):
+            pipeline._organize_file(src, dest)
+
+        assert not escaped.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_file_refuses_symlinked_ancestor(self, tmp_path):
+        src = tmp_path / "source.txt"
+        src.write_text("payload")
+        out = tmp_path / "out"
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out.mkdir()
+        try:
+            (out / "docs").symlink_to(outside, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        dest = out / "docs" / "source.txt"
+
+        pipeline = PipelineOrchestrator(PipelineConfig(output_directory=out))
+        with pytest.raises(OSError, match=r"(Symlink|symlink|Too many levels)"):
+            pipeline._organize_file(src, dest)
+
+        assert list(outside.iterdir()) == []
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_file_refuses_symlinked_source(self, tmp_path):
+        real = tmp_path / "real.txt"
+        real.write_text("secret")
+        src = tmp_path / "source.txt"
+        try:
+            src.symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        out = tmp_path / "out"
+        dest = out / "source.txt"
+
+        pipeline = PipelineOrchestrator(PipelineConfig(output_directory=out))
+        with pytest.raises(OSError, match=r"(Symlink|symlink|Too many levels)"):
+            pipeline._organize_file(src, dest)
+
+        assert not dest.exists()

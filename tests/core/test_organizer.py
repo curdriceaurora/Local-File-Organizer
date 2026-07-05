@@ -9,6 +9,7 @@ After the God Object decomposition, tests are organized by module:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -311,7 +312,7 @@ class TestFileOps:
         assert structure == {"docs": ["file_1.txt", "file_2.txt"], "images": ["img_1.jpg"]}
         assert not out_path.exists()
 
-    @patch("file_organizer.core.file_ops.shutil.copy2")
+    @patch("file_organizer.core.file_ops.safe_copy2")
     def test_organize_files_copy(self, mock_copy: MagicMock, tmp_path: Path) -> None:
         """Test physical file copy organization."""
         from file_organizer.core.file_ops import organize_files
@@ -331,7 +332,7 @@ class TestFileOps:
         )
 
         assert structure == {"docs": ["file_1.txt"]}
-        mock_copy.assert_called_once_with(f1, out_path / "docs" / "file_1.txt")
+        mock_copy.assert_called_once_with(f1, out_path / "docs" / "file_1.txt", out_path)
         assert (out_path / "docs").is_dir()
 
     @patch("file_organizer.core.file_ops.os.link")
@@ -356,7 +357,7 @@ class TestFileOps:
         assert structure == {"docs": ["file_1.txt"]}
         mock_link.assert_called_once_with(f1, out_path / "docs" / "file_1.txt")
 
-    @patch("file_organizer.core.file_ops.shutil.copy2")
+    @patch("file_organizer.core.file_ops.safe_copy2")
     def test_organize_files_collision(self, mock_copy: MagicMock, tmp_path: Path) -> None:
         """Test handling of identical filenames during copy."""
         from file_organizer.core.file_ops import organize_files
@@ -379,7 +380,89 @@ class TestFileOps:
         )
 
         assert structure == {"docs": ["file_1_1.txt"]}
-        mock_copy.assert_called_once_with(f1, out_path / "docs" / "file_1_1.txt")
+        mock_copy.assert_called_once_with(f1, out_path / "docs" / "file_1_1.txt", out_path)
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_files_refuses_dangling_symlink_destination(self, tmp_path: Path) -> None:
+        """A symlink planted at the destination leaf is not followed."""
+        from file_organizer.core.file_ops import organize_files
+
+        src = tmp_path / "input.txt"
+        src.write_text("payload")
+        out_path = tmp_path / "out"
+        docs = out_path / "docs"
+        docs.mkdir(parents=True)
+        escaped = tmp_path / "escaped.txt"
+        try:
+            (docs / "file_1.txt").symlink_to(escaped)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        structure = organize_files(
+            [ProcessedFile(src, "", "docs", "file_1")],
+            out_path,
+            skip_existing=False,
+            use_hardlinks=False,
+            undo_manager=None,
+            transaction_id=None,
+        )
+
+        assert structure == {}
+        assert not escaped.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_files_refuses_symlinked_ancestor(self, tmp_path: Path) -> None:
+        """A symlinked output subdirectory is refused instead of traversed."""
+        from file_organizer.core.file_ops import organize_files
+
+        src = tmp_path / "input.txt"
+        src.write_text("payload")
+        out_path = tmp_path / "out"
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        out_path.mkdir()
+        try:
+            (out_path / "docs").symlink_to(outside, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+
+        structure = organize_files(
+            [ProcessedFile(src, "", "docs", "file_1")],
+            out_path,
+            skip_existing=False,
+            use_hardlinks=False,
+            undo_manager=None,
+            transaction_id=None,
+        )
+
+        assert structure == {}
+        assert list(outside.iterdir()) == []
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="SafeDir copy hardening is POSIX-only")
+    def test_organize_files_refuses_symlinked_source(self, tmp_path: Path) -> None:
+        """A symlinked source is refused instead of dereferenced."""
+        from file_organizer.core.file_ops import organize_files
+
+        real = tmp_path / "real.txt"
+        real.write_text("secret")
+        src = tmp_path / "input.txt"
+        try:
+            src.symlink_to(real)
+        except OSError:
+            pytest.skip("symlink creation not supported")
+        out_path = tmp_path / "out"
+
+        structure = organize_files(
+            [ProcessedFile(src, "", "docs", "file_1")],
+            out_path,
+            skip_existing=False,
+            use_hardlinks=False,
+            undo_manager=None,
+            transaction_id=None,
+        )
+
+        assert structure == {}
+        assert not (out_path / "docs" / "file_1.txt").exists()
 
     def test_fallback_by_extension(self, tmp_path: Path) -> None:
         """Test extension-based fallback organization."""

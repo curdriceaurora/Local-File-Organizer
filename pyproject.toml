@@ -994,6 +994,7 @@ DEP002 = [
 "src/file_organizer/utils/readers/documents.py" = 70
 "src/file_organizer/utils/readers/ebook.py" = 65
 "src/file_organizer/utils/readers/scientific.py" = 65
+"src/file_organizer/utils/safe_copy.py" = 95
 "src/file_organizer/utils/safedir.py" = 90
 "src/file_organizer/utils/text_processing.py" = 95
 "src/file_organizer/version.py" = 85

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import shutil
 import threading
 import time
 from collections.abc import Sequence
@@ -24,6 +23,7 @@ from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
 from file_organizer.optimization.buffer_pool import BufferPool
 from file_organizer.optimization.memory_limiter import MemoryLimiter
 from file_organizer.optimization.resource_monitor import ResourceMonitor
+from file_organizer.utils.safe_copy import safe_copy2
 
 from .config import PipelineConfig
 from .processor_pool import (
@@ -931,7 +931,7 @@ class PipelineOrchestrator:
             final_dest = destination.parent / f"{stem}_{counter}{suffix}"
             counter += 1
 
-        shutil.copy2(source, final_dest)  # noqa: safedir-required  # orchestrator copy — source/destination are SafeDir-resolved paths
+        safe_copy2(source, final_dest, self.config.output_directory)
         logger.info("Organized %s -> %s", source, final_dest)
 
     def _start_watch_mode(self) -> None:
