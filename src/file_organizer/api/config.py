@@ -36,7 +36,7 @@ class ApiSettings(BaseModel):
     app_name: str = "File Organizer API"
     version: str = __version__
     environment: str = "development"
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "INFO"
     cors_origins: list[str] = Field(default_factory=lambda: list(_DEFAULT_CORS))
@@ -412,6 +412,25 @@ def _load_ollama_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
         data["ollama_url"] = env["OLLAMA_HOST"]
 
 
+_PLACEHOLDER_AUTH_SECRETS = frozenset(
+    {
+        "",
+        "change-me",
+        "changeme",
+        "secret",
+        "password",
+        "replace-me",
+        "your-secret-here",
+    }
+)
+
+
+def _is_placeholder_auth_secret(secret: str) -> bool:
+    """Return whether a JWT secret is an obvious placeholder value."""
+    normalized = secret.strip().lower()
+    return normalized in _PLACEHOLDER_AUTH_SECRETS
+
+
 def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) -> None:
     """Validate settings and log warnings or raise errors for misconfiguration.
 
@@ -422,16 +441,13 @@ def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) ->
     Raises:
         ValueError: On critical production misconfigurations.
     """
-    if settings.auth_enabled and settings.auth_jwt_secret.get_secret_value() == "change-me":
-        if settings.environment.lower() in {"development", "test"}:
-            logger.warning(
-                "FO_API_AUTH_JWT_SECRET is using the default placeholder. "
-                "Set FO_API_AUTH_JWT_SECRET before deploying."
-            )
-        else:
-            raise ValueError(
-                "FO_API_AUTH_JWT_SECRET must be set when auth is enabled outside development."
-            )
+    if settings.auth_enabled and _is_placeholder_auth_secret(
+        settings.auth_jwt_secret.get_secret_value()
+    ):
+        raise ValueError(
+            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value "
+            "when auth is enabled."
+        )
 
     if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:
         logger.warning("API key auth is enabled but no keys are configured.")

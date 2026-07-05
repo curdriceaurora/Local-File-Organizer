@@ -11,6 +11,7 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -150,6 +151,19 @@ class UpdateInstaller:
     def install_dir(self) -> Path:
         """The installation directory."""
         return self._install_dir
+
+    def pip_upgrade_command(self) -> list[str] | None:
+        """Return a pip/pipx upgrade command when binary updates do not apply."""
+        system = platform.system().lower()
+        if system not in {"darwin", "windows"}:
+            return None
+
+        executable = Path(sys.executable)
+        pipx_env = any(os.environ.get(name) for name in ("PIPX_HOME", "PIPX_BIN_DIR"))
+        if pipx_env or "pipx" in executable.as_posix().lower():
+            return ["pipx", "upgrade", "local-file-organizer"]
+
+        return [str(executable), "-m", "pip", "install", "-U", "local-file-organizer"]
 
     def download_asset(
         self,

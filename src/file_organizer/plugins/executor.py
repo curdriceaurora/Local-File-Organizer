@@ -197,8 +197,7 @@ class PluginExecutor:
         plugin_name: Human-readable name used for error messages.  Defaults
             to the plugin file's stem when not supplied.
         policy: Security policy serialised and forwarded to the worker.
-            Defaults to :meth:`~.security.PluginSecurityPolicy.unrestricted`
-            when not supplied.
+            Defaults to deny-by-default when not supplied.
 
     Raises:
         PluginLoadError: If :meth:`start` fails to spawn the worker.
@@ -214,7 +213,7 @@ class PluginExecutor:
         """Set up the executor for the plugin at the given path."""
         self._plugin_path = Path(plugin_path)
         self._plugin_name = plugin_name or self._plugin_path.stem
-        self._policy = policy or PluginSecurityPolicy.unrestricted()
+        self._policy = policy or PluginSecurityPolicy()
         self._proc: subprocess.Popen[bytes] | None = None
 
     # ------------------------------------------------------------------

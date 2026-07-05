@@ -34,14 +34,14 @@ def _copy_fd_xattrs(src_fd: int, dst_fd: int) -> None:
     if not hasattr(os, "listxattr"):
         return
     try:
-        names = os.listxattr(src_fd)
+        names = os.listxattr(src_fd)  # pyre-ignore[16]
     except OSError as exc:
         if exc.errno not in _XATTR_LIST_SKIP:
             raise
         return
     for name in names:
         try:
-            os.setxattr(dst_fd, name, os.getxattr(src_fd, name))
+            os.setxattr(dst_fd, name, os.getxattr(src_fd, name))  # pyre-ignore[16]
         except OSError as exc:
             if exc.errno not in _XATTR_SET_SKIP:
                 raise

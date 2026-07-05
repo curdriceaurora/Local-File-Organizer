@@ -268,9 +268,9 @@ class TestRegistryQueries:
 
 
 class TestBuildSandboxFromManifest:
-    def test_defaults_to_read_only(self):
+    def test_defaults_to_no_operations(self):
         policy = PluginRegistry._build_sandbox_from_manifest({"allowed_paths": ["/data"]})
-        assert "read" in policy.allowed_operations
+        assert policy.allowed_operations == frozenset()
 
     def test_explicit_operations(self):
         policy = PluginRegistry._build_sandbox_from_manifest(

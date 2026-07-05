@@ -21,6 +21,8 @@ jobs:
       benchmark: ${{ steps.filter.outputs.benchmark }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - id: filter
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d
         with:
@@ -59,6 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
@@ -71,6 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
@@ -83,6 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - name: Check documentation links
         run: |
           echo "Checking for broken documentation links..."
@@ -129,6 +137,7 @@ jobs:
           # fetch-depth: 0 is required for the diff-cover step on PRs —
           # shallow clones lack the merge-base needed to compute the changed-line diff.
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
@@ -187,13 +196,13 @@ jobs:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         shard: [1, 2, 3, 4, 5, 6]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
           # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -214,7 +223,7 @@ jobs:
           # Rename .coverage so artifacts from all shards have distinct names
           mv .coverage .coverage.shard-${{ matrix.shard }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: coverage-${{ matrix.python-version }}-${{ matrix.shard }}
           path: .coverage.shard-${{ matrix.shard }}
@@ -239,13 +248,15 @@ jobs:
         browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
           cache: pip
       - name: Cache Playwright virtualenv
         id: playwright-venv-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
         with:
           path: .venv-playwright
           # Shared across all three browser legs: they run the same Python env.
@@ -265,7 +276,7 @@ jobs:
           pip install "pytest-rerunfailures>=14.0" --no-cache-dir
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
         with:
           path: ~/.cache/ms-playwright
           # Browser is part of the cache key so chromium/firefox/webkit caches
@@ -297,7 +308,7 @@ jobs:
             --override-ini="addopts="
       - name: Upload Playwright artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           # Browser name in artifact name prevents matrix legs from clobbering
           # each other when uploading to the same workflow run.
@@ -312,14 +323,16 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
       - name: Download coverage data (py3.11 shards)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           pattern: coverage-3.11-*
           merge-multiple: true
@@ -348,6 +361,8 @@ jobs:
       actions: read         # download benchmark-baseline artifact from prior main runs
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.11"
@@ -443,7 +458,7 @@ jobs:
           fi
       - name: Upload benchmark results (main only)
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: benchmark-baseline
           path: benchmark-results.json
@@ -456,6 +471,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.11"

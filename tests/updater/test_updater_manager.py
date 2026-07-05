@@ -122,6 +122,7 @@ class TestUpdateManagerUpdate:
 
         mock_installer = MagicMock()
         mock_installer.select_asset.return_value = None
+        mock_installer.pip_upgrade_command.return_value = None
         mock_installer_cls.return_value = mock_installer
 
         mgr = UpdateManager(current_version="1.0.0")
@@ -129,6 +130,36 @@ class TestUpdateManagerUpdate:
         assert status.install_result is not None
         assert status.install_result.success is False
         assert "No compatible" in status.install_result.message
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_no_compatible_asset_prints_pip_fallback(
+        self, mock_installer_cls, mock_checker_cls
+    ):
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[])
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.select_asset.return_value = None
+        mock_installer.pip_upgrade_command.return_value = [
+            "python",
+            "-m",
+            "pip",
+            "install",
+            "-U",
+            "local-file-organizer",
+        ]
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+
+        assert status.install_result is not None
+        assert status.install_result.success is True
+        assert "python -m pip install -U local-file-organizer" in status.install_result.message
 
     @patch("file_organizer.updater.manager.UpdateChecker")
     @patch("file_organizer.updater.manager.UpdateInstaller")

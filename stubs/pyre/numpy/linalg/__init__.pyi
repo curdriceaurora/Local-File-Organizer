@@ -1,0 +1,3 @@
+from typing import Any
+
+def norm(x: Any, *args: Any, **kwargs: Any) -> Any: ...

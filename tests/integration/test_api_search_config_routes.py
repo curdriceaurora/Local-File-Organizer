@@ -15,10 +15,11 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.config import router as config_router
 from file_organizer.api.routers.search import router as search_router
+from file_organizer.config.manager import ConfigManager
 
 pytestmark = pytest.mark.integration
 
@@ -47,9 +48,11 @@ def search_client(test_settings: ApiSettings) -> TestClient:
 
 
 @pytest.fixture()
-def config_client(test_settings: ApiSettings) -> TestClient:
+def config_client(test_settings: ApiSettings, tmp_path: Path) -> TestClient:
     app = FastAPI()
+    manager = ConfigManager(config_dir=tmp_path / "config")
     app.dependency_overrides[get_settings] = lambda: test_settings
+    app.dependency_overrides[get_config_manager] = lambda: manager
     setup_exception_handlers(app)
     app.include_router(config_router)
     return TestClient(app, raise_server_exceptions=False)
@@ -192,51 +195,48 @@ class TestConfigRouter:
         assert r.status_code == 200
 
     def test_get_config_has_version(self, config_client: TestClient) -> None:
-        from file_organizer.api.routers.config import ConfigResponse
-
         r = config_client.get("/config")
         body = r.json()
-        assert "version" in body
-        assert body["version"] == ConfigResponse().version
+        assert body["config"]["version"] == "1.0"
 
-    def test_get_config_has_ai_section(self, config_client: TestClient) -> None:
+    def test_get_config_has_models_section(self, config_client: TestClient) -> None:
         r = config_client.get("/config")
         body = r.json()
-        assert "ai" in body
-        assert "model" in body["ai"]
+        assert "models" in body["config"]
+        assert "text_model" in body["config"]["models"]
 
     def test_put_config_updates_organization_method(self, config_client: TestClient) -> None:
         r = config_client.put(
             "/config",
-            json={"organization": {"method": "JD", "auto_organize": True}},
+            json={"default_methodology": "jd"},
         )
         assert r.status_code == 200
         body = r.json()
-        assert body["organization"]["method"] == "JD"
+        assert body["config"]["default_methodology"] == "jd"
 
-    def test_put_config_updates_ai_temperature(self, config_client: TestClient) -> None:
+    def test_put_config_updates_model_temperature(self, config_client: TestClient) -> None:
         r = config_client.put(
             "/config",
-            json={"ai": {"temperature": 0.9, "model": "llama3:8b", "max_tokens": 2000}},
+            json={"models": {"temperature": 0.9, "text_model": "llama3:8b", "max_tokens": 2000}},
         )
         assert r.status_code == 200
         body = r.json()
-        assert body["ai"]["temperature"] == pytest.approx(0.9)
-        assert body["ai"]["model"] == "llama3:8b"
+        assert body["config"]["models"]["temperature"] == pytest.approx(0.9)
+        assert body["config"]["models"]["text_model"] == "llama3:8b"
 
     def test_reset_config_restores_defaults(self, config_client: TestClient) -> None:
-        config_client.put("/config", json={"organization": {"method": "JD", "auto_organize": True}})
+        config_client.put("/config", json={"default_methodology": "jd"})
         r = config_client.post("/config/reset")
         assert r.status_code == 200
         body = r.json()
-        assert body["organization"]["method"] == "PARA"
+        assert body["config"]["default_methodology"] == "none"
 
-    def test_put_config_partial_update_storage(self, config_client: TestClient) -> None:
+    def test_put_config_partial_update_watcher(self, config_client: TestClient) -> None:
         config_client.post("/config/reset")
         r = config_client.put(
             "/config",
-            json={"storage": {"base_path": "/custom/path", "auto_backup": False}},
+            json={"watcher": {"enabled": True}},
         )
         assert r.status_code == 200
         body = r.json()
-        assert body["storage"]["auto_backup"] is False
+        assert body["config"]["watcher"] == {"enabled": True}

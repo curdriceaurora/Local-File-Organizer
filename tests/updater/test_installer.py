@@ -71,6 +71,24 @@ class TestInstallerInit:
         expected = Path(sys.executable).resolve().parent
         assert inst.install_dir == expected
 
+    @patch("platform.system", return_value="Darwin")
+    def test_pip_upgrade_command_macos(self, _system):
+        inst = UpdateInstaller()
+        command = inst.pip_upgrade_command()
+        assert command is not None
+        assert command[-4:] == ["-m", "pip", "install", "-U", "local-file-organizer"][-4:]
+
+    @patch.dict("os.environ", {"PIPX_HOME": "/tmp/pipx"})
+    @patch("platform.system", return_value="Windows")
+    def test_pip_upgrade_command_pipx(self, _system):
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+
+    @patch("platform.system", return_value="Linux")
+    def test_pip_upgrade_command_linux_none(self, _system):
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() is None
+
 
 # ---------------------------------------------------------------------------
 # download_asset

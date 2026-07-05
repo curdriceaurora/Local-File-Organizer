@@ -28,13 +28,13 @@ jobs:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         shard: [1, 2, 3, 4, 5, 6]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
           # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -54,7 +54,7 @@ jobs:
             --timeout=30 -n=auto --override-ini="addopts="
           mv .coverage .coverage.shard-${{ matrix.shard }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: daily-coverage-${{ matrix.python-version }}-${{ matrix.shard }}
           path: .coverage.shard-${{ matrix.shard }}
@@ -66,14 +66,16 @@ jobs:
     needs: test-linux-full
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
       - name: Download coverage data (py3.11 shards)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           pattern: daily-coverage-3.11-*
           merge-multiple: true
@@ -92,6 +94,8 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
@@ -112,6 +116,8 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"

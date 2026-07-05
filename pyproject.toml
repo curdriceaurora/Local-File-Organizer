@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-file-organizer"
-version = "2.0.0"
+dynamic = ["version"]
 description = "AI-powered local file management with state-of-the-art models"
 authors = [
     {name = "Local File Organizer Team", email = "noreply@example.com"}
@@ -264,6 +264,9 @@ Documentation = "https://github.com/curdriceaurora/Local-File-Organizer#readme"
 Repository = "https://github.com/curdriceaurora/Local-File-Organizer"
 Issues = "https://github.com/curdriceaurora/Local-File-Organizer/issues"
 Changelog = "https://github.com/curdriceaurora/Local-File-Organizer/releases"
+
+[tool.setuptools.dynamic]
+version = {attr = "file_organizer.version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

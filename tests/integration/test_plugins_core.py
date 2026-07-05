@@ -265,10 +265,10 @@ class TestPluginSandbox:
     def test_unrestricted_policy_allows_any_path(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox
 
-        sandbox = PluginSandbox(plugin_name="test", policy=None)  # defaults to unrestricted
+        sandbox = PluginSandbox(plugin_name="test", policy=None)
 
-        assert sandbox.validate_file_access(tmp_path) is True
-        assert sandbox.validate_file_access("/etc/passwd") is True  # noqa: test-hardcoded-paths
+        assert sandbox.validate_file_access(tmp_path) is False
+        assert sandbox.validate_file_access("/etc/passwd") is False  # noqa: test-hardcoded-paths
 
     def test_restricted_policy_denies_path_outside_allowed(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox, PluginSecurityPolicy

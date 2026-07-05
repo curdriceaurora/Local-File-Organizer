@@ -118,6 +118,17 @@ class UpdateManager:
         # Select platform asset
         asset = self._installer.select_asset(release)
         if asset is None:
+            pip_command = self._installer.pip_upgrade_command()
+            if pip_command is not None:
+                command_text = " ".join(pip_command)
+                status.install_result = InstallResult(
+                    success=True,
+                    message=(
+                        "No compatible binary found for this platform. "
+                        f"This installation can be upgraded with: {command_text}"
+                    ),
+                )
+                return status
             status.install_result = InstallResult(
                 success=False,
                 message="No compatible binary found for this platform.",

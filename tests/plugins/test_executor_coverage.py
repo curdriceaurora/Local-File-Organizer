@@ -28,9 +28,10 @@ class TestPluginExecutorInit:
         )
         assert executor._plugin_name == "custom"
 
-    def test_default_policy_is_unrestricted(self):
+    def test_default_policy_denies_everything(self):
         executor = PluginExecutor(plugin_path=Path("/") / "x.py")
-        assert executor._policy.allow_all_paths is True
+        assert executor._policy.allow_all_paths is False
+        assert executor._policy.allow_all_operations is False
 
 
 class TestPluginExecutorStart:

@@ -46,7 +46,7 @@ def test_serve_calls_uvicorn_run(mock_uvicorn_run: MagicMock):
     mock_uvicorn_run.assert_called_once_with(
         "file_organizer.api.main:create_app",
         factory=True,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
         reload=False,
         workers=1,
@@ -76,7 +76,7 @@ def test_serve_reload_flag(mock_uvicorn_run: MagicMock):
     mock_uvicorn_run.assert_called_once_with(
         "file_organizer.api.main:create_app",
         factory=True,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
         reload=True,
         workers=1,
@@ -91,7 +91,7 @@ def test_serve_workers_flag(mock_uvicorn_run: MagicMock):
     mock_uvicorn_run.assert_called_once_with(
         "file_organizer.api.main:create_app",
         factory=True,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
         reload=False,
         workers=4,
