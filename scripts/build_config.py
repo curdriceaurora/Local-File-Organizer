@@ -18,21 +18,43 @@ from pathlib import Path
 APP_NAME = "file-organizer"
 
 
-def _read_pyproject_version() -> str:
-    """Read the project version from pyproject.toml.
+def _detect_version() -> str:
+    """Resolve the package version for build artifact naming.
 
-    Falls back to "0.0.0" if the file or version field is missing.
+    Prefers the installed distribution metadata (the single source of truth in
+    the build/release CI, where the package is ``pip install``-ed before the
+    build runs), and falls back to reading the in-tree
+    ``src/file_organizer/version.py`` for a non-installed source checkout.
+    Returns ``"0.0.0"`` only if neither source is available.
     """
-    project_root = Path(__file__).resolve().parent.parent
-    pyproject = project_root / "pyproject.toml"
-    if not pyproject.exists():
+    try:
+        from importlib.metadata import PackageNotFoundError
+        from importlib.metadata import version as _dist_version
+
+        try:
+            return _dist_version("local-file-organizer")
+        except PackageNotFoundError:
+            pass
+    except ImportError:  # pragma: no cover - importlib.metadata ships on 3.11+
+        pass
+
+    # Fallback: read version.py directly without importing the full package
+    # (keeps the build script importable with no runtime deps installed).
+    version_file = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "file_organizer"
+        / "version.py"
+    )
+    try:
+        text = version_file.read_text(encoding="utf-8")
+    except OSError:
         return "0.0.0"
-    text = pyproject.read_text(encoding="utf-8")
-    match = re.search(r'(?m)^version\\s*=\\s*"([^"]+)"', text)
+    match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', text)
     return match.group(1) if match else "0.0.0"
 
 
-APP_VERSION = _read_pyproject_version()
+APP_VERSION = _detect_version()
 APP_DESCRIPTION = "AI-powered local file management"
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-05
+
+First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after stabilizing the executable-build and release pipelines and closing the last write-path symlink-hardening gap. Installable from PyPI: `pip install local-file-organizer` (or `pipx install local-file-organizer`).
+
+### Security
+
+- **Legacy organize copy paths hardened (#1481, closes #1479)** — `pipeline.orchestrator._organize_file` and `core.file_ops.organize_files` now route their file copies through the shared SafeDir helper (`O_NOFOLLOW` fd-based copy with symlinked-destination/ancestor/source refusal and full `copy2` metadata parity) instead of raw `shutil.copy2`. This closes the last two unhardened copy call sites left as follow-up debt after the WP-2.2 writer-stage work, so a symlink swapped in between path validation and the copy can no longer redirect the write out of the output tree. Falls back to `shutil.copy2` on Windows.
+
+### Changed
+
+- **Correct version labeling on build artifacts** — `scripts/build_config.py` resolves the real package version via `importlib.metadata` (with an in-tree `version.py` fallback) instead of a regex that used a literal `\s` and always fell back to `0.0.0`. Release executables now carry the true `2.0.0` version in their filenames.
+- **Release workflows consolidated to remove a race** — `release.yml` now owns PyPI publishing only (with `skip-existing` for safety), and `build.yml` is the sole owner of the GitHub Release. Previously both workflows created/updated the same release on a tag push, making the attached assets and notes nondeterministic.
+- **Release binaries are Linux-only** — the GitHub Release ships the Linux CLI + desktop executables and an AppImage, plus the sdist/wheel and `SHA256SUMS`. macOS and Windows remain **supported and CI-verified** (the full suite runs on macOS/Windows in `ci-full.yml`, plus the `python-probe` matrix), and install via `pip`/`pipx`.
+- **GitHub release notes come from the CHANGELOG** — the release body is now the curated CHANGELOG section for the tag (via `scripts/extract_changelog.py`), with the auto-generated PR list appended after it.
+- **Install & platform docs** — README and docs now lead with `pipx`/`pip install local-file-organizer` (with `pip install -e .` kept as a from-source note); the "macOS (DMG), Windows (installer)" wording is corrected to reflect that only a Linux AppImage is produced and macOS/Windows are pip/pipx installs; the auto-update description is scoped to the Linux AppImage, with pip self-update on macOS/Windows.
+- Package metadata `Development Status` promoted from `4 - Beta` to `5 - Production/Stable`.
+
+### Removed
+
+- **Unsigned macOS/Windows executables are no longer attached to releases** — they carried Gatekeeper/SmartScreen friction with no code signing or notarization and offered no benefit over `pip`/`pipx` for a CLI tool. Signed `.dmg`/`.app` and installer packaging is deferred as a post-GA follow-up.
+
+### Fixed
+
+- **Executable build/release lane stabilized (#1473–#1478)** — resolved the executable-build workflow blockers, narrowed and stabilized the build test-lane selection, and fixed macOS executable verification that had failed on the `2.0.0-beta.1` tag.
+
 ## [2.0.0-beta.1] - 2026-07-04
 
 ### Added

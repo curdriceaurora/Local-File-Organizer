@@ -27,7 +27,7 @@ router = APIRouter(
             {
                 "status": "degraded",
                 "readiness": "starting",
-                "version": "2.0.0-beta.1",
+                "version": "2.0.0",
                 "provider": "ollama",
                 "ollama": False,
                 "uptime": 2.14,

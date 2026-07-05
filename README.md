@@ -4,7 +4,7 @@
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0--beta.1-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](CHANGELOG.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
 > or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
@@ -50,8 +50,8 @@
 - **PARA + Johnny Decimal**: Built-in organizational methodologies
 - **Deduplication**: Hash and semantic duplicate detection
 - **Undo/Redo**: Full operation history
-- **Auto-Update**: GitHub Releases checks with verified downloads and rollback
-- **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
+- **Auto-Update**: Linux AppImage self-updates from GitHub Releases (verified downloads + rollback); macOS/Windows update via `pip`/`pipx`
+- **Cross-Platform**: Runs on macOS, Windows, and Linux (verified in CI). Linux ships a standalone AppImage plus executables; install on macOS/Windows via `pip`/`pipx`
 
 ## How It Works
 
@@ -90,7 +90,9 @@
 ### With Ollama (local, default)
 
 ```bash
-pip install -e .
+# Install from PyPI — pipx keeps it isolated and on your PATH:
+pipx install local-file-organizer
+# or: pip install local-file-organizer
 
 # 1) Configure defaults
 fo setup
@@ -169,10 +171,13 @@ Canonical extras matrix:
 Common installs:
 
 ```bash
-pip install -e ".[parsers,web]"
-pip install -e ".[cloud,claude]"
-pip install -e ".[all]"
+pip install "local-file-organizer[parsers,web]"
+pip install "local-file-organizer[cloud,claude]"
+pip install "local-file-organizer[all]"
 ```
+
+> **From source (development):** clone the repo and use an editable install
+> instead, e.g. `pip install -e ".[all]"`.
 
 ### Audio system dependencies
 
@@ -272,4 +277,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**Status**: Beta 1 | **Version**: 2.0.0-beta.1 | **Last Updated**: 2026-07-04
+**Status**: Stable | **Version**: 2.0.0 | **Last Updated**: 2026-07-05
