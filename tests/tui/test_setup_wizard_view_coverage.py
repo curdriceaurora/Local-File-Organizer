@@ -532,6 +532,97 @@ def test_setup_wizard_view_screen_rendering() -> None:
     assert "Unknown screen state" in markup
 
 
+def test_hardware_detect_complete_shows_ollama_command_guidance() -> None:
+    """Hardware detection screen should print exact commands for cold-start states."""
+    view = SetupWizardView()
+    view._current_screen = WizardScreen.HARDWARE_DETECT
+    view._detection_status = "complete"
+
+    mock_hw = MagicMock()
+    mock_hw.gpu_type = MagicMock(value="none")
+    mock_hw.ram_gb = 16
+    mock_hw.cpu_cores = 8
+    mock_hw.arch = "arm64"
+    mock_hw.recommended_text_model.return_value = "qwen2.5:3b"
+    mock_hw.recommended_workers.return_value = 2
+
+    mock_ollama = MagicMock()
+    mock_ollama.running = False
+    mock_ollama.installed = True
+    mock_ollama.models_count = 0
+    mock_ollama.version = None
+
+    mock_caps = MagicMock()
+    mock_caps.hardware = mock_hw
+    mock_caps.ollama_status = mock_ollama
+    mock_caps.installed_models = []
+    view._capabilities = mock_caps
+
+    markup = view._render_screen()
+
+    assert "ollama serve" in markup
+    assert "ollama pull qwen2.5:3b" in markup
+
+
+def test_model_select_shows_install_start_and_pull_commands() -> None:
+    """Model selection screen should avoid auto-pull and show copy-paste commands."""
+    view = SetupWizardView()
+    view._current_screen = WizardScreen.MODEL_SELECT
+    view._selected_model = "qwen2.5:3b"
+
+    mock_hw = MagicMock()
+    mock_hw.recommended_text_model.return_value = "qwen2.5:3b"
+
+    mock_ollama = MagicMock()
+    mock_ollama.running = False
+    mock_ollama.installed = False
+
+    mock_caps = MagicMock()
+    mock_caps.hardware = mock_hw
+    mock_caps.ollama_status = mock_ollama
+    mock_caps.installed_models = []
+    view._capabilities = mock_caps
+
+    markup = view._render_screen()
+
+    assert "https://ollama.com/download" in markup
+    assert "ollama serve" in markup
+    assert "ollama pull qwen2.5:3b" in markup
+
+
+def test_model_select_shows_start_and_pull_when_ollama_installed() -> None:
+    """Installed-but-stopped Ollama should show start and pull commands."""
+    view = SetupWizardView()
+    view._current_screen = WizardScreen.MODEL_SELECT
+    view._selected_model = "qwen2.5:3b"
+
+    mock_hw = MagicMock()
+    mock_hw.recommended_text_model.return_value = "qwen2.5:3b"
+
+    mock_ollama = MagicMock()
+    mock_ollama.running = False
+    mock_ollama.installed = True
+
+    mock_caps = MagicMock()
+    mock_caps.hardware = mock_hw
+    mock_caps.ollama_status = mock_ollama
+    mock_caps.installed_models = []
+    view._capabilities = mock_caps
+
+    markup = view._render_screen()
+
+    assert "Start Ollama: ollama serve" in markup
+    assert "Pull the recommended model if needed: ollama pull qwen2.5:3b" in markup
+
+
+def test_ollama_next_steps_empty_before_capability_detection() -> None:
+    """Shared Ollama guidance helper should be quiet before detection completes."""
+    view = SetupWizardView()
+    view._capabilities = None
+
+    assert view._render_ollama_next_steps() == []
+
+
 def test_setup_wizard_view_status_bar_update() -> None:
     """Verify _set_status safely handles absence of StatusBar or application mount."""
     view = SetupWizardView()

@@ -264,6 +264,7 @@ class FileOrganizerApp(App[None]):
             # deliberate (re)configuration that must migrate/overwrite an
             # unsupported-version profile rather than crash on the save guard (#1276).
             config.setup_completed = True
+            config.setup_deferred = False  # pragma: no cover
             self._config_manager.save(config, force=True)
 
             # Update internal state

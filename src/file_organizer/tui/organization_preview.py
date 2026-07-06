@@ -150,6 +150,7 @@ class OrganizationPreviewView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
+        self._is_applying = False
 
     def compose(self) -> ComposeResult:
         """Build the preview layout."""
@@ -168,8 +169,16 @@ class OrganizationPreviewView(Vertical):
         self._load_preview()
 
     def action_confirm(self) -> None:
-        """Placeholder for confirming organization."""
-        self._set_status("Confirm not yet implemented.")
+        """Apply the currently previewed organization and open History."""
+        if self._is_applying:
+            self._set_status("Organization is already applying...")
+            return
+
+        self._is_applying = True
+        self.query_one(BeforeAfterPanel).update("[dim]Applying organization...[/dim]")
+        self.query_one(OrganizationSummary).update("[dim]Working...[/dim]")
+        self._set_status("Applying organization...")
+        self._apply_organization()
 
     def action_cancel(self) -> None:
         """Go back / cancel."""
@@ -221,6 +230,59 @@ class OrganizationPreviewView(Vertical):
                 self.query_one(OrganizationSummary).update,
                 "[dim]No data available.[/dim]",
             )
+
+    @work(thread=True)
+    def _apply_organization(self) -> None:
+        """Run the reviewed organization for real and navigate to history."""
+        try:
+            from file_organizer.core.organizer import FileOrganizer
+
+            runtime_settings = load_parallel_runtime_settings()
+            organizer = FileOrganizer(
+                dry_run=False,
+                parallel_workers=runtime_settings.max_workers,
+                prefetch_depth=runtime_settings.prefetch_depth,
+            )
+            result = organizer.organize(
+                input_path=self._input_dir,
+                output_path=self._output_dir,
+            )
+
+            self.app.call_from_thread(self._handle_apply_success, result)
+        except Exception as exc:
+            self.app.call_from_thread(self._handle_apply_error, exc)
+
+    def _handle_apply_success(self, result: object) -> None:
+        """Update the preview with the applied result and switch to History."""
+        self._is_applying = False
+        panel = self.query_one(BeforeAfterPanel)
+        summary = self.query_one(OrganizationSummary)
+        organized_structure = getattr(result, "organized_structure", {})
+        panel.set_structure(organized_structure, str(self._input_dir))
+        summary.set_result(
+            total=getattr(result, "total_files", 0),
+            processed=getattr(result, "processed_files", 0),
+            skipped=getattr(result, "skipped_files", 0),
+            failed=getattr(result, "failed_files", 0),
+            folders=len(organized_structure),
+            errors=getattr(result, "errors", []),
+        )
+        self._set_status("Organization applied. Opening history.")
+        switch_view = getattr(self.app, "action_switch_view", None)
+        if switch_view is not None:
+            result = switch_view("history")
+            if hasattr(result, "__await__"):
+                self.app.run_worker(result, exclusive=False)
+
+    def _handle_apply_error(self, exc: Exception) -> None:
+        """Show apply failures without leaving the preview."""
+        self._is_applying = False
+        self.query_one(BeforeAfterPanel).update(
+            f"[red]Apply failed:[/red] {exc}\n\n"
+            "[dim]Some files may have been changed. Check History before retrying.[/dim]"
+        )
+        self.query_one(OrganizationSummary).update("[dim]No data available.[/dim]")
+        self._set_status("Apply failed")
 
     def _set_status(self, message: str) -> None:
         """Update the app status bar if available."""

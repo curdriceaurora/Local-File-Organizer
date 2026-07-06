@@ -95,6 +95,32 @@ class SystemCapabilities:
         }
 
 
+def ollama_next_steps(
+    status: OllamaStatus,
+    recommended_model: str,
+    installed_models: list[InstalledModel] | None = None,
+) -> list[str]:
+    """Return exact commands that move Ollama setup to the next usable state."""
+    steps: list[str] = []
+    installed_models = installed_models or []
+
+    if not status.installed:
+        steps.append("Install Ollama from https://ollama.com/download")
+        steps.append("Start Ollama: ollama serve")
+        steps.append(f"Pull the recommended model: ollama pull {recommended_model}")
+        return steps
+
+    if not status.running:
+        steps.append("Start Ollama: ollama serve")
+        steps.append(f"Pull the recommended model if needed: ollama pull {recommended_model}")
+        return steps
+
+    if not installed_models:
+        steps.append(f"Pull the recommended model: ollama pull {recommended_model}")
+
+    return steps
+
+
 class SetupWizard:
     """Interactive setup wizard for first-run configuration.
 
@@ -260,7 +286,10 @@ class SetupWizard:
                 self.detect_capabilities()
 
             if self.capabilities and not self.capabilities.ollama_status.running:
-                errors.append("Ollama framework selected but Ollama service is not running")
+                errors.append(
+                    "Ollama framework selected but Ollama service is not running. "
+                    "Start it with: ollama serve"
+                )
 
         # Validate model availability
         if self.capabilities and self.capabilities.ollama_status.running:
@@ -291,6 +320,7 @@ class SetupWizard:
         """
         profile = profile or config.profile_name
         config.setup_completed = True
+        config.setup_deferred = False
         # force=True: setup completion is a deliberate (re)configuration, so it
         # must migrate/overwrite an existing profile even if its on-disk schema
         # version is unsupported — otherwise the save guard (#1276) would make
@@ -332,12 +362,15 @@ class SetupWizard:
                     f"Ollama: Running (v{capabilities.ollama_status.version}), "
                     f"{capabilities.ollama_status.models_count} models available"
                 )
-            elif capabilities.ollama_status.installed:
-                result.warnings.append(
-                    "Ollama is installed but not running. Start it with: ollama serve"
-                )
-            else:
-                result.warnings.append("Ollama not detected. Install from: https://ollama.ai")
+
+            recommended_model = capabilities.hardware.recommended_text_model()
+            for step in ollama_next_steps(
+                capabilities.ollama_status,
+                recommended_model,
+                getattr(capabilities, "installed_models", []),
+            ):
+                if step not in result.warnings:
+                    result.warnings.append(step)
 
             # Step 2: Generate configuration
             result.messages.append("Generating configuration...")

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from file_organizer.plugins.api.endpoints import get_hook_manager, router
 from file_organizer.plugins.api.hooks import (
     HookEvent,
     PluginHookManager,
@@ -15,6 +14,4 @@ __all__ = [
     "PluginHookManager",
     "WebhookDeliveryResult",
     "WebhookRegistration",
-    "get_hook_manager",
-    "router",
 ]

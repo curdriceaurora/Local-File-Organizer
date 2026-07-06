@@ -148,6 +148,7 @@ class TestBrowseFolderMacOS:
         assert cmd[0] == "/usr/bin/osascript"  # noqa: test-hardcoded-paths
         assert "POSIX path of (choose folder)" in " ".join(cmd)
         assert kwargs["capture_output"] is True
+        assert kwargs["check"] is True
         assert kwargs["text"] is True
         assert kwargs["timeout"] == 60
 
@@ -158,38 +159,23 @@ class TestBrowseFolderMacOS:
 
 
 class TestBrowseFolderMacOSCancel:
-    def _make_cancel_result(self) -> MagicMock:
-        result = MagicMock(spec=subprocess.CompletedProcess)
-        result.returncode = 1
-        result.stdout = ""
-        result.stderr = "1:205: execution error: User canceled. (-128)"
-        return result
-
-    def test_cancelled_when_user_canceled_in_stderr(self, client: TestClient) -> None:
+    def test_called_process_cancel_returns_cancelled(self, client: TestClient) -> None:
+        """check=True raises for osascript cancellation; preserve cancel semantics."""
+        exc = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["/usr/bin/osascript"],  # noqa: test-hardcoded-paths
+            stderr="execution error: User canceled. (-128)",
+        )
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
-            patch(
-                "file_organizer.api.routers.setup.subprocess.run",
-                return_value=self._make_cancel_result(),
-            ),
+            patch("file_organizer.api.routers.setup.subprocess.run", side_effect=exc),
         ):
             resp = client.get("/api/setup/browse-folder")
+
         data = resp.json()
         assert data["path"] == ""
         assert data["cancelled"] is True
         assert data["available"] is True
-
-    def test_available_true_on_cancel(self, client: TestClient) -> None:
-        """Cancel means available=True (picker worked, user just cancelled it)."""
-        with (
-            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
-            patch(
-                "file_organizer.api.routers.setup.subprocess.run",
-                return_value=self._make_cancel_result(),
-            ),
-        ):
-            resp = client.get("/api/setup/browse-folder")
-        assert resp.json()["available"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -198,27 +184,6 @@ class TestBrowseFolderMacOSCancel:
 
 
 class TestBrowseFolderMacOSError:
-    def _make_error_result(self, stderr: str = "some other error") -> MagicMock:
-        result = MagicMock(spec=subprocess.CompletedProcess)
-        result.returncode = 1
-        result.stdout = ""
-        result.stderr = stderr
-        return result
-
-    def test_non_cancel_nonzero_returns_unavailable(self, client: TestClient) -> None:
-        """Non-cancel failure must return available=False so browser fallbacks run."""
-        with (
-            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
-            patch(
-                "file_organizer.api.routers.setup.subprocess.run",
-                return_value=self._make_error_result("GUI unavailable"),
-            ),
-        ):
-            resp = client.get("/api/setup/browse-folder")
-        data = resp.json()
-        assert data["available"] is False
-        assert data["path"] == ""
-
     def test_returns_unavailable_when_osascript_missing(self, client: TestClient) -> None:
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
@@ -255,4 +220,21 @@ class TestBrowseFolderMacOSError:
         ):
             resp = client.get("/api/setup/browse-folder")
         data = resp.json()
+        assert data["available"] is False
+
+    def test_called_process_non_cancel_returns_unavailable(self, client: TestClient) -> None:
+        exc = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["/usr/bin/osascript"],  # noqa: test-hardcoded-paths
+            stderr="GUI unavailable",
+        )
+        with (
+            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
+            patch("file_organizer.api.routers.setup.subprocess.run", side_effect=exc),
+        ):
+            resp = client.get("/api/setup/browse-folder")
+
+        data = resp.json()
+        assert data["path"] == ""
+        assert data["cancelled"] is False
         assert data["available"] is False

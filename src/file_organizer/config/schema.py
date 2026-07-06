@@ -76,6 +76,7 @@ class AppConfig:
         version: Configuration schema version.
         default_methodology: Default organization methodology (none, para, jd).
         setup_completed: Whether the guided setup wizard has been completed.
+        setup_deferred: Whether the user has chosen to finish guided setup later.
         models: AI model preset configuration.
         updates: Auto-update preferences.
         watcher: Watcher module config overrides.
@@ -92,6 +93,7 @@ class AppConfig:
     version: str = CURRENT_SCHEMA_VERSION
     default_methodology: str = "none"
     setup_completed: bool = False
+    setup_deferred: bool = False
     models: ModelPreset = field(default_factory=ModelPreset)
     updates: UpdateSettings = field(default_factory=UpdateSettings)
 

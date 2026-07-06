@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if setup_deferred %}
+<div class="banner banner-info">
+    Setup is paused. <a href="/ui/setup" hx-select="#main">Finish setup</a> to enable model-backed organization.
+</div>
+{% endif %}
+
 <section class="hero">
     <div class="hero-content">
         <div class="hero-tag">HTMX UI Preview</div>

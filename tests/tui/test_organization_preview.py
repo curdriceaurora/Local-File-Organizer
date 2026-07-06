@@ -7,7 +7,7 @@ initialization, preview display, and organization actions.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from textual.binding import Binding
@@ -290,6 +290,8 @@ class TestOrganizationPreviewView:
     def test_action_confirm_sets_status(self) -> None:
         """Test that action_confirm sets status message."""
         view = OrganizationPreviewView()
+        view.query_one = MagicMock()
+        view._apply_organization = MagicMock()
         view._set_status = MagicMock()
         view.action_confirm()
         view._set_status.assert_called()
@@ -300,3 +302,237 @@ class TestOrganizationPreviewView:
         view._set_status = MagicMock()
         view.action_cancel()
         view._set_status.assert_called_with("Ready")
+
+    def test_compose_yields_widgets(self) -> None:
+        view = OrganizationPreviewView()
+        widgets = list(view.compose())
+        assert len(widgets) == 3
+
+    def test_on_mount_calls_load_preview(self) -> None:
+        view = OrganizationPreviewView()
+        view._load_preview = MagicMock()
+        view.on_mount()
+        view._load_preview.assert_called_once()
+
+    def test_action_refresh_preview(self) -> None:
+        view = OrganizationPreviewView()
+        view.query_one = MagicMock()
+        view._load_preview = MagicMock()
+        view.action_refresh_preview()
+        assert view.query_one.call_count == 2
+        view._load_preview.assert_called_once()
+
+    def test_action_confirm_when_already_applying(self) -> None:
+        view = OrganizationPreviewView()
+        view._is_applying = True
+        view._set_status = MagicMock()
+        view.action_confirm()
+        view._set_status.assert_called_with("Organization is already applying...")
+
+    @patch(
+        "tests.tui.test_organization_preview.OrganizationPreviewView.app", new_callable=PropertyMock
+    )
+    def test_handle_apply_success(self, mock_app) -> None:
+        view = OrganizationPreviewView()
+        view.query_one = MagicMock()
+        view._set_status = MagicMock()
+
+        class MockResult:
+            organized_structure = {"A": ["b.txt"]}
+            total_files = 1
+            processed_files = 1
+            skipped_files = 0
+            failed_files = 0
+            errors = []
+
+        view._handle_apply_success(MockResult())
+        assert not view._is_applying
+        assert view.query_one.call_count == 2
+        view._set_status.assert_called_with("Organization applied. Opening history.")
+
+    def test_handle_apply_error(self) -> None:
+        view = OrganizationPreviewView()
+        view.query_one = MagicMock()
+        view._set_status = MagicMock()
+        view._handle_apply_error(Exception("Test error"))
+        assert not view._is_applying
+        assert view.query_one.call_count == 2
+        view._set_status.assert_called_with("Apply failed")
+
+    def test_set_status_no_app(self) -> None:
+        view = OrganizationPreviewView()
+        view._set_status("test message")  # Should safely ignore missing app
+
+    @pytest.mark.asyncio
+    async def test_load_preview_success(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            pass
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+
+            mock_instance = mock_org.return_value
+
+            class MockResult:
+                organized_structure = {"A": ["b.txt"]}
+                total_files = 1
+                processed_files = 1
+                skipped_files = 0
+                failed_files = 0
+                errors = []
+
+            mock_instance.organize.return_value = MockResult()
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                mock_instance.organize.assert_called_once_with(
+                    input_path=view._input_dir,
+                    output_path=view._output_dir,
+                )
+
+                panel = view.query_one(BeforeAfterPanel)
+                assert "A/" in str(panel.render())
+
+    @pytest.mark.asyncio
+    async def test_load_preview_error(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            pass
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+
+            mock_instance = mock_org.return_value
+            mock_instance.organize.side_effect = Exception("test error")
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                panel = view.query_one(BeforeAfterPanel)
+                rendered = str(panel.render())
+                assert "Models unavailable" in rendered
+                assert "test error" in rendered
+
+    @pytest.mark.asyncio
+    async def test_apply_organization_success(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            action_switch_view = MagicMock()
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+
+            mock_instance = mock_org.return_value
+
+            class MockResult:
+                organized_structure = {"A": ["b.txt"]}
+                total_files = 1
+                processed_files = 1
+                skipped_files = 0
+                failed_files = 0
+                errors = []
+
+            mock_instance.organize.return_value = MockResult()
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                mock_instance.organize.reset_mock()
+
+                view.action_confirm()
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                mock_instance.organize.assert_called_once_with(
+                    input_path=view._input_dir,
+                    output_path=view._output_dir,
+                )
+
+                app.action_switch_view.assert_called_once_with("history")
+
+    @pytest.mark.asyncio
+    async def test_apply_organization_error(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            action_switch_view = MagicMock()
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+
+            mock_instance = mock_org.return_value
+
+            class MockResult:
+                organized_structure = {"A": ["b.txt"]}
+                total_files = 1
+                processed_files = 1
+                skipped_files = 0
+                failed_files = 0
+                errors = []
+
+            mock_instance.organize.return_value = MockResult()
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                mock_instance.organize.side_effect = Exception("apply error")
+
+                view.action_confirm()
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                panel = view.query_one(BeforeAfterPanel)
+                rendered = str(panel.render())
+                assert "Apply failed" in rendered
+                assert "apply error" in rendered

@@ -894,7 +894,7 @@ class TestWizardRun:
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
-        assert any("not running" in w for w in result.warnings)
+        assert any("Start Ollama" in w for w in result.warnings)
 
     def test_ollama_not_installed_adds_warning(self) -> None:
         """Ollama not installed at all should produce a different warning."""
@@ -910,8 +910,8 @@ class TestWizardRun:
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
-        # Source emits: "Ollama not detected. Install from: https://ollama.ai"
-        assert any("Ollama not detected" in w for w in result.warnings)
+        # Source emits: "Install Ollama from https://ollama.com/download"
+        assert any("Install Ollama" in w for w in result.warnings)
 
     def test_messages_populated_on_success(self) -> None:
         from file_organizer.core.setup_wizard import SetupWizard, WizardMode
