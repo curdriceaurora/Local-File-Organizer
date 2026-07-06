@@ -51,7 +51,7 @@ def setup_wizard(
     return templates.TemplateResponse(request, "setup_wizard.html", context)
 
 
-@setup_router.get("/setup/defer")
+@setup_router.post("/setup/defer")
 def defer_setup() -> RedirectResponse:
     """Mark setup as deferred and continue to the web UI."""
     manager = ConfigManager()

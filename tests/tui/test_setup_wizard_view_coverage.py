@@ -611,8 +611,16 @@ def test_model_select_shows_start_and_pull_when_ollama_installed() -> None:
 
     markup = view._render_screen()
 
-    assert "Command: ollama serve" in markup
-    assert "Then pull: ollama pull qwen2.5:3b" in markup
+    assert "Start Ollama: ollama serve" in markup
+    assert "Pull the recommended model if needed: ollama pull qwen2.5:3b" in markup
+
+
+def test_ollama_next_steps_empty_before_capability_detection() -> None:
+    """Shared Ollama guidance helper should be quiet before detection completes."""
+    view = SetupWizardView()
+    view._capabilities = None
+
+    assert view._render_ollama_next_steps() == []
 
 
 def test_setup_wizard_view_status_bar_update() -> None:

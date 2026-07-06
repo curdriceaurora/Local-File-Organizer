@@ -100,7 +100,7 @@ class TestHomeRoute:
             config.setup_completed = True
             config.setup_deferred = False
             config.profile_name = "default"
-            response = client.get("/ui/setup/defer", follow_redirects=False)
+            response = client.post("/ui/setup/defer", follow_redirects=False)
 
         assert response.status_code == 303
         assert response.headers["location"] == "/ui/"

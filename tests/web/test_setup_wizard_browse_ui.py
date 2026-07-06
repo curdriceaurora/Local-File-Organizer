@@ -106,11 +106,12 @@ class TestSetupWizardJSBrowseFunction:
 
     def test_fetch_handles_server_unavailable(self, js: str) -> None:
         """The fetch call must have error handling so server errors show guidance."""
-        # There must be a try/catch around the fetch call
-        fetch_pos = js.index("/api/v1/setup/browse-folder")
-        # Find the surrounding try block (search backward)
-        code_before = js[:fetch_pos]
-        assert "try" in code_before[-200:], (
+        pattern = re.compile(
+            r"try\s*\{(?:(?!\}\s*catch).)*?/api/v1/setup/browse-folder"
+            r"(?:(?!\}\s*catch).)*?\}\s*catch\s*\(",
+            re.DOTALL,
+        )
+        assert pattern.search(js), (
             "fetch('/api/setup/browse-folder') must be inside a try block "
             "so network errors can show typed-path guidance"
         )

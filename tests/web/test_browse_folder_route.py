@@ -148,6 +148,7 @@ class TestBrowseFolderMacOS:
         assert cmd[0] == "/usr/bin/osascript"  # noqa: test-hardcoded-paths
         assert "POSIX path of (choose folder)" in " ".join(cmd)
         assert kwargs["capture_output"] is True
+        assert kwargs["check"] is True
         assert kwargs["text"] is True
         assert kwargs["timeout"] == 60
 
@@ -190,6 +191,24 @@ class TestBrowseFolderMacOSCancel:
         ):
             resp = client.get("/api/setup/browse-folder")
         assert resp.json()["available"] is True
+
+    def test_called_process_cancel_returns_cancelled(self, client: TestClient) -> None:
+        """check=True raises for osascript cancellation; preserve cancel semantics."""
+        exc = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["/usr/bin/osascript"],
+            stderr="execution error: User canceled. (-128)",
+        )
+        with (
+            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
+            patch("file_organizer.api.routers.setup.subprocess.run", side_effect=exc),
+        ):
+            resp = client.get("/api/setup/browse-folder")
+
+        data = resp.json()
+        assert data["path"] == ""
+        assert data["cancelled"] is True
+        assert data["available"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -255,4 +274,21 @@ class TestBrowseFolderMacOSError:
         ):
             resp = client.get("/api/setup/browse-folder")
         data = resp.json()
+        assert data["available"] is False
+
+    def test_called_process_non_cancel_returns_unavailable(self, client: TestClient) -> None:
+        exc = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["/usr/bin/osascript"],
+            stderr="GUI unavailable",
+        )
+        with (
+            patch("file_organizer.api.routers.setup.sys.platform", "darwin"),
+            patch("file_organizer.api.routers.setup.subprocess.run", side_effect=exc),
+        ):
+            resp = client.get("/api/setup/browse-folder")
+
+        data = resp.json()
+        assert data["path"] == ""
+        assert data["cancelled"] is False
         assert data["available"] is False

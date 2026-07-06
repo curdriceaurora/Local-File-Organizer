@@ -292,14 +292,17 @@ def browse_folder(
 
     try:
         result = subprocess.run(
-            # returncode is checked in the outer function body after this
-            # try/except block; the detector treats the try body as a separate
-            # scope so cannot follow the cross-block reference.
             ["/usr/bin/osascript", "-e", "POSIX path of (choose folder)"],
             capture_output=True,
+            check=True,
             text=True,
             timeout=60,
         )
+    except subprocess.CalledProcessError as exc:
+        stderr = str(exc.stderr or "")
+        if "user canceled" in stderr.lower() or "-128" in stderr:
+            return BrowseFolderResponse(path="", available=True, cancelled=True)
+        return BrowseFolderResponse(path="", available=False)
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
         return BrowseFolderResponse(path="", available=False)
 

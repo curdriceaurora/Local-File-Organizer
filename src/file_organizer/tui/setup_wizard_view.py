@@ -22,6 +22,8 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.core.setup_wizard import ollama_next_steps
+
 logger = logging.getLogger(__name__)
 
 
@@ -400,13 +402,10 @@ class SetupWizardView(Vertical):
                 )
             elif ollama.installed:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Installed but not running")
-                lines.append("      [dim]Start with: ollama serve[/dim]")
-                lines.append(f"      [dim]Pull model later: ollama pull {hw.recommended_text_model()}[/dim]")
+                lines.extend(self._render_ollama_next_steps())
             else:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Not installed")
-                lines.append("      [dim]Install from: https://ollama.com/download[/dim]")
-                lines.append("      [dim]Start with: ollama serve[/dim]")
-                lines.append(f"      [dim]Pull model later: ollama pull {hw.recommended_text_model()}[/dim]")
+                lines.extend(self._render_ollama_next_steps())
 
             # Recommendations section
             lines.append("\n[b]Recommended Configuration:[/b]")
@@ -562,16 +561,8 @@ class SetupWizardView(Vertical):
         # Backend status
         if not self._capabilities.ollama_status.running:
             lines.append("[yellow]⚠ Warning:[/yellow] Ollama is not running")
-            recommended_model = self._capabilities.hardware.recommended_text_model()
-            if self._capabilities.ollama_status.installed:
-                lines.append("  Start Ollama service before downloading models")
-                lines.append("  [dim]Command: ollama serve[/dim]")
-                lines.append(f"  [dim]Then pull: ollama pull {recommended_model}[/dim]\n")
-            else:
-                lines.append("  Install Ollama to download models")
-                lines.append("  [dim]Visit: https://ollama.com/download[/dim]")
-                lines.append("  [dim]Command: ollama serve[/dim]")
-                lines.append(f"  [dim]Then pull: ollama pull {recommended_model}[/dim]\n")
+            lines.extend(self._render_ollama_next_steps())
+            lines.append("")
 
         # Instructions
         lines.append("[dim]Press 1, 2, or 3 to select a model")
@@ -584,6 +575,21 @@ class SetupWizardView(Vertical):
         lines.append("Press Enter to continue, Esc to go back[/dim]")
 
         return "\n".join(lines)
+
+    def _render_ollama_next_steps(self) -> list[str]:
+        """Render shared Ollama next-step guidance for TUI screens."""
+        if self._capabilities is None:
+            return []
+
+        recommended_model = self._capabilities.hardware.recommended_text_model()
+        return [
+            f"      [dim]{step}[/dim]"
+            for step in ollama_next_steps(
+                self._capabilities.ollama_status,
+                recommended_model,
+                self._capabilities.installed_models,
+            )
+        ]
 
     def _render_complete_screen(self) -> str:
         """Render the setup completion screen."""

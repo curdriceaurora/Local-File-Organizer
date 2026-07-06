@@ -150,6 +150,7 @@ class OrganizationPreviewView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
+        self._is_applying = False
 
     def compose(self) -> ComposeResult:
         """Build the preview layout."""
@@ -169,6 +170,11 @@ class OrganizationPreviewView(Vertical):
 
     def action_confirm(self) -> None:
         """Apply the currently previewed organization and open History."""
+        if self._is_applying:
+            self._set_status("Organization is already applying...")
+            return
+
+        self._is_applying = True
         self.query_one(BeforeAfterPanel).update("[dim]Applying organization...[/dim]")
         self.query_one(OrganizationSummary).update("[dim]Working...[/dim]")
         self._set_status("Applying organization...")
@@ -248,6 +254,7 @@ class OrganizationPreviewView(Vertical):
 
     def _handle_apply_success(self, result: object) -> None:
         """Update the preview with the applied result and switch to History."""
+        self._is_applying = False
         panel = self.query_one(BeforeAfterPanel)
         summary = self.query_one(OrganizationSummary)
         organized_structure = getattr(result, "organized_structure", {})
@@ -269,8 +276,10 @@ class OrganizationPreviewView(Vertical):
 
     def _handle_apply_error(self, exc: Exception) -> None:
         """Show apply failures without leaving the preview."""
+        self._is_applying = False
         self.query_one(BeforeAfterPanel).update(
-            f"[red]Apply failed:[/red] {exc}\n\n[dim]No files were applied.[/dim]"
+            f"[red]Apply failed:[/red] {exc}\n\n"
+            "[dim]Some files may have been changed. Check History before retrying.[/dim]"
         )
         self.query_one(OrganizationSummary).update("[dim]No data available.[/dim]")
         self._set_status("Apply failed")

@@ -218,9 +218,25 @@ class TestOrganizationPreviewViewLoadPreview:
         ]
         view._set_status.assert_called_once_with("Applying organization...")
         view._apply_organization.assert_called_once()
+        assert view._is_applying is True
 
-    def test_apply_organization_success_uses_real_organizer(self) -> None:
-        view = OrganizationPreviewView(input_dir="/tmp/in", output_dir="/tmp/out")
+    def test_action_confirm_ignores_duplicate_apply(self) -> None:
+        view = OrganizationPreviewView()
+        view._is_applying = True
+        view.query_one = MagicMock()
+        view._set_status = MagicMock()
+        view._apply_organization = MagicMock()
+
+        view.action_confirm()
+
+        view.query_one.assert_not_called()
+        view._set_status.assert_called_once_with("Organization is already applying...")
+        view._apply_organization.assert_not_called()
+
+    def test_apply_organization_success_uses_real_organizer(self, tmp_path) -> None:
+        input_dir = tmp_path / "in"
+        output_dir = tmp_path / "out"
+        view = OrganizationPreviewView(input_dir=input_dir, output_dir=output_dir)
         mock_result = SimpleNamespace(
             organized_structure={"Docs": ["a.pdf"]},
             total_files=1,
@@ -259,8 +275,10 @@ class TestOrganizationPreviewViewLoadPreview:
         )
         view._handle_apply_success.assert_called_once_with(mock_result)
 
-    def test_handle_apply_success_switches_to_history(self) -> None:
-        view = OrganizationPreviewView(input_dir="/tmp/in")
+    def test_handle_apply_success_switches_to_history(self, tmp_path) -> None:
+        input_dir = tmp_path / "in"
+        view = OrganizationPreviewView(input_dir=input_dir)
+        view._is_applying = True
         before_after_panel = MagicMock()
         summary_panel = MagicMock()
 
@@ -294,7 +312,8 @@ class TestOrganizationPreviewViewLoadPreview:
         with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
             view._handle_apply_success(mock_result)
 
-        before_after_panel.set_structure.assert_called_once_with({"Docs": ["a.pdf"]}, "/tmp/in")
+        assert view._is_applying is False
+        before_after_panel.set_structure.assert_called_once_with({"Docs": ["a.pdf"]}, str(input_dir))
         summary_panel.set_result.assert_called_once_with(
             total=1,
             processed=1,
@@ -331,6 +350,7 @@ class TestOrganizationPreviewViewLoadPreview:
 
     def test_handle_apply_error_updates_panels_and_status(self) -> None:
         view = OrganizationPreviewView()
+        view._is_applying = True
         before_after_panel = MagicMock()
         summary_panel = MagicMock()
 
@@ -346,8 +366,10 @@ class TestOrganizationPreviewViewLoadPreview:
 
         view._handle_apply_error(RuntimeError("disk full"))
 
+        assert view._is_applying is False
         before_after_panel.update.assert_called_once_with(
-            "[red]Apply failed:[/red] disk full\n\n[dim]No files were applied.[/dim]"
+            "[red]Apply failed:[/red] disk full\n\n"
+            "[dim]Some files may have been changed. Check History before retrying.[/dim]"
         )
         summary_panel.update.assert_called_once_with("[dim]No data available.[/dim]")
         view._set_status.assert_called_once_with("Apply failed")

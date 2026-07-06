@@ -362,14 +362,6 @@ class SetupWizard:
                     f"Ollama: Running (v{capabilities.ollama_status.version}), "
                     f"{capabilities.ollama_status.models_count} models available"
                 )
-            elif capabilities.ollama_status.installed:
-                result.warnings.append(
-                    "Ollama is installed but not running. Start it with: ollama serve"
-                )
-            else:
-                result.warnings.append(
-                    "Ollama not detected. Install from: https://ollama.com/download"
-                )
 
             recommended_model = capabilities.hardware.recommended_text_model()
             for step in ollama_next_steps(

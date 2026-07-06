@@ -304,7 +304,8 @@ window.browseDirectory = async (inputId) => {
       if (result.success) {
         showStep(4);
       } else {
-        showSetupMessage(`Setup failed: ${result.errors.join(", ")}`);
+        const errorText = result.errors?.length ? result.errors.join(", ") : "Unknown error";
+        showSetupMessage(`Setup failed: ${errorText}`);
         if (btnComplete) {
           btnComplete.disabled = false;
           btnComplete.textContent = "Complete Setup";
