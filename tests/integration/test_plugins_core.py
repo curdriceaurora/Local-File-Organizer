@@ -261,6 +261,7 @@ class TestPluginSecurityPolicy:
         assert len(policy.allowed_operations) == 0
 
 
+@pytest.mark.ci
 class TestPluginSandbox:
     def test_default_policy_denies_all_paths(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox

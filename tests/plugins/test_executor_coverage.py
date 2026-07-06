@@ -13,7 +13,7 @@ from file_organizer.plugins.errors import PluginError, PluginLoadError
 from file_organizer.plugins.executor import PluginExecutor
 from file_organizer.plugins.ipc import PluginResult
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 class TestPluginExecutorInit:

@@ -101,6 +101,15 @@ class TestInstallerInit:
         assert command[0] == sys.executable
         assert command[1:] == ["-m", "pip", "install", "-U", "local-file-organizer"]
 
+    @patch("platform.system", return_value="Windows")
+    def test_pip_upgrade_command_detects_pipx_virtualenv(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setenv(
+            "VIRTUAL_ENV",
+            str(tmp_path / "pipx" / "venvs" / "local-file-organizer"),
+        )
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+
     @patch("platform.system", return_value="Linux")
     def test_pip_upgrade_command_linux_none(self, _system):
         inst = UpdateInstaller()

@@ -575,6 +575,7 @@ class TestLoadSettings:
         with pytest.raises(ValueError, match="FO_API_AUTH_JWT_SECRET must be set"):
             load_settings()
 
+    @pytest.mark.ci
     def test_short_jwt_secret_error(self, monkeypatch):
         """Short non-placeholder JWT secrets should fail when auth is enabled."""
         monkeypatch.setenv("FO_API_AUTH_ENABLED", "true")

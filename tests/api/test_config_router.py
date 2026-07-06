@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,10 +18,11 @@ from file_organizer.api.dependencies import (
     get_settings,
 )
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.config import router
+from file_organizer.api.routers.config import _apply_update, router
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.schema import AppConfig
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 def _build_app(
@@ -203,6 +205,20 @@ class TestUpdateConfig:
         assert config["models"]["framework"] == "mlx"
         assert config["updates"]["include_prereleases"] is True
         assert config["watcher"] == {"enabled": True}
+
+    def test_apply_update_ignores_unknown_request_fields(self) -> None:
+        """Defensive helper path ignores fields that are not AppConfig attributes."""
+        config = AppConfig()
+        request = SimpleNamespace(
+            default_methodology=None,
+            models=None,
+            updates=None,
+            model_dump=lambda exclude_none=True: {"unknown_section": {"enabled": True}},
+        )
+
+        _apply_update(config, request)
+
+        assert not hasattr(config, "unknown_section")
 
     def test_update_config_unsupported_version_returns_409(self, tmp_path: Path) -> None:
         """PUT refuses to overwrite unsupported on-disk profiles."""

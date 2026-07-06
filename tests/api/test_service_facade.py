@@ -224,6 +224,7 @@ class TestGetStatus:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestGetConfig:
     """Tests for ServiceFacade.get_config()."""

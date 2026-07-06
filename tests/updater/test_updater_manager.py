@@ -13,7 +13,7 @@ from file_organizer.updater.checker import AssetInfo, ReleaseInfo
 from file_organizer.updater.installer import InstallResult
 from file_organizer.updater.manager import UpdateManager, UpdateStatus
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 # ---------------------------------------------------------------------------
