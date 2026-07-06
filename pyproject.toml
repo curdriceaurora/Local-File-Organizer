@@ -62,7 +62,7 @@ dependencies = [
     # back as defaults (issue: CLIState.debug/verbose always False, lazy
     # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
     "typer[all]>=0.12,<0.26",
-    "rich~=13.0",
+    "rich~=15.0",
     "textual~=0.50",
 
     # API and async
