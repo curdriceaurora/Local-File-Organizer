@@ -134,7 +134,7 @@ web = [
 ]
 
 dev = [
-    "pytest~=9.0.3",
+    "pytest~=9.1.1",
     "pytest-asyncio~=1.4",
     "pytest-cov>=4.1,<8",  # 4.1 predates pytest 9 / Python 3.13+; allow current major
     "pytest-mock~=3.12",
