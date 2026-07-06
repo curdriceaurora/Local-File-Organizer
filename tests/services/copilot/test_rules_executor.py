@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -119,6 +120,10 @@ def test_apply_move_uses_resolved_directory_destination(tmp_path: Path) -> None:
     assert (tmp_path / "archive" / "note.txt").read_text(encoding="utf-8") == "hello"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="copy apply uses SafeDir, whose Windows port is deferred (#264)",
+)
 def test_copy_to_sibling_file_destination_is_not_treated_as_destination_root(
     tmp_path: Path,
 ) -> None:
@@ -181,6 +186,10 @@ def test_link_actions_undo_and_redo_transaction(tmp_path: Path) -> None:
             assert link.resolve() == source
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="copy apply uses SafeDir, whose Windows port is deferred (#264)",
+)
 def test_watch_calls_cycle_callback(tmp_path: Path) -> None:
     source = tmp_path / "note.txt"
     source.write_text("hello", encoding="utf-8")

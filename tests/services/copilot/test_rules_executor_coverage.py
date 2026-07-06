@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -56,6 +57,9 @@ def test_copy_file_exclusive_creation_exists(tmp_path: Path) -> None:
         assert res.reason == "exists"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_copy_file_exception_cleanup(tmp_path: Path) -> None:
     source = tmp_path / "source.txt"
     source.write_text("hello", encoding="utf-8")
@@ -116,6 +120,9 @@ def test_post_mutation_failure_rollback_move(tmp_path: Path) -> None:
         assert not (tmp_path / "moved" / "note.txt").exists()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy apply uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_post_mutation_failure_rollback_copy(tmp_path: Path) -> None:
     mgr = _manager(tmp_path)
     executor = RuleExecutor(undo_manager=mgr)

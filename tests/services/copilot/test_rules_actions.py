@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -52,6 +53,9 @@ def test_conflict_skip_leaves_existing_destination(tmp_path: Path) -> None:
     assert destination.read_text(encoding="utf-8") == "old"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_conflict_rename_new_preserves_existing_destination(tmp_path: Path) -> None:
     source = tmp_path / "source.txt"
     destination = tmp_path / "dest.txt"
@@ -66,6 +70,9 @@ def test_conflict_rename_new_preserves_existing_destination(tmp_path: Path) -> N
     assert result.destination.read_text(encoding="utf-8") == "new"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_copy_file_clean_success(tmp_path: Path) -> None:
     """Tests copying a file where no destination or parent directory exists yet."""
     source = tmp_path / "source.txt"
@@ -79,6 +86,9 @@ def test_copy_file_clean_success(tmp_path: Path) -> None:
     assert destination.read_text(encoding="utf-8") == "clean copy"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_conflict_overwrite_file(tmp_path: Path) -> None:
     """Tests that ConflictStrategy.OVERWRITE successfully replaces an existing file."""
     source = tmp_path / "source.txt"
@@ -104,6 +114,9 @@ def test_conflict_overwrite_directory_raises_error(tmp_path: Path) -> None:
         copy_file(source, destination, ConflictStrategy.OVERWRITE)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_conflict_rename_multiple_increments(tmp_path: Path) -> None:
     """Tests the while-loop branch where dest.txt and dest_1.txt both exist."""
     source = tmp_path / "source.txt"
@@ -117,6 +130,9 @@ def test_conflict_rename_multiple_increments(tmp_path: Path) -> None:
     assert result.destination.read_text(encoding="utf-8") == "brand new"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_copy_file_exception_unlinks_partial_file(tmp_path: Path) -> None:
     """Tests the try/except block in copy_file unlinks the target if copying fails."""
     source = tmp_path / "source.txt"
@@ -148,6 +164,9 @@ def test_link_strategies_handling_skipped_conflicts(tmp_path: Path) -> None:
     assert sl_result.reason == "exists"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="copy_file uses SafeDir, whose Windows port is deferred (#264)"
+)
 def test_copy_file_fsync_failure_unlinks_destination(tmp_path: Path) -> None:
     """Tests that a failure in fsync_directory unlinks the created copy."""
     source = tmp_path / "source.txt"

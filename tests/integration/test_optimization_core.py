@@ -238,6 +238,9 @@ class TestMemoryProfiler:
             rss = MemoryProfiler._get_rss()
             assert rss == 1000 * 1024
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="resource module is POSIX-only (absent on Windows)"
+    )
     def test_get_rss_linux_proc_missing_vmrss(self) -> None:
         """Verify that _get_rss falls back to resource module on Linux if VmRSS is missing in proc status."""
         from unittest.mock import mock_open
@@ -255,6 +258,9 @@ class TestMemoryProfiler:
             rss = MemoryProfiler._get_rss()
             assert rss == 2000 * 1024
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="resource module is POSIX-only (absent on Windows)"
+    )
     def test_get_rss_darwin_proc_missing(self) -> None:
         """Verify that _get_rss queries resource maxrss directly on macOS/Darwin when proc status is missing."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -293,6 +299,9 @@ class TestMemoryProfiler:
             assert rss == 1000 * 1024
             assert vms == 5000 * 1024
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="resource module is POSIX-only (absent on Windows)"
+    )
     def test_get_rss_vms_darwin(self) -> None:
         """Verify that _get_rss_vms queries resource maxrss and returns 0 VMS on macOS/Darwin."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -308,6 +317,9 @@ class TestMemoryProfiler:
             assert rss == 4000
             assert vms == 0
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="resource module is POSIX-only (absent on Windows)"
+    )
     def test_get_rss_vms_linux_resource_fallback(self) -> None:
         """Verify that _get_rss_vms falls back to resource module on Linux if proc status is missing."""
         from file_organizer.optimization.memory_profiler import MemoryProfiler
@@ -323,6 +335,9 @@ class TestMemoryProfiler:
             assert rss == 5000 * 1024
             assert vms == 0
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="resource module is POSIX-only (absent on Windows)"
+    )
     def test_get_rss_vms_linux_missing_vmrss_keeps_vms(self) -> None:
         """Verify VmSize parse is preserved while RSS falls back if VmRSS is absent."""
         from unittest.mock import mock_open
