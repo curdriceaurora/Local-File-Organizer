@@ -401,9 +401,12 @@ class SetupWizardView(Vertical):
             elif ollama.installed:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Installed but not running")
                 lines.append("      [dim]Start with: ollama serve[/dim]")
+                lines.append(f"      [dim]Pull model later: ollama pull {hw.recommended_text_model()}[/dim]")
             else:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Not installed")
-                lines.append("      [dim]Install from: https://ollama.ai[/dim]")
+                lines.append("      [dim]Install from: https://ollama.com/download[/dim]")
+                lines.append("      [dim]Start with: ollama serve[/dim]")
+                lines.append(f"      [dim]Pull model later: ollama pull {hw.recommended_text_model()}[/dim]")
 
             # Recommendations section
             lines.append("\n[b]Recommended Configuration:[/b]")
@@ -559,12 +562,16 @@ class SetupWizardView(Vertical):
         # Backend status
         if not self._capabilities.ollama_status.running:
             lines.append("[yellow]⚠ Warning:[/yellow] Ollama is not running")
+            recommended_model = self._capabilities.hardware.recommended_text_model()
             if self._capabilities.ollama_status.installed:
                 lines.append("  Start Ollama service before downloading models")
-                lines.append("  [dim]Command: ollama serve[/dim]\n")
+                lines.append("  [dim]Command: ollama serve[/dim]")
+                lines.append(f"  [dim]Then pull: ollama pull {recommended_model}[/dim]\n")
             else:
                 lines.append("  Install Ollama to download models")
-                lines.append("  [dim]Visit: https://ollama.ai[/dim]\n")
+                lines.append("  [dim]Visit: https://ollama.com/download[/dim]")
+                lines.append("  [dim]Command: ollama serve[/dim]")
+                lines.append(f"  [dim]Then pull: ollama pull {recommended_model}[/dim]\n")
 
         # Instructions
         lines.append("[dim]Press 1, 2, or 3 to select a model")

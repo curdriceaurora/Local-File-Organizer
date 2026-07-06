@@ -463,6 +463,7 @@ class ConfigManager:
             "version": CURRENT_SCHEMA_VERSION,
             "default_methodology": config.default_methodology,
             "setup_completed": config.setup_completed,
+            "setup_deferred": config.setup_deferred,
             "models": asdict(config.models),
             "updates": asdict(config.updates),
         }
@@ -511,6 +512,7 @@ class ConfigManager:
             version=str(data.get("version", CURRENT_SCHEMA_VERSION)),
             default_methodology=data.get("default_methodology", "none"),
             setup_completed=data.get("setup_completed", False),
+            setup_deferred=data.get("setup_deferred", False),
             models=models,
             updates=updates,
             watcher=data.get("watcher"),

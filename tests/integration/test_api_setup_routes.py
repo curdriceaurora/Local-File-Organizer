@@ -46,6 +46,7 @@ def _make_mock_manager(completed: bool = True, profile: str = "default") -> Magi
     mock_manager = MagicMock()
     mock_config = MagicMock()
     mock_config.setup_completed = completed
+    mock_config.setup_deferred = False
     mock_config.profile_name = profile
     mock_manager.load.return_value = mock_config
     return mock_manager
@@ -106,6 +107,21 @@ class TestSetupStatus:
         assert isinstance(body["profile"], str)
         assert len(body["profile"]) > 0
 
+    def test_setup_status_response_has_deferred(self, test_settings: ApiSettings) -> None:
+        mock_manager = _make_mock_manager(completed=False, profile="default")
+        mock_manager.load.return_value.setup_deferred = True
+        app = FastAPI()
+        app.dependency_overrides[get_settings] = lambda: test_settings
+        app.dependency_overrides[get_config_manager] = lambda: mock_manager
+        setup_exception_handlers(app)
+        app.include_router(setup_router)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        r = client.get("/setup/status")
+
+        assert r.status_code == 200
+        assert r.json()["deferred"] is True
+
 
 # ---------------------------------------------------------------------------
 # GET /setup/capabilities
@@ -149,7 +165,22 @@ class TestSetupCapabilities:
         assert body["hardware"]["gpu_available"] is False
         assert body["hardware"]["cpu_cores"] == 8
         assert body["ollama"]["installed"] is True
+        assert "next_steps" in body["ollama"]
         assert isinstance(body["models"], list)
+
+    def test_capabilities_returns_ollama_pull_next_step(
+        self, setup_client: TestClient
+    ) -> None:
+        mock_caps = self._make_mock_capabilities()
+        mock_caps.ollama_status.installed = True
+        mock_caps.ollama_status.running = True
+        mock_caps.ollama_status.models_count = 0
+        mock_caps.installed_models = []
+        with patch.object(SetupWizard, "detect_capabilities", return_value=mock_caps):
+            r = setup_client.get("/setup/capabilities")
+
+        assert r.status_code == 200
+        assert "ollama pull qwen2.5:3b" in r.json()["ollama"]["next_steps"][0]
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +195,7 @@ class TestSetupComplete:
         mock_wizard.detect_capabilities.return_value = mock_caps
         mock_config = MagicMock()
         mock_config.models.text_model = "qwen2.5:3b"
+        mock_config.setup_deferred = True
         mock_wizard.generate_config.return_value = mock_config
         mock_wizard.validate_config.return_value = (True, [])
         return mock_wizard
@@ -191,6 +223,9 @@ class TestSetupComplete:
         assert body["success"] is True
         assert body["profile"] == "default"
         assert len(body["messages"]) >= 1
+        saved_config = mock_mgr.save.call_args[0][0]
+        assert saved_config.setup_completed is True
+        assert saved_config.setup_deferred is False
 
     def test_complete_setup_invalid_mode_uses_quick_start(self, test_settings: ApiSettings) -> None:
         mock_mgr = MagicMock()

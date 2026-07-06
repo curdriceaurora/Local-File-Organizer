@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import (
@@ -24,7 +24,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.config.manager import ConfigManager
 from file_organizer.core.hardware_profile import GpuType
-from file_organizer.core.setup_wizard import SetupWizard, WizardMode
+from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
 
 router = APIRouter(tags=["setup"], responses=INTERNAL_500_RESPONSE)
 
@@ -33,6 +33,7 @@ class SetupStatusResponse(BaseModel):
     """Setup completion status."""
 
     completed: bool
+    deferred: bool = False
     profile: str = "default"
 
 
@@ -54,6 +55,7 @@ class OllamaInfo(BaseModel):
     running: bool
     version: str | None = None
     models_count: int = 0
+    next_steps: list[str] = Field(default_factory=list)
 
 
 class ModelInfo(BaseModel):
@@ -96,7 +98,7 @@ class SetupResponse(BaseModel):
     responses=merge_responses(
         success_response(
             "Returned setup completion status.",
-            {"completed": True, "profile": "default"},
+            {"completed": True, "deferred": False, "profile": "default"},
         ),
     ),
 )
@@ -108,6 +110,7 @@ def get_setup_status(
     config = manager.load()
     return SetupStatusResponse(
         completed=config.setup_completed,
+        deferred=getattr(config, "setup_deferred", False),
         profile=config.profile_name,
     )
 
@@ -160,6 +163,11 @@ def detect_capabilities(
         running=capabilities.ollama_status.running,
         version=capabilities.ollama_status.version,
         models_count=capabilities.ollama_status.models_count,
+        next_steps=ollama_next_steps(
+            capabilities.ollama_status,
+            hardware_info.recommended_model,
+            capabilities.installed_models,
+        ),
     )
 
     models = [
@@ -226,6 +234,7 @@ def complete_setup(
 
     # Mark setup as completed
     config.setup_completed = True
+    config.setup_deferred = False
     config.profile_name = request.profile
 
     # Save configuration. force=True: setup completion is a deliberate
@@ -282,7 +291,7 @@ def browse_folder(
         return BrowseFolderResponse(path="", available=False)
 
     try:
-        result = subprocess.run(  # noqa: subprocess-returncode
+        result = subprocess.run(
             # returncode is checked in the outer function body after this
             # try/except block; the detector treats the try body as a separate
             # scope so cannot follow the cross-block reference.
@@ -297,8 +306,7 @@ def browse_folder(
     if result.returncode != 0:
         # osascript exit code 1 + "User canceled." in stderr → explicit cancel.
         # Any other failure (permissions, GUI unavailable, etc.) is treated as
-        # unavailable so the browser-side fallbacks (showDirectoryPicker,
-        # webkitdirectory) still run.
+        # unavailable so the browser can ask for a typed absolute path.
         if "user canceled" in result.stderr.lower() or "-128" in result.stderr:
             return BrowseFolderResponse(path="", available=True, cancelled=True)
         return BrowseFolderResponse(path="", available=False)

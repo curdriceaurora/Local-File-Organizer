@@ -13,6 +13,7 @@ from file_organizer.core.setup_wizard import (
     SystemCapabilities,
     WizardMode,
     WizardResult,
+    ollama_next_steps,
 )
 
 
@@ -274,7 +275,7 @@ class TestValidateConfig:
 
         assert is_valid is False
         assert len(errors) > 0
-        assert any("Ollama" in err for err in errors)
+        assert any("ollama serve" in err for err in errors)
 
     def test_validate_config_model_not_installed(self):
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
@@ -363,6 +364,7 @@ class TestSaveConfig:
         mock_manager.save.assert_called_once()
         saved_config, saved_profile = mock_manager.save.call_args[0]
         assert saved_config.setup_completed is True
+        assert saved_config.setup_deferred is False
         assert saved_profile == "test-profile"
 
     def test_save_config_with_profile_override(self):
@@ -376,7 +378,42 @@ class TestSaveConfig:
         mock_manager.save.assert_called_once()
         saved_config, saved_profile = mock_manager.save.call_args[0]
         assert saved_config.setup_completed is True
+        assert saved_config.setup_deferred is False
         assert saved_profile == "override"
+
+
+class TestOllamaNextSteps:
+    def test_not_installed_prints_install_start_and_pull(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=False, running=False),
+            "qwen2.5:3b",
+        )
+
+        assert steps == [
+            "Install Ollama from https://ollama.com/download",
+            "Start Ollama: ollama serve",
+            "Pull the recommended model: ollama pull qwen2.5:3b",
+        ]
+
+    def test_running_without_models_prints_pull_command(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=True, running=True),
+            "qwen2.5:3b",
+            [],
+        )
+
+        assert steps == ["Pull the recommended model: ollama pull qwen2.5:3b"]
+
+    def test_installed_but_not_running_prints_start_and_pull_commands(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=True, running=False),
+            "qwen2.5:3b",
+        )
+
+        assert steps == [
+            "Start Ollama: ollama serve",
+            "Pull the recommended model if needed: ollama pull qwen2.5:3b",
+        ]
 
 
 class TestWizardRun:

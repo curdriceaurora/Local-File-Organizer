@@ -11,10 +11,11 @@ This module provides a guided setup wizard interface that:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.config.manager import ConfigManager
 from file_organizer.web._helpers import base_context, templates
 
 setup_router = APIRouter(tags=["web"])
@@ -48,3 +49,14 @@ def setup_wizard(
         },
     )
     return templates.TemplateResponse(request, "setup_wizard.html", context)
+
+
+@setup_router.get("/setup/defer")
+def defer_setup() -> RedirectResponse:
+    """Mark setup as deferred and continue to the web UI."""
+    manager = ConfigManager()
+    config = manager.load()
+    config.setup_completed = False
+    config.setup_deferred = True
+    manager.save(config, config.profile_name, force=True)
+    return RedirectResponse(url="/ui/", status_code=303)

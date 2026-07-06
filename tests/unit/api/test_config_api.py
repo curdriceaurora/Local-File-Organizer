@@ -48,6 +48,7 @@ class TestConfigGetEndpoint:
         config = response.json()["config"]
         assert "version" in config
         assert "setup_completed" in config
+        assert "setup_deferred" in config
 
     def test_config_includes_organization_settings(self, client):
         """Config should include organization settings."""

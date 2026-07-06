@@ -4,9 +4,8 @@ Checks:
 - Both directory inputs have an accompanying Browse button in the HTML template
 - The Browse buttons carry the correct onclick attributes
 - setup_wizard.js defines window.browseDirectory before the IIFE
-- The JS function handles pywebview path, server-API path, and fallback paths
-- The JS function does NOT return early on showDirectoryPicker errors
-  (must fall through to webkitdirectory fallback)
+- The JS function handles pywebview path and server-API path
+- The JS function does not use browser-only folder-name fallbacks
 """
 
 from __future__ import annotations
@@ -94,31 +93,24 @@ class TestSetupWizardJSBrowseFunction:
         """Function must call the server-side /api/v1/setup/browse-folder endpoint."""
         assert "/api/v1/setup/browse-folder" in js
 
-    def test_webkitdirectory_fallback_present(self, js: str) -> None:
-        """Function must include the webkitdirectory fallback input as last resort."""
-        assert "webkitdirectory" in js
+    def test_browser_only_folder_name_fallbacks_are_disabled(self, js: str) -> None:
+        """Browser APIs that expose only folder names must not populate paths."""
+        assert "showDirectoryPicker(" not in js
+        assert "webkitdirectory = true" not in js
 
-    def test_showdirectorypicker_error_does_not_use_bare_return(self, js: str) -> None:
-        """
-        When showDirectoryPicker throws an error that is NOT AbortError, the code
-        must NOT simply `return` — it must fall through to the next picker method.
+    def test_unavailable_picker_guides_user_to_type_absolute_path(self, js: str) -> None:
+        """Unavailable native picker should focus the text input and show guidance."""
+        assert "showDirectoryPickerUnavailable" in js
+        assert "Type the full absolute path" in js
+        assert "input.focus()" in js
 
-        We verify this by checking that inside the showDirectoryPicker catch block,
-        the only unconditional `return` is for AbortError cancellation.
-        Specifically, the pattern `if (e.name === "AbortError") return;` must be
-        present AND there must be NO bare `return;` immediately after the catch
-        error logging.
-        """
-        # The correct pattern: only return on AbortError, otherwise fall through
-        assert 'e.name === "AbortError"' in js or 'e.name !== "AbortError"' in js
-
-    def test_fetch_fallback_on_server_unavailable(self, js: str) -> None:
-        """The fetch call must have error handling so server errors fall through."""
+    def test_fetch_handles_server_unavailable(self, js: str) -> None:
+        """The fetch call must have error handling so server errors show guidance."""
         # There must be a try/catch around the fetch call
         fetch_pos = js.index("/api/v1/setup/browse-folder")
         # Find the surrounding try block (search backward)
         code_before = js[:fetch_pos]
         assert "try" in code_before[-200:], (
             "fetch('/api/setup/browse-folder') must be inside a try block "
-            "so network errors fall through to the next picker"
+            "so network errors can show typed-path guidance"
         )

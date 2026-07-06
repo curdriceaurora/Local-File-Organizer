@@ -72,6 +72,7 @@ class TestGetConfig:
         config = body["config"]
         assert config["default_methodology"] == "none"
         assert config["setup_completed"] is False
+        assert config["setup_deferred"] is False
         assert config["models"]["text_model"] == "qwen2.5:3b-instruct-q4_K_M"
         assert config["updates"]["repo"] == "curdriceaurora/Local-File-Organizer"
 

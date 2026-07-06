@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table  # pyre-ignore[21]
 
 from file_organizer.cli.interactive import confirm_action, console, prompt_choice
-from file_organizer.core.setup_wizard import SetupWizard, WizardMode
+from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
 
 setup_app = typer.Typer(help="Interactive setup wizard for first-run configuration.")
 
@@ -98,10 +98,16 @@ def setup_run(  # noqa: C901
             console.print(model_table)
     elif capabilities.ollama_status.installed:
         console.print("[yellow]\u26a0[/yellow] Ollama is installed but not running")
-        console.print("  Start it with: [bold]ollama serve[/bold]")
     else:
         console.print("[yellow]\u26a0[/yellow] Ollama is not installed")
-        console.print("  Install from: [bold]https://ollama.ai[/bold]")
+
+    recommended_model = capabilities.hardware.recommended_text_model()
+    for step in ollama_next_steps(
+        capabilities.ollama_status,
+        recommended_model,
+        capabilities.installed_models,
+    ):
+        console.print(f"  {step}")
 
     console.print()
 
