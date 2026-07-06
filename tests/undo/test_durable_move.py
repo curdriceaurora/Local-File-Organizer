@@ -2309,8 +2309,12 @@ class TestJournalSchemaV2Parser:
         """Equal paths are not descendants; only deeper children match."""
         from file_organizer.undo.durable_move import _is_descendant
 
-        assert _is_descendant("/trash/dir", "/trash/dir") is False
-        assert _is_descendant("/trash/dir/file.txt", "/trash/dir") is True
+        # ``_is_descendant`` compares on ``os.sep`` boundaries against inputs the
+        # caller has already normcased; build the paths with ``os.sep`` so the
+        # separator matches on Windows (``\``) as well as POSIX (``/``).
+        base = f"{os.sep}trash{os.sep}dir"
+        assert _is_descendant(base, base) is False
+        assert _is_descendant(f"{base}{os.sep}file.txt", base) is True
 
 
 # ---------------------------------------------------------------------------
@@ -2627,6 +2631,10 @@ class TestJournalLockFile:
         assert reader_done.wait(timeout=5.0)
         t.join(timeout=2)
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_returns_empty_when_journal_vanishes(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2654,6 +2662,10 @@ class TestJournalLockFile:
 
         assert dm.read_journal_under_shared_lock(journal) == []
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_race_returns_list_not_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2685,6 +2697,10 @@ class TestJournalLockFile:
             "read_journal_under_shared_lock must return a list, not None or other falsy"
         )
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_race_with_multi_entry_journal(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2718,6 +2734,10 @@ class TestJournalLockFile:
 
         assert dm.read_journal_under_shared_lock(journal) == []
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_passthrough_for_non_journal_paths(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

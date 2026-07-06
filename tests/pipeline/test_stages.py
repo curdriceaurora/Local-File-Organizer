@@ -431,6 +431,10 @@ class TestWriterStage:
         result = WriterStage().process(ctx)
         assert result.error == "prior"
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX fd-copy path; Windows falls back to shutil.copy2 (see test_writer_stage_windows_platform_fallback)",
+    )
     def test_special_file_error_destination(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -478,6 +482,10 @@ class TestWriterStage:
         assert dest.exists()
         assert dest.read_text() == "content"
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX fd-copy path; Windows falls back to shutil.copy2 (see test_writer_stage_windows_platform_fallback)",
+    )
     def test_fdopen_os_error_closes_fd(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -531,6 +539,7 @@ class TestWriterStage:
         assert dest.exists()
         assert dest.read_text() == "fallback-content"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
     def test_copyxattr_fd_success(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify that _copy_fd_xattrs successfully copies extended attributes when they are present."""
         src = tmp_path / "src.txt"
@@ -566,6 +575,7 @@ class TestWriterStage:
         assert setxattr_calls[0][1] == b"user.comment"
         assert setxattr_calls[0][2] == b"test-comment"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
     def test_copyxattr_fd_skipped_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

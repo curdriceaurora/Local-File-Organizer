@@ -456,13 +456,15 @@ class TestRulesPreview:
         assert result.exit_code == 0
         assert "5 files matched" in result.output
 
-    def test_preview_no_enabled_rules(self, runner):
+    def test_preview_no_enabled_rules(self, runner, tmp_path):
         mock_mgr = MagicMock()
         rs = RuleSet(name="empty", rules=[])
         mock_mgr.load_rule_set.return_value = rs
 
+        # Use tmp_path (not a hardcoded ``/tmp``) so the path-existence check
+        # the CLI performs passes on Windows, where ``/tmp`` does not exist.
         with patch(_RULE_MGR_PATH, return_value=mock_mgr):
-            result = runner.invoke(rules_app, ["preview", "/tmp"])  # noqa: test-hardcoded-paths
+            result = runner.invoke(rules_app, ["preview", str(tmp_path)])
         assert result.exit_code == 0
         assert "No enabled rules" in result.output
 

@@ -613,6 +613,10 @@ class TestClaimPidFile:
         with pytest.raises(FileExistsError):
             pid_manager2.claim_pid_file(pid_file)
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="POSIX directory-permission semantics; chmod does not block writes on Windows",
+    )
     def test_claim_oserror_on_unwritable_dir(
         self, pid_manager: PidFileManager, tmp_path: Path
     ) -> None:
@@ -631,6 +635,10 @@ class TestClaimPidFile:
         finally:
             locked_dir.chmod(stat.S_IRWXU)  # restore so tmp_path cleanup works
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="os.fchmod is POSIX-only; the source guards it with hasattr on Windows",
+    )
     def test_claim_fchmod_oserror_is_non_fatal(
         self, pid_manager: PidFileManager, pid_file: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
