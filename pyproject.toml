@@ -146,7 +146,7 @@ dev = [
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
     "black>=23.12,<27.0",
     "isort~=5.13",
-    "pre-commit~=3.6",
+    "pre-commit~=4.6",
     "codespell~=2.2",
     "faker~=40.12",
     "pytest-benchmark>=4.0,<6",  # 5.x drops benchmark_* ini keys; we pass them via CLI (see pytest note below)
