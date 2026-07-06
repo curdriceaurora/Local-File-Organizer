@@ -383,7 +383,10 @@ class TestNumberingResult:
 
         result_dict = result.to_dict()
 
-        assert result_dict["file_path"] == "/test/file.txt"
+        # ``to_dict`` serializes with ``str(path)``, which uses the native
+        # separator — compare against the same construction so the assertion
+        # holds on Windows (``\test\file.txt``) as well as POSIX.
+        assert result_dict["file_path"] == str(Path("/") / "test" / "file.txt")
         assert result_dict["number"] == "10.01"
         assert result_dict["number_name"] == "Test"
         assert result_dict["confidence"] == 0.8

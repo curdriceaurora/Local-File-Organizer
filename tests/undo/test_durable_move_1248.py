@@ -46,6 +46,10 @@ def _force_exdev(monkeypatch: pytest.MonkeyPatch) -> None:
 class TestStartedBeforeTmpOrdering:
     """#1248 #1: in-flight marker must precede the GC-visible tmp window."""
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="instruments _append_journal_line_locked, only used on the POSIX fcntl append path",
+    )
     def test_started_journaled_before_tmp_created(
         self, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

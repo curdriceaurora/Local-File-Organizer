@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -173,6 +174,10 @@ class TestModelManager:
         assert all(m.installed is True for m in models)
         assert mock_whisper_installed.call_count == len(models)
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="clears env so Path.home() raises on Windows; asserts the POSIX ~/.cache/huggingface layout",
+    )
     @patch.dict("os.environ", {}, clear=True)
     @patch("pathlib.Path.is_dir", autospec=True, return_value=True)
     @patch.dict("sys.modules", {"faster_whisper": MagicMock()})
@@ -192,8 +197,9 @@ class TestModelManager:
         with patch.dict("os.environ", {"HF_HUB_CACHE": str(hub_cache)}, clear=True):
             assert ModelManager._is_whisper_installed("small") is True
         checked_path = str(mock_is_dir.call_args.args[0])
-        assert checked_path.startswith(f"{hub_cache}/")
-        assert checked_path.endswith("models--Systran--faster-whisper-small")
+        # Build the expected path with the same ``Path`` join the source uses so
+        # the separator matches on Windows (``\``) as well as POSIX (``/``).
+        assert checked_path == str(hub_cache / "models--Systran--faster-whisper-small")
 
     def test_is_whisper_installed_returns_false_when_dependency_missing(self) -> None:
         real_import = __import__
