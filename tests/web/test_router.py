@@ -17,7 +17,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.web.router import router
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 _HTML_OK = HTMLResponse("<html>ok</html>")
 

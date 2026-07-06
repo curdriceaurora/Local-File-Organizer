@@ -302,6 +302,7 @@ class TestOrganizationPreviewView:
         view._set_status = MagicMock()
         view.action_cancel()
         view._set_status.assert_called_with("Ready")
+
     def test_compose_yields_widgets(self) -> None:
         view = OrganizationPreviewView()
         widgets = list(view.compose())
@@ -328,7 +329,9 @@ class TestOrganizationPreviewView:
         view.action_confirm()
         view._set_status.assert_called_with("Organization is already applying...")
 
-    @patch("tests.tui.test_organization_preview.OrganizationPreviewView.app", new_callable=PropertyMock)
+    @patch(
+        "tests.tui.test_organization_preview.OrganizationPreviewView.app", new_callable=PropertyMock
+    )
     def test_handle_apply_success(self, mock_app) -> None:
         view = OrganizationPreviewView()
         view.query_one = MagicMock()
@@ -367,13 +370,17 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             pass
 
-        with patch("file_organizer.core.organizer.FileOrganizer") as mock_org, \
-             patch("file_organizer.tui.organization_preview.load_parallel_runtime_settings") as mock_settings:
-
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
+
             class MockResult:
                 organized_structure = {"A": ["b.txt"]}
                 total_files = 1
@@ -381,6 +388,7 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+
             mock_instance.organize.return_value = MockResult()
 
             app = MockApp()
@@ -406,9 +414,12 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             pass
 
-        with patch("file_organizer.core.organizer.FileOrganizer") as mock_org, \
-             patch("file_organizer.tui.organization_preview.load_parallel_runtime_settings") as mock_settings:
-
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
@@ -435,13 +446,17 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             action_switch_view = MagicMock()
 
-        with patch("file_organizer.core.organizer.FileOrganizer") as mock_org, \
-             patch("file_organizer.tui.organization_preview.load_parallel_runtime_settings") as mock_settings:
-
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
+
             class MockResult:
                 organized_structure = {"A": ["b.txt"]}
                 total_files = 1
@@ -449,6 +464,7 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+
             mock_instance.organize.return_value = MockResult()
 
             app = MockApp()
@@ -480,13 +496,17 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             action_switch_view = MagicMock()
 
-        with patch("file_organizer.core.organizer.FileOrganizer") as mock_org, \
-             patch("file_organizer.tui.organization_preview.load_parallel_runtime_settings") as mock_settings:
-
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
+
             class MockResult:
                 organized_structure = {"A": ["b.txt"]}
                 total_files = 1
@@ -494,6 +514,7 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+
             mock_instance.organize.return_value = MockResult()
 
             app = MockApp()

@@ -111,7 +111,11 @@ class AudioMetadataExtractor:
     def _extract_with_mutagen(self, audio_path: Path) -> AudioMetadata:
         """Extract metadata using mutagen library."""
         try:
-            from mutagen import File as MutagenFile  # type: ignore[attr-defined]
+            # mutagen re-exports ``File`` without an explicit ``__all__`` entry, so
+            # strict mypy flags ``attr-defined`` when the package is installed; the
+            # type-check CI job installs no audio extra, so the ignore is unused
+            # there. ``unused-ignore`` keeps both environments green.
+            from mutagen import File as MutagenFile  # type: ignore[attr-defined, unused-ignore]
         except ImportError as e:
             raise ImportError(
                 "mutagen is required for audio metadata extraction. "

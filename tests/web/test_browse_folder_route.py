@@ -159,8 +159,6 @@ class TestBrowseFolderMacOS:
 
 
 class TestBrowseFolderMacOSCancel:
-
-
     def test_called_process_cancel_returns_cancelled(self, client: TestClient) -> None:
         """check=True raises for osascript cancellation; preserve cancel semantics."""
         exc = subprocess.CalledProcessError(
@@ -186,8 +184,6 @@ class TestBrowseFolderMacOSCancel:
 
 
 class TestBrowseFolderMacOSError:
-
-
     def test_returns_unavailable_when_osascript_missing(self, client: TestClient) -> None:
         with (
             patch("file_organizer.api.routers.setup.sys.platform", "darwin"),

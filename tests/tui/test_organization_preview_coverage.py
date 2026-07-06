@@ -18,7 +18,7 @@ from file_organizer.tui.organization_preview import (
 )
 from file_organizer.tui.settings_view import ParallelRuntimeSettings
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,9 @@ class TestOrganizationPreviewViewLoadPreview:
             view._handle_apply_success(mock_result)
 
         assert view._is_applying is False
-        before_after_panel.set_structure.assert_called_once_with({"Docs": ["a.pdf"]}, str(input_dir))
+        before_after_panel.set_structure.assert_called_once_with(
+            {"Docs": ["a.pdf"]}, str(input_dir)
+        )
         summary_panel.set_result.assert_called_once_with(
             total=1,
             processed=1,
