@@ -320,7 +320,7 @@ def test_targeted_noqa_suppresses_intentional_exception(tmp_path: Path) -> None:
         tmp_path,
         "import sys\n\n"
         "def test_intentional_import_cache_state():\n"
-        "    sys.modules['fixture_only'] = object()  # noqa: test-environment-leakage\n",
+        "    sys.modules['fixture_only'] = object()  # noqa\n",
     )
 
     assert checker.check_file(src) == []

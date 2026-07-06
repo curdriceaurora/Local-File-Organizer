@@ -172,14 +172,14 @@ class TestAudioMetadataPanel:
         # Block the import so the except branch triggers
         mod_key = "file_organizer.services.audio.metadata_extractor"
         saved = sys.modules.get(mod_key)
-        sys.modules[mod_key] = None  # causes ImportError on `from ... import`  # noqa - mocking sys.modules
+        sys.modules[mod_key] = None  # causes ImportError on `from ... import`
         try:
             panel.set_metadata(meta)
         finally:
             if saved is None:
                 sys.modules.pop(mod_key, None)
             else:
-                sys.modules[mod_key] = saved  # noqa - mocking sys.modules
+                sys.modules[mod_key] = saved
         rendered = panel.update.call_args[0][0]
         assert "180.0s" in rendered or "180" in rendered
 

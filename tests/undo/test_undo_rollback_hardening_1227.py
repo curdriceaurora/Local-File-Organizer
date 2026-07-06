@@ -287,10 +287,12 @@ def test_durable_move_exdev_symlink_swap_refused(
         st_ino = 1
 
     def fake_lstat(path: object, *a: object, **k: object) -> object:
-        calls["n"] += 1
-        if calls["n"] == 1:  # initial source check → real (regular)
-            return real_lstat(path, *a, **k)
-        return _SymlinkStat()  # EXDEV re-check → simulated symlink swap
+        if str(path) == str(src):
+            calls["n"] += 1
+            if calls["n"] == 1:  # initial source check → real (regular)
+                return real_lstat(path, *a, **k)
+            return _SymlinkStat()  # EXDEV re-check → simulated symlink swap
+        return real_lstat(path, *a, **k)
 
     def fake_replace(s: object, d: object) -> None:
         raise OSError(errno.EXDEV, "cross-device link")
@@ -343,9 +345,9 @@ def test_durable_move_refuses_symlinked_destination_after_move(
         st_mode = stat_mod.S_IFLNK | 0o777
 
     def fake_lstat(path: object, *a: object, **k: object) -> object:
-        if str(path) == str(src):
-            return real_lstat(path, *a, **k)
-        return _SymlinkStat()  # post-move dst → looks like a symlink
+        if str(path) == str(dst):
+            return _SymlinkStat()  # post-move dst → looks like a symlink
+        return real_lstat(path, *a, **k)
 
     monkeypatch.setattr(rb.os, "lstat", fake_lstat)
 
