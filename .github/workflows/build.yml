@@ -11,6 +11,9 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -32,12 +35,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install pywebview Linux build dependencies
         if: matrix.platform == 'linux'
@@ -154,14 +158,26 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          # Curated CHANGELOG section on top; softprops appends the
-          # auto-generated PR list below it (generate_release_notes).
-          body_path: release-notes.md
-          files: |
-            artifacts/**/*
-          draft: ${{ !(contains(env.RELEASE_TAG, '-') || contains(env.RELEASE_TAG, 'a') || contains(env.RELEASE_TAG, 'b') || contains(env.RELEASE_TAG, 'rc')) }}
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') || contains(env.RELEASE_TAG, 'a') || contains(env.RELEASE_TAG, 'b') || contains(env.RELEASE_TAG, 'rc') }}
-          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t release_files < <(find artifacts -type f | sort)
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            echo "No release files found under artifacts/"
+            exit 1
+          fi
+
+          args=(
+            release create "${RELEASE_TAG}"
+            "${release_files[@]}"
+            --notes-file release-notes.md
+            --generate-notes
+          )
+
+          if [[ "${RELEASE_TAG}" != *-* && "${RELEASE_TAG}" != *a* && "${RELEASE_TAG}" != *b* && "${RELEASE_TAG}" != *rc* ]]; then
+            args+=(--draft)
+          else
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"

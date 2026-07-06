@@ -50,10 +50,12 @@ class TestExecutorInit:
         ex = PluginExecutor(plugin_path=Path("foo") / "plugin.py", plugin_name="custom")
         assert ex._plugin_name == "custom"
 
-    def test_default_policy_is_unrestricted(self) -> None:
+    def test_default_policy_denies_everything(self) -> None:
         ex = PluginExecutor(plugin_path=Path("foo") / "plugin.py")
-        assert ex._policy.allow_all_paths is True
-        assert ex._policy.allow_all_operations is True
+        assert ex._policy.allow_all_paths is False
+        assert ex._policy.allow_all_operations is False
+        assert ex._policy.allowed_paths == frozenset()
+        assert ex._policy.allowed_operations == frozenset()
 
     def test_proc_starts_none(self) -> None:
         ex = _make_executor()

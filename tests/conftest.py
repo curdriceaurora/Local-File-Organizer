@@ -8,6 +8,7 @@ Requires Python 3.11+.
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -101,6 +102,13 @@ skip_below_py312 = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 # Shared test fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def default_api_auth_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give tests a non-placeholder API JWT secret unless they override it."""
+    if "FO_API_AUTH_JWT_SECRET" not in os.environ:
+        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "test-secret-32-bytes-minimum-key!!")
 
 
 @pytest.fixture(autouse=True)

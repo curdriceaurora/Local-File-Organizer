@@ -11,6 +11,7 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,6 +56,19 @@ def _get_arch_hints() -> list[str]:
         hints.append("universal")
 
     return hints
+
+
+def _looks_like_pipx_install(executable: Path) -> bool:
+    """Return whether the running Python path appears to belong to pipx."""
+    candidates = [executable, Path(sys.prefix)]
+    virtual_env = os.environ.get("VIRTUAL_ENV")
+    if virtual_env:
+        candidates.append(Path(virtual_env))
+
+    for path in candidates:
+        if "pipx" in {part.lower() for part in path.parts}:
+            return True
+    return False
 
 
 def _is_checksum_file(filename: str) -> bool:
@@ -150,6 +164,18 @@ class UpdateInstaller:
     def install_dir(self) -> Path:
         """The installation directory."""
         return self._install_dir
+
+    def pip_upgrade_command(self) -> list[str] | None:
+        """Return a pip/pipx upgrade command when binary updates do not apply."""
+        system = platform.system().lower()
+        if system not in {"darwin", "windows"}:
+            return None
+
+        executable = Path(sys.executable)
+        if _looks_like_pipx_install(executable):
+            return ["pipx", "upgrade", "local-file-organizer"]
+
+        return [str(executable), "-m", "pip", "install", "-U", "local-file-organizer"]
 
     def download_asset(
         self,
@@ -371,8 +397,6 @@ class UpdateInstaller:
     @staticmethod
     def _detect_install_dir() -> Path:
         """Detect the directory containing the running executable."""
-        import sys
-
         exe = Path(sys.executable).resolve()
         return exe.parent
 

@@ -7,8 +7,9 @@ import os
 import shutil
 import stat
 import sys
+from collections.abc import Callable, Iterable
 from pathlib import Path, PurePath
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 from file_organizer.utils.safedir import SafeDir
 
@@ -27,21 +28,33 @@ _XATTR_SET_SKIP = frozenset({errno.EPERM, errno.EACCES, errno.ENOTSUP, errno.ENO
 _O_NONBLOCK = getattr(os, "O_NONBLOCK", 0)
 _DST_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | _O_NONBLOCK
 _DST_OPEN_MODE = 0o666
+_LISTXATTR = "listxattr"
+_GETXATTR = "getxattr"
+_SETXATTR = "setxattr"
+_XATTR_NAME = str | bytes
 
 
 def _copy_fd_xattrs(src_fd: int, dst_fd: int) -> None:
     """Best-effort copy of extended attributes between two fds (Linux)."""
-    if not hasattr(os, "listxattr"):
+    raw_listxattr = getattr(os, _LISTXATTR, None)
+    if not callable(raw_listxattr):
         return
+    listxattr = cast(Callable[[int], Iterable[_XATTR_NAME]], raw_listxattr)
     try:
-        names = os.listxattr(src_fd)
+        names = listxattr(src_fd)
     except OSError as exc:
         if exc.errno not in _XATTR_LIST_SKIP:
             raise
         return
+    raw_getxattr = getattr(os, _GETXATTR, None)
+    raw_setxattr = getattr(os, _SETXATTR, None)
+    if not callable(raw_getxattr) or not callable(raw_setxattr):
+        return
+    getxattr = cast(Callable[[int, _XATTR_NAME], bytes], raw_getxattr)
+    setxattr = cast(Callable[[int, _XATTR_NAME, bytes], None], raw_setxattr)
     for name in names:
         try:
-            os.setxattr(dst_fd, name, os.getxattr(src_fd, name))
+            setxattr(dst_fd, name, getxattr(src_fd, name))
         except OSError as exc:
             if exc.errno not in _XATTR_SET_SKIP:
                 raise

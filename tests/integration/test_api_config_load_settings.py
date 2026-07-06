@@ -152,9 +152,9 @@ class TestLoadSettingsEnvOverrides:
         assert s.auth_enabled is False
 
     def test_auth_jwt_secret_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "my-secret-key")
+        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "my-secret-key-32-byte-value")
         s = load_settings()
-        assert s.auth_jwt_secret.get_secret_value() == "my-secret-key"
+        assert s.auth_jwt_secret.get_secret_value() == "my-secret-key-32-byte-value"
 
     def test_auth_access_minutes_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_API_AUTH_ACCESS_MINUTES", "60")

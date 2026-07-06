@@ -82,15 +82,13 @@ class TestServiceFacadeGetConfig:
         settings = ApiSettings(auth_enabled=False, environment="test")
         facade = ServiceFacade(settings=settings)
         result = await facade.get_config()
-        # ConfigResponse has version, ai, storage, organization, app_version keys
-        expected_keys = {"version", "ai"}
+        expected_keys = {"version", "models"}
         assert expected_keys.issubset(result.keys())
 
     @pytest.mark.ci
-    async def test_get_config_returns_dict_with_ai_key(self):
+    async def test_get_config_returns_dict_with_models_key(self):
         settings = ApiSettings(auth_enabled=False, environment="staging")
         facade = ServiceFacade(settings=settings)
         result = await facade.get_config()
-        # ConfigResponse has version, ai, storage, organization, app_version keys
-        expected_keys = {"version", "ai", "storage", "organization", "app_version"}
+        expected_keys = {"version", "models", "updates", "default_methodology"}
         assert expected_keys.issubset(result.keys())

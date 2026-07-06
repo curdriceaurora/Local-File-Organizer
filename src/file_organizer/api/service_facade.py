@@ -7,6 +7,7 @@ with the Python backend without starting the FastAPI server.
 from __future__ import annotations
 
 import asyncio
+import os
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -15,7 +16,7 @@ from typing import Any
 from loguru import logger
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.routers.config import ConfigResponse
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.provider_env import get_current_provider
 from file_organizer.version import __version__
 
@@ -137,18 +138,19 @@ class ServiceFacade:
     async def get_config(self) -> dict[str, Any]:
         """Return the current application configuration.
 
-        Reads from the in-memory config store used by the REST endpoints so
-        that the desktop shell always sees the same values as the API.
+        Reads from the same persisted configuration manager used by the REST
+        endpoints so that the desktop shell sees the same values as the API.
 
         Returns:
-            A dictionary representation of
-            :class:`~file_organizer.api.routers.config.ConfigResponse`.
+            A dictionary representation of the active configuration profile.
         """
-        # Import here to avoid circular dependencies at module level
-        from file_organizer.api.routers import config as _config_router
 
-        cfg: ConfigResponse = _config_router._config
-        return cfg.model_dump()
+        def _load_config() -> dict[str, Any]:
+            manager = ConfigManager(config_dir=os.environ.get("FO_CONFIG_DIR"))
+            config = manager.load()
+            return manager.config_to_dict(config)
+
+        return await asyncio.to_thread(_load_config)
 
     # ------------------------------------------------------------------
     # organize_files

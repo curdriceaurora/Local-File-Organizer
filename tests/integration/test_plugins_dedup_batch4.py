@@ -63,14 +63,16 @@ class TestPluginExecutor:
         executor = PluginExecutor(plugin_path=plugin_file, plugin_name="custom_name")
         assert executor._plugin_name == "custom_name"
 
-    def test_init_default_policy_unrestricted(self, tmp_path: Path) -> None:
+    def test_init_default_policy_denies_everything(self, tmp_path: Path) -> None:
         from file_organizer.plugins.executor import PluginExecutor
 
         plugin_file = tmp_path / "my_plugin.py"
         plugin_file.write_text("# dummy")
         executor = PluginExecutor(plugin_path=plugin_file)
-        assert executor._policy.allow_all_paths is True
-        assert executor._policy.allow_all_operations is True
+        assert executor._policy.allow_all_paths is False
+        assert executor._policy.allow_all_operations is False
+        assert executor._policy.allowed_paths == frozenset()
+        assert executor._policy.allowed_operations == frozenset()
 
     def test_init_custom_policy(self, tmp_path: Path) -> None:
         from file_organizer.plugins.executor import PluginExecutor

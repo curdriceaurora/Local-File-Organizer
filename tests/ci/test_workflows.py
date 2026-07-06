@@ -596,16 +596,18 @@ class TestReleaseWorkflow:
             (
                 step
                 for step in steps
-                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
             ),
             {},
         )
-        prerelease_expr = str(release_step.get("with", {}).get("prerelease", ""))
-        assert prerelease_expr, "build.yml GitHub release step must define prerelease expression"
-        assert "contains(env.RELEASE_TAG, '-')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'a')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'b')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'rc')" in prerelease_expr
+        run_script = str(release_step.get("run", ""))
+        assert 'gh "${args[@]}"' in run_script
+        assert "--prerelease" in run_script
+        assert "--draft" in run_script
+        assert '"${RELEASE_TAG}" != *-*' in run_script
+        assert '"${RELEASE_TAG}" != *a*' in run_script
+        assert '"${RELEASE_TAG}" != *b*' in run_script
+        assert '"${RELEASE_TAG}" != *rc*' in run_script
 
 
 @pytest.mark.unit

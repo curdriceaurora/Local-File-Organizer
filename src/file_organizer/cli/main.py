@@ -254,7 +254,7 @@ def version() -> None:
 
 @app.command()
 def serve(
-    host: Annotated[str, typer.Option(help="Bind address.")] = "0.0.0.0",
+    host: Annotated[str, typer.Option(help="Bind address.")] = "127.0.0.1",
     port: Annotated[int, typer.Option(help="Port number.")] = 8000,
     reload: Annotated[bool, typer.Option(help="Auto-reload on code changes.")] = False,
     workers: Annotated[int, typer.Option(help="Number of worker processes.")] = 1,

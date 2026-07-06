@@ -309,10 +309,10 @@ class TestLoadPlugin:
 class TestBuildSandbox:
     """Tests for PluginRegistry._build_sandbox_from_manifest."""
 
-    def test_default_read_only_policy(self) -> None:
+    def test_default_policy_denies_operations(self) -> None:
         manifest: dict[str, object] = {"name": "x"}
         policy = PluginRegistry._build_sandbox_from_manifest(manifest)
-        assert "read" in policy.allowed_operations
+        assert policy.allowed_operations == frozenset()
         assert policy.allow_all_operations is False
 
     def test_custom_operations(self) -> None:

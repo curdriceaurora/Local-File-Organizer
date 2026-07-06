@@ -328,6 +328,13 @@ class TestCopyFdXattrs:
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
+    def test_noop_when_getxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.utils import safe_copy as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.delattr(w.os, "getxattr", raising=False)
+        w._copy_fd_xattrs(0, 1)  # returns early when xattr copy calls are unavailable
+
     def test_setxattr_permission_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 

@@ -534,7 +534,8 @@ class TestFormatFlagValidation:
         # the error message naming the accepted alternatives.
         assert result.exit_code == 2
         # The accepted formats appear in the error message
-        out = (result.stderr or "") + (result.output or "")
+        stderr = result.stderr_bytes.decode(errors="replace") if result.stderr_bytes else ""
+        out = stderr + (result.output or "")
         assert "rich" in out
         assert "json" in out
         assert "plain" in out

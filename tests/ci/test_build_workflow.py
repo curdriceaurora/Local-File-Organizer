@@ -172,12 +172,13 @@ class TestReleaseJob:
             (
                 step
                 for step in release.get("steps", [])
-                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
             ),
             {},
         )
-        tag_name = str(release_step.get("with", {}).get("tag_name", ""))
-        assert "RELEASE_TAG" in tag_name, "release step must publish against resolved release tag"
+        run_script = str(release_step.get("run", ""))
+        assert "release create" in run_script
+        assert "RELEASE_TAG" in run_script, "release step must publish against resolved release tag"
 
     def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
         """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
@@ -187,16 +188,14 @@ class TestReleaseJob:
             (
                 step
                 for step in steps
-                if isinstance(step, dict) and "action-gh-release" in str(step.get("uses", ""))
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
             ),
             {},
         )
-        with_config = release_step.get("with", {})
-        prerelease_expr = str(with_config.get("prerelease", ""))
-        draft_expr = str(with_config.get("draft", ""))
-        assert prerelease_expr, "build.yml release step must define prerelease expression"
-        assert draft_expr, "build.yml release step must define draft expression"
-        assert "contains(env.RELEASE_TAG, '-')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'a')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'b')" in prerelease_expr
-        assert "contains(env.RELEASE_TAG, 'rc')" in prerelease_expr
+        run_script = str(release_step.get("run", ""))
+        assert "--prerelease" in run_script, "build.yml release step must set prerelease"
+        assert "--draft" in run_script, "build.yml release step must set draft for stable releases"
+        assert '"${RELEASE_TAG}" != *-*' in run_script
+        assert '"${RELEASE_TAG}" != *a*' in run_script
+        assert '"${RELEASE_TAG}" != *b*' in run_script
+        assert '"${RELEASE_TAG}" != *rc*' in run_script

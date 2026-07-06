@@ -60,7 +60,7 @@ class PluginSandbox:
     ) -> None:
         """Set up a sandbox for the named plugin with the given security policy."""
         self.plugin_name = plugin_name
-        self.policy = policy or PluginSecurityPolicy.unrestricted()
+        self.policy = policy or PluginSecurityPolicy()
 
     def validate_file_access(self, path: str | Path) -> bool:
         """Return whether the plugin may access the provided path."""

@@ -355,10 +355,6 @@ class PluginRegistry:
         allowed_operations = list(manifest.get("allowed_operations", []))
         allow_all_ops = manifest.get("allow_all_operations", False)
 
-        # If no operations specified, use safe defaults (read-only)
-        if not allowed_operations and not allow_all_ops:
-            allowed_operations = ["read"]
-
         return PluginSecurityPolicy.from_permissions(
             allowed_paths=list(manifest.get("allowed_paths", [])),
             allowed_operations=allowed_operations,
