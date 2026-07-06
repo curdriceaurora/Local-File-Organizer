@@ -203,7 +203,7 @@ audio = [
 ]
 
 video = [
-    "opencv-python~=4.8",  # Video frame processing
+    "opencv-python~=5.0",  # Video frame processing
     "scenedetect[opencv]>=0.6.0",  # 0.x — unstable API, keep >=; Scene detection algorithms
 ]
 
