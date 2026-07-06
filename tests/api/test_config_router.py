@@ -20,6 +20,8 @@ from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.config import router
 from file_organizer.config.manager import ConfigManager
 
+pytestmark = pytest.mark.integration
+
 
 def _build_app(
     config_dir: Path,
@@ -124,6 +126,44 @@ class TestUpdateConfig:
         assert reloaded.models.text_model == "custom-model"
         assert reloaded.models.temperature == pytest.approx(0.8)
         assert reloaded.models.max_tokens == 4000
+
+    def test_update_config_load_and_save_use_profile_lock(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The full load/mutate/save sequence runs under the profile lock."""
+        manager, client = _build_app(tmp_path, admin_user=_admin_user())
+        original_load = manager.load
+        original_save = manager.save
+        lock_depth = 0
+
+        def guarded_load(profile: str = "default"):
+            assert lock_depth == 1
+            return original_load(profile)
+
+        def guarded_save(*args, **kwargs):
+            assert lock_depth == 1
+            return original_save(*args, **kwargs)
+
+        class TrackingLock:
+            def __enter__(self):
+                nonlocal lock_depth
+                lock_depth += 1
+
+            def __exit__(self, exc_type, exc, tb):
+                nonlocal lock_depth
+                lock_depth -= 1
+
+        monkeypatch.setattr(manager, "load", guarded_load)
+        monkeypatch.setattr(manager, "save", guarded_save)
+        monkeypatch.setattr(
+            "file_organizer.api.routers.config._profile_update_lock",
+            lambda _manager, _profile: TrackingLock(),
+        )
+
+        resp = client.put("/api/v1/config", json={"default_methodology": "para"})
+
+        assert resp.status_code == 200
+        assert lock_depth == 0
 
     def test_update_config_partial_update_preserves_other_fields(self, tmp_path: Path) -> None:
         """Partial updates keep fields that were not mentioned."""

@@ -249,9 +249,9 @@ class TestLoadSettings:
         assert settings.auth_db_path == "/tmp/auth.db"  # noqa: test-hardcoded-paths
 
     def test_env_auth_jwt_secret(self, monkeypatch):
-        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "my-secret-key")
+        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "my-secret-key-32-byte-value")
         settings = load_settings()
-        assert settings.auth_jwt_secret.get_secret_value() == "my-secret-key"
+        assert settings.auth_jwt_secret.get_secret_value() == "my-secret-key-32-byte-value"
 
     def test_env_auth_jwt_algorithm(self, monkeypatch):
         monkeypatch.setenv("FO_API_AUTH_JWT_ALGORITHM", "HS512")
@@ -573,6 +573,13 @@ class TestLoadSettings:
         monkeypatch.setenv("FO_API_ENVIRONMENT", "production")
         monkeypatch.setenv("FO_API_CORS_ORIGINS", "https://example.com")
         with pytest.raises(ValueError, match="FO_API_AUTH_JWT_SECRET must be set"):
+            load_settings()
+
+    def test_short_jwt_secret_error(self, monkeypatch):
+        """Short non-placeholder JWT secrets should fail when auth is enabled."""
+        monkeypatch.setenv("FO_API_AUTH_ENABLED", "true")
+        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "short-secret")
+        with pytest.raises(ValueError, match="at least 16 characters"):
             load_settings()
 
     def test_api_key_enabled_without_hashes_warns(self, monkeypatch, caplog):

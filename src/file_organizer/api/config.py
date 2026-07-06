@@ -423,12 +423,13 @@ _PLACEHOLDER_AUTH_SECRETS = frozenset(
         "your-secret-here",
     }
 )
+_MIN_AUTH_SECRET_LENGTH = 16
 
 
 def _is_placeholder_auth_secret(secret: str) -> bool:
     """Return whether a JWT secret is an obvious placeholder value."""
     normalized = secret.strip().lower()
-    return normalized in _PLACEHOLDER_AUTH_SECRETS
+    return normalized in _PLACEHOLDER_AUTH_SECRETS or len(secret.strip()) < _MIN_AUTH_SECRET_LENGTH
 
 
 def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) -> None:
@@ -445,7 +446,8 @@ def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) ->
         settings.auth_jwt_secret.get_secret_value()
     ):
         raise ValueError(
-            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value when auth is enabled."
+            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value "
+            f"of at least {_MIN_AUTH_SECRET_LENGTH} characters when auth is enabled."
         )
 
     if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:

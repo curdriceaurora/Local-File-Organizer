@@ -35,45 +35,45 @@ class TestConfigGetEndpoint:
         """Config should include AI model settings."""
         response = client.get("/api/v1/config")
 
-        if response.status_code == 200:
-            config = response.json()["config"]
-            assert "models" in config
-            assert isinstance(config["models"], dict)
+        assert response.status_code == 200
+        config = response.json()["config"]
+        assert "models" in config
+        assert isinstance(config["models"], dict)
 
     def test_config_includes_storage_settings(self, client):
         """Config should include persisted config metadata."""
         response = client.get("/api/v1/config")
 
-        if response.status_code == 200:
-            config = response.json()["config"]
-            assert "version" in config
-            assert "setup_completed" in config
+        assert response.status_code == 200
+        config = response.json()["config"]
+        assert "version" in config
+        assert "setup_completed" in config
 
     def test_config_includes_organization_settings(self, client):
         """Config should include organization settings."""
         response = client.get("/api/v1/config")
 
-        if response.status_code == 200:
-            config = response.json()["config"]
-            assert "default_methodology" in config
+        assert response.status_code == 200
+        config = response.json()["config"]
+        assert "default_methodology" in config
 
     def test_config_response_structure(self, client):
         """Config response should have consistent structure."""
         response = client.get("/api/v1/config")
 
-        if response.status_code == 200:
-            data = response.json()
-            assert set(data) >= {"profile", "config", "profiles"}
-            assert isinstance(data["config"], dict)
-            assert isinstance(data["profiles"], list)
+        assert response.status_code == 200
+        data = response.json()
+        assert set(data) >= {"profile", "config", "profiles"}
+        assert isinstance(data["config"], dict)
+        assert isinstance(data["profiles"], list)
 
     def test_config_version_included(self, client):
         """Config should include application version."""
         response = client.get("/api/v1/config")
 
-        if response.status_code == 200:
-            config = response.json()["config"]
-            assert "version" in config
+        assert response.status_code == 200
+        config = response.json()["config"]
+        assert "version" in config
 
 
 class TestConfigUpdateEndpoint:

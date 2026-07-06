@@ -58,6 +58,19 @@ def _get_arch_hints() -> list[str]:
     return hints
 
 
+def _looks_like_pipx_install(executable: Path) -> bool:
+    """Return whether the running Python path appears to belong to pipx."""
+    candidates = [executable, Path(sys.prefix)]
+    virtual_env = os.environ.get("VIRTUAL_ENV")
+    if virtual_env:
+        candidates.append(Path(virtual_env))
+
+    for path in candidates:
+        if "pipx" in {part.lower() for part in path.parts}:
+            return True
+    return False
+
+
 def _is_checksum_file(filename: str) -> bool:
     """Check if a filename is a checksum file.
 
@@ -159,8 +172,7 @@ class UpdateInstaller:
             return None
 
         executable = Path(sys.executable)
-        pipx_env = any(os.environ.get(name) for name in ("PIPX_HOME", "PIPX_BIN_DIR"))
-        if pipx_env or "pipx" in executable.as_posix().lower():
+        if _looks_like_pipx_install(executable):
             return ["pipx", "upgrade", "local-file-organizer"]
 
         return [str(executable), "-m", "pip", "install", "-U", "local-file-organizer"]
@@ -385,8 +397,6 @@ class UpdateInstaller:
     @staticmethod
     def _detect_install_dir() -> Path:
         """Detect the directory containing the running executable."""
-        import sys
-
         exe = Path(sys.executable).resolve()
         return exe.parent
 

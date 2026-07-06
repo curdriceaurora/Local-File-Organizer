@@ -262,7 +262,7 @@ class TestPluginSecurityPolicy:
 
 
 class TestPluginSandbox:
-    def test_unrestricted_policy_allows_any_path(self, tmp_path: Path) -> None:
+    def test_default_policy_denies_all_paths(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox
 
         sandbox = PluginSandbox(plugin_name="test", policy=None)

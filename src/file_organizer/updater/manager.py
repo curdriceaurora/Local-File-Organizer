@@ -122,9 +122,9 @@ class UpdateManager:
             if pip_command is not None:
                 command_text = " ".join(pip_command)
                 status.install_result = InstallResult(
-                    success=True,
+                    success=False,
                     message=(
-                        "No compatible binary found for this platform. "
+                        "No compatible binary was installed for this platform. "
                         f"This installation can be upgraded with: {command_text}"
                     ),
                 )

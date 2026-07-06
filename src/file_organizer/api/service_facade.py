@@ -144,9 +144,13 @@ class ServiceFacade:
         Returns:
             A dictionary representation of the active configuration profile.
         """
-        manager = ConfigManager(config_dir=os.environ.get("FO_CONFIG_DIR"))
-        config = manager.load()
-        return manager.config_to_dict(config)
+
+        def _load_config() -> dict[str, Any]:
+            manager = ConfigManager(config_dir=os.environ.get("FO_CONFIG_DIR"))
+            config = manager.load()
+            return manager.config_to_dict(config)
+
+        return await asyncio.to_thread(_load_config)
 
     # ------------------------------------------------------------------
     # organize_files

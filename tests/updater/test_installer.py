@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -72,7 +73,9 @@ class TestInstallerInit:
         assert inst.install_dir == expected
 
     @patch("platform.system", return_value="Darwin")
-    def test_pip_upgrade_command_macos(self, _system):
+    def test_pip_upgrade_command_macos(self, _system, monkeypatch):
+        monkeypatch.delenv("PIPX_HOME", raising=False)
+        monkeypatch.delenv("PIPX_BIN_DIR", raising=False)
         inst = UpdateInstaller()
         command = inst.pip_upgrade_command()
         assert command is not None
@@ -80,9 +83,23 @@ class TestInstallerInit:
 
     @patch("platform.system", return_value="Windows")
     def test_pip_upgrade_command_pipx(self, _system, monkeypatch, tmp_path):
-        monkeypatch.setenv("PIPX_HOME", str(tmp_path / "pipx"))
+        monkeypatch.setattr(
+            sys,
+            "executable",
+            str(tmp_path / "pipx" / "venvs" / "local-file-organizer" / "bin" / "python"),
+        )
         inst = UpdateInstaller()
         assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+
+    @patch("platform.system", return_value="Darwin")
+    def test_pip_upgrade_command_ignores_global_pipx_env(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setenv("PIPX_HOME", str(tmp_path / "pipx"))
+        monkeypatch.setenv("PIPX_BIN_DIR", str(tmp_path / "bin"))
+        inst = UpdateInstaller()
+        command = inst.pip_upgrade_command()
+        assert command is not None
+        assert command[0] == sys.executable
+        assert command[1:] == ["-m", "pip", "install", "-U", "local-file-organizer"]
 
     @patch("platform.system", return_value="Linux")
     def test_pip_upgrade_command_linux_none(self, _system):

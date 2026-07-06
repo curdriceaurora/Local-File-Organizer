@@ -156,7 +156,7 @@ class TestUpdateManagerUpdate:
         status = mgr.update()
 
         assert status.install_result is not None
-        assert status.install_result.success is True
+        assert status.install_result.success is False
         assert "python -m pip install -U local-file-organizer" in status.install_result.message
 
     @patch("file_organizer.updater.manager.UpdateChecker")

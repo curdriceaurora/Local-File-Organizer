@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from threading import Lock, RLock
+
 from fastapi import APIRouter, Depends, Query
 
 from file_organizer.api.dependencies import get_config_manager, require_admin_user
@@ -19,6 +21,16 @@ from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersio
 from file_organizer.config.schema import AppConfig
 
 router = APIRouter(tags=["config"], responses=INTERNAL_500_RESPONSE)
+
+_CONFIG_UPDATE_LOCKS: dict[tuple[str, str], RLock] = {}
+_CONFIG_UPDATE_LOCKS_GUARD = Lock()
+
+
+def _profile_update_lock(manager: ConfigManager, profile: str) -> RLock:
+    """Return the process-local lock for one persisted config profile."""
+    key = (str(manager.config_dir.resolve()), profile)
+    with _CONFIG_UPDATE_LOCKS_GUARD:
+        return _CONFIG_UPDATE_LOCKS.setdefault(key, RLock())
 
 
 def _apply_update(config: AppConfig, request: ConfigUpdateRequest) -> None:
@@ -112,19 +124,20 @@ def update_config(
     _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
     """Apply partial updates to a persisted configuration profile."""
-    config = manager.load(request.profile)
-    _apply_update(config, request)
+    with _profile_update_lock(manager, request.profile):
+        config = manager.load(request.profile)
+        _apply_update(config, request)
 
-    try:
-        manager.save(config, request.profile)
-    except UnsupportedConfigVersionError as exc:
-        raise ApiError(
-            status_code=409,
-            error="unsupported_config_version",
-            message=str(exc),
-        ) from exc
+        try:
+            manager.save(config, request.profile)
+        except UnsupportedConfigVersionError as exc:
+            raise ApiError(
+                status_code=409,
+                error="unsupported_config_version",
+                message=str(exc),
+            ) from exc
 
-    return _response(manager, request.profile, config)
+        return _response(manager, request.profile, config)
 
 
 @router.post(
