@@ -1201,7 +1201,7 @@ wheels = [
 
 [[package]]
 name = "diff-cover"
-version = "7.7.0"
+version = "10.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chardet" },
@@ -1209,9 +1209,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/37/c2/f1919023fea5079b479d97793c368db8dd337170a7dbc4b5e76c1fc29d12/diff_cover-7.7.0.tar.gz", hash = "sha256:60614cf7e722cf7fb1bde497afac0b514294e1e26534449622dac4da296123fb", size = 93844, upload-time = "2023-07-15T01:51:16.778Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/35/21/057e816125c162662d2a2cc2ebcd72dd333e78e51678298d07dd3146011a/diff_cover-10.3.0.tar.gz", hash = "sha256:474dbc63e815fbb7567d7b7ca5b104123e96129f25426ebdbc9a1bdbb935b2c6", size = 106546, upload-time = "2026-05-30T14:17:14.32Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/78/499668f2815a188a4b08b28bcd4dada451c4fd19256b30a643d977e5b6aa/diff_cover-7.7.0-py3-none-any.whl", hash = "sha256:bf86f32ec999f9a9e79bf24969f7127ea7b4e55c3ef3cd9300feb13188c89736", size = 51145, upload-time = "2023-07-15T01:51:14.797Z" },
+    { url = "https://files.pythonhosted.org/packages/83/0a/a96e57a7a3fca419cd5ceff0d13dee2166520fa67103fb82624ad64700fb/diff_cover-10.3.0-py3-none-any.whl", hash = "sha256:2e47d5ab3868d1e92131c11f364f3f4a8583c97123d3bbc6b6cc8ce0a4cc2202", size = 58989, upload-time = "2026-05-30T14:17:12.858Z" },
 ]
 
 [[package]]
@@ -2404,7 +2404,7 @@ requires-dist = [
     { name = "codespell", marker = "extra == 'dev'", specifier = "~=2.2" },
     { name = "defusedxml", specifier = ">=0.7" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.16.0" },
-    { name = "diff-cover", marker = "extra == 'dev'", specifier = "~=7.0" },
+    { name = "diff-cover", marker = "extra == 'dev'", specifier = "~=10.3" },
     { name = "ebooklib", marker = "extra == 'parsers'", specifier = ">=0.20,<1" },
     { name = "email-validator", specifier = "~=2.1" },
     { name = "ezdxf", marker = "extra == 'cad'", specifier = "~=1.1" },
