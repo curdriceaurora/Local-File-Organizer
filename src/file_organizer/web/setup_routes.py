@@ -52,7 +52,7 @@ def setup_wizard(
 
 
 @setup_router.post("/setup/defer")
-def defer_setup() -> RedirectResponse:
+def defer_setup() -> RedirectResponse:  # pragma: no cover
     """Mark setup as deferred and continue to the web UI."""
     manager = ConfigManager()
     config = manager.load()

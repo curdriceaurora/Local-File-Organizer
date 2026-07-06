@@ -10,6 +10,7 @@ Covers:
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -168,9 +169,7 @@ class TestSetupCapabilities:
         assert "next_steps" in body["ollama"]
         assert isinstance(body["models"], list)
 
-    def test_capabilities_returns_ollama_pull_next_step(
-        self, setup_client: TestClient
-    ) -> None:
+    def test_capabilities_returns_ollama_pull_next_step(self, setup_client: TestClient) -> None:
         mock_caps = self._make_mock_capabilities()
         mock_caps.ollama_status.installed = True
         mock_caps.ollama_status.running = True
@@ -266,14 +265,15 @@ class TestBrowseFolder:
     def test_browse_folder_darwin_cancelled_returns_cancelled(
         self, setup_client: TestClient
     ) -> None:
-        mock_result = MagicMock()
-        mock_result.returncode = 1
-        mock_result.stderr = "User canceled."
-        mock_result.stdout = ""
+        exc = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["/usr/bin/osascript"],  # noqa: test-hardcoded-paths
+            stderr="User canceled.",
+        )
 
         with (
             patch.object(sys, "platform", "darwin"),
-            patch("file_organizer.api.routers.setup.subprocess.run", return_value=mock_result),
+            patch("file_organizer.api.routers.setup.subprocess.run", side_effect=exc),
         ):
             r = setup_client.get("/setup/browse-folder")
 

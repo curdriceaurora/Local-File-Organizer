@@ -280,7 +280,7 @@ class PluginExecutor:
                         logger.debug("Failed to close plugin worker pipe cleanly", exc_info=True)
             proc.terminate()
             try:
-                proc.wait(timeout=5)
+                proc.wait(timeout=15)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
@@ -409,7 +409,7 @@ class PluginExecutor:
                 f"Worker for '{self._plugin_name}' died before receiving call '{method}'."
             ) from exc
 
-        raw = self._readline_with_timeout(timeout=10.0)
+        raw = self._readline_with_timeout(timeout=30.0)
         if not raw:
             stderr_output = ""
             if stderr is not None:

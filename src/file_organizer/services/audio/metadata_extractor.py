@@ -111,7 +111,7 @@ class AudioMetadataExtractor:
     def _extract_with_mutagen(self, audio_path: Path) -> AudioMetadata:
         """Extract metadata using mutagen library."""
         try:
-            from mutagen import File as MutagenFile
+            from mutagen import File as MutagenFile  # type: ignore[attr-defined]
         except ImportError as e:
             raise ImportError(
                 "mutagen is required for audio metadata extraction. "
@@ -327,7 +327,7 @@ class AudioMetadataExtractor:
             file_size=audio_path.stat().st_size,
             format=audio_path.suffix[1:].upper(),
             duration=tag.duration or 0.0,
-            bitrate=tag.bitrate or 0,
+            bitrate=int(tag.bitrate) if tag.bitrate else 0,
             sample_rate=tag.samplerate or 0,
             channels=tag.channels or 0,
             title=tag.title,
