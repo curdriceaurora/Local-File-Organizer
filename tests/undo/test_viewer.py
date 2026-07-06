@@ -60,12 +60,12 @@ class TestHistoryViewer(unittest.TestCase):
         """Test showing recent operations."""
         # Capture output
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
 
         self.viewer.show_recent_operations(limit=10)
 
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("operations", output.lower())
         self.assertIn("file1.txt", output)
@@ -74,12 +74,12 @@ class TestHistoryViewer(unittest.TestCase):
     def test_show_operation_details(self):
         """Test showing details of specific operation."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
 
         self.viewer.show_operation_details(self.op1_id)
 
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn(str(self.op1_id), output)
         self.assertIn("move", output.lower())
@@ -102,12 +102,12 @@ class TestHistoryViewer(unittest.TestCase):
         self.history.commit_transaction(txn_id)
 
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
 
         self.viewer.show_transaction_details(txn_id)
 
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn(txn_id, output)
         self.assertIn("file3.txt", output)
@@ -136,12 +136,12 @@ class TestHistoryViewer(unittest.TestCase):
     def test_display_filtered_operations(self):
         """Test displaying filtered operations."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
 
         self.viewer.display_filtered_operations(operation_type="move")
 
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("found", output.lower())
         self.assertIn("file1.txt", output)
@@ -158,12 +158,12 @@ class TestHistoryViewer(unittest.TestCase):
     def test_show_statistics(self):
         """Test showing statistics."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
 
         self.viewer.show_statistics()
 
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("Statistics", output)
         self.assertIn("Total operations: 2", output)
@@ -229,10 +229,10 @@ class TestHistoryViewer(unittest.TestCase):
         empty_viewer = HistoryViewer(history=empty_history)
 
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         empty_viewer.show_recent_operations()
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("No operations found", output)
         empty_viewer.close()
@@ -240,10 +240,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_show_operation_details_not_found(self):
         """Test show_operation_details with non-existent operation."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.show_operation_details(999999)
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("999999", output)
         self.assertIn("not found", output)
@@ -262,10 +262,10 @@ class TestHistoryViewer(unittest.TestCase):
         )
 
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.show_operation_details(op_id)
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("Metadata", output)
         self.assertIn("reason", output)
@@ -274,10 +274,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_show_transaction_details_not_found(self):
         """Test show_transaction_details with non-existent transaction."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.show_transaction_details("nonexistent-txn-id")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("nonexistent-txn-id", output)
         self.assertIn("not found", output)
@@ -285,10 +285,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_filter_operations_invalid_type(self):
         """Test filter_operations with invalid operation type."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         operations = self.viewer.filter_operations(operation_type="invalid_type")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertEqual(operations, [])
         self.assertIn("Invalid operation type", output)
@@ -296,10 +296,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_filter_operations_invalid_status(self):
         """Test filter_operations with invalid status."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         operations = self.viewer.filter_operations(status="invalid_status")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertEqual(operations, [])
         self.assertIn("Invalid status", output)
@@ -307,10 +307,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_display_filtered_operations_with_search(self):
         """Test display_filtered_operations with search parameter."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.display_filtered_operations(search="file1.txt")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("file1.txt", output)
         self.assertIn("operations found affecting path", output)
@@ -318,20 +318,20 @@ class TestHistoryViewer(unittest.TestCase):
     def test_display_filtered_operations_search_no_results(self):
         """Test display_filtered_operations with search that returns nothing."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.display_filtered_operations(search="nonexistent_file.xyz")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("No operations found affecting path", output)
 
     def test_display_filtered_operations_no_matching_filters(self):
         """Test display_filtered_operations with no matching results."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         self.viewer.display_filtered_operations(operation_type="create")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIn("No operations found matching the filters", output)
 
@@ -377,10 +377,10 @@ class TestHistoryViewer(unittest.TestCase):
     def test_parse_date_invalid_format(self):
         """Test parsing date with unparseable format."""
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = StringIO()  # noqa - mocking stdout
         parsed = self.viewer._parse_date("not-a-date")
         output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
+        sys.stdout = old_stdout  # noqa - mocking stdout
 
         self.assertIsNone(parsed)
         self.assertIn("Warning", output)

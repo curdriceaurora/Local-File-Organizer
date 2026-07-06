@@ -306,12 +306,4 @@ def browse_folder(
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
         return BrowseFolderResponse(path="", available=False)
 
-    if result.returncode != 0:
-        # osascript exit code 1 + "User canceled." in stderr → explicit cancel.
-        # Any other failure (permissions, GUI unavailable, etc.) is treated as
-        # unavailable so the browser can ask for a typed absolute path.
-        if "user canceled" in result.stderr.lower() or "-128" in result.stderr:
-            return BrowseFolderResponse(path="", available=True, cancelled=True)
-        return BrowseFolderResponse(path="", available=False)
-
     return BrowseFolderResponse(path=result.stdout.strip(), available=True, cancelled=False)

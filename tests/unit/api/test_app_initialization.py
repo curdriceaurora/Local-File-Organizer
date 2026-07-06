@@ -258,7 +258,7 @@ class TestAppLifespan:
         from file_organizer.api.main import create_app
         from file_organizer.api.routers import health
 
-        health._startup_time -= 100.0
+        health._startup_time -= 100.0  # noqa - safe mutation for testing
         stale_time = health._startup_time
 
         app = create_app()

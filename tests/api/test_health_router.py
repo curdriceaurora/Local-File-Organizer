@@ -260,6 +260,6 @@ class TestHealthEndpoint:
 
         # Force a stale timestamp, then verify reset overwrites it
         old = health._startup_time
-        health._startup_time = old - 100.0  # artificially stale
+        health._startup_time = old - 100.0  # artificially stale  # noqa - safe mutation for testing
         health.reset_startup_time()
         assert health._startup_time >= old  # at least as recent as before
