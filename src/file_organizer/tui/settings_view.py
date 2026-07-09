@@ -1,14 +1,19 @@
 # pyre-ignore-all-errors
-"""TUI view for persistent runtime parallelism controls.
+"""TUI Settings view: the single place to configure an organize run.
 
-This view is intentionally scoped to parallelism controls that map directly to
-``FileOrganizer`` runtime knobs:
-- max workers
-- prefetch depth
-- sequential mode (derived from workers=1, prefetch=0)
+Beyond the runtime parallelism controls (max workers, prefetch depth,
+sequential mode), this view consolidates the most-used run knobs so Settings
+is a one-stop configuration surface:
 
-Values are persisted via ``ConfigManager`` under ``AppConfig.parallel`` so they
-can be reused by TUI workflows such as Organization Preview.
+- default input/output directories (pre-filled for organize runs)
+- organization methodology (none, PARA, Johnny Decimal)
+- text model choice (cycles through curated Ollama presets)
+- update / privacy toggles (check-on-startup, include pre-releases)
+
+Every value is persisted through :class:`ConfigManager` onto the canonical
+:class:`~file_organizer.config.schema.AppConfig` so the same configuration is
+reused by the CLI, web UI, and other TUI workflows such as Organization
+Preview.
 """
 
 from __future__ import annotations
@@ -21,13 +26,33 @@ from typing import Any
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import Static
+from textual.widgets import Input, Static
 
 from file_organizer.config.manager import ConfigManager
 
 _DEFAULT_PREFETCH_DEPTH = 2
 _MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
 logger = logging.getLogger(__name__)
+
+# Organization methodologies, in cycle order. Values match
+# ``AppConfig.default_methodology`` and the TUI MethodologyView vocabulary.
+_METHODOLOGY_ORDER = ("none", "para", "jd")
+_METHODOLOGY_LABELS = {
+    "none": "None (flat / content-based)",
+    "para": "PARA",
+    "jd": "Johnny Decimal",
+}
+
+# Curated text-model presets cycled through with the "t" binding. A value
+# persisted outside this list is preserved and prepended so cycling never
+# silently discards a hand-picked model.
+_TEXT_MODEL_PRESETS = (
+    "qwen2.5:3b-instruct-q4_K_M",
+    "qwen2.5:7b-instruct-q4_K_M",
+    "llama3.2:3b-instruct-q4_K_M",
+    "gemma2:2b-instruct-q4_K_M",
+)
+_DEFAULT_TEXT_MODEL = _TEXT_MODEL_PRESETS[0]
 
 
 @dataclass(frozen=True)
@@ -41,6 +66,18 @@ class ParallelRuntimeSettings:
     def sequential(self) -> bool:
         """Return True when settings imply sequential execution."""
         return self.max_workers == 1 and self.prefetch_depth == 0
+
+
+@dataclass(frozen=True)
+class WorkflowSettings:
+    """Persisted run-configuration knobs surfaced in the Settings view."""
+
+    default_input_dir: str
+    default_output_dir: str
+    methodology: str
+    text_model: str
+    check_updates_on_startup: bool
+    include_prereleases: bool
 
 
 def _coerce_positive_int(value: Any, *, max_value: int | None = None) -> int | None:
@@ -69,6 +106,13 @@ def _coerce_non_negative_int(value: Any, *, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed >= 0 else default
+
+
+def _normalize_methodology(value: Any) -> str:
+    """Return a known methodology identifier, defaulting to ``"none"``."""
+    if isinstance(value, str) and value in _METHODOLOGY_ORDER:
+        return value
+    return "none"
 
 
 def load_parallel_runtime_settings(
@@ -124,8 +168,48 @@ def save_parallel_runtime_settings(
     resolved_manager.save(config, profile=profile)
 
 
+def load_workflow_settings(
+    *,
+    profile: str = "default",
+    manager: ConfigManager | None = None,
+) -> WorkflowSettings:
+    """Load persistent run-configuration knobs from configuration."""
+    resolved_manager = manager or ConfigManager()
+    config = resolved_manager.load(profile=profile)
+
+    text_model = config.models.text_model.strip() or _DEFAULT_TEXT_MODEL
+    return WorkflowSettings(
+        default_input_dir=config.default_input_dir or "",
+        default_output_dir=config.default_output_dir or "",
+        methodology=_normalize_methodology(config.default_methodology),
+        text_model=text_model,
+        check_updates_on_startup=bool(config.updates.check_on_startup),
+        include_prereleases=bool(config.updates.include_prereleases),
+    )
+
+
+def save_workflow_settings(
+    settings: WorkflowSettings,
+    *,
+    profile: str = "default",
+    manager: ConfigManager | None = None,
+) -> None:
+    """Persist run-configuration knobs to configuration."""
+    resolved_manager = manager or ConfigManager()
+    config = resolved_manager.load(profile=profile)
+
+    config.default_input_dir = settings.default_input_dir.strip()
+    config.default_output_dir = settings.default_output_dir.strip()
+    config.default_methodology = _normalize_methodology(settings.methodology)
+    config.models.text_model = settings.text_model.strip() or _DEFAULT_TEXT_MODEL
+    config.updates.check_on_startup = bool(settings.check_updates_on_startup)
+    config.updates.include_prereleases = bool(settings.include_prereleases)
+
+    resolved_manager.save(config, profile=profile)
+
+
 class SettingsView(Vertical):
-    """Interactive TUI settings panel for runtime parallel controls."""
+    """Interactive TUI settings panel for run configuration."""
 
     DEFAULT_CSS = """
     SettingsView {
@@ -139,6 +223,10 @@ class SettingsView(Vertical):
         margin: 1 0;
         padding: 1 2;
     }
+
+    SettingsView Input {
+        margin: 0 0 1 0;
+    }
     """
 
     BINDINGS = [
@@ -148,6 +236,10 @@ class SettingsView(Vertical):
         Binding("left", "prefetch_down", "Prefetch -", show=True),
         Binding("s", "toggle_sequential", "Sequential", show=True),
         Binding("a", "toggle_auto_workers", "Auto Workers", show=True),
+        Binding("m", "cycle_methodology", "Methodology", show=True),
+        Binding("t", "cycle_text_model", "Model", show=True),
+        Binding("u", "toggle_update_check", "Updates", show=True),
+        Binding("p", "toggle_prereleases", "Pre-releases", show=True),
         Binding("enter", "save_settings", "Save", show=True),
         Binding("r", "reload_settings", "Reload", show=True),
     ]
@@ -163,18 +255,32 @@ class SettingsView(Vertical):
         """Create the settings view with profile-backed persisted state."""
         super().__init__(name=name, id=id, classes=classes)
         self._profile = profile
+        # Parallelism controls
         self._max_workers: int | None = None
         self._prefetch_depth: int = _DEFAULT_PREFETCH_DEPTH
         self._last_non_sequential_workers: int | None = None
         self._last_non_sequential_prefetch_depth: int = _DEFAULT_PREFETCH_DEPTH
+        # Workflow controls
+        self._input_dir: str = ""
+        self._output_dir: str = ""
+        self._methodology: str = "none"
+        self._text_model: str = _DEFAULT_TEXT_MODEL
+        self._check_updates: bool = True
+        self._include_prereleases: bool = False
 
     def compose(self) -> ComposeResult:
         """Render settings panel content."""
         yield Static(self._render_text(), id="settings-body")
+        yield Input(placeholder="Default input directory", id="settings-input-dir")
+        yield Input(placeholder="Default output directory", id="settings-output-dir")
 
     def on_mount(self) -> None:
         """Load persisted settings when mounted."""
         self.action_reload_settings()
+
+    # ------------------------------------------------------------------
+    # Parallelism actions
+    # ------------------------------------------------------------------
 
     def action_workers_up(self) -> None:
         """Increase worker count unless sequential mode is active."""
@@ -242,18 +348,58 @@ class SettingsView(Vertical):
             self._set_status("Sequential mode enabled.")
         self._refresh_panel()
 
+    # ------------------------------------------------------------------
+    # Workflow actions
+    # ------------------------------------------------------------------
+
+    def action_cycle_methodology(self) -> None:
+        """Cycle the default organization methodology."""
+        current = _normalize_methodology(self._methodology)
+        index = _METHODOLOGY_ORDER.index(current)
+        self._methodology = _METHODOLOGY_ORDER[(index + 1) % len(_METHODOLOGY_ORDER)]
+        self._set_status(f"Methodology: {_METHODOLOGY_LABELS[self._methodology]}")
+        self._refresh_panel()
+
+    def action_cycle_text_model(self) -> None:
+        """Cycle the text model through curated presets (preserving custom values)."""
+        options = self._text_model_options()
+        try:
+            index = options.index(self._text_model)
+        except ValueError:
+            index = -1
+        self._text_model = options[(index + 1) % len(options)]
+        self._set_status(f"Text model: {self._text_model}")
+        self._refresh_panel()
+
+    def action_toggle_update_check(self) -> None:
+        """Toggle checking for updates on startup."""
+        self._check_updates = not self._check_updates
+        state = "on" if self._check_updates else "off"
+        self._set_status(f"Update check on startup: {state}")
+        self._refresh_panel()
+
+    def action_toggle_prereleases(self) -> None:
+        """Toggle whether update checks include pre-releases."""
+        self._include_prereleases = not self._include_prereleases
+        state = "on" if self._include_prereleases else "off"
+        self._set_status(f"Include pre-releases: {state}")
+        self._refresh_panel()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Track directory inputs as the user edits them."""
+        if event.input.id == "settings-input-dir":
+            self._input_dir = event.value
+        elif event.input.id == "settings-output-dir":
+            self._output_dir = event.value
+
+    # ------------------------------------------------------------------
+    # Persistence actions
+    # ------------------------------------------------------------------
+
     def action_reload_settings(self) -> None:
         """Reload persisted settings from configuration."""
-        try:
-            loaded = load_parallel_runtime_settings(profile=self._profile)
-        except Exception as exc:
-            self._set_status(f"Failed to load settings: {exc}")
-        else:
-            self._max_workers = loaded.max_workers
-            self._prefetch_depth = loaded.prefetch_depth
-            if not loaded.sequential:
-                self._record_non_sequential_snapshot()
-            self._set_status("Settings loaded.")
+        self._reload_parallel_settings()
+        self._reload_workflow_settings()
         self._refresh_panel()
 
     def action_save_settings(self) -> None:
@@ -266,11 +412,72 @@ class SettingsView(Vertical):
                 ),
                 profile=self._profile,
             )
+            save_workflow_settings(
+                self._current_workflow_settings(),
+                profile=self._profile,
+            )
         except Exception as exc:
             self._set_status(f"Failed to save settings: {exc}")
         else:
             self._set_status("Settings saved.")
         self._refresh_panel()
+
+    def _reload_parallel_settings(self) -> None:
+        """Reload parallel controls, surfacing any load failure."""
+        try:
+            loaded = load_parallel_runtime_settings(profile=self._profile)
+        except Exception as exc:
+            self._set_status(f"Failed to load settings: {exc}")
+        else:
+            self._max_workers = loaded.max_workers
+            self._prefetch_depth = loaded.prefetch_depth
+            if not loaded.sequential:
+                self._record_non_sequential_snapshot()
+            self._set_status("Settings loaded.")
+
+    def _reload_workflow_settings(self) -> None:
+        """Reload workflow controls, surfacing any load failure."""
+        try:
+            loaded = load_workflow_settings(profile=self._profile)
+        except Exception as exc:
+            self._set_status(f"Failed to load settings: {exc}")
+            return
+        self._input_dir = loaded.default_input_dir
+        self._output_dir = loaded.default_output_dir
+        self._methodology = loaded.methodology
+        self._text_model = loaded.text_model
+        self._check_updates = loaded.check_updates_on_startup
+        self._include_prereleases = loaded.include_prereleases
+        self._sync_dir_inputs()
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _current_workflow_settings(self) -> WorkflowSettings:
+        """Snapshot the in-memory workflow controls."""
+        return WorkflowSettings(
+            default_input_dir=self._input_dir,
+            default_output_dir=self._output_dir,
+            methodology=self._methodology,
+            text_model=self._text_model,
+            check_updates_on_startup=self._check_updates,
+            include_prereleases=self._include_prereleases,
+        )
+
+    def _text_model_options(self) -> list[str]:
+        """Return cycle options, prepending any persisted custom model."""
+        if self._text_model in _TEXT_MODEL_PRESETS:
+            return list(_TEXT_MODEL_PRESETS)
+        return [self._text_model, *_TEXT_MODEL_PRESETS]
+
+    def _sync_dir_inputs(self) -> None:
+        """Push loaded directory values into the Input widgets when mounted."""
+        try:
+            self.query_one("#settings-input-dir", Input).value = self._input_dir
+            self.query_one("#settings-output-dir", Input).value = self._output_dir
+        except Exception:
+            logger.debug("Directory inputs not mounted; skipping sync.", exc_info=True)
 
     @property
     def _is_sequential(self) -> bool:
@@ -292,14 +499,26 @@ class SettingsView(Vertical):
         """Render formatted text content for the settings display."""
         workers_text = "auto" if self._max_workers is None else str(self._max_workers)
         sequential_text = "on" if self._is_sequential else "off"
+        input_text = self._input_dir or "[dim](unset)[/dim]"
+        output_text = self._output_dir or "[dim](unset)[/dim]"
+        update_text = "on" if self._check_updates else "off"
+        prerelease_text = "on" if self._include_prereleases else "off"
         return (
             "[b]Settings[/b]\n\n"
+            "[b]Workflow[/b]\n"
+            f"  input dir     : {input_text}\n"
+            f"  output dir    : {output_text}\n"
+            f"  methodology   : {_METHODOLOGY_LABELS[self._methodology]}\n"
+            f"  text model    : {self._text_model}\n"
+            f"  update check  : {update_text}\n"
+            f"  pre-releases  : {prerelease_text}\n\n"
             "[b]Persistent Runtime Controls[/b]\n"
             f"  max_workers   : {workers_text}\n"
             f"  prefetch_depth: {self._prefetch_depth}\n"
             f"  sequential    : {sequential_text}\n\n"
-            "[dim]Use arrows to adjust values.[/dim]\n"
-            "[dim]s: toggle sequential, a: toggle auto workers, Enter: save, r: reload[/dim]"
+            "[dim]Arrows: workers/prefetch · s: sequential · a: auto workers[/dim]\n"
+            "[dim]m: methodology · t: model · u: update check · p: pre-releases[/dim]\n"
+            "[dim]Type in the fields below to set directories · Enter: save · r: reload[/dim]"
         )
 
     def _set_status(self, message: str) -> None:

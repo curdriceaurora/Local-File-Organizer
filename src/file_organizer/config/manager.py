@@ -462,6 +462,8 @@ class ConfigManager:
         data: dict[str, Any] = {
             "version": CURRENT_SCHEMA_VERSION,
             "default_methodology": config.default_methodology,
+            "default_input_dir": config.default_input_dir,
+            "default_output_dir": config.default_output_dir,
             "setup_completed": config.setup_completed,
             "setup_deferred": config.setup_deferred,
             "models": asdict(config.models),
@@ -511,6 +513,8 @@ class ConfigManager:
             # leak through as a float despite the ``str`` annotation.
             version=str(data.get("version", CURRENT_SCHEMA_VERSION)),
             default_methodology=data.get("default_methodology", "none"),
+            default_input_dir=data.get("default_input_dir", ""),
+            default_output_dir=data.get("default_output_dir", ""),
             setup_completed=data.get("setup_completed", False),
             setup_deferred=data.get("setup_deferred", False),
             models=models,
