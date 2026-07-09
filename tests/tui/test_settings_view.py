@@ -540,9 +540,14 @@ async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
     from file_organizer.tui import settings_view as sv
     from file_organizer.tui.app import FileOrganizerApp
 
-    # Keep the test hermetic: never touch the real config file on save.
+    # Keep the test hermetic: never touch the real config file on load or save.
     monkeypatch.setattr(sv, "save_parallel_runtime_settings", lambda *a, **k: None)
     monkeypatch.setattr(sv, "save_workflow_settings", lambda *a, **k: None)
+    monkeypatch.setattr(
+        sv,
+        "load_parallel_runtime_settings",
+        lambda **k: ParallelRuntimeSettings(max_workers=2, prefetch_depth=2),
+    )
     monkeypatch.setattr(
         sv,
         "load_workflow_settings",
