@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-07-09
+
+Post-GA hardening and UX release. Tightens unsafe-by-default settings, makes the plugin sandbox deny-by-default, and broadens the TUI Settings view into a single run-configuration surface. Part of the post-GA hardening & UX epic (#1501). Install/upgrade with `pip install -U local-file-organizer` (or `pipx upgrade local-file-organizer`).
+
+### Security
+
+- **Plugins are now deny-by-default (#1488)** — completed across #1502 and #1533. The unrestricted and implicit read-only sandbox fallbacks were removed (#1502), and a plugin's own `plugin.json` can no longer self-grant blanket access: `_build_sandbox_from_manifest` ignores `allow_all_operations`/`allow_all_paths`, building a policy only from the specific `allowed_paths`/`allowed_operations` it enumerates (#1533). Blanket grants are host-only — a host that trusts a plugin must pass an explicit `policy=` (e.g. `PluginSecurityPolicy.unrestricted()`) to `load_plugin()`. Manifests that previously relied on implicit access now need to enumerate their grants. Phase 2 (signed-manifest / repo-pinning trust) remains scoped in #1488.
+- **Safe-by-default API/web binding and auth (#1502, closes #1490, #1491)** — local API/web runs now bind to `127.0.0.1` instead of `0.0.0.0`, and enabling authentication with a placeholder JWT secret (`change-me`) fails fast instead of starting insecurely.
+- **GitHub Actions supply-chain defaults hardened (#1502)** — workflow permissions and pinning tightened.
+
+### Added
+
+- **TUI Settings broadened into a full run-configuration surface (#1495)** — beyond the parallelism controls, Settings now manages default input/output directories, organization methodology (none / PARA / Johnny Decimal), text-model choice, and update/privacy toggles, all persisted to the canonical `AppConfig` (new `default_input_dir` / `default_output_dir` fields). New keybindings cycle methodology/model and toggle the update/pre-release flags.
+- **TUI preview → apply (#1503, closes #1492)** — the organization-preview Confirm is a real apply action that runs the organize and navigates to History, so the undo path is immediately visible.
+- **"Defer setup" flow (#1503, closes #1493)** — persisted `setup_deferred` state with a web defer route and a home-screen reminder, cleared automatically when setup completes via the API, TUI, or core setup.
+- **Ollama next-step guidance (#1503, closes #1498)** — prints the exact install/start/pull commands without automatically downloading models.
+- **pip/pipx-aware updater fallback (#1502, closes #1497)** — suggests a `pip`/`pipx` upgrade path on macOS/Windows when no native release asset exists.
+
+### Changed
+
+- **Persisted, profile-based `/config` API (#1502, closes #1499)** — the in-memory config store is replaced with `ConfigManager` wiring, and `ServiceFacade` reads from the same source. The `/config` response shape is now the persisted `AppConfig` profile shape (intentional breaking change to the API response).
+- **Package version single-sourced from `version.py` (#1502, closes #1485)** — package metadata now resolves the version from `file_organizer.version.__version__` in one place.
+- **Directory picking clarified as browser-only where unavailable (#1503, closes #1494)** — browser-only picker fallbacks are disabled and users are guided toward typed absolute paths, with better macOS cancel/unavailable handling.
+- **Dependency & CI maintenance** — Renovate bumps across the toolchain: pytest 9.1, rich 15, aiofiles 25, diff-cover 10, opencv-python 5, pre-commit 4, isort 8, pytest-randomly 4, and several Docker/action updates (#1505–#1526). `mypy` is pinned `<1.20` to avoid a flaky 1.20.x compiled-build lint crash (#1533).
+- **Docs** — repo landing page cleanup (#1486).
+
+### Fixed
+
+- **POSIX-only CI/smoke tests guarded on Windows (#1529)** — tests that assume POSIX filesystem semantics are now skipped on Windows instead of failing.
+
 ## [2.0.0] - 2026-07-05
 
 First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after stabilizing the executable-build and release pipelines and closing the last write-path symlink-hardening gap. Installable from PyPI: `pip install local-file-organizer` (or `pipx install local-file-organizer`).
