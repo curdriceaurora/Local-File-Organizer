@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from textual.widgets import Input
 
 from file_organizer.config.schema import AppConfig
 from file_organizer.tui.settings_view import (
@@ -21,7 +22,7 @@ from file_organizer.tui.settings_view import (
     save_workflow_settings,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def test_load_parallel_runtime_settings_defaults() -> None:
@@ -443,3 +444,144 @@ def test_settings_view_save_action_persists_workflow_values() -> None:
     assert persisted.check_updates_on_startup is False
     assert persisted.include_prereleases is True
     assert mock_save.call_args.kwargs == {"profile": "default"}
+
+
+# ---------------------------------------------------------------------------
+# Parallelism actions (worker / prefetch adjustments)
+# ---------------------------------------------------------------------------
+
+
+def test_settings_view_workers_up_increments_from_auto() -> None:
+    """Workers up from auto (None) should set an explicit count."""
+    view = SettingsView()
+    view._max_workers = None
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_workers_up()
+
+    assert view._max_workers == 2
+
+
+def test_settings_view_workers_down_returns_to_auto_at_one() -> None:
+    """Workers down at 1 should drop back to auto (None)."""
+    view = SettingsView()
+    view._max_workers = 1
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_workers_down()
+
+    assert view._max_workers is None
+
+
+def test_settings_view_prefetch_up_and_down() -> None:
+    """Prefetch depth should increase and clamp at zero."""
+    view = SettingsView()
+    view._max_workers = 2
+    view._prefetch_depth = 0
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_prefetch_up()
+        assert view._prefetch_depth == 1
+        view.action_prefetch_down()
+        view.action_prefetch_down()  # clamps, does not go negative
+        assert view._prefetch_depth == 0
+
+
+def test_settings_view_toggle_auto_workers() -> None:
+    """Auto-workers toggle should flip between auto (None) and explicit 1."""
+    view = SettingsView()
+    view._max_workers = None
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_toggle_auto_workers()
+        assert view._max_workers == 1
+        view.action_toggle_auto_workers()
+        assert view._max_workers is None
+
+
+def test_settings_view_actions_blocked_in_sequential_mode() -> None:
+    """Worker/prefetch actions should be inert while sequential mode is on."""
+    view = SettingsView()
+    view._max_workers = 1
+    view._prefetch_depth = 0  # sequential
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as status:
+        view.action_workers_up()
+        view.action_prefetch_up()
+        view.action_toggle_auto_workers()
+
+    assert view._is_sequential is True
+    assert status.call_count == 3  # each action reports the blocked state
+
+
+def test_settings_view_toggle_sequential_restores_previous_values() -> None:
+    """Leaving sequential mode should restore the prior worker/prefetch values."""
+    view = SettingsView()
+    view._max_workers = 4
+    view._prefetch_depth = 3
+    view._record_non_sequential_snapshot()
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_toggle_sequential()  # enable
+        assert view._is_sequential is True
+        view.action_toggle_sequential()  # disable -> restore
+
+    assert view._max_workers == 4
+    assert view._prefetch_depth == 3
+
+
+# ---------------------------------------------------------------------------
+# Mounted view: compose / on_mount / refresh / directory-input sync
+# ---------------------------------------------------------------------------
+
+
+async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
+    """Mount the real view inside the app and exercise mount-bound methods."""
+    from file_organizer.tui import settings_view as sv
+    from file_organizer.tui.app import FileOrganizerApp
+
+    # Keep the test hermetic: never touch the real config file on save.
+    monkeypatch.setattr(sv, "save_parallel_runtime_settings", lambda *a, **k: None)
+    monkeypatch.setattr(sv, "save_workflow_settings", lambda *a, **k: None)
+    monkeypatch.setattr(
+        sv,
+        "load_workflow_settings",
+        lambda **k: WorkflowSettings(
+            default_input_dir="/seed/in",
+            default_output_dir="/seed/out",
+            methodology="para",
+            text_model="qwen2.5:7b-instruct-q4_K_M",
+            check_updates_on_startup=False,
+            include_prereleases=True,
+        ),
+    )
+
+    app = FileOrganizerApp()
+    async with app.run_test() as pilot:
+        await app.action_switch_view("settings")
+        await pilot.pause()
+        view = app.query_one(SettingsView)
+
+        # on_mount ran reload; loaded workflow values pushed into the inputs.
+        input_field = view.query_one("#settings-input-dir", Input)
+        output_field = view.query_one("#settings-output-dir", Input)
+        assert input_field.value == "/seed/in"
+        assert output_field.value == "/seed/out"
+
+        # Editing an input updates in-memory state (real Input.Changed event).
+        input_field.value = "/edited/in"
+        await pilot.pause()
+        assert view._input_dir == "/edited/in"
+
+        # Exercise the actions against the mounted view (real _refresh_panel /
+        # _set_status paths, including the StatusBar update).
+        view.action_cycle_methodology()
+        view.action_cycle_text_model()
+        view.action_toggle_update_check()
+        view.action_toggle_prereleases()
+        view.action_workers_up()
+        view.action_prefetch_up()
+        view.action_toggle_sequential()
+        view.action_save_settings()
+        view.action_reload_settings()
+        await pilot.pause()
