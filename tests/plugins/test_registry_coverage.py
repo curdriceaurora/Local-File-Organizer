@@ -278,6 +278,13 @@ class TestBuildSandboxFromManifest:
         )
         assert "write" in policy.allowed_operations
 
-    def test_allow_all_operations(self):
+    def test_manifest_cannot_self_grant_all_operations(self):
+        # Deny-by-default: a plugin's own manifest may not self-grant blanket
+        # operation access; allow_all_operations is a host-only concept.
         policy = PluginRegistry._build_sandbox_from_manifest({"allow_all_operations": True})
-        assert policy.allow_all_operations is True
+        assert policy.allow_all_operations is False
+        assert policy.allowed_operations == frozenset()
+
+    def test_manifest_cannot_self_grant_all_paths(self):
+        policy = PluginRegistry._build_sandbox_from_manifest({"allow_all_paths": True})
+        assert policy.allow_all_paths is False

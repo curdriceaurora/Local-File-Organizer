@@ -75,6 +75,10 @@ class AppConfig:
         profile_name: Name of this configuration profile.
         version: Configuration schema version.
         default_methodology: Default organization methodology (none, para, jd).
+        default_input_dir: Default source directory pre-filled for organize runs
+            (empty string means "unset — prompt each run").
+        default_output_dir: Default destination directory pre-filled for organize
+            runs (empty string means "unset — prompt each run").
         setup_completed: Whether the guided setup wizard has been completed.
         setup_deferred: Whether the user has chosen to finish guided setup later.
         models: AI model preset configuration.
@@ -92,6 +96,8 @@ class AppConfig:
     profile_name: str = "default"
     version: str = CURRENT_SCHEMA_VERSION
     default_methodology: str = "none"
+    default_input_dir: str = ""
+    default_output_dir: str = ""
     setup_completed: bool = False
     setup_deferred: bool = False
     models: ModelPreset = field(default_factory=ModelPreset)
