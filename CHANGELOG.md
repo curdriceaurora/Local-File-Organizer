@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-07-10
+
+Release recovery patch for the interrupted `2.0.1` publishing flow. This release republishes the `2.0.1` code state under a fresh PyPI version because PyPI does not allow re-uploading a deleted or previously published version. No runtime behavior changes.
+
 ## [2.0.1] - 2026-07-09
 
 Post-GA hardening and UX release. Tightens unsafe-by-default settings, makes the plugin sandbox deny-by-default, and broadens the TUI Settings view into a single run-configuration surface. Part of the post-GA hardening & UX epic (#1501). Install/upgrade with `pip install -U local-file-organizer` (or `pipx upgrade local-file-organizer`).
