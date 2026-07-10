@@ -34,12 +34,12 @@ from file_organizer.web.settings_routes import (
     _as_form_bool,
     _coerce_bool,
     _load_web_settings,
+    _normalize_methodology,
     _render_section,
     _save_web_settings,
     _section_context,
     _update_web_settings,
     _validate_choice,
-    _validate_methodology,
     _validate_rules,
     settings_router,
 )
@@ -165,30 +165,41 @@ class TestValidateChoice:
 
 
 # ---------------------------------------------------------------------------
-# _validate_methodology
+# _normalize_methodology (canonical vocabulary — see file_organizer.config.methodology)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestValidateMethodology:
-    """Test methodology validation."""
+class TestNormalizeMethodology:
+    """Test methodology normalization against the canonical vocabulary."""
 
-    def test_valid_methodologies(self):
-        """Should accept valid methodologies."""
-        assert _validate_methodology("content_based") == "content_based"
-        assert _validate_methodology("johnny_decimal") == "johnny_decimal"
-        assert _validate_methodology("para") == "para"
-        assert _validate_methodology("date_based") == "date_based"
+    def test_canonical_values_pass_through(self):
+        """Should accept the canonical none/para/jd values unchanged."""
+        assert _normalize_methodology("none") == "none"
+        assert _normalize_methodology("para") == "para"
+        assert _normalize_methodology("jd") == "jd"
+
+    def test_legacy_aliases_map_to_canonical(self):
+        """Pre-unification web values should map to their canonical equivalent."""
+        assert _normalize_methodology("content_based") == "none"
+        assert _normalize_methodology("johnny_decimal") == "jd"
 
     def test_case_insensitive(self):
         """Should be case insensitive."""
-        assert _validate_methodology("CONTENT_BASED") == "content_based"
-        assert _validate_methodology("PARA") == "para"
+        assert _normalize_methodology("CONTENT_BASED") == "none"
+        assert _normalize_methodology("PARA") == "para"
 
-    def test_invalid_defaults_to_content_based(self):
-        """Should default to content_based for invalid."""
-        assert _validate_methodology("invalid") == "content_based"
-        assert _validate_methodology("") == "content_based"
+    def test_invalid_defaults_to_none(self):
+        """Should default to none for invalid or unimplemented values.
+
+        ``date_based`` was a web-only dropdown option with no organizer
+        implementation behind it anywhere in the codebase, so it is not a
+        recognized alias — it falls back to the default like any other
+        unrecognized value.
+        """
+        assert _normalize_methodology("invalid") == "none"
+        assert _normalize_methodology("") == "none"
+        assert _normalize_methodology("date_based") == "none"
 
 
 # ---------------------------------------------------------------------------
@@ -550,11 +561,12 @@ class TestConstants:
     """Test that option constants are properly defined."""
 
     def test_methodology_options(self):
-        """Should have methodology options."""
-        assert "content_based" in METHODOLOGY_OPTIONS
-        assert "johnny_decimal" in METHODOLOGY_OPTIONS
-        assert "para" in METHODOLOGY_OPTIONS
-        assert "date_based" in METHODOLOGY_OPTIONS
+        """Should have the canonical methodology options and nothing else.
+
+        ``date_based`` was removed: it was a web-only dropdown option with no
+        organizer implementation behind it anywhere in the codebase (#1538).
+        """
+        assert set(METHODOLOGY_OPTIONS) == {"none", "para", "jd"}
 
     def test_theme_options(self):
         """Should have theme options."""

@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+
 # Schema-version constants. ``CURRENT_SCHEMA_VERSION`` is what new configs are
 # written as; ``SUPPORTED_SCHEMA_VERSIONS`` is the set ConfigManager will load
 # without falling back to defaults. It is derived from CURRENT_SCHEMA_VERSION so
@@ -74,7 +76,8 @@ class AppConfig:
     Args:
         profile_name: Name of this configuration profile.
         version: Configuration schema version.
-        default_methodology: Default organization methodology (none, para, jd).
+        default_methodology: Default organization methodology — one of
+            ``config.methodology.ORDER`` (currently none, para, jd).
         default_input_dir: Default source directory pre-filled for organize runs
             (empty string means "unset — prompt each run").
         default_output_dir: Default destination directory pre-filled for organize
@@ -95,7 +98,7 @@ class AppConfig:
 
     profile_name: str = "default"
     version: str = CURRENT_SCHEMA_VERSION
-    default_methodology: str = "none"
+    default_methodology: str = _DEFAULT_METHODOLOGY
     default_input_dir: str = ""
     default_output_dir: str = ""
     setup_completed: bool = False

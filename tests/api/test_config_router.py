@@ -183,6 +183,24 @@ class TestUpdateConfig:
         assert config["models"]["temperature"] == 0.5
         assert config["updates"]["check_on_startup"] is True
 
+    def test_update_config_normalizes_legacy_methodology_value(self, tmp_path: Path) -> None:
+        """A pre-unification/legacy methodology value is normalized on write.
+
+        Regression test: this endpoint previously wrote request.default_methodology
+        straight onto AppConfig with no validation at all, so an unrecognized or
+        legacy-web value (e.g. "content_based") would corrupt the persisted config
+        with a value the TUI/core vocabulary doesn't recognize.
+        """
+        _, client = _build_app(tmp_path, admin_user=_admin_user())
+
+        resp = client.put(
+            "/api/v1/config",
+            json={"default_methodology": "content_based"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["config"]["default_methodology"] == "none"
+
     def test_update_config_multiple_sections(self, tmp_path: Path) -> None:
         """PUT can update top-level, model, update, and module override fields."""
         _, client = _build_app(tmp_path, admin_user=_admin_user())

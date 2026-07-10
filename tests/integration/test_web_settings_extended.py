@@ -4,7 +4,7 @@ Covers: settings_page, settings_search, settings_export, settings_import,
 settings_reset, all section GET/POST routes (general, models, organization,
 appearance, advanced), settings_organization_validate, settings_models_test,
 and the pure helpers (_as_form_bool, _coerce_bool, _validate_choice,
-_validate_methodology, _validate_rules, WebSettings defaults).
+_normalize_methodology, _validate_rules, WebSettings defaults).
 """
 
 from __future__ import annotations
@@ -121,17 +121,17 @@ class TestValidateChoice:
         assert result == "dark"
 
 
-class TestValidateMethodology:
+class TestNormalizeMethodology:
     def test_valid_methodology(self) -> None:
-        from file_organizer.web.settings_routes import _validate_methodology
+        from file_organizer.web.settings_routes import _normalize_methodology
 
-        assert _validate_methodology("para") == "para"
-        assert _validate_methodology("PARA") == "para"
+        assert _normalize_methodology("para") == "para"
+        assert _normalize_methodology("PARA") == "para"
 
     def test_invalid_methodology_returns_default(self) -> None:
-        from file_organizer.web.settings_routes import _validate_methodology
+        from file_organizer.web.settings_routes import _normalize_methodology
 
-        assert _validate_methodology("unknown_meth") == "content_based"
+        assert _normalize_methodology("unknown_meth") == "none"
 
 
 class TestValidateRules:

@@ -114,7 +114,7 @@ class TestSettingsSectionPartials:
         client = _build_client(tmp_path)
         response = client.get("/ui/settings/organization")
         assert response.status_code == 200
-        assert "Content-Based" in response.text
+        assert "None (flat / content-based)" in response.text
         assert "Johnny Decimal" in response.text
         assert "PARA" in response.text
 
@@ -245,7 +245,7 @@ class TestSettingsValidation:
     """Test handling of invalid inputs and edge cases."""
 
     @pytest.mark.usefixtures("_patch_settings_file")
-    def test_invalid_methodology_defaults_to_content_based(
+    def test_invalid_methodology_defaults_to_none(
         self, tmp_path: Path, _patch_settings_file: Path
     ) -> None:
         client = _build_client(tmp_path)
@@ -258,7 +258,7 @@ class TestSettingsValidation:
         assert "Organization settings saved" in response.text
 
         data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_methodology"] == "content_based"
+        assert data["default_methodology"] == "none"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_invalid_theme_defaults_to_light(

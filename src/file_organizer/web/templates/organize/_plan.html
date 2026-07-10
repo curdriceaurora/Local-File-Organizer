@@ -10,7 +10,7 @@
 <div class="plan-summary-grid" data-plan-id="{{ plan.plan_id }}">
     <article>
         <h3>Plan summary</h3>
-        <p><strong>Method:</strong> {{ methodology_options.get(plan.methodology, 'Content-Based') }}</p>
+        <p><strong>Method:</strong> {{ methodology_options.get(plan.methodology, 'None (flat / content-based)') }}</p>
         <p><strong>Input:</strong> {{ plan.input_dir }}</p>
         <p><strong>Output:</strong> {{ plan.output_dir }}</p>
     </article>

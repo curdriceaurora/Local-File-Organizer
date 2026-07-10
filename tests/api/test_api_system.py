@@ -56,6 +56,32 @@ def test_system_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert update.json()["config"]["default_methodology"] == "para"
 
 
+def test_system_config_update_normalizes_legacy_methodology_value(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pre-unification/legacy methodology value is normalized on write.
+
+    Regression test: this endpoint previously wrote request.default_methodology
+    straight onto AppConfig with no validation at all, so an unrecognized or
+    legacy-web value (e.g. "content_based") would corrupt the persisted config
+    with a value the TUI/core vocabulary doesn't recognize.
+    """
+    config_dir = tmp_path / "config"
+    monkeypatch.setenv("FO_CONFIG_DIR", str(config_dir))
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    client, headers = _client(tmp_path, [str(data_dir)], admin=True)
+
+    update = client.patch(
+        "/api/v1/system/config",
+        json={"profile": "default", "default_methodology": "content_based"},
+        headers=headers,
+    )
+    assert update.status_code == 200
+    assert update.json()["config"]["default_methodology"] == "none"
+
+
 def test_system_config_update_refuses_unsupported_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

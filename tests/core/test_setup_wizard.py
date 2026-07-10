@@ -156,6 +156,57 @@ class TestGenerateConfig:
         assert config.models.temperature == 0.8
         assert config.models.max_tokens == 4096
 
+    def test_generate_config_default_methodology_is_none(self):
+        """Absent custom_settings, default_methodology should be canonical 'none'."""
+        wizard = SetupWizard(mode=WizardMode.QUICK_START)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config()
+
+        assert config.default_methodology == "none"
+
+    def test_generate_config_applies_custom_methodology(self):
+        """custom_settings["methodology"] must reach AppConfig.default_methodology.
+
+        Regression test: the setup wizard's methodology selector previously sent
+        this value but generate_config() silently discarded it, always writing
+        "none" regardless of what the user picked. Also verifies this isn't
+        gated to POWER_USER mode, matching profile_name's existing treatment.
+        """
+        wizard = SetupWizard(mode=WizardMode.QUICK_START)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config(custom_settings={"methodology": "para"})
+
+        assert config.default_methodology == "para"
+
+    def test_generate_config_normalizes_legacy_methodology_alias(self):
+        """An unrecognized/legacy methodology value should normalize, not pass through."""
+        wizard = SetupWizard(mode=WizardMode.POWER_USER)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config(custom_settings={"methodology": "content_based"})
+
+        assert config.default_methodology == "none"
+
     def test_generate_config_uses_first_available_model(self):
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
 
