@@ -7,7 +7,6 @@ src/file_organizer/services/audio/utils.py.  Every test class carries
 
 from __future__ import annotations
 
-import builtins
 import hashlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -27,6 +26,7 @@ from file_organizer.services.audio.utils import (
     trim_audio,
     validate_audio_file,
 )
+from tests.utils.import_mocks import make_fake_import
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -53,17 +53,13 @@ class TestGetAudioDurationBranches:
         mock_tinytag = MagicMock()
         mock_tinytag.TinyTag.get.return_value = mock_tag
 
-        real_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            """Substitute __import__ that raises for pydub and returns mock_tinytag for tinytag."""
-            if name == "pydub":
-                raise ImportError("no pydub")
-            if name == "tinytag":
-                return mock_tinytag
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(
+                missing_names=("pydub",),
+                module_overrides={"tinytag": mock_tinytag},
+            ),
+        ):
             duration = get_audio_duration(audio)
 
         assert duration == 0.0
@@ -569,15 +565,10 @@ class TestDetectSilenceSegmentsBranches:
 
     def test_no_pydub_returns_empty_list(self, audio_file: Path) -> None:
         """Lines 221-223: ImportError → warning logged, returns []."""
-        real_import = builtins.__import__
-
-        def _no_pydub(name: str, *args: object, **kwargs: object) -> object:
-            """Substitute __import__ that raises ImportError for any pydub import."""
-            if "pydub" in name:
-                raise ImportError("no pydub")
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=_no_pydub):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub",)),
+        ):
             result = detect_silence_segments(audio_file)
 
         assert result == []

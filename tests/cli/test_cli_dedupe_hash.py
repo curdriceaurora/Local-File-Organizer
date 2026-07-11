@@ -14,6 +14,7 @@ from file_organizer.cli.dedupe_hash import (
     initialize_hash_detector,
     scan_for_duplicates,
 )
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -21,16 +22,10 @@ pytestmark = [pytest.mark.ci, pytest.mark.unit]
 class TestProgressTracker:
     def test_without_tqdm_disables_progress(self) -> None:
         console = Console(record=True)
-        import builtins
-
-        original_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            if name == "tqdm":
-                raise ImportError("missing")
-            return original_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("tqdm",)),
+        ):
             tracker = ProgressTracker(console)
 
         assert tracker.has_tqdm is False

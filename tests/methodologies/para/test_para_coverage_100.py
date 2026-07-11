@@ -15,7 +15,6 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,6 +30,7 @@ from file_organizer.methodologies.para.ai.suggestion_engine import (
 from file_organizer.methodologies.para.categories import PARACategory
 from file_organizer.methodologies.para.config import HeuristicWeights
 from file_organizer.methodologies.para.detection.heuristics import AIHeuristic
+from tests.utils.import_mocks import make_fake_import
 
 _HEURISTICS_MODULE = "file_organizer.methodologies.para.detection.heuristics"
 
@@ -52,23 +52,22 @@ class TestOllamaImportGuard:
         saved_ollama = sys.modules.pop("ollama", None)
         saved_heuristics = sys.modules.pop(module_name, None)
 
-        # Block the import of ollama
         import builtins
 
         original_import = builtins.__import__
 
-        def _blocked_import(name: str, *args: Any, **kwargs: Any) -> Any:
-            if name == "ollama":
-                raise ImportError("mocked: no ollama")
-            return original_import(name, *args, **kwargs)
-
         try:
-            builtins.__import__ = _blocked_import  # type: ignore[assignment]
-            mod = importlib.import_module(module_name)
+            with patch(
+                "builtins.__import__",
+                side_effect=make_fake_import(
+                    missing_names=("ollama",),
+                    original_import=original_import,
+                ),
+            ):
+                mod = importlib.import_module(module_name)
             assert mod.OLLAMA_AVAILABLE is False
             assert mod.ollama is None
         finally:
-            builtins.__import__ = original_import  # type: ignore[assignment]
             # Restore original modules
             if saved_heuristics is not None:
                 sys.modules[module_name] = saved_heuristics

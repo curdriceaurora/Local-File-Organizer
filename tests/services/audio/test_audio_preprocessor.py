@@ -7,7 +7,6 @@ External dependencies (ffmpeg, pydub) are mocked.
 
 from __future__ import annotations
 
-import builtins
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +16,7 @@ from file_organizer.services.audio.preprocessor import (
     AudioFormat,
     AudioPreprocessor,
 )
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = [pytest.mark.unit]
 
@@ -228,14 +228,10 @@ class TestConvertWithPydub:
     def test_no_pydub(self, preprocessor, audio_file, tmp_path):
         out = tmp_path / "out.wav"
 
-        real_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            if "pydub" in name:
-                raise ImportError("no pydub")
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub",)),
+        ):
             with pytest.raises(ImportError, match="Neither ffmpeg nor pydub"):
                 preprocessor._convert_with_pydub(audio_file, out, 16000, 1)
 
@@ -269,14 +265,10 @@ class TestNormalizeAudio:
         assert result == audio_file
 
     def test_no_pydub(self, preprocessor, audio_file):
-        real_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            if "pydub" in name:
-                raise ImportError
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub",)),
+        ):
             result = preprocessor.normalize_audio(audio_file)
         assert result == audio_file
 
@@ -323,14 +315,10 @@ class TestRemoveSilence:
         assert result == audio_file
 
     def test_no_pydub(self, preprocessor, audio_file):
-        real_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            if "pydub" in name:
-                raise ImportError
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub",)),
+        ):
             result = preprocessor.remove_silence(audio_file)
         assert result == audio_file
 
@@ -424,14 +412,10 @@ class TestGetAudioInfo:
         assert info["sample_rate"] == 44100
 
     def test_no_pydub(self, audio_file):
-        real_import = builtins.__import__
-
-        def fake_import(name, *args, **kwargs):
-            if "pydub" in name:
-                raise ImportError
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub",)),
+        ):
             info = AudioPreprocessor.get_audio_info(audio_file)
         assert "error" in info
 
