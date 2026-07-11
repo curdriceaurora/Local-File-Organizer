@@ -7,6 +7,7 @@ External dependencies (ffmpeg, pydub) are mocked.
 
 from __future__ import annotations
 
+import builtins
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -227,10 +228,12 @@ class TestConvertWithPydub:
     def test_no_pydub(self, preprocessor, audio_file, tmp_path):
         out = tmp_path / "out.wav"
 
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             with pytest.raises(ImportError, match="Neither ffmpeg nor pydub"):
@@ -266,10 +269,12 @@ class TestNormalizeAudio:
         assert result == audio_file
 
     def test_no_pydub(self, preprocessor, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError
-            raise ImportError
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = preprocessor.normalize_audio(audio_file)
@@ -318,10 +323,12 @@ class TestRemoveSilence:
         assert result == audio_file
 
     def test_no_pydub(self, preprocessor, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError
-            raise ImportError
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = preprocessor.remove_silence(audio_file)
@@ -417,10 +424,12 @@ class TestGetAudioInfo:
         assert info["sample_rate"] == 44100
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError
-            raise ImportError
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             info = AudioPreprocessor.get_audio_info(audio_file)
