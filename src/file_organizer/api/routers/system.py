@@ -33,6 +33,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.api.utils import file_info_from_path, resolve_path
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 from file_organizer.version import __version__
 
@@ -94,7 +95,7 @@ def system_status(
             "Returned configuration profile.",
             {
                 "profile": "default",
-                "config": {"default_methodology": "PARA"},
+                "config": {"default_methodology": "para"},
                 "profiles": ["default"],
             },
         ),
@@ -119,7 +120,7 @@ def get_config(
             "Updated configuration profile.",
             {
                 "profile": "default",
-                "config": {"default_methodology": "PARA"},
+                "config": {"default_methodology": "para"},
                 "profiles": ["default"],
             },
         ),
@@ -141,7 +142,7 @@ def update_config(
     config = manager.load(request.profile)
 
     if request.default_methodology is not None:
-        config.default_methodology = request.default_methodology
+        config.default_methodology = normalize_methodology(request.default_methodology)
 
     if request.models is not None:
         models = request.models

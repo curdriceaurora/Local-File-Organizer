@@ -2,7 +2,7 @@
 
 Covers uncovered lines including:
 - _parse_delay_minutes: None/empty → 0, non-int raises, negative raises, over-max raises
-- _normalize_methodology: known key, unknown key → content_based
+- _normalize_methodology: known key, unknown key → none (canonical default)
 - _scan_directory: single file input (hidden/not hidden), non-recursive glob
 - _counts_by_type: image, video, audio, cad, other categories
 - _store_organize_plan / _get_organize_plan / _delete_organize_plan
@@ -146,11 +146,17 @@ class TestNormalizeMethodology:
     def test_known_key_returns_key(self) -> None:
         assert _normalize_methodology("para") == "para"
 
-    def test_unknown_key_returns_content_based(self) -> None:
-        assert _normalize_methodology("nonsense") == "content_based"
+    def test_unknown_key_returns_none(self) -> None:
+        """``date_based`` and other unrecognized values fall back to canonical "none"."""
+        assert _normalize_methodology("nonsense") == "none"
+        assert _normalize_methodology("date_based") == "none"
 
-    def test_none_returns_content_based(self) -> None:
-        assert _normalize_methodology(None) == "content_based"
+    def test_none_returns_none(self) -> None:
+        assert _normalize_methodology(None) == "none"
+
+    def test_legacy_alias_maps_to_canonical(self) -> None:
+        assert _normalize_methodology("content_based") == "none"
+        assert _normalize_methodology("johnny_decimal") == "jd"
 
     def test_uppercase_known_key_is_case_insensitive(self) -> None:
         assert _normalize_methodology("PARA") == "para"

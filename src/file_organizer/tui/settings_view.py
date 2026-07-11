@@ -29,19 +29,13 @@ from textual.containers import Vertical
 from textual.widgets import Input, Static
 
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.methodology import LABELS as _METHODOLOGY_LABELS
+from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
+from file_organizer.config.methodology import normalize as _normalize_methodology
 
 _DEFAULT_PREFETCH_DEPTH = 2
 _MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
 logger = logging.getLogger(__name__)
-
-# Organization methodologies, in cycle order. Values match
-# ``AppConfig.default_methodology`` and the TUI MethodologyView vocabulary.
-_METHODOLOGY_ORDER = ("none", "para", "jd")
-_METHODOLOGY_LABELS = {
-    "none": "None (flat / content-based)",
-    "para": "PARA",
-    "jd": "Johnny Decimal",
-}
 
 # Curated text-model presets cycled through with the "t" binding. A value
 # persisted outside this list is preserved and prepended so cycling never
@@ -106,13 +100,6 @@ def _coerce_non_negative_int(value: Any, *, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed >= 0 else default
-
-
-def _normalize_methodology(value: Any) -> str:
-    """Return a known methodology identifier, defaulting to ``"none"``."""
-    if isinstance(value, str) and value in _METHODOLOGY_ORDER:
-        return value
-    return "none"
 
 
 def load_parallel_runtime_settings(

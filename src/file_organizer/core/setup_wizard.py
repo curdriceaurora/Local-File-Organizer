@@ -14,6 +14,7 @@ from typing import Any
 from loguru import logger
 
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig, ModelPreset
 from file_organizer.core.backend_detector import (
     InstalledModel,
@@ -261,7 +262,9 @@ class SetupWizard:
             if custom_settings
             else "default",
             version="1.0",
-            default_methodology="none",
+            default_methodology=normalize_methodology(
+                custom_settings.get("methodology") if custom_settings else None
+            ),
             models=models,
         )
 

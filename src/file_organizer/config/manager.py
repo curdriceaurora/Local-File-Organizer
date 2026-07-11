@@ -23,6 +23,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.migrations import compare_versions, migrate_to_current
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import (
@@ -512,7 +513,7 @@ class ConfigManager:
             # Normalize to str so a YAML-parsed float (``version: 1.0``) does not
             # leak through as a float despite the ``str`` annotation.
             version=str(data.get("version", CURRENT_SCHEMA_VERSION)),
-            default_methodology=data.get("default_methodology", "none"),
+            default_methodology=normalize_methodology(data.get("default_methodology")),
             default_input_dir=data.get("default_input_dir", ""),
             default_output_dir=data.get("default_output_dir", ""),
             setup_completed=data.get("setup_completed", False),

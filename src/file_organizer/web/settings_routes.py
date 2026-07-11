@@ -22,6 +22,9 @@ from loguru import logger
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.utils import resolve_path
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.config.methodology import LABELS as METHODOLOGY_OPTIONS
+from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.utils.atomic_write import atomic_write_text
 from file_organizer.web._helpers import base_context, templates
@@ -31,12 +34,6 @@ settings_router = APIRouter(tags=["web"])
 _SETTINGS_DIR = get_config_dir()
 _SETTINGS_FILE = _SETTINGS_DIR / "web-settings.json"
 
-METHODOLOGY_OPTIONS = {
-    "content_based": "Content-Based",
-    "johnny_decimal": "Johnny Decimal",
-    "para": "PARA",
-    "date_based": "Date-Based",
-}
 LOG_LEVEL_OPTIONS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 THEME_OPTIONS = ["light", "dark", "auto", "custom"]
 LANGUAGE_OPTIONS = ["en", "es", "fr", "de", "ja"]
@@ -102,7 +99,7 @@ class WebSettings:
     ollama_url: str = "http://localhost:11434"
 
     # Organization
-    default_methodology: str = "content_based"
+    default_methodology: str = _DEFAULT_METHODOLOGY
     auto_organize: bool = False
     notifications_enabled: bool = True
     file_filter_glob: str = "*"
@@ -139,12 +136,6 @@ def _validate_choice(value: str, allowed: list[str], fallback: str) -> str:
     """Return *value* if it is in *allowed*, otherwise return *fallback*."""
     candidate = value.strip()
     return candidate if candidate in allowed else fallback
-
-
-def _validate_methodology(value: str) -> str:
-    """Validate and normalize a methodology identifier."""
-    candidate = value.strip().lower()
-    return candidate if candidate in METHODOLOGY_OPTIONS else "content_based"
 
 
 def _validate_rules(rules: str) -> tuple[bool, str]:
@@ -190,7 +181,7 @@ def _load_web_settings() -> WebSettings:
                 continue
             if isinstance(value, str):
                 setattr(ws, key, value)
-        ws.default_methodology = _validate_methodology(ws.default_methodology)
+        ws.default_methodology = _normalize_methodology(ws.default_methodology)
         ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
         ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
         ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
@@ -405,7 +396,7 @@ async def settings_import(
             elif isinstance(value, str):
                 setattr(ws, key, value)
 
-        ws.default_methodology = _validate_methodology(ws.default_methodology)
+        ws.default_methodology = _normalize_methodology(ws.default_methodology)
         ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
         ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
         ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
@@ -586,7 +577,7 @@ def settings_organization_validate(
 @settings_router.post("/settings/organization", response_class=HTMLResponse)
 def settings_organization_post(
     request: Request,
-    default_methodology: str = Form("content_based"),
+    default_methodology: str = Form(_DEFAULT_METHODOLOGY),
     auto_organize: str | None = Form(None),
     notifications_enabled: str | None = Form(None),
     file_filter_glob: str = Form("*"),
@@ -607,7 +598,7 @@ def settings_organization_post(
 
     try:
         ws = _update_web_settings(
-            default_methodology=_validate_methodology(default_methodology),
+            default_methodology=_normalize_methodology(default_methodology),
             auto_organize=_as_form_bool(auto_organize),
             notifications_enabled=_as_form_bool(notifications_enabled),
             file_filter_glob=file_filter_glob.strip() or "*",

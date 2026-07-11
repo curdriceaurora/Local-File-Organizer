@@ -23,6 +23,9 @@ from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import create_job, get_job, list_jobs, update_job
 from file_organizer.api.models import OrganizationError, OrganizationResultResponse, OrganizeRequest
 from file_organizer.api.utils import is_hidden, resolve_path
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
+from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 from file_organizer.web._helpers import (
     allowed_roots,
@@ -42,13 +45,6 @@ ORGANIZE_PLAN_LIMIT = 200
 ORGANIZE_JOB_TYPE = "organize_web"
 JOB_METADATA_PRUNE_THRESHOLD = 256
 JOB_METADATA_PRUNE_INTERVAL_SECONDS = 60.0
-
-ORGANIZE_METHODOLOGIES = {
-    "johnny_decimal": "Johnny Decimal",
-    "para": "PARA",
-    "content_based": "Content-Based",
-    "date_based": "Date-Based",
-}
 
 _ORGANIZE_PLAN_STORE: dict[str, dict[str, Any]] = {}
 _ORGANIZE_PLAN_LOCK = Lock()
@@ -93,14 +89,6 @@ def _parse_delay_minutes(value: str | None) -> int:
             message=f"Schedule delay must be between 0 and {ORGANIZE_MAX_DELAY_MIN} minutes.",
         )
     return minutes
-
-
-def _normalize_methodology(value: str | None) -> str:
-    """Normalize a methodology string, defaulting to ``content_based``."""
-    token = (value or "").strip().lower()
-    if token in ORGANIZE_METHODOLOGIES:
-        return token
-    return "content_based"
 
 
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
@@ -313,6 +301,8 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
     elif total_files > 0 and job.status == "running":
         progress = max(progress, int((processed_files / max(total_files, 1)) * 100))
 
+    methodology = _normalize_methodology(metadata.get("methodology"))
+
     return {
         "job_id": job.job_id,
         "status": job.status,
@@ -325,11 +315,8 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
         "failed_files": failed_files,
         "skipped_files": skipped_files,
         "result": result,
-        "methodology": metadata.get("methodology", "content_based"),
-        "methodology_label": ORGANIZE_METHODOLOGIES.get(
-            metadata.get("methodology", "content_based"),
-            "Content-Based",
-        ),
+        "methodology": methodology,
+        "methodology_label": ORGANIZE_METHODOLOGIES[methodology],
         "input_dir": metadata.get("input_dir", ""),
         "output_dir": metadata.get("output_dir", ""),
         "dry_run": bool(metadata.get("dry_run", False)),
@@ -380,7 +367,7 @@ def _build_organize_stats() -> dict[str, Any]:
 
     methodology_counts: dict[str, int] = {}
     for job in jobs:
-        label = job.get("methodology_label", "Content-Based")
+        label = job.get("methodology_label", ORGANIZE_METHODOLOGIES[_DEFAULT_METHODOLOGY])
         methodology_counts[label] = methodology_counts.get(label, 0) + 1
 
     return {
@@ -514,7 +501,7 @@ def organize_scan(
     settings: ApiSettings = Depends(get_settings),
     input_dir: str = Form(""),
     output_dir: str = Form(""),
-    methodology: str = Form("content_based"),
+    methodology: str = Form(_DEFAULT_METHODOLOGY),
     recursive: str = Form("1"),
     include_hidden: str = Form("0"),
     skip_existing: str = Form("1"),
@@ -685,7 +672,7 @@ def organize_execute(
                 "plan_id": plan_id,
                 "input_dir": organize_request.input_dir,
                 "output_dir": organize_request.output_dir,
-                "methodology": str(plan.get("methodology", "content_based")),
+                "methodology": _normalize_methodology(plan.get("methodology")),
                 "dry_run": organize_request.dry_run,
                 "schedule_delay_minutes": delay_minutes,
                 "scheduled_for": scheduled_for,

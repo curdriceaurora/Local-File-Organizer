@@ -676,6 +676,7 @@ DEP002 = [
 "src/file_organizer/client/sync_client.py" = 70
 "src/file_organizer/config/__init__.py" = 100
 "src/file_organizer/config/manager.py" = 80
+"src/file_organizer/config/methodology.py" = 100
 "src/file_organizer/config/migrations.py" = 20
 "src/file_organizer/config/path_manager.py" = 100
 "src/file_organizer/config/path_migration.py" = 90

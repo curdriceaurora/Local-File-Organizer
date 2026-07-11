@@ -429,8 +429,9 @@ class TestSystemConfigPatch:
             },
         )
         assert resp.status_code == 200
-        # Top-level scalar update applied.
-        assert config.default_methodology == "PARA"
+        # Top-level scalar update applied, normalized to the canonical
+        # lowercase vocabulary (see file_organizer.config.methodology).
+        assert config.default_methodology == "para"
         # Nested models update applied via setattr loop.
         assert config.models.text_model == "x-text"
         # Nested updates update applied via setattr loop.

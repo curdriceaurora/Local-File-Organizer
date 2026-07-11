@@ -18,6 +18,7 @@ from file_organizer.api.openapi_responses import (
     validation_error_response,
 )
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig
 
 router = APIRouter(tags=["config"], responses=INTERNAL_500_RESPONSE)
@@ -36,7 +37,7 @@ def _profile_update_lock(manager: ConfigManager, profile: str) -> RLock:
 def _apply_update(config: AppConfig, request: ConfigUpdateRequest) -> None:
     """Apply a partial API update to an AppConfig instance."""
     if request.default_methodology is not None:
-        config.default_methodology = request.default_methodology
+        config.default_methodology = normalize_methodology(request.default_methodology)
 
     models = request.models
     if models is not None:

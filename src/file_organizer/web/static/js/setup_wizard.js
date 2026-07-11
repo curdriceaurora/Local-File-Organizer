@@ -259,7 +259,7 @@ window.browseDirectory = async (inputId) => {
       models: {
         text_model: textModel,
       },
-      methodology: methodology || "content_based",
+      methodology: methodology || "none",
     };
 
     if (visionModel) {
