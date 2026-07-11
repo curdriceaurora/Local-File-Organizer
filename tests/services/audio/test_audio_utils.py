@@ -84,12 +84,14 @@ class TestGetAudioDuration:
         mock_tinytag.TinyTag.get.return_value = mock_tag
 
         # First import (pydub) fails, second (tinytag) succeeds
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if name == "pydub":
                 raise ImportError("no pydub")
             if name == "tinytag":
                 return mock_tinytag
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             duration = get_audio_duration(audio_file)
@@ -98,11 +100,12 @@ class TestGetAudioDuration:
 
     def test_no_audio_libs(self, audio_file):
         """When neither pydub nor tinytag is available."""
+        real_import = builtins.__import__
 
         def fake_import(name, *args, **kwargs):
             if name in ("pydub", "tinytag"):
                 raise ImportError(f"no {name}")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             duration = get_audio_duration(audio_file)
@@ -149,10 +152,12 @@ class TestNormalizeAudio:
             assert result == audio_file
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = normalize_audio(audio_file)
@@ -184,10 +189,12 @@ class TestSplitAudio:
         assert len(result) == 2
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = split_audio(audio_file)
@@ -233,10 +240,12 @@ class TestConvertAudioFormat:
             assert result == audio_file.with_suffix(".wav")
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = convert_audio_format(audio_file, "wav")
@@ -314,10 +323,12 @@ class TestDetectSilenceSegments:
         assert len(result) == 2
 
     def test_no_pydub(self, audio_file):
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if "pydub" in name:
                 raise ImportError("no pydub")
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             result = detect_silence_segments(audio_file)

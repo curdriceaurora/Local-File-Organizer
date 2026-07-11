@@ -7,6 +7,7 @@ src/file_organizer/services/audio/utils.py.  Every test class carries
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -52,13 +53,15 @@ class TestGetAudioDurationBranches:
         mock_tinytag = MagicMock()
         mock_tinytag.TinyTag.get.return_value = mock_tag
 
+        real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             """Substitute __import__ that raises for pydub and returns mock_tinytag for tinytag."""
             if name == "pydub":
                 raise ImportError("no pydub")
             if name == "tinytag":
                 return mock_tinytag
-            raise ImportError(f"no {name}")
+            return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=fake_import):
             duration = get_audio_duration(audio)
@@ -566,8 +569,6 @@ class TestDetectSilenceSegmentsBranches:
 
     def test_no_pydub_returns_empty_list(self, audio_file: Path) -> None:
         """Lines 221-223: ImportError → warning logged, returns []."""
-        import builtins
-
         real_import = builtins.__import__
 
         def _no_pydub(name: str, *args: object, **kwargs: object) -> object:
