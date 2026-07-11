@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from file_organizer.services.deduplication.extractor import DocumentExtractor
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = pytest.mark.unit
 
@@ -136,7 +137,10 @@ class TestExtractPdf:
         f = tmp_path / "test.pdf"
         f.write_bytes(b"%PDF-1.4")
         with patch.dict("sys.modules", {"pypdf": None}):
-            with patch("builtins.__import__", side_effect=ImportError("no pypdf")):
+            with patch(
+                "builtins.__import__",
+                side_effect=make_fake_import(missing_names=("pypdf",)),
+            ):
                 result = extractor._extract_pdf(f)
         assert result == ""
 
@@ -156,7 +160,10 @@ class TestExtractDocx:
     def test_docx_import_error(self, extractor, tmp_path):
         f = tmp_path / "test.docx"
         f.write_bytes(b"PK\x03\x04")
-        with patch("builtins.__import__", side_effect=ImportError("no docx")):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("docx",)),
+        ):
             result = extractor._extract_docx(f)
         assert result == ""
 

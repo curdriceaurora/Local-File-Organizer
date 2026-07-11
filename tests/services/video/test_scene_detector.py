@@ -18,6 +18,7 @@ from file_organizer.services.video.scene_detector import (
     SceneDetectionResult,
     SceneDetector,
 )
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = [pytest.mark.unit]
 
@@ -176,7 +177,10 @@ class TestSceneDetectorInit:
     def test_check_dependencies_missing_cv2(self) -> None:
         """When cv2 is missing, detector should still initialize."""
         with patch.dict("sys.modules", {"cv2": None}):
-            with patch("builtins.__import__", side_effect=_import_side_effect(block={"cv2"})):
+            with patch(
+                "builtins.__import__",
+                side_effect=make_fake_import(missing_names=("cv2",)),
+            ):
                 # Should not raise
                 detector = SceneDetector.__new__(SceneDetector)
                 detector.method = DetectionMethod.CONTENT
@@ -189,7 +193,7 @@ class TestSceneDetectorInit:
         with patch.dict("sys.modules", {"scenedetect": None}):
             with patch(
                 "builtins.__import__",
-                side_effect=_import_side_effect(block={"scenedetect"}),
+                side_effect=make_fake_import(missing_names=("scenedetect",)),
             ):
                 detector = SceneDetector.__new__(SceneDetector)
                 detector.method = DetectionMethod.CONTENT
@@ -535,23 +539,6 @@ class TestExtractSceneThumbnails:
 
         # target_time = 2.0 + 1.0 = 3.0, target_frame = 3.0 * 30 = 90
         cap.set.assert_called_once_with(mock_cv2.CAP_PROP_POS_FRAMES, 90)
-
-
-# ---------------------------------------------------------------------------
-# Mock helpers
-# ---------------------------------------------------------------------------
-
-
-def _import_side_effect(block: set[str]):
-    """Return a side_effect function for __import__ that blocks certain modules."""
-    real_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
-
-    def _import(name, *args, **kwargs):
-        if name in block:
-            raise ImportError(f"Mocked missing: {name}")
-        return real_import(name, *args, **kwargs)
-
-    return _import
 
 
 def _run_scenedetect_mock(

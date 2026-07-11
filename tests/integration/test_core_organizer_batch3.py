@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.utils.import_mocks import make_fake_import
+
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
@@ -1402,21 +1404,15 @@ class TestAudioUtils:
             get_audio_duration(tmp_path / "nonexistent.mp3")
 
     def test_get_audio_duration_returns_float_when_no_libs(self, tmp_path: Path) -> None:
-        import builtins
-
         from file_organizer.services.audio.utils import get_audio_duration
 
         f = tmp_path / "dummy.mp3"
         f.write_bytes(b"\xff\xfb")
 
-        real_import = builtins.__import__
-
-        def import_without_audio_libs(name: str, *args: Any, **kwargs: Any) -> Any:
-            if name in {"pydub", "tinytag"} or name.startswith(("pydub.", "tinytag.")):
-                raise ImportError(f"no {name}")
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=import_without_audio_libs):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub", "tinytag")),
+        ):
             result = get_audio_duration(f)
 
         assert result == 0.0

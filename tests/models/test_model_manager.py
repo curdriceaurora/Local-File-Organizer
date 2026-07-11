@@ -12,6 +12,7 @@ import pytest
 from file_organizer.models.base import ModelType
 from file_organizer.models.model_manager import ModelManager
 from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
+from tests.utils.import_mocks import make_fake_import
 
 
 @pytest.fixture
@@ -202,20 +203,10 @@ class TestModelManager:
         assert checked_path == str(hub_cache / "models--Systran--faster-whisper-small")
 
     def test_is_whisper_installed_returns_false_when_dependency_missing(self) -> None:
-        real_import = __import__
-
-        def _mock_import(
-            name: str,
-            globals: object = None,
-            locals: object = None,
-            fromlist=(),
-            level: int = 0,
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("faster_whisper",)),
         ):
-            if name == "faster_whisper":
-                raise ImportError("missing")
-            return real_import(name, globals, locals, fromlist, level)
-
-        with patch("builtins.__import__", side_effect=_mock_import):
             assert ModelManager._is_whisper_installed("base") is False
 
 

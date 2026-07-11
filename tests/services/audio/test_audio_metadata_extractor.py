@@ -16,6 +16,7 @@ from file_organizer.services.audio.metadata_extractor import (
     AudioMetadata,
     AudioMetadataExtractor,
 )
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = [pytest.mark.unit]
 
@@ -249,15 +250,10 @@ class TestExtractWithMutagen:
     """Tests for _extract_with_mutagen."""
 
     def test_import_error(self, extractor, audio_file):
-        def fake_import(name, *args, **kwargs):
-            if "mutagen" in name:
-                raise ImportError("no mutagen")
-            return original_import(name, *args, **kwargs)
-
-        import builtins
-
-        original_import = builtins.__import__
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("mutagen",)),
+        ):
             with pytest.raises(ImportError, match="mutagen is required"):
                 extractor._extract_with_mutagen(audio_file)
 
@@ -507,15 +503,10 @@ class TestExtractWithTinytag:
     """Tests for _extract_with_tinytag fallback."""
 
     def test_import_error(self, extractor, audio_file):
-        def fake_import(name, *args, **kwargs):
-            if "tinytag" in name:
-                raise ImportError("no tinytag")
-            return original_import(name, *args, **kwargs)
-
-        import builtins
-
-        original_import = builtins.__import__
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("tinytag",)),
+        ):
             with pytest.raises(ImportError, match="tinytag is required"):
                 extractor._extract_with_tinytag(audio_file)
 
