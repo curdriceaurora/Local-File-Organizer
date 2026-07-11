@@ -480,6 +480,8 @@ class TestRenderSection:
 
         assert result == mock_response
         mock_templates.TemplateResponse.assert_called_once()
+        rendered_context = mock_templates.TemplateResponse.call_args[0][2]
+        assert rendered_context["app_config"] is app_config
 
     @patch("file_organizer.web.settings_routes.templates")
     def test_render_section_with_error(self, mock_templates, mock_request, app_config):
@@ -497,6 +499,8 @@ class TestRenderSection:
         )
 
         assert result == mock_response
+        rendered_context = mock_templates.TemplateResponse.call_args[0][2]
+        assert rendered_context["app_config"] is app_config
 
 
 # ---------------------------------------------------------------------------
@@ -724,7 +728,19 @@ class TestSettingsImportPathBased:
         """A valid JSON file under allowed_paths should be imported with status 200."""
         client, tmp_path = _client
         cfg_file = tmp_path / "cfg.json"
-        cfg_file.write_text(json.dumps({"theme": "dark", "language": "en"}))
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "theme": "dark",
+                    "language": "en",
+                    "default_input_dir": "/import/input",
+                    "default_output_dir": "/import/output",
+                    "text_model": "imported-text-model",
+                    "vision_model": "imported-vision-model",
+                    "default_methodology": "para",
+                }
+            )
+        )
 
         with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
             mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
@@ -739,6 +755,13 @@ class TestSettingsImportPathBased:
         ws = _load_web_settings()
         assert ws.theme == "dark"
         assert ws.language == "en"
+        # Shared workflow fields persist to AppConfig, not web-settings.json.
+        app_config = ConfigManager(config_dir=tmp_path / "app-config").load()
+        assert app_config.default_input_dir == "/import/input"
+        assert app_config.default_output_dir == "/import/output"
+        assert app_config.models.text_model == "imported-text-model"
+        assert app_config.models.vision_model == "imported-vision-model"
+        assert app_config.default_methodology == "para"
 
     def test_import_via_path_outside_allowed_root_returns_error(self, tmp_path):
         """A path outside allowed_paths must trigger an error flash (not a 403 raise)."""

@@ -390,6 +390,7 @@ class TestSettingsModelsPost:
         assert r.status_code == 200
         app_config = ConfigManager(config_dir=tmp_path / "app-config").load()
         assert app_config.models.text_model == "qwen2.5:3b-instruct-q4_K_M"
+        assert app_config.models.vision_model == "qwen2.5vl:7b-q4_K_M"
 
 
 # ---------------------------------------------------------------------------

@@ -408,6 +408,10 @@ class TestSettingsUtilities:
         stored = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
         assert stored["language"] == "fr"
         assert stored["timezone"] == "Europe/London"
+        # Shared workflow fields persist to AppConfig, not web-settings.json.
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_input_dir == "/import/input"
+        assert app_config.default_output_dir == "/import/output"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_settings_reset(self, tmp_path: Path, _patch_settings_file: Path) -> None:

@@ -500,25 +500,35 @@ def settings_reset(
     """
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
-    ws = WebSettings()
-    _save_web_settings(ws)
+    try:
+        ws = WebSettings()
+        _save_web_settings(ws)
 
-    defaults = AppConfig()
-    app_config = _load_app_config(manager)
-    app_config.default_input_dir = defaults.default_input_dir
-    app_config.default_output_dir = defaults.default_output_dir
-    app_config.default_methodology = defaults.default_methodology
-    app_config.models.text_model = defaults.models.text_model
-    app_config.models.vision_model = defaults.models.vision_model
-    _save_app_config(manager, app_config)
+        defaults = AppConfig()
+        app_config = _load_app_config(manager)
+        app_config.default_input_dir = defaults.default_input_dir
+        app_config.default_output_dir = defaults.default_output_dir
+        app_config.default_methodology = defaults.default_methodology
+        app_config.models.text_model = defaults.models.text_model
+        app_config.models.vision_model = defaults.models.vision_model
+        _save_app_config(manager, app_config)
 
-    return _render_section(
-        request,
-        ws,
-        app_config,
-        section=target_section,
-        success_message="Settings reset to defaults.",
-    )
+        return _render_section(
+            request,
+            ws,
+            app_config,
+            section=target_section,
+            success_message="Settings reset to defaults.",
+        )
+    except Exception as exc:
+        logger.exception("Failed to reset settings")
+        return _render_section(
+            request,
+            _load_web_settings(),
+            _load_app_config(manager),
+            section=target_section,
+            error_message=f"Failed to reset settings: {exc}",
+        )
 
 
 @settings_router.get("/settings/general", response_class=HTMLResponse)
@@ -592,8 +602,9 @@ def settings_models_post(
             ollama_url=ollama_url.strip() or "http://localhost:11434",
         )
         app_config = _load_app_config(manager)
-        app_config.models.text_model = text_model.strip() or "qwen2.5:3b-instruct-q4_K_M"
-        app_config.models.vision_model = vision_model.strip() or "qwen2.5vl:7b-q4_K_M"
+        defaults = AppConfig()
+        app_config.models.text_model = text_model.strip() or defaults.models.text_model
+        app_config.models.vision_model = vision_model.strip() or defaults.models.vision_model
         _save_app_config(manager, app_config)
         return _render_section(
             request,
