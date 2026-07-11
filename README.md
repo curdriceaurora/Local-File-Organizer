@@ -236,4 +236,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-**Status**: Stable | **Version**: 2.0.0 | **Last Updated**: 2026-07-05
+**Status**: Stable | **Version**: 2.0.2 | **Last Updated**: 2026-07-05

@@ -8,6 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+from file_organizer.version import __version__
 
 runner = CliRunner()
 
@@ -27,7 +28,7 @@ class TestVersionCommand:
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         assert "fo" in result.output
-        assert "2.0.0" in result.output
+        assert __version__ in result.output
 
 
 @pytest.mark.unit
