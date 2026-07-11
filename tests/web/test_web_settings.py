@@ -159,11 +159,13 @@ class TestSettingsSectionSaves:
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_general_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:
         client = _build_client(tmp_path)
+        input_dir = str(tmp_path / "input")
+        output_dir = str(tmp_path / "output")
         response = client.post(
             "/ui/settings/general",
             data={
-                "default_input_dir": "/tmp/input",  # noqa: test-hardcoded-paths
-                "default_output_dir": "/tmp/output",  # noqa: test-hardcoded-paths
+                "default_input_dir": input_dir,
+                "default_output_dir": output_dir,
             },
             headers=csrf_headers(client),
         )
@@ -172,8 +174,8 @@ class TestSettingsSectionSaves:
 
         # Verify persisted to the shared AppConfig, not web-settings.json.
         app_config = _load_app_config(tmp_path)
-        assert app_config.default_input_dir == "/tmp/input"  # noqa: test-hardcoded-paths
-        assert app_config.default_output_dir == "/tmp/output"  # noqa: test-hardcoded-paths
+        assert app_config.default_input_dir == input_dir
+        assert app_config.default_output_dir == output_dir
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_model_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:
