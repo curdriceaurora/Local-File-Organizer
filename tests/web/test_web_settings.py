@@ -9,8 +9,11 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
+from file_organizer.api.dependencies import get_config_manager
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings, csrf_headers, seed_csrf_token
+from file_organizer.config.manager import ConfigManager
+from file_organizer.config.schema import AppConfig
 
 
 def _build_client(tmp_path: Path) -> TestClient:
@@ -20,9 +23,17 @@ def _build_client(tmp_path: Path) -> TestClient:
         auth_overrides={"auth_enabled": False},
     )
     app = create_app(settings)
+    app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+        config_dir=tmp_path / "app-config"
+    )
     client = TestClient(app)
     seed_csrf_token(client)
     return client
+
+
+def _load_app_config(tmp_path: Path) -> AppConfig:
+    """Load the AppConfig backing a test client built by ``_build_client``."""
+    return ConfigManager(config_dir=tmp_path / "app-config").load()
 
 
 @pytest.fixture()
@@ -148,21 +159,23 @@ class TestSettingsSectionSaves:
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_general_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:
         client = _build_client(tmp_path)
+        input_dir = str(tmp_path / "input")
+        output_dir = str(tmp_path / "output")
         response = client.post(
             "/ui/settings/general",
             data={
-                "default_input_dir": "/tmp/input",  # noqa: test-hardcoded-paths
-                "default_output_dir": "/tmp/output",  # noqa: test-hardcoded-paths
+                "default_input_dir": input_dir,
+                "default_output_dir": output_dir,
             },
             headers=csrf_headers(client),
         )
         assert response.status_code == 200
         assert "General settings saved" in response.text
 
-        # Verify persisted
-        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_input_dir"] == "/tmp/input"  # noqa: test-hardcoded-paths
-        assert data["default_output_dir"] == "/tmp/output"  # noqa: test-hardcoded-paths
+        # Verify persisted to the shared AppConfig, not web-settings.json.
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_input_dir == input_dir
+        assert app_config.default_output_dir == output_dir
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_model_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:
@@ -178,9 +191,9 @@ class TestSettingsSectionSaves:
         assert response.status_code == 200
         assert "Model settings saved" in response.text
 
-        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["text_model"] == "llama3:8b"
-        assert data["vision_model"] == "llava:7b"
+        app_config = _load_app_config(tmp_path)
+        assert app_config.models.text_model == "llama3:8b"
+        assert app_config.models.vision_model == "llava:7b"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_save_organization_settings(self, tmp_path: Path, _patch_settings_file: Path) -> None:
@@ -196,8 +209,9 @@ class TestSettingsSectionSaves:
         assert response.status_code == 200
         assert "Organization settings saved" in response.text
 
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_methodology == "para"
         data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_methodology"] == "para"
         assert data["auto_organize"] is True
 
     @pytest.mark.usefixtures("_patch_settings_file")
@@ -257,8 +271,8 @@ class TestSettingsValidation:
         assert response.status_code == 200
         assert "Organization settings saved" in response.text
 
-        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_methodology"] == "none"
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_methodology == "none"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_invalid_theme_defaults_to_light(
@@ -302,9 +316,9 @@ class TestSettingsValidation:
         )
         assert response.status_code == 200
 
-        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["text_model"] == "qwen2.5:3b-instruct-q4_K_M"
-        assert data["vision_model"] == "qwen2.5vl:7b-q4_K_M"
+        app_config = _load_app_config(tmp_path)
+        assert app_config.models.text_model == "qwen2.5:3b-instruct-q4_K_M"
+        assert app_config.models.vision_model == "qwen2.5vl:7b-q4_K_M"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_unchecked_checkboxes_save_as_false(
@@ -396,6 +410,10 @@ class TestSettingsUtilities:
         stored = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
         assert stored["language"] == "fr"
         assert stored["timezone"] == "Europe/London"
+        # Shared workflow fields persist to AppConfig, not web-settings.json.
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_input_dir == "/import/input"
+        assert app_config.default_output_dir == "/import/output"
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_settings_reset(self, tmp_path: Path, _patch_settings_file: Path) -> None:
@@ -412,9 +430,9 @@ class TestSettingsUtilities:
         )
         assert response.status_code == 200
         assert "Settings reset to defaults" in response.text
-        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
-        assert data["default_input_dir"] == ""
-        assert data["default_output_dir"] == ""
+        app_config = _load_app_config(tmp_path)
+        assert app_config.default_input_dir == ""
+        assert app_config.default_output_dir == ""
 
     @pytest.mark.usefixtures("_patch_settings_file")
     def test_rules_validation_endpoint(self, tmp_path: Path) -> None:

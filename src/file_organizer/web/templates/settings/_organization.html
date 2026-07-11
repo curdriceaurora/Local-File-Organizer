@@ -19,7 +19,7 @@
             <label for="settings-methodology">Default methodology</label>
             <select id="settings-methodology" name="default_methodology">
                 {% for key, label in methodology_options.items() %}
-                <option value="{{ key }}" {% if ws.default_methodology == key %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ key }}" {% if app_config.default_methodology == key %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
             <p class="form-hint">The default file organization methodology used for new jobs.</p>

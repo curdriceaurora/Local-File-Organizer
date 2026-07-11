@@ -20,14 +20,22 @@ from fastapi.responses import HTMLResponse, Response
 from loguru import logger
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.utils import resolve_path
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as METHODOLOGY_OPTIONS
 from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.config.path_manager import get_config_dir
+from file_organizer.config.schema import AppConfig
 from file_organizer.utils.atomic_write import atomic_write_text
 from file_organizer.web._helpers import base_context, templates
+
+# Profile used for the AppConfig-backed fields shown on this page (default
+# input/output dirs, methodology, text/vision model). The web UI does not
+# yet expose profile switching, so it always reads/writes "default" — same
+# as every other AppConfig consumer (TUI, CLI, API routers).
+_PROFILE = "default"
 
 settings_router = APIRouter(tags=["web"])
 
@@ -85,21 +93,24 @@ _SECTION_INDEX = {
 
 @dataclass
 class WebSettings:
-    """Persistent settings for the web UI."""
+    """Persistent settings for the web UI.
+
+    Holds only fields with no canonical home elsewhere. The workflow fields
+    shown alongside these on the settings page — default input/output dirs,
+    methodology, text/vision model — live on the shared ``AppConfig``
+    (``config.manager.ConfigManager``) instead, so a value set here is
+    visible to the TUI, CLI, and API too (see #1539). Loaded/saved via
+    ``_load_app_config``/``_save_app_config`` in the route handlers below.
+    """
 
     # General
     language: str = "en"
     timezone: str = "UTC"
-    default_input_dir: str = ""
-    default_output_dir: str = ""
 
     # Models
-    text_model: str = "qwen2.5:3b-instruct-q4_K_M"
-    vision_model: str = "qwen2.5vl:7b-q4_K_M"
     ollama_url: str = "http://localhost:11434"
 
     # Organization
-    default_methodology: str = _DEFAULT_METHODOLOGY
     auto_organize: bool = False
     notifications_enabled: bool = True
     file_filter_glob: str = "*"
@@ -181,7 +192,6 @@ def _load_web_settings() -> WebSettings:
                 continue
             if isinstance(value, str):
                 setattr(ws, key, value)
-        ws.default_methodology = _normalize_methodology(ws.default_methodology)
         ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
         ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
         ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
@@ -213,9 +223,20 @@ def _update_web_settings(**kwargs: object) -> WebSettings:
     return ws
 
 
+def _load_app_config(manager: ConfigManager) -> AppConfig:
+    """Load the canonical ``AppConfig`` backing this page's workflow fields."""
+    return manager.load(profile=_PROFILE)
+
+
+def _save_app_config(manager: ConfigManager, config: AppConfig) -> None:
+    """Persist *config*, the canonical ``AppConfig`` backing this page."""
+    manager.save(config, profile=_PROFILE)
+
+
 def _section_context(
     request: Request,
     ws: WebSettings,
+    app_config: AppConfig,
     *,
     section: str,
     success_message: str = "",
@@ -225,6 +246,7 @@ def _section_context(
     return {
         "request": request,
         "ws": ws,
+        "app_config": app_config,
         "section": section,
         "success_message": success_message,
         "error_message": error_message,
@@ -240,6 +262,7 @@ def _section_context(
 def _render_section(
     request: Request,
     ws: WebSettings,
+    app_config: AppConfig,
     *,
     section: str,
     success_message: str = "",
@@ -249,7 +272,8 @@ def _render_section(
 
     Args:
         request: Incoming FastAPI request.
-        ws: Current persisted web settings.
+        ws: Current persisted web-only settings.
+        app_config: Current shared AppConfig (dirs, methodology, model).
         section: Section name (e.g. ``"general"``, ``"models"``).
         success_message: Optional success flash.
         error_message: Optional error flash.
@@ -260,6 +284,7 @@ def _render_section(
     context = _section_context(
         request,
         ws,
+        app_config,
         section=section,
         success_message=success_message,
         error_message=error_message,
@@ -269,7 +294,9 @@ def _render_section(
 
 @settings_router.get("/settings", response_class=HTMLResponse)
 def settings_page(
-    request: Request, settings_obj: ApiSettings = Depends(get_settings)
+    request: Request,
+    settings_obj: ApiSettings = Depends(get_settings),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Render the full settings page with all sections.
 
@@ -277,6 +304,7 @@ def settings_page(
         Full HTML page for settings.
     """
     ws = _load_web_settings()
+    app_config = _load_app_config(manager)
     context = base_context(
         request,
         settings_obj,
@@ -284,6 +312,7 @@ def settings_page(
         title="Settings",
         extras={
             "ws": ws,
+            "app_config": app_config,
             "methodology_options": METHODOLOGY_OPTIONS,
             "log_level_options": LOG_LEVEL_OPTIONS,
             "theme_options": THEME_OPTIONS,
@@ -326,10 +355,23 @@ def settings_search(query: str = Query("", alias="q")) -> HTMLResponse:
 
 
 @settings_router.get("/settings/export")
-def settings_export() -> Response:
-    """Export current web settings as a downloadable JSON file."""
+def settings_export(manager: ConfigManager = Depends(get_config_manager)) -> Response:
+    """Export current web settings, plus the shared AppConfig fields shown on this page.
+
+    Returns:
+        A single downloadable JSON file.
+    """
     ws = _load_web_settings()
-    payload = json.dumps(asdict(ws), indent=2) + "\n"
+    app_config = _load_app_config(manager)
+    payload_dict = asdict(ws)
+    payload_dict.update(
+        default_input_dir=app_config.default_input_dir,
+        default_output_dir=app_config.default_output_dir,
+        text_model=app_config.models.text_model,
+        vision_model=app_config.models.vision_model,
+        default_methodology=app_config.default_methodology,
+    )
+    payload = json.dumps(payload_dict, indent=2) + "\n"
     return Response(
         content=payload,
         media_type="application/json",
@@ -344,6 +386,7 @@ async def settings_import(
     settings_file: UploadFile | None = File(None),
     settings_path: str | None = Form(None),
     settings: ApiSettings = Depends(get_settings),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Import web settings from an uploaded JSON file or a desktop file path.
 
@@ -366,6 +409,7 @@ async def settings_import(
                 return _render_section(
                     request,
                     ws,
+                    _load_app_config(manager),
                     section=target_section,
                     error_message="Import failed: uploaded file is empty.",
                 )
@@ -379,6 +423,7 @@ async def settings_import(
             return _render_section(
                 request,
                 ws,
+                _load_app_config(manager),
                 section=target_section,
                 error_message="Import failed: provide either a settings file or a valid path.",
             )
@@ -396,7 +441,6 @@ async def settings_import(
             elif isinstance(value, str):
                 setattr(ws, key, value)
 
-        ws.default_methodology = _normalize_methodology(ws.default_methodology)
         ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
         ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
         ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
@@ -404,9 +448,27 @@ async def settings_import(
         ws.timezone = _validate_choice(ws.timezone, TIMEZONE_OPTIONS, "UTC")
         _save_web_settings(ws)
 
+        # Shared AppConfig fields (dirs, methodology, model) are imported
+        # separately since #1539 — WebSettings no longer carries them.
+        app_config = _load_app_config(manager)
+        if isinstance(payload.get("default_input_dir"), str):
+            app_config.default_input_dir = payload["default_input_dir"].strip()
+        if isinstance(payload.get("default_output_dir"), str):
+            app_config.default_output_dir = payload["default_output_dir"].strip()
+        if isinstance(payload.get("text_model"), str) and payload["text_model"].strip():
+            app_config.models.text_model = payload["text_model"].strip()
+        if isinstance(payload.get("vision_model"), str) and payload["vision_model"].strip():
+            app_config.models.vision_model = payload["vision_model"].strip()
+        if "default_methodology" in payload:
+            app_config.default_methodology = _normalize_methodology(
+                payload.get("default_methodology")
+            )
+        _save_app_config(manager, app_config)
+
         return _render_section(
             request,
             ws,
+            app_config,
             section=target_section,
             success_message="Settings imported successfully.",
         )
@@ -415,34 +477,68 @@ async def settings_import(
         return _render_section(
             request,
             ws,
+            _load_app_config(manager),
             section=target_section,
             error_message=f"Import failed: {exc}",
         )
 
 
 @settings_router.post("/settings/reset", response_class=HTMLResponse)
-def settings_reset(request: Request, section: str = Form("general")) -> HTMLResponse:
-    """Reset all web settings to their defaults.
+def settings_reset(
+    request: Request,
+    section: str = Form("general"),
+    manager: ConfigManager = Depends(get_config_manager),
+) -> HTMLResponse:
+    """Reset all web settings, and the shared AppConfig fields shown on this page.
+
+    Only the fields this page owns (default dirs, methodology, text/vision
+    model) are reset on AppConfig — other AppConfig state (setup_completed,
+    updates, module overrides, ...) is left untouched.
 
     Returns:
         Re-rendered section partial confirming the reset.
     """
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
-    ws = WebSettings()
-    _save_web_settings(ws)
-    return _render_section(
-        request,
-        ws,
-        section=target_section,
-        success_message="Settings reset to defaults.",
-    )
+    try:
+        ws = WebSettings()
+        _save_web_settings(ws)
+
+        defaults = AppConfig()
+        app_config = _load_app_config(manager)
+        app_config.default_input_dir = defaults.default_input_dir
+        app_config.default_output_dir = defaults.default_output_dir
+        app_config.default_methodology = defaults.default_methodology
+        app_config.models.text_model = defaults.models.text_model
+        app_config.models.vision_model = defaults.models.vision_model
+        _save_app_config(manager, app_config)
+
+        return _render_section(
+            request,
+            ws,
+            app_config,
+            section=target_section,
+            success_message="Settings reset to defaults.",
+        )
+    except Exception as exc:
+        logger.exception("Failed to reset settings")
+        return _render_section(
+            request,
+            _load_web_settings(),
+            _load_app_config(manager),
+            section=target_section,
+            error_message=f"Failed to reset settings: {exc}",
+        )
 
 
 @settings_router.get("/settings/general", response_class=HTMLResponse)
-def settings_general_get(request: Request) -> HTMLResponse:
+def settings_general_get(
+    request: Request, manager: ConfigManager = Depends(get_config_manager)
+) -> HTMLResponse:
     """Render the General settings section partial."""
-    return _render_section(request, _load_web_settings(), section="general")
+    return _render_section(
+        request, _load_web_settings(), _load_app_config(manager), section="general"
+    )
 
 
 @settings_router.post("/settings/general", response_class=HTMLResponse)
@@ -452,18 +548,22 @@ def settings_general_post(
     timezone: str = Form("UTC"),
     default_input_dir: str = Form(""),
     default_output_dir: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save General settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
             language=_validate_choice(language, LANGUAGE_OPTIONS, "en"),
             timezone=_validate_choice(timezone, TIMEZONE_OPTIONS, "UTC"),
-            default_input_dir=default_input_dir.strip(),
-            default_output_dir=default_output_dir.strip(),
         )
+        app_config = _load_app_config(manager)
+        app_config.default_input_dir = default_input_dir.strip()
+        app_config.default_output_dir = default_output_dir.strip()
+        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
+            app_config,
             section="general",
             success_message="General settings saved.",
         )
@@ -472,15 +572,20 @@ def settings_general_post(
         return _render_section(
             request,
             _load_web_settings(),
+            _load_app_config(manager),
             section="general",
             error_message=f"Failed to save settings: {exc}",
         )
 
 
 @settings_router.get("/settings/models", response_class=HTMLResponse)
-def settings_models_get(request: Request) -> HTMLResponse:
+def settings_models_get(
+    request: Request, manager: ConfigManager = Depends(get_config_manager)
+) -> HTMLResponse:
     """Render the Models settings section partial."""
-    return _render_section(request, _load_web_settings(), section="models")
+    return _render_section(
+        request, _load_web_settings(), _load_app_config(manager), section="models"
+    )
 
 
 @settings_router.post("/settings/models", response_class=HTMLResponse)
@@ -489,17 +594,22 @@ def settings_models_post(
     text_model: str = Form(""),
     vision_model: str = Form(""),
     ollama_url: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Models settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
-            text_model=text_model.strip() or "qwen2.5:3b-instruct-q4_K_M",
-            vision_model=vision_model.strip() or "qwen2.5vl:7b-q4_K_M",
             ollama_url=ollama_url.strip() or "http://localhost:11434",
         )
+        app_config = _load_app_config(manager)
+        defaults = AppConfig()
+        app_config.models.text_model = text_model.strip() or defaults.models.text_model
+        app_config.models.vision_model = vision_model.strip() or defaults.models.vision_model
+        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
+            app_config,
             section="models",
             success_message="Model settings saved.",
         )
@@ -508,6 +618,7 @@ def settings_models_post(
         return _render_section(
             request,
             _load_web_settings(),
+            _load_app_config(manager),
             section="models",
             error_message=f"Failed to save settings: {exc}",
         )
@@ -517,9 +628,11 @@ def settings_models_post(
 def settings_models_test(
     request: Request,
     ollama_url: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Test Ollama connectivity and re-render the Models section partial."""
     ws = _load_web_settings()
+    app_config = _load_app_config(manager)
     target = ollama_url.strip() or ws.ollama_url
     try:
         with httpx.Client(timeout=3.0) as client:
@@ -529,6 +642,7 @@ def settings_models_test(
         return _render_section(
             request,
             ws,
+            app_config,
             section="models",
             success_message="Ollama connection successful.",
         )
@@ -536,24 +650,31 @@ def settings_models_test(
         return _render_section(
             request,
             ws,
+            app_config,
             section="models",
             error_message=f"Ollama connection failed: {exc}",
         )
 
 
 @settings_router.get("/settings/organization", response_class=HTMLResponse)
-def settings_organization_get(request: Request) -> HTMLResponse:
+def settings_organization_get(
+    request: Request, manager: ConfigManager = Depends(get_config_manager)
+) -> HTMLResponse:
     """Render the Organization settings section partial."""
-    return _render_section(request, _load_web_settings(), section="organization")
+    return _render_section(
+        request, _load_web_settings(), _load_app_config(manager), section="organization"
+    )
 
 
 @settings_router.post("/settings/organization/validate", response_class=HTMLResponse)
 def settings_organization_validate(
     request: Request,
     organization_rules: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Validate organization rules and re-render the section partial."""
     ws = _load_web_settings()
+    app_config = _load_app_config(manager)
     candidate_rules = organization_rules or ws.organization_rules
     valid, message = _validate_rules(candidate_rules)
     if valid:
@@ -562,6 +683,7 @@ def settings_organization_validate(
         return _render_section(
             request,
             ws,
+            app_config,
             section="organization",
             success_message=message,
         )
@@ -569,6 +691,7 @@ def settings_organization_validate(
     return _render_section(
         request,
         ws,
+        app_config,
         section="organization",
         error_message=message,
     )
@@ -582,6 +705,7 @@ def settings_organization_post(
     notifications_enabled: str | None = Form(None),
     file_filter_glob: str = Form("*"),
     organization_rules: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Organization settings and re-render the section partial."""
     existing = _load_web_settings()
@@ -592,21 +716,25 @@ def settings_organization_post(
         return _render_section(
             request,
             existing,
+            _load_app_config(manager),
             section="organization",
             error_message=message,
         )
 
     try:
         ws = _update_web_settings(
-            default_methodology=_normalize_methodology(default_methodology),
             auto_organize=_as_form_bool(auto_organize),
             notifications_enabled=_as_form_bool(notifications_enabled),
             file_filter_glob=file_filter_glob.strip() or "*",
             organization_rules=candidate_rules,
         )
+        app_config = _load_app_config(manager)
+        app_config.default_methodology = _normalize_methodology(default_methodology)
+        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
+            app_config,
             section="organization",
             success_message="Organization settings saved.",
         )
@@ -615,15 +743,20 @@ def settings_organization_post(
         return _render_section(
             request,
             _load_web_settings(),
+            _load_app_config(manager),
             section="organization",
             error_message=f"Failed to save settings: {exc}",
         )
 
 
 @settings_router.get("/settings/appearance", response_class=HTMLResponse)
-def settings_appearance_get(request: Request) -> HTMLResponse:
+def settings_appearance_get(
+    request: Request, manager: ConfigManager = Depends(get_config_manager)
+) -> HTMLResponse:
     """Render the Appearance settings section partial."""
-    return _render_section(request, _load_web_settings(), section="appearance")
+    return _render_section(
+        request, _load_web_settings(), _load_app_config(manager), section="appearance"
+    )
 
 
 @settings_router.post("/settings/appearance", response_class=HTMLResponse)
@@ -631,6 +764,7 @@ def settings_appearance_post(
     request: Request,
     theme: str = Form("light"),
     custom_theme_name: str = Form(""),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Appearance settings and re-render the section partial."""
     try:
@@ -641,6 +775,7 @@ def settings_appearance_post(
         return _render_section(
             request,
             ws,
+            _load_app_config(manager),
             section="appearance",
             success_message="Appearance settings saved.",
         )
@@ -649,15 +784,20 @@ def settings_appearance_post(
         return _render_section(
             request,
             _load_web_settings(),
+            _load_app_config(manager),
             section="appearance",
             error_message=f"Failed to save settings: {exc}",
         )
 
 
 @settings_router.get("/settings/advanced", response_class=HTMLResponse)
-def settings_advanced_get(request: Request) -> HTMLResponse:
+def settings_advanced_get(
+    request: Request, manager: ConfigManager = Depends(get_config_manager)
+) -> HTMLResponse:
     """Render the Advanced settings section partial."""
-    return _render_section(request, _load_web_settings(), section="advanced")
+    return _render_section(
+        request, _load_web_settings(), _load_app_config(manager), section="advanced"
+    )
 
 
 @settings_router.post("/settings/advanced", response_class=HTMLResponse)
@@ -667,6 +807,7 @@ def settings_advanced_post(
     cache_enabled: str | None = Form(None),
     debug_mode: str | None = Form(None),
     performance_mode: str = Form("balanced"),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Advanced settings and re-render the section partial."""
     try:
@@ -683,6 +824,7 @@ def settings_advanced_post(
         return _render_section(
             request,
             ws,
+            _load_app_config(manager),
             section="advanced",
             success_message="Advanced settings saved.",
         )
@@ -691,6 +833,7 @@ def settings_advanced_post(
         return _render_section(
             request,
             _load_web_settings(),
+            _load_app_config(manager),
             section="advanced",
             error_message=f"Failed to save settings: {exc}",
         )

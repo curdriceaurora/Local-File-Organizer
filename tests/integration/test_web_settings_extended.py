@@ -19,9 +19,10 @@ from fastapi.responses import HTMLResponse
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.config.manager import ConfigManager
 from file_organizer.web.settings_routes import settings_router
 
 pytestmark = pytest.mark.integration
@@ -47,6 +48,9 @@ def settings_settings(tmp_path: Path) -> ApiSettings:
 def settings_client(settings_settings: ApiSettings, tmp_path: Path) -> TestClient:
     app = FastAPI()
     app.dependency_overrides[get_settings] = lambda: settings_settings
+    app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+        config_dir=tmp_path / "app-config"
+    )
     setup_exception_handlers(app)
     app.include_router(settings_router, prefix="/ui")
     client = TestClient(app, raise_server_exceptions=False)
@@ -384,9 +388,9 @@ class TestSettingsModelsPost:
                         headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
-        if ws_file.exists():
-            data = json.loads(ws_file.read_text())
-            assert data["text_model"] == "qwen2.5:3b-instruct-q4_K_M"
+        app_config = ConfigManager(config_dir=tmp_path / "app-config").load()
+        assert app_config.models.text_model == "qwen2.5:3b-instruct-q4_K_M"
+        assert app_config.models.vision_model == "qwen2.5vl:7b-q4_K_M"
 
 
 # ---------------------------------------------------------------------------
