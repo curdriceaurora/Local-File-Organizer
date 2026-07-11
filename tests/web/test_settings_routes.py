@@ -22,7 +22,9 @@ from fastapi.responses import HTMLResponse
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
+from file_organizer.config.manager import ConfigManager
+from file_organizer.config.schema import AppConfig
 from file_organizer.web.settings_routes import (
     LANGUAGE_OPTIONS,
     LOG_LEVEL_OPTIONS,
@@ -80,6 +82,12 @@ def use_temp_settings_dir(monkeypatch, tmp_path):
             tmp_path / "web-settings.json",
         ):
             yield tmp_path
+
+
+@pytest.fixture()
+def app_config():
+    """Return a default ``AppConfig`` for tests that render sections directly."""
+    return AppConfig()
 
 
 # ---------------------------------------------------------------------------
@@ -401,18 +409,19 @@ class TestUpdateWebSettings:
 class TestSectionContext:
     """Test section context building."""
 
-    def test_section_context_has_required_keys(self, mock_request):
+    def test_section_context_has_required_keys(self, mock_request, app_config):
         """Should include required keys."""
         ws = WebSettings()
-        ctx = _section_context(mock_request, ws, section="general")
+        ctx = _section_context(mock_request, ws, app_config, section="general")
         assert ctx["request"] == mock_request
         assert ctx["ws"] == ws
+        assert ctx["app_config"] == app_config
         assert ctx["section"] == "general"
 
-    def test_section_context_includes_options(self, mock_request):
+    def test_section_context_includes_options(self, mock_request, app_config):
         """Should include all option lists."""
         ws = WebSettings()
-        ctx = _section_context(mock_request, ws, section="general")
+        ctx = _section_context(mock_request, ws, app_config, section="general")
         assert "methodology_options" in ctx
         assert "log_level_options" in ctx
         assert "theme_options" in ctx
@@ -420,23 +429,25 @@ class TestSectionContext:
         assert "timezone_options" in ctx
         assert "performance_modes" in ctx
 
-    def test_success_message(self, mock_request):
+    def test_success_message(self, mock_request, app_config):
         """Should include success message."""
         ws = WebSettings()
         ctx = _section_context(
             mock_request,
             ws,
+            app_config,
             section="general",
             success_message="Settings saved!",
         )
         assert ctx["success_message"] == "Settings saved!"
 
-    def test_error_message(self, mock_request):
+    def test_error_message(self, mock_request, app_config):
         """Should include error message."""
         ws = WebSettings()
         ctx = _section_context(
             mock_request,
             ws,
+            app_config,
             section="general",
             error_message="Save failed!",
         )
@@ -453,7 +464,7 @@ class TestRenderSection:
     """Test section rendering."""
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_calls_template(self, mock_templates, mock_request):
+    def test_render_section_calls_template(self, mock_templates, mock_request, app_config):
         """Should call template renderer."""
         ws = WebSettings()
         mock_response = MagicMock()
@@ -462,6 +473,7 @@ class TestRenderSection:
         result = _render_section(
             mock_request,
             ws,
+            app_config,
             section="general",
             success_message="Saved!",
         )
@@ -470,7 +482,7 @@ class TestRenderSection:
         mock_templates.TemplateResponse.assert_called_once()
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_with_error(self, mock_templates, mock_request):
+    def test_render_section_with_error(self, mock_templates, mock_request, app_config):
         """Should render with error message."""
         ws = WebSettings()
         mock_response = MagicMock()
@@ -479,6 +491,7 @@ class TestRenderSection:
         result = _render_section(
             mock_request,
             ws,
+            app_config,
             section="general",
             error_message="Save failed!",
         )
@@ -533,12 +546,7 @@ class TestWebSettings:
         ws = WebSettings()
         assert hasattr(ws, "language")
         assert hasattr(ws, "timezone")
-        assert hasattr(ws, "default_input_dir")
-        assert hasattr(ws, "default_output_dir")
-        assert hasattr(ws, "text_model")
-        assert hasattr(ws, "vision_model")
         assert hasattr(ws, "ollama_url")
-        assert hasattr(ws, "default_methodology")
         assert hasattr(ws, "auto_organize")
         assert hasattr(ws, "notifications_enabled")
         assert hasattr(ws, "file_filter_glob")
@@ -549,6 +557,15 @@ class TestWebSettings:
         assert hasattr(ws, "cache_enabled")
         assert hasattr(ws, "debug_mode")
         assert hasattr(ws, "performance_mode")
+
+    def test_shared_fields_moved_to_app_config(self):
+        """Workflow fields now live on AppConfig, not WebSettings (see #1539)."""
+        ws = WebSettings()
+        assert not hasattr(ws, "default_input_dir")
+        assert not hasattr(ws, "default_output_dir")
+        assert not hasattr(ws, "text_model")
+        assert not hasattr(ws, "vision_model")
+        assert not hasattr(ws, "default_methodology")
 
 
 # ---------------------------------------------------------------------------
@@ -696,6 +713,9 @@ class TestSettingsImportPathBased:
         )
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: api_settings
+        app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+            config_dir=tmp_path / "app-config"
+        )
         app.include_router(settings_router)
         return TestClient(app, raise_server_exceptions=False), tmp_path
 
@@ -736,6 +756,9 @@ class TestSettingsImportPathBased:
 
             app = FastAPI()
             app.dependency_overrides[get_settings] = lambda: api_settings
+            app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+                config_dir=tmp_path / "app-config"
+            )
             app.include_router(settings_router)
             client = TestClient(app, raise_server_exceptions=False)
 
