@@ -9,7 +9,7 @@ import pytest
 
 from file_organizer.config.schema import AppConfig
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.fixture(autouse=True)
