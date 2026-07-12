@@ -15,6 +15,8 @@ from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
 
+from file_organizer.config.defaults import DEFAULT_OLLAMA_URL, DEFAULT_TEXT_MODEL
+
 from .categories import PARACategory
 
 logger = logging.getLogger(__name__)
@@ -107,8 +109,8 @@ class TemporalThresholds:
 class AIHeuristicConfig:
     """Configuration for the AI-powered heuristic."""
 
-    model: str = "qwen2.5:3b-instruct-q4_K_M"
-    ollama_url: str = "http://localhost:11434"
+    model: str = DEFAULT_TEXT_MODEL
+    ollama_url: str = DEFAULT_OLLAMA_URL
     timeout: float = 30.0
     max_content_chars: int = 4096
     temperature: float = 0.3

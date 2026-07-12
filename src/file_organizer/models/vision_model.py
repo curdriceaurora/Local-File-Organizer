@@ -14,6 +14,7 @@ except ImportError:
 
 from loguru import logger
 
+from file_organizer.config.defaults import DEFAULT_VISION_MODEL
 from file_organizer.models._ollama_response import (
     compute_retry_num_predict,
     format_exhaustion_diagnostics,
@@ -281,7 +282,7 @@ class VisionModel(BaseModel):
 
     @staticmethod
     def get_default_config(
-        model_name: str = "qwen2.5vl:7b-q4_K_M",
+        model_name: str = DEFAULT_VISION_MODEL,
     ) -> ModelConfig:
         """Get default configuration for vision model.
 

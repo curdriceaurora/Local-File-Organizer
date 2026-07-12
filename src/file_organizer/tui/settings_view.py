@@ -28,6 +28,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Input, Static
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import LABELS as _METHODOLOGY_LABELS
 from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
@@ -41,8 +42,8 @@ logger = logging.getLogger(__name__)
 # persisted outside this list is preserved and prepended so cycling never
 # silently discards a hand-picked model.
 _TEXT_MODEL_PRESETS = (
-    "qwen2.5:3b-instruct-q4_K_M",
-    "qwen2.5:7b-instruct-q4_K_M",
+    DEFAULT_TEXT_MODEL,
+    DEFAULT_TEXT_MODEL_LARGE,
     "llama3.2:3b-instruct-q4_K_M",
     "gemma2:2b-instruct-q4_K_M",
 )

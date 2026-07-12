@@ -17,6 +17,7 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
 from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig
@@ -78,7 +79,7 @@ def _response(manager: ConfigManager, profile: str, config: AppConfig) -> Config
                     "version": "1.0",
                     "default_methodology": "none",
                     "setup_completed": False,
-                    "models": {"text_model": "qwen2.5:3b-instruct-q4_K_M"},
+                    "models": {"text_model": DEFAULT_TEXT_MODEL},
                 },
                 "profiles": ["default"],
             },

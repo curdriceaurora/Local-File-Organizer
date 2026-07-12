@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_VISION_MODEL
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 
 # Schema-version constants. ``CURRENT_SCHEMA_VERSION`` is what new configs are
@@ -40,8 +41,8 @@ class ModelPreset:
         framework: Inference framework (ollama, llama_cpp, mlx).
     """
 
-    text_model: str = "qwen2.5:3b-instruct-q4_K_M"
-    vision_model: str = "qwen2.5vl:7b-q4_K_M"
+    text_model: str = DEFAULT_TEXT_MODEL
+    vision_model: str = DEFAULT_VISION_MODEL
     temperature: float = 0.5
     max_tokens: int = 3000
     device: str = "auto"

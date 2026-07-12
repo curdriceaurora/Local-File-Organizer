@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.models.registry import ModelInfo
 
 
@@ -29,7 +30,7 @@ class TextModelInfo(ModelInfo):
 
 TEXT_MODELS: list[TextModelInfo] = [
     TextModelInfo(
-        name="qwen2.5:3b-instruct-q4_K_M",
+        name=DEFAULT_TEXT_MODEL,
         model_type="text",
         size="1.9 GB",
         quantization="q4_K_M",
@@ -38,7 +39,7 @@ TEXT_MODELS: list[TextModelInfo] = [
         max_tokens=3000,
     ),
     TextModelInfo(
-        name="qwen2.5:7b-instruct-q4_K_M",
+        name=DEFAULT_TEXT_MODEL_LARGE,
         model_type="text",
         size="4.4 GB",
         quantization="q4_K_M",

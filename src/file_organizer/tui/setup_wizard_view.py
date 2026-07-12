@@ -22,6 +22,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.core.setup_wizard import ollama_next_steps
 
 logger = logging.getLogger(__name__)
@@ -168,9 +169,9 @@ class SetupWizardView(Vertical):
                 # Choose the other recommended model
                 current = self._capabilities.hardware.recommended_text_model()
                 if "7b" in current:
-                    model = "qwen2.5:3b-instruct-q4_K_M"
+                    model = DEFAULT_TEXT_MODEL
                 else:
-                    model = "qwen2.5:7b-instruct-q4_K_M"
+                    model = DEFAULT_TEXT_MODEL_LARGE
                 self._selected_model = model
                 self._set_status(f"Selected model: {model}")
                 logger.info("User selected alternative model: {}", model)
@@ -447,9 +448,7 @@ class SetupWizardView(Vertical):
         hardware = self._capabilities.hardware
         recommended_model = hardware.recommended_text_model()
         alternative_model = (
-            "qwen2.5:3b-instruct-q4_K_M"
-            if "7b" in recommended_model
-            else "qwen2.5:7b-instruct-q4_K_M"
+            DEFAULT_TEXT_MODEL if "7b" in recommended_model else DEFAULT_TEXT_MODEL_LARGE
         )
 
         # Check installed models
