@@ -28,6 +28,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Input, Static
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import LABELS as _METHODOLOGY_LABELS
 from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
@@ -41,12 +42,11 @@ logger = logging.getLogger(__name__)
 # persisted outside this list is preserved and prepended so cycling never
 # silently discards a hand-picked model.
 _TEXT_MODEL_PRESETS = (
-    "qwen2.5:3b-instruct-q4_K_M",
-    "qwen2.5:7b-instruct-q4_K_M",
+    DEFAULT_TEXT_MODEL,
+    DEFAULT_TEXT_MODEL_LARGE,
     "llama3.2:3b-instruct-q4_K_M",
     "gemma2:2b-instruct-q4_K_M",
 )
-_DEFAULT_TEXT_MODEL = _TEXT_MODEL_PRESETS[0]
 
 
 @dataclass(frozen=True)
@@ -164,7 +164,7 @@ def load_workflow_settings(
     resolved_manager = manager or ConfigManager()
     config = resolved_manager.load(profile=profile)
 
-    text_model = config.models.text_model.strip() or _DEFAULT_TEXT_MODEL
+    text_model = config.models.text_model.strip() or DEFAULT_TEXT_MODEL
     return WorkflowSettings(
         default_input_dir=config.default_input_dir or "",
         default_output_dir=config.default_output_dir or "",
@@ -188,7 +188,7 @@ def save_workflow_settings(
     config.default_input_dir = settings.default_input_dir.strip()
     config.default_output_dir = settings.default_output_dir.strip()
     config.default_methodology = _normalize_methodology(settings.methodology)
-    config.models.text_model = settings.text_model.strip() or _DEFAULT_TEXT_MODEL
+    config.models.text_model = settings.text_model.strip() or DEFAULT_TEXT_MODEL
     config.updates.check_on_startup = bool(settings.check_updates_on_startup)
     config.updates.include_prereleases = bool(settings.include_prereleases)
 
@@ -251,7 +251,7 @@ class SettingsView(Vertical):
         self._input_dir: str = ""
         self._output_dir: str = ""
         self._methodology: str = "none"
-        self._text_model: str = _DEFAULT_TEXT_MODEL
+        self._text_model: str = DEFAULT_TEXT_MODEL
         self._check_updates: bool = True
         self._include_prereleases: bool = False
 

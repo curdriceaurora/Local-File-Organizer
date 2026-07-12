@@ -13,6 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt, SecretStr, field_validator
 
 from file_organizer.api.api_keys import hash_api_key
+from file_organizer.config.defaults import DEFAULT_OLLAMA_URL
 from file_organizer.version import __version__
 
 _DEFAULT_CORS = [
@@ -103,7 +104,7 @@ class ApiSettings(BaseModel):
     security_hsts_seconds: NonNegativeInt = 31536000
     security_hsts_subdomains: bool = True
     security_referrer_policy: str = "strict-origin-when-cross-origin"
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str = DEFAULT_OLLAMA_URL
 
     @field_validator("ollama_url")  # pyre-ignore[56]
     @classmethod

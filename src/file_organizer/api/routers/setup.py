@@ -22,6 +22,7 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 from file_organizer.config.manager import ConfigManager
 from file_organizer.core.hardware_profile import GpuType
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
@@ -128,7 +129,7 @@ def get_setup_status(
                     "gpu_vram_gb": None,
                     "gpu_name": None,
                     "cpu_cores": 8,
-                    "recommended_model": "qwen2.5:3b-instruct-q4_K_M",
+                    "recommended_model": DEFAULT_TEXT_MODEL,
                 },
                 "ollama": {
                     "installed": True,
@@ -195,7 +196,7 @@ def detect_capabilities(
             {
                 "success": True,
                 "profile": "default",
-                "messages": ["Setup completed successfully with model: qwen2.5:3b-instruct-q4_K_M"],
+                "messages": [f"Setup completed successfully with model: {DEFAULT_TEXT_MODEL}"],
                 "warnings": [],
                 "errors": [],
             },

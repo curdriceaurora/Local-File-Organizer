@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from file_organizer.config.defaults import DEFAULT_VISION_MODEL
 from file_organizer.models.registry import ModelInfo
 
 
@@ -31,7 +32,7 @@ class VisionModelInfo(ModelInfo):
 
 VISION_MODELS: list[VisionModelInfo] = [
     VisionModelInfo(
-        name="qwen2.5vl:7b-q4_K_M",
+        name=DEFAULT_VISION_MODEL,
         model_type="vision",
         size="6.0 GB",
         quantization="q4_K_M",

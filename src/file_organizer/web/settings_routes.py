@@ -22,6 +22,7 @@ from loguru import logger
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.utils import resolve_path
+from file_organizer.config.defaults import DEFAULT_OLLAMA_URL
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as METHODOLOGY_OPTIONS
@@ -108,7 +109,7 @@ class WebSettings:
     timezone: str = "UTC"
 
     # Models
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str = DEFAULT_OLLAMA_URL
 
     # Organization
     auto_organize: bool = False
@@ -599,7 +600,7 @@ def settings_models_post(
     """Save Models settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
-            ollama_url=ollama_url.strip() or "http://localhost:11434",
+            ollama_url=ollama_url.strip() or DEFAULT_OLLAMA_URL,
         )
         app_config = _load_app_config(manager)
         defaults = AppConfig()

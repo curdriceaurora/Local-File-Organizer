@@ -13,6 +13,7 @@ from typing import Any
 
 from loguru import logger
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig, ModelPreset
@@ -219,8 +220,8 @@ class SetupWizard:
             available_names = {m.name for m in capabilities.installed_models}
 
             # Check for recommended models
-            recommended_large = "qwen2.5:7b-instruct-q4_K_M"
-            recommended_small = "qwen2.5:3b-instruct-q4_K_M"
+            recommended_large = DEFAULT_TEXT_MODEL_LARGE
+            recommended_small = DEFAULT_TEXT_MODEL
 
             if recommended_large in available_names:
                 text_model = recommended_large
