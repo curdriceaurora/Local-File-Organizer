@@ -249,6 +249,19 @@ class ConfigManager:
         )
         logger.info("Saved profile '%s' to %s", profile, config_path)
 
+    @staticmethod
+    def mark_setup_completed(config: AppConfig) -> None:
+        """Flag *config* as having completed guided setup, in place.
+
+        Sets ``setup_completed=True`` and clears ``setup_deferred``. Does not
+        persist — callers save afterward, typically with ``force=True`` since
+        setup completion is a deliberate (re)configuration that should
+        migrate/overwrite an unsupported-version profile rather than fail the
+        save guard (#1276).
+        """
+        config.setup_completed = True
+        config.setup_deferred = False
+
     def list_profiles(self) -> list[str]:
         """List available configuration profile names.
 

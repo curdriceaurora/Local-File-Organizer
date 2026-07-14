@@ -234,8 +234,7 @@ def complete_setup(
         )
 
     # Mark setup as completed
-    config.setup_completed = True
-    config.setup_deferred = False  # pragma: no cover
+    ConfigManager.mark_setup_completed(config)  # pragma: no cover
     config.profile_name = request.profile
 
     # Save configuration. force=True: setup completion is a deliberate

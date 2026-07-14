@@ -323,8 +323,7 @@ class SetupWizard:
             profile: Profile name override. Uses config.profile_name if None.
         """
         profile = profile or config.profile_name
-        config.setup_completed = True
-        config.setup_deferred = False
+        ConfigManager.mark_setup_completed(config)
         # force=True: setup completion is a deliberate (re)configuration, so it
         # must migrate/overwrite an existing profile even if its on-disk schema
         # version is unsupported — otherwise the save guard (#1276) would make
