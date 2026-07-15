@@ -47,6 +47,8 @@ def _assert_bearer_auth(request: httpx.Request, token: str = "tok") -> None:
 class TestPluginExecutor:
     """Tests for PluginExecutor (plugins/executor.py)."""
 
+    _READY_LINE = b'{"ready": true}\n'
+
     def test_init_default_name_from_path(self, tmp_path: Path) -> None:
         from file_organizer.plugins.executor import PluginExecutor
 
@@ -98,7 +100,14 @@ class TestPluginExecutor:
         plugin_file = tmp_path / "my_plugin.py"
         plugin_file.write_text("# dummy")
         executor = PluginExecutor(plugin_path=plugin_file)
-        with patch("subprocess.Popen") as mock_popen:
+        with (
+            patch("subprocess.Popen") as mock_popen,
+            patch.object(
+                PluginExecutor,
+                "_readline_with_timeout",
+                return_value=self._READY_LINE,
+            ),
+        ):
             mock_proc = MagicMock()
             mock_popen.return_value = mock_proc
             executor.start()
@@ -110,7 +119,14 @@ class TestPluginExecutor:
         plugin_file = tmp_path / "my_plugin.py"
         plugin_file.write_text("# dummy")
         executor = PluginExecutor(plugin_path=plugin_file)
-        with patch("subprocess.Popen") as mock_popen:
+        with (
+            patch("subprocess.Popen") as mock_popen,
+            patch.object(
+                PluginExecutor,
+                "_readline_with_timeout",
+                return_value=self._READY_LINE,
+            ),
+        ):
             mock_proc = MagicMock()
             mock_popen.return_value = mock_proc
             executor.start()
@@ -180,7 +196,14 @@ class TestPluginExecutor:
         plugin_file = tmp_path / "my_plugin.py"
         plugin_file.write_text("# dummy")
         executor = PluginExecutor(plugin_path=plugin_file)
-        with patch("subprocess.Popen") as mock_popen:
+        with (
+            patch("subprocess.Popen") as mock_popen,
+            patch.object(
+                PluginExecutor,
+                "_readline_with_timeout",
+                return_value=self._READY_LINE,
+            ),
+        ):
             mock_proc = MagicMock()
             mock_proc.stdin = None
             mock_proc.stdout = None
