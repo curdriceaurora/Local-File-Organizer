@@ -17,9 +17,9 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
+from file_organizer.api.utils import apply_config_update
 from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
-from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig
 
 router = APIRouter(tags=["config"], responses=INTERNAL_500_RESPONSE)
@@ -33,29 +33,6 @@ def _profile_update_lock(manager: ConfigManager, profile: str) -> RLock:
     key = (str(manager.config_dir.resolve()), profile)
     with _CONFIG_UPDATE_LOCKS_GUARD:
         return _CONFIG_UPDATE_LOCKS.setdefault(key, RLock())
-
-
-def _apply_update(config: AppConfig, request: ConfigUpdateRequest) -> None:
-    """Apply a partial API update to an AppConfig instance."""
-    if request.default_methodology is not None:
-        config.default_methodology = normalize_methodology(request.default_methodology)
-
-    models = request.models
-    if models is not None:
-        for field, value in models.model_dump(exclude_none=True).items():
-            setattr(config.models, field, value)
-
-    updates = request.updates
-    if updates is not None:
-        for field, value in updates.model_dump(exclude_none=True).items():
-            setattr(config.updates, field, value)
-
-    excluded_fields = {"profile", "default_methodology", "models", "updates"}
-    for name, value in request.model_dump(exclude_none=True).items():
-        if name in excluded_fields:
-            continue
-        if hasattr(config, name):
-            setattr(config, name, value)
 
 
 def _response(manager: ConfigManager, profile: str, config: AppConfig) -> ConfigResponse:
@@ -128,7 +105,7 @@ def update_config(
     """Apply partial updates to a persisted configuration profile."""
     with _profile_update_lock(manager, request.profile):
         config = manager.load(request.profile)
-        _apply_update(config, request)
+        apply_config_update(config, request)
 
         try:
             manager.save(config, request.profile)
