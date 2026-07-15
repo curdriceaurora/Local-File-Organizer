@@ -421,7 +421,9 @@ class TestDictToConfigFieldIteration:
 
     def test_unknown_extra_keys_in_data_are_ignored(self, tmp_path):
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(yaml.dump({"profiles": {"p": {"totally_unknown_field": "surprise"}}}))
+        config_path.write_text(
+            yaml.dump({"profiles": {"p": {"totally_unknown_field": "surprise"}}})
+        )
         mgr = ConfigManager(config_dir=tmp_path)
         cfg = mgr.load("p")
         assert not hasattr(cfg, "totally_unknown_field")
