@@ -171,9 +171,9 @@ def _drop_closed_stream_sinks() -> None:
 
         loggers = [logging.getLogger()]
         loggers += [
-            logging.getLogger(name)
-            for name in list(logging.root.manager.loggerDict)
-            if isinstance(logging.getLogger(name), logging.Logger)
+            logger_obj
+            for logger_obj in list(logging.root.manager.loggerDict.values())
+            if isinstance(logger_obj, logging.Logger)
         ]
         for lg in loggers:
             for handler in list(getattr(lg, "handlers", ())):

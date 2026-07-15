@@ -165,7 +165,7 @@ class TestPluginExecutor:
 
             with pytest.raises(
                 PluginLoadError,
-                match="did not signal readiness.*startup stderr",
+                match=r"did not signal readiness.*startup stderr",
             ):
                 executor.start()
 
@@ -229,9 +229,10 @@ class TestPluginExecutor:
         mock_proc.stderr.close.side_effect = OSError("stderr close failed")
         executor._proc = mock_proc
 
-        with pytest.raises(PluginLoadError, match="<unavailable>"):
+        with pytest.raises(PluginLoadError, match=r"Stderr: ''"):
             executor._abort_startup("failed early")
 
+        mock_proc.stderr.read.assert_not_called()
         assert executor._proc is None
 
     def test_stop_when_not_started_is_noop(self, tmp_path: Path) -> None:

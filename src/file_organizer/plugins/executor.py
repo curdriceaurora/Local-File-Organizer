@@ -91,6 +91,13 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     import sys
     from pathlib import Path
 
+    stdin_bin = sys.stdin.buffer
+    stdout_bin = sys.stdout.buffer
+    # Keep stdout reserved for the JSON IPC protocol. Plugin code can run at
+    # import time and during construction, so redirect normal prints before
+    # loading any plugin-controlled module.
+    sys.stdout = sys.stderr
+
     # ------------------------------------------------------------------
     # 1. Apply resource limits (best-effort; Linux/macOS only)
     # ------------------------------------------------------------------
@@ -147,9 +154,6 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     # 4. IPC loop — read PluginCall from stdin, write PluginResult to stdout
     # ------------------------------------------------------------------
     from file_organizer.plugins.ipc import PluginResult, decode_call, encode_result
-
-    stdin_bin = sys.stdin.buffer
-    stdout_bin = sys.stdout.buffer
 
     # Readiness handshake — MUST be the first bytes on stdout. The parent's
     # start() blocks on this line; see _READY_LINE.
@@ -338,14 +342,16 @@ class PluginExecutor:
         proc = self._proc
         stderr_output = ""
         if proc is not None:
+            reaped = False
             try:
                 proc.kill()
                 proc.wait(timeout=5)
+                reaped = True
             except OSError:
                 logger.debug("Failed to reap worker during startup abort", exc_info=True)
             except subprocess.TimeoutExpired:
                 logger.debug("Worker did not exit after kill during startup abort")
-            if proc.stderr is not None:
+            if reaped and proc.stderr is not None:
                 try:
                     stderr_output = proc.stderr.read().decode(errors="replace")
                 except OSError:

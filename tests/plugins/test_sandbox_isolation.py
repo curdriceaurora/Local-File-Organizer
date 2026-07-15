@@ -418,6 +418,26 @@ _BENIGN_PLUGIN_SRC = (
     "    def on_unload(self): pass\n"
 )
 
+_NOISY_STARTUP_PLUGIN_SRC = (
+    "print('import noise from plugin')\n"
+    "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
+    "class NoisyPlugin(Plugin):\n"
+    "    name = 'noisy'\n"
+    "    version = '1.0.0'\n"
+    "    allowed_paths = []\n"
+    "    def __init__(self):\n"
+    "        print('constructor noise from plugin')\n"
+    "    def get_metadata(self):\n"
+    "        return PluginMetadata(name=self.name, version=self.version,"
+    " author='test', description='noisy')\n"
+    "    def on_load(self):\n"
+    "        print('call noise from plugin')\n"
+    "        return 'loaded'\n"
+    "    def on_enable(self): pass\n"
+    "    def on_disable(self): pass\n"
+    "    def on_unload(self): pass\n"
+)
+
 # src/ root of the package the TEST process imports — the worker child must
 # run this exact tree, not whatever a stale editable install resolves to.
 _PARENT_SRC_ROOT = (
@@ -474,6 +494,18 @@ class TestExecutorStartupHandshake:
             f"got {first_line!r} (returncode: {proc.returncode}, "
             f"stderr: {proc.stderr[-500:]!r})"
         )
+
+    def test_plugin_startup_prints_do_not_pollute_ipc_stdout(self, tmp_path: Path) -> None:
+        """Plugin import/constructor prints are redirected away from IPC stdout."""
+        plugin = tmp_path / "noisy_plugin.py"
+        plugin.write_text(_NOISY_STARTUP_PLUGIN_SRC)
+
+        executor = PluginExecutor(plugin_path=str(plugin))
+        executor.start()
+        try:
+            assert executor.call("on_load") == "loaded"
+        finally:
+            executor.stop()
 
     def test_start_raises_plugin_load_error_when_plugin_import_crashes(
         self, tmp_path: Path

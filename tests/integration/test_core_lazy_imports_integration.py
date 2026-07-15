@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import shutil
+
 import pytest
+
+if shutil.which("ruff") is None:
+    pytest.fail("ruff must be installed to run lazy core import integration tests")
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 

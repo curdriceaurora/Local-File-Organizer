@@ -15,11 +15,15 @@ regression.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+if shutil.which("ruff") is None:
+    pytest.fail("ruff must be installed to run lazy core import regression tests")
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 

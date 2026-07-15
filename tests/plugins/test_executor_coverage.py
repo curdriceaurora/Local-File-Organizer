@@ -78,7 +78,7 @@ class TestPluginExecutorStart:
 
         with pytest.raises(
             PluginLoadError,
-            match="did not signal readiness.*child stderr",
+            match=r"did not signal readiness.*child stderr",
         ):
             executor.start()
 
@@ -130,9 +130,10 @@ class TestPluginExecutorStart:
         executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         executor._proc = mock_proc
 
-        with pytest.raises(PluginLoadError, match="<unavailable>"):
+        with pytest.raises(PluginLoadError, match=r"Stderr: ''"):
             executor._abort_startup("failed early")
 
+        mock_proc.stderr.read.assert_not_called()
         assert executor._proc is None
 
 

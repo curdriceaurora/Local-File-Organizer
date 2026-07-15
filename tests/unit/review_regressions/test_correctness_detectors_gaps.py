@@ -18,9 +18,13 @@ does not exercise:
 from __future__ import annotations
 
 import ast
+import shutil
 from pathlib import Path
 
 import pytest
+
+if shutil.which("ruff") is None:
+    pytest.fail("ruff must be installed to run correctness detector regression tests")
 
 from file_organizer.review_regressions.correctness import (
     ActiveModelPrimitiveStoreDetector,
