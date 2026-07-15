@@ -3,11 +3,15 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions.security import (
     SECURITY_DETECTORS,
     GuardedContextDirectPathDetector,
     ValidatedPathBypassDetector,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _fixture_root() -> Path:

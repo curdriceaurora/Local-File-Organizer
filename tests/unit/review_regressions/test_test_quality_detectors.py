@@ -17,6 +17,8 @@ from file_organizer.review_regressions.test_quality import (
     discover_changed_test_files,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 def _fixture_root() -> Path:
     return (
