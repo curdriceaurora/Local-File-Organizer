@@ -41,8 +41,9 @@ class TestPluginExecutorStart:
         executor.start()
         # Should not spawn another process
 
+    @patch.object(PluginExecutor, "_readline_with_timeout", return_value=b'{"ready": true}\n')
     @patch("file_organizer.plugins.executor.subprocess.Popen")
-    def test_start_spawns_subprocess(self, mock_popen):
+    def test_start_spawns_subprocess(self, mock_popen, mock_ready):
         mock_proc = MagicMock()
         mock_popen.return_value = mock_proc
 
@@ -51,6 +52,8 @@ class TestPluginExecutorStart:
 
         mock_popen.assert_called_once()
         assert executor._proc is mock_proc
+        # start() must block on the readiness handshake before returning.
+        mock_ready.assert_called_once()
 
     @patch("file_organizer.plugins.executor.subprocess.Popen")
     def test_start_raises_plugin_load_error_on_os_error(self, mock_popen):
@@ -59,6 +62,79 @@ class TestPluginExecutorStart:
         executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         with pytest.raises(PluginLoadError, match="Failed to spawn worker"):
             executor.start()
+
+    @patch.object(
+        PluginExecutor,
+        "_readline_with_timeout",
+        side_effect=PluginError("startup read timed out"),
+    )
+    @patch("file_organizer.plugins.executor.subprocess.Popen")
+    def test_start_aborts_when_ready_line_times_out(self, mock_popen, _mock_ready):
+        mock_proc = MagicMock()
+        mock_proc.stderr.read.return_value = b"child stderr"
+        mock_popen.return_value = mock_proc
+
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
+
+        with pytest.raises(
+            PluginLoadError,
+            match=r"did not signal readiness.*child stderr",
+        ):
+            executor.start()
+
+        mock_proc.kill.assert_called_once()
+        mock_proc.wait.assert_called_once_with(timeout=5)
+        mock_proc.stdin.close.assert_called_once()
+        mock_proc.stdout.close.assert_called_once()
+        mock_proc.stderr.close.assert_called_once()
+        assert executor._proc is None
+
+    @pytest.mark.parametrize(
+        ("ready_line", "message"),
+        [
+            (b"not-ready\n", "sent unexpected first stdout line"),
+            (b"", "exited during startup without signalling readiness"),
+        ],
+    )
+    @patch("file_organizer.plugins.executor.subprocess.Popen")
+    def test_start_aborts_when_ready_line_is_invalid(
+        self,
+        mock_popen,
+        ready_line,
+        message,
+    ):
+        mock_proc = MagicMock()
+        mock_proc.stderr.read.return_value = b""
+        mock_popen.return_value = mock_proc
+
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
+        with patch.object(
+            PluginExecutor,
+            "_readline_with_timeout",
+            return_value=ready_line,
+        ):
+            with pytest.raises(PluginLoadError, match=message):
+                executor.start()
+
+        mock_proc.kill.assert_called_once()
+        assert executor._proc is None
+
+    def test_abort_startup_tolerates_cleanup_errors(self):
+        mock_proc = MagicMock()
+        mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="worker", timeout=5)
+        mock_proc.stderr.read.side_effect = OSError("stderr unavailable")
+        mock_proc.stdin.close.side_effect = OSError("stdin close failed")
+        mock_proc.stdout.close.side_effect = OSError("stdout close failed")
+        mock_proc.stderr.close.side_effect = OSError("stderr close failed")
+
+        executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
+        executor._proc = mock_proc
+
+        with pytest.raises(PluginLoadError, match=r"Stderr: ''"):
+            executor._abort_startup("failed early")
+
+        mock_proc.stderr.read.assert_not_called()
+        assert executor._proc is None
 
 
 class TestPluginExecutorStop:
@@ -115,8 +191,9 @@ class TestPluginExecutorStop:
 
 
 class TestPluginExecutorContextManager:
+    @patch.object(PluginExecutor, "_readline_with_timeout", return_value=b'{"ready": true}\n')
     @patch("file_organizer.plugins.executor.subprocess.Popen")
-    def test_context_manager_starts_and_stops(self, mock_popen):
+    def test_context_manager_starts_and_stops(self, mock_popen, mock_ready):
         mock_proc = MagicMock()
         mock_proc.wait.return_value = 0
         mock_proc.stdin = MagicMock()

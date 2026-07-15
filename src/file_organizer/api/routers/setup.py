@@ -111,7 +111,7 @@ def get_setup_status(
     config = manager.load()
     return SetupStatusResponse(
         completed=config.setup_completed,
-        deferred=getattr(config, "setup_deferred", False),
+        deferred=config.setup_deferred,
         profile=config.profile_name,
     )
 
