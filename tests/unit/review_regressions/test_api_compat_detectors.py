@@ -3,6 +3,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions.api_compat import (
     API_COMPAT_DETECTORS,
     PublicApiCompatibilityDetector,
@@ -13,6 +15,8 @@ from file_organizer.review_regressions.api_compat import (
     _find_named_methods,
     _find_toplevel_callable,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _fixture_root() -> Path:
