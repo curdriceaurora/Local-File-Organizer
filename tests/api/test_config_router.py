@@ -18,7 +18,8 @@ from file_organizer.api.dependencies import (
     get_settings,
 )
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.config import _apply_update, router
+from file_organizer.api.routers.config import router
+from file_organizer.api.utils import apply_config_update
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.schema import AppConfig
 
@@ -235,7 +236,7 @@ class TestUpdateConfig:
             model_dump=lambda exclude_none=True: {"unknown_section": {"enabled": True}},
         )
 
-        _apply_update(config, request)
+        apply_config_update(config, request)
 
         assert not hasattr(config, "unknown_section")
 
