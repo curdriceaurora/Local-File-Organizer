@@ -76,3 +76,13 @@ def test_core_unknown_attribute_raises_attribute_error() -> None:
 
     with pytest.raises(AttributeError, match="DefinitelyNotAnExport"):
         _ = core.DefinitelyNotAnExport
+
+
+def test_core_dir_lists_lazy_exports() -> None:
+    """``dir(file_organizer.core)`` should advertise the lazy public API."""
+    import file_organizer.core as core
+
+    names = dir(core)
+
+    assert "FileOrganizer" in names
+    assert "OrganizationResult" in names
