@@ -17,6 +17,8 @@ from file_organizer.review_regressions.framework import (
     run_audit,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @dataclass
 class _Detector:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions.correctness import (
     CORRECTNESS_DETECTORS,
     ActiveModelPrimitiveStoreDetector,
@@ -14,6 +16,8 @@ from file_organizer.review_regressions.correctness import (
     _is_stage_context_annotation,
     _is_stage_context_constructor,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _fixture_root() -> Path:

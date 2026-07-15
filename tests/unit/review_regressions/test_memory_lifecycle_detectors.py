@@ -32,6 +32,8 @@ from file_organizer.review_regressions.memory_lifecycle import (
     _parent_map,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture(scope="session")
 def fixture_root() -> Path:
