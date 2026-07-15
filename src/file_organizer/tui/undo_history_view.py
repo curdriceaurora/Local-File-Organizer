@@ -7,7 +7,6 @@ and aggregate history statistics.
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -17,10 +16,10 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.tui.status import StatusMixin
+
 if TYPE_CHECKING:
     from file_organizer.history.models import Operation
-
-logger = logging.getLogger(__name__)
 
 
 class OperationHistoryPanel(Static):
@@ -175,7 +174,7 @@ class HistoryStatsPanel(Static):
         self.update("\n".join(lines))
 
 
-class UndoHistoryView(Vertical):
+class UndoHistoryView(StatusMixin, Vertical):
     """Undo/redo and operation history view mounted as ``#view``.
 
     Bindings:
@@ -318,15 +317,6 @@ class UndoHistoryView(Vertical):
 
         # Reload history to reflect changes
         self.app.call_from_thread(self.action_refresh_history)
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("UndoHistoryView status bar unavailable", exc_info=True)
 
 
 def _format_timestamp(ts: datetime | None) -> str:

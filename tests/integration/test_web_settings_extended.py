@@ -3,7 +3,7 @@
 Covers: settings_page, settings_search, settings_export, settings_import,
 settings_reset, all section GET/POST routes (general, models, organization,
 appearance, advanced), settings_organization_validate, settings_models_test,
-and the pure helpers (_as_form_bool, _coerce_bool, _validate_choice,
+and the pure helpers (form_bool, coerce_bool, _validate_choice,
 _normalize_methodology, _validate_rules, WebSettings defaults).
 """
 
@@ -66,43 +66,43 @@ def settings_client(settings_settings: ApiSettings, tmp_path: Path) -> TestClien
 # ---------------------------------------------------------------------------
 
 
-class TestAsFormBool:
+class TestFormBool:
     def test_none_returns_false(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
-        assert _as_form_bool(None) is False
+        assert form_bool(None) is False
 
     def test_true_string(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
         for v in ("1", "true", "True", "TRUE", "yes", "on"):
-            assert _as_form_bool(v) is True
+            assert form_bool(v) is True
 
     def test_false_string(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
         for v in ("0", "false", "no", "off", ""):
-            assert _as_form_bool(v) is False
+            assert form_bool(v) is False
 
 
 class TestCoerceBool:
     def test_bool_passthrough(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool(True, False) is True
-        assert _coerce_bool(False, True) is False
+        assert coerce_bool(True, False) is True
+        assert coerce_bool(False, True) is False
 
     def test_string_truthy(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool("1", False) is True
-        assert _coerce_bool("true", False) is True
+        assert coerce_bool("1", False) is True
+        assert coerce_bool("true", False) is True
 
     def test_unknown_type_returns_default(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool(42, True) is True
-        assert _coerce_bool(42, False) is False
+        assert coerce_bool(42, True) is True
+        assert coerce_bool(42, False) is False
 
 
 class TestValidateChoice:

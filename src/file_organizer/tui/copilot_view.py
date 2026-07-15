@@ -8,7 +8,6 @@ so the UI stays responsive.
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from textual import work
@@ -18,11 +17,10 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Input, Static
 
 from file_organizer.services.copilot.models import MessageRole
+from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
     from file_organizer.services.copilot.engine import CopilotEngine
-
-logger = logging.getLogger(__name__)
 
 
 class CopilotMessageLog(VerticalScroll):
@@ -74,7 +72,7 @@ class CopilotInput(Input):
     """
 
 
-class CopilotView(Vertical):
+class CopilotView(StatusMixin, Vertical):
     """Copilot chat panel mounted as ``#view`` in the TUI.
 
     Bindings:
@@ -176,15 +174,6 @@ class CopilotView(Vertical):
 
             self._engine = CopilotEngine()
         return self._engine
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("CopilotView status bar unavailable", exc_info=True)
 
 
 def _escape(text: str) -> str:

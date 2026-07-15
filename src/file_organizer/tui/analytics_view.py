@@ -7,7 +7,6 @@ and duplicate statistics in a scrollable panel layout.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 from textual import work
@@ -16,7 +15,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
-logger = logging.getLogger(__name__)
+from file_organizer.tui.status import StatusMixin
 
 
 class StorageOverviewPanel(Static):
@@ -172,7 +171,7 @@ class DuplicateStatsPanel(Static):
         )
 
 
-class AnalyticsView(Vertical):
+class AnalyticsView(StatusMixin, Vertical):
     """Analytics dashboard mounted as ``#view`` for the Analytics nav.
 
     Bindings:
@@ -281,15 +280,6 @@ class AnalyticsView(Vertical):
                 DuplicateStatsPanel,
             ):
                 self.app.call_from_thread(self.query_one(panel_type).update, msg)
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("AnalyticsView status bar unavailable", exc_info=True)
 
 
 def _format_bytes(num_bytes: int) -> str:

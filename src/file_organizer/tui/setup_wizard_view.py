@@ -24,6 +24,7 @@ from textual.widgets import Static
 
 from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.core.setup_wizard import ollama_next_steps
+from file_organizer.tui.status import StatusMixin
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class WizardScreen(StrEnum):
     COMPLETE = "complete"
 
 
-class SetupWizardView(Vertical):
+class SetupWizardView(StatusMixin, Vertical):
     """Interactive TUI setup wizard for first-run configuration.
 
     Guides users through initial setup with a multi-screen flow:
@@ -622,19 +623,6 @@ class SetupWizardView(Vertical):
         bar = "━" * filled + "╸" if filled < width else "━" * width
         empty = "─" * (width - len(bar))
         return f"[cyan]{bar}[/cyan][dim]{empty}[/dim]"
-
-    def _set_status(self, message: str) -> None:
-        """Update status bar when available.
-
-        Args:
-            message: Status message to display.
-        """
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("Failed to set status message on StatusBar.", exc_info=True)
 
     @work(thread=True)
     def _run_hardware_detection(self) -> None:

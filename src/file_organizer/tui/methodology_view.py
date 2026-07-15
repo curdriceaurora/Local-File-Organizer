@@ -7,7 +7,6 @@ or none) and preview how files would be categorized under the selected scheme.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 from textual import work
@@ -16,7 +15,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
-logger = logging.getLogger(__name__)
+from file_organizer.tui.status import StatusMixin
 
 
 class MethodologySelectorPanel(Static):
@@ -144,7 +143,7 @@ class MethodologyPreviewPanel(Static):
         self.update(f"[red]Error:[/red] {message}")
 
 
-class MethodologyView(Vertical):
+class MethodologyView(StatusMixin, Vertical):
     """Methodology selector view mounted as ``#view``.
 
     Bindings:
@@ -295,12 +294,3 @@ class MethodologyView(Vertical):
                 self.query_one(MethodologyPreviewPanel).show_error,
                 str(exc),
             )
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("MethodologyView status bar unavailable", exc_info=True)

@@ -33,6 +33,7 @@ from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import LABELS as _METHODOLOGY_LABELS
 from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
 from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.tui.status import StatusMixin
 
 _DEFAULT_PREFETCH_DEPTH = 2
 _MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
@@ -195,7 +196,7 @@ def save_workflow_settings(
     resolved_manager.save(config, profile=profile)
 
 
-class SettingsView(Vertical):
+class SettingsView(StatusMixin, Vertical):
     """Interactive TUI settings panel for run configuration."""
 
     DEFAULT_CSS = """
@@ -507,12 +508,3 @@ class SettingsView(Vertical):
             "[dim]m: methodology · t: model · u: update check · p: pre-releases[/dim]\n"
             "[dim]Type in the fields below to set directories · Enter: save · r: reload[/dim]"
         )
-
-    def _set_status(self, message: str) -> None:
-        """Update status bar when available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("Failed to set status message on StatusBar.", exc_info=True)

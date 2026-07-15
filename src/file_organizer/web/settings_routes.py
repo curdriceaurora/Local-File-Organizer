@@ -30,6 +30,7 @@ from file_organizer.config.methodology import normalize as _normalize_methodolog
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import AppConfig
 from file_organizer.utils.atomic_write import atomic_write_text
+from file_organizer.web._forms import coerce_bool, form_bool, update_form_section
 from file_organizer.web._helpers import base_context, templates
 
 # Profile used for the AppConfig-backed fields shown on this page (default
@@ -128,22 +129,6 @@ class WebSettings:
     performance_mode: str = "balanced"
 
 
-def _as_form_bool(value: str | None) -> bool:
-    """Convert an HTML form checkbox value to ``bool``."""
-    if value is None:
-        return False
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _coerce_bool(value: object, default: bool) -> bool:
-    """Coerce an arbitrary value to ``bool``, falling back to *default*."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return default
-
-
 def _validate_choice(value: str, allowed: list[str], fallback: str) -> str:
     """Return *value* if it is in *allowed*, otherwise return *fallback*."""
     candidate = value.strip()
@@ -189,7 +174,7 @@ def _load_web_settings() -> WebSettings:
             if key not in known:
                 continue
             if key in {"auto_organize", "notifications_enabled", "cache_enabled", "debug_mode"}:
-                setattr(ws, key, _coerce_bool(value, getattr(ws, key)))
+                setattr(ws, key, coerce_bool(value, getattr(ws, key)))
                 continue
             if isinstance(value, str):
                 setattr(ws, key, value)
@@ -438,7 +423,7 @@ async def settings_import(
             if key not in known:
                 continue
             if isinstance(getattr(ws, key), bool):
-                setattr(ws, key, _coerce_bool(value, getattr(ws, key)))
+                setattr(ws, key, coerce_bool(value, getattr(ws, key)))
             elif isinstance(value, str):
                 setattr(ws, key, value)
 
@@ -724,8 +709,8 @@ def settings_organization_post(
 
     try:
         ws = _update_web_settings(
-            auto_organize=_as_form_bool(auto_organize),
-            notifications_enabled=_as_form_bool(notifications_enabled),
+            auto_organize=form_bool(auto_organize),
+            notifications_enabled=form_bool(notifications_enabled),
             file_filter_glob=file_filter_glob.strip() or "*",
             organization_rules=candidate_rules,
         )
@@ -768,11 +753,12 @@ def settings_appearance_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Appearance settings and re-render the section partial."""
-    try:
-        ws = _update_web_settings(
-            theme=_validate_choice(theme.lower(), THEME_OPTIONS, "light"),
-            custom_theme_name=custom_theme_name.strip(),
-        )
+
+    def apply(ws: WebSettings) -> None:
+        ws.theme = _validate_choice(theme.lower(), THEME_OPTIONS, "light")
+        ws.custom_theme_name = custom_theme_name.strip()
+
+    def render_success(ws: WebSettings) -> HTMLResponse:
         return _render_section(
             request,
             ws,
@@ -780,15 +766,25 @@ def settings_appearance_post(
             section="appearance",
             success_message="Appearance settings saved.",
         )
-    except Exception as exc:
+
+    def render_error(message: str) -> HTMLResponse:
         logger.exception("Failed to save appearance settings")
         return _render_section(
             request,
             _load_web_settings(),
             _load_app_config(manager),
             section="appearance",
-            error_message=f"Failed to save settings: {exc}",
+            error_message=message,
         )
+
+    return update_form_section(
+        load=_load_web_settings,
+        apply=apply,
+        save=_save_web_settings,
+        render_success=render_success,
+        render_error=render_error,
+        error_prefix="Failed to save settings",
+    )
 
 
 @settings_router.get("/settings/advanced", response_class=HTMLResponse)
@@ -811,17 +807,18 @@ def settings_advanced_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Advanced settings and re-render the section partial."""
-    try:
-        ws = _update_web_settings(
-            log_level=_validate_choice(log_level.strip().upper(), LOG_LEVEL_OPTIONS, "INFO"),
-            cache_enabled=_as_form_bool(cache_enabled),
-            debug_mode=_as_form_bool(debug_mode),
-            performance_mode=_validate_choice(
-                performance_mode.strip().lower(),
-                PERFORMANCE_MODES,
-                "balanced",
-            ),
+
+    def apply(ws: WebSettings) -> None:
+        ws.log_level = _validate_choice(log_level.strip().upper(), LOG_LEVEL_OPTIONS, "INFO")
+        ws.cache_enabled = form_bool(cache_enabled)
+        ws.debug_mode = form_bool(debug_mode)
+        ws.performance_mode = _validate_choice(
+            performance_mode.strip().lower(),
+            PERFORMANCE_MODES,
+            "balanced",
         )
+
+    def render_success(ws: WebSettings) -> HTMLResponse:
         return _render_section(
             request,
             ws,
@@ -829,12 +826,22 @@ def settings_advanced_post(
             section="advanced",
             success_message="Advanced settings saved.",
         )
-    except Exception as exc:
+
+    def render_error(message: str) -> HTMLResponse:
         logger.exception("Failed to save advanced settings")
         return _render_section(
             request,
             _load_web_settings(),
             _load_app_config(manager),
             section="advanced",
-            error_message=f"Failed to save settings: {exc}",
+            error_message=message,
         )
+
+    return update_form_section(
+        load=_load_web_settings,
+        apply=apply,
+        save=_save_web_settings,
+        render_success=render_success,
+        render_error=render_error,
+        error_prefix="Failed to save settings",
+    )
