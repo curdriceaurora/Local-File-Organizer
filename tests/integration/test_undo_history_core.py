@@ -81,6 +81,18 @@ def _make_operation(
     )
 
 
+def test_tui_history_display_helpers_cover_timestamp_and_truncation() -> None:
+    """Keep undo history TUI helper coverage in the integration floor suite."""
+    from file_organizer.tui.undo_history_view import _format_timestamp, _truncate
+
+    timestamp = datetime(2026, 7, 15, 16, 30, 5, tzinfo=UTC)
+
+    assert _format_timestamp(None) == "-"
+    assert _format_timestamp(timestamp) == "2026-07-15 16:30:05"
+    assert _truncate("short", 10) == "short"
+    assert _truncate("long-value", 6) == "long-\u2026"
+
+
 # ===========================================================================
 # TestOperationValidator
 # ===========================================================================
