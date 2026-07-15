@@ -144,6 +144,96 @@ class TestPluginExecutor:
             with pytest.raises(PluginLoadError, match="Failed to spawn worker"):
                 executor.start()
 
+    def test_start_aborts_when_ready_line_times_out(self, tmp_path: Path) -> None:
+        from file_organizer.plugins.errors import PluginError, PluginLoadError
+        from file_organizer.plugins.executor import PluginExecutor
+
+        plugin_file = tmp_path / "my_plugin.py"
+        plugin_file.write_text("# dummy")
+        executor = PluginExecutor(plugin_path=plugin_file)
+        with (
+            patch("subprocess.Popen") as mock_popen,
+            patch.object(
+                PluginExecutor,
+                "_readline_with_timeout",
+                side_effect=PluginError("startup read timed out"),
+            ),
+        ):
+            mock_proc = MagicMock()
+            mock_proc.stderr.read.return_value = b"startup stderr"
+            mock_popen.return_value = mock_proc
+
+            with pytest.raises(
+                PluginLoadError,
+                match="did not signal readiness.*startup stderr",
+            ):
+                executor.start()
+
+        mock_proc.kill.assert_called_once()
+        mock_proc.stdin.close.assert_called_once()
+        mock_proc.stdout.close.assert_called_once()
+        mock_proc.stderr.close.assert_called_once()
+        assert executor._proc is None
+
+    @pytest.mark.parametrize(
+        ("ready_line", "message"),
+        [
+            (b"not-ready\n", "sent unexpected first stdout line"),
+            (b"", "exited during startup without signalling readiness"),
+        ],
+    )
+    def test_start_aborts_when_ready_line_is_invalid(
+        self,
+        tmp_path: Path,
+        ready_line: bytes,
+        message: str,
+    ) -> None:
+        from file_organizer.plugins.errors import PluginLoadError
+        from file_organizer.plugins.executor import PluginExecutor
+
+        plugin_file = tmp_path / "my_plugin.py"
+        plugin_file.write_text("# dummy")
+        executor = PluginExecutor(plugin_path=plugin_file)
+        with (
+            patch("subprocess.Popen") as mock_popen,
+            patch.object(
+                PluginExecutor,
+                "_readline_with_timeout",
+                return_value=ready_line,
+            ),
+        ):
+            mock_proc = MagicMock()
+            mock_proc.stderr.read.return_value = b""
+            mock_popen.return_value = mock_proc
+
+            with pytest.raises(PluginLoadError, match=message):
+                executor.start()
+
+        mock_proc.kill.assert_called_once()
+        assert executor._proc is None
+
+    def test_abort_startup_tolerates_cleanup_errors(self, tmp_path: Path) -> None:
+        import subprocess
+
+        from file_organizer.plugins.errors import PluginLoadError
+        from file_organizer.plugins.executor import PluginExecutor
+
+        plugin_file = tmp_path / "my_plugin.py"
+        plugin_file.write_text("# dummy")
+        executor = PluginExecutor(plugin_path=plugin_file)
+        mock_proc = MagicMock()
+        mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="worker", timeout=5)
+        mock_proc.stderr.read.side_effect = OSError("stderr unavailable")
+        mock_proc.stdin.close.side_effect = OSError("stdin close failed")
+        mock_proc.stdout.close.side_effect = OSError("stdout close failed")
+        mock_proc.stderr.close.side_effect = OSError("stderr close failed")
+        executor._proc = mock_proc
+
+        with pytest.raises(PluginLoadError, match="<unavailable>"):
+            executor._abort_startup("failed early")
+
+        assert executor._proc is None
+
     def test_stop_when_not_started_is_noop(self, tmp_path: Path) -> None:
         from file_organizer.plugins.executor import PluginExecutor
 

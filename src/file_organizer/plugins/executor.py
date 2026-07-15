@@ -308,6 +308,7 @@ class PluginExecutor:
         # also converts a child that crashes during startup — e.g. a plugin
         # that raises at import — into an immediate PluginLoadError carrying
         # the child's stderr, instead of an opaque pipe error at first call.
+        first_line = b""
         try:
             first_line = self._readline_with_timeout(timeout=self._startup_timeout)
         except PluginError as exc:
