@@ -416,7 +416,7 @@ def test_undo_history_view_status_bar_updates() -> None:
 
     # 2. Exception fallback
     mock_app.query_one.side_effect = Exception("No status bar")
-    with patch("file_organizer.tui.undo_history_view.logger") as mock_logger:
+    with patch("file_organizer.tui.status.logger") as mock_logger:
         view._set_status("Loading history")
         mock_logger.debug.assert_called_once()
 

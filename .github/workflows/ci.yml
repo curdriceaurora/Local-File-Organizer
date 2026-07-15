@@ -525,5 +525,8 @@ jobs:
           name: coverage-unit-json
           path: .coverage-unit.json
           retention-days: 30
+          # Dot-prefixed paths are "hidden" and excluded by default since
+          # upload-artifact v4.4; without this the artifact silently uploads nothing.
+          include-hidden-files: true
       - name: Check per-file unit coverage floors
         run: python scripts/coverage/check_module_coverage_floor.py
