@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -17,13 +18,6 @@ from file_organizer.plugins.base import (
 )
 
 pytestmark = pytest.mark.unit
-
-
-def _write_manifest(plugin_dir: Path, manifest: dict) -> Path:
-    plugin_dir.mkdir(parents=True, exist_ok=True)
-    path = plugin_dir / "plugin.json"
-    path.write_text(json.dumps(manifest))
-    return path
 
 
 VALID_MANIFEST = {
@@ -56,9 +50,13 @@ class TestLoadManifest:
         with pytest.raises(PluginLoadError, match="must be a JSON object"):
             load_manifest(plugin_dir)
 
-    def test_valid_manifest_applies_defaults(self, tmp_path):
+    def test_valid_manifest_applies_defaults(
+        self,
+        tmp_path: Path,
+        plugin_manifest_writer: Callable[[Path, dict[str, object]], Path],
+    ):
         plugin_dir = tmp_path / "plugin"
-        _write_manifest(plugin_dir, VALID_MANIFEST)
+        plugin_manifest_writer(plugin_dir, VALID_MANIFEST)
 
         result = load_manifest(plugin_dir)
         assert result["license"] == "MIT"
@@ -67,10 +65,14 @@ class TestLoadManifest:
         assert result["min_organizer_version"] == "2.0.0"
         assert result["homepage"] is None
 
-    def test_manifest_preserves_existing_optional_fields(self, tmp_path):
+    def test_manifest_preserves_existing_optional_fields(
+        self,
+        tmp_path: Path,
+        plugin_manifest_writer: Callable[[Path, dict[str, object]], Path],
+    ):
         plugin_dir = tmp_path / "plugin"
         m = {**VALID_MANIFEST, "license": "Apache-2.0", "homepage": "https://example.com"}
-        _write_manifest(plugin_dir, m)
+        plugin_manifest_writer(plugin_dir, m)
 
         result = load_manifest(plugin_dir)
         assert result["license"] == "Apache-2.0"

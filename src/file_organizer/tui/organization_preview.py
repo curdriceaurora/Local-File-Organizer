@@ -7,7 +7,6 @@ along with an organization summary with file counts and status.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 from textual import work
@@ -17,8 +16,7 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from file_organizer.tui.settings_view import load_parallel_runtime_settings
-
-logger = logging.getLogger(__name__)
+from file_organizer.tui.status import StatusMixin
 
 
 class BeforeAfterPanel(Static):
@@ -114,7 +112,7 @@ class OrganizationSummary(Static):
         self.update("\n".join(lines))
 
 
-class OrganizationPreviewView(Vertical):
+class OrganizationPreviewView(StatusMixin, Vertical):
     """Live organization preview mounted as ``#view`` for the Organized nav.
 
     Bindings:
@@ -283,12 +281,3 @@ class OrganizationPreviewView(Vertical):
         )
         self.query_one(OrganizationSummary).update("[dim]No data available.[/dim]")
         self._set_status("Apply failed")
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("OrganizationPreviewView status bar unavailable", exc_info=True)

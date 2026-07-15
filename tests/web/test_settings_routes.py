@@ -25,6 +25,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.schema import AppConfig
+from file_organizer.web._forms import coerce_bool, form_bool
 from file_organizer.web.settings_routes import (
     LANGUAGE_OPTIONS,
     LOG_LEVEL_OPTIONS,
@@ -33,8 +34,6 @@ from file_organizer.web.settings_routes import (
     THEME_OPTIONS,
     TIMEZONE_OPTIONS,
     WebSettings,
-    _as_form_bool,
-    _coerce_bool,
     _load_web_settings,
     _normalize_methodology,
     _render_section,
@@ -91,35 +90,35 @@ def app_config():
 
 
 # ---------------------------------------------------------------------------
-# _as_form_bool
+# form_bool
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestAsFormBool:
+class TestFormBool:
     """Test HTML form checkbox value conversion."""
 
     def test_true_values(self):
         """Should recognize true values."""
-        assert _as_form_bool("1") is True
-        assert _as_form_bool("true") is True
-        assert _as_form_bool("yes") is True
-        assert _as_form_bool("on") is True
+        assert form_bool("1") is True
+        assert form_bool("true") is True
+        assert form_bool("yes") is True
+        assert form_bool("on") is True
 
     def test_false_values(self):
         """Should treat non-true values as false."""
-        assert _as_form_bool("0") is False
-        assert _as_form_bool("false") is False
-        assert _as_form_bool("no") is False
-        assert _as_form_bool("") is False
+        assert form_bool("0") is False
+        assert form_bool("false") is False
+        assert form_bool("no") is False
+        assert form_bool("") is False
 
     def test_none_value(self):
         """Should treat None as false."""
-        assert _as_form_bool(None) is False
+        assert form_bool(None) is False
 
 
 # ---------------------------------------------------------------------------
-# _coerce_bool
+# coerce_bool
 # ---------------------------------------------------------------------------
 
 
@@ -129,21 +128,21 @@ class TestCoerceBool:
 
     def test_bool_values(self):
         """Should pass through bool values."""
-        assert _coerce_bool(True, False) is True
-        assert _coerce_bool(False, True) is False
+        assert coerce_bool(True, False) is True
+        assert coerce_bool(False, True) is False
 
     def test_string_values(self):
         """Should coerce string values."""
-        assert _coerce_bool("true", False) is True
-        assert _coerce_bool("false", True) is False
-        assert _coerce_bool("1", False) is True
+        assert coerce_bool("true", False) is True
+        assert coerce_bool("false", True) is False
+        assert coerce_bool("1", False) is True
 
     def test_fallback_to_default(self):
         """Should use default for non-bool/string values."""
-        assert _coerce_bool(123, False) is False
-        assert _coerce_bool(123, True) is True
-        assert _coerce_bool(None, False) is False
-        assert _coerce_bool([], True) is True
+        assert coerce_bool(123, False) is False
+        assert coerce_bool(123, True) is True
+        assert coerce_bool(None, False) is False
+        assert coerce_bool([], True) is True
 
 
 # ---------------------------------------------------------------------------

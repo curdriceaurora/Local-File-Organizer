@@ -36,6 +36,7 @@ from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.utils.atomic_write import atomic_write_bytes
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+from file_organizer.web._forms import form_bool
 from file_organizer.web._helpers import base_context, templates
 
 profile_router = APIRouter(tags=["web"])
@@ -1153,7 +1154,7 @@ def account_settings_toggle_2fa(
     if isinstance(user, HTMLResponse):
         return user
 
-    toggle = enabled is not None and enabled.strip().lower() in {"1", "true", "yes", "on"}
+    toggle = form_bool(enabled)
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
