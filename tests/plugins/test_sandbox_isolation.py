@@ -398,6 +398,144 @@ class TestExecutorInterface:
 
 
 # ===========================================================================
+# 2b. Executor startup handshake  (worker readiness + parent-code propagation)
+# ===========================================================================
+
+_BENIGN_PLUGIN_SRC = (
+    "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
+    "class BenignPlugin(Plugin):\n"
+    "    name = 'benign'\n"
+    "    version = '1.0.0'\n"
+    "    allowed_paths = []\n"
+    "    def get_metadata(self):\n"
+    "        return PluginMetadata(name=self.name, version=self.version,"
+    " author='test', description='benign')\n"
+    "    def on_load(self):\n"
+    "        import file_organizer\n"
+    "        return file_organizer.__file__\n"
+    "    def on_enable(self): pass\n"
+    "    def on_disable(self): pass\n"
+    "    def on_unload(self): pass\n"
+)
+
+# src/ root of the package the TEST process imports — the worker child must
+# run this exact tree, not whatever a stale editable install resolves to.
+_PARENT_SRC_ROOT = (
+    Path(importlib.import_module("file_organizer").__file__ or "").resolve().parents[1]
+)
+
+
+class TestExecutorStartupHandshake:
+    """Startup contract: worker signals readiness; start() enforces it.
+
+    Root cause these tests pin (diff-cover gate flake): the worker child
+    pays the full ``file_organizer`` import cost (~5s bare, ~12s under
+    pytest-cov subprocess instrumentation) BEFORE it can answer IPC, while
+    ``call()`` enforces a fixed 10s read timeout. Without a readiness
+    handshake in ``start()``, instrumented or slow environments eat the
+    entire call budget during startup and every executor test times out.
+    """
+
+    def test_worker_emits_ready_line_before_ipc_loop(self, tmp_path: Path) -> None:
+        """The worker's first stdout line is the readiness sentinel.
+
+        Runs the worker bootstrap directly with stdin closed: the worker
+        must print the ready line, then exit cleanly on stdin EOF.
+        """
+        import json
+        import os
+        import sys
+
+        plugin = tmp_path / "benign_plugin.py"
+        plugin.write_text(_BENIGN_PLUGIN_SRC)
+        policy = {
+            "allowed_paths": [],
+            "allowed_operations": [],
+            "allow_all_paths": True,
+            "allow_all_operations": True,
+        }
+        bootstrap = (
+            "import json; "
+            "from file_organizer.plugins.executor import _worker; "
+            f"_worker({str(plugin)!r}, json.loads({json.dumps(json.dumps(policy))!r}))"
+        )
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(_PARENT_SRC_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+        proc = subprocess.run(
+            [sys.executable, "-c", bootstrap],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=60,
+            env=env,
+        )
+        first_line = proc.stdout.splitlines()[0] if proc.stdout else b""
+        assert first_line == b'{"ready": true}', (
+            f"worker must emit the readiness sentinel as its first stdout line; "
+            f"got {first_line!r} (returncode: {proc.returncode}, "
+            f"stderr: {proc.stderr[-500:]!r})"
+        )
+
+    def test_start_raises_plugin_load_error_when_plugin_import_crashes(
+        self, tmp_path: Path
+    ) -> None:
+        """A plugin that dies at import fails fast in start(), not at first call().
+
+        Pre-handshake, start() returned successfully and the caller got an
+        opaque pipe error on the first call; the handshake surfaces the
+        child's stderr in a PluginLoadError instead.
+        """
+        plugin = tmp_path / "crashing_plugin.py"
+        plugin.write_text("raise RuntimeError('boom at import')\n")
+
+        executor = PluginExecutor(plugin_path=str(plugin))
+        try:
+            with pytest.raises(PluginLoadError, match="boom at import"):
+                executor.start()
+        finally:
+            executor.stop()
+
+    def test_child_executes_same_package_as_parent(self, tmp_path: Path) -> None:
+        """The worker child imports the same file_organizer tree as the test process.
+
+        Guards against stale editable installs in the interpreter
+        environment silently substituting another checkout's code in the
+        sandbox child (observed: an old copilot-worktree path shadowing the
+        repo under test).
+        """
+        plugin = tmp_path / "benign_plugin.py"
+        plugin.write_text(_BENIGN_PLUGIN_SRC)
+
+        executor = PluginExecutor(plugin_path=str(plugin))
+        executor.start()
+        try:
+            child_pkg_file = executor.call("on_load")
+        finally:
+            executor.stop()
+
+        assert Path(child_pkg_file).resolve().is_relative_to(_PARENT_SRC_ROOT), (
+            f"worker child imported file_organizer from {child_pkg_file!r}, "
+            f"expected the parent's tree under {_PARENT_SRC_ROOT}"
+        )
+
+    def test_start_times_out_when_startup_exceeds_budget(self, tmp_path: Path) -> None:
+        """start() raises PluginLoadError when the ready line never arrives in time.
+
+        A microscopic startup_timeout guarantees the (multi-second) real
+        worker bootstrap cannot win the race, exercising the timeout path
+        deterministically.
+        """
+        plugin = tmp_path / "benign_plugin.py"
+        plugin.write_text(_BENIGN_PLUGIN_SRC)
+
+        executor = PluginExecutor(plugin_path=str(plugin), startup_timeout=0.01)
+        try:
+            with pytest.raises(PluginLoadError, match="did not signal readiness"):
+                executor.start()
+        finally:
+            executor.stop()
+
+
+# ===========================================================================
 # 3. IPC protocol tests  (run immediately — no subprocess dependency)
 # ===========================================================================
 

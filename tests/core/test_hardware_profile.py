@@ -6,7 +6,7 @@ and no-GPU detection scenarios without requiring actual hardware.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -266,3 +266,183 @@ class TestDetectionHelpers:
         name, vram = _detect_amd()
         assert name is None
         assert vram == 0
+
+    @patch("subprocess.run")
+    def test_nvidia_detect_too_few_csv_fields(self, mock_run: MagicMock) -> None:
+        """nvidia-smi output with fewer than 2 comma fields yields (None, 0)."""
+        from file_organizer.core.hardware_profile import _detect_nvidia
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="OnlyNameNoComma\n")
+        name, vram = _detect_nvidia()
+        assert name is None
+        assert vram == 0
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run", side_effect=FileNotFoundError("sysctl missing"))
+    def test_apple_mps_subprocess_error_returns_none(
+        self, _run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """On Darwin, a subprocess error from sysctl is swallowed → (None, 0)."""
+        from file_organizer.core.hardware_profile import _detect_apple_mps
+
+        name, vram = _detect_apple_mps()
+        assert name is None
+        assert vram == 0
+
+    @patch("subprocess.run")
+    def test_amd_detect_nonzero_returncode(self, mock_run: MagicMock) -> None:
+        """rocm-smi returning a non-zero exit code yields (None, 0)."""
+        from file_organizer.core.hardware_profile import _detect_amd
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        name, vram = _detect_amd()
+        assert name is None
+        assert vram == 0
+
+    @patch("subprocess.run")
+    def test_nvidia_detect_nonzero_returncode(self, mock_run: MagicMock) -> None:
+        """nvidia-smi returning a non-zero exit code yields (None, 0)."""
+        from file_organizer.core.hardware_profile import _detect_nvidia
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        name, vram = _detect_nvidia()
+        assert name is None
+        assert vram == 0
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run")
+    def test_apple_mps_success_reports_unified_memory(
+        self, mock_run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """On Apple Silicon, the chip name and unified memory are returned."""
+        from file_organizer.core.hardware_profile import _detect_apple_mps
+
+        mock_run.side_effect = [
+            MagicMock(returncode=0, stdout="Apple M3 Max\n"),
+            MagicMock(returncode=0, stdout=f"{64 * 1024**3}\n"),
+        ]
+        name, mem = _detect_apple_mps()
+        assert name == "Apple M3 Max"
+        assert mem == 64 * 1024**3
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run")
+    def test_apple_mps_non_apple_cpu_returns_none(
+        self, mock_run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """A Darwin host on Intel silicon is not Apple MPS."""
+        from file_organizer.core.hardware_profile import _detect_apple_mps
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="Intel(R) Core(TM) i9\n")
+        name, mem = _detect_apple_mps()
+        assert name is None
+        assert mem == 0
+
+    @patch("subprocess.run")
+    def test_amd_detect_meminfo_nonzero_returncode_keeps_zero_vram(
+        self, mock_run: MagicMock
+    ) -> None:
+        """When the VRAM query fails, the device name is still returned with 0 VRAM."""
+        from file_organizer.core.hardware_profile import _detect_amd
+
+        mock_run.side_effect = [
+            MagicMock(returncode=0, stdout="device,\nRadeon RX 7900 XTX,\n"),
+            MagicMock(returncode=1, stdout=""),
+        ]
+        name, vram = _detect_amd()
+        assert name == "Radeon RX 7900 XTX"
+        assert vram == 0
+
+    @patch("subprocess.run")
+    def test_amd_detect_vram_parse_error_yields_zero_vram(self, mock_run: MagicMock) -> None:
+        """A non-integer VRAM cell is tolerated: name is kept, vram falls back to 0."""
+        from file_organizer.core.hardware_profile import _detect_amd
+
+        name_result = MagicMock(returncode=0, stdout="device,\nRadeon RX 7900 XTX,\n")
+        vram_result = MagicMock(returncode=0, stdout="vram,\nNOT_A_NUMBER,\n")
+        mock_run.side_effect = [name_result, vram_result]
+
+        name, vram = _detect_amd()
+        assert name == "Radeon RX 7900 XTX"
+        assert vram == 0
+
+
+# ---------------------------------------------------------------------------
+# _get_system_ram / _get_cpu_cores fallback tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestSystemResourceFallbacks:
+    """Exercise the psutil-failure and OS-specific fallback branches."""
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run")
+    @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
+    def test_system_ram_falls_back_to_darwin_sysctl(
+        self, _vm: MagicMock, mock_run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """When psutil fails on macOS, sysctl hw.memsize supplies the value."""
+        from file_organizer.core.hardware_profile import _get_system_ram
+
+        mock_run.return_value = MagicMock(returncode=0, stdout=f"{32 * 1024**3}\n")
+        assert _get_system_ram() == 32 * 1024**3
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run")
+    @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
+    def test_system_ram_sysctl_nonzero_falls_through_to_zero(
+        self, _vm: MagicMock, mock_run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """psutil fails, sysctl returns non-zero, /proc/meminfo absent → 0."""
+        from file_organizer.core.hardware_profile import _get_system_ram
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        with patch("builtins.open", side_effect=OSError("no /proc on macOS")):
+            assert _get_system_ram() == 0
+
+    @patch("platform.system", return_value="Darwin")
+    @patch("subprocess.run", side_effect=FileNotFoundError("sysctl missing"))
+    @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
+    def test_system_ram_sysctl_error_falls_through_to_zero(
+        self, _vm: MagicMock, _run: MagicMock, _sys: MagicMock
+    ) -> None:
+        """psutil fails and sysctl raises → the error is swallowed and 0 returned."""
+        from file_organizer.core.hardware_profile import _get_system_ram
+
+        with patch("builtins.open", side_effect=OSError("no /proc on macOS")):
+            assert _get_system_ram() == 0
+
+    @patch("platform.system", return_value="Linux")
+    @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
+    def test_system_ram_linux_reads_proc_meminfo(self, _vm: MagicMock, _sys: MagicMock) -> None:
+        """On non-Darwin, /proc/meminfo MemTotal (kB) is converted to bytes."""
+        from file_organizer.core.hardware_profile import _get_system_ram
+
+        meminfo = "MemTotal:       16384000 kB\nMemFree: 100 kB\n"
+        with patch("builtins.open", mock_open(read_data=meminfo)):
+            assert _get_system_ram() == 16384000 * 1024
+
+    @patch("platform.system", return_value="Linux")
+    @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
+    def test_system_ram_returns_zero_when_all_sources_fail(
+        self, _vm: MagicMock, _sys: MagicMock
+    ) -> None:
+        """psutil fails, non-Darwin, /proc/meminfo unreadable → 0."""
+        from file_organizer.core.hardware_profile import _get_system_ram
+
+        with patch("builtins.open", side_effect=OSError("unreadable")):
+            assert _get_system_ram() == 0
+
+    def test_cpu_cores_without_psutil_uses_os_cpu_count(self) -> None:
+        """When psutil is unavailable, fall back to os.cpu_count()."""
+        import sys
+
+        from file_organizer.core.hardware_profile import _get_cpu_cores
+
+        with (
+            patch.dict(sys.modules, {"psutil": None}),
+            patch("os.cpu_count", return_value=12),
+        ):
+            assert _get_cpu_cores() == 12
