@@ -11,7 +11,6 @@ This module powers a multi-section settings page with:
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, fields
 
 import aiofiles
 import httpx
@@ -22,40 +21,40 @@ from loguru import logger
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.utils import resolve_path
-from file_organizer.config.defaults import DEFAULT_OLLAMA_URL
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as METHODOLOGY_OPTIONS
-from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.config.methodology import normalize as _methodology_normalize
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import AppConfig
-from file_organizer.utils.atomic_write import atomic_write_text
-from file_organizer.web._forms import coerce_bool, form_bool, update_form_section
+from file_organizer.web._forms import update_form_section
 from file_organizer.web._helpers import base_context, templates
-
-# Profile used for the AppConfig-backed fields shown on this page (default
-# input/output dirs, methodology, text/vision model). The web UI does not
-# yet expose profile switching, so it always reads/writes "default" — same
-# as every other AppConfig consumer (TUI, CLI, API routers).
-_PROFILE = "default"
+from file_organizer.web.settings_service import (
+    LANGUAGE_OPTIONS,
+    LOG_LEVEL_OPTIONS,
+    PERFORMANCE_MODES,
+    THEME_OPTIONS,
+    TIMEZONE_OPTIONS,
+    WebSettings,
+    WebSettingsStore,
+    apply_advanced_settings,
+    apply_appearance_settings,
+    apply_general_settings,
+    apply_model_settings,
+    apply_organization_settings,
+    build_export_payload,
+    import_settings_payload,
+    load_app_config,
+    reset_settings,
+    save_app_config,
+    validate_choice,
+    validate_rules,
+)
 
 settings_router = APIRouter(tags=["web"])
 
 _SETTINGS_DIR = get_config_dir()
 _SETTINGS_FILE = _SETTINGS_DIR / "web-settings.json"
-
-LOG_LEVEL_OPTIONS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-THEME_OPTIONS = ["light", "dark", "auto", "custom"]
-LANGUAGE_OPTIONS = ["en", "es", "fr", "de", "ja"]
-TIMEZONE_OPTIONS = [
-    "UTC",
-    "America/New_York",
-    "America/Chicago",
-    "America/Denver",
-    "America/Los_Angeles",
-    "Europe/London",
-]
-PERFORMANCE_MODES = ["balanced", "performance", "memory_saver"]
 
 _SECTION_INDEX = {
     "general": [
@@ -93,130 +92,49 @@ _SECTION_INDEX = {
 }
 
 
-@dataclass
-class WebSettings:
-    """Persistent settings for the web UI.
-
-    Holds only fields with no canonical home elsewhere. The workflow fields
-    shown alongside these on the settings page — default input/output dirs,
-    methodology, text/vision model — live on the shared ``AppConfig``
-    (``config.manager.ConfigManager``) instead, so a value set here is
-    visible to the TUI, CLI, and API too (see #1539). Loaded/saved via
-    ``_load_app_config``/``_save_app_config`` in the route handlers below.
-    """
-
-    # General
-    language: str = "en"
-    timezone: str = "UTC"
-
-    # Models
-    ollama_url: str = DEFAULT_OLLAMA_URL
-
-    # Organization
-    auto_organize: bool = False
-    notifications_enabled: bool = True
-    file_filter_glob: str = "*"
-    organization_rules: str = "docs/* -> Documents\nimages/* -> Media/Images"
-
-    # Appearance
-    theme: str = "light"
-    custom_theme_name: str = ""
-
-    # Advanced
-    log_level: str = "INFO"
-    cache_enabled: bool = True
-    debug_mode: bool = False
-    performance_mode: str = "balanced"
-
-
 def _validate_choice(value: str, allowed: list[str], fallback: str) -> str:
-    """Return *value* if it is in *allowed*, otherwise return *fallback*."""
-    candidate = value.strip()
-    return candidate if candidate in allowed else fallback
+    """Compatibility wrapper for settings choice validation."""
+    return validate_choice(value, allowed, fallback)
 
 
 def _validate_rules(rules: str) -> tuple[bool, str]:
-    """Validate organization rule text.
+    """Compatibility wrapper for organization rule validation."""
+    return validate_rules(rules)
 
-    Args:
-        rules: Newline-separated ``pattern -> destination`` rules.
 
-    Returns:
-        Tuple of ``(is_valid, message)``.
-    """
-    lines = [line.strip() for line in rules.splitlines() if line.strip()]
-    if not lines:
-        return False, "Rules cannot be empty."
-    for idx, line in enumerate(lines, start=1):
-        if line.startswith("#"):
-            continue
-        if "->" not in line:
-            return False, f"Line {idx} is invalid. Expected 'pattern -> destination'."
-        left, right = [part.strip() for part in line.split("->", 1)]
-        if not left or not right:
-            return False, f"Line {idx} is invalid. Both pattern and destination are required."
-    return True, "Rules look valid."
+def _normalize_methodology(value: object) -> str:
+    """Compatibility wrapper for canonical methodology normalization."""
+    return _methodology_normalize(value)
+
+
+def _settings_store() -> WebSettingsStore:
+    """Build a store from the route-level paths, preserving test monkeypatches."""
+    return WebSettingsStore(_SETTINGS_DIR, _SETTINGS_FILE)
 
 
 def _load_web_settings() -> WebSettings:
-    """Load persisted ``WebSettings`` from disk, returning defaults on failure."""
-    if not _SETTINGS_FILE.exists():
-        return WebSettings()
-
-    try:
-        raw = json.loads(_SETTINGS_FILE.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict):
-            return WebSettings()
-
-        ws = WebSettings()
-        known = {f.name for f in fields(WebSettings)}
-        for key, value in raw.items():
-            if key not in known:
-                continue
-            if key in {"auto_organize", "notifications_enabled", "cache_enabled", "debug_mode"}:
-                setattr(ws, key, coerce_bool(value, getattr(ws, key)))
-                continue
-            if isinstance(value, str):
-                setattr(ws, key, value)
-        ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
-        ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
-        ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
-        ws.language = _validate_choice(ws.language, LANGUAGE_OPTIONS, "en")
-        ws.timezone = _validate_choice(ws.timezone, TIMEZONE_OPTIONS, "UTC")
-        return ws
-    except Exception as exc:
-        logger.warning("Failed to load settings from {}: {}", _SETTINGS_FILE, exc)
-        return WebSettings()
+    """Compatibility wrapper for loading persisted ``WebSettings``."""
+    return _settings_store().load()
 
 
 def _save_web_settings(ws: WebSettings) -> None:
-    """Persist *ws* to the JSON settings file on disk."""
-    try:
-        _SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(_SETTINGS_FILE, json.dumps(asdict(ws), indent=2) + "\n")
-    except Exception as exc:
-        logger.error("Failed to save settings to {}: {}", _SETTINGS_FILE, exc)
+    """Compatibility wrapper for persisting ``WebSettings``."""
+    _settings_store().save(ws)
 
 
 def _update_web_settings(**kwargs: object) -> WebSettings:
-    """Load settings, apply *kwargs* overrides, save, and return the result."""
-    ws = _load_web_settings()
-    known_fields = {f.name for f in fields(WebSettings)}
-    for key, value in kwargs.items():
-        if key in known_fields:
-            setattr(ws, key, value)
-    _save_web_settings(ws)
-    return ws
+    """Compatibility wrapper for updating ``WebSettings``."""
+    return _settings_store().update(**kwargs)
 
 
 def _load_app_config(manager: ConfigManager) -> AppConfig:
-    """Load the canonical ``AppConfig`` backing this page's workflow fields."""
-    return manager.load(profile=_PROFILE)
+    """Compatibility wrapper for loading settings-page ``AppConfig``."""
+    return load_app_config(manager)
 
 
 def _save_app_config(manager: ConfigManager, config: AppConfig) -> None:
-    """Persist *config*, the canonical ``AppConfig`` backing this page."""
-    manager.save(config, profile=_PROFILE)
+    """Compatibility wrapper for saving settings-page ``AppConfig``."""
+    save_app_config(manager, config)
 
 
 def _section_context(
@@ -349,15 +267,7 @@ def settings_export(manager: ConfigManager = Depends(get_config_manager)) -> Res
     """
     ws = _load_web_settings()
     app_config = _load_app_config(manager)
-    payload_dict = asdict(ws)
-    payload_dict.update(
-        default_input_dir=app_config.default_input_dir,
-        default_output_dir=app_config.default_output_dir,
-        text_model=app_config.models.text_model,
-        vision_model=app_config.models.vision_model,
-        default_methodology=app_config.default_methodology,
-    )
-    payload = json.dumps(payload_dict, indent=2) + "\n"
+    payload = json.dumps(build_export_payload(ws, app_config), indent=2) + "\n"
     return Response(
         content=payload,
         media_type="application/json",
@@ -417,39 +327,7 @@ async def settings_import(
         if not isinstance(payload, dict):
             raise ValueError("Imported payload must be a JSON object.")
 
-        ws = _load_web_settings()
-        known = {f.name for f in fields(WebSettings)}
-        for key, value in payload.items():
-            if key not in known:
-                continue
-            if isinstance(getattr(ws, key), bool):
-                setattr(ws, key, coerce_bool(value, getattr(ws, key)))
-            elif isinstance(value, str):
-                setattr(ws, key, value)
-
-        ws.theme = _validate_choice(ws.theme, THEME_OPTIONS, "light")
-        ws.log_level = _validate_choice(ws.log_level, LOG_LEVEL_OPTIONS, "INFO")
-        ws.performance_mode = _validate_choice(ws.performance_mode, PERFORMANCE_MODES, "balanced")
-        ws.language = _validate_choice(ws.language, LANGUAGE_OPTIONS, "en")
-        ws.timezone = _validate_choice(ws.timezone, TIMEZONE_OPTIONS, "UTC")
-        _save_web_settings(ws)
-
-        # Shared AppConfig fields (dirs, methodology, model) are imported
-        # separately since #1539 — WebSettings no longer carries them.
-        app_config = _load_app_config(manager)
-        if isinstance(payload.get("default_input_dir"), str):
-            app_config.default_input_dir = payload["default_input_dir"].strip()
-        if isinstance(payload.get("default_output_dir"), str):
-            app_config.default_output_dir = payload["default_output_dir"].strip()
-        if isinstance(payload.get("text_model"), str) and payload["text_model"].strip():
-            app_config.models.text_model = payload["text_model"].strip()
-        if isinstance(payload.get("vision_model"), str) and payload["vision_model"].strip():
-            app_config.models.vision_model = payload["vision_model"].strip()
-        if "default_methodology" in payload:
-            app_config.default_methodology = _normalize_methodology(
-                payload.get("default_methodology")
-            )
-        _save_app_config(manager, app_config)
+        ws, app_config = import_settings_payload(_settings_store(), manager, payload)
 
         return _render_section(
             request,
@@ -487,17 +365,7 @@ def settings_reset(
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
     try:
-        ws = WebSettings()
-        _save_web_settings(ws)
-
-        defaults = AppConfig()
-        app_config = _load_app_config(manager)
-        app_config.default_input_dir = defaults.default_input_dir
-        app_config.default_output_dir = defaults.default_output_dir
-        app_config.default_methodology = defaults.default_methodology
-        app_config.models.text_model = defaults.models.text_model
-        app_config.models.vision_model = defaults.models.vision_model
-        _save_app_config(manager, app_config)
+        ws, app_config = reset_settings(_settings_store(), manager)
 
         return _render_section(
             request,
@@ -538,14 +406,14 @@ def settings_general_post(
 ) -> HTMLResponse:
     """Save General settings and re-render the section partial."""
     try:
-        ws = _update_web_settings(
-            language=_validate_choice(language, LANGUAGE_OPTIONS, "en"),
-            timezone=_validate_choice(timezone, TIMEZONE_OPTIONS, "UTC"),
+        ws, app_config = apply_general_settings(
+            _settings_store(),
+            manager,
+            language=language,
+            timezone=timezone,
+            default_input_dir=default_input_dir,
+            default_output_dir=default_output_dir,
         )
-        app_config = _load_app_config(manager)
-        app_config.default_input_dir = default_input_dir.strip()
-        app_config.default_output_dir = default_output_dir.strip()
-        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
@@ -584,14 +452,13 @@ def settings_models_post(
 ) -> HTMLResponse:
     """Save Models settings and re-render the section partial."""
     try:
-        ws = _update_web_settings(
-            ollama_url=ollama_url.strip() or DEFAULT_OLLAMA_URL,
+        ws, app_config = apply_model_settings(
+            _settings_store(),
+            manager,
+            text_model=text_model,
+            vision_model=vision_model,
+            ollama_url=ollama_url,
         )
-        app_config = _load_app_config(manager)
-        defaults = AppConfig()
-        app_config.models.text_model = text_model.strip() or defaults.models.text_model
-        app_config.models.vision_model = vision_model.strip() or defaults.models.vision_model
-        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
@@ -708,15 +575,15 @@ def settings_organization_post(
         )
 
     try:
-        ws = _update_web_settings(
-            auto_organize=form_bool(auto_organize),
-            notifications_enabled=form_bool(notifications_enabled),
-            file_filter_glob=file_filter_glob.strip() or "*",
+        ws, app_config = apply_organization_settings(
+            _settings_store(),
+            manager,
+            default_methodology=default_methodology,
+            auto_organize=auto_organize,
+            notifications_enabled=notifications_enabled,
+            file_filter_glob=file_filter_glob,
             organization_rules=candidate_rules,
         )
-        app_config = _load_app_config(manager)
-        app_config.default_methodology = _normalize_methodology(default_methodology)
-        _save_app_config(manager, app_config)
         return _render_section(
             request,
             ws,
@@ -755,8 +622,7 @@ def settings_appearance_post(
     """Save Appearance settings and re-render the section partial."""
 
     def apply(ws: WebSettings) -> None:
-        ws.theme = _validate_choice(theme.lower(), THEME_OPTIONS, "light")
-        ws.custom_theme_name = custom_theme_name.strip()
+        apply_appearance_settings(ws, theme=theme, custom_theme_name=custom_theme_name)
 
     def render_success(ws: WebSettings) -> HTMLResponse:
         return _render_section(
@@ -809,13 +675,12 @@ def settings_advanced_post(
     """Save Advanced settings and re-render the section partial."""
 
     def apply(ws: WebSettings) -> None:
-        ws.log_level = _validate_choice(log_level.strip().upper(), LOG_LEVEL_OPTIONS, "INFO")
-        ws.cache_enabled = form_bool(cache_enabled)
-        ws.debug_mode = form_bool(debug_mode)
-        ws.performance_mode = _validate_choice(
-            performance_mode.strip().lower(),
-            PERFORMANCE_MODES,
-            "balanced",
+        apply_advanced_settings(
+            ws,
+            log_level=log_level,
+            cache_enabled=cache_enabled,
+            debug_mode=debug_mode,
+            performance_mode=performance_mode,
         )
 
     def render_success(ws: WebSettings) -> HTMLResponse:
