@@ -43,5 +43,6 @@ def update_form_section(
         apply(state)
         save(state)
         return render_success(state)
+    # User-provided form callbacks may fail; return an HTML error response instead of crashing.
     except Exception as exc:
         return render_error(f"{error_prefix}: {exc}")

@@ -52,6 +52,10 @@ def update_version_files(version: str, *, root: Path = REPO_ROOT) -> list[Path]:
     for path, pattern in replacements:
         if _replace_once(path, pattern, normalized):
             touched.append(path)
+        else:
+            raise RuntimeError(
+                f"Failed to find version pattern {pattern.pattern!r} in {path.relative_to(root)}"
+            )
 
     # Reuse the drift-sync contract from #1540 for docs and platform stamps.
     import sys

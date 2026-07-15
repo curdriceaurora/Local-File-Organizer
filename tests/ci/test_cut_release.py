@@ -10,7 +10,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "scripts"))
 
-from cut_release import ensure_changelog_section, normalize_version, release_commands, tag_for
+from cut_release import (
+    ensure_changelog_section,
+    normalize_version,
+    release_commands,
+    tag_for,
+    update_version_files,
+)
 
 pytestmark = pytest.mark.ci
 
@@ -46,6 +52,25 @@ def test_ensure_changelog_section_is_idempotent(tmp_path: Path) -> None:
     changelog.write_text("# Changelog\n\n## [Unreleased]\n\n## [2.0.3] - old\n", encoding="utf-8")
 
     assert ensure_changelog_section("2.0.3", changelog=changelog) is False
+
+
+def test_update_version_files_fails_when_touchpoint_pattern_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "src" / "file_organizer").mkdir(parents=True)
+    (tmp_path / "pyproject.toml").write_text("version = '2.0.2'\n", encoding="utf-8")
+    (tmp_path / "src" / "file_organizer" / "version.py").write_text(
+        '__version__ = "2.0.2"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "file_organizer" / "__init__.py").write_text(
+        '__version__ = "2.0.2"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parent.parent.parent / "scripts"))
+
+    with pytest.raises(RuntimeError, match=r"version pattern.*pyproject\.toml"):
+        update_version_files("2.0.3", root=tmp_path)
 
 
 def test_release_commands_point_to_tag_triggered_build_flow() -> None:

@@ -18,5 +18,6 @@ class StatusMixin:
 
             app = cast(Any, self).app
             app.query_one(StatusBar).set_status(message)
+        # Status updates are best-effort because views can outlive an unmounted status bar.
         except Exception:
             logger.debug("Status bar unavailable for %s.", type(self).__name__, exc_info=True)
