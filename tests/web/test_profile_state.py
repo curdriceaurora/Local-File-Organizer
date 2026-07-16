@@ -9,14 +9,13 @@ import pytest
 
 from file_organizer.web import profile_state
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def test_append_activity_uses_injected_clock_and_caps_log() -> None:
     state: dict[str, object] = {
         "activity_log": [
-            {"id": str(index), "message": "old", "timestamp": ""}
-            for index in range(100)
+            {"id": str(index), "message": "old", "timestamp": ""} for index in range(100)
         ]
     }
 
@@ -81,12 +80,13 @@ def test_update_team_member_role_only_changes_matching_member() -> None:
     assert "Updated role for two@example.com to admin." == activity[0]["message"]
 
 
-def test_shared_folder_helpers_normalize_and_remove_entries() -> None:
+def test_shared_folder_helpers_normalize_and_remove_entries(tmp_path) -> None:
     state = profile_state.default_profile_state()
+    shared_dir = tmp_path / "shared"
 
     profile_state.add_shared_folder(
         state,
-        " /tmp/shared ",
+        f" {shared_dir} ",
         "delete",
         id_factory=lambda: "folder-id",
     )
@@ -96,7 +96,7 @@ def test_shared_folder_helpers_normalize_and_remove_entries() -> None:
     activity = state["activity_log"]
     assert isinstance(activity, list)
     assert activity[0]["message"] == "Removed a shared folder entry."
-    assert activity[1]["message"] == "Shared folder '/tmp/shared' as view."
+    assert activity[1]["message"] == f"Shared folder '{shared_dir}' as view."
 
 
 def test_mark_notification_read_ignores_non_matching_entries() -> None:
@@ -115,7 +115,9 @@ def test_mark_notification_read_ignores_non_matching_entries() -> None:
     assert notifications[1]["read"] is True
 
 
-def test_load_profile_state_falls_back_when_json_is_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_profile_state_falls_back_when_json_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     db = MagicMock()
     monkeypatch.setattr(profile_state.SettingsRepository, "get", lambda *_args, **_kwargs: "{")
 

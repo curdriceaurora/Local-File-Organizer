@@ -13,7 +13,8 @@ from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import OrganizationError, OrganizationResultResponse
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.config.methodology import normalize as _normalize_methodology
-from file_organizer.core.organizer import FileOrganizer, OrganizationResult
+from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.types import OrganizationResult
 from file_organizer.web._helpers import as_bool
 
 ORGANIZE_DEFAULT_DELAY_MIN = 0

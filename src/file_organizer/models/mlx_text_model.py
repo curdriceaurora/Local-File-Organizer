@@ -18,6 +18,8 @@ from loguru import logger
 
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
+mlx_generate: Any
+mlx_load: Any
 try:
     from mlx_lm import generate as mlx_generate
     from mlx_lm import load as mlx_load
@@ -87,8 +89,11 @@ class MLXTextModel(BaseModel):
 
             if mlx_load is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
                 raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
+            model_path = self.config.model_path
+            if model_path is None:
+                raise RuntimeError("model_path is required before initializing MLXTextModel")
             try:
-                loaded = mlx_load(self.config.model_path)
+                loaded = mlx_load(model_path)
             except (RuntimeError, OSError, ValueError, ImportError) as exc:
                 raise RuntimeError(
                     f"Could not load MLX model from '{self.config.model_path}': {exc}"

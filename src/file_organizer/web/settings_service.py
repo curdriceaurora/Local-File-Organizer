@@ -167,14 +167,18 @@ def apply_web_settings_payload(ws: WebSettings, payload: dict[str, object]) -> W
 
 def apply_app_config_payload(app_config: AppConfig, payload: dict[str, object]) -> AppConfig:
     """Apply imported shared settings fields to ``AppConfig``."""
-    if isinstance(payload.get("default_input_dir"), str):
-        app_config.default_input_dir = payload["default_input_dir"].strip()
-    if isinstance(payload.get("default_output_dir"), str):
-        app_config.default_output_dir = payload["default_output_dir"].strip()
-    if isinstance(payload.get("text_model"), str) and payload["text_model"].strip():
-        app_config.models.text_model = payload["text_model"].strip()
-    if isinstance(payload.get("vision_model"), str) and payload["vision_model"].strip():
-        app_config.models.vision_model = payload["vision_model"].strip()
+    default_input_dir = payload.get("default_input_dir")
+    if isinstance(default_input_dir, str):
+        app_config.default_input_dir = default_input_dir.strip()
+    default_output_dir = payload.get("default_output_dir")
+    if isinstance(default_output_dir, str):
+        app_config.default_output_dir = default_output_dir.strip()
+    text_model = payload.get("text_model")
+    if isinstance(text_model, str) and text_model.strip():
+        app_config.models.text_model = text_model.strip()
+    vision_model = payload.get("vision_model")
+    if isinstance(vision_model, str) and vision_model.strip():
+        app_config.models.vision_model = vision_model.strip()
     if "default_methodology" in payload:
         app_config.default_methodology = normalize_methodology(payload.get("default_methodology"))
     return app_config
@@ -210,7 +214,9 @@ def import_settings_payload(
     return ws, app_config
 
 
-def reset_settings(store: WebSettingsStore, manager: ConfigManager) -> tuple[WebSettings, AppConfig]:
+def reset_settings(
+    store: WebSettingsStore, manager: ConfigManager
+) -> tuple[WebSettings, AppConfig]:
     """Reset fields owned by the settings page to their defaults."""
     ws = WebSettings()
     store.save(ws)

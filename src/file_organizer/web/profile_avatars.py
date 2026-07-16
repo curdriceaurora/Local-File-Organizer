@@ -33,7 +33,9 @@ def resolve_avatar_for_read(
     avatar_dir: Path,
     *,
     path_factory: Callable[[str], Path] | None = None,
-    safe_dir_open: Callable[[Path], AbstractContextManager[SafeDir]] = SafeDir.open_root,
+    safe_dir_open: Callable[
+        [Path], AbstractContextManager[SafeDir, bool | None]
+    ] = SafeDir.open_root,
 ) -> Path:
     """Return a validated avatar path that is safe to serve."""
     candidate_path = path_factory(user_id) if path_factory else avatar_path(user_id, avatar_dir)

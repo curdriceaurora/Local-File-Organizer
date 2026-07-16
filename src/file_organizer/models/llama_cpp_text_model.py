@@ -28,6 +28,7 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+Llama: Any
 try:
     from llama_cpp import Llama
 
@@ -91,10 +92,14 @@ class LlamaCppTextModel(BaseModel):
             logger.debug("LlamaCpp text model {} already initialized", self.config.name)
             return
 
+        model_path = self.config.model_path
+        if model_path is None:
+            raise RuntimeError("model_path is required before initializing LlamaCppTextModel")
+
         n_gpu_layers = self._device_to_gpu_layers()
         try:
             self.client = Llama(
-                model_path=self.config.model_path,
+                model_path=model_path,
                 n_ctx=self.config.context_window,
                 n_gpu_layers=n_gpu_layers,
                 verbose=False,

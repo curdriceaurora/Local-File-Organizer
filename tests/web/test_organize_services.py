@@ -13,7 +13,7 @@ from file_organizer.web.organize_services import (
     build_organize_plan,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
