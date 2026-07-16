@@ -39,3 +39,21 @@ def test_process_file_uploads_closes_files_and_reports_errors(tmp_path: Path) ->
     assert errors == ["big.bin exceeds upload size limit."]
     assert upload.file.closed
     assert not (tmp_path / "big.bin").exists()
+
+
+def test_process_file_uploads_saves_hidden_file_when_allowed(tmp_path: Path) -> None:
+    saved, errors = process_file_uploads(
+        [_upload(".env", b"KEY=value")], tmp_path, allow_hidden=True
+    )
+
+    assert saved == 1
+    assert errors == []
+    assert (tmp_path / ".env").read_bytes() == b"KEY=value"
+
+
+def test_process_file_uploads_rejects_hidden_file_by_default(tmp_path: Path) -> None:
+    saved, errors = process_file_uploads([_upload(".env", b"KEY=value")], tmp_path)
+
+    assert saved == 0
+    assert errors
+    assert not (tmp_path / ".env").exists()

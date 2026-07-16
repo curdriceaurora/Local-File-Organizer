@@ -46,14 +46,12 @@ def resolve_avatar_for_read(
     try:
         with safe_dir_open(avatar_root) as safe_dir:
             fd = safe_dir.open_for_reader(avatar_name)
-    except NotImplementedError:  # pragma: no cover - Windows fallback
+    except NotImplementedError as exc:  # pragma: no cover - Windows fallback
         avatar_root_str = str(avatar_root)
         candidate_str = os.path.normpath(str(candidate))
         if not candidate_str.startswith(f"{avatar_root_str}{os.sep}"):
             raise FileNotFoundError("Avatar not found") from None
-        if not os.path.isfile(candidate_str):
-            raise FileNotFoundError("Avatar not found") from None
-        return candidate
+        raise FileNotFoundError("Avatar not found") from exc
     except (FileNotFoundError, SymlinkRejected) as exc:
         raise FileNotFoundError("Avatar not found") from exc
     else:

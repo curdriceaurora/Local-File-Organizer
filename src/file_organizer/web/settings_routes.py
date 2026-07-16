@@ -561,19 +561,6 @@ def settings_organization_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Organization settings and re-render the section partial."""
-    existing = _load_web_settings()
-    candidate_rules = organization_rules or existing.organization_rules
-    valid, message = _validate_rules(candidate_rules)
-    if not valid:
-        existing.organization_rules = candidate_rules
-        return _render_section(
-            request,
-            existing,
-            _load_app_config(manager),
-            section="organization",
-            error_message=message,
-        )
-
     try:
         ws, app_config = apply_organization_settings(
             _settings_store(),
@@ -582,7 +569,7 @@ def settings_organization_post(
             auto_organize=auto_organize,
             notifications_enabled=notifications_enabled,
             file_filter_glob=file_filter_glob,
-            organization_rules=candidate_rules,
+            organization_rules=organization_rules,
         )
         return _render_section(
             request,
@@ -590,6 +577,17 @@ def settings_organization_post(
             app_config,
             section="organization",
             success_message="Organization settings saved.",
+        )
+    except ValueError as exc:
+        logger.warning("Rejected organization settings: {}", exc)
+        ws = _load_web_settings()
+        ws.organization_rules = organization_rules or ws.organization_rules
+        return _render_section(
+            request,
+            ws,
+            _load_app_config(manager),
+            section="organization",
+            error_message=str(exc),
         )
     except Exception as exc:
         logger.exception("Failed to save organization settings")
@@ -622,9 +620,11 @@ def settings_appearance_post(
     """Save Appearance settings and re-render the section partial."""
 
     def apply(ws: WebSettings) -> None:
+        """Apply appearance form values to loaded settings."""
         apply_appearance_settings(ws, theme=theme, custom_theme_name=custom_theme_name)
 
     def render_success(ws: WebSettings) -> HTMLResponse:
+        """Render the appearance section after a successful save."""
         return _render_section(
             request,
             ws,
@@ -634,6 +634,7 @@ def settings_appearance_post(
         )
 
     def render_error(message: str) -> HTMLResponse:
+        """Render the appearance section after a failed save."""
         logger.exception("Failed to save appearance settings")
         return _render_section(
             request,
@@ -675,6 +676,7 @@ def settings_advanced_post(
     """Save Advanced settings and re-render the section partial."""
 
     def apply(ws: WebSettings) -> None:
+        """Apply advanced form values to loaded settings."""
         apply_advanced_settings(
             ws,
             log_level=log_level,
@@ -684,6 +686,7 @@ def settings_advanced_post(
         )
 
     def render_success(ws: WebSettings) -> HTMLResponse:
+        """Render the advanced section after a successful save."""
         return _render_section(
             request,
             ws,
@@ -693,6 +696,7 @@ def settings_advanced_post(
         )
 
     def render_error(message: str) -> HTMLResponse:
+        """Render the advanced section after a failed save."""
         logger.exception("Failed to save advanced settings")
         return _render_section(
             request,

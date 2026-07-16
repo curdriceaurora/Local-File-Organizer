@@ -130,6 +130,7 @@ class WebSettingsStore:
             atomic_write_text(self.settings_file, json.dumps(asdict(ws), indent=2) + "\n")
         except Exception as exc:
             logger.error("Failed to save settings to {}: {}", self.settings_file, exc)
+            raise
 
     def update(self, **kwargs: object) -> WebSettings:
         """Load settings, apply known-field overrides, save, and return the result."""
@@ -206,6 +207,9 @@ def import_settings_payload(
     ws = store.load()
     apply_web_settings_payload(ws, payload)
     sanitize_web_settings(ws)
+    valid, message = validate_rules(ws.organization_rules)
+    if not valid:
+        raise ValueError(message)
     store.save(ws)
 
     app_config = load_app_config(manager)
@@ -286,7 +290,6 @@ def apply_organization_settings(
     candidate_rules = organization_rules or existing.organization_rules
     valid, message = validate_rules(candidate_rules)
     if not valid:
-        existing.organization_rules = candidate_rules
         raise ValueError(message)
 
     ws = store.update(

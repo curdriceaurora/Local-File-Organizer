@@ -55,3 +55,22 @@ def test_collect_entries_keeps_directories_before_limited_files(tmp_path: Path) 
 
     assert total == 3
     assert [entry["name"] for entry in entries] == ["alpha", "beta"]
+
+
+def test_collect_entries_applies_descending_sort_to_directories(tmp_path: Path) -> None:
+    (tmp_path / "alpha").mkdir()
+    (tmp_path / "Beta").mkdir()
+    (tmp_path / "zeta.txt").write_text("z")
+
+    entries, total = collect_entries(
+        tmp_path,
+        query=None,
+        file_type=None,
+        sort_by="name",
+        sort_order="desc",
+        include_hidden=False,
+        limit=3,
+    )
+
+    assert total == 3
+    assert [entry["name"] for entry in entries] == ["Beta", "alpha", "zeta.txt"]

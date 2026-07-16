@@ -25,3 +25,15 @@ def test_resolve_avatar_for_read_uses_contained_filename(tmp_path: Path) -> None
     result = resolve_avatar_for_read("user-id", avatar_dir)
 
     assert result == stored.resolve()
+
+
+def test_resolve_avatar_for_read_fails_closed_when_safedir_unavailable(tmp_path: Path) -> None:
+    avatar_dir = tmp_path / "avatars"
+    avatar_dir.mkdir()
+    (avatar_dir / "user-id.png").write_bytes(b"png-data")
+
+    def unavailable(_path: Path):
+        raise NotImplementedError
+
+    with pytest.raises(FileNotFoundError, match="Avatar not found"):
+        resolve_avatar_for_read("user-id", avatar_dir, safe_dir_open=unavailable)

@@ -99,6 +99,18 @@ def test_shared_folder_helpers_normalize_and_remove_entries(tmp_path) -> None:
     assert activity[1]["message"] == f"Shared folder '{shared_dir}' as view."
 
 
+def test_remove_shared_folder_ignores_missing_id_without_activity() -> None:
+    state = {
+        "shared_folders": [{"id": "folder-id", "path": "/safe", "permission": "view"}],
+        "activity_log": [],
+    }
+
+    profile_state.remove_shared_folder(state, "missing")
+
+    assert state["shared_folders"] == [{"id": "folder-id", "path": "/safe", "permission": "view"}]
+    assert state["activity_log"] == []
+
+
 def test_mark_notification_read_ignores_non_matching_entries() -> None:
     state = {
         "notifications": [
@@ -124,3 +136,18 @@ def test_load_profile_state_falls_back_when_json_is_invalid(
     result = profile_state.load_profile_state(db, "user-id")
 
     assert result == profile_state.default_profile_state()
+
+
+def test_load_profile_state_propagates_unexpected_sanitizer_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = MagicMock()
+    monkeypatch.setattr(profile_state.SettingsRepository, "get", lambda *_args, **_kwargs: "{}")
+
+    def broken(_raw: object) -> dict[str, object]:
+        raise RuntimeError("sanitizer bug")
+
+    monkeypatch.setattr(profile_state, "sanitize_profile_state", broken)
+
+    with pytest.raises(RuntimeError, match="sanitizer bug"):
+        profile_state.load_profile_state(db, "user-id")

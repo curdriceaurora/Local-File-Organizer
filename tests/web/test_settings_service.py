@@ -67,6 +67,18 @@ def test_store_update_ignores_unknown_fields(tmp_path) -> None:
     assert not hasattr(ws, "unknown")
 
 
+def test_store_save_propagates_write_failures(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    store = _store(tmp_path)
+
+    def fail_write(*_args, **_kwargs) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("file_organizer.web.settings_service.atomic_write_text", fail_write)
+
+    with pytest.raises(OSError, match="disk full"):
+        store.save(WebSettings())
+
+
 def test_apply_web_settings_payload_only_accepts_known_typed_fields() -> None:
     ws = WebSettings()
 
@@ -130,6 +142,24 @@ def test_import_settings_payload_persists_web_and_app_config_fields(tmp_path) ->
     assert app_config.default_input_dir == str(input_dir)
     assert app_config.default_methodology == "para"
     manager.save.assert_called_once()
+
+
+def test_import_settings_payload_rejects_invalid_rules_without_saving(tmp_path) -> None:
+    store = _store(tmp_path)
+    manager = _manager()
+
+    with pytest.raises(ValueError, match="Expected 'pattern -> destination'"):
+        import_settings_payload(
+            store,
+            manager,
+            {
+                "language": "es",
+                "organization_rules": "bad rule",
+            },
+        )
+
+    assert not (tmp_path / "web-settings.json").exists()
+    manager.save.assert_not_called()
 
 
 def test_build_export_payload_includes_web_and_shared_fields(tmp_path) -> None:

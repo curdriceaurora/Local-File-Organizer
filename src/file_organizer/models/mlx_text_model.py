@@ -23,10 +23,10 @@ mlx_generate: Any = None
 mlx_load: Any = None
 try:
     _mlx_lm: Any = importlib.import_module("mlx_lm")
-    mlx_generate = _mlx_lm.generate
-    mlx_load = _mlx_lm.load
+    mlx_generate = getattr(_mlx_lm, "generate", None)
+    mlx_load = getattr(_mlx_lm, "load", None)
 
-    MLX_LM_AVAILABLE = True
+    MLX_LM_AVAILABLE = mlx_generate is not None and mlx_load is not None
 except ImportError:
     _mlx_lm = None
     MLX_LM_AVAILABLE = False

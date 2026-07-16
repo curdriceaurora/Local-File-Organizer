@@ -70,11 +70,80 @@ class TestBuildOrganizePlan:
                     "reason": "Categorized into docs",
                 }
             ]
-            organizer_factory.assert_called_once_with(dry_run=True, use_hardlinks=False)
+            organizer_factory.assert_called_once_with(
+                dry_run=True,
+                use_hardlinks=False,
+            )
             organizer.organize.assert_called_once_with(
                 input_path=input_dir,
                 output_path=output_dir,
                 skip_existing=True,
+            )
+        finally:
+            _delete_organize_plan(plan["plan_id"])
+
+    def test_applies_normalized_methodology_to_preview_movements(self, tmp_path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+        (input_dir / "notes.txt").write_text("hello")
+
+        organizer = MagicMock()
+        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer_factory = MagicMock(return_value=organizer)
+
+        plan = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="johnny_decimal",
+            recursive="0",
+            include_hidden="0",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=organizer_factory,
+        )
+
+        try:
+            assert plan["methodology"] == "jd"
+            organizer_factory.assert_called_once_with(
+                dry_run=True,
+                use_hardlinks=False,
+            )
+            assert plan["movements"][0]["destination"] == str(
+                output_dir / "30 Operations & Projects" / "docs" / "notes.txt"
+            )
+        finally:
+            _delete_organize_plan(plan["plan_id"])
+
+    def test_applies_para_methodology_to_preview_movements(self, tmp_path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+        (input_dir / "notes.txt").write_text("hello")
+
+        organizer = MagicMock()
+        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer_factory = MagicMock(return_value=organizer)
+
+        plan = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="para",
+            recursive="0",
+            include_hidden="0",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=organizer_factory,
+        )
+
+        try:
+            assert plan["methodology"] == "para"
+            assert plan["movements"][0]["destination"] == str(
+                output_dir / "Resources" / "docs" / "notes.txt"
             )
         finally:
             _delete_organize_plan(plan["plan_id"])

@@ -61,7 +61,7 @@ def save_upload(upload: UploadFile, target_dir: Path, allow_hidden: bool) -> str
 
     filename = upload.filename
     assert filename is not None
-    safe_name = sanitize_upload_name(filename)
+    safe_name = sanitize_upload_name(filename, allow_hidden=allow_hidden)
     if safe_name is None:
         return f"Rejected {filename}: invalid filename."
 
@@ -86,6 +86,7 @@ def write_upload_chunks(upload: UploadFile, destination: Path, safe_name: str) -
     total_bytes = 0
 
     def _writer(handle: Any) -> None:
+        """Copy upload chunks into the atomic write handle."""
         nonlocal total_bytes
         while True:
             chunk = upload.file.read(UPLOAD_CHUNK_SIZE)

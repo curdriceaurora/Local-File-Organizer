@@ -32,9 +32,9 @@ from file_organizer.models.base import (
 Llama: Any = None
 try:
     _llama_cpp: Any = importlib.import_module("llama_cpp")
-    Llama = _llama_cpp.Llama
+    Llama = getattr(_llama_cpp, "Llama", None)
 
-    LLAMA_CPP_AVAILABLE = True
+    LLAMA_CPP_AVAILABLE = Llama is not None
 except ImportError:
     _llama_cpp = None
     LLAMA_CPP_AVAILABLE = False

@@ -12,7 +12,13 @@ from uuid import uuid4
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import OrganizationError, OrganizationResultResponse
 from file_organizer.api.utils import is_hidden, resolve_path
-from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.config.methodology import (
+    JOHNNY_DECIMAL,
+    PARA,
+)
+from file_organizer.config.methodology import (
+    normalize as _normalize_methodology,
+)
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.types import OrganizationResult
 from file_organizer.web._helpers import as_bool
@@ -104,6 +110,36 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
             OrganizationError(file=file_name, error=error) for file_name, error in result.errors
         ],
     )
+
+
+def _methodology_preview_bucket(bucket: str, methodology: str) -> str:
+    """Return the dashboard preview bucket for a selected methodology."""
+    if methodology == PARA:
+        para_roots = {"Projects", "Areas", "Resources", "Archive"}
+        if bucket in para_roots or any(bucket.startswith(f"{root}/") for root in para_roots):
+            return bucket
+        return f"Resources/{bucket}"
+    if methodology == JOHNNY_DECIMAL:
+        if bucket[:2].isdigit() and len(bucket) > 2 and bucket[2] in {" ", "/", "."}:
+            return bucket
+        return f"30 Operations & Projects/{bucket}"
+    return bucket
+
+
+def _apply_preview_methodology(
+    preview: OrganizationResultResponse,
+    methodology: str,
+) -> OrganizationResultResponse:
+    """Apply methodology-specific destination shape to a dry-run preview."""
+    if methodology not in {PARA, JOHNNY_DECIMAL}:
+        return preview
+
+    organized_structure: dict[str, list[str]] = {}
+    for bucket, names in preview.organized_structure.items():
+        mapped_bucket = _methodology_preview_bucket(bucket, methodology)
+        organized_structure.setdefault(mapped_bucket, []).extend(names)
+
+    return preview.model_copy(update={"organized_structure": organized_structure})
 
 
 def _build_plan_movements(
@@ -230,7 +266,10 @@ def build_organize_plan(
         output_path=safe_output,
         skip_existing=skip_existing_enabled,
     )
-    preview = _result_to_response(preview_result)
+    preview = _apply_preview_methodology(
+        _result_to_response(preview_result),
+        normalized_methodology,
+    )
     return _store_organize_plan(
         {
             "input_dir": str(safe_input),

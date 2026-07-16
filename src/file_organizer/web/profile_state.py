@@ -59,7 +59,7 @@ def load_profile_state(db: Session, user_id: str) -> dict[str, object]:
         return default_profile_state()
     try:
         return sanitize_profile_state(json.loads(raw))
-    except Exception:
+    except (json.JSONDecodeError, TypeError):
         return default_profile_state()
 
 
@@ -197,11 +197,14 @@ def remove_shared_folder(state: dict[str, object], folder_id: str) -> None:
     shared = state.get("shared_folders")
     if not isinstance(shared, list):
         return
-    state["shared_folders"] = [
+    filtered = [
         folder
         for folder in shared
         if not (isinstance(folder, dict) and folder.get("id") == folder_id)
     ]
+    if len(filtered) == len(shared):
+        return
+    state["shared_folders"] = filtered
     append_activity(state, "Removed a shared folder entry.")
 
 

@@ -80,7 +80,7 @@ def collect_entries(
         include_hidden=include_hidden,
         allowed_types=allowed_types,
     )
-    directories.sort(key=lambda p: p.name.lower())
+    directories.sort(key=lambda p: p.name.lower(), reverse=sort_order == "desc")
 
     file_stats: dict[Path, os.stat_result | None] = {}
     if sort_by in {"size", "created", "modified"}:
