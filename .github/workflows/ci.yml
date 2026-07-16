@@ -496,3 +496,37 @@ jobs:
 
       - name: Check per-file integration coverage floors
         run: python scripts/coverage/check-integration-floors.py
+
+  test-unit-floors:
+    name: Unit coverage floor gate
+    needs: changes
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev,search]"
+      - name: Unit coverage run
+        run: pytest tests/ -m "unit" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=0 --cov-report=json:.coverage-unit.json --timeout=60 --override-ini="addopts="
+      - name: Upload unit coverage JSON
+        # The artifact is the source of truth for regenerating
+        # [tool.coverage.floors.unit] (generate_module_coverage_floor.py):
+        # floors must be reconciled against CI's own environment, not a
+        # contributor's local run.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: coverage-unit-json
+          path: .coverage-unit.json
+          retention-days: 30
+          # Dot-prefixed paths are "hidden" and excluded by default since
+          # upload-artifact v4.4; without this the artifact silently uploads nothing.
+          include-hidden-files: true
+      - name: Check per-file unit coverage floors
+        run: python scripts/coverage/check_module_coverage_floor.py

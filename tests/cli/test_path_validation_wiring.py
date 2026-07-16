@@ -37,6 +37,11 @@ def _bogus(tmp_path: Path) -> str:
     return str(tmp_path / "does_not_exist")
 
 
+def _flat_output(output: str) -> str:
+    """Collapse rich/typer line-wrapping (width-dependent newlines) for substring asserts."""
+    return " ".join(output.split()).lower()
+
+
 # (app, argv-template) — each template uses ``{p}`` for the bogus path.
 # Commands that take two paths get two bogus substitutions; one rejected path
 # is enough to trigger the ``resolve_cli_path`` branch.
@@ -76,7 +81,7 @@ def test_cli_command_rejects_missing_path(
     assert result.exit_code == 2, (
         f"expected exit 2 for {argv}; got {result.exit_code}\noutput: {result.output}"
     )
-    assert "does not exist" in result.output.lower()
+    assert "does not exist" in _flat_output(result.output)
 
 
 def test_benchmark_compare_directory_rejected(tmp_path: Path) -> None:
@@ -91,7 +96,7 @@ def test_benchmark_compare_directory_rejected(tmp_path: Path) -> None:
     compare_dir.mkdir()
     result = runner.invoke(app, ["benchmark", "run", str(input_dir), "--compare", str(compare_dir)])
     assert result.exit_code == 2
-    assert "not a regular file" in result.output.lower()
+    assert "not a regular file" in _flat_output(result.output)
 
 
 def test_analyze_directory_rejected_with_regular_file_message(tmp_path: Path) -> None:
@@ -103,4 +108,4 @@ def test_analyze_directory_rejected_with_regular_file_message(tmp_path: Path) ->
     d.mkdir()
     result = runner.invoke(app, ["analyze", str(d)])
     assert result.exit_code == 1
-    assert "not a regular file" in result.output.lower()
+    assert "not a regular file" in _flat_output(result.output)

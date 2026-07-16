@@ -328,6 +328,52 @@ class TestOrganizationPreviewViewLoadPreview:
         mock_app.action_switch_view.assert_called_once_with("history")
         mock_app.run_worker.assert_called_once()
 
+    def test_handle_apply_success_without_switch_view_action(self, tmp_path) -> None:
+        """An app without action_switch_view still applies the result cleanly."""
+        input_dir = tmp_path / "in"
+        view = OrganizationPreviewView(input_dir=input_dir)
+        view._is_applying = True
+        before_after_panel = MagicMock()
+        summary_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                BeforeAfterPanel: before_after_panel,
+                OrganizationSummary: summary_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
+        view._set_status = MagicMock()
+        mock_app = MagicMock()
+        del mock_app.action_switch_view
+        mock_result = SimpleNamespace(
+            organized_structure={"Docs": ["a.pdf"]},
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            failed_files=0,
+            errors=[],
+        )
+
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._handle_apply_success(mock_result)
+
+        assert view._is_applying is False
+        before_after_panel.set_structure.assert_called_once_with(
+            {"Docs": ["a.pdf"]}, str(input_dir)
+        )
+        summary_panel.set_result.assert_called_once_with(
+            total=1,
+            processed=1,
+            skipped=0,
+            failed=0,
+            folders=1,
+            errors=[],
+        )
+        view._set_status.assert_called_once_with("Organization applied. Opening history.")
+        mock_app.run_worker.assert_not_called()
+
     def test_apply_organization_exception_shows_apply_error(self) -> None:
         view = OrganizationPreviewView()
         mock_app = MagicMock()
