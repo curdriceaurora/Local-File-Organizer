@@ -11,6 +11,7 @@ Install the optional dependency::
 
 from __future__ import annotations
 
+import importlib
 import threading
 from typing import Any
 
@@ -18,16 +19,16 @@ from loguru import logger
 
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
-mlx_generate: Any
-mlx_load: Any
+mlx_generate: Any = None
+mlx_load: Any = None
 try:
-    from mlx_lm import generate as mlx_generate
-    from mlx_lm import load as mlx_load
+    _mlx_lm: Any = importlib.import_module("mlx_lm")
+    mlx_generate = _mlx_lm.generate
+    mlx_load = _mlx_lm.load
 
     MLX_LM_AVAILABLE = True
 except ImportError:
-    mlx_generate = None
-    mlx_load = None
+    _mlx_lm = None
     MLX_LM_AVAILABLE = False
 
 
@@ -88,7 +89,7 @@ class MLXTextModel(BaseModel):
                 return
 
             if mlx_load is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
-                raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
+                raise RuntimeError("mlx_lm.load is required before initializing MLXTextModel")
             model_path = self.config.model_path
             if model_path is None:
                 raise RuntimeError("model_path is required before initializing MLXTextModel")
@@ -136,7 +137,7 @@ class MLXTextModel(BaseModel):
         top_k = int(kwargs.get("top_k", self.config.top_k))
 
         if mlx_generate is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
-            raise RuntimeError("mlx_generate is None — mlx-lm is required; should not be reachable")
+            raise RuntimeError("mlx_lm.generate is required before generating with MLXTextModel")
         try:
             response = self._call_generate(
                 prompt=prompt,
@@ -169,7 +170,7 @@ class MLXTextModel(BaseModel):
         skip the probe loop entirely.
         """
         if mlx_generate is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
-            raise RuntimeError("mlx_generate is None — mlx-lm is required; should not be reachable")
+            raise RuntimeError("mlx_lm.generate is required before generating with MLXTextModel")
         call_variants: tuple[dict[str, Any], ...] = (
             {"max_tokens": max_tokens, "temp": temperature, "top_p": top_p, "top_k": top_k},
             {"max_tokens": max_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k},

@@ -10,6 +10,7 @@ Install the optional dependency::
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from loguru import logger
@@ -28,13 +29,14 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
-Llama: Any
+Llama: Any = None
 try:
-    from llama_cpp import Llama
+    _llama_cpp: Any = importlib.import_module("llama_cpp")
+    Llama = _llama_cpp.Llama
 
     LLAMA_CPP_AVAILABLE = True
 except ImportError:
-    Llama = None
+    _llama_cpp = None
     LLAMA_CPP_AVAILABLE = False
 
 
@@ -97,6 +99,8 @@ class LlamaCppTextModel(BaseModel):
             raise RuntimeError("model_path is required before initializing LlamaCppTextModel")
 
         n_gpu_layers = self._device_to_gpu_layers()
+        if Llama is None:  # guarded by LLAMA_CPP_AVAILABLE in __init__
+            raise RuntimeError("llama_cpp.Llama is required before initializing LlamaCppTextModel")
         try:
             self.client = Llama(
                 model_path=model_path,
