@@ -25,9 +25,9 @@ from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
 from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.web._forms import form_bool
 from file_organizer.web._helpers import (
     allowed_roots,
-    as_bool,
     build_content_disposition,
     format_timestamp,
     templates,
@@ -445,7 +445,7 @@ def organize_execute(
             )
 
         delay_minutes = _parse_delay_minutes(schedule_delay_minutes)
-        dry_run_enabled = as_bool(dry_run)
+        dry_run_enabled = form_bool(dry_run)
         safe_input = resolve_path(plan["input_dir"], settings.allowed_paths)
         safe_output = resolve_path(plan["output_dir"], settings.allowed_paths)
 

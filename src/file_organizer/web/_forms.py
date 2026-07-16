@@ -9,14 +9,16 @@ from fastapi.responses import HTMLResponse
 
 T = TypeVar("T")
 
-_TRUE_FORM_VALUES = {"1", "true", "yes", "on"}
+# Canonical truthy form values for the whole web layer; other modules
+# (e.g. _helpers.TRUE_VALUES) alias this set instead of redefining it.
+TRUE_FORM_VALUES = frozenset({"1", "true", "yes", "on"})
 
 
 def form_bool(value: str | None) -> bool:
     """Convert an HTML checkbox value to ``bool``."""
     if value is None:
         return False
-    return value.strip().lower() in _TRUE_FORM_VALUES
+    return value.strip().lower() in TRUE_FORM_VALUES
 
 
 def coerce_bool(value: object, default: bool) -> bool:
@@ -24,7 +26,7 @@ def coerce_bool(value: object, default: bool) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.strip().lower() in _TRUE_FORM_VALUES
+        return value.strip().lower() in TRUE_FORM_VALUES
     return default
 
 

@@ -347,14 +347,17 @@ class TestSettingsSectionPostRoutes:
     def test_appearance_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_appearance_post
 
+        # The handler saves via update_form_section(save=_save_web_settings).
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes._save_web_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_appearance_post(
                 MagicMock(), theme="dark", custom_theme_name="", manager=mock_manager
             )
         mock_templates.TemplateResponse.assert_called_once()
+        context = mock_templates.TemplateResponse.call_args[0][2]
+        assert "boom" in context["error_message"]
 
     def test_advanced_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_advanced_post
@@ -372,8 +375,9 @@ class TestSettingsSectionPostRoutes:
     def test_advanced_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_advanced_post
 
+        # The handler saves via update_form_section(save=_save_web_settings).
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes._save_web_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_advanced_post(
@@ -385,6 +389,8 @@ class TestSettingsSectionPostRoutes:
                 manager=mock_manager,
             )
         mock_templates.TemplateResponse.assert_called_once()
+        context = mock_templates.TemplateResponse.call_args[0][2]
+        assert "boom" in context["error_message"]
 
 
 class TestLoadWebSettingsEdgeCases:

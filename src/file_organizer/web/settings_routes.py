@@ -11,6 +11,7 @@ This module powers a multi-section settings page with:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import aiofiles
 import httpx
@@ -196,6 +197,48 @@ def _render_section(
     return templates.TemplateResponse(request, f"settings/_{section}.html", context)
 
 
+def _run_section_post(
+    request: Request,
+    manager: ConfigManager,
+    *,
+    section: str,
+    action: Callable[[], tuple[WebSettings, AppConfig]],
+    success_message: str,
+    failure_log: str,
+    error_prefix: str = "Failed to save settings",
+    on_rejected: Callable[[ValueError], HTMLResponse] | None = None,
+) -> HTMLResponse:
+    """Run the shared action → render-success / render-error flow for a section POST.
+
+    ``action`` performs the persistence (usually a ``settings_service.apply_*``
+    call) and returns the updated ``(WebSettings, AppConfig)`` pair to render.
+    A ``ValueError`` is treated as a validation rejection and routed to
+    ``on_rejected`` when provided (which owns its own logging and rendering);
+    any other failure logs ``failure_log`` and re-renders the section from
+    freshly loaded state with an error flash.
+    """
+    try:
+        ws, app_config = action()
+    except Exception as exc:
+        if isinstance(exc, ValueError) and on_rejected is not None:
+            return on_rejected(exc)
+        logger.exception(failure_log)
+        return _render_section(
+            request,
+            _load_web_settings(),
+            _load_app_config(manager),
+            section=section,
+            error_message=f"{error_prefix}: {exc}",
+        )
+    return _render_section(
+        request,
+        ws,
+        app_config,
+        section=section,
+        success_message=success_message,
+    )
+
+
 @settings_router.get("/settings", response_class=HTMLResponse)
 def settings_page(
     request: Request,
@@ -364,25 +407,15 @@ def settings_reset(
     """
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
-    try:
-        ws, app_config = reset_settings(_settings_store(), manager)
-
-        return _render_section(
-            request,
-            ws,
-            app_config,
-            section=target_section,
-            success_message="Settings reset to defaults.",
-        )
-    except Exception as exc:
-        logger.exception("Failed to reset settings")
-        return _render_section(
-            request,
-            _load_web_settings(),
-            _load_app_config(manager),
-            section=target_section,
-            error_message=f"Failed to reset settings: {exc}",
-        )
+    return _run_section_post(
+        request,
+        manager,
+        section=target_section,
+        action=lambda: reset_settings(_settings_store(), manager),
+        success_message="Settings reset to defaults.",
+        failure_log="Failed to reset settings",
+        error_prefix="Failed to reset settings",
+    )
 
 
 @settings_router.get("/settings/general", response_class=HTMLResponse)
@@ -405,31 +438,21 @@ def settings_general_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save General settings and re-render the section partial."""
-    try:
-        ws, app_config = apply_general_settings(
+    return _run_section_post(
+        request,
+        manager,
+        section="general",
+        action=lambda: apply_general_settings(
             _settings_store(),
             manager,
             language=language,
             timezone=timezone,
             default_input_dir=default_input_dir,
             default_output_dir=default_output_dir,
-        )
-        return _render_section(
-            request,
-            ws,
-            app_config,
-            section="general",
-            success_message="General settings saved.",
-        )
-    except Exception as exc:
-        logger.exception("Failed to save general settings")
-        return _render_section(
-            request,
-            _load_web_settings(),
-            _load_app_config(manager),
-            section="general",
-            error_message=f"Failed to save settings: {exc}",
-        )
+        ),
+        success_message="General settings saved.",
+        failure_log="Failed to save general settings",
+    )
 
 
 @settings_router.get("/settings/models", response_class=HTMLResponse)
@@ -451,30 +474,20 @@ def settings_models_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Models settings and re-render the section partial."""
-    try:
-        ws, app_config = apply_model_settings(
+    return _run_section_post(
+        request,
+        manager,
+        section="models",
+        action=lambda: apply_model_settings(
             _settings_store(),
             manager,
             text_model=text_model,
             vision_model=vision_model,
             ollama_url=ollama_url,
-        )
-        return _render_section(
-            request,
-            ws,
-            app_config,
-            section="models",
-            success_message="Model settings saved.",
-        )
-    except Exception as exc:
-        logger.exception("Failed to save model settings")
-        return _render_section(
-            request,
-            _load_web_settings(),
-            _load_app_config(manager),
-            section="models",
-            error_message=f"Failed to save settings: {exc}",
-        )
+        ),
+        success_message="Model settings saved.",
+        failure_log="Failed to save model settings",
+    )
 
 
 @settings_router.post("/settings/models/test", response_class=HTMLResponse)
@@ -561,24 +574,8 @@ def settings_organization_post(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Save Organization settings and re-render the section partial."""
-    try:
-        ws, app_config = apply_organization_settings(
-            _settings_store(),
-            manager,
-            default_methodology=default_methodology,
-            auto_organize=auto_organize,
-            notifications_enabled=notifications_enabled,
-            file_filter_glob=file_filter_glob,
-            organization_rules=organization_rules,
-        )
-        return _render_section(
-            request,
-            ws,
-            app_config,
-            section="organization",
-            success_message="Organization settings saved.",
-        )
-    except ValueError as exc:
+
+    def render_rejected(exc: ValueError) -> HTMLResponse:
         logger.warning("Rejected organization settings: {}", exc)
         ws = _load_web_settings()
         ws.organization_rules = organization_rules or ws.organization_rules
@@ -589,15 +586,24 @@ def settings_organization_post(
             section="organization",
             error_message=str(exc),
         )
-    except Exception as exc:
-        logger.exception("Failed to save organization settings")
-        return _render_section(
-            request,
-            _load_web_settings(),
-            _load_app_config(manager),
-            section="organization",
-            error_message=f"Failed to save settings: {exc}",
-        )
+
+    return _run_section_post(
+        request,
+        manager,
+        section="organization",
+        action=lambda: apply_organization_settings(
+            _settings_store(),
+            manager,
+            default_methodology=default_methodology,
+            auto_organize=auto_organize,
+            notifications_enabled=notifications_enabled,
+            file_filter_glob=file_filter_glob,
+            organization_rules=organization_rules,
+        ),
+        success_message="Organization settings saved.",
+        failure_log="Failed to save organization settings",
+        on_rejected=render_rejected,
+    )
 
 
 @settings_router.get("/settings/appearance", response_class=HTMLResponse)

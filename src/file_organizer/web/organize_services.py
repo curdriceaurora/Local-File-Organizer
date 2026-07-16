@@ -21,7 +21,7 @@ from file_organizer.config.methodology import (
 )
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.types import OrganizationResult
-from file_organizer.web._helpers import as_bool
+from file_organizer.web._forms import form_bool
 
 ORGANIZE_DEFAULT_DELAY_MIN = 0
 ORGANIZE_MAX_DELAY_MIN = 7 * 24 * 60
@@ -242,16 +242,16 @@ def build_organize_plan(
         raise ApiError(status_code=404, error="not_found", message="Input directory not found.")
 
     normalized_methodology = _normalize_methodology(methodology)
-    recursive_enabled = as_bool(recursive)
-    include_hidden_enabled = as_bool(include_hidden)
+    recursive_enabled = form_bool(recursive)
+    include_hidden_enabled = form_bool(include_hidden)
     if include_hidden_enabled:
         raise ApiError(
             status_code=400,
             error="include_hidden_not_supported",
             message="Including hidden files is not supported in this dashboard flow yet.",
         )
-    skip_existing_enabled = as_bool(skip_existing)
-    use_hardlinks_enabled = as_bool(use_hardlinks)
+    skip_existing_enabled = form_bool(skip_existing)
+    use_hardlinks_enabled = form_bool(use_hardlinks)
 
     scan_files = _scan_directory(
         safe_input,
