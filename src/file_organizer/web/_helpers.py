@@ -55,6 +55,7 @@ TEXT_SAMPLE_BYTES = 8192
 TEXT_PREVIEW_CHARS = 4000
 INVALID_FILENAME_CHARS = set('<>:"/\\|?*')
 SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()-]*$")
+SAFE_HIDDEN_FILENAME_RE = re.compile(r"^\.[A-Za-z0-9][A-Za-z0-9 ._()-]*$")
 ALLOWED_VIEWS = {"grid", "list"}
 ALLOWED_SORT_BY = {"name", "size", "created", "modified", "type"}
 ALLOWED_SORT_ORDER = {"asc", "desc"}
@@ -230,18 +231,19 @@ def is_probably_text(path: Path) -> bool:
     return True
 
 
-def sanitize_upload_name(name: str) -> str | None:
+def sanitize_upload_name(name: str, *, allow_hidden: bool = False) -> str | None:
     """Sanitize an upload filename, returning None when unsafe."""
     safe_name = Path(name).name.strip()
     if not safe_name or safe_name in {".", ".."}:
         return None
-    if safe_name.startswith("."):
+    if safe_name.startswith(".") and not allow_hidden:
         return None
     if len(safe_name) > 255:
         return None
     if any(char in INVALID_FILENAME_CHARS for char in safe_name):
         return None
-    if not SAFE_FILENAME_RE.match(safe_name):
+    safe_pattern = SAFE_HIDDEN_FILENAME_RE if safe_name.startswith(".") else SAFE_FILENAME_RE
+    if not safe_pattern.match(safe_name):
         return None
     return safe_name
 

@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import os
-import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -31,24 +27,41 @@ from file_organizer.api.auth_models import Base, User
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.db_models import Workspace
 from file_organizer.api.dependencies import get_settings
-from file_organizer.api.repositories.settings_repo import SettingsRepository
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.utils.atomic_write import atomic_write_bytes
-from file_organizer.utils.safedir import SafeDir, SymlinkRejected
+from file_organizer.utils.safedir import SafeDir
 from file_organizer.web._forms import form_bool
 from file_organizer.web._helpers import base_context, templates
+from file_organizer.web.profile_avatars import avatar_path, resolve_avatar_for_read
+from file_organizer.web.profile_state import (
+    DEFAULT_ROLES,
+    STATE_KEY,
+    add_shared_folder,
+    append_activity,
+    append_notification,
+    default_profile_state,
+    invite_team_member,
+    load_profile_state,
+    mark_notification_read,
+    now_utc,
+    remove_shared_folder,
+    sanitize_profile_state,
+    save_profile_state,
+    set_two_factor_enabled,
+    update_team_member_role,
+)
 
 profile_router = APIRouter(tags=["web"])
 
 _SESSION_COOKIE = "fo_session"
 _API_KEY_PREFIX = "fo"
-_STATE_KEY = "web_profile_state"
+_STATE_KEY = STATE_KEY
 _RESET_TOKEN_TTL_MINUTES = 20
 
 _SETTINGS_DIR = get_config_dir()
 _AVATAR_DIR = _SETTINGS_DIR / "avatars"
-_DEFAULT_ROLES = {"viewer", "editor", "admin"}
+_DEFAULT_ROLES = DEFAULT_ROLES
 _PASSWORD_RESET_TOKENS: dict[str, tuple[str, datetime]] = {}
 
 
@@ -66,9 +79,13 @@ class UserApiKey(Base):  # type: ignore[misc]
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
-def _now() -> datetime:
-    """Return the current UTC datetime."""
-    return datetime.now(UTC)
+_now = now_utc
+_default_profile_state = default_profile_state
+_sanitize_profile_state = sanitize_profile_state
+_load_profile_state = load_profile_state
+_save_profile_state = save_profile_state
+_append_activity = append_activity
+_append_notification = append_notification
 
 
 def _ensure_api_key_table(db_path: str) -> None:
@@ -116,89 +133,6 @@ def _require_web_user(request: Request, settings: ApiSettings) -> User | HTMLRes
     return user
 
 
-def _default_profile_state() -> dict[str, object]:
-    """Return the initial empty profile state dict."""
-    return {
-        "active_workspace_id": "",
-        "team_members": [],
-        "shared_folders": [],
-        "activity_log": [],
-        "notifications": [],
-        "two_factor_enabled": False,
-    }
-
-
-def _sanitize_profile_state(raw: object) -> dict[str, object]:
-    """Normalize raw profile state data, filling in missing keys with defaults."""
-    state = _default_profile_state()
-    if not isinstance(raw, dict):
-        return state
-
-    if isinstance(raw.get("active_workspace_id"), str):
-        state["active_workspace_id"] = raw["active_workspace_id"]
-
-    for key in ("team_members", "shared_folders", "activity_log", "notifications"):
-        value = raw.get(key)
-        if isinstance(value, list):
-            state[key] = value
-
-    two_factor = raw.get("two_factor_enabled")
-    if isinstance(two_factor, bool):
-        state["two_factor_enabled"] = two_factor
-    return state
-
-
-def _load_profile_state(db: Session, user_id: str) -> dict[str, object]:
-    """Load the profile state for *user_id* from the settings repository."""
-    raw = SettingsRepository.get(db, _STATE_KEY, user_id=user_id)
-    if raw is None:
-        return _default_profile_state()
-    try:
-        return _sanitize_profile_state(json.loads(raw))
-    except Exception:
-        return _default_profile_state()
-
-
-def _save_profile_state(db: Session, user_id: str, state: dict[str, object]) -> None:
-    """Persist the profile *state* dict for *user_id*."""
-    SettingsRepository.set(db, _STATE_KEY, json.dumps(state), user_id=user_id)
-
-
-def _append_activity(state: dict[str, object], message: str) -> None:
-    """Add a timestamped activity entry to the profile state."""
-    log = state.get("activity_log")
-    if not isinstance(log, list):
-        log = []
-        state["activity_log"] = log
-    log.insert(
-        0,
-        {
-            "id": secrets.token_hex(4),
-            "message": message,
-            "timestamp": _now().isoformat(),
-        },
-    )
-    del log[100:]
-
-
-def _append_notification(state: dict[str, object], message: str) -> None:
-    """Add a timestamped notification to the profile state."""
-    notifications = state.get("notifications")
-    if not isinstance(notifications, list):
-        notifications = []
-        state["notifications"] = notifications
-    notifications.insert(
-        0,
-        {
-            "id": secrets.token_hex(4),
-            "message": message,
-            "created_at": _now().isoformat(),
-            "read": False,
-        },
-    )
-    del notifications[100:]
-
-
 def _workspace_context(db: Session, user_id: str) -> tuple[list[Workspace], str]:
     """Return the user's workspaces and their active workspace ID.
 
@@ -222,49 +156,19 @@ def _workspace_context(db: Session, user_id: str) -> tuple[list[Workspace], str]
     return workspaces, active
 
 
-# Strict pattern for user IDs — ASCII alphanumeric, hyphens, underscores, dots only.
-_SAFE_USER_ID = re.compile(r"^[\w.\-]+$", re.ASCII)
+def _avatar_path(user_id: str):
+    """Return the filesystem path where the user's avatar is stored."""
+    return avatar_path(user_id, _AVATAR_DIR)
 
 
-def _avatar_path(user_id: str) -> Path:
-    """Return the filesystem path where the user's avatar is stored.
-
-    Raises:
-        ValueError: If user_id contains path-traversal characters or is empty.
-    """
-    if not user_id or not _SAFE_USER_ID.match(user_id):
-        raise ValueError(f"Invalid user_id: {user_id!r}")
-    result = _AVATAR_DIR / f"{user_id}.png"
-    # Belt-and-suspenders: verify resolved path is under avatar dir
-    if not result.resolve().is_relative_to(_AVATAR_DIR.resolve()):
-        raise ValueError(f"Invalid user_id: {user_id!r}")
-    return result
-
-
-def _resolve_avatar_for_read(user_id: str) -> Path:
+def _resolve_avatar_for_read(user_id: str):
     """Return a validated avatar path that is safe to serve."""
-    avatar_path = _avatar_path(user_id)
-    avatar_name = avatar_path.name
-    avatar_root = _AVATAR_DIR.resolve()
-    candidate = avatar_root / avatar_name
-
-    try:
-        with SafeDir.open_root(avatar_root) as safe_dir:
-            fd = safe_dir.open_for_reader(avatar_name)
-    except NotImplementedError:  # pragma: no cover - Windows fallback
-        # SafeDir is POSIX-only; validate normalized path containment explicitly.
-        avatar_root_str = str(avatar_root)
-        candidate_str = os.path.normpath(str(candidate))
-        if not candidate_str.startswith(f"{avatar_root_str}{os.sep}"):
-            raise FileNotFoundError("Avatar not found") from None
-        if not os.path.isfile(candidate_str):
-            raise FileNotFoundError("Avatar not found") from None
-        return candidate
-    except (FileNotFoundError, SymlinkRejected) as exc:
-        raise FileNotFoundError("Avatar not found") from exc
-    else:
-        os.close(fd)
-    return candidate
+    return resolve_avatar_for_read(
+        user_id,
+        _AVATAR_DIR,
+        path_factory=_avatar_path,
+        safe_dir_open=SafeDir.open_root,
+    )
 
 
 def _cleanup_expired_reset_tokens() -> None:
@@ -816,24 +720,10 @@ def team_invite(
     if isinstance(user, HTMLResponse):
         return user
 
-    normalized_role = role if role in _DEFAULT_ROLES else "viewer"
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        team = state.get("team_members")
-        if not isinstance(team, list):
-            team = []
-            state["team_members"] = team
-        team.append(
-            {
-                "id": secrets.token_hex(4),
-                "email": email.strip().lower(),
-                "role": normalized_role,
-                "status": "invited",
-            }
-        )
-        _append_activity(state, f"Invited {email.strip().lower()} as {normalized_role}.")
-        _append_notification(state, f"Invitation created for {email.strip().lower()}.")
+        invite_team_member(state, email, role)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         return team_partial(request, settings)
@@ -853,21 +743,10 @@ def team_update_role(
     if isinstance(user, HTMLResponse):
         return user
 
-    normalized_role = role if role in _DEFAULT_ROLES else "viewer"
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        team = state.get("team_members")
-        if isinstance(team, list):
-            for member in team:
-                if isinstance(member, dict) and member.get("id") == member_id:
-                    member["role"] = normalized_role
-                    member["status"] = "active"
-                    _append_activity(
-                        state,
-                        f"Updated role for {member.get('email', 'member')} to {normalized_role}.",
-                    )
-                    break
+        update_team_member_role(state, member_id, role)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         return team_partial(request, settings)
@@ -908,24 +787,10 @@ def shared_add(
     if isinstance(user, HTMLResponse):
         return user
 
-    normalized_permission = permission if permission in {"view", "edit", "admin"} else "view"
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        shared = state.get("shared_folders")
-        if not isinstance(shared, list):
-            shared = []
-            state["shared_folders"] = shared
-        shared.append(
-            {
-                "id": secrets.token_hex(4),
-                "path": folder_path.strip(),
-                "permission": normalized_permission,
-            }
-        )
-        _append_activity(
-            state, f"Shared folder '{folder_path.strip()}' as {normalized_permission}."
-        )
+        add_shared_folder(state, folder_path, permission)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         return shared_partial(request, settings)
@@ -947,14 +812,7 @@ def shared_remove(
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        shared = state.get("shared_folders")
-        if isinstance(shared, list):
-            state["shared_folders"] = [
-                folder
-                for folder in shared
-                if not (isinstance(folder, dict) and folder.get("id") == folder_id)
-            ]
-            _append_activity(state, "Removed a shared folder entry.")
+        remove_shared_folder(state, folder_id)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         return shared_partial(request, settings)
@@ -1022,12 +880,7 @@ def notification_mark_read(
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        notifications = state.get("notifications")
-        if isinstance(notifications, list):
-            for item in notifications:
-                if isinstance(item, dict) and item.get("id") == notification_id:
-                    item["read"] = True
-                    break
+        mark_notification_read(state, notification_id)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         return notifications_partial(request, settings)
@@ -1158,10 +1011,7 @@ def account_settings_toggle_2fa(
     db = _get_db(settings)
     try:
         state = _load_profile_state(db, str(user.id))
-        state["two_factor_enabled"] = toggle
-        _append_activity(
-            state, f"Set two-factor authentication to {'enabled' if toggle else 'disabled'}."
-        )
+        set_two_factor_enabled(state, toggle)
         _save_profile_state(db, str(user.id), state)
         db.commit()
         context = _make_profile_context(

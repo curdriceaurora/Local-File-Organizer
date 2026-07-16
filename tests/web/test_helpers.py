@@ -576,6 +576,10 @@ class TestSanitizeUploadName:
         """Should reject files starting with '.'."""
         assert sanitize_upload_name(".hidden") is None
 
+    def test_allows_hidden_files_when_enabled(self):
+        """Should accept files starting with '.' when explicitly allowed."""
+        assert sanitize_upload_name(".hidden", allow_hidden=True) == ".hidden"
+
     def test_rejects_invalid_chars(self):
         """Should reject filenames with invalid characters."""
         assert sanitize_upload_name('file"name.txt') is None

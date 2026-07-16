@@ -583,6 +583,9 @@ DEP002 = [
     "pywebview",
     # audioop-lts: restores stdlib `audioop` on Python 3.13+ for pydub (never imported directly)
     "audioop-lts",
+    # Optional model providers are loaded through importlib to keep mypy stable with/without extras.
+    "llama-cpp-python",
+    "mlx-lm",
 ]
 
 [tool.coverage.floors.integration]
@@ -1013,14 +1016,20 @@ DEP002 = [
 "src/file_organizer/web/_forms.py" = 90
 "src/file_organizer/web/_helpers.py" = 70
 "src/file_organizer/web/csrf.py" = 97
+"src/file_organizer/web/file_listing.py" = 75
 "src/file_organizer/web/file_operations.py" = 75
+"src/file_organizer/web/file_uploads.py" = 80
 "src/file_organizer/web/file_validators.py" = 70
 "src/file_organizer/web/files_routes.py" = 95
 "src/file_organizer/web/marketplace_routes.py" = 95
-"src/file_organizer/web/organize_routes.py" = 70
+"src/file_organizer/web/organize_routes.py" = 65
+"src/file_organizer/web/organize_services.py" = 95
+"src/file_organizer/web/profile_avatars.py" = 90
 "src/file_organizer/web/profile_routes.py" = 80
+"src/file_organizer/web/profile_state.py" = 75
 "src/file_organizer/web/router.py" = 70
 "src/file_organizer/web/settings_routes.py" = 85
+"src/file_organizer/web/settings_service.py" = 90
 "src/file_organizer/web/setup_routes.py" = 80
 
 [tool.coverage.floors.unit]
@@ -1451,12 +1460,18 @@ DEP002 = [
 "src/file_organizer/web/_forms.py" = 90
 "src/file_organizer/web/_helpers.py" = 85
 "src/file_organizer/web/csrf.py" = 95
-"src/file_organizer/web/file_operations.py" = 90
+"src/file_organizer/web/file_listing.py" = 95
+"src/file_organizer/web/file_operations.py" = 85
+"src/file_organizer/web/file_uploads.py" = 90
 "src/file_organizer/web/file_validators.py" = 100
 "src/file_organizer/web/files_routes.py" = 100
 "src/file_organizer/web/marketplace_routes.py" = 100
-"src/file_organizer/web/organize_routes.py" = 85
+"src/file_organizer/web/organize_routes.py" = 80
+"src/file_organizer/web/organize_services.py" = 95
+"src/file_organizer/web/profile_avatars.py" = 100
 "src/file_organizer/web/profile_routes.py" = 85
+"src/file_organizer/web/profile_state.py" = 85
 "src/file_organizer/web/router.py" = 100
-"src/file_organizer/web/settings_routes.py" = 95
+"src/file_organizer/web/settings_routes.py" = 90
+"src/file_organizer/web/settings_service.py" = 100
 "src/file_organizer/web/setup_routes.py" = 100

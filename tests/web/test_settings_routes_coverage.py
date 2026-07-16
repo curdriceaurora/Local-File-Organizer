@@ -205,7 +205,7 @@ class TestSettingsSectionPostRoutes:
         from file_organizer.web.settings_routes import settings_general_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_general_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_general_post(
@@ -234,7 +234,7 @@ class TestSettingsSectionPostRoutes:
         from file_organizer.web.settings_routes import settings_models_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_model_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_models_post(
@@ -306,7 +306,7 @@ class TestSettingsSectionPostRoutes:
         from file_organizer.web.settings_routes import settings_organization_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_organization_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_organization_post(
@@ -412,12 +412,12 @@ class TestLoadWebSettingsEdgeCases:
         ws = _load_web_settings()
         assert ws.language == "en"
 
-    def test_save_failure_does_not_raise(self) -> None:
+    def test_save_failure_raises(self) -> None:
         from file_organizer.web.settings_routes import WebSettings, _save_web_settings
 
         with patch(
             "file_organizer.web.settings_routes._SETTINGS_DIR",
             MagicMock(mkdir=MagicMock(side_effect=PermissionError("denied"))),
         ):
-            # Should not raise
-            _save_web_settings(WebSettings())
+            with pytest.raises(PermissionError, match="denied"):
+                _save_web_settings(WebSettings())
