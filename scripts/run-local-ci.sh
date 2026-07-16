@@ -327,7 +327,7 @@ run_integration() {
 run_unit_floors() {
   run_step \
     "Run unit coverage" \
-    pytest \
+    "$PYTHON_BIN" -m pytest \
     tests/ \
     -m \
     unit \
@@ -340,7 +340,7 @@ run_unit_floors() {
     --override-ini=addopts=
   run_step \
     "Check per-file unit coverage floors" \
-    python \
+    "$PYTHON_BIN" \
     scripts/coverage/check_module_coverage_floor.py
 }
 

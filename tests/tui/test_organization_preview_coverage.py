@@ -363,6 +363,14 @@ class TestOrganizationPreviewViewLoadPreview:
         before_after_panel.set_structure.assert_called_once_with(
             {"Docs": ["a.pdf"]}, str(input_dir)
         )
+        summary_panel.set_result.assert_called_once_with(
+            total=1,
+            processed=1,
+            skipped=0,
+            failed=0,
+            folders=1,
+            errors=[],
+        )
         view._set_status.assert_called_once_with("Organization applied. Opening history.")
         mock_app.run_worker.assert_not_called()
 
