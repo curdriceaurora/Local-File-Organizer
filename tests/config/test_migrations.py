@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 import pytest
 
@@ -13,6 +15,34 @@ from file_organizer.config.migrations import (
     compare_versions,
     migrate_to_current,
 )
+
+
+@contextmanager
+def _capture_migration_logs(level: int) -> Iterator[list[logging.LogRecord]]:
+    """Collect migration logger records without inheriting leaked logging state."""
+    target = logging.getLogger("file_organizer.config.migrations")
+    records: list[logging.LogRecord] = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Collector(level=level)
+    prev_disable = logging.root.manager.disable
+    prev_level = target.level
+    prev_disabled = target.disabled
+    logging.disable(logging.NOTSET)
+    target.addHandler(handler)
+    target.setLevel(level)
+    target.disabled = False
+    try:
+        yield records
+    finally:
+        target.removeHandler(handler)
+        target.setLevel(prev_level)
+        target.disabled = prev_disabled
+        logging.disable(prev_disable)
+
 
 # ---------------------------------------------------------------------------
 # _version_key
@@ -40,10 +70,10 @@ class TestVersionKey:
         assert _version_key("1.0.1") == (1, 0, 1)
         assert _version_key("1.0.1") > _version_key("1.0")
 
-    def test_non_numeric_version_falls_back_to_zero(self, caplog: pytest.LogCaptureFixture) -> None:
-        with caplog.at_level(logging.WARNING, logger="file_organizer.config.migrations"):
+    def test_non_numeric_version_falls_back_to_zero(self) -> None:
+        with _capture_migration_logs(logging.WARNING) as records:
             assert _version_key("garbage") == (0,)
-        assert "Non-numeric config version" in caplog.text
+        assert any("Non-numeric config version" in record.getMessage() for record in records)
 
     def test_partially_numeric_version_falls_back_to_zero(self) -> None:
         assert _version_key("1.beta") == (0,)
@@ -136,7 +166,7 @@ class TestMigrateToCurrent:
         assert result == {"a": True, "b": True}
 
     def test_registry_gap_warns_and_returns_data_unchanged(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
             migrations,
@@ -144,13 +174,13 @@ class TestMigrateToCurrent:
             {"2.0": Migration(to_version="3.0", transform=lambda d: d)},
         )
         data = {"key": "value"}
-        with caplog.at_level(logging.WARNING, logger="file_organizer.config.migrations"):
+        with _capture_migration_logs(logging.WARNING) as records:
             result = migrate_to_current(data, from_version="0.5", to_version="3.0")
         assert result is data
-        assert "No migration registered" in caplog.text
+        assert any("No migration registered" in record.getMessage() for record in records)
 
     def test_chain_stops_at_gap_after_partial_progress(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # 0.5 -> 1.0 exists, but nothing from 1.0 onwards: the walker
         # applies the first step, then bails with a gap warning.
@@ -159,28 +189,24 @@ class TestMigrateToCurrent:
             "MIGRATIONS",
             {"0.5": Migration(to_version="1.0", transform=lambda d: {**d, "a": 1})},
         )
-        with caplog.at_level(logging.WARNING, logger="file_organizer.config.migrations"):
+        with _capture_migration_logs(logging.WARNING) as records:
             result = migrate_to_current({}, from_version="0.5", to_version="2.0")
         assert result == {"a": 1}
-        assert "No migration registered" in caplog.text
+        assert any("No migration registered" in record.getMessage() for record in records)
 
-    def test_non_increasing_target_stops_walk(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_non_increasing_target_stops_walk(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
             migrations,
             "MIGRATIONS",
             {"1.0": Migration(to_version="1.0", transform=lambda d: d)},
         )
         data = {"key": "value"}
-        with caplog.at_level(logging.ERROR, logger="file_organizer.config.migrations"):
+        with _capture_migration_logs(logging.ERROR) as records:
             result = migrate_to_current(data, from_version="1.0", to_version="2.0")
         assert result is data
-        assert "non-increasing target" in caplog.text
+        assert any("non-increasing target" in record.getMessage() for record in records)
 
-    def test_failing_transform_logs_and_reraises(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_failing_transform_logs_and_reraises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def broken(data: dict[str, object]) -> dict[str, object]:
             raise ValueError("boom")
 
@@ -189,14 +215,12 @@ class TestMigrateToCurrent:
             "MIGRATIONS",
             {"0.5": Migration(to_version="1.0", transform=broken)},
         )
-        with caplog.at_level(logging.ERROR, logger="file_organizer.config.migrations"):
+        with _capture_migration_logs(logging.ERROR) as records:
             with pytest.raises(ValueError, match="boom"):
                 migrate_to_current({}, from_version="0.5", to_version="1.0")
-        assert "migration from version 0.5 failed" in caplog.text
+        assert any("migration from version 0.5 failed" in record.getMessage() for record in records)
 
-    def test_safety_limit_exhaustion_warns(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_safety_limit_exhaustion_warns(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # The safety limit is computed once (len(MIGRATIONS) + 1) before the
         # walk. A transform that grows the registry mid-walk can therefore
         # outrun the limit without ever reaching the target version.
@@ -213,7 +237,7 @@ class TestMigrateToCurrent:
         registry["1.0"] = make_step(1)
         monkeypatch.setattr(migrations, "MIGRATIONS", registry)
         data = {"key": "value"}
-        with caplog.at_level(logging.WARNING, logger="file_organizer.config.migrations"):
+        with _capture_migration_logs(logging.WARNING) as records:
             result = migrate_to_current(data, from_version="1.0", to_version="99.0")
         assert result is data
-        assert "did not reach target version" in caplog.text
+        assert any("did not reach target version" in record.getMessage() for record in records)
