@@ -8,12 +8,22 @@ import pytest
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.web.organize_services import (
+    ORGANIZE_MAX_DELAY_MIN,
+    _apply_preview_methodology,
+    _build_plan_movements,
+    _counts_by_type,
     _delete_organize_plan,
     _get_organize_plan,
+    _job_report_payload,
+    _methodology_preview_bucket,
+    _parse_delay_minutes,
+    _result_to_response,
+    _scan_directory,
+    _store_organize_plan,
     build_organize_plan,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
@@ -26,6 +36,123 @@ def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
     result.organized_structure = structure
     result.errors = []
     return result
+
+
+def test_parse_delay_minutes_validates_bounds_and_defaults() -> None:
+    assert _parse_delay_minutes(None) == 0
+    assert _parse_delay_minutes(" ") == 0
+    assert _parse_delay_minutes("7") == 7
+
+    with pytest.raises(ApiError) as invalid:
+        _parse_delay_minutes("soon")
+    assert invalid.value.error == "invalid_schedule_delay"
+
+    with pytest.raises(ApiError) as out_of_range:
+        _parse_delay_minutes(str(ORGANIZE_MAX_DELAY_MIN + 1))
+    assert out_of_range.value.error == "invalid_schedule_delay"
+
+
+def test_scan_directory_handles_files_hidden_entries_and_recursive(tmp_path) -> None:
+    visible = tmp_path / "visible.txt"
+    hidden = tmp_path / ".hidden.txt"
+    nested_dir = tmp_path / "nested"
+    nested_dir.mkdir()
+    nested = nested_dir / "nested.txt"
+    for path in (visible, hidden, nested):
+        path.write_text("data")
+
+    assert _scan_directory(visible, recursive=False, include_hidden=False) == [visible]
+    assert _scan_directory(hidden, recursive=False, include_hidden=False) == []
+    assert _scan_directory(hidden, recursive=False, include_hidden=True) == [hidden]
+    assert _scan_directory(tmp_path, recursive=False, include_hidden=False) == [visible]
+    assert set(_scan_directory(tmp_path, recursive=True, include_hidden=True)) == {
+        visible,
+        hidden,
+        nested,
+    }
+
+
+def test_counts_by_type_covers_all_buckets(tmp_path) -> None:
+    files = [
+        tmp_path / "notes.txt",
+        tmp_path / "photo.jpg",
+        tmp_path / "clip.mp4",
+        tmp_path / "song.mp3",
+        tmp_path / "part.step",
+        tmp_path / "archive.bin",
+    ]
+
+    assert _counts_by_type(files) == {
+        "text": 1,
+        "image": 1,
+        "video": 1,
+        "audio": 1,
+        "cad": 1,
+        "other": 1,
+    }
+
+
+def test_methodology_preview_preserves_existing_methodology_buckets() -> None:
+    assert _methodology_preview_bucket("Projects/Build", "para") == "Projects/Build"
+    assert _methodology_preview_bucket("11.01 Notes", "jd") == "11.01 Notes"
+    assert _methodology_preview_bucket("docs", "none") == "docs"
+
+    preview = _apply_preview_methodology(
+        _result_to_response(_preview_result({"Projects": ["plan.txt"], "docs": ["notes.txt"]})),
+        "para",
+    )
+    assert preview.organized_structure == {
+        "Projects": ["plan.txt"],
+        "Resources/docs": ["notes.txt"],
+    }
+
+
+def test_build_plan_movements_uses_name_when_source_is_unknown(tmp_path) -> None:
+    preview = _preview_result({"docs": ["missing.txt"]})
+
+    assert _build_plan_movements([], tmp_path, preview) == [
+        {
+            "file_name": "missing.txt",
+            "source": "missing.txt",
+            "destination": str(tmp_path / "docs" / "missing.txt"),
+            "reason": "Categorized into docs",
+        }
+    ]
+
+
+def test_plan_store_prunes_and_missing_lookup_returns_none(monkeypatch) -> None:
+    monkeypatch.setattr("file_organizer.web.organize_services.ORGANIZE_PLAN_LIMIT", 1)
+    first = _store_organize_plan({"input_dir": "a"})
+    second = _store_organize_plan({"input_dir": "b"})
+
+    try:
+        assert _get_organize_plan(first["plan_id"]) is None
+        assert _get_organize_plan(second["plan_id"]) is not None
+        assert _get_organize_plan("missing") is None
+    finally:
+        _delete_organize_plan(first["plan_id"])
+        _delete_organize_plan(second["plan_id"])
+
+
+def test_job_report_payload_extracts_report_fields() -> None:
+    job = {
+        "job_id": "job-1",
+        "status": "completed",
+        "created_at": "then",
+        "updated_at": "now",
+        "methodology": "none",
+        "input_dir": "/in",
+        "output_dir": "/out",
+        "dry_run": False,
+        "processed_files": 1,
+        "total_files": 1,
+        "failed_files": 0,
+        "skipped_files": 0,
+        "error": None,
+        "result": {"ok": True},
+    }
+
+    assert _job_report_payload(job) == job
 
 
 class TestBuildOrganizePlan:
@@ -165,6 +292,44 @@ class TestBuildOrganizePlan:
             )
 
         assert exc_info.value.error == "missing_input_dir"
+        organizer_factory.assert_not_called()
+
+    def test_rejects_missing_output_before_preview(self, tmp_path) -> None:
+        organizer_factory = MagicMock()
+
+        with pytest.raises(ApiError) as exc_info:
+            build_organize_plan(
+                input_dir=str(tmp_path),
+                output_dir=" ",
+                methodology="none",
+                recursive="1",
+                include_hidden="0",
+                skip_existing="1",
+                use_hardlinks="1",
+                allowed_paths=[str(tmp_path)],
+                organizer_factory=organizer_factory,
+            )
+
+        assert exc_info.value.error == "missing_output_dir"
+        organizer_factory.assert_not_called()
+
+    def test_rejects_missing_input_path_before_preview(self, tmp_path) -> None:
+        organizer_factory = MagicMock()
+
+        with pytest.raises(ApiError) as exc_info:
+            build_organize_plan(
+                input_dir=str(tmp_path / "missing"),
+                output_dir=str(tmp_path),
+                methodology="none",
+                recursive="1",
+                include_hidden="0",
+                skip_existing="1",
+                use_hardlinks="1",
+                allowed_paths=[str(tmp_path)],
+                organizer_factory=organizer_factory,
+            )
+
+        assert exc_info.value.error == "not_found"
         organizer_factory.assert_not_called()
 
     def test_rejects_hidden_inclusion_before_preview(self, tmp_path) -> None:
