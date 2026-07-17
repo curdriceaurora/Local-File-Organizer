@@ -136,9 +136,16 @@ jobs:
 
       - name: Build sdist and wheel
         run: |
-          python -m pip install --upgrade pip build
+          python -m pip install --upgrade pip build pycryptodomex
           python -m build --outdir dist/
           cp dist/*.whl dist/*.tar.gz artifacts/
+
+      - name: Generate and sign release manifest
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          python scripts/sign_release.py
 
       - name: Create checksums
         run: |

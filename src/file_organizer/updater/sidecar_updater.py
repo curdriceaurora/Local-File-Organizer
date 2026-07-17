@@ -191,13 +191,37 @@ def coordinated_update(
     release = status.release
     assert release is not None
 
+    # Verify signed manifest
+    manifest_data = installer.fetch_and_verify_manifest(release, repo)
+    if manifest_data is None:
+        result.message = "Backend update aborted: trust verification failed."
+        emit("update-failed", {"reason": result.message})
+        return result
+
     asset = installer.select_asset(release)
     if asset is None:
         result.message = "No compatible backend asset found for this platform."
         emit("update-failed", {"reason": result.message})
         return result
 
-    expected_sha256 = installer.find_checksum(release, asset.name)
+    # Confirm asset is in manifest
+    matching_assets = [a for a in manifest_data.get("assets", []) if a.get("name") == asset.name]
+    if len(matching_assets) != 1:
+        result.message = f"Backend update aborted: asset {asset.name} is missing or duplicated in the verified manifest."
+        emit("update-failed", {"reason": result.message})
+        return result
+
+    manifest_asset = matching_assets[0]
+    expected_sha256 = manifest_asset.get("sha256", "")
+    expected_size = manifest_asset.get("size")
+
+    if not expected_sha256 or expected_size is None:
+        result.message = (
+            "Backend update aborted: verified manifest has missing digest or size info."
+        )
+        emit("update-failed", {"reason": result.message})
+        return result
+
     if expected_sha256:
         logger.info("Expected backend SHA256: {}...", expected_sha256[:16])
 
@@ -206,6 +230,7 @@ def coordinated_update(
     downloaded = installer.download_asset(
         asset,
         expected_sha256=expected_sha256,
+        expected_size=expected_size,
     )
 
     if downloaded is None:

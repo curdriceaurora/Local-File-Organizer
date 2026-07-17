@@ -79,6 +79,7 @@ dependencies = [
     "Pygments>=2.20.0",
     "pyjwt~=2.8",
     "bcrypt>=4.0.0,<6.0.0",
+    "pycryptodomex>=3.23.0",
     # Database
     "sqlalchemy~=2.0",
     "alembic~=1.13",

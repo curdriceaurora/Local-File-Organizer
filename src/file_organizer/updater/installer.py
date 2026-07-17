@@ -15,6 +15,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx
 from loguru import logger
@@ -177,11 +178,51 @@ class UpdateInstaller:
 
         return [str(executable), "-m", "pip", "install", "-U", "local-file-organizer"]
 
+    def fetch_and_verify_manifest(self, release: ReleaseInfo, repo: str) -> dict[str, Any] | None:
+        """Fetch and verify the signed release manifest from the release.
+
+        Args:
+            release: The release to fetch from.
+            repo: Expected repository identity (e.g. owner/repo).
+
+        Returns:
+            Parsed manifest dictionary, or None if verification fails.
+        """
+        manifest_asset = None
+        signature_asset = None
+        for a in release.assets:
+            if a.name.lower() == "file-organizer-release-manifest.json":
+                manifest_asset = a
+            elif a.name.lower() == "file-organizer-release-manifest.json.sig":
+                signature_asset = a
+
+        if manifest_asset is None or signature_asset is None:
+            logger.error("Missing manifest or signature asset in release.")
+            return None
+
+        manifest_content = self._download_text(manifest_asset.url)
+        signature_content = self._download_text(signature_asset.url)
+
+        if not manifest_content or not signature_content:
+            logger.error("Manifest or signature asset download returned empty content.")
+            return None
+
+        from file_organizer.updater import trust
+
+        return trust.verify_release_manifest(
+            manifest_content,
+            signature_content,
+            expected_repo=repo,
+            expected_tag=release.tag,
+            expected_version=release.version,
+        )
+
     def download_asset(
         self,
         asset: AssetInfo,
         *,
         expected_sha256: str = "",
+        expected_size: int | None = None,
         progress_callback: object | None = None,
     ) -> Path | None:
         """Download an asset to a temporary file.
@@ -189,6 +230,7 @@ class UpdateInstaller:
         Args:
             asset: The asset to download.
             expected_sha256: Expected hex digest for verification.
+            expected_size: Expected size in bytes for verification.
             progress_callback: Optional callable(downloaded, total) for progress.
 
         Returns:
@@ -213,6 +255,13 @@ class UpdateInstaller:
                     tmp.write(chunk)
                     hasher.update(chunk)
                     downloaded += len(chunk)
+                    if expected_size is not None and downloaded > expected_size:
+                        logger.error(
+                            "Downloaded size exceeded expected size of {} bytes.", expected_size
+                        )
+                        tmp.close()
+                        tmp_path.unlink(missing_ok=True)
+                        return None
                     if progress_callback is not None and callable(progress_callback):
                         progress_callback(downloaded, asset.size)
 
@@ -226,6 +275,15 @@ class UpdateInstaller:
                     "SHA256 mismatch! Expected {} got {}",
                     expected_sha256,
                     actual_sha256,
+                )
+                tmp_path.unlink(missing_ok=True)
+                return None
+
+            if expected_size is not None and tmp_path.stat().st_size != expected_size:
+                logger.error(
+                    "Size mismatch! Expected {} got {}",
+                    expected_size,
+                    tmp_path.stat().st_size,
                 )
                 tmp_path.unlink(missing_ok=True)
                 return None
@@ -377,16 +435,22 @@ class UpdateInstaller:
         # Look for dedicated checksum file
         for a in release.assets:
             if a.name.lower() == f"{asset_name.lower()}.sha256":
-                return self._download_text(a.url).strip().split()[0]
+                checksum_parts = self._download_text(a.url).strip().split()
+                if checksum_parts:
+                    return str(checksum_parts[0])
 
         # Look for SHA256SUMS.txt
         for a in release.assets:
             if a.name.lower() in ("sha256sums.txt", "sha256sums"):
-                content = self._download_text(a.url)
-                for line in content.splitlines():
+                sums_content = self._download_text(a.url)
+                for line in sums_content.splitlines():
                     parts = line.strip().split()
-                    if len(parts) >= 2 and asset_name in parts[-1]:
-                        return parts[0]
+                    if len(parts) >= 2:
+                        target = parts[-1]
+                        if target.startswith("./"):
+                            target = target[2:]
+                        if target == asset_name:
+                            return str(parts[0])
 
         return ""
 

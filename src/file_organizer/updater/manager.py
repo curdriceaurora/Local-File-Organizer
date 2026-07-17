@@ -115,6 +115,15 @@ class UpdateManager:
 
         release = status.release
 
+        # Verify signed manifest
+        manifest_data = self._installer.fetch_and_verify_manifest(release, self._checker._repo)
+        if manifest_data is None:
+            status.install_result = InstallResult(
+                success=False,
+                message="Update aborted: trust verification failed.",
+            )
+            return status
+
         # Select platform asset
         asset = self._installer.select_asset(release)
         if asset is None:
@@ -137,8 +146,28 @@ class UpdateManager:
 
         logger.info("Selected asset: {} ({} bytes)", asset.name, asset.size)
 
-        # Find checksum
-        expected_sha256 = self._installer.find_checksum(release, asset.name)
+        # Confirm asset is in manifest
+        matching_assets = [
+            a for a in manifest_data.get("assets", []) if a.get("name") == asset.name
+        ]
+        if len(matching_assets) != 1:
+            status.install_result = InstallResult(
+                success=False,
+                message=f"Update aborted: asset {asset.name} is missing or duplicated in the verified manifest.",
+            )
+            return status
+
+        manifest_asset = matching_assets[0]
+        expected_sha256 = manifest_asset.get("sha256", "")
+        expected_size = manifest_asset.get("size")
+
+        if not expected_sha256 or expected_size is None:
+            status.install_result = InstallResult(
+                success=False,
+                message="Update aborted: verified manifest has missing digest or size info.",
+            )
+            return status
+
         if expected_sha256:
             logger.info("Expected SHA256: {}", expected_sha256[:16] + "...")
 
@@ -146,6 +175,7 @@ class UpdateManager:
         downloaded = self._installer.download_asset(
             asset,
             expected_sha256=expected_sha256,
+            expected_size=expected_size,
         )
         if downloaded is None:
             status.install_result = InstallResult(

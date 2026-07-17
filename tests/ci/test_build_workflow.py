@@ -199,3 +199,18 @@ class TestReleaseJob:
         assert '"${RELEASE_TAG}" != *a*' in run_script
         assert '"${RELEASE_TAG}" != *b*' in run_script
         assert '"${RELEASE_TAG}" != *rc*' in run_script
+
+    def test_release_job_signs_manifest(self) -> None:
+        """release job must install pycryptodomex and execute sign_release.py with RELEASE_SIGNING_KEY."""
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+
+        # Check pycryptodomex is installed
+        build_step = next(s for s in steps if s.get("name") == "Build sdist and wheel")
+        assert "pycryptodomex" in build_step.get("run", "")
+
+        # Check sign step exists and has correct environment
+        sign_step = next(s for s in steps if s.get("name") == "Generate and sign release manifest")
+        assert "sign_release.py" in sign_step.get("run", "")
+        env = sign_step.get("env", {})
+        assert env.get("RELEASE_SIGNING_KEY") == "${{ secrets.RELEASE_SIGNING_KEY }}"

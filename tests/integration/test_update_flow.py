@@ -84,6 +84,9 @@ class TestFullUpdateFlow:
             checker.check.return_value = release
 
             inst = MockInstaller.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded_path
@@ -118,6 +121,9 @@ class TestFullUpdateFlow:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded_path
@@ -169,6 +175,9 @@ class TestSha256VerificationIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = "deadbeef" * 8
             # Simulate failed download (SHA256 mismatch caught inside installer)
@@ -203,6 +212,9 @@ class TestRollbackIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded
@@ -231,6 +243,9 @@ class TestRollbackIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded

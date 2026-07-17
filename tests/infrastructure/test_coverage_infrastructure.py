@@ -2151,6 +2151,7 @@ class TestUpdateManager:
         release = ReleaseInfo(version="2.0.0")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(mgr._installer, "fetch_and_verify_manifest", return_value={"assets": []}),
             patch.object(mgr._installer, "select_asset", return_value=None),
         ):
             status = mgr.update()
@@ -2165,6 +2166,7 @@ class TestUpdateManager:
         asset = AssetInfo(name="app.bin", url="http://x")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(mgr._installer, "fetch_and_verify_manifest", return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]}),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=None),
@@ -2182,6 +2184,7 @@ class TestUpdateManager:
         download_path.write_bytes(b"data")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(mgr._installer, "fetch_and_verify_manifest", return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]}),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
@@ -2201,6 +2204,7 @@ class TestUpdateManager:
         install_result = InstallResult(success=True, message="installed")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(mgr._installer, "fetch_and_verify_manifest", return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]}),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
