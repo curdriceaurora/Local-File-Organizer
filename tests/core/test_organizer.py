@@ -736,3 +736,163 @@ class TestInitializer:
         result = init_vision_processor(config, console)
 
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Plan-flow edge cases and thin delegation wrappers (#1504 coverage)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.ci
+class TestOrganizerPlanEdgeCases:
+    """Edge cases for the plan-based organize flow and small delegations."""
+
+    def test_init_rejects_negative_max_transcribe_seconds(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        with pytest.raises(ValueError, match="max_transcribe_seconds must be >= 0"):
+            FileOrganizer(
+                text_model_config=text_config,
+                vision_model_config=vision_config,
+                max_transcribe_seconds=-1,
+            )
+
+    def test_init_subclass_requires_fallback_map_entries(self) -> None:
+        with pytest.raises(TypeError, match="_TEXT_FALLBACK_MAP is missing entries"):
+
+            class _BadOrganizer(FileOrganizer):
+                TEXT_EXTENSIONS = FileOrganizer.TEXT_EXTENSIONS | {".weird"}
+
+    def test_build_plan_raises_when_result_has_no_plan(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        result = OrganizationResult(total_files=0)
+        with (
+            patch.object(organizer, "organize", return_value=result),
+            pytest.raises(RuntimeError, match="did not produce an executable plan"),
+        ):
+            organizer.build_plan(tmp_path, tmp_path / "out")
+
+    def test_organize_reraises_execute_failure(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """A live-run execute failure propagates instead of being swallowed."""
+        doc = tmp_path / "input" / "notes.txt"
+        doc.parent.mkdir()
+        doc.write_text("hi")
+        organizer.dry_run = False
+
+        def _fake_init() -> None:
+            tp = MagicMock()
+            tp.text_model.is_initialized = True
+            organizer.text_processor = tp
+
+        processed = ProcessedFile(
+            file_path=doc,
+            description="Categorized into Docs",
+            folder_name="Docs",
+            filename=doc.stem,
+        )
+        with (
+            patch("file_organizer.core.file_ops.collect_files", return_value=[doc]),
+            patch(
+                "file_organizer.core.organizer.dispatcher.process_text_files",
+                return_value=[processed],
+            ),
+            patch.object(organizer, "_init_text_processor", side_effect=_fake_init),
+            patch(
+                "file_organizer.core.organizer.execute_plan",
+                side_effect=OSError("disk full"),
+            ),
+            pytest.raises(OSError, match="disk full"),
+        ):
+            organizer.organize(doc.parent, tmp_path / "out")
+
+    def test_organize_keeps_files_with_unreadable_hash(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """Files whose hash cannot be read are kept, not deduplicated away."""
+        first = tmp_path / "input" / "a.txt"
+        second = tmp_path / "input" / "b.txt"
+        first.parent.mkdir()
+        first.write_text("same")
+        second.write_text("same")
+
+        def _fake_init() -> None:
+            tp = MagicMock()
+            tp.text_model.is_initialized = True
+            organizer.text_processor = tp
+
+        processed = [
+            ProcessedFile(
+                file_path=path,
+                description="Categorized into Docs",
+                folder_name="Docs",
+                filename=path.stem,
+            )
+            for path in (first, second)
+        ]
+        with (
+            patch("file_organizer.core.file_ops.collect_files", return_value=[first, second]),
+            patch(
+                "file_organizer.core.organizer.dispatcher.process_text_files",
+                return_value=processed,
+            ),
+            patch.object(organizer, "_init_text_processor", side_effect=_fake_init),
+            patch.object(FileOrganizer, "_sha256_via_safedir", return_value=None),
+        ):
+            result = organizer.organize(first.parent, tmp_path / "out")
+
+        assert result.deduplicated_files == 0
+        assert result.processed_files == 2
+
+    def test_organize_routes_cad_files_to_extension_fallback(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """CAD files fall back to extension routing when no text model is ready."""
+        drawing = tmp_path / "input" / "part.dwg"
+        drawing.parent.mkdir()
+        drawing.write_bytes(b"fake dwg")
+
+        with (
+            patch("file_organizer.core.file_ops.collect_files", return_value=[drawing]),
+            patch.object(organizer, "_init_text_processor", return_value=None),
+        ):
+            result = organizer.organize(drawing.parent, tmp_path / "out")
+
+        assert result.total_files == 1
+        assert result.organized_structure
+
+    def test_organize_files_delegates_to_file_ops(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        with patch(
+            "file_organizer.core.organizer.file_ops.organize_files", return_value={}
+        ) as mock_organize:
+            assert organizer._organize_files([], tmp_path / "out", True) == {}
+        mock_organize.assert_called_once()
+
+    def test_process_image_files_delegates_to_dispatcher(self, organizer: FileOrganizer) -> None:
+        organizer.vision_processor = MagicMock()
+        with patch(
+            "file_organizer.core.organizer.dispatcher.process_image_files", return_value=[]
+        ) as mock_process:
+            assert organizer._process_image_files([]) == []
+        mock_process.assert_called_once()
+
+    def test_process_video_files_delegates_to_dispatcher(self, organizer: FileOrganizer) -> None:
+        with patch(
+            "file_organizer.core.organizer.dispatcher.process_video_files", return_value=[]
+        ) as mock_process:
+            assert organizer._process_video_files([]) == []
+        mock_process.assert_called_once()
+
+    def test_init_vision_processor_delegates_to_initializer(self, organizer: FileOrganizer) -> None:
+        with patch(
+            "file_organizer.core.organizer.initializer.init_vision_processor",
+            return_value=None,
+        ) as mock_init:
+            organizer._init_vision_processor()
+        assert organizer.vision_processor is None
+        mock_init.assert_called_once()
