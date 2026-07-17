@@ -220,6 +220,10 @@ def _run_section_post(
     try:
         ws, app_config = action()
     except Exception as exc:
+        # Deliberately broad: `action` is a settings_service.apply_* call whose
+        # failure modes aren't enumerable here, and this is a user-facing form
+        # POST handler — any unexpected error must degrade to a re-rendered
+        # section with an error flash rather than an unhandled 500.
         if isinstance(exc, ValueError) and on_rejected is not None:
             return on_rejected(exc)
         logger.exception(failure_log)
