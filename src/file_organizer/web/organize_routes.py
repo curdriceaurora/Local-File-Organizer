@@ -7,7 +7,6 @@ import csv
 import io
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import Lock, Timer
 from time import monotonic
 from typing import Any
@@ -516,11 +515,7 @@ def organize_execute(
                 message="Stored plan does not contain executable operations.",
             )
         executable_plan = OrganizationPlan.from_dict(executable_plan_data)
-        if Path(executable_plan.input_path).resolve(strict=False) != safe_input.resolve(
-            strict=False
-        ) or Path(executable_plan.output_path).resolve(strict=False) != safe_output.resolve(
-            strict=False
-        ):
+        if not executable_plan.roots_match(safe_input, safe_output):
             raise ApiError(
                 status_code=400,
                 error="plan_path_mismatch",

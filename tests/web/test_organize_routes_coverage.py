@@ -2,13 +2,40 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
+from file_organizer.core.types import OrganizationResult
+from file_organizer.services.text_processor import ProcessedFile
 
 pytestmark = pytest.mark.unit
+
+
+def _plan_for_routes(tmp_path: Path) -> OrganizationPlan:
+    source = tmp_path / "input" / "notes.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("hello")
+    return build_plan_from_processed(
+        input_path=source.parent,
+        output_path=tmp_path / "output",
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description="Categorized into docs",
+                folder_name="docs",
+                filename=source.stem,
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
 
 
 @pytest.fixture()
@@ -118,6 +145,41 @@ class TestOrganizeExecuteRoute:
                 schedule_delay_minutes="0",
             )
         mock_templates.TemplateResponse.assert_called_once()
+
+    def test_execute_rejects_path_mismatch(self, tmp_path, mock_templates) -> None:
+        from file_organizer.web.organize_routes import organize_execute
+
+        plan = _plan_for_routes(tmp_path)
+        request = MagicMock()
+        background = MagicMock()
+        settings = MagicMock()
+        settings.allowed_paths = [str(tmp_path)]
+        stored_plan = {
+            "input_dir": str(tmp_path / "different-input"),
+            "output_dir": plan.output_path,
+            "skip_existing": True,
+            "use_hardlinks": False,
+            "methodology": "none",
+            "executable_plan": plan.to_dict(),
+        }
+
+        with patch(
+            "file_organizer.web.organize_routes._get_organize_plan", return_value=stored_plan
+        ):
+            organize_execute(
+                request,
+                background,
+                settings,
+                plan_id="plan-1",
+                dry_run="0",
+                schedule_delay_minutes="0",
+            )
+
+        context = mock_templates.TemplateResponse.call_args.args[2]
+        assert (
+            context["error_message"] == "Stored plan paths do not match the requested safe paths."
+        )
+        background.add_task.assert_not_called()
 
 
 class TestOrganizeJobStatusRoute:
@@ -404,6 +466,64 @@ class TestRunOrganizeJob:
             _run_organize_job("j1", request)
 
 
+class TestRunOrganizePlanJob:
+    """Covers executable-plan job execution."""
+
+    def test_result_from_plan_preview(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import _result_from_plan_preview
+
+        plan = _plan_for_routes(tmp_path)
+
+        result = _result_from_plan_preview(plan)
+
+        assert result.total_files == plan.total_files
+        assert result.processed_files == plan.processed_files
+        assert result.organized_structure == {"docs": ["notes.txt"]}
+        assert result.plan == plan
+
+    def test_run_dry_run_uses_stored_plan_preview(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import _run_organize_plan_job
+
+        plan = _plan_for_routes(tmp_path)
+
+        with patch("file_organizer.web.organize_routes.update_job") as mock_update:
+            _run_organize_plan_job("j1", plan.to_dict(), dry_run=True)
+
+        assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
+        assert mock_update.call_args_list[-1].kwargs["result"]["processed_files"] == 1
+
+    def test_run_executes_stored_plan(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import _run_organize_plan_job
+
+        plan = _plan_for_routes(tmp_path)
+        result = OrganizationResult(
+            total_files=1,
+            processed_files=1,
+            organized_structure={"docs": ["notes.txt"]},
+            plan=plan,
+        )
+        organizer = MagicMock()
+        organizer.execute_plan.return_value = result
+
+        with (
+            patch("file_organizer.web.organize_routes.update_job") as mock_update,
+            patch("file_organizer.web.organize_routes.FileOrganizer", return_value=organizer),
+        ):
+            _run_organize_plan_job("j1", plan.to_dict(), dry_run=False)
+
+        organizer.execute_plan.assert_called_once()
+        assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
+
+    def test_run_reports_invalid_plan_failure(self) -> None:
+        from file_organizer.web.organize_routes import _run_organize_plan_job
+
+        with patch("file_organizer.web.organize_routes.update_job") as mock_update:
+            _run_organize_plan_job("j1", {"operations": []}, dry_run=True)
+
+        assert mock_update.call_args_list[-1].kwargs["status"] == "failed"
+        assert mock_update.call_args_list[-1].kwargs["error"]
+
+
 class TestScheduleJob:
     """Covers _schedule_job."""
 
@@ -431,6 +551,33 @@ class TestScheduleJob:
         assert "j-delayed" in _SCHEDULED_TIMERS
         # Clean up
         timer = _SCHEDULED_TIMERS.pop("j-delayed")
+        timer.cancel()
+
+
+class TestSchedulePlanJob:
+    """Covers _schedule_plan_job."""
+
+    def test_schedule_immediate(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import _schedule_plan_job
+
+        plan = _plan_for_routes(tmp_path)
+
+        with patch("file_organizer.web.organize_routes._run_organize_plan_job") as mock_run:
+            _schedule_plan_job("j1", plan.to_dict(), delay_minutes=0, dry_run=True)
+
+        mock_run.assert_called_once_with("j1", plan.to_dict(), dry_run=True)
+
+    def test_schedule_delayed(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import (
+            _SCHEDULED_TIMERS,
+            _schedule_plan_job,
+        )
+
+        plan = _plan_for_routes(tmp_path)
+
+        _schedule_plan_job("j-plan-delayed", plan.to_dict(), delay_minutes=1, dry_run=True)
+        assert "j-plan-delayed" in _SCHEDULED_TIMERS
+        timer = _SCHEDULED_TIMERS.pop("j-plan-delayed")
         timer.cancel()
 
 

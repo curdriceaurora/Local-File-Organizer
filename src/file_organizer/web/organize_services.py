@@ -183,8 +183,8 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
         return plan
 
     remapped = OrganizationPlan.from_dict(plan.to_dict())
-    reserved_destinations: set[Path] = set()
-    output_dir = Path(remapped.output_path)
+    reserved_destinations: set[str] = set()
+    output_dir = remapped.output_root
 
     for operation in remapped.operations:
         mapped_bucket = _methodology_preview_bucket(operation.folder_name, methodology)
@@ -194,21 +194,18 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
         if operation.status == OrganizationOperationStatus.ERROR:
             continue
 
-        if remapped.skip_existing and (
-            base_destination.exists() or base_destination in reserved_destinations
-        ):
+        if remapped.skip_existing and base_destination.exists():
             operation.status = OrganizationOperationStatus.SKIPPED
             operation.collision_action = CollisionAction.SKIP_EXISTING
             continue
 
         operation.status = OrganizationOperationStatus.READY
         operation.collision_action = CollisionAction.CREATE
-        if not remapped.skip_existing:
+        if str(base_destination) in reserved_destinations or not remapped.skip_existing:
             counter = 1
             planned = base_destination
-            stem = Path(operation.file_name).stem
-            suffix = Path(operation.file_name).suffix
-            while planned.exists() or planned in reserved_destinations:
+            stem, suffix = _split_name_suffix(operation.file_name)
+            while planned.exists() or str(planned) in reserved_destinations:
                 planned = output_dir / mapped_bucket / f"{stem}_{counter}{suffix}"
                 counter += 1
             if planned != base_destination:
@@ -216,7 +213,7 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
                 operation.file_name = planned.name
                 operation.collision_action = CollisionAction.RENAME_WITH_COUNTER
 
-        reserved_destinations.add(Path(operation.destination_path))
+        reserved_destinations.add(operation.destination_path)
 
     remapped.processed_files = len(remapped.ready_operations)
     remapped.skipped_files = sum(
@@ -231,6 +228,14 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
     )
     remapped.metadata["methodology"] = methodology
     return remapped
+
+
+def _split_name_suffix(file_name: str) -> tuple[str, str]:
+    """Split a file name into stem and suffix without constructing a Path."""
+    stem, dot, suffix = file_name.rpartition(".")
+    if not dot or not stem:
+        return file_name, ""
+    return stem, f".{suffix}"
 
 
 def _prune_plan_store() -> None:

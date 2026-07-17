@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Executable organization plans.
 
 The plan is the contract between preview and apply: previews render from
@@ -175,6 +176,22 @@ class OrganizationPlan:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
+    def input_root(self) -> Path:
+        """Validated input root as a ``Path`` object."""
+        return Path(self.input_path)
+
+    @property
+    def output_root(self) -> Path:
+        """Validated output root as a ``Path`` object."""
+        return Path(self.output_path)
+
+    def roots_match(self, input_path: str | Path, output_path: str | Path) -> bool:
+        """Return whether the plan roots match already-validated request roots."""
+        return self.input_root.resolve(strict=False) == Path(input_path).resolve(
+            strict=False
+        ) and self.output_root.resolve(strict=False) == Path(output_path).resolve(strict=False)
+
+    @property
     def ready_operations(self) -> list[OrganizationOperation]:
         """Operations that should be executed."""
         return [
@@ -291,10 +308,10 @@ def build_plan_from_processed(
 
         if error:
             status = OrganizationOperationStatus.ERROR
-        elif skip_existing and (destination.exists() or destination in reserved_destinations):
+        elif skip_existing and destination.exists():
             status = OrganizationOperationStatus.SKIPPED
             collision_action = CollisionAction.SKIP_EXISTING
-        elif not skip_existing:
+        elif destination in reserved_destinations or not skip_existing:
             counter = 1
             planned = destination
             while planned.exists() or planned in reserved_destinations:

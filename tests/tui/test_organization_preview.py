@@ -330,6 +330,29 @@ class TestOrganizationPreviewView:
         view.action_confirm()
         view._set_status.assert_called_with("Organization is already applying...")
 
+    def test_action_confirm_requires_loaded_plan(self) -> None:
+        view = OrganizationPreviewView()
+        panel = MagicMock()
+        view.query_one = MagicMock(return_value=panel)
+        view._set_status = MagicMock()
+        view._apply_organization = MagicMock()
+
+        view.action_confirm()
+
+        view._set_status.assert_called_once_with("Refresh preview before applying.")
+        panel.update.assert_called_once()
+        view._apply_organization.assert_not_called()
+
+    def test_set_current_plan_updates_cached_plan(self) -> None:
+        view = OrganizationPreviewView()
+        plan = object()
+
+        view._set_current_plan(plan)
+        assert view._current_plan is plan
+
+        view._set_current_plan(None)
+        assert view._current_plan is None
+
     @patch(
         "tests.tui.test_organization_preview.OrganizationPreviewView.app", new_callable=PropertyMock
     )
@@ -444,6 +467,39 @@ class TestOrganizationPreviewView:
                 rendered = str(panel.render())
                 assert "Models unavailable" in rendered
                 assert "test error" in rendered
+
+    @pytest.mark.asyncio
+    async def test_load_preview_requires_executable_plan(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            pass
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+
+            mock_result = MagicMock()
+            mock_result.plan = None
+            mock_org.return_value.organize.return_value = mock_result
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                panel = view.query_one(BeforeAfterPanel)
+                rendered = str(panel.render())
+                assert "Preview did not produce an executable plan." in rendered
+                assert view._current_plan is None
 
     @pytest.mark.asyncio
     async def test_apply_organization_success(self) -> None:

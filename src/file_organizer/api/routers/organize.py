@@ -121,11 +121,7 @@ def _load_request_plan(request: OrganizeRequest) -> OrganizationPlan | None:
     if request.plan is None:
         return None
     plan = OrganizationPlan.from_dict(request.plan)
-    request_input = Path(request.input_dir).resolve(strict=False)
-    request_output = Path(request.output_dir).resolve(strict=False)
-    plan_input = Path(plan.input_path).resolve(strict=False)
-    plan_output = Path(plan.output_path).resolve(strict=False)
-    if plan_input != request_input or plan_output != request_output:
+    if not plan.roots_match(request.input_dir, request.output_dir):
         raise ValueError("Submitted plan roots do not match request paths.")
     return plan
 

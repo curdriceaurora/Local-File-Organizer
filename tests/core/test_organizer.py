@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.plan import build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.text_processor import ProcessedFile
@@ -198,6 +199,101 @@ class TestFileOrganizer:
         mock_process_images.assert_not_called()
         mock_fallback.assert_called_once()
         assert mock_fallback.call_args.args[0] == [image]
+
+    def test_build_plan_forces_dry_run_and_restores_original_setting(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """Preview planning should not permanently mutate the organizer mode."""
+        source = tmp_path / "notes.txt"
+        source.write_text("hello")
+        plan = build_plan_from_processed(
+            input_path=tmp_path,
+            output_path=tmp_path / "out",
+            processed=[
+                ProcessedFile(
+                    file_path=source,
+                    description="Categorized into Docs",
+                    folder_name="Docs",
+                    filename=source.stem,
+                )
+            ],
+            skip_existing=True,
+            use_hardlinks=False,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        )
+        result = OrganizationResult(
+            total_files=1,
+            processed_files=1,
+            organized_structure={"Docs": ["notes.txt"]},
+            plan=plan,
+        )
+        organizer.dry_run = False
+
+        with patch.object(organizer, "organize", return_value=result) as mock_organize:
+            assert organizer.build_plan(tmp_path, tmp_path / "out", skip_existing=False) == plan
+
+        assert organizer.dry_run is False
+        mock_organize.assert_called_once_with(tmp_path, tmp_path / "out", skip_existing=False)
+
+    def test_build_plan_restores_mode_when_preview_fails(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """Preview errors should leave the facade reusable in its original mode."""
+        organizer.dry_run = False
+
+        with (
+            patch.object(organizer, "organize", side_effect=RuntimeError("preview failed")),
+            pytest.raises(RuntimeError, match="preview failed"),
+        ):
+            organizer.build_plan(tmp_path, tmp_path / "out")
+
+        assert organizer.dry_run is False
+
+    def test_execute_plan_builds_result_from_exact_plan(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
+        """Executing a reviewed plan should report the exact plan outcome."""
+        source = tmp_path / "notes.txt"
+        source.write_text("hello")
+        plan = build_plan_from_processed(
+            input_path=tmp_path,
+            output_path=tmp_path / "out",
+            processed=[
+                ProcessedFile(
+                    file_path=source,
+                    description="Categorized into Docs",
+                    folder_name="Docs",
+                    filename=source.stem,
+                )
+            ],
+            skip_existing=True,
+            use_hardlinks=False,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        )
+
+        with (
+            patch(
+                "file_organizer.core.organizer.execute_plan",
+                return_value=({"Docs": ["notes.txt"]}, "txn-1", [(str(source), "copy failed")]),
+            ) as mock_execute,
+            patch("file_organizer.core.organizer.display.show_summary") as mock_summary,
+        ):
+            result = organizer.execute_plan(plan)
+
+        assert result.total_files == 1
+        assert result.processed_files == 1
+        assert result.failed_files == 1
+        assert result.organized_structure == {"Docs": ["notes.txt"]}
+        assert result.errors == [(str(source), "copy failed")]
+        assert result.plan == plan
+        assert organizer._last_transaction_id == "txn-1"
+        assert organizer._last_output_path == tmp_path / "out"
+        mock_execute.assert_called_once()
+        mock_summary.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

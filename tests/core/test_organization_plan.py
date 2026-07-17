@@ -107,6 +107,35 @@ def test_plan_collision_rename_is_decided_at_plan_time(tmp_path: Path) -> None:
     assert plan.organized_structure() == {"Docs": ["input_1.txt"]}
 
 
+def test_plan_same_run_collision_renames_even_when_skip_existing(tmp_path: Path) -> None:
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    first.write_text("one")
+    second.write_text("two")
+
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(first, name="shared"), _processed(second, name="shared")],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    assert [operation.status for operation in plan.operations] == [
+        OrganizationOperationStatus.READY,
+        OrganizationOperationStatus.READY,
+    ]
+    assert [operation.file_name for operation in plan.operations] == [
+        "shared.txt",
+        "shared_1.txt",
+    ]
+    assert plan.processed_files == 2
+    assert plan.skipped_files == 0
+
+
 def test_execute_plan_rejects_modified_source_before_mutation(tmp_path: Path) -> None:
     source = tmp_path / "input.txt"
     source.write_text("hello")
