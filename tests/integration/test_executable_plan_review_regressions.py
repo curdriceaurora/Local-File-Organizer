@@ -1,0 +1,418 @@
+"""Integration regressions for executable organization plan review fixes."""
+
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi import FastAPI
+from starlette.testclient import TestClient
+
+from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.routers.organize import router
+from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.plan import (
+    CollisionAction,
+    OrganizationOperationStatus,
+    OrganizationPlan,
+    PlanValidationResult,
+    build_plan_from_processed,
+    execute_plan,
+    validate_plan,
+)
+from file_organizer.history.tracker import OperationHistory
+from file_organizer.services.text_processor import ProcessedFile
+from file_organizer.undo import UndoManager
+from file_organizer.web.organize_services import (
+    _ORGANIZE_PLAN_STORE,
+    _apply_plan_methodology,
+    _apply_preview_methodology,
+    _build_plan_movements,
+    _counts_by_type,
+    _delete_organize_plan,
+    _get_organize_plan,
+    _methodology_preview_bucket,
+    _parse_delay_minutes,
+    _prune_plan_store,
+    _scan_directory,
+    _split_name_suffix,
+    _store_organize_plan,
+)
+
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
+
+
+def _processed(path: Path, folder: str = "Docs") -> ProcessedFile:
+    return ProcessedFile(
+        file_path=path,
+        description=f"Categorized into {folder}",
+        folder_name=folder,
+        filename=path.stem,
+    )
+
+
+def _single_plan(tmp_path: Path, *, use_hardlinks: bool = False):
+    source = tmp_path / "input" / "notes.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("reviewed")
+    return build_plan_from_processed(
+        input_path=source.parent,
+        output_path=tmp_path / "output",
+        processed=[_processed(source)],
+        skip_existing=True,
+        use_hardlinks=use_hardlinks,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+        file_hashes={source: hashlib.sha256(b"reviewed").hexdigest()},
+    )
+
+
+def test_execute_plan_cleans_up_when_commit_returns_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    monkeypatch.setattr(manager.history, "commit_transaction", lambda _: False)
+
+    with pytest.raises(RuntimeError, match="Failed to commit organization transaction"):
+        execute_plan(plan, undo_manager=manager)
+
+    assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
+
+
+def test_execute_plan_verifies_open_source_before_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_plan(tmp_path)
+    source = tmp_path / "input" / "notes.txt"
+
+    def replace_after_validation(_: object) -> PlanValidationResult:
+        source.write_text("swapped")
+        return PlanValidationResult(can_proceed=True)
+
+    monkeypatch.setattr("file_organizer.core.plan.validate_plan", replace_after_validation)
+
+    organized, _, errors = execute_plan(
+        plan,
+        undo_manager=UndoManager(history=OperationHistory(tmp_path / "history.db")),
+    )
+
+    assert organized == {}
+    assert errors == [(str(source), "Source metadata changed after preview.")]
+    assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
+
+
+def test_execute_plan_hardlinks_verified_source(tmp_path: Path) -> None:
+    plan = _single_plan(tmp_path, use_hardlinks=True)
+
+    organized, _, errors = execute_plan(
+        plan,
+        undo_manager=UndoManager(history=OperationHistory(tmp_path / "history.db")),
+    )
+
+    destination = tmp_path / "output" / "Docs" / "notes.txt"
+    assert errors == []
+    assert organized == {"Docs": ["notes.txt"]}
+    assert destination.stat().st_ino == (tmp_path / "input" / "notes.txt").stat().st_ino
+
+
+def test_file_organizer_empty_scan_returns_noop_plan(tmp_path: Path) -> None:
+    input_dir = tmp_path / "empty"
+    input_dir.mkdir()
+
+    result = FileOrganizer(dry_run=True, use_hardlinks=False).organize(
+        input_path=input_dir,
+        output_path=tmp_path / "output",
+    )
+
+    assert result.total_files == 0
+    assert result.plan is not None
+    assert result.plan.operations == []
+
+
+def test_api_preview_plan_executes_round_trip(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    plan = _single_plan(tmp_path)
+    settings = ApiSettings(
+        environment="test",
+        auth_enabled=False,
+        allowed_paths=[str(tmp_path)],
+        auth_jwt_secret="test-secret",
+        rate_limit_enabled=False,
+    )
+    app = FastAPI()
+    setup_exception_handlers(app)
+    app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[get_current_active_user] = lambda: MagicMock(
+        is_active=True,
+        is_admin=True,
+    )
+    app.include_router(router, prefix="/api/v1")
+    client = TestClient(app)
+
+    with patch("file_organizer.api.routers.organize.FileOrganizer") as organizer_cls:
+        organizer = organizer_cls.return_value
+        organizer.organize.return_value = MagicMock(
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            failed_files=0,
+            deduplicated_files=0,
+            processing_time=0.0,
+            organized_structure=plan.organized_structure(),
+            errors=[],
+            plan=plan,
+        )
+        organizer.execute_plan.return_value = organizer.organize.return_value
+
+        preview = client.post(
+            "/api/v1/organize/preview",
+            json={"input_dir": str(input_dir), "output_dir": str(output_dir)},
+        )
+        response = client.post(
+            "/api/v1/organize/execute",
+            json={
+                "input_dir": str(input_dir),
+                "output_dir": str(output_dir),
+                "run_in_background": False,
+                "plan": preview.json()["plan"],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+    organizer.execute_plan.assert_called_once()
+
+
+def test_methodology_remap_preserves_non_operation_skips(tmp_path: Path) -> None:
+    plan = _single_plan(tmp_path)
+    plan.total_files = 2
+    plan.skipped_files = 1
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    assert remapped.processed_files == 1
+    assert remapped.skipped_files == 1
+
+
+def test_plan_deserialization_rejects_missing_or_invalid_fingerprint(tmp_path: Path) -> None:
+    plan_data = _single_plan(tmp_path).to_dict()
+    plan_data["operations"][0]["fingerprint"] = None
+
+    with pytest.raises(ValueError, match="source fingerprint"):
+        OrganizationPlan.from_dict(plan_data)
+
+    plan_data = _single_plan(tmp_path).to_dict()
+    plan_data["operations"][0]["fingerprint"]["size"] = "large"
+
+    with pytest.raises(ValueError, match="Invalid source fingerprint"):
+        OrganizationPlan.from_dict(plan_data)
+
+
+def test_plan_records_skipped_collisions_and_fingerprint_errors(tmp_path: Path) -> None:
+    source = tmp_path / "input" / "notes.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("reviewed")
+    destination = tmp_path / "output" / "Docs" / "notes.txt"
+    destination.parent.mkdir(parents=True)
+    destination.write_text("existing")
+    missing = tmp_path / "input" / "missing.txt"
+
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=tmp_path / "output",
+        processed=[_processed(source), _processed(missing)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    assert plan.operations[0].status == OrganizationOperationStatus.SKIPPED
+    assert plan.operations[0].collision_action == CollisionAction.SKIP_EXISTING
+    assert plan.operations[1].status == OrganizationOperationStatus.ERROR
+    assert "Unable to fingerprint source" in (plan.operations[1].error or "")
+
+
+def test_validate_plan_reports_source_and_destination_conflicts(tmp_path: Path) -> None:
+    plan = _single_plan(tmp_path)
+    source = tmp_path / "input" / "notes.txt"
+    extra_source = tmp_path / "input" / "extra.txt"
+    extra_source.write_text("extra")
+    source.unlink()
+    (tmp_path / "output" / "Docs").mkdir(parents=True)
+    (tmp_path / "output" / "Docs" / "notes.txt").write_text("existing")
+    plan.operations.append(
+        build_plan_from_processed(
+            input_path=tmp_path / "input",
+            output_path=tmp_path / "output",
+            processed=[_processed(extra_source)],
+            skip_existing=True,
+            use_hardlinks=False,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        ).operations[0]
+    )
+    (tmp_path / "output" / "Docs" / "extra.txt").write_text("existing")
+
+    validation = validate_plan(plan)
+
+    conflict_types = {conflict.conflict_type.value for conflict in validation.conflicts}
+    assert "source_missing" in conflict_types
+    assert "destination_exists" in conflict_types
+    assert "source_missing" in validation.error_message
+
+
+def test_execute_plan_cleans_destination_when_history_logging_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    def fail_log(*_: object, **__: object) -> None:
+        raise RuntimeError("history unavailable")
+
+    monkeypatch.setattr(manager.history, "log_operation", fail_log)
+
+    organized, _, errors = execute_plan(plan, undo_manager=manager)
+
+    assert organized == {}
+    assert errors == [(str(tmp_path / "input" / "notes.txt"), "history unavailable")]
+    assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
+
+
+def test_file_organizer_plan_helpers_execute_and_restore_state(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    source = input_dir / "notes.txt"
+    source.write_text("reviewed")
+    organizer = FileOrganizer(dry_run=False, use_hardlinks=False)
+
+    plan = organizer.build_plan(input_dir, tmp_path / "preview-output")
+    result = organizer.execute_plan(plan)
+
+    assert organizer.dry_run is False
+    assert result.processed_files == 1
+    assert any((tmp_path / "preview-output").rglob("*.txt"))
+
+
+def test_web_organize_helpers_cover_methodology_and_store_paths(tmp_path: Path) -> None:
+    visible = tmp_path / "visible.txt"
+    hidden = tmp_path / ".hidden.txt"
+    cad = tmp_path / "drawing.dwg"
+    visible.write_text("visible")
+    hidden.write_text("hidden")
+    cad.write_text("cad")
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (nested / "clip.mp4").write_text("video")
+
+    files = _scan_directory(tmp_path, recursive=True, include_hidden=False)
+    counts = _counts_by_type(files)
+    preview = MagicMock(
+        organized_structure={
+            "Documents": ["visible.txt"],
+            "30 Operations & Projects/Keep": ["done.txt"],
+        }
+    )
+    preview.model_copy.side_effect = lambda update: MagicMock(**update)
+
+    remapped = _apply_preview_methodology(preview, "jd")
+    movements = _build_plan_movements(files, tmp_path / "out", remapped)
+    record = _store_organize_plan({"payload": True})
+    fetched = _get_organize_plan(record["plan_id"])
+    _delete_organize_plan(record["plan_id"])
+
+    assert hidden not in files
+    assert counts["text"] == 1
+    assert counts["cad"] == 1
+    assert counts["video"] == 1
+    assert _methodology_preview_bucket("Inbox", "para") == "Resources/Inbox"
+    assert _methodology_preview_bucket("30.01 Existing", "jd") == "30.01 Existing"
+    assert _methodology_preview_bucket("Inbox", "jd") == "30 Operations & Projects/Inbox"
+    assert _apply_preview_methodology(preview, "none") is preview
+    assert any(movement["destination"].endswith("done.txt") for movement in movements)
+    assert fetched is not None and fetched["payload"] is True
+    assert _get_organize_plan(record["plan_id"]) is None
+
+
+def test_apply_plan_methodology_handles_error_skip_and_rename(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    first_dir = input_dir / "one"
+    second_dir = input_dir / "two"
+    output_dir = tmp_path / "output"
+    first_dir.mkdir(parents=True)
+    second_dir.mkdir(parents=True)
+    (output_dir / "Resources" / "Docs").mkdir(parents=True)
+    first = first_dir / "same.txt"
+    second = second_dir / "same.txt"
+    blocked = first_dir / "blocked.txt"
+    first.write_text("first")
+    second.write_text("second")
+    blocked.write_text("blocked")
+    (output_dir / "Resources" / "Docs" / "blocked.txt").write_text("existing")
+
+    plan = build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            _processed(first, "Docs"),
+            _processed(second, "Resources/Docs"),
+            _processed(blocked, "Docs"),
+            ProcessedFile(
+                file_path=first_dir / "bad.txt",
+                description="failed",
+                folder_name="Docs",
+                filename="bad",
+                error="classifier failed",
+            ),
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=4,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    operations = {operation.source.name: operation for operation in remapped.operations}
+    assert operations["bad.txt"].status == OrganizationOperationStatus.ERROR
+    assert operations["blocked.txt"].status == OrganizationOperationStatus.SKIPPED
+    assert operations["blocked.txt"].collision_action == CollisionAction.SKIP_EXISTING
+    assert operations["same.txt"].destination.name in {"same.txt", "same_1.txt"}
+    same_destinations = [
+        operation.destination.name
+        for operation in remapped.operations
+        if operation.source.name == "same.txt"
+    ]
+    assert sorted(same_destinations) == ["same.txt", "same_1.txt"]
+
+
+def test_web_organize_helper_validation_branches(tmp_path: Path) -> None:
+    with pytest.raises(Exception, match="whole number"):
+        _parse_delay_minutes("later")
+    with pytest.raises(Exception, match="between"):
+        _parse_delay_minutes("-1")
+
+    assert _parse_delay_minutes(None) == 0
+    assert _parse_delay_minutes("  ") == 0
+    assert _split_name_suffix("README") == ("README", "")
+    assert _split_name_suffix(".env") == (".env", "")
+    assert _split_name_suffix("archive.tar") == ("archive", ".tar")
+
+    _ORGANIZE_PLAN_STORE.clear()
+    for index in range(205):
+        _ORGANIZE_PLAN_STORE[str(index)] = {"index": index}
+    _prune_plan_store()
+
+    assert len(_ORGANIZE_PLAN_STORE) == 200

@@ -8,7 +8,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.core.types import OrganizationResult
+from file_organizer.services.text_processor import ProcessedFile
 from tests.conftest import get_csrf_headers
+
+# Route-level tests: also counted for the integration coverage gate so the
+# plan-execution web routes added for #1504 keep web/organize_routes.py
+# above its integration floor.
+pytestmark = pytest.mark.ci
 
 
 @pytest.fixture
@@ -22,18 +30,50 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     Returns the mock FileOrganizer class so tests can verify initialization.
     """
     mock_organizer = MagicMock()
-    # Mock return value must be an object with OrganizationResult attributes
-    mock_result = MagicMock()
-    mock_result.total_files = 0
-    mock_result.processed_files = 0
-    mock_result.skipped_files = 0
-    mock_result.failed_files = 0
-    mock_result.processing_time = 0.0
-    mock_result.organized_structure = {}
-    mock_result.errors = {}
-    mock_organizer.organize.return_value = mock_result
+    organizer_options: dict[str, Any] = {}
 
-    mock_class = MagicMock(return_value=mock_organizer)
+    def organize_side_effect(**kwargs: Any) -> OrganizationResult:
+        input_path = Path(kwargs["input_path"])
+        output_path = Path(kwargs["output_path"])
+        files = [path for path in sorted(input_path.rglob("*")) if path.is_file()]
+        processed = [
+            ProcessedFile(
+                file_path=path,
+                description="Categorized into docs",
+                folder_name="docs",
+                filename=path.stem,
+            )
+            for path in files
+        ]
+        plan = build_plan_from_processed(
+            input_path=input_path,
+            output_path=output_path,
+            processed=processed,
+            skip_existing=bool(kwargs.get("skip_existing", True)),
+            use_hardlinks=bool(organizer_options["use_hardlinks"]),
+            total_files=len(files),
+            skipped_files=0,
+            deduplicated_files=0,
+        )
+        return OrganizationResult(
+            total_files=len(files),
+            processed_files=plan.processed_files,
+            skipped_files=plan.skipped_files,
+            failed_files=plan.failed_files,
+            deduplicated_files=plan.deduplicated_files,
+            processing_time=0.0,
+            organized_structure=plan.organized_structure(),
+            errors=plan.errors,
+            plan=plan,
+        )
+
+    mock_organizer.organize.side_effect = organize_side_effect
+
+    def organizer_factory(**kwargs: Any) -> MagicMock:
+        organizer_options.update(kwargs)
+        return mock_organizer
+
+    mock_class = MagicMock(return_value=mock_organizer, side_effect=organizer_factory)
     monkeypatch.setattr(
         "file_organizer.web.organize_routes.FileOrganizer",
         mock_class,

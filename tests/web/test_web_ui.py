@@ -16,7 +16,9 @@ from starlette.testclient import TestClient
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 from file_organizer.core.organizer import OrganizationResult
+from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.plugins.marketplace import compute_sha256
+from file_organizer.services.text_processor import ProcessedFile
 from tests.conftest import get_csrf_headers
 
 _PNG_BYTES = base64.b64decode(
@@ -92,6 +94,7 @@ class DummyOrganizer:
 
     def __init__(self, *args, **kwargs) -> None:
         self.dry_run = bool(kwargs.get("dry_run", False))
+        self.use_hardlinks = bool(kwargs.get("use_hardlinks", False))
 
     def organize(
         self,
@@ -117,6 +120,25 @@ class DummyOrganizer:
             "Images": image_files,
             "Other": other_files,
         }
+        processed = [
+            ProcessedFile(
+                file_path=path,
+                description=f"Categorized into {_folder_for_dummy_path(path)}",
+                folder_name=_folder_for_dummy_path(path),
+                filename=path.stem,
+            )
+            for path in files
+        ]
+        plan = build_plan_from_processed(
+            input_path=source,
+            output_path=Path(output_path),
+            processed=processed,
+            skip_existing=skip_existing,
+            use_hardlinks=self.use_hardlinks,
+            total_files=len(files),
+            skipped_files=0,
+            deduplicated_files=0,
+        )
         return OrganizationResult(
             total_files=len(files),
             processed_files=len(files),
@@ -125,7 +147,29 @@ class DummyOrganizer:
             processing_time=0.01,
             organized_structure=structure,
             errors=[],
+            plan=plan,
         )
+
+    def execute_plan(self, plan: OrganizationPlan) -> OrganizationResult:
+        organized_structure = plan.organized_structure()
+        return OrganizationResult(
+            total_files=plan.total_files,
+            processed_files=sum(len(files) for files in organized_structure.values()),
+            skipped_files=plan.skipped_files,
+            failed_files=plan.failed_files,
+            processing_time=0.01,
+            organized_structure=organized_structure,
+            errors=plan.errors,
+            plan=plan,
+        )
+
+
+def _folder_for_dummy_path(path: Path) -> str:
+    if path.suffix.lower() == ".txt":
+        return "Text"
+    if path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+        return "Images"
+    return "Other"
 
 
 def _extract_attr(html: str, attr_name: str) -> str:

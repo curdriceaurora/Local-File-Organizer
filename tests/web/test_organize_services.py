@@ -7,8 +7,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.plan import (
+    CollisionAction,
+    OrganizationOperationStatus,
+    build_plan_from_processed,
+)
+from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_services import (
     ORGANIZE_MAX_DELAY_MIN,
+    _apply_plan_methodology,
     _apply_preview_methodology,
     _build_plan_movements,
     _counts_by_type,
@@ -19,11 +26,12 @@ from file_organizer.web.organize_services import (
     _parse_delay_minutes,
     _result_to_response,
     _scan_directory,
+    _split_name_suffix,
     _store_organize_plan,
     build_organize_plan,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
@@ -35,6 +43,30 @@ def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
     result.processing_time = 0.01
     result.organized_structure = structure
     result.errors = []
+    return result
+
+
+def _preview_result_with_plan(input_dir, output_dir, folder: str = "docs") -> MagicMock:
+    source = input_dir / "notes.txt"
+    plan = build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description=f"Categorized into {folder}",
+                folder_name=folder,
+                filename=source.stem,
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+    result = _preview_result(plan.organized_structure())
+    result.plan = plan
     return result
 
 
@@ -120,6 +152,123 @@ def test_build_plan_movements_uses_name_when_source_is_unknown(tmp_path) -> None
     ]
 
 
+def test_apply_plan_methodology_preserves_error_operations(tmp_path) -> None:
+    source = tmp_path / "input" / "notes.txt"
+    output = tmp_path / "output"
+    source.parent.mkdir()
+    source.write_text("hello")
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=output,
+        processed=[ProcessedFile(source, "failed", "docs", source.stem, error="boom")],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    operation = remapped.operations[0]
+    assert operation.status == OrganizationOperationStatus.ERROR
+    assert operation.folder_name == "Resources/docs"
+    assert operation.destination_path == str(output / "Resources" / "docs" / "notes.txt")
+    assert remapped.failed_files == 1
+
+
+def test_apply_plan_methodology_skips_existing_after_remap(tmp_path) -> None:
+    source = tmp_path / "input" / "notes.txt"
+    output = tmp_path / "output"
+    source.parent.mkdir()
+    source.write_text("hello")
+    existing = output / "Resources" / "docs" / "notes.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_text("already there")
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=output,
+        processed=[ProcessedFile(source, "Categorized into docs", "docs", source.stem)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    operation = remapped.operations[0]
+    assert operation.status == OrganizationOperationStatus.SKIPPED
+    assert operation.collision_action == CollisionAction.SKIP_EXISTING
+    assert remapped.processed_files == 0
+    assert remapped.skipped_files == 1
+
+
+def test_apply_plan_methodology_preserves_non_operation_skips(tmp_path) -> None:
+    source = tmp_path / "input" / "notes.txt"
+    output = tmp_path / "output"
+    source.parent.mkdir()
+    source.write_text("hello")
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=output,
+        processed=[ProcessedFile(source, "Categorized into docs", "docs", source.stem)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=1,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    assert remapped.processed_files == 1
+    assert remapped.skipped_files == 1
+
+
+def test_apply_plan_methodology_renames_same_run_collision_after_remap(tmp_path) -> None:
+    first = tmp_path / "input" / "a"
+    second = tmp_path / "input" / "b"
+    first.mkdir(parents=True)
+    second.mkdir()
+    first_source = first / "notes"
+    second_source = second / "notes"
+    first_source.write_text("one")
+    second_source.write_text("two")
+    plan = build_plan_from_processed(
+        input_path=tmp_path / "input",
+        output_path=tmp_path / "output",
+        processed=[
+            ProcessedFile(first_source, "Categorized into docs", "docs", "notes"),
+            ProcessedFile(
+                second_source,
+                "Categorized into Resources/docs",
+                "Resources/docs",
+                "notes",
+            ),
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    assert [operation.file_name for operation in remapped.operations] == ["notes", "notes_1"]
+    assert remapped.operations[1].collision_action == CollisionAction.RENAME_WITH_COUNTER
+    assert remapped.processed_files == 2
+    assert remapped.skipped_files == 0
+
+
+def test_split_name_suffix_handles_extensionless_and_hidden_names() -> None:
+    assert _split_name_suffix("archive.tar.gz") == ("archive.tar", ".gz")
+    assert _split_name_suffix("README") == ("README", "")
+    assert _split_name_suffix(".env") == (".env", "")
+
+
 def test_plan_store_prunes_and_missing_lookup_returns_none(monkeypatch) -> None:
     monkeypatch.setattr("file_organizer.web.organize_services.ORGANIZE_PLAN_LIMIT", 1)
     first = _store_organize_plan({"input_dir": "a"})
@@ -165,7 +314,7 @@ class TestBuildOrganizePlan:
         (input_dir / "photo.jpg").write_bytes(b"image")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -191,10 +340,12 @@ class TestBuildOrganizePlan:
             assert plan["scan_total_files"] == 2
             assert plan["movements"] == [
                 {
+                    "operation_id": plan["movements"][0]["operation_id"],
                     "file_name": "notes.txt",
                     "source": str(input_dir / "notes.txt"),
                     "destination": str(output_dir / "docs" / "notes.txt"),
                     "reason": "Categorized into docs",
+                    "status": "ready",
                 }
             ]
             organizer_factory.assert_called_once_with(
@@ -217,7 +368,7 @@ class TestBuildOrganizePlan:
         (input_dir / "notes.txt").write_text("hello")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -252,7 +403,7 @@ class TestBuildOrganizePlan:
         (input_dir / "notes.txt").write_text("hello")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -272,6 +423,40 @@ class TestBuildOrganizePlan:
             assert plan["movements"][0]["destination"] == str(
                 output_dir / "Resources" / "docs" / "notes.txt"
             )
+        finally:
+            _delete_organize_plan(plan["plan_id"])
+
+    def test_para_methodology_recomputes_skip_collision_after_remap(self, tmp_path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        (input_dir / "notes.txt").write_text("hello")
+        existing = output_dir / "docs" / "notes.txt"
+        existing.parent.mkdir(parents=True)
+        existing.write_text("already there")
+
+        organizer = MagicMock()
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
+        organizer_factory = MagicMock(return_value=organizer)
+
+        plan = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="para",
+            recursive="0",
+            include_hidden="0",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=organizer_factory,
+        )
+
+        try:
+            movement = plan["movements"][0]
+            assert movement["status"] == "ready"
+            assert movement["destination"] == str(output_dir / "Resources" / "docs" / "notes.txt")
+            assert plan["preview"]["processed_files"] == 1
+            assert plan["preview"]["skipped_files"] == 0
         finally:
             _delete_organize_plan(plan["plan_id"])
 
