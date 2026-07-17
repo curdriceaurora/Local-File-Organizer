@@ -630,7 +630,8 @@ def execute_plan(
                 organized.setdefault(operation.folder_name, []).append(operation.file_name)
 
         try:
-            manager.history.commit_transaction(transaction_id)
+            if not manager.history.commit_transaction(transaction_id):
+                raise RuntimeError(f"Failed to commit organization transaction {transaction_id}")
         except Exception:
             for destination in reversed(completed_destinations):
                 _cleanup_unlogged_destination(destination)
@@ -712,6 +713,11 @@ def _copy_operation_anchored(plan: OrganizationPlan, operation: OrganizationOper
     ):
         source_fd = source_root.open_anchored_reader(source_relative)
         try:
+            _verify_source_fd(source_fd, operation)
+        except Exception:
+            os.close(source_fd)
+            raise
+        try:
             destination_fd = destination_root.open_anchored_writer(
                 destination_relative,
                 flags=os.O_WRONLY | os.O_CREAT | os.O_EXCL,
@@ -740,18 +746,83 @@ def _hardlink_operation_anchored(plan: OrganizationPlan, operation: Organization
         SafeDir.open_root(plan.output_path) as destination_root,
         contextlib.ExitStack() as stack,
     ):
-        source_parent, source_name = _open_anchored_parent(
-            stack, source_root, source_relative, create=False
-        )
-        destination_parent, destination_name = _open_anchored_parent(
-            stack, destination_root, destination_relative, create=True
-        )
-        os.link(
-            source_name,
-            destination_name,
-            src_dir_fd=source_parent.fd,
-            dst_dir_fd=destination_parent.fd,
-        )
+        source_fd = source_root.open_anchored_reader(source_relative)
+        try:
+            _verify_source_fd(source_fd, operation)
+            source_parent, source_name = _open_anchored_parent(
+                stack, source_root, source_relative, create=False
+            )
+            destination_parent, destination_name = _open_anchored_parent(
+                stack, destination_root, destination_relative, create=True
+            )
+            _link_verified_source(
+                source_fd, source_parent, source_name, destination_parent, destination_name
+            )
+        finally:
+            os.close(source_fd)
+
+
+def _verify_source_fd(source_fd: int, operation: OrganizationOperation) -> None:
+    """Validate an opened source descriptor against the reviewed fingerprint."""
+    fingerprint = operation.fingerprint
+    if fingerprint is None:
+        raise OSError("Ready operation is missing source fingerprint.")
+
+    stat_result = os.fstat(source_fd)
+    if stat_result.st_size != fingerprint.size or stat_result.st_mtime_ns != fingerprint.mtime_ns:
+        raise OSError("Source metadata changed after preview.")
+    if fingerprint.sha256 is not None and _sha256_fd(source_fd) != fingerprint.sha256:
+        raise OSError("Source content hash changed after preview.")
+    os.lseek(source_fd, 0, os.SEEK_SET)
+
+
+def _sha256_fd(source_fd: int) -> str:
+    """Return the SHA-256 digest for an already opened source descriptor."""
+    hasher = hashlib.sha256()
+    os.lseek(source_fd, 0, os.SEEK_SET)
+    for chunk in iter(lambda: os.read(source_fd, _CHUNK_SIZE), b""):
+        hasher.update(chunk)
+    os.lseek(source_fd, 0, os.SEEK_SET)
+    return hasher.hexdigest()
+
+
+def _link_verified_source(
+    source_fd: int,
+    source_parent: SafeDir,
+    source_name: str,
+    destination_parent: SafeDir,
+    destination_name: str,
+) -> None:
+    """Create a hardlink to the verified source descriptor when supported."""
+    for fd_root in ("/proc/self/fd", "/dev/fd"):
+        fd_path = Path(fd_root) / str(source_fd)
+        if not fd_path.exists():
+            continue
+        try:
+            os.link(str(fd_path), destination_name, dst_dir_fd=destination_parent.fd)
+            return
+        except OSError:
+            continue
+
+    source_stat = os.fstat(source_fd)
+    os.link(
+        source_name,
+        destination_name,
+        src_dir_fd=source_parent.fd,
+        dst_dir_fd=destination_parent.fd,
+    )
+    destination_stat = os.stat(
+        destination_name,
+        dir_fd=destination_parent.fd,
+        follow_symlinks=False,
+    )
+    if (destination_stat.st_dev, destination_stat.st_ino) != (
+        source_stat.st_dev,
+        source_stat.st_ino,
+    ):
+        with contextlib.suppress(OSError):
+            destination_parent.unlink(destination_name)
+        raise OSError("Linked destination does not match verified source.")
 
 
 def _open_anchored_parent(

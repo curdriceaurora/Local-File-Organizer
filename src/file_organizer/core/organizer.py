@@ -228,6 +228,21 @@ class FileOrganizer:
 
         result = OrganizationResult(total_files=len(files))
         if not files:
+            result.plan = build_plan_from_processed(
+                input_path=input_path,
+                output_path=output_path,
+                processed=[],
+                skip_existing=skip_existing,
+                use_hardlinks=self.use_hardlinks,
+                total_files=0,
+                skipped_files=0,
+                deduplicated_files=0,
+                metadata={
+                    "enable_vision": self.enable_vision,
+                    "prefetch_depth": self.prefetch_depth,
+                },
+            )
+            result.processing_time = time.time() - start_time
             self.console.print("[yellow]No files found to organize[/yellow]")
             return result
 
