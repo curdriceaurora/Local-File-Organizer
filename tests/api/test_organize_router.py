@@ -14,6 +14,8 @@ from file_organizer.api.dependencies import get_current_active_user, get_setting
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.organize import router
 from file_organizer.core.organizer import OrganizationResult
+from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.services.text_processor import ProcessedFile
 
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
@@ -49,6 +51,32 @@ def _make_result(**overrides) -> OrganizationResult:
     }
     defaults.update(overrides)
     return OrganizationResult(**defaults)
+
+
+def _make_plan(tmp_path: Path):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True)
+    source = input_dir / "report.txt"
+    source.write_text("hello")
+    return build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description="Categorized into Documents",
+                folder_name="Documents",
+                filename="report",
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +263,37 @@ class TestPreviewOrganization:
         assert len(body["errors"]) == 1
         assert body["errors"][0]["file"] == "bad.txt"
 
+    @patch("file_organizer.api.routers.organize.FileOrganizer")
+    def test_preview_includes_executable_plan_when_available(
+        self, mock_organizer_cls, tmp_path: Path
+    ) -> None:
+        plan = _make_plan(tmp_path)
+        mock_instance = MagicMock()
+        mock_instance.organize.return_value = _make_result(
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            organized_structure=plan.organized_structure(),
+            plan=plan,
+        )
+        mock_organizer_cls.return_value = mock_instance
+        _, client, _ = _build_app(tmp_path)
+
+        resp = client.post(
+            "/api/v1/organize/preview",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+            },
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["plan"]["plan_id"] == plan.plan_id
+        assert body["plan"]["operations"][0]["destination_path"] == str(
+            tmp_path / "output" / "Documents" / "report.txt"
+        )
+
 
 # ---------------------------------------------------------------------------
 # execute_organization endpoint
@@ -368,6 +427,62 @@ class TestExecuteOrganization:
         )
         assert resp.status_code == 200
         mock_organizer_cls.assert_called_once_with(dry_run=False, use_hardlinks=False)
+
+    @patch("file_organizer.api.routers.organize.FileOrganizer")
+    def test_execute_sync_uses_submitted_plan(self, mock_organizer_cls, tmp_path: Path) -> None:
+        plan = _make_plan(tmp_path)
+        mock_instance = MagicMock()
+        mock_instance.execute_plan.return_value = _make_result(
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            organized_structure=plan.organized_structure(),
+            plan=plan,
+        )
+        mock_organizer_cls.return_value = mock_instance
+        _, client, _ = _build_app(tmp_path)
+
+        resp = client.post(
+            "/api/v1/organize/execute",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "run_in_background": False,
+                "plan": plan.to_dict(),
+            },
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "completed"
+        executed_plan = mock_instance.execute_plan.call_args.args[0]
+        assert executed_plan.plan_id == plan.plan_id
+        mock_instance.organize.assert_not_called()
+
+    @patch("file_organizer.api.routers.organize.FileOrganizer")
+    def test_execute_rejects_plan_with_mismatched_roots(
+        self, mock_organizer_cls, tmp_path: Path
+    ) -> None:
+        plan = _make_plan(tmp_path)
+        data = plan.to_dict()
+        data["input_path"] = str(tmp_path / "other-input")
+        _, client, _ = _build_app(tmp_path)
+
+        resp = client.post(
+            "/api/v1/organize/execute",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "run_in_background": False,
+                "plan": data,
+            },
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "failed"
+        assert "roots do not match" in body["error"]
+        mock_organizer_cls.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

@@ -290,6 +290,7 @@ class TestOrganizationPreviewView:
     def test_action_confirm_sets_status(self) -> None:
         """Test that action_confirm sets status message."""
         view = OrganizationPreviewView()
+        view._current_plan = object()
         view.query_one = MagicMock()
         view._apply_organization = MagicMock()
         view._set_status = MagicMock()
@@ -370,6 +371,10 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             pass
 
+        class MockPlan:
+            def organized_structure(self) -> dict[str, list[str]]:
+                return {"A": ["b.txt"]}
+
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
@@ -388,6 +393,7 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+                plan = MockPlan()
 
             mock_instance.organize.return_value = MockResult()
 
@@ -446,6 +452,10 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             action_switch_view = MagicMock()
 
+        class MockPlan:
+            def organized_structure(self) -> dict[str, list[str]]:
+                return {"A": ["b.txt"]}
+
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
@@ -464,8 +474,10 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+                plan = MockPlan()
 
             mock_instance.organize.return_value = MockResult()
+            mock_instance.execute_plan.return_value = MockResult()
 
             app = MockApp()
             async with app.run_test():
@@ -476,16 +488,15 @@ class TestOrganizationPreviewView:
                     await worker.wait()
 
                 mock_instance.organize.reset_mock()
+                mock_instance.execute_plan.reset_mock()
 
                 view.action_confirm()
 
                 for worker in view.workers:
                     await worker.wait()
 
-                mock_instance.organize.assert_called_once_with(
-                    input_path=view._input_dir,
-                    output_path=view._output_dir,
-                )
+                mock_instance.organize.assert_not_called()
+                mock_instance.execute_plan.assert_called_once_with(view._current_plan)
 
                 app.action_switch_view.assert_called_once_with("history")
 
@@ -495,6 +506,10 @@ class TestOrganizationPreviewView:
 
         class MockApp(App):
             action_switch_view = MagicMock()
+
+        class MockPlan:
+            def organized_structure(self) -> dict[str, list[str]]:
+                return {"A": ["b.txt"]}
 
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
@@ -514,8 +529,10 @@ class TestOrganizationPreviewView:
                 skipped_files = 0
                 failed_files = 0
                 errors = []
+                plan = MockPlan()
 
             mock_instance.organize.return_value = MockResult()
+            mock_instance.execute_plan.return_value = MockResult()
 
             app = MockApp()
             async with app.run_test():
@@ -525,7 +542,7 @@ class TestOrganizationPreviewView:
                 for worker in view.workers:
                     await worker.wait()
 
-                mock_instance.organize.side_effect = Exception("apply error")
+                mock_instance.execute_plan.side_effect = Exception("apply error")
 
                 view.action_confirm()
 

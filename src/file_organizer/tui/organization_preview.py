@@ -8,6 +8,7 @@ along with an organization summary with file counts and status.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from textual import work
 from textual.app import ComposeResult
@@ -149,6 +150,7 @@ class OrganizationPreviewView(StatusMixin, Vertical):
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
         self._is_applying = False
+        self._current_plan: Any | None = None
 
     def compose(self) -> ComposeResult:
         """Build the preview layout."""
@@ -162,6 +164,7 @@ class OrganizationPreviewView(StatusMixin, Vertical):
 
     def action_refresh_preview(self) -> None:
         """Re-run the dry-run organization."""
+        self._current_plan = None
         self.query_one(BeforeAfterPanel).update("[dim]Refreshing...[/dim]")
         self.query_one(OrganizationSummary).update("[dim]Calculating...[/dim]")
         self._load_preview()
@@ -170,6 +173,13 @@ class OrganizationPreviewView(StatusMixin, Vertical):
         """Apply the currently previewed organization and open History."""
         if self._is_applying:
             self._set_status("Organization is already applying...")
+            return
+        if self._current_plan is None:
+            self._set_status("Refresh preview before applying.")
+            self.query_one(BeforeAfterPanel).update(
+                "[yellow]No reviewed plan is loaded.[/yellow]\n\n"
+                "[dim]Refresh the preview, review the proposed changes, then confirm.[/dim]"
+            )
             return
 
         self._is_applying = True
@@ -198,13 +208,20 @@ class OrganizationPreviewView(StatusMixin, Vertical):
                 input_path=self._input_dir,
                 output_path=self._output_dir,
             )
+            plan = getattr(result, "plan", None)
+            if plan is None:
+                raise RuntimeError("Preview did not produce an executable plan.")
 
             panel = self.query_one(BeforeAfterPanel)
             summary = self.query_one(OrganizationSummary)
 
             self.app.call_from_thread(
+                self._set_current_plan,
+                plan,
+            )
+            self.app.call_from_thread(
                 panel.set_structure,
-                result.organized_structure,
+                plan.organized_structure(),
                 str(self._input_dir),
             )
             self.app.call_from_thread(
@@ -219,6 +236,7 @@ class OrganizationPreviewView(StatusMixin, Vertical):
             self.app.call_from_thread(self._set_status, "Preview loaded")
 
         except Exception as exc:
+            self.app.call_from_thread(self._set_current_plan, None)
             self.app.call_from_thread(
                 self.query_one(BeforeAfterPanel).update,
                 f"[red]Models unavailable:[/red] {exc}\n\n"
@@ -235,20 +253,23 @@ class OrganizationPreviewView(StatusMixin, Vertical):
         try:
             from file_organizer.core.organizer import FileOrganizer
 
+            if self._current_plan is None:
+                raise RuntimeError("Refresh preview before applying.")
             runtime_settings = load_parallel_runtime_settings()
             organizer = FileOrganizer(
                 dry_run=False,
                 parallel_workers=runtime_settings.max_workers,
                 prefetch_depth=runtime_settings.prefetch_depth,
             )
-            result = organizer.organize(
-                input_path=self._input_dir,
-                output_path=self._output_dir,
-            )
+            result = organizer.execute_plan(self._current_plan)
 
             self.app.call_from_thread(self._handle_apply_success, result)
         except Exception as exc:
             self.app.call_from_thread(self._handle_apply_error, exc)
+
+    def _set_current_plan(self, plan: object | None) -> None:
+        """Store the last reviewed executable plan."""
+        self._current_plan = plan
 
     def _handle_apply_success(self, result: object) -> None:
         """Update the preview with the applied result and switch to History."""

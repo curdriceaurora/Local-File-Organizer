@@ -23,6 +23,11 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core import dispatcher, display, file_ops, initializer
+from file_organizer.core.plan import (
+    OrganizationPlan,
+    build_plan_from_processed,
+    execute_plan,
+)
 from file_organizer.core.types import (
     AUDIO_EXTENSIONS,
     CAD_EXTENSIONS,
@@ -344,12 +349,14 @@ class FileOrganizer:
             # Sort by file path to ensure deterministic deduplication order across runs
             all_processed.sort(key=lambda x: str(x.file_path))
             seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
+            file_hashes: dict[Path, str | None] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
                 # input_path is the trusted walked root: anchor the hash read so
                 # a symlink swapped into any intermediate directory under it is
                 # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
                 file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
+                file_hashes[pf.file_path] = file_hash
                 if file_hash is None:
                     # Unreadable or refused symlink — keep the file (handled later).
                     deduped_processed.append(pf)
@@ -364,27 +371,46 @@ class FileOrganizer:
                     )
                     result.deduplicated_files += 1
             all_processed = deduped_processed
-            failed_cnt = len([p for p in all_processed if p.error])
-            result.processed_files = len(all_processed) - failed_cnt
-            result.failed_files = failed_cnt
+            processed_errors = [
+                (str(processed.file_path), processed.error)
+                for processed in all_processed
+                if processed.error
+            ]
+            result.errors.extend(
+                (path, error or "Processing failed") for path, error in processed_errors
+            )
+
+            plan = build_plan_from_processed(
+                input_path=input_path,
+                output_path=output_path,
+                processed=all_processed,
+                skip_existing=skip_existing,
+                use_hardlinks=self.use_hardlinks,
+                total_files=result.total_files,
+                skipped_files=result.skipped_files,
+                deduplicated_files=result.deduplicated_files,
+                errors=result.errors,
+                file_hashes=file_hashes,
+                metadata={
+                    "enable_vision": self.enable_vision,
+                    "prefetch_depth": self.prefetch_depth,
+                },
+            )
+            result.plan = plan
+            result.processed_files = plan.processed_files
+            result.skipped_files = plan.skipped_files
+            result.failed_files = plan.failed_files
 
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 if self._undo_manager is None:
                     self._undo_manager = UndoManager()
-                self._last_transaction_id = self._undo_manager.history.start_transaction(
-                    metadata={"input_path": str(input_path), "output_path": str(output_path)}
-                )
                 self._last_output_path = output_path
 
                 try:
-                    organized = file_ops.organize_files(
-                        all_processed,
-                        output_path,
-                        skip_existing,
-                        use_hardlinks=self.use_hardlinks,
+                    organized, transaction_id, execute_errors = execute_plan(
+                        plan,
                         undo_manager=self._undo_manager,
-                        transaction_id=self._last_transaction_id,
                     )
                 except (OSError, RuntimeError):
                     logger.exception(
@@ -393,18 +419,16 @@ class FileOrganizer:
                     )
                     raise
                 else:
-                    undo_manager = self._undo_manager
-                    assert undo_manager is not None
-                    history = undo_manager.history
-                    history.commit_transaction(self._last_transaction_id)
+                    self._last_transaction_id = transaction_id
                     result.organized_structure = organized
+                    result.errors.extend(execute_errors)
+                    result.failed_files += len(execute_errors)
+                    result.processed_files = sum(len(files) for files in organized.values())
             else:
                 self.console.print(
                     "\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]"
                 )
-                result.organized_structure = file_ops.simulate_organization(
-                    all_processed, output_path
-                )
+                result.organized_structure = plan.organized_structure()
 
         # Skipped files
         if other_files:
@@ -513,6 +537,45 @@ class FileOrganizer:
             return False
 
         return self._undo_manager.redo_transaction(self._last_transaction_id)
+
+    def build_plan(
+        self,
+        input_path: str | Path,
+        output_path: str | Path,
+        skip_existing: bool = True,
+    ) -> OrganizationPlan:
+        """Build an executable organization plan without applying it."""
+        original_dry_run = self.dry_run
+        self.dry_run = True
+        try:
+            result = self.organize(input_path, output_path, skip_existing=skip_existing)
+        finally:
+            self.dry_run = original_dry_run
+        if not isinstance(result.plan, OrganizationPlan):
+            raise RuntimeError("Organization did not produce an executable plan.")
+        return result.plan
+
+    def execute_plan(self, plan: OrganizationPlan) -> OrganizationResult:
+        """Execute a previously reviewed organization plan."""
+        start_time = time.time()
+        if self._undo_manager is None:
+            self._undo_manager = UndoManager()
+        organized, transaction_id, errors = execute_plan(plan, undo_manager=self._undo_manager)
+        self._last_transaction_id = transaction_id
+        self._last_output_path = Path(plan.output_path)
+        result = OrganizationResult(
+            total_files=plan.total_files,
+            processed_files=sum(len(files) for files in organized.values()),
+            skipped_files=plan.skipped_files,
+            failed_files=plan.failed_files + len(errors),
+            deduplicated_files=plan.deduplicated_files,
+            processing_time=time.time() - start_time,
+            organized_structure=organized,
+            errors=[*plan.errors, *errors],
+            plan=plan,
+        )
+        display.show_summary(self.console, result, Path(plan.output_path), dry_run=False)
+        return result
 
     # ------------------------------------------------------------------
     # Backward-compatible delegation (used by existing tests)

@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_services import (
     ORGANIZE_MAX_DELAY_MIN,
     _apply_preview_methodology,
@@ -35,6 +37,30 @@ def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
     result.processing_time = 0.01
     result.organized_structure = structure
     result.errors = []
+    return result
+
+
+def _preview_result_with_plan(input_dir, output_dir, folder: str = "docs") -> MagicMock:
+    source = input_dir / "notes.txt"
+    plan = build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description=f"Categorized into {folder}",
+                folder_name=folder,
+                filename=source.stem,
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+    result = _preview_result(plan.organized_structure())
+    result.plan = plan
     return result
 
 
@@ -165,7 +191,7 @@ class TestBuildOrganizePlan:
         (input_dir / "photo.jpg").write_bytes(b"image")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -191,10 +217,12 @@ class TestBuildOrganizePlan:
             assert plan["scan_total_files"] == 2
             assert plan["movements"] == [
                 {
+                    "operation_id": plan["movements"][0]["operation_id"],
                     "file_name": "notes.txt",
                     "source": str(input_dir / "notes.txt"),
                     "destination": str(output_dir / "docs" / "notes.txt"),
                     "reason": "Categorized into docs",
+                    "status": "ready",
                 }
             ]
             organizer_factory.assert_called_once_with(
@@ -217,7 +245,7 @@ class TestBuildOrganizePlan:
         (input_dir / "notes.txt").write_text("hello")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -252,7 +280,7 @@ class TestBuildOrganizePlan:
         (input_dir / "notes.txt").write_text("hello")
 
         organizer = MagicMock()
-        organizer.organize.return_value = _preview_result({"docs": ["notes.txt"]})
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
         organizer_factory = MagicMock(return_value=organizer)
 
         plan = build_organize_plan(
@@ -272,6 +300,40 @@ class TestBuildOrganizePlan:
             assert plan["movements"][0]["destination"] == str(
                 output_dir / "Resources" / "docs" / "notes.txt"
             )
+        finally:
+            _delete_organize_plan(plan["plan_id"])
+
+    def test_para_methodology_recomputes_skip_collision_after_remap(self, tmp_path) -> None:
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        (input_dir / "notes.txt").write_text("hello")
+        existing = output_dir / "docs" / "notes.txt"
+        existing.parent.mkdir(parents=True)
+        existing.write_text("already there")
+
+        organizer = MagicMock()
+        organizer.organize.return_value = _preview_result_with_plan(input_dir, output_dir)
+        organizer_factory = MagicMock(return_value=organizer)
+
+        plan = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="para",
+            recursive="0",
+            include_hidden="0",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=organizer_factory,
+        )
+
+        try:
+            movement = plan["movements"][0]
+            assert movement["status"] == "ready"
+            assert movement["destination"] == str(output_dir / "Resources" / "docs" / "notes.txt")
+            assert plan["preview"]["processed_files"] == 1
+            assert plan["preview"]["skipped_files"] == 0
         finally:
             _delete_organize_plan(plan["plan_id"])
 

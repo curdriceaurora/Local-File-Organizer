@@ -7,6 +7,7 @@ import csv
 import io
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from threading import Lock, Timer
 from time import monotonic
 from typing import Any
@@ -25,6 +26,8 @@ from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
 from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.plan import OrganizationPlan
+from file_organizer.core.types import OrganizationResult
 from file_organizer.web._forms import form_bool
 from file_organizer.web._helpers import (
     allowed_roots,
@@ -265,6 +268,36 @@ def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
         update_job(job_id, status="failed", error=str(exc))
 
 
+def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
+    """Build an OrganizationResult for a dry-run execution of a stored plan."""
+    return OrganizationResult(
+        total_files=plan.total_files,
+        processed_files=plan.processed_files,
+        skipped_files=plan.skipped_files,
+        failed_files=plan.failed_files,
+        deduplicated_files=plan.deduplicated_files,
+        organized_structure=plan.organized_structure(),
+        errors=plan.errors,
+        plan=plan,
+    )
+
+
+def _run_organize_plan_job(job_id: str, plan_data: dict[str, Any], *, dry_run: bool) -> None:
+    """Execute a stored executable organization plan."""
+    update_job(job_id, status="running", error=None)
+    try:
+        plan = OrganizationPlan.from_dict(plan_data)
+        if dry_run:
+            result = _result_from_plan_preview(plan)
+        else:
+            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
+            result = organizer.execute_plan(plan)
+        response = _result_to_response(result).model_dump()
+        update_job(job_id, status="completed", result=response, error=None)
+    except Exception as exc:
+        update_job(job_id, status="failed", error=str(exc))
+
+
 def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes: int) -> None:
     """Schedule an organization job to run after *delay_minutes*.
 
@@ -277,6 +310,33 @@ def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes:
         with _SCHEDULED_TIMERS_LOCK:
             _SCHEDULED_TIMERS.pop(job_id, None)
         _run_organize_job(job_id, organize_request)
+
+    if delay_seconds <= 0:
+        _runner()
+        return
+
+    timer = Timer(delay_seconds, _runner)
+    timer.daemon = True
+    with _SCHEDULED_TIMERS_LOCK:
+        _SCHEDULED_TIMERS[job_id] = timer
+    timer.start()
+
+
+def _schedule_plan_job(
+    job_id: str,
+    plan_data: dict[str, Any],
+    delay_minutes: int,
+    *,
+    dry_run: bool,
+) -> None:
+    """Schedule execution of a stored organization plan."""
+    delay_seconds = delay_minutes * 60
+
+    def _runner() -> None:
+        """Execute the scheduled plan job."""
+        with _SCHEDULED_TIMERS_LOCK:
+            _SCHEDULED_TIMERS.pop(job_id, None)
+        _run_organize_plan_job(job_id, plan_data, dry_run=dry_run)
 
     if delay_seconds <= 0:
         _runner()
@@ -448,6 +508,24 @@ def organize_execute(
         dry_run_enabled = form_bool(dry_run)
         safe_input = resolve_path(plan["input_dir"], settings.allowed_paths)
         safe_output = resolve_path(plan["output_dir"], settings.allowed_paths)
+        executable_plan_data = plan.get("executable_plan")
+        if not isinstance(executable_plan_data, dict):
+            raise ApiError(
+                status_code=400,
+                error="plan_not_executable",
+                message="Stored plan does not contain executable operations.",
+            )
+        executable_plan = OrganizationPlan.from_dict(executable_plan_data)
+        if Path(executable_plan.input_path).resolve(strict=False) != safe_input.resolve(
+            strict=False
+        ) or Path(executable_plan.output_path).resolve(strict=False) != safe_output.resolve(
+            strict=False
+        ):
+            raise ApiError(
+                status_code=400,
+                error="plan_path_mismatch",
+                message="Stored plan paths do not match the requested safe paths.",
+            )
 
         organize_request = OrganizeRequest(
             input_dir=str(safe_input),
@@ -473,14 +551,25 @@ def organize_execute(
                 "dry_run": organize_request.dry_run,
                 "schedule_delay_minutes": delay_minutes,
                 "scheduled_for": scheduled_for,
+                "executable_plan_id": executable_plan.plan_id,
             },
         )
 
         if delay_minutes > 0:
-            _schedule_job(job.job_id, organize_request, delay_minutes)
+            _schedule_plan_job(
+                job.job_id,
+                executable_plan.to_dict(),
+                delay_minutes,
+                dry_run=dry_run_enabled,
+            )
             info_message = f"Job scheduled to start in {delay_minutes} minute(s)."
         else:
-            background_tasks.add_task(_run_organize_job, job.job_id, organize_request)
+            background_tasks.add_task(
+                _run_organize_plan_job,
+                job.job_id,
+                executable_plan.to_dict(),
+                dry_run=dry_run_enabled,
+            )
             info_message = "Organization job queued."
 
         job_view = _build_job_view(job.job_id)

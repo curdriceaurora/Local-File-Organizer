@@ -151,6 +151,7 @@ class OrganizeRequest(BaseModel):
     dry_run: bool = False
     use_hardlinks: bool = True
     run_in_background: bool = True
+    plan: dict[str, Any] | None = None
 
     @field_validator("input_dir", "output_dir")  # pyre-ignore[56]
     @classmethod
@@ -177,6 +178,7 @@ class OrganizationResultResponse(BaseModel):
     processing_time: float
     organized_structure: dict[str, list[str]]
     errors: list[OrganizationError]
+    plan: dict[str, Any] | None = None
 
 
 class OrganizeExecuteResponse(BaseModel):

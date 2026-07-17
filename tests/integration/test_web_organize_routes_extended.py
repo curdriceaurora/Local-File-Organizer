@@ -34,6 +34,9 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError, setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
+from file_organizer.core.types import OrganizationResult
+from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_routes import (
     ORGANIZE_MAX_DELAY_MIN,
     _build_job_view,
@@ -44,12 +47,14 @@ from file_organizer.web.organize_routes import (
     _normalize_methodology,
     _parse_delay_minutes,
     _prune_job_metadata,
+    _run_organize_plan_job,
     _scan_directory,
     _set_job_metadata,
     _status_progress,
     _store_organize_plan,
     organize_router,
 )
+from file_organizer.web.organize_services import build_organize_plan
 
 pytestmark = pytest.mark.integration
 
@@ -269,6 +274,101 @@ class TestPlanStore:
 
     def test_get_nonexistent_plan_returns_none(self) -> None:
         assert _get_organize_plan("does-not-exist-ever") is None
+
+    def test_build_organize_plan_stores_executable_operations(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "in"
+        output_dir = tmp_path / "out"
+        input_dir.mkdir()
+        source = input_dir / "report.txt"
+        source.write_text("hello")
+        plan = build_plan_from_processed(
+            input_path=input_dir,
+            output_path=output_dir,
+            processed=[
+                ProcessedFile(
+                    file_path=source,
+                    description="Categorized into Docs",
+                    folder_name="Docs",
+                    filename="report",
+                )
+            ],
+            skip_existing=True,
+            use_hardlinks=False,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        )
+
+        class FakeOrganizer:
+            def __init__(self, **_: object) -> None:
+                pass
+
+            def organize(self, **_: object) -> OrganizationResult:
+                return OrganizationResult(
+                    total_files=1,
+                    processed_files=1,
+                    organized_structure=plan.organized_structure(),
+                    plan=plan,
+                )
+
+        record = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="none",
+            recursive="1",
+            include_hidden="0",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=FakeOrganizer,
+        )
+
+        executable = OrganizationPlan.from_dict(record["executable_plan"])
+        assert executable.operations[0].source_path == str(source)
+        assert executable.operations[0].destination_path == str(output_dir / "Docs" / "report.txt")
+        assert record["movements"][0]["source"] == str(source)
+
+    def test_run_organize_plan_job_executes_stored_plan(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "in"
+        output_dir = tmp_path / "out"
+        input_dir.mkdir()
+        source = input_dir / "report.txt"
+        source.write_text("hello")
+        plan = build_plan_from_processed(
+            input_path=input_dir,
+            output_path=output_dir,
+            processed=[
+                ProcessedFile(
+                    file_path=source,
+                    description="Categorized into Docs",
+                    folder_name="Docs",
+                    filename="report",
+                )
+            ],
+            skip_existing=True,
+            use_hardlinks=False,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        )
+        result = OrganizationResult(
+            total_files=1,
+            processed_files=1,
+            organized_structure=plan.organized_structure(),
+            plan=plan,
+        )
+
+        with (
+            patch("file_organizer.web.organize_routes.update_job") as mock_update,
+            patch("file_organizer.web.organize_routes.FileOrganizer") as mock_organizer_cls,
+        ):
+            mock_organizer_cls.return_value.execute_plan.return_value = result
+            _run_organize_plan_job("job-1", plan.to_dict(), dry_run=False)
+
+        mock_organizer_cls.return_value.execute_plan.assert_called_once()
+        executed_plan = mock_organizer_cls.return_value.execute_plan.call_args.args[0]
+        assert executed_plan.plan_id == plan.plan_id
+        assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
 
 
 # ---------------------------------------------------------------------------
