@@ -22,6 +22,12 @@ from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.services.vision_processor import ProcessedImage
 
+# Organizer flow tests exercise real filesystem operations through the
+# facade; also counted for the integration coverage gate so the plan-based
+# live-execution paths added for #1504 keep core/organizer.py above its
+# integration floor.
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def text_config() -> ModelConfig:

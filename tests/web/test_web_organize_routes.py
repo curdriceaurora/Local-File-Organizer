@@ -13,6 +13,11 @@ from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
 from tests.conftest import get_csrf_headers
 
+# Route-level tests: also counted for the integration coverage gate so the
+# plan-execution web routes added for #1504 keep web/organize_routes.py
+# above its integration floor.
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:

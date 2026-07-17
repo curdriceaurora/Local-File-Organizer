@@ -20,7 +20,7 @@ from file_organizer.history.tracker import OperationHistory
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.undo import UndoManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def _processed(path: Path, folder: str = "Docs", name: str | None = None) -> ProcessedFile:
@@ -335,3 +335,296 @@ def test_execute_plan_cleans_up_destination_when_history_logging_fails(
     assert organized == {}
     assert errors == [(str(source), "history unavailable")]
     assert not (output / "Docs" / "input.txt").exists()
+
+
+def test_movements_expose_exact_source_destination_identity(tmp_path: Path) -> None:
+    source = tmp_path / "input.txt"
+    source.write_text("hello")
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(source)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    rows = plan.movements()
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["operation_id"] == plan.operations[0].operation_id
+    assert row["source"] == str(source)
+    assert row["destination"] == str(tmp_path / "out" / "Docs" / "input.txt")
+    assert row["status"] == "ready"
+    assert row["reason"] == "Categorized into Docs"
+
+
+def test_error_message_summarizes_first_three_conflicts() -> None:
+    from file_organizer.core.plan import (
+        PlanConflict,
+        PlanConflictType,
+        PlanValidationResult,
+    )
+
+    conflicts = [
+        PlanConflict(PlanConflictType.SOURCE_MISSING, f"/tmp/{i}", "gone")  # noqa: test-hardcoded-paths
+        for i in range(5)
+    ]
+    result = PlanValidationResult(can_proceed=False, conflicts=conflicts)
+
+    assert "and 2 more" in result.error_message
+    assert PlanValidationResult(can_proceed=True).error_message == ""
+    empty = PlanValidationResult(can_proceed=False)
+    assert empty.error_message == "Organization plan validation failed."
+
+
+def test_conflict_str_includes_expected_and_actual() -> None:
+    from file_organizer.core.plan import PlanConflict, PlanConflictType
+
+    conflict = PlanConflict(
+        PlanConflictType.SOURCE_CHANGED,
+        "/p",
+        "changed",
+        expected="size=1",
+        actual="size=2",
+    )
+    assert "(expected: size=1, actual: size=2)" in str(conflict)
+
+
+def _single_op_plan(tmp_path: Path, *, use_hardlinks: bool = False):
+    source = tmp_path / "input.txt"
+    if not source.exists():
+        source.write_text("hello")
+    return build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(source)],
+        skip_existing=True,
+        use_hardlinks=use_hardlinks,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+
+def test_validate_plan_rejects_missing_source(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    (tmp_path / "input.txt").unlink()
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "source_missing" in validation.error_message
+
+
+def test_validate_plan_rejects_source_replaced_by_symlink(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    source = tmp_path / "input.txt"
+    target = tmp_path / "elsewhere.txt"
+    target.write_text("other")
+    source.unlink()
+    source.symlink_to(target)
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "source_symlink" in validation.error_message
+
+
+def test_validate_plan_rejects_source_replaced_by_directory(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    source = tmp_path / "input.txt"
+    source.unlink()
+    source.mkdir()
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "source_not_file" in validation.error_message
+
+
+def test_validate_plan_rejects_destination_created_after_preview(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    destination = tmp_path / "out" / "Docs" / "input.txt"
+    destination.parent.mkdir(parents=True)
+    destination.write_text("raced in")
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "destination_exists" in validation.error_message
+
+
+def test_validate_plan_rejects_output_root_blocked_by_file(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    (tmp_path / "out").write_text("not a directory")
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert any(c.conflict_type.value == "destination_parent_blocked" for c in validation.conflicts)
+
+
+def test_validate_plan_rejects_destination_parent_symlink(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    output = tmp_path / "out"
+    output.mkdir()
+    # Symlink target stays inside the output root so the containment check
+    # passes and validation reaches the parent-symlink rejection.
+    real_docs = output / "real_docs"
+    real_docs.mkdir()
+    (output / "Docs").symlink_to(real_docs, target_is_directory=True)
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "destination_parent_symlink" in validation.error_message
+
+
+def test_validate_plan_rejects_destination_parent_blocked_by_file(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    output = tmp_path / "out"
+    output.mkdir()
+    (output / "Docs").write_text("not a directory")
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert any(c.conflict_type.value == "destination_parent_blocked" for c in validation.conflicts)
+
+
+def test_validate_plan_rejects_content_hash_change(tmp_path: Path) -> None:
+    import os
+
+    from file_organizer.core.plan import SourceFingerprint
+
+    plan = _single_op_plan(tmp_path)
+    source = tmp_path / "input.txt"
+    stat = source.stat()
+    operation = plan.operations[0]
+    operation.fingerprint = SourceFingerprint(
+        size=stat.st_size, mtime_ns=stat.st_mtime_ns, sha256="0" * 64
+    )
+    # Keep size/mtime matching so validation reaches the content-hash check.
+    os.utime(source, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "content hash changed" in validation.error_message
+
+
+def test_build_plan_marks_unfingerprintable_source_as_error(tmp_path: Path) -> None:
+    missing = tmp_path / "vanished.txt"
+
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(missing)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    operation = plan.operations[0]
+    assert operation.status == OrganizationOperationStatus.ERROR
+    assert operation.error is not None
+    assert "Unable to fingerprint source" in operation.error
+    assert plan.failed_files == 1
+
+
+def test_build_plan_preserves_processing_error(tmp_path: Path) -> None:
+    source = tmp_path / "input.txt"
+    source.write_text("hello")
+    failed = _processed(source)
+    failed.error = "model failed"
+
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[failed],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    operation = plan.operations[0]
+    assert operation.status == OrganizationOperationStatus.ERROR
+    assert operation.error == "model failed"
+
+
+def test_execute_plan_uses_hardlinks_when_requested(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path, use_hardlinks=True)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    organized, _, errors = execute_plan(plan, undo_manager=manager)
+
+    destination = tmp_path / "out" / "Docs" / "input.txt"
+    assert errors == []
+    assert organized == {"Docs": ["input.txt"]}
+    assert destination.stat().st_ino == (tmp_path / "input.txt").stat().st_ino
+
+
+def test_execute_plan_records_error_when_operation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_op_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    def fail_copy(*_: object, **__: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("file_organizer.core.plan.safe_copy2", fail_copy)
+
+    organized, _, errors = execute_plan(plan, undo_manager=manager)
+
+    assert organized == {}
+    assert errors == [(str(tmp_path / "input.txt"), "disk full")]
+
+
+def test_execute_plan_cleans_up_when_history_logging_raises_oserror(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_op_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    def fail_log(*_: object, **__: object) -> None:
+        raise OSError("log disk full")
+
+    monkeypatch.setattr(manager.history, "log_operation", fail_log)
+
+    organized, _, errors = execute_plan(plan, undo_manager=manager)
+
+    assert organized == {}
+    assert errors == [(str(tmp_path / "input.txt"), "log disk full")]
+    assert not (tmp_path / "out" / "Docs" / "input.txt").exists()
+
+
+def test_sha256_hashes_regular_file_and_none_for_missing(tmp_path: Path) -> None:
+    import hashlib
+
+    from file_organizer.core.plan import _sha256
+
+    source = tmp_path / "input.txt"
+    source.write_text("hello")
+
+    assert _sha256(source) == hashlib.sha256(b"hello").hexdigest()
+    assert _sha256(tmp_path / "missing.txt") is None
+
+
+def test_parents_from_root_returns_leaf_when_outside_root(tmp_path: Path) -> None:
+    from file_organizer.core.plan import _parents_from_root
+
+    root = tmp_path / "out"
+    inside = root / "a" / "b"
+    outside = tmp_path / "elsewhere"
+
+    assert _parents_from_root(root, outside) == [outside]
+    assert _parents_from_root(root, inside) == [root, root / "a", root / "a" / "b"]

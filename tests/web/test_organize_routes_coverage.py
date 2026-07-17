@@ -12,7 +12,7 @@ from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def _plan_for_routes(tmp_path: Path) -> OrganizationPlan:
@@ -179,6 +179,116 @@ class TestOrganizeExecuteRoute:
         assert (
             context["error_message"] == "Stored plan paths do not match the requested safe paths."
         )
+        background.add_task.assert_not_called()
+
+    def test_execute_rejects_plan_without_executable_operations(
+        self, tmp_path, mock_templates
+    ) -> None:
+        from file_organizer.web.organize_routes import organize_execute
+
+        request = MagicMock()
+        background = MagicMock()
+        settings = MagicMock()
+        settings.allowed_paths = [str(tmp_path)]
+        stored_plan = {
+            "input_dir": str(tmp_path / "input"),
+            "output_dir": str(tmp_path / "output"),
+            "skip_existing": True,
+            "use_hardlinks": False,
+            "methodology": "none",
+            "executable_plan": None,
+        }
+
+        with patch(
+            "file_organizer.web.organize_routes._get_organize_plan", return_value=stored_plan
+        ):
+            organize_execute(
+                request,
+                background,
+                settings,
+                plan_id="plan-1",
+                dry_run="0",
+                schedule_delay_minutes="0",
+            )
+
+        context = mock_templates.TemplateResponse.call_args.args[2]
+        assert context["error_message"] == "Stored plan does not contain executable operations."
+        background.add_task.assert_not_called()
+
+    def test_execute_queues_immediate_job_from_stored_plan(self, tmp_path, mock_templates) -> None:
+        from file_organizer.web.organize_routes import organize_execute
+
+        plan = _plan_for_routes(tmp_path)
+        request = MagicMock()
+        background = MagicMock()
+        settings = MagicMock()
+        settings.allowed_paths = [str(tmp_path)]
+        stored_plan = {
+            "input_dir": plan.input_path,
+            "output_dir": plan.output_path,
+            "skip_existing": True,
+            "use_hardlinks": False,
+            "methodology": "none",
+            "executable_plan": plan.to_dict(),
+        }
+
+        with patch(
+            "file_organizer.web.organize_routes._get_organize_plan", return_value=stored_plan
+        ):
+            organize_execute(
+                request,
+                background,
+                settings,
+                plan_id="plan-1",
+                dry_run="0",
+                schedule_delay_minutes="0",
+            )
+
+        context = mock_templates.TemplateResponse.call_args.args[2]
+        assert context["error_message"] is None
+        assert context["info_message"] == "Organization job queued."
+        assert context["job"] is not None
+        background.add_task.assert_called_once()
+        # The queued task consumes the exact reviewed executable plan.
+        queued_plan = background.add_task.call_args.args[2]
+        assert queued_plan["plan_id"] == plan.plan_id
+
+    def test_execute_schedules_delayed_job_from_stored_plan(self, tmp_path, mock_templates) -> None:
+        from file_organizer.web.organize_routes import organize_execute
+
+        plan = _plan_for_routes(tmp_path)
+        request = MagicMock()
+        background = MagicMock()
+        settings = MagicMock()
+        settings.allowed_paths = [str(tmp_path)]
+        stored_plan = {
+            "input_dir": plan.input_path,
+            "output_dir": plan.output_path,
+            "skip_existing": True,
+            "use_hardlinks": False,
+            "methodology": "none",
+            "executable_plan": plan.to_dict(),
+        }
+
+        with (
+            patch(
+                "file_organizer.web.organize_routes._get_organize_plan", return_value=stored_plan
+            ),
+            patch("file_organizer.web.organize_routes._schedule_plan_job") as schedule,
+        ):
+            organize_execute(
+                request,
+                background,
+                settings,
+                plan_id="plan-1",
+                dry_run="0",
+                schedule_delay_minutes="5",
+            )
+
+        context = mock_templates.TemplateResponse.call_args.args[2]
+        assert context["error_message"] is None
+        assert context["info_message"] == "Job scheduled to start in 5 minute(s)."
+        schedule.assert_called_once()
         background.add_task.assert_not_called()
 
 

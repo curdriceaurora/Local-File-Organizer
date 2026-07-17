@@ -18,7 +18,7 @@ from file_organizer.tui.organization_preview import (
 )
 from file_organizer.tui.settings_view import ParallelRuntimeSettings
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------

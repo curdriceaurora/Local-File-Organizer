@@ -17,6 +17,11 @@ from file_organizer.core.organizer import OrganizationResult
 from file_organizer.core.plan import build_plan_from_processed
 from file_organizer.services.text_processor import ProcessedFile
 
+# Route-level TestClient tests: counted for the integration coverage gate as
+# well, so the plan preview/execute API paths added for #1504 keep
+# api/routers/organize.py above its integration floor.
+pytestmark = pytest.mark.integration
+
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
     """Create a minimal FastAPI app with the organize router."""
