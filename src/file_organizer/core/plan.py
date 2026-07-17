@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import os
 import sqlite3
+import sys
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +25,7 @@ from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
 from file_organizer.undo import UndoManager
 from file_organizer.utils.safe_copy import safe_copy2
+from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 PLAN_SCHEMA_VERSION = 1
 _CHUNK_SIZE = 65536
@@ -617,12 +619,36 @@ def execute_plan(
     return organized, transaction_id, errors
 
 
-def _sha256(path: Path) -> str:
+def _sha256(path: Path) -> str | None:
     hasher = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()
+    if sys.platform != "win32":
+        try:
+            with SafeDir.open_root(path.parent) as safe_dir:
+                fd = safe_dir.open_for_reader(path.name)
+                try:
+                    fileobj = os.fdopen(fd, "rb", closefd=True)
+                except OSError:
+                    os.close(fd)
+                    raise
+                with fileobj:
+                    for chunk in iter(lambda: fileobj.read(_CHUNK_SIZE), b""):
+                        hasher.update(chunk)
+            return hasher.hexdigest()
+        except SymlinkRejected as exc:
+            logger.warning("Refused to hash symlinked plan source {}: {}", path, exc)
+            return None
+        except NotImplementedError:
+            logger.debug("SafeDir unavailable; hashing {} via legacy reader", path.name)
+        except (OSError, ValueError):
+            return None
+
+    try:
+        with path.open("rb") as fh:  # noqa: safedir-required  # Windows / NotImplementedError fallback; POSIX uses SafeDir above.
+            for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except OSError:
+        return None
 
 
 def _cleanup_unlogged_destination(destination: Path) -> None:
