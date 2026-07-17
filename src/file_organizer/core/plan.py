@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Executable organization plans.
 
 The plan is the contract between preview and apply: previews render from

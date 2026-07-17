@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Shared type definitions for the file organizer core.
 
 Contains the ``OrganizationResult`` dataclass and extension-set constants

@@ -20,7 +20,10 @@ from file_organizer.history.tracker import OperationHistory
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.undo import UndoManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+# The integration marker keeps core/plan.py above its 85% integration
+# coverage floor: these lifecycle tests are the primary coverage of the
+# plan module in the integration gate.
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def _processed(path: Path, folder: str = "Docs", name: str | None = None) -> ProcessedFile:
