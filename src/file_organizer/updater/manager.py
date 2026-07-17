@@ -168,8 +168,7 @@ class UpdateManager:
             )
             return status
 
-        if expected_sha256:
-            logger.info("Expected SHA256: {}", expected_sha256[:16] + "...")
+        logger.info("Expected SHA256: {}", expected_sha256[:16] + "...")
 
         # Download
         downloaded = self._installer.download_asset(

@@ -1433,6 +1433,7 @@ DEP002 = [
 "src/file_organizer/updater/manager.py" = 100
 "src/file_organizer/updater/sidecar_updater.py" = 85
 "src/file_organizer/updater/state.py" = 100
+"src/file_organizer/updater/trust.py" = 95
 "src/file_organizer/utils/__init__.py" = 100
 "src/file_organizer/utils/atomic_io.py" = 80
 "src/file_organizer/utils/atomic_write.py" = 95

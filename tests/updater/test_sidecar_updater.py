@@ -170,6 +170,56 @@ class TestCoordinatedUpdateNoAsset:
 class TestCoordinatedUpdateDownloadFailure:
     """coordinated_update when asset download fails."""
 
+    def test_manifest_missing_asset_fails_before_download(self) -> None:
+        """When the selected asset is not in the manifest, no download occurs."""
+        release = _make_release("2.0.0")
+        asset = release.assets[0]
+
+        mock_checker = MagicMock()
+        mock_checker.check.return_value = release
+        mock_checker.current_version = "1.0.0"
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {"assets": []}
+        mock_installer.select_asset.return_value = asset
+
+        with (
+            patch(_CHECKER_PATH, return_value=mock_checker),
+            patch(_INSTALLER_PATH, return_value=mock_installer),
+        ):
+            result = coordinated_update(current_version="1.0.0")
+
+        assert result.success is False
+        assert "missing or duplicated" in result.message
+        assert "update-failed" in result.events
+        mock_installer.download_asset.assert_not_called()
+
+    def test_manifest_missing_digest_info_fails_before_download(self) -> None:
+        """When the manifest omits digest metadata, no download occurs."""
+        release = _make_release("2.0.0")
+        asset = release.assets[0]
+
+        mock_checker = MagicMock()
+        mock_checker.check.return_value = release
+        mock_checker.current_version = "1.0.0"
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": asset.name, "sha256": "abc"}]
+        }
+        mock_installer.select_asset.return_value = asset
+
+        with (
+            patch(_CHECKER_PATH, return_value=mock_checker),
+            patch(_INSTALLER_PATH, return_value=mock_installer),
+        ):
+            result = coordinated_update(current_version="1.0.0")
+
+        assert result.success is False
+        assert "missing digest or size info" in result.message
+        assert "update-failed" in result.events
+        mock_installer.download_asset.assert_not_called()
+
     def test_download_failure_sets_failed_message(self) -> None:
         """When download_asset() returns None, result reflects download failure."""
         release = _make_release("2.0.0")

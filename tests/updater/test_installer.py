@@ -380,7 +380,7 @@ class TestFindChecksum:
     @patch.object(
         UpdateInstaller,
         "_download_text",
-        return_value="def456  app.bin\nghi789  other.bin",
+        return_value="def456  ./app.bin\nghi789  other.bin",
     )
     def test_sha256sums_file(self, mock_dl):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
@@ -813,6 +813,49 @@ class TestTrustAndManifestVerification:
             )
             is None
         )
+
+    def test_verify_release_manifest_rejects_invalid_manifest_json(self):
+        from file_organizer.updater import trust
+
+        with patch.object(trust, "verify_manifest_signature", return_value=True):
+            result = trust.verify_release_manifest(
+                "{not-json",
+                "signature",
+                expected_repo="owner/repo",
+                expected_tag="v1.0.0",
+                expected_version="1.0.0",
+            )
+
+        assert result is None
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_missing_manifest_asset(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
+        mock_download.assert_not_called()
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_rejects_empty_download(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="url1"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+        mock_download.side_effect = ["{}", ""]
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
 
     @patch.object(UpdateInstaller, "_download_text")
     def test_fetch_and_verify_manifest_helper(self, mock_download, monkeypatch):

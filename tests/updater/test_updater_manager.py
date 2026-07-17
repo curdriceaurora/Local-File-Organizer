@@ -231,6 +231,31 @@ class TestUpdateManagerUpdate:
 
     @patch("file_organizer.updater.manager.UpdateChecker")
     @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_asset_manifest_missing_digest_info(self, mock_installer_cls, mock_checker_cls):
+        asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
+
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": "app.bin", "sha256": "", "size": 100}]
+        }
+        mock_installer.select_asset.return_value = asset
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "missing digest or size info" in status.install_result.message
+        mock_installer.download_asset.assert_not_called()
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
     def test_download_failed(self, mock_installer_cls, mock_checker_cls):
         asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
         release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
