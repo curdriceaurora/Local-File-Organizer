@@ -20,7 +20,7 @@ from file_organizer.tui.organization_preview import (
     OrganizationSummary,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # -----------------------------------------------------------------------

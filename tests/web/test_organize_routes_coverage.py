@@ -12,7 +12,7 @@ from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _plan_for_routes(tmp_path: Path) -> OrganizationPlan:
