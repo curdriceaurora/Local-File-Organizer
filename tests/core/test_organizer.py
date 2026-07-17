@@ -26,7 +26,7 @@ from file_organizer.services.vision_processor import ProcessedImage
 # facade; also counted for the integration coverage gate so the plan-based
 # live-execution paths added for #1504 keep core/organizer.py above its
 # integration floor.
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.ci
 
 
 @pytest.fixture
@@ -284,16 +284,16 @@ class TestFileOrganizer:
         with (
             patch(
                 "file_organizer.core.organizer.execute_plan",
-                return_value=({"Docs": ["notes.txt"]}, "txn-1", [(str(source), "copy failed")]),
+                return_value=({}, "txn-1", [(str(source), "copy failed")]),
             ) as mock_execute,
             patch("file_organizer.core.organizer.display.show_summary") as mock_summary,
         ):
             result = organizer.execute_plan(plan)
 
         assert result.total_files == 1
-        assert result.processed_files == 1
+        assert result.processed_files == 0
         assert result.failed_files == 1
-        assert result.organized_structure == {"Docs": ["notes.txt"]}
+        assert result.organized_structure == {}
         assert result.errors == [(str(source), "copy failed")]
         assert result.plan == plan
         assert organizer._last_transaction_id == "txn-1"

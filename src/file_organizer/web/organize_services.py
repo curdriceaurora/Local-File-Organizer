@@ -183,6 +183,10 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
         return plan
 
     remapped = OrganizationPlan.from_dict(plan.to_dict())
+    original_operation_skips = sum(
+        operation.status == OrganizationOperationStatus.SKIPPED for operation in remapped.operations
+    )
+    non_operation_skips = remapped.skipped_files - original_operation_skips
     reserved_destinations: set[str] = set()
     output_dir = remapped.output_root
 
@@ -216,7 +220,7 @@ def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> Organiz
         reserved_destinations.add(operation.destination_path)
 
     remapped.processed_files = len(remapped.ready_operations)
-    remapped.skipped_files = sum(
+    remapped.skipped_files = non_operation_skips + sum(
         1
         for operation in remapped.operations
         if operation.status == OrganizationOperationStatus.SKIPPED

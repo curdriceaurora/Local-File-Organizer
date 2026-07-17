@@ -15,6 +15,7 @@ from file_organizer.api.jobs import create_job, get_job, update_job
 from file_organizer.api.models import (
     JobStatusResponse,
     OrganizationError,
+    OrganizationPlanPayload,
     OrganizationResultResponse,
     OrganizeExecuteResponse,
     OrganizeRequest,
@@ -88,7 +89,11 @@ def _counts_by_type(files: list[Path]) -> dict[str, int]:
 
 def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
     """Map an OrganizationResult dataclass to the HTTP response model."""
-    plan = result.plan.to_dict() if isinstance(result.plan, OrganizationPlan) else None
+    plan = (
+        OrganizationPlanPayload(**result.plan.to_dict())
+        if isinstance(result.plan, OrganizationPlan)
+        else None
+    )
     return OrganizationResultResponse(
         total_files=result.total_files,
         processed_files=result.processed_files,
@@ -120,7 +125,7 @@ def _load_request_plan(request: OrganizeRequest) -> OrganizationPlan | None:
     """Deserialize an optional executable plan from the request."""
     if request.plan is None:
         return None
-    plan = OrganizationPlan.from_dict(request.plan)
+    plan = OrganizationPlan.from_dict(request.plan.model_dump())
     if not plan.roots_match(request.input_dir, request.output_dir):
         raise ValueError("Submitted plan roots do not match request paths.")
     return plan

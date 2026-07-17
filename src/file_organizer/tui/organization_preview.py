@@ -8,7 +8,6 @@ along with an organization summary with file counts and status.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from textual import work
 from textual.app import ComposeResult
@@ -16,6 +15,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.core.plan import OrganizationPlan
 from file_organizer.tui.settings_view import load_parallel_runtime_settings
 from file_organizer.tui.status import StatusMixin
 
@@ -150,7 +150,7 @@ class OrganizationPreviewView(StatusMixin, Vertical):
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
         self._is_applying = False
-        self._current_plan: Any | None = None
+        self._current_plan: OrganizationPlan | None = None
 
     def compose(self) -> ComposeResult:
         """Build the preview layout."""
@@ -182,11 +182,12 @@ class OrganizationPreviewView(StatusMixin, Vertical):
             )
             return
 
+        plan = self._current_plan
         self._is_applying = True
         self.query_one(BeforeAfterPanel).update("[dim]Applying organization...[/dim]")
         self.query_one(OrganizationSummary).update("[dim]Working...[/dim]")
         self._set_status("Applying organization...")
-        self._apply_organization()
+        self._apply_organization(plan)
 
     def action_cancel(self) -> None:
         """Go back / cancel."""
@@ -209,7 +210,23 @@ class OrganizationPreviewView(StatusMixin, Vertical):
                 output_path=self._output_dir,
             )
             plan = getattr(result, "plan", None)
-            if plan is None:
+            if result.total_files == 0:
+                panel = self.query_one(BeforeAfterPanel)
+                summary = self.query_one(OrganizationSummary)
+                self.app.call_from_thread(self._set_current_plan, None)
+                self.app.call_from_thread(panel.set_structure, {}, str(self._input_dir))
+                self.app.call_from_thread(
+                    summary.set_result,
+                    total=result.total_files,
+                    processed=result.processed_files,
+                    skipped=result.skipped_files,
+                    failed=result.failed_files,
+                    folders=0,
+                    errors=result.errors,
+                )
+                self.app.call_from_thread(self._set_status, "No files to organize")
+                return
+            if not isinstance(plan, OrganizationPlan):
                 raise RuntimeError("Preview did not produce an executable plan.")
 
             panel = self.query_one(BeforeAfterPanel)
@@ -248,12 +265,12 @@ class OrganizationPreviewView(StatusMixin, Vertical):
             )
 
     @work(thread=True)
-    def _apply_organization(self) -> None:
+    def _apply_organization(self, plan: OrganizationPlan | None) -> None:
         """Run the reviewed organization for real and navigate to history."""
         try:
             from file_organizer.core.organizer import FileOrganizer
 
-            if self._current_plan is None:
+            if plan is None:
                 raise RuntimeError("Refresh preview before applying.")
             runtime_settings = load_parallel_runtime_settings()
             organizer = FileOrganizer(
@@ -261,13 +278,13 @@ class OrganizationPreviewView(StatusMixin, Vertical):
                 parallel_workers=runtime_settings.max_workers,
                 prefetch_depth=runtime_settings.prefetch_depth,
             )
-            result = organizer.execute_plan(self._current_plan)
+            result = organizer.execute_plan(plan)
 
             self.app.call_from_thread(self._handle_apply_success, result)
         except Exception as exc:
             self.app.call_from_thread(self._handle_apply_error, exc)
 
-    def _set_current_plan(self, plan: object | None) -> None:
+    def _set_current_plan(self, plan: OrganizationPlan | None) -> None:
         """Store the last reviewed executable plan."""
         self._current_plan = plan
 

@@ -7,6 +7,7 @@ initialization, preview display, and organization actions.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -14,13 +15,41 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.tui.organization_preview import (
     BeforeAfterPanel,
     OrganizationPreviewView,
     OrganizationSummary,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
+
+def _make_plan(tmp_path: Path):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    source = input_dir / "b.txt"
+    source.write_text("hello")
+    return build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description="Categorized into A",
+                folder_name="A",
+                filename="b",
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
 
 
 # -----------------------------------------------------------------------
@@ -287,10 +316,10 @@ class TestOrganizationPreviewView:
         assert view.name == "test-view"
         assert view.id == "org-preview"
 
-    def test_action_confirm_sets_status(self) -> None:
+    def test_action_confirm_sets_status(self, tmp_path: Path) -> None:
         """Test that action_confirm sets status message."""
         view = OrganizationPreviewView()
-        view._current_plan = object()
+        view._current_plan = _make_plan(tmp_path)
         view.query_one = MagicMock()
         view._apply_organization = MagicMock()
         view._set_status = MagicMock()
@@ -343,9 +372,27 @@ class TestOrganizationPreviewView:
         panel.update.assert_called_once()
         view._apply_organization.assert_not_called()
 
-    def test_set_current_plan_updates_cached_plan(self) -> None:
+    def test_action_confirm_snapshots_current_plan(self, tmp_path: Path) -> None:
         view = OrganizationPreviewView()
-        plan = object()
+        confirmed_plan = _make_plan(tmp_path)
+        refreshed_plan = _make_plan(tmp_path / "refresh")
+        view._current_plan = confirmed_plan
+        view.query_one = MagicMock()
+        view._set_status = MagicMock()
+
+        def replace_plan(_: object) -> None:
+            view._current_plan = refreshed_plan
+
+        view._apply_organization = MagicMock(side_effect=replace_plan)
+
+        view.action_confirm()
+
+        view._apply_organization.assert_called_once_with(confirmed_plan)
+        assert view._current_plan is refreshed_plan
+
+    def test_set_current_plan_updates_cached_plan(self, tmp_path: Path) -> None:
+        view = OrganizationPreviewView()
+        plan = _make_plan(tmp_path)
 
         view._set_current_plan(plan)
         assert view._current_plan is plan
@@ -388,15 +435,11 @@ class TestOrganizationPreviewView:
         view._set_status("test message")  # Should safely ignore missing app
 
     @pytest.mark.asyncio
-    async def test_load_preview_success(self) -> None:
+    async def test_load_preview_success(self, tmp_path: Path) -> None:
         from textual.app import App
 
         class MockApp(App):
             pass
-
-        class MockPlan:
-            def organized_structure(self) -> dict[str, list[str]]:
-                return {"A": ["b.txt"]}
 
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
@@ -408,17 +451,16 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
-
-            class MockResult:
-                organized_structure = {"A": ["b.txt"]}
-                total_files = 1
-                processed_files = 1
-                skipped_files = 0
-                failed_files = 0
-                errors = []
-                plan = MockPlan()
-
-            mock_instance.organize.return_value = MockResult()
+            plan = _make_plan(tmp_path)
+            mock_instance.organize.return_value = SimpleNamespace(
+                organized_structure={"A": ["b.txt"]},
+                total_files=1,
+                processed_files=1,
+                skipped_files=0,
+                failed_files=0,
+                errors=[],
+                plan=plan,
+            )
 
             app = MockApp()
             async with app.run_test():
@@ -485,6 +527,7 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.prefetch_depth = 4
 
             mock_result = MagicMock()
+            mock_result.total_files = 1
             mock_result.plan = None
             mock_org.return_value.organize.return_value = mock_result
 
@@ -502,15 +545,48 @@ class TestOrganizationPreviewView:
                 assert view._current_plan is None
 
     @pytest.mark.asyncio
-    async def test_apply_organization_success(self) -> None:
+    async def test_load_preview_allows_empty_result_without_plan(self) -> None:
+        from textual.app import App
+
+        class MockApp(App):
+            pass
+
+        with (
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+            ) as mock_settings,
+        ):
+            mock_settings.return_value.max_workers = 2
+            mock_settings.return_value.prefetch_depth = 4
+            mock_org.return_value.organize.return_value = SimpleNamespace(
+                organized_structure={},
+                total_files=0,
+                processed_files=0,
+                skipped_files=0,
+                failed_files=0,
+                errors=[],
+                plan=None,
+            )
+
+            app = MockApp()
+            async with app.run_test():
+                view = OrganizationPreviewView()
+                await app.mount(view)
+
+                for worker in view.workers:
+                    await worker.wait()
+
+                panel = view.query_one(BeforeAfterPanel)
+                assert "No files to organize" in str(panel.render())
+                assert view._current_plan is None
+
+    @pytest.mark.asyncio
+    async def test_apply_organization_success(self, tmp_path: Path) -> None:
         from textual.app import App
 
         class MockApp(App):
             action_switch_view = MagicMock()
-
-        class MockPlan:
-            def organized_structure(self) -> dict[str, list[str]]:
-                return {"A": ["b.txt"]}
 
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
@@ -522,18 +598,18 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
-
-            class MockResult:
-                organized_structure = {"A": ["b.txt"]}
-                total_files = 1
-                processed_files = 1
-                skipped_files = 0
-                failed_files = 0
-                errors = []
-                plan = MockPlan()
-
-            mock_instance.organize.return_value = MockResult()
-            mock_instance.execute_plan.return_value = MockResult()
+            plan = _make_plan(tmp_path)
+            result = SimpleNamespace(
+                organized_structure={"A": ["b.txt"]},
+                total_files=1,
+                processed_files=1,
+                skipped_files=0,
+                failed_files=0,
+                errors=[],
+                plan=plan,
+            )
+            mock_instance.organize.return_value = result
+            mock_instance.execute_plan.return_value = result
 
             app = MockApp()
             async with app.run_test():
@@ -552,20 +628,16 @@ class TestOrganizationPreviewView:
                     await worker.wait()
 
                 mock_instance.organize.assert_not_called()
-                mock_instance.execute_plan.assert_called_once_with(view._current_plan)
+                mock_instance.execute_plan.assert_called_once_with(plan)
 
                 app.action_switch_view.assert_called_once_with("history")
 
     @pytest.mark.asyncio
-    async def test_apply_organization_error(self) -> None:
+    async def test_apply_organization_error(self, tmp_path: Path) -> None:
         from textual.app import App
 
         class MockApp(App):
             action_switch_view = MagicMock()
-
-        class MockPlan:
-            def organized_structure(self) -> dict[str, list[str]]:
-                return {"A": ["b.txt"]}
 
         with (
             patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
@@ -577,18 +649,18 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.prefetch_depth = 4
 
             mock_instance = mock_org.return_value
-
-            class MockResult:
-                organized_structure = {"A": ["b.txt"]}
-                total_files = 1
-                processed_files = 1
-                skipped_files = 0
-                failed_files = 0
-                errors = []
-                plan = MockPlan()
-
-            mock_instance.organize.return_value = MockResult()
-            mock_instance.execute_plan.return_value = MockResult()
+            plan = _make_plan(tmp_path)
+            result = SimpleNamespace(
+                organized_structure={"A": ["b.txt"]},
+                total_files=1,
+                processed_files=1,
+                skipped_files=0,
+                failed_files=0,
+                errors=[],
+                plan=plan,
+            )
+            mock_instance.organize.return_value = result
+            mock_instance.execute_plan.return_value = result
 
             app = MockApp()
             async with app.run_test():

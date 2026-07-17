@@ -16,7 +16,7 @@ from tests.conftest import get_csrf_headers
 # Route-level tests: also counted for the integration coverage gate so the
 # plan-execution web routes added for #1504 keep web/organize_routes.py
 # above its integration floor.
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.ci
 
 
 @pytest.fixture
@@ -30,6 +30,7 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     Returns the mock FileOrganizer class so tests can verify initialization.
     """
     mock_organizer = MagicMock()
+    organizer_options: dict[str, Any] = {}
 
     def organize_side_effect(**kwargs: Any) -> OrganizationResult:
         input_path = Path(kwargs["input_path"])
@@ -49,7 +50,7 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
             output_path=output_path,
             processed=processed,
             skip_existing=bool(kwargs.get("skip_existing", True)),
-            use_hardlinks=True,
+            use_hardlinks=bool(organizer_options["use_hardlinks"]),
             total_files=len(files),
             skipped_files=0,
             deduplicated_files=0,
@@ -68,7 +69,11 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
     mock_organizer.organize.side_effect = organize_side_effect
 
-    mock_class = MagicMock(return_value=mock_organizer)
+    def organizer_factory(**kwargs: Any) -> MagicMock:
+        organizer_options.update(kwargs)
+        return mock_organizer
+
+    mock_class = MagicMock(return_value=mock_organizer, side_effect=organizer_factory)
     monkeypatch.setattr(
         "file_organizer.web.organize_routes.FileOrganizer",
         mock_class,

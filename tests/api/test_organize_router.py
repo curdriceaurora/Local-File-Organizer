@@ -20,7 +20,7 @@ from file_organizer.services.text_processor import ProcessedFile
 # Route-level TestClient tests: counted for the integration coverage gate as
 # well, so the plan preview/execute API paths added for #1504 keep
 # api/routers/organize.py above its integration floor.
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.ci
 
 
 def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
@@ -463,6 +463,55 @@ class TestExecuteOrganization:
         executed_plan = mock_instance.execute_plan.call_args.args[0]
         assert executed_plan.plan_id == plan.plan_id
         mock_instance.organize.assert_not_called()
+
+    @patch("file_organizer.api.routers.organize.FileOrganizer")
+    def test_execute_accepts_preview_response_plan(
+        self, mock_organizer_cls, tmp_path: Path
+    ) -> None:
+        plan = _make_plan(tmp_path)
+        mock_instance = MagicMock()
+        mock_instance.organize.return_value = _make_result(
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            organized_structure=plan.organized_structure(),
+            plan=plan,
+        )
+        mock_instance.execute_plan.return_value = _make_result(
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            organized_structure=plan.organized_structure(),
+            plan=plan,
+        )
+        mock_organizer_cls.return_value = mock_instance
+        _, client, _ = _build_app(tmp_path)
+
+        preview = client.post(
+            "/api/v1/organize/preview",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+            },
+        )
+        assert preview.status_code == 200
+
+        resp = client.post(
+            "/api/v1/organize/execute",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "run_in_background": False,
+                "plan": preview.json()["plan"],
+            },
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "completed"
+        assert body["result"]["organized_structure"] == {"Documents": ["report.txt"]}
+        executed_plan = mock_instance.execute_plan.call_args.args[0]
+        assert executed_plan.plan_id == plan.plan_id
 
     @patch("file_organizer.api.routers.organize.FileOrganizer")
     def test_execute_rejects_plan_with_mismatched_roots(

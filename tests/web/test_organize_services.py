@@ -31,7 +31,7 @@ from file_organizer.web.organize_services import (
     build_organize_plan,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
@@ -202,6 +202,28 @@ def test_apply_plan_methodology_skips_existing_after_remap(tmp_path) -> None:
     assert operation.status == OrganizationOperationStatus.SKIPPED
     assert operation.collision_action == CollisionAction.SKIP_EXISTING
     assert remapped.processed_files == 0
+    assert remapped.skipped_files == 1
+
+
+def test_apply_plan_methodology_preserves_non_operation_skips(tmp_path) -> None:
+    source = tmp_path / "input" / "notes.txt"
+    output = tmp_path / "output"
+    source.parent.mkdir()
+    source.write_text("hello")
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=output,
+        processed=[ProcessedFile(source, "Categorized into docs", "docs", source.stem)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=1,
+        deduplicated_files=0,
+    )
+
+    remapped = _apply_plan_methodology(plan, "para")
+
+    assert remapped.processed_files == 1
     assert remapped.skipped_files == 1
 
 

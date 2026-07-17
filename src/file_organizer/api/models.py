@@ -142,6 +142,50 @@ class ScanResponse(BaseModel):
     counts: dict[str, int]
 
 
+class SourceFingerprintPayload(BaseModel):
+    """Serialized source fingerprint for a ready organization operation."""
+
+    size: int
+    mtime_ns: int
+    sha256: str | None = None
+
+
+class OrganizationOperationPayload(BaseModel):
+    """Serialized executable organization operation."""
+
+    operation_id: str
+    source_path: str
+    destination_path: str
+    operation_type: Literal["copy", "hardlink"]
+    collision_action: Literal["create", "skip_existing", "rename_with_counter"]
+    status: Literal["ready", "skipped", "error"]
+    folder_name: str
+    file_name: str
+    description: str = ""
+    fingerprint: SourceFingerprintPayload | None = None
+    error: str | None = None
+
+
+class OrganizationPlanPayload(BaseModel):
+    """Serialized executable organization plan."""
+
+    plan_id: str
+    schema_version: int
+    input_path: str
+    output_path: str
+    created_at: str
+    skip_existing: bool
+    use_hardlinks: bool
+    total_files: int
+    processed_files: int
+    skipped_files: int
+    failed_files: int
+    deduplicated_files: int
+    operations: list[OrganizationOperationPayload] = Field(default_factory=list)
+    errors: list[tuple[str, str]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class OrganizeRequest(BaseModel):
     """Request body for file organization."""
 
@@ -151,7 +195,7 @@ class OrganizeRequest(BaseModel):
     dry_run: bool = False
     use_hardlinks: bool = True
     run_in_background: bool = True
-    plan: dict[str, Any] | None = None
+    plan: OrganizationPlanPayload | None = None
 
     @field_validator("input_dir", "output_dir")  # pyre-ignore[56]
     @classmethod
@@ -178,7 +222,7 @@ class OrganizationResultResponse(BaseModel):
     processing_time: float
     organized_structure: dict[str, list[str]]
     errors: list[OrganizationError]
-    plan: dict[str, Any] | None = None
+    plan: OrganizationPlanPayload | None = None
 
 
 class OrganizeExecuteResponse(BaseModel):

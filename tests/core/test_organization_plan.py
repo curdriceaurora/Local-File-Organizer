@@ -20,7 +20,7 @@ from file_organizer.history.tracker import OperationHistory
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.undo import UndoManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _processed(path: Path, folder: str = "Docs", name: str | None = None) -> ProcessedFile:
@@ -99,6 +99,33 @@ def test_plan_roots_display_rows_and_serialization_round_trip(tmp_path: Path) ->
     assert restored.operations[0].operation_type == plan.operations[0].operation_type
     assert restored.operations[0].fingerprint == plan.operations[0].fingerprint
     assert restored.metadata == {"methodology": "none"}
+
+
+def test_from_dict_rejects_unsupported_schema_version(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["schema_version"] = 999
+
+    with pytest.raises(ValueError, match="Unsupported organization plan schema_version"):
+        OrganizationPlan.from_dict(data)
+
+
+def test_from_dict_rejects_ready_operation_without_fingerprint(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["operations"][0]["fingerprint"] = None
+
+    with pytest.raises(ValueError, match="require a source fingerprint"):
+        OrganizationPlan.from_dict(data)
+
+
+def test_from_dict_rejects_invalid_ready_operation_fingerprint(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["operations"][0]["fingerprint"] = {"size": "not-an-int", "mtime_ns": 1}
+
+    with pytest.raises(ValueError, match="Invalid source fingerprint"):
+        OrganizationPlan.from_dict(data)
 
 
 def test_validate_plan_rejects_source_hash_change_when_metadata_is_stable(
@@ -370,8 +397,7 @@ def test_error_message_summarizes_first_three_conflicts() -> None:
     )
 
     conflicts = [
-        PlanConflict(PlanConflictType.SOURCE_MISSING, f"/tmp/{i}", "gone")  # noqa: test-hardcoded-paths
-        for i in range(5)
+        PlanConflict(PlanConflictType.SOURCE_MISSING, f"path-{i}", "gone") for i in range(5)
     ]
     result = PlanValidationResult(can_proceed=False, conflicts=conflicts)
 
@@ -581,7 +607,7 @@ def test_execute_plan_records_error_when_operation_fails(
     def fail_copy(*_: object, **__: object) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr("file_organizer.core.plan.safe_copy2", fail_copy)
+    monkeypatch.setattr("file_organizer.core.plan._copy_operation_anchored", fail_copy)
 
     organized, _, errors = execute_plan(plan, undo_manager=manager)
 
@@ -604,6 +630,23 @@ def test_execute_plan_cleans_up_when_history_logging_raises_oserror(
 
     assert organized == {}
     assert errors == [(str(tmp_path / "input.txt"), "log disk full")]
+    assert not (tmp_path / "out" / "Docs" / "input.txt").exists()
+
+
+def test_execute_plan_cleans_up_when_commit_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_op_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    def fail_commit(_: str) -> None:
+        raise OSError("commit disk full")
+
+    monkeypatch.setattr(manager.history, "commit_transaction", fail_commit)
+
+    with pytest.raises(OSError, match="commit disk full"):
+        execute_plan(plan, undo_manager=manager)
+
     assert not (tmp_path / "out" / "Docs" / "input.txt").exists()
 
 

@@ -345,62 +345,61 @@ class FileOrganizer:
 
         # Organize
         # Content‑based deduplication: remove duplicate files based on file content hash
-        if all_processed:
-            # Sort by file path to ensure deterministic deduplication order across runs
-            all_processed.sort(key=lambda x: str(x.file_path))
-            seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
-            file_hashes: dict[Path, str | None] = {}
-            deduped_processed: list[ProcessedFile | ProcessedImage] = []
-            for pf in all_processed:
-                # input_path is the trusted walked root: anchor the hash read so
-                # a symlink swapped into any intermediate directory under it is
-                # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
-                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
-                file_hashes[pf.file_path] = file_hash
-                if file_hash is None:
-                    # Unreadable or refused symlink — keep the file (handled later).
-                    deduped_processed.append(pf)
-                    continue
-                if file_hash not in seen_hashes:
-                    seen_hashes[file_hash] = pf
-                    deduped_processed.append(pf)
-                else:
-                    # Duplicate detected – skip this file
-                    logger.info(
-                        f"Duplicate file detected by content: {pf.file_path.name}, skipping."
-                    )
-                    result.deduplicated_files += 1
-            all_processed = deduped_processed
-            processed_errors = [
-                (str(processed.file_path), processed.error)
-                for processed in all_processed
-                if processed.error
-            ]
-            result.errors.extend(
-                (path, error or "Processing failed") for path, error in processed_errors
-            )
+        # Sort by file path to ensure deterministic deduplication order across runs
+        all_processed.sort(key=lambda x: str(x.file_path))
+        seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
+        file_hashes: dict[Path, str | None] = {}
+        deduped_processed: list[ProcessedFile | ProcessedImage] = []
+        for pf in all_processed:
+            # input_path is the trusted walked root: anchor the hash read so
+            # a symlink swapped into any intermediate directory under it is
+            # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
+            file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
+            file_hashes[pf.file_path] = file_hash
+            if file_hash is None:
+                # Unreadable or refused symlink — keep the file (handled later).
+                deduped_processed.append(pf)
+                continue
+            if file_hash not in seen_hashes:
+                seen_hashes[file_hash] = pf
+                deduped_processed.append(pf)
+            else:
+                # Duplicate detected - skip this file
+                logger.info("Duplicate file detected by content: {}, skipping.", pf.file_path.name)
+                result.deduplicated_files += 1
+        all_processed = deduped_processed
+        processed_errors = [
+            (str(processed.file_path), processed.error)
+            for processed in all_processed
+            if processed.error
+        ]
+        result.errors.extend(
+            (path, error or "Processing failed") for path, error in processed_errors
+        )
 
-            plan = build_plan_from_processed(
-                input_path=input_path,
-                output_path=output_path,
-                processed=all_processed,
-                skip_existing=skip_existing,
-                use_hardlinks=self.use_hardlinks,
-                total_files=result.total_files,
-                skipped_files=result.skipped_files,
-                deduplicated_files=result.deduplicated_files,
-                errors=result.errors,
-                file_hashes=file_hashes,
-                metadata={
-                    "enable_vision": self.enable_vision,
-                    "prefetch_depth": self.prefetch_depth,
-                },
-            )
-            result.plan = plan
-            result.processed_files = plan.processed_files
-            result.skipped_files = plan.skipped_files
-            result.failed_files = plan.failed_files
+        result.skipped_files = len(other_files)
+        plan = build_plan_from_processed(
+            input_path=input_path,
+            output_path=output_path,
+            processed=all_processed,
+            skip_existing=skip_existing,
+            use_hardlinks=self.use_hardlinks,
+            total_files=result.total_files,
+            skipped_files=result.skipped_files,
+            deduplicated_files=result.deduplicated_files,
+            errors=result.errors,
+            file_hashes=file_hashes,
+            metadata={
+                "enable_vision": self.enable_vision,
+                "prefetch_depth": self.prefetch_depth,
+            },
+        )
+        result.plan = plan
+        result.processed_files = plan.processed_files
+        result.skipped_files = plan.skipped_files
+        result.failed_files = plan.failed_files
 
+        if plan.ready_operations:
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 if self._undo_manager is None:
@@ -432,7 +431,6 @@ class FileOrganizer:
 
         # Skipped files
         if other_files:
-            result.skipped_files = len(other_files)
             self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
             for f in other_files:
                 self.console.print(f"  [yellow]•[/yellow] {f.name} (unsupported type)")

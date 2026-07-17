@@ -1,4 +1,3 @@
-# pyre-ignore-all-errors
 """Executable organization plans.
 
 The plan is the contract between preview and apply: previews render from
@@ -8,13 +7,14 @@ after validating that the filesystem still matches the reviewed state.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import sqlite3
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 from uuid import uuid4
 
@@ -24,7 +24,6 @@ from file_organizer._compat import StrEnum
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
 from file_organizer.undo import UndoManager
-from file_organizer.utils.safe_copy import safe_copy2
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
 PLAN_SCHEMA_VERSION = 1
@@ -237,14 +236,35 @@ class OrganizationPlan:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OrganizationPlan:
         """Deserialize a plan previously returned by :meth:`to_dict`."""
+        schema_version = int(data.get("schema_version", PLAN_SCHEMA_VERSION))
+        if schema_version != PLAN_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported organization plan schema_version {schema_version}; "
+                f"expected {PLAN_SCHEMA_VERSION}."
+            )
+
         operations: list[OrganizationOperation] = []
         for raw in data.get("operations", []):
+            status = OrganizationOperationStatus(raw["status"])
             fingerprint_data = raw.get("fingerprint")
-            fingerprint = (
-                SourceFingerprint(**fingerprint_data)
-                if isinstance(fingerprint_data, dict)
-                else None
-            )
+            if status == OrganizationOperationStatus.READY and not isinstance(
+                fingerprint_data, dict
+            ):
+                raise ValueError("Ready organization operations require a source fingerprint.")
+            try:
+                fingerprint = (
+                    SourceFingerprint(**fingerprint_data)
+                    if isinstance(fingerprint_data, dict)
+                    else None
+                )
+                if fingerprint is not None and (
+                    not isinstance(fingerprint.size, int)
+                    or not isinstance(fingerprint.mtime_ns, int)
+                    or (fingerprint.sha256 is not None and not isinstance(fingerprint.sha256, str))
+                ):
+                    raise ValueError
+            except (TypeError, ValueError) as exc:
+                raise ValueError("Invalid source fingerprint in organization plan.") from exc
             operations.append(
                 OrganizationOperation(
                     operation_id=raw["operation_id"],
@@ -252,7 +272,7 @@ class OrganizationPlan:
                     destination_path=raw["destination_path"],
                     operation_type=OrganizationOperationType(raw["operation_type"]),
                     collision_action=CollisionAction(raw["collision_action"]),
-                    status=OrganizationOperationStatus(raw["status"]),
+                    status=status,
                     folder_name=raw["folder_name"],
                     file_name=raw["file_name"],
                     description=raw.get("description", ""),
@@ -263,7 +283,7 @@ class OrganizationPlan:
 
         return cls(
             plan_id=data["plan_id"],
-            schema_version=int(data.get("schema_version", PLAN_SCHEMA_VERSION)),
+            schema_version=schema_version,
             input_path=data["input_path"],
             output_path=data["output_path"],
             created_at=data["created_at"],
@@ -326,9 +346,6 @@ def build_plan_from_processed(
                 destination = planned
                 base_name = destination.name
 
-        if status == OrganizationOperationStatus.READY:
-            reserved_destinations.add(destination)
-
         fingerprint = None
         if status != OrganizationOperationStatus.ERROR:
             try:
@@ -336,6 +353,9 @@ def build_plan_from_processed(
             except OSError as exc:
                 status = OrganizationOperationStatus.ERROR
                 error = f"Unable to fingerprint source: {exc}"
+
+        if status == OrganizationOperationStatus.READY:
+            reserved_destinations.add(destination)
 
         operations.append(
             OrganizationOperation(
@@ -382,7 +402,7 @@ def build_plan_from_processed(
     )
 
 
-def validate_plan(plan: OrganizationPlan) -> PlanValidationResult:  # noqa: C901
+def validate_plan(plan: OrganizationPlan) -> PlanValidationResult:  # noqa: C901  # copilot: wontfix
     """Validate a reviewed plan before mutating the filesystem."""
     conflicts: list[PlanConflict] = []
     input_root = Path(plan.input_path)
@@ -567,19 +587,18 @@ def execute_plan(
 
     organized: dict[str, list[str]] = {}
     errors: list[tuple[str, str]] = []
-    output_root = Path(plan.output_path)
-    output_root.mkdir(parents=True, exist_ok=True)
+    completed_destinations: list[Path] = []
+    _ensure_output_root(Path(plan.output_path))
 
     try:
         for operation in plan.ready_operations:
             destination = operation.destination
-            destination.parent.mkdir(parents=True, exist_ok=True)
             try:
                 if operation.operation_type == OrganizationOperationType.HARDLINK:
-                    os.link(operation.source, destination)
+                    _hardlink_operation_anchored(plan, operation)
                     history_type = OperationType.HARDLINK
                 else:
-                    safe_copy2(operation.source, destination, output_root)
+                    _copy_operation_anchored(plan, operation)
                     history_type = OperationType.COPY
             except OSError as exc:
                 logger.opt(exception=exc).error("Failed to execute plan operation {}", operation)
@@ -607,9 +626,15 @@ def execute_plan(
                 _cleanup_unlogged_destination(destination)
                 errors.append((operation.source_path, str(exc)))
             else:
+                completed_destinations.append(destination)
                 organized.setdefault(operation.folder_name, []).append(operation.file_name)
 
-        manager.history.commit_transaction(transaction_id)
+        try:
+            manager.history.commit_transaction(transaction_id)
+        except Exception:
+            for destination in reversed(completed_destinations):
+                _cleanup_unlogged_destination(destination)
+            raise
     except Exception:
         logger.exception(
             "Plan execution failed; leaving transaction {} uncommitted", transaction_id
@@ -643,7 +668,7 @@ def _sha256(path: Path) -> str | None:
             return None
 
     try:
-        with path.open("rb") as fh:  # noqa: safedir-required  # Windows / NotImplementedError fallback; POSIX uses SafeDir above.
+        with path.open("rb") as fh:  # noqa: safedir-required  # copilot: wontfix  # Windows / NotImplementedError fallback; POSIX uses SafeDir above.
             for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
@@ -657,6 +682,98 @@ def _cleanup_unlogged_destination(destination: Path) -> None:
         destination.unlink(missing_ok=True)
     except OSError as exc:
         logger.warning("Failed to clean up unlogged destination {}: {}", destination, exc)
+
+
+def _ensure_output_root(output_root: Path) -> None:
+    """Create the output root before opening it as a SafeDir anchor."""
+    if output_root.exists():
+        return
+    parent = output_root.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    with SafeDir.open_root(parent) as parent_dir:
+        try:
+            parent_dir.mkdir(output_root.name)
+        except FileExistsError:
+            pass
+
+
+def _relative_to_root(path: Path, root: Path) -> PurePath:
+    """Return a plan path relative to its already validated root."""
+    return PurePath(path.resolve(strict=False).relative_to(root.resolve(strict=False)))
+
+
+def _copy_operation_anchored(plan: OrganizationPlan, operation: OrganizationOperation) -> None:
+    """Copy a planned file using SafeDir anchored source and destination roots."""
+    source_relative = _relative_to_root(operation.source, Path(plan.input_path))
+    destination_relative = _relative_to_root(operation.destination, Path(plan.output_path))
+    with (
+        SafeDir.open_root(plan.input_path) as source_root,
+        SafeDir.open_root(plan.output_path) as destination_root,
+    ):
+        source_fd = source_root.open_anchored_reader(source_relative)
+        try:
+            destination_fd = destination_root.open_anchored_writer(
+                destination_relative,
+                flags=os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            )
+        except OSError:
+            os.close(source_fd)
+            raise
+        try:
+            with (
+                os.fdopen(source_fd, "rb", closefd=True) as src,
+                os.fdopen(destination_fd, "wb", closefd=True) as dst,
+            ):
+                for chunk in iter(lambda: src.read(_CHUNK_SIZE), b""):
+                    dst.write(chunk)
+        except Exception:
+            _cleanup_unlogged_destination(operation.destination)
+            raise
+
+
+def _hardlink_operation_anchored(plan: OrganizationPlan, operation: OrganizationOperation) -> None:
+    """Create a planned hardlink using SafeDir anchored parent directories."""
+    source_relative = _relative_to_root(operation.source, Path(plan.input_path))
+    destination_relative = _relative_to_root(operation.destination, Path(plan.output_path))
+    with (
+        SafeDir.open_root(plan.input_path) as source_root,
+        SafeDir.open_root(plan.output_path) as destination_root,
+        contextlib.ExitStack() as stack,
+    ):
+        source_parent, source_name = _open_anchored_parent(
+            stack, source_root, source_relative, create=False
+        )
+        destination_parent, destination_name = _open_anchored_parent(
+            stack, destination_root, destination_relative, create=True
+        )
+        os.link(
+            source_name,
+            destination_name,
+            src_dir_fd=source_parent.fd,
+            dst_dir_fd=destination_parent.fd,
+        )
+
+
+def _open_anchored_parent(
+    stack: contextlib.ExitStack,
+    root: SafeDir,
+    relative_path: PurePath,
+    *,
+    create: bool,
+) -> tuple[SafeDir, str]:
+    """Walk to an anchored parent directory and return it with the leaf name."""
+    parts = relative_path.parts
+    if not parts:
+        raise ValueError("Plan operation path must not be empty.")
+    current = root
+    for component in parts[:-1]:
+        if create:
+            try:
+                current.mkdir(component)
+            except FileExistsError:
+                pass
+        current = stack.enter_context(current.open_subdir(component))
+    return current, parts[-1]
 
 
 def _parents_from_root(root: Path, leaf_parent: Path) -> list[Path]:

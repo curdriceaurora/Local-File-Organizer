@@ -1,4 +1,3 @@
-# pyre-ignore-all-errors
 """Shared type definitions for the file organizer core.
 
 Contains the ``OrganizationResult`` dataclass and extension-set constants
@@ -8,7 +7,8 @@ used across core modules.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+
+from file_organizer.core.plan import OrganizationPlan
 
 
 @dataclass
@@ -37,7 +37,7 @@ class OrganizationResult:
     processing_time: float = 0.0
     organized_structure: dict[str, list[str]] = field(default_factory=dict)
     errors: list[tuple[str, str]] = field(default_factory=list)  # (file, error)
-    plan: Any | None = None
+    plan: OrganizationPlan | None = None
 
 
 # ---------------------------------------------------------------------------
