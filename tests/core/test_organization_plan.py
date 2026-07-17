@@ -9,7 +9,9 @@ import pytest
 from file_organizer.core.plan import (
     CollisionAction,
     OrganizationOperationStatus,
+    OrganizationPlan,
     PlanValidationError,
+    SourceFingerprint,
     build_plan_from_processed,
     execute_plan,
     validate_plan,
@@ -56,6 +58,80 @@ def test_plan_generation_records_exact_ready_operation(tmp_path: Path) -> None:
     assert operation.status == OrganizationOperationStatus.READY
     assert operation.fingerprint is not None
     assert operation.fingerprint.sha256 == "abc"
+
+
+def test_plan_roots_display_rows_and_serialization_round_trip(tmp_path: Path) -> None:
+    source = tmp_path / "input" / "report.txt"
+    source.parent.mkdir()
+    source.write_text("hello")
+    output = tmp_path / "out"
+
+    plan = build_plan_from_processed(
+        input_path=source.parent,
+        output_path=output,
+        processed=[_processed(source)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+        metadata={"methodology": "none"},
+    )
+
+    assert plan.input_root == source.parent
+    assert plan.output_root == output
+    assert plan.roots_match(source.parent / ".", output / ".")
+    assert not plan.roots_match(tmp_path / "other-input", output)
+    assert plan.movements() == [
+        {
+            "operation_id": plan.operations[0].operation_id,
+            "file_name": "report.txt",
+            "source": str(source),
+            "destination": str(output / "Docs" / "report.txt"),
+            "reason": "Categorized into Docs",
+            "status": "ready",
+        }
+    ]
+
+    restored = OrganizationPlan.from_dict(plan.to_dict())
+
+    assert restored == plan
+    assert restored.operations[0].operation_type == plan.operations[0].operation_type
+    assert restored.operations[0].fingerprint == plan.operations[0].fingerprint
+    assert restored.metadata == {"methodology": "none"}
+
+
+def test_validate_plan_rejects_source_hash_change_when_metadata_is_stable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "input.txt"
+    source.write_text("hello")
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(source)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+        file_hashes={source: "expected-hash"},
+    )
+
+    stat = source.stat()
+    plan.operations[0].fingerprint = SourceFingerprint(
+        size=stat.st_size,
+        mtime_ns=stat.st_mtime_ns,
+        sha256="expected-hash",
+    )
+    monkeypatch.setattr("file_organizer.core.plan._sha256", lambda path: "actual-hash")
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "Source content hash changed after preview." in validation.error_message
+    assert "expected-hash" in validation.error_message
+    assert "actual-hash" in validation.error_message
 
 
 def test_plan_collision_skip_existing_is_decided_at_plan_time(tmp_path: Path) -> None:
