@@ -119,14 +119,54 @@ export interface OrganizationError {
   error: string;
 }
 
+export interface SourceFingerprintPayload {
+  size: number;
+  mtime_ns: number;
+  sha256: string | null;
+}
+
+export interface OrganizationOperationPayload {
+  operation_id: string;
+  source_path: string;
+  destination_path: string;
+  operation_type: "copy" | "hardlink";
+  collision_action: "create" | "skip_existing" | "rename_with_counter";
+  status: "ready" | "skipped" | "error";
+  folder_name: string;
+  file_name: string;
+  description: string;
+  fingerprint: SourceFingerprintPayload | null;
+  error: string | null;
+}
+
+export interface OrganizationPlanPayload {
+  plan_id: string;
+  schema_version: number;
+  input_path: string;
+  output_path: string;
+  created_at: string;
+  skip_existing: boolean;
+  use_hardlinks: boolean;
+  total_files: number;
+  processed_files: number;
+  skipped_files: number;
+  failed_files: number;
+  deduplicated_files: number;
+  operations: OrganizationOperationPayload[];
+  errors: [string, string][];
+  metadata: Record<string, unknown>;
+}
+
 export interface OrganizationResultResponse {
   total_files: number;
   processed_files: number;
   skipped_files: number;
   failed_files: number;
+  deduplicated_files: number;
   processing_time: number;
   organized_structure: Record<string, string[]>;
   errors: OrganizationError[];
+  plan: OrganizationPlanPayload | null;
 }
 
 export interface OrganizeRequest {
@@ -136,6 +176,7 @@ export interface OrganizeRequest {
   dry_run?: boolean;
   use_hardlinks?: boolean;
   run_in_background?: boolean;
+  plan?: OrganizationPlanPayload | null;
 }
 
 export interface OrganizeExecuteResponse {

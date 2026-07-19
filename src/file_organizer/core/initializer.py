@@ -13,6 +13,22 @@ from rich.console import Console
 from file_organizer.models.base import ModelConfig
 from file_organizer.services import TextProcessor, VisionProcessor
 
+_MODEL_INIT_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    RuntimeError,
+    ImportError,
+    OSError,
+    ConnectionError,
+    ValueError,
+    TypeError,
+    AttributeError,
+)
+try:
+    from ollama import ResponseError as OllamaResponseError
+except ImportError:  # pragma: no cover - ollama is an optional runtime dependency in some envs
+    pass
+else:
+    _MODEL_INIT_EXCEPTIONS = (*_MODEL_INIT_EXCEPTIONS, OllamaResponseError)
+
 
 def init_text_processor(
     config: ModelConfig,
@@ -42,15 +58,7 @@ def init_text_processor(
         processor.initialize()
         console.print("[green]✓[/green] Text model ready")
         return processor
-    except (
-        RuntimeError,
-        ImportError,
-        OSError,
-        ConnectionError,
-        ValueError,
-        TypeError,
-        AttributeError,
-    ) as e:
+    except _MODEL_INIT_EXCEPTIONS as e:
         if processor is not None:
             try:
                 processor.cleanup()
@@ -93,15 +101,7 @@ def init_vision_processor(
         processor.initialize()
         console.print("[green]✓[/green] Vision model ready")
         return processor
-    except (
-        RuntimeError,
-        ImportError,
-        OSError,
-        ConnectionError,
-        ValueError,
-        TypeError,
-        AttributeError,
-    ) as e:
+    except _MODEL_INIT_EXCEPTIONS as e:
         if processor is not None:
             try:
                 processor.cleanup()
