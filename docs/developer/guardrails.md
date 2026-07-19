@@ -175,9 +175,8 @@ Implementation detail:
 
 ## Test Environment Leakage Rule Index
 
-Issue `#1414` adds an advisory rail for test process state mutations. It starts
-advisory while current findings are classified, then can be promoted once the
-repo-wide finding count reaches zero.
+Issue `#1414` adds an enforced rail for test process state mutations. It was
+promoted once the repo-wide finding count reached zero.
 
 | Rail | Canonical home | What it flags |
 |------|----------------|---------------|
