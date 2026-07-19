@@ -199,3 +199,38 @@ class TestReleaseJob:
         assert '"${RELEASE_TAG}" != *a*' in run_script
         assert '"${RELEASE_TAG}" != *b*' in run_script
         assert '"${RELEASE_TAG}" != *rc*' in run_script
+
+    def test_release_job_signs_manifest(self) -> None:
+        """release job must install pycryptodomex and execute sign_release.py with RELEASE_SIGNING_KEY."""
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+
+        # Check the signing script's runtime dependencies are installed
+        build_step = next(s for s in steps if s.get("name") == "Build sdist and wheel")
+        assert "pycryptodomex" in build_step.get("run", "")
+        assert "loguru" in build_step.get("run", ""), (
+            "sign_release.py imports file_organizer.updater.trust which requires loguru"
+        )
+
+        # Check sign step exists and has correct environment
+        sign_step = next(s for s in steps if s.get("name") == "Generate and sign release manifest")
+        assert "sign_release.py" in sign_step.get("run", "")
+        env = sign_step.get("env", {})
+        assert env.get("RELEASE_SIGNING_KEY") == "${{ secrets.RELEASE_SIGNING_KEY }}"
+
+    def test_release_job_downloads_artifacts_flat(self) -> None:
+        """download-artifact must merge artifacts into a flat directory.
+
+        Without merge-multiple, each artifact lands in its own subdirectory and
+        sign_release.py records prefixed paths that never match the flat asset
+        names attached to the GitHub release.
+        """
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+        download_step = next(s for s in steps if s.get("name") == "Download build artifacts")
+        with_block = download_step.get("with", {})
+        assert with_block.get("path") == "artifacts"
+        assert with_block.get("merge-multiple") is True, (
+            "build.yml release job must set merge-multiple: true so manifest "
+            "asset names match release asset names"
+        )

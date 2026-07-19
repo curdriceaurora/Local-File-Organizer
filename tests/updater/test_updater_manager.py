@@ -113,6 +113,25 @@ class TestUpdateManagerUpdate:
 
     @patch("file_organizer.updater.manager.UpdateChecker")
     @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_manifest_verification_failed(self, mock_installer_cls, mock_checker_cls):
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[])
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = None
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "trust verification failed" in status.install_result.message
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
     def test_no_compatible_asset(self, mock_installer_cls, mock_checker_cls):
         release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[])
         mock_checker = MagicMock()
@@ -121,6 +140,7 @@ class TestUpdateManagerUpdate:
         mock_checker_cls.return_value = mock_checker
 
         mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {"assets": []}
         mock_installer.select_asset.return_value = None
         mock_installer.pip_upgrade_command.return_value = None
         mock_installer_cls.return_value = mock_installer
@@ -141,6 +161,7 @@ class TestUpdateManagerUpdate:
         mock_checker_cls.return_value = mock_checker
 
         mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {"assets": []}
         mock_installer.select_asset.return_value = None
         mock_installer.pip_upgrade_command.return_value = [
             "python",
@@ -161,6 +182,80 @@ class TestUpdateManagerUpdate:
 
     @patch("file_organizer.updater.manager.UpdateChecker")
     @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_asset_not_in_manifest(self, mock_installer_cls, mock_checker_cls):
+        asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
+
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {"assets": []}  # empty assets
+        mock_installer.select_asset.return_value = asset
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "missing or duplicated in the verified manifest" in status.install_result.message
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_asset_duplicate_in_manifest(self, mock_installer_cls, mock_checker_cls):
+        asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
+
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [
+                {"name": "app.bin", "sha256": "abc", "size": 100},
+                {"name": "app.bin", "sha256": "def", "size": 100},
+            ]
+        }
+        mock_installer.select_asset.return_value = asset
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "missing or duplicated in the verified manifest" in status.install_result.message
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
+    def test_asset_manifest_missing_digest_info(self, mock_installer_cls, mock_checker_cls):
+        asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
+        release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
+
+        mock_checker = MagicMock()
+        mock_checker.current_version = "1.0.0"
+        mock_checker.check.return_value = release
+        mock_checker_cls.return_value = mock_checker
+
+        mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": "app.bin", "sha256": "", "size": 100}]
+        }
+        mock_installer.select_asset.return_value = asset
+        mock_installer_cls.return_value = mock_installer
+
+        mgr = UpdateManager(current_version="1.0.0")
+        status = mgr.update()
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "missing digest or size info" in status.install_result.message
+        mock_installer.download_asset.assert_not_called()
+
+    @patch("file_organizer.updater.manager.UpdateChecker")
+    @patch("file_organizer.updater.manager.UpdateInstaller")
     def test_download_failed(self, mock_installer_cls, mock_checker_cls):
         asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
         release = ReleaseInfo(tag="v2.0.0", version="2.0.0", assets=[asset])
@@ -171,8 +266,10 @@ class TestUpdateManagerUpdate:
         mock_checker_cls.return_value = mock_checker
 
         mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]
+        }
         mock_installer.select_asset.return_value = asset
-        mock_installer.find_checksum.return_value = ""
         mock_installer.download_asset.return_value = None
         mock_installer_cls.return_value = mock_installer
 
@@ -197,8 +294,10 @@ class TestUpdateManagerUpdate:
         downloaded.write_bytes(b"binary")
 
         mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]
+        }
         mock_installer.select_asset.return_value = asset
-        mock_installer.find_checksum.return_value = "abc"
         mock_installer.download_asset.return_value = downloaded
         mock_installer_cls.return_value = mock_installer
 
@@ -224,8 +323,10 @@ class TestUpdateManagerUpdate:
 
         install_result = InstallResult(success=True, message="Done!")
         mock_installer = MagicMock()
+        mock_installer.fetch_and_verify_manifest.return_value = {
+            "assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]
+        }
         mock_installer.select_asset.return_value = asset
-        mock_installer.find_checksum.return_value = ""
         mock_installer.download_asset.return_value = downloaded
         mock_installer.install.return_value = install_result
         mock_installer_cls.return_value = mock_installer

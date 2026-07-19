@@ -79,6 +79,7 @@ dependencies = [
     "Pygments>=2.20.0",
     "pyjwt~=2.8",
     "bcrypt>=4.0.0,<6.0.0",
+    "pycryptodomex>=3.23.0",
     # Database
     "sqlalchemy~=2.0",
     "alembic~=1.13",
@@ -1432,6 +1433,7 @@ DEP002 = [
 "src/file_organizer/updater/manager.py" = 100
 "src/file_organizer/updater/sidecar_updater.py" = 85
 "src/file_organizer/updater/state.py" = 100
+"src/file_organizer/updater/trust.py" = 95
 "src/file_organizer/utils/__init__.py" = 100
 "src/file_organizer/utils/atomic_io.py" = 80
 "src/file_organizer/utils/atomic_write.py" = 95

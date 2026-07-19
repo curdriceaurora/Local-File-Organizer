@@ -18,7 +18,8 @@ from unittest.mock import patch
 import pytest
 
 from file_organizer.updater.checker import AssetInfo, ReleaseInfo
-from file_organizer.updater.installer import InstallResult
+from file_organizer.updater.installer import InstallResult, UpdateInstaller
+from file_organizer.updater.manager import UpdateManager
 from file_organizer.updater.sidecar_updater import (
     coordinated_update,
     verify_sha256,
@@ -84,6 +85,9 @@ class TestFullUpdateFlow:
             checker.check.return_value = release
 
             inst = MockInstaller.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded_path
@@ -118,6 +122,9 @@ class TestFullUpdateFlow:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded_path
@@ -169,6 +176,9 @@ class TestSha256VerificationIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = "deadbeef" * 8
             # Simulate failed download (SHA256 mismatch caught inside installer)
@@ -178,6 +188,125 @@ class TestSha256VerificationIntegration:
 
         assert result.success is False
         assert "update-failed" in events
+
+
+# ---------------------------------------------------------------------------
+# Integration test: verified manifest guardrails
+# ---------------------------------------------------------------------------
+
+
+class TestVerifiedManifestGuardrails:
+    """Integration coverage for verified manifest failure paths."""
+
+    def test_installer_manifest_assets_are_required(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v2.1.0",
+            version="2.1.0",
+            assets=[AssetInfo(name="file-organizer-release-manifest.json.sig", url="sig-url")],
+        )
+
+        with patch.object(UpdateInstaller, "_download_text") as download_text:
+            assert installer.fetch_and_verify_manifest(release, "owner/repo") is None
+
+        download_text.assert_not_called()
+
+    def test_installer_rejects_empty_manifest_download(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v2.1.0",
+            version="2.1.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="manifest-url"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="sig-url"),
+            ],
+        )
+
+        with patch.object(UpdateInstaller, "_download_text", side_effect=["{}", ""]):
+            assert installer.fetch_and_verify_manifest(release, "owner/repo") is None
+
+    def test_installer_sha256sums_accepts_dot_slash_targets(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v2.1.0",
+            version="2.1.0",
+            assets=[AssetInfo(name="SHA256SUMS.txt", url="sums-url")],
+        )
+
+        with patch.object(UpdateInstaller, "_download_text", return_value="abc123  ./app.bin"):
+            assert installer.find_checksum(release, "app.bin") == "abc123"
+
+    def test_manager_rejects_manifest_asset_without_digest(self) -> None:
+        asset = AssetInfo(name="app.bin", url="https://example.com/app.bin", size=100)
+        release = ReleaseInfo(tag="v2.1.0", version="2.1.0", assets=[asset])
+
+        with (
+            patch("file_organizer.updater.manager.UpdateChecker") as MockChecker,
+            patch("file_organizer.updater.manager.UpdateInstaller") as MockInstaller,
+        ):
+            MockChecker.return_value.current_version = "2.0.0"
+            MockChecker.return_value.check.return_value = release
+
+            installer = MockInstaller.return_value
+            installer.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": "app.bin", "sha256": "", "size": 100}]
+            }
+            installer.select_asset.return_value = asset
+
+            status = UpdateManager(current_version="2.0.0").update()
+
+        assert status.install_result is not None
+        assert status.install_result.success is False
+        assert "missing digest or size info" in status.install_result.message
+        installer.download_asset.assert_not_called()
+
+    def test_sidecar_rejects_manifest_missing_selected_asset(self) -> None:
+        release = _make_release()
+        asset = release.assets[0]
+
+        events: list[str] = []
+        with (
+            patch("file_organizer.updater.sidecar_updater.UpdateChecker") as MockChecker,
+            patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller,
+        ):
+            MockChecker.return_value.current_version = "2.0.0"
+            MockChecker.return_value.check.return_value = release
+
+            installer = MockInstaller.return_value
+            installer.fetch_and_verify_manifest.return_value = {"assets": []}
+            installer.select_asset.return_value = asset
+
+            result = coordinated_update(event_callback=lambda event, _: events.append(event))
+
+        assert result.success is False
+        assert "missing or duplicated" in result.message
+        assert "update-failed" in events
+        installer.download_asset.assert_not_called()
+
+    def test_sidecar_rejects_manifest_asset_without_size(self) -> None:
+        release = _make_release()
+        asset = release.assets[0]
+
+        events: list[str] = []
+        with (
+            patch("file_organizer.updater.sidecar_updater.UpdateChecker") as MockChecker,
+            patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller,
+        ):
+            MockChecker.return_value.current_version = "2.0.0"
+            MockChecker.return_value.check.return_value = release
+
+            installer = MockInstaller.return_value
+            installer.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": asset.name, "sha256": "abc"}]
+            }
+            installer.select_asset.return_value = asset
+
+            result = coordinated_update(event_callback=lambda event, _: events.append(event))
+
+        assert result.success is False
+        assert "missing digest or size info" in result.message
+        assert "update-failed" in events
+        installer.download_asset.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +332,9 @@ class TestRollbackIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded
@@ -231,6 +363,9 @@ class TestRollbackIntegration:
             MC.return_value.check.return_value = release
 
             inst = MI.return_value
+            inst.fetch_and_verify_manifest.return_value = {
+                "assets": [{"name": release.assets[0].name, "sha256": "abc", "size": 2048}]
+            }
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded
