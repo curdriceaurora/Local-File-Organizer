@@ -17,6 +17,13 @@ PINNED_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAnirlcO8/RIANG5F9tLrXR+QJR6Vshpcz+TDnlrV2gIY=
 -----END PUBLIC KEY-----"""
 
+# Upper bound on a single release asset size recorded in the manifest (10 GiB).
+# Anything larger is treated as malformed metadata and fails closed.
+_MAX_ASSET_SIZE = 10 * 1024**3
+
+_SHA256_HEX_LENGTH = 64
+_SHA256_HEX_CHARS = frozenset("0123456789abcdef")
+
 
 def verify_manifest_signature(manifest_content: str, signature_content: str) -> bool:
     """Verify that the manifest JSON matches the base64-encoded signature.
@@ -39,12 +46,9 @@ def verify_manifest_signature(manifest_content: str, signature_content: str) -> 
         # Load the public key
         pub_key = ECC.import_key(PINNED_PUBLIC_KEY)
 
-        # Decode signature content
-        sig_str = signature_content.strip()
-        try:
-            sig_bytes = base64.b64decode(sig_str)
-        except Exception:
-            sig_bytes = sig_str.encode("utf-8") if isinstance(sig_str, str) else sig_str
+        # Decode signature content. Strict base64 only: a malformed or
+        # tampered encoding must fail closed rather than be reinterpreted.
+        sig_bytes = base64.b64decode(signature_content.strip(), validate=True)
 
         # Verify using Ed25519 (EdDSA RFC8032)
         verifier = eddsa.new(pub_key, "rfc8032")
@@ -84,6 +88,12 @@ def verify_release_manifest(
         logger.error("Failed to parse verified manifest JSON: {}", exc)
         return None
 
+    # A validly signed payload must still be a manifest object, not a bare
+    # list/scalar — fail closed instead of crashing on attribute access.
+    if not isinstance(manifest_data, dict):
+        logger.error("Manifest is not a JSON object: {}", type(manifest_data).__name__)
+        return None
+
     # Validate Schema
     schema_version = manifest_data.get("schema_version")
     if schema_version != 1:
@@ -106,4 +116,55 @@ def verify_release_manifest(
         logger.error("Manifest version mismatch: expected {}, got {}", expected_version, version)
         return None
 
+    published_at = manifest_data.get("published_at")
+    if not isinstance(published_at, str) or not published_at:
+        logger.error("Manifest published_at is missing or not a string.")
+        return None
+
+    if not _validate_manifest_assets(manifest_data.get("assets")):
+        return None
+
     return cast(dict[str, Any], manifest_data)
+
+
+def _validate_manifest_assets(assets: object) -> bool:
+    """Validate the manifest's asset entries, failing closed on any anomaly.
+
+    Requires a list of uniquely named asset objects, each with a non-empty
+    string name, a bounded non-negative integer size, and a 64-character
+    lowercase-hex SHA-256 digest.
+    """
+    if not isinstance(assets, list) or not assets:
+        logger.error("Manifest assets must be a non-empty list.")
+        return False
+
+    seen_names: set[str] = set()
+    for entry in assets:
+        if not isinstance(entry, dict):
+            logger.error("Manifest asset entry is not an object: {!r}", entry)
+            return False
+
+        name = entry.get("name")
+        if not isinstance(name, str) or not name:
+            logger.error("Manifest asset name is missing or not a string.")
+            return False
+        if name in seen_names:
+            logger.error("Manifest contains duplicate asset name: {}", name)
+            return False
+        seen_names.add(name)
+
+        size = entry.get("size")
+        if isinstance(size, bool) or not isinstance(size, int) or not 0 <= size <= _MAX_ASSET_SIZE:
+            logger.error("Manifest asset {} has invalid size: {!r}", name, size)
+            return False
+
+        sha256 = entry.get("sha256")
+        if (
+            not isinstance(sha256, str)
+            or len(sha256) != _SHA256_HEX_LENGTH
+            or not set(sha256) <= _SHA256_HEX_CHARS
+        ):
+            logger.error("Manifest asset {} has invalid sha256 digest.", name)
+            return False
+
+    return True

@@ -24,6 +24,10 @@ from file_organizer.updater.checker import AssetInfo, ReleaseInfo
 
 _CHUNK_SIZE = 65536  # 64 KB download chunks
 
+# Upper bound for small text downloads (manifests, signatures, checksum lists).
+# A response larger than this is treated as hostile and discarded.
+_MAX_TEXT_DOWNLOAD_BYTES = 1024 * 1024
+
 
 def _get_platform_hints() -> list[str]:
     """Get platform hints for the current system.
@@ -188,17 +192,23 @@ class UpdateInstaller:
         Returns:
             Parsed manifest dictionary, or None if verification fails.
         """
-        manifest_asset = None
-        signature_asset = None
-        for a in release.assets:
-            if a.name.lower() == "file-organizer-release-manifest.json":
-                manifest_asset = a
-            elif a.name.lower() == "file-organizer-release-manifest.json.sig":
-                signature_asset = a
+        manifest_assets = [
+            a for a in release.assets if a.name.lower() == "file-organizer-release-manifest.json"
+        ]
+        signature_assets = [
+            a
+            for a in release.assets
+            if a.name.lower() == "file-organizer-release-manifest.json.sig"
+        ]
 
-        if manifest_asset is None or signature_asset is None:
-            logger.error("Missing manifest or signature asset in release.")
+        # Exactly one of each: duplicates would let an attacker race a second
+        # (unsigned or mismatched) copy against the legitimate one.
+        if len(manifest_assets) != 1 or len(signature_assets) != 1:
+            logger.error("Release must contain exactly one manifest and signature asset.")
             return None
+
+        manifest_asset = manifest_assets[0]
+        signature_asset = signature_assets[0]
 
         manifest_content = self._download_text(manifest_asset.url)
         signature_content = self._download_text(signature_asset.url)
@@ -485,17 +495,30 @@ class UpdateInstaller:
 
     @staticmethod
     def _download_text(url: str) -> str:
-        """Download a small text file.
+        """Download a small text file, capped at ``_MAX_TEXT_DOWNLOAD_BYTES``.
 
         Args:
             url: URL to download.
 
         Returns:
-            File content as string.
+            File content as string, or empty string on failure or if the
+            response exceeds the size cap.
         """
         try:
-            resp = httpx.get(url, follow_redirects=True, timeout=15.0)
-            resp.raise_for_status()
-            return resp.text
+            with httpx.stream("GET", url, follow_redirects=True, timeout=15.0) as resp:
+                resp.raise_for_status()
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in resp.iter_bytes(chunk_size=_CHUNK_SIZE):
+                    total += len(chunk)
+                    if total > _MAX_TEXT_DOWNLOAD_BYTES:
+                        logger.error(
+                            "Text download exceeded {} byte cap: {}",
+                            _MAX_TEXT_DOWNLOAD_BYTES,
+                            url,
+                        )
+                        return ""
+                    chunks.append(chunk)
+                return b"".join(chunks).decode("utf-8")
         except Exception:
             return ""

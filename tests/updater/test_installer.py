@@ -462,14 +462,14 @@ class TestDownloadText:
     @patch("file_organizer.updater.installer.httpx")
     def test_success(self, mock_httpx):
         mock_resp = MagicMock()
-        mock_resp.text = "file content"
-        mock_httpx.get.return_value = mock_resp
+        mock_resp.iter_bytes.return_value = [b"file content"]
+        mock_httpx.stream.return_value.__enter__.return_value = mock_resp
         result = UpdateInstaller._download_text("https://example.com/file.txt")
         assert result == "file content"
 
     @patch("file_organizer.updater.installer.httpx")
     def test_failure(self, mock_httpx):
-        mock_httpx.get.side_effect = Exception("error")
+        mock_httpx.stream.side_effect = Exception("error")
         result = UpdateInstaller._download_text("https://example.com/file.txt")
         assert result == ""
 
@@ -718,7 +718,7 @@ class TestTrustAndManifestVerification:
             "tag": "v1.0.0",
             "version": "1.0.0",
             "published_at": "2026-07-17T12:00:00Z",
-            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "abc123hash"}],
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
         }
         canonical_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode(
             "utf-8"
@@ -878,7 +878,7 @@ class TestTrustAndManifestVerification:
             "tag": "v1.0.0",
             "version": "1.0.0",
             "published_at": "2026-07-17T12:00:00Z",
-            "assets": [],
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
         }
         canonical_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode(
             "utf-8"
@@ -903,6 +903,158 @@ class TestTrustAndManifestVerification:
         res = inst.fetch_and_verify_manifest(release, "owner/repo")
         assert res is not None
         assert res["repo"] == "owner/repo"
+
+    @staticmethod
+    def _sign_payload(test_key, payload):
+        """Sign an arbitrary JSON payload the same way sign_release.py does."""
+        import base64
+        import json
+
+        from Cryptodome.Signature import eddsa
+
+        canonical_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return base64.b64encode(eddsa.new(test_key, "rfc8032").sign(canonical_bytes)).decode(
+            "utf-8"
+        )
+
+    def test_verify_manifest_rejects_non_object_payload(self, monkeypatch):
+        """A validly signed JSON list must fail closed, not crash on .get()."""
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        payload = ["not", "a", "manifest"]
+        sig_b64 = self._sign_payload(test_key, payload)
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(payload), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+    def test_verify_manifest_rejects_malformed_assets(self, monkeypatch):
+        """Signed manifests with anomalous asset entries must fail closed."""
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        good_asset = {"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}
+        bad_asset_lists = [
+            [],  # empty
+            ["not-an-object"],  # entry is not a dict
+            [{"size": 100, "sha256": "a1" * 32}],  # missing name
+            [good_asset, dict(good_asset)],  # duplicate names
+            [{**good_asset, "size": True}],  # bool masquerading as int
+            [{**good_asset, "size": -1}],  # negative size
+            [{**good_asset, "size": 11 * 1024**3}],  # absurdly large size
+            [{**good_asset, "sha256": "abc123hash"}],  # not a 64-char digest
+            [{**good_asset, "sha256": "Z" * 64}],  # non-hex characters
+            [{**good_asset, "sha256": 12345}],  # digest is not a string
+        ]
+
+        for assets in bad_asset_lists:
+            manifest = {
+                "schema_version": 1,
+                "repo": "owner/repo",
+                "tag": "v1.0.0",
+                "version": "1.0.0",
+                "published_at": "2026-07-17T12:00:00Z",
+                "assets": assets,
+            }
+            sig_b64 = self._sign_payload(test_key, manifest)
+            assert (
+                trust.verify_release_manifest(
+                    json.dumps(manifest), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+                )
+                is None
+            ), f"manifest with assets={assets!r} should have been rejected"
+
+    def test_verify_manifest_rejects_missing_published_at(self, monkeypatch):
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        manifest = {
+            "schema_version": 1,
+            "repo": "owner/repo",
+            "tag": "v1.0.0",
+            "version": "1.0.0",
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
+        }
+        sig_b64 = self._sign_payload(test_key, manifest)
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+    def test_signature_requires_strict_base64(self, monkeypatch):
+        """Non-base64 signature content must be rejected, never reinterpreted."""
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        assert trust.verify_manifest_signature("{}", "!!not-valid-base64!!") is False
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_rejects_duplicate_assets(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="url1"),
+                AssetInfo(name="File-Organizer-Release-Manifest.JSON", url="url1b"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
+        mock_download.assert_not_called()
+
+    def test_download_text_enforces_size_cap(self):
+        from file_organizer.updater import installer as installer_mod
+
+        oversized = b"x" * (installer_mod._MAX_TEXT_DOWNLOAD_BYTES + 1)
+        mock_response = MagicMock()
+        mock_response.iter_bytes.return_value = [oversized]
+
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response
+            assert UpdateInstaller._download_text("https://example.com/big.txt") == ""
+
+        mock_response_ok = MagicMock()
+        mock_response_ok.iter_bytes.return_value = [b"small content"]
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response_ok
+            assert UpdateInstaller._download_text("https://example.com/ok.txt") == "small content"
 
     def test_download_asset_with_size_check(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
