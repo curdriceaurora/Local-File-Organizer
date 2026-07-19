@@ -1,0 +1,6 @@
+from typing import Any
+
+class EccKey:
+    def __getattr__(self, name: str) -> Any: ...
+
+def import_key(encoded: Any, *args: Any, **kwargs: Any) -> EccKey: ...
