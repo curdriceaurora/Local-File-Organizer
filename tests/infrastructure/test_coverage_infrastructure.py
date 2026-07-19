@@ -2072,8 +2072,9 @@ class TestUpdateInstaller:
 
         installer = UpdateInstaller()
         mock_resp = MagicMock()
-        mock_resp.text = "checksum content"
-        with patch("httpx.get", return_value=mock_resp):
+        mock_resp.iter_bytes.return_value = [b"checksum content"]
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_resp
             result = installer._download_text("http://example.com/SHA256SUMS")
             assert result == "checksum content"
 
@@ -2081,7 +2082,7 @@ class TestUpdateInstaller:
         from file_organizer.updater.installer import UpdateInstaller
 
         installer = UpdateInstaller()
-        with patch("httpx.get", side_effect=Exception("error")):
+        with patch("httpx.stream", side_effect=Exception("error")):
             result = installer._download_text("http://bad")
             assert result == ""
 
