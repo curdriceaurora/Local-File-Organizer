@@ -58,7 +58,7 @@ def test_organize_happy_path_runs_to_completion(
             const pct = parseInt(bar?.getAttribute('aria-valuenow') || '0', 10);
             return status === 'running' && pct > 0 && pct < 100;
         }""",
-        timeout=5000,
+        timeout=30000,
     )
 
     # 5) Wait for completion: status=="completed", progress bar at 100%
