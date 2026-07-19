@@ -1,4 +1,4 @@
-"""Tests for the advisory test-environment-leakage CI rail."""
+"""Tests for the test-environment-leakage CI rail."""
 
 from __future__ import annotations
 
@@ -326,10 +326,6 @@ def test_targeted_noqa_suppresses_intentional_exception(tmp_path: Path) -> None:
     assert checker.check_file(src) == []
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Advisory rail: existing findings are classified before enforcement.",
-)
 def test_repo_environment_leakage_findings_are_zero() -> None:
     root = Path(__file__).resolve().parents[2]
     violations = [

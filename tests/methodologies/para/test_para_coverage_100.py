@@ -44,35 +44,27 @@ _HEURISTICS_MODULE = "file_organizer.methodologies.para.detection.heuristics"
 class TestOllamaImportGuard:
     """Cover the ``except ImportError`` branch for the ollama import (lines 24-26)."""
 
-    def test_ollama_import_error_sets_flag_false(self) -> None:
+    def test_ollama_import_error_sets_flag_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ollama is not installed, OLLAMA_AVAILABLE is False and
         ollama is set to None (lines 24-26)."""
         module_name = _HEURISTICS_MODULE
-        # Save and remove ollama from sys.modules so the import fails
-        saved_ollama = sys.modules.pop("ollama", None)
-        saved_heuristics = sys.modules.pop(module_name, None)
+        monkeypatch.delitem(sys.modules, "ollama", raising=False)
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
 
         import builtins
 
         original_import = builtins.__import__
 
-        try:
-            with patch(
-                "builtins.__import__",
-                side_effect=make_fake_import(
-                    missing_names=("ollama",),
-                    original_import=original_import,
-                ),
-            ):
-                mod = importlib.import_module(module_name)
-            assert mod.OLLAMA_AVAILABLE is False
-            assert mod.ollama is None
-        finally:
-            # Restore original modules
-            if saved_heuristics is not None:
-                sys.modules[module_name] = saved_heuristics
-            if saved_ollama is not None:
-                sys.modules["ollama"] = saved_ollama
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(
+                missing_names=("ollama",),
+                original_import=original_import,
+            ),
+        ):
+            mod = importlib.import_module(module_name)
+        assert mod.OLLAMA_AVAILABLE is False
+        assert mod.ollama is None
 
 
 # =========================================================================

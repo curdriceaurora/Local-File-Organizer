@@ -666,7 +666,7 @@ def playwright() -> Iterator[Any]:
     during teardown. This prevents the 'attached to a different loop' error
     caused by other async tests changing the thread-local event loop state.
     """
-    global _PLAYWRIGHT_LOOP
+    global _PLAYWRIGHT_LOOP  # noqa: test-environment-leakage - session fixture owns and restores Playwright's event-loop singleton.
     import asyncio
     import asyncio.events
 
