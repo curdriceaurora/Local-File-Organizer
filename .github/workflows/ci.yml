@@ -479,7 +479,7 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev,search]"
-      - name: "Integration coverage gate (floor: 75.7% combined line+branch)"
+      - name: "Integration coverage gate (floor: 76.0% combined line+branch)"
         # Ratchet floor — bump threshold in the PR that closes each gap.
         # 2026-03-17: 35.43% line (173 integration tests, clean CI env with [dev,search] extras).
         # 2026-03-20: 30% branch (ratchet after enabling branch = true; issue #912). Target per issue #856: 90%.
@@ -492,7 +492,8 @@ jobs:
         # 2026-04-06: floor held at 71.9% — new integration tests added (auth+service-facade+websocket); local measurement 71.76% due to missing [search] extras in local venv vs CI env with [dev,search]
         # 2026-04-06: 72.0% combined (ratchet after dedupe-hash/removal + repo integration tests; actual 72%)
         # 2026-06-25: 75.7% combined (ratchet after ebook, document, audio, video and model coverage updates; actual 75.77%)
-        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=75.7 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
+        # 2026-07-19: 76.0% combined (ratchet after genuine integration tests for the JD migrator, dedupe CLI, and deploy scaling/monitoring/compose modules; issue #1582)
+        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=76.0 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
 
       - name: Check per-file integration coverage floors
         run: python scripts/coverage/check-integration-floors.py
