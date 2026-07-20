@@ -137,7 +137,7 @@ jobs:
 
       - name: Build sdist and wheel
         run: |
-          python -m pip install --upgrade pip build pycryptodomex loguru
+          python -m pip install --upgrade pip build pycryptodomex loguru httpx
           python -m build --outdir dist/
           cp dist/*.whl dist/*.tar.gz artifacts/
 

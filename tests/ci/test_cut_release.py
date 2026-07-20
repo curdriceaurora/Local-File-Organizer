@@ -60,7 +60,7 @@ def test_update_version_files_fails_when_touchpoint_pattern_is_missing(
     (tmp_path / "src" / "file_organizer").mkdir(parents=True)
     (tmp_path / "pyproject.toml").write_text("version = '2.0.2'\n", encoding="utf-8")
     (tmp_path / "src" / "file_organizer" / "version.py").write_text(
-        '__version__ = "2.0.2"\n',
+        "wrong format\n",
         encoding="utf-8",
     )
     (tmp_path / "src" / "file_organizer" / "__init__.py").write_text(
@@ -69,7 +69,7 @@ def test_update_version_files_fails_when_touchpoint_pattern_is_missing(
     )
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parent.parent.parent / "scripts"))
 
-    with pytest.raises(RuntimeError, match=r"version pattern.*pyproject\.toml"):
+    with pytest.raises(RuntimeError, match=r"version pattern.*version\.py"):
         update_version_files("2.0.3", root=tmp_path)
 
 
