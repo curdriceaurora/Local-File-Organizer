@@ -93,5 +93,5 @@ description = "Flags subprocess.run() calls where returncode is not checked and 
 [[rail]]
 name = "test-environment-leakage"
 command = ["python", "scripts/ci/guardrails/check_test_environment_leakage.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags tests that mutate class/global state or sys.modules without scoped restoration (issue #1414)."

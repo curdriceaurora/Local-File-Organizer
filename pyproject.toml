@@ -543,6 +543,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "opencv-python" = "cv2"
 "pydantic-settings" = "pydantic_settings"
 "pypdf" = "pypdf"
+"pycryptodomex" = "Cryptodome"
 "striprtf" = "striprtf"
 "llama-cpp-python" = "llama_cpp"
 "mlx-lm" = "mlx_lm"

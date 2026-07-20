@@ -249,7 +249,7 @@ class TestAppCaching:
 class TestAppLifespan:
     """Test that the FastAPI lifespan context actually fires."""
 
-    def test_lifespan_resets_health_startup_time_on_entry(self):
+    def test_lifespan_resets_health_startup_time_on_entry(self, monkeypatch: pytest.MonkeyPatch):
         """Entering the app's lifespan (e.g. via TestClient) calls
         reset_startup_time() — pins the wiring between create_app()'s
         lifespan and the health router's uptime tracking."""
@@ -258,7 +258,7 @@ class TestAppLifespan:
         from file_organizer.api.main import create_app
         from file_organizer.api.routers import health
 
-        health._startup_time -= 100.0
+        monkeypatch.setattr(health, "_startup_time", health._startup_time - 100.0)
         stale_time = health._startup_time
 
         app = create_app()

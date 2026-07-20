@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CI-rail: Flag test environment mutations that can leak across tests.
 
-This advisory rail catches direct mutations of shared test process state when
-the mutation is not structurally scoped by pytest's ``monkeypatch``, unittest
+This rail catches direct mutations of shared test process state when the
+mutation is not structurally scoped by pytest's ``monkeypatch``, unittest
 ``patch`` helpers, fixture finalizers, or a ``try/finally`` restoration block.
 """
 
