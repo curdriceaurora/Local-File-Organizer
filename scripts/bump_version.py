@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Sync hardcoded version stamps (docs, README, Windows manifest) to ``__version__``.
+"""Sync hardcoded version stamps to ``__version__``.
 
 The package version is single-sourced in ``src/file_organizer/version.py``
 (``__version__``), but a handful of other files also carry their own copy of
-it for humans or platform tooling to read: doc "**Version**: X.Y.Z" stamps
-and the Windows desktop manifest's assembly version. Nothing kept those in
-sync, so they drifted independently across release cycles (see #1540 — at
-time of filing, version.py said 2.0.2 while README.md and docs/index.md
-still said 2.0.0 and 2.0.1). This script is *not* the semantic-version
-bumper (that's ``release.py``'s ``bump_version()``, which bumps
-major/minor/patch); it only rewrites these stamps to match whatever
+it for humans or platform tooling to read: README badges, doc version stamps,
+documentation support text, package/module docstrings, and the Windows desktop
+manifest's assembly version. Nothing kept those in sync, so they drifted
+independently across release cycles (see #1540). This script is *not* the
+semantic-version bumper; it only rewrites these stamps to match whatever
 ``__version__`` already is.
 
 ``tests/ci/test_version_drift.py`` fails CI if a stamp disagrees with
@@ -46,9 +44,33 @@ def _windows_assembly_version(version: str) -> str:
     return f"{version}.0"
 
 
+def _shields_badge_version(version: str) -> str:
+    """Encode hyphenated pre-release versions for shields.io badge URLs."""
+    return version.replace("-", "--")
+
+
+def _with_v_prefix(version: str) -> str:
+    """Return the version string with the human-facing ``v`` prefix."""
+    return f"v{version}"
+
+
+_SEMVER_STAMP = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?"
+_SHIELDS_SEMVER_STAMP = r"\d+\.\d+\.\d+(?:--[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?"
+
 # Matches the "**Version**: X.Y.Z" stamp used verbatim (optionally inside a
 # blockquote, as in docs/tui.md's "> **Version**: X.Y.Z").
 _DOC_VERSION_STAMP = re.compile(r"\*\*Version\*\*:\s*(?P<version>\S+)")
+
+# Matches the shields.io README version badge URL segment.
+_README_BADGE_VERSION = re.compile(rf"version-(?P<version>{_SHIELDS_SEMVER_STAMP})")
+
+# Matches docs/index.md's prose support statement.
+_DOCS_SUPPORT_VERSION = re.compile(
+    rf"This documentation supports File Organizer\s+`?(?P<version>{_SEMVER_STAMP})`?"
+)
+
+# Matches package/module docstrings that include "File Organizer vX.Y.Z".
+_FILE_ORGANIZER_V_VERSION = re.compile(rf"File Organizer\s+(?P<version>v{_SEMVER_STAMP})")
 
 # Matches only File Organizer's own <assemblyIdentity> in the Windows
 # manifest (not the nested Microsoft.Windows.Common-Controls dependency,
@@ -69,9 +91,26 @@ class Touchpoint:
 
 
 TOUCHPOINTS: list[Touchpoint] = [
+    Touchpoint(REPO_ROOT / "README.md", _README_BADGE_VERSION, _shields_badge_version),
     Touchpoint(REPO_ROOT / "README.md"),
+    Touchpoint(REPO_ROOT / "docs" / "index.md", _DOCS_SUPPORT_VERSION),
     Touchpoint(REPO_ROOT / "docs" / "index.md"),
     Touchpoint(REPO_ROOT / "docs" / "tui.md"),
+    Touchpoint(
+        REPO_ROOT / "src" / "file_organizer" / "__init__.py",
+        _FILE_ORGANIZER_V_VERSION,
+        _with_v_prefix,
+    ),
+    Touchpoint(
+        REPO_ROOT / "src" / "file_organizer" / "methodologies" / "para" / "__init__.py",
+        _FILE_ORGANIZER_V_VERSION,
+        _with_v_prefix,
+    ),
+    Touchpoint(
+        REPO_ROOT / "src" / "file_organizer" / "methodologies" / "johnny_decimal" / "__init__.py",
+        _FILE_ORGANIZER_V_VERSION,
+        _with_v_prefix,
+    ),
     Touchpoint(
         REPO_ROOT / "desktop" / "build" / "app.manifest",
         _WINDOWS_MANIFEST_STAMP,

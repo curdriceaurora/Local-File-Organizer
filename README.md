@@ -1,7 +1,7 @@
 # Local File Organizer
 
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue?style=flat-square)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 This software uses AI to organize your local files. It operates locally with Ollama. It does not need a cloud connection. You can also connect it to an OpenAI-compatible endpoint or Anthropic Claude.
@@ -236,4 +236,4 @@ This project uses the [MIT License](LICENSE).
 
 ---
 
-**Status**: Stable | **Version**: 2.1.0 | **Last Updated**: 2026-07-05
+**Status**: Stable | **Version**: 2.1.1 | **Last Updated**: 2026-07-20
