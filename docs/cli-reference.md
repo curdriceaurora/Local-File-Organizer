@@ -1,6 +1,6 @@
 # File Organizer CLI Reference
 
-All commands are available via `file-organizer` or the short alias `fo`.
+All commands are available through `file-organizer` or the alias `fo`.
 
 ## Core first run commands
 
@@ -24,7 +24,7 @@ See the canonical command sections:
 
 ## Global Options
 
-These options apply to every command and may be passed before or after the command name:
+These options apply to all commands. You can pass them before or after the command name:
 
 | Flag | Short | Description |
 |------|-------|-------------|
@@ -51,7 +51,7 @@ file-organizer version
 
 ### `start`
 
-Guided first-run setup with safe defaults (recommended beginner path).
+Run the first-run setup with safe defaults. We recommend this path for beginners.
 
 **Usage:**
 

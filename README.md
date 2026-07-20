@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-AI-powered local file management. Local-first by default (Ollama, no cloud required)—or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
+This software uses AI to organize your local files. It operates locally with Ollama. It does not need a cloud connection. You can also connect it to an OpenAI-compatible endpoint or Anthropic Claude.
 
 ![TUI overview](docs/assets/tui-overview.svg)
 
@@ -25,28 +25,28 @@ AI-powered local file management. Local-first by default (Ollama, no cloud requi
 
 ### AI and Analysis
 
-- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM) — or Anthropic Claude
-- **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
-- **Video Analysis**: Scene detection and keyframe extraction
-- **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
+- **AI-Powered Organization**: Uses Qwen 2.5 3B (text) and Qwen 2.5-VL 7B (vision) with Ollama. It also supports OpenAI-compatible endpoints and Anthropic Claude.
+- **Audio Transcription**: Uses faster-whisper to convert local speech to text. This uses the GPU.
+- **Video Analysis**: Finds scenes and gets keyframes from video files.
+- **Intelligence**: Learns patterns, tracks your preferences, suggests actions, and adds tags automatically.
 
 ### Interfaces
 
-- **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
-- **Web UI**: Browser-based interface via FastAPI and HTMX
-- **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
-- **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, api-keys
-- **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
+- **Terminal UI**: Gives you an 8-view Textual TUI (Files, Analytics, Audio, History, Copilot).
+- **Web UI**: Shows a browser interface with FastAPI and HTMX.
+- **Desktop App**: Shows a native OS window with pywebview. It uses a single Python process. It does not use Electron or Rust.
+- **Full CLI**: Includes commands to organize, set rules, suggest, find duplicates, run as a daemon, show analytics, update, and manage API keys.
+- **Copilot Chat**: Lets you use natural language to give commands. For example, type "organize ./Downloads" or "undo".
 
 ### Organization
 
-- **Extensive Support**: Handles 840 tests, 408 modules, and 39 distinct file types natively
-- **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
-- **PARA + Johnny Decimal**: Built-in organizational methodologies
-- **Deduplication**: Hash and semantic duplicate detection
-- **Undo/Redo**: Full operation history
-- **Auto-Update**: Linux AppImage self-updates from GitHub Releases (verified downloads + rollback); macOS/Windows update via `pip`/`pipx`
-- **Cross-Platform**: Runs on macOS, Windows, and Linux (verified in CI). Linux ships a standalone AppImage plus executables; install on macOS/Windows via `pip`/`pipx`
+- **Extensive Support**: Operates on 840 tests, 408 modules, and 39 file types.
+- **Organization Rules**: Sorts files automatically with conditions and previews. It saves rules in YAML.
+- **PARA + Johnny Decimal**: Includes these organizational methodologies.
+- **Deduplication**: Finds duplicate files with hash and semantic checks.
+- **Undo/Redo**: Keeps a full history of operations so you can undo them.
+- **Auto-Update**: Updates Linux AppImage from GitHub Releases. Updates macOS and Windows with `pip` or `pipx`.
+- **Cross-Platform**: Operates on macOS, Windows, and Linux.
 
 ## How It Works
 
@@ -77,10 +77,10 @@ flowchart LR
     F -.-> |Learn Patterns| F
 ```
 
-1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (80+ formats supported)
-2. **Analyze** — Sends extracted content to an AI model (Ollama, OpenAI, or Claude) for categorization and naming
-3. **Organize** — Moves or copies files into a structured folder hierarchy with AI-generated names
-4. **Learn** — Tracks your patterns and preferences over time for smarter future suggestions
+1. **Scan** — The software reads files from a source directory. It gets text, metadata, and visual content. It supports more than 80 formats.
+2. **Analyze** — The software sends the content to an AI model. The model categorizes and names the files.
+3. **Organize** — The software moves or copies files into folders. It uses the AI-generated names.
+4. **Learn** — The software tracks your patterns and preferences to make better suggestions in the future.
 
 ## Interfaces (Visuals)
 
@@ -88,39 +88,40 @@ flowchart LR
 ![TUI demo](docs/assets/tui-demo.gif)
 
 ### Web UI (Preview)
-Start the FastAPI server and open the UI:
+To start the FastAPI server and open the UI, type this command:
 
 ```bash
 file-organizer serve --reload
 ```
 
-Then visit `http://localhost:8000/ui/` for the HTMX interface.
+Then, go to `http://localhost:8000/ui/` in your browser.
 
 ## Quick Start (Essentials)
 
 ### With Ollama (local, default)
 
 ```bash
-# Install from PyPI — pipx keeps it isolated and on your PATH:
+# Install from PyPI with pipx:
 pipx install local-file-organizer
-# or: pip install local-file-organizer
+# or with pip:
+pip install local-file-organizer
 
-# 1) Configure defaults
+# 1) Set the default configuration
 fo setup
 
-# 2) Preview a folder before changing anything
+# 2) Preview a folder before you change anything
 fo preview ~/Downloads
 
-# 3) Run organization
+# 3) Start the organization process
 fo organize ~/Downloads ~/Organized
 
-# 4) Roll back the most recent organize run if needed
+# 4) Undo the most recent organize run if necessary
 fo undo
 ```
 
-### Need cloud providers instead of the default local flow?
+### Use cloud providers instead of the default local flow
 
-Use the [AI Provider Setup guide](docs/setup/ai-providers.md) for OpenAI-compatible endpoints and Claude.
+Read the [AI Provider Setup guide](docs/setup/ai-providers.md) for OpenAI-compatible endpoints and Claude.
 
 ```bash
 # OpenAI-compatible providers
@@ -140,7 +141,7 @@ export FO_PROVIDER=claude
 - [User Guide Workflow Map](docs/USER_GUIDE.md#workflow-map-quick-paths)
 - [Web UI Quick Start](docs/web-ui/getting-started.md)
 - [Troubleshooting](docs/troubleshooting.md)
-- [Installation Guide](docs/admin/installation.md) (Advanced dependencies and audio setup)
+- [Installation Guide](docs/admin/installation.md)
 
 ### Advanced / Admin / Developer
 
@@ -162,7 +163,7 @@ Canonical extras matrix:
 
 - [Dependencies & Optional Extras](docs/setup/dependencies.md#optional-extras-matrix)
 
-Common installs:
+Common installation commands:
 
 ```bash
 pip install "local-file-organizer[parsers,web]"
@@ -170,14 +171,13 @@ pip install "local-file-organizer[cloud,claude]"
 pip install "local-file-organizer[all]"
 ```
 
-> **From source (development):** clone the repo and use an editable install
-> instead, e.g. `pip install -e ".[all]"`.
+> **From source (development):** Download the repository and use an editable install (for example, `pip install -e ".[all]"`).
 
 ### Audio system dependencies
 
-For full audio format support, the `[audio]` pack uses **FFmpeg** (all platforms) and optionally **CUDA + cuDNN** (NVIDIA GPU users).
+To get full audio format support, the `[audio]` pack uses **FFmpeg** (all platforms). It optionally uses **CUDA + cuDNN** (for NVIDIA GPU users).
 
-**FFmpeg** — required for non-`.wav` formats (MP3, M4A, FLAC, OGG); optional if you only transcribe raw `.wav`:
+**FFmpeg** — This is necessary for non-`.wav` formats (MP3, M4A, FLAC, OGG). It is optional if you only transcribe raw `.wav` files:
 
 ```bash
 # macOS
@@ -190,49 +190,49 @@ sudo apt install ffmpeg
 winget install ffmpeg
 ```
 
-**CUDA + cuDNN** — optional, for significantly faster transcription (see [faster-whisper benchmarks](https://github.com/SYSTRAN/faster-whisper) for hardware-specific numbers):
+**CUDA + cuDNN** — This is optional. It makes transcription much faster.
 
 ```bash
 # Install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads
 # Install cuDNN from https://developer.nvidia.com/cudnn
 
-# Verify the full transcription backend (not just PyTorch)
+# Verify the full transcription backend
 python3 -c "from faster_whisper import WhisperModel; print('faster-whisper OK')"
 python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
 ```
 
-**Fallback behavior**: without FFmpeg, only `.wav` files are transcribed; other formats are organized by filename/metadata but not content-analyzed. Without CUDA, transcription runs on CPU (slower but fully functional).
+**Fallback behavior**: If you do not have FFmpeg, the software only transcribes `.wav` files. It organizes other formats by filename and metadata, but it does not analyze their content. If you do not have CUDA, the transcription uses the CPU. This is slower but it operates correctly.
 
-See the [Installation Guide](docs/admin/installation.md) for troubleshooting and advanced configuration.
+Read the [Installation Guide](docs/admin/installation.md) to find troubleshooting steps and advanced configuration options.
 
 ## Development
 
 ```bash
-# Run tests
+# Start tests
 pytest
 
-# Lint
+# Find errors with ruff
 ruff check src/
 ```
 
-*(For a full breakdown of the project structure, see [CONTRIBUTING.md](CONTRIBUTING.md))*
+*(To see a full breakdown of the project structure, read [CONTRIBUTING.md](CONTRIBUTING.md))*
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, project structure, and how to submit changes.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn about the development setup, coding standards, project structure, and how to submit your changes.
 
 ## Configuration
 
-Configuration is stored in platform-appropriate locations using `platformdirs`:
+The software stores configuration files in these locations:
 - **macOS**: `~/Library/Application Support/file-organizer/`
 - **Linux**: `~/.config/file-organizer/` (or `$XDG_CONFIG_HOME/file-organizer/`)
 - **Windows**: `%APPDATA%/file-organizer/`
 
-See [Configuration Guide](docs/CONFIGURATION.md) for details.
+Read the [Configuration Guide](docs/CONFIGURATION.md) for more data.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project uses the [MIT License](LICENSE).
 
 ---
 
