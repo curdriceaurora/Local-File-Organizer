@@ -17,6 +17,7 @@ from bump_version import (
     _FILE_ORGANIZER_V_VERSION,
     _README_BADGE_VERSION,
     Touchpoint,
+    _shields_badge_version,
     find_drift,
     main,
 )
@@ -114,6 +115,24 @@ class TestFindDrift:
         assert len(stale) == 1
         assert f"version-{__version__}-blue" in doc.read_text(encoding="utf-8")
 
+    def test_readme_badge_prerelease_version_is_rewritten(self, tmp_path: Path) -> None:
+        doc = tmp_path / "README.md"
+        doc.write_text(
+            "[![Version](https://img.shields.io/badge/version-0.0.1--rc1-blue)](CHANGELOG.md)\n",
+            encoding="utf-8",
+        )
+        tp = Touchpoint(doc, _README_BADGE_VERSION)
+
+        stale = find_drift(fix=True, touchpoints=[tp])
+
+        assert len(stale) == 1
+        text = doc.read_text(encoding="utf-8")
+        assert f"version-{__version__}-blue" in text
+        assert "--rc1-blue" not in text
+
+    def test_readme_badge_expected_formatter_uses_shields_hyphen_encoding(self) -> None:
+        assert _shields_badge_version("2.2.0-rc1") == "2.2.0--rc1"
+
     def test_docs_support_version_is_rewritten(self, tmp_path: Path) -> None:
         doc = tmp_path / "index.md"
         doc.write_text(
@@ -129,6 +148,21 @@ class TestFindDrift:
             encoding="utf-8"
         )
 
+    def test_docs_support_prerelease_version_is_rewritten(self, tmp_path: Path) -> None:
+        doc = tmp_path / "index.md"
+        doc.write_text(
+            "This documentation supports File Organizer `0.0.1-rc1`. To read older versions.\n",
+            encoding="utf-8",
+        )
+        tp = Touchpoint(doc, _DOCS_SUPPORT_VERSION)
+
+        stale = find_drift(fix=True, touchpoints=[tp])
+
+        assert len(stale) == 1
+        text = doc.read_text(encoding="utf-8")
+        assert f"This documentation supports File Organizer `{__version__}`." in text
+        assert "-rc1`" not in text
+
     def test_file_organizer_v_version_is_rewritten(self, tmp_path: Path) -> None:
         doc = tmp_path / "__init__.py"
         doc.write_text('"""File Organizer v0.0.1 - package docstring."""\n', encoding="utf-8")
@@ -138,6 +172,18 @@ class TestFindDrift:
 
         assert len(stale) == 1
         assert f"File Organizer v{__version__}" in doc.read_text(encoding="utf-8")
+
+    def test_file_organizer_v_prerelease_version_is_rewritten(self, tmp_path: Path) -> None:
+        doc = tmp_path / "__init__.py"
+        doc.write_text('"""File Organizer v0.0.1-rc1 - package docstring."""\n', encoding="utf-8")
+        tp = Touchpoint(doc, _FILE_ORGANIZER_V_VERSION, lambda version: f"v{version}")
+
+        stale = find_drift(fix=True, touchpoints=[tp])
+
+        assert len(stale) == 1
+        text = doc.read_text(encoding="utf-8")
+        assert f"File Organizer v{__version__}" in text
+        assert "-rc1 - package" not in text
 
 
 class TestMain:

@@ -44,25 +44,33 @@ def _windows_assembly_version(version: str) -> str:
     return f"{version}.0"
 
 
+def _shields_badge_version(version: str) -> str:
+    """Encode hyphenated pre-release versions for shields.io badge URLs."""
+    return version.replace("-", "--")
+
+
 def _with_v_prefix(version: str) -> str:
     """Return the version string with the human-facing ``v`` prefix."""
     return f"v{version}"
 
+
+_SEMVER_STAMP = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?"
+_SHIELDS_SEMVER_STAMP = r"\d+\.\d+\.\d+(?:--[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?"
 
 # Matches the "**Version**: X.Y.Z" stamp used verbatim (optionally inside a
 # blockquote, as in docs/tui.md's "> **Version**: X.Y.Z").
 _DOC_VERSION_STAMP = re.compile(r"\*\*Version\*\*:\s*(?P<version>\S+)")
 
 # Matches the shields.io README version badge URL segment.
-_README_BADGE_VERSION = re.compile(r"version-(?P<version>\d+\.\d+\.\d+)")
+_README_BADGE_VERSION = re.compile(rf"version-(?P<version>{_SHIELDS_SEMVER_STAMP})")
 
 # Matches docs/index.md's prose support statement.
 _DOCS_SUPPORT_VERSION = re.compile(
-    r"This documentation supports File Organizer\s+`?(?P<version>\d+\.\d+\.\d+)`?"
+    rf"This documentation supports File Organizer\s+`?(?P<version>{_SEMVER_STAMP})`?"
 )
 
 # Matches package/module docstrings that include "File Organizer vX.Y.Z".
-_FILE_ORGANIZER_V_VERSION = re.compile(r"File Organizer\s+(?P<version>v\d+\.\d+\.\d+)")
+_FILE_ORGANIZER_V_VERSION = re.compile(rf"File Organizer\s+(?P<version>v{_SEMVER_STAMP})")
 
 # Matches only File Organizer's own <assemblyIdentity> in the Windows
 # manifest (not the nested Microsoft.Windows.Common-Controls dependency,
@@ -83,7 +91,7 @@ class Touchpoint:
 
 
 TOUCHPOINTS: list[Touchpoint] = [
-    Touchpoint(REPO_ROOT / "README.md", _README_BADGE_VERSION),
+    Touchpoint(REPO_ROOT / "README.md", _README_BADGE_VERSION, _shields_badge_version),
     Touchpoint(REPO_ROOT / "README.md"),
     Touchpoint(REPO_ROOT / "docs" / "index.md", _DOCS_SUPPORT_VERSION),
     Touchpoint(REPO_ROOT / "docs" / "index.md"),
