@@ -31,6 +31,13 @@ Release recovery patch for the interrupted `2.0.1` publishing flow. This release
 
 Post-GA hardening and UX release. Tightens unsafe-by-default settings, makes the plugin sandbox deny-by-default, and broadens the TUI Settings view into a single run-configuration surface. Part of the post-GA hardening & UX epic (#1501). Install/upgrade with `pip install -U local-file-organizer` (or `pipx upgrade local-file-organizer`).
 
+### Highlights
+
+- **Deny-by-default plugins**: Plugins must now explicitly declare permissions in their manifest, eliminating implicit file access grants.
+- **TUI Settings Overhaul**: Settings UI now manages methodology, model choice, and default directories in one place.
+- **Safe-by-default binding**: Local API now binds safely to `127.0.0.1` and enforces authentication placeholders.
+- **Preview Apply**: Previews can now be applied directly from the TUI with immediate undo visibility.
+
 ### Security
 
 - **Plugins are now deny-by-default (#1488)** — completed across #1502 and #1533. The unrestricted and implicit read-only sandbox fallbacks were removed (#1502), and a plugin's own `plugin.json` can no longer self-grant blanket access: `_build_sandbox_from_manifest` ignores `allow_all_operations`/`allow_all_paths`, building a policy only from the specific `allowed_paths`/`allowed_operations` it enumerates (#1533). Blanket grants are host-only — a host that trusts a plugin must pass an explicit `policy=` (e.g. `PluginSecurityPolicy.unrestricted()`) to `load_plugin()`. Manifests that previously relied on implicit access now need to enumerate their grants. Phase 2 (signed-manifest / repo-pinning trust) remains scoped in #1488.
@@ -61,6 +68,13 @@ Post-GA hardening and UX release. Tightens unsafe-by-default settings, makes the
 
 First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after stabilizing the executable-build and release pipelines and closing the last write-path symlink-hardening gap. Installable from PyPI: `pip install local-file-organizer` (or `pipx install local-file-organizer`).
 
+### Highlights
+
+- **GA Release**: Reached production stability (5 - Production/Stable) and stabilized the executable release pipeline.
+- **Symlink hardening completed**: Legacy organize copy paths hardened via `SafeDir` against TOCTOU symlink redirect attacks.
+- **Consolidated Linux binaries**: GitHub release focuses on Linux AppImage and CLI; macOS and Windows handled by pip/pipx.
+- **Deterministic release packaging**: Fixed packaging scripts to stamp the true 2.0.0 version on executable artifacts.
+
 ### Security
 
 - **Legacy organize copy paths hardened (#1481, closes #1479)** — `pipeline.orchestrator._organize_file` and `core.file_ops.organize_files` now route their file copies through the shared SafeDir helper (`O_NOFOLLOW` fd-based copy with symlinked-destination/ancestor/source refusal and full `copy2` metadata parity) instead of raw `shutil.copy2`. This closes the last two unhardened copy call sites left as follow-up debt after the WP-2.2 writer-stage work, so a symlink swapped in between path validation and the copy can no longer redirect the write out of the output tree. Falls back to `shutil.copy2` on Windows.
@@ -84,6 +98,14 @@ First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after 
 - **Executable build/release lane stabilized (#1473–#1478)** — resolved the executable-build workflow blockers, narrowed and stabilized the build test-lane selection, and fixed macOS executable verification that had failed on the `2.0.0-beta.1` tag.
 
 ## [2.0.0-beta.1] - 2026-07-04
+
+### Highlights
+
+- **Audio Model Integration**: Whisper (faster-whisper) implemented with size selection and native device/compute type fallbacks.
+- **Symlink TOCTOU Hardening**: Comprehensive `SafeDir`-based symlink refusal (leaf and ancestor paths) deployed across text processors, dedup, archivers, and writer stages.
+- **Crash-Safe Operations**: Cross-device durable move, trash garbage collection, atomic configuration writes, and rollback/undo hardening deployed.
+- **Desktop UI Swap**: Removed Rust/Tauri architecture in favor of a pure-Python pywebview native application.
+- **Deterministic Offline Processing**: Migrated off NLTK to offline, vendored dependencies (snowballstemmer and stopwords).
 
 ### Added
 
