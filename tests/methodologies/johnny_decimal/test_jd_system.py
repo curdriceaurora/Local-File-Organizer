@@ -69,28 +69,28 @@ class TestExtractNumberFromPath:
     """Cover _extract_number_from_path — lines 107."""
 
     def test_extract_area_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("root/10 Finance"))
+        num = system._extract_number_from_path(Path("root") / "10 Finance")
         assert num is not None
         assert num.area == 10
 
     def test_extract_category_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("root/11.01 Budgets"))
+        num = system._extract_number_from_path(Path("root") / "11.01 Budgets")
         assert num is not None
         assert num.area == 11
         assert num.category == 1
 
     def test_extract_id_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("root/11.01.001 Q1 Budget"))
+        num = system._extract_number_from_path(Path("root") / "11.01.001 Q1 Budget")
         assert num is not None
         assert num.item_id == 1
 
     def test_extract_no_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("root/Random Folder"))
+        num = system._extract_number_from_path(Path("root") / "Random Folder")
         assert num is None
 
     def test_extract_empty_name(self, system: JohnnyDecimalSystem) -> None:
         """Edge case with empty name returns None — no crash expected."""
-        num = system._extract_number_from_path(Path("root/"))
+        num = system._extract_number_from_path(Path("root"))
         assert num is None
 
 
@@ -245,7 +245,7 @@ class TestSystemCoverage:
     # Single part (just a number, no name)
     def test_extract_number_no_name_part(self, system: JohnnyDecimalSystem) -> None:
         """When path name is just '10' with no additional parts, name stays empty."""
-        num = system._extract_number_from_path(Path("root/10"))
+        num = system._extract_number_from_path(Path("root") / "10")
         assert num is not None
         assert num.area == 10
         assert num.name == ""
@@ -253,7 +253,7 @@ class TestSystemCoverage:
     # Line 116->122: when len(parts) > 1 with extension in name part
     def test_extract_number_with_extension_in_name(self, system: JohnnyDecimalSystem) -> None:
         """Name part containing a dot triggers Path().stem extraction."""
-        num = system._extract_number_from_path(Path("root/10 report.pdf"))
+        num = system._extract_number_from_path(Path("root") / "10 report.pdf")
         assert num is not None
         assert num.name == "report"
 
@@ -405,5 +405,5 @@ class TestSystemCoverage:
     # load_configuration file not found
     def test_load_config_file_not_found(self, system: JohnnyDecimalSystem, tmp_path: Path) -> None:
         missing_config = tmp_path / "missing_config.json"
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
             system.load_configuration(missing_config)

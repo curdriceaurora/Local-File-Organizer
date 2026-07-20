@@ -10,6 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.utils.import_mocks import make_fake_import
+
 # We need to mock faster_whisper before importing the module under test,
 # because it's imported at module level.
 mock_faster_whisper = MagicMock()
@@ -314,16 +316,10 @@ class TestDetectDevice:
         """When torch is not installed at all, we fall back to cpu."""
         t = AudioTranscriber.__new__(AudioTranscriber)
 
-        original_import = (
-            __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
-        )
-
-        def fake_import(name, *args, **kwargs):
-            if name == "torch":
-                raise ImportError("no torch")
-            return original_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("torch",)),
+        ):
             result = t._detect_device("auto")
         assert result == "cpu"
 

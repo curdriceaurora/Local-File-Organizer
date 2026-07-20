@@ -29,8 +29,9 @@ Tasks:
   test-full     run main-branch non-benchmark suite on Python 3.11.15 and 3.12.13 in parallel
   benchmark     run benchmark suite on Python 3.11.15 then 3.12.13 sequentially
   integration   integration coverage gate
+  unit-floors   unit coverage run plus per-file unit floor check
   security      pip-audit and bandit
-  all           quick + benchmark + integration + security
+  all           quick + benchmark + integration + unit-floors + security
 
 Options:
   --python BIN  Python executable to use for non-matrix tasks (default: python3)
@@ -323,6 +324,26 @@ run_integration() {
     scripts/coverage/check-integration-floors.py
 }
 
+run_unit_floors() {
+  run_step \
+    "Run unit coverage" \
+    "$PYTHON_BIN" -m pytest \
+    tests/ \
+    -m \
+    unit \
+    --strict-markers \
+    --cov=file_organizer \
+    --cov-branch \
+    --cov-fail-under=0 \
+    --cov-report=json:.coverage-unit.json \
+    --timeout=60 \
+    --override-ini=addopts=
+  run_step \
+    "Check per-file unit coverage floors" \
+    "$PYTHON_BIN" \
+    scripts/coverage/check_module_coverage_floor.py
+}
+
 run_security() {
   run_step \
     "Run pip-audit" \
@@ -347,10 +368,11 @@ expand_task() {
         "test"
         "benchmark"
         "integration"
+        "unit-floors"
         "security"
       )
       ;;
-    lint|unused-deps|type-check|links|test|test-full|benchmark|integration|security)
+    lint|unused-deps|type-check|links|test|test-full|benchmark|integration|unit-floors|security)
       TASKS+=("$task")
       ;;
     *)
@@ -432,6 +454,9 @@ for task in "${TASKS[@]}"; do
       ;;
     integration)
       run_integration
+      ;;
+    unit-floors)
+      run_unit_floors
       ;;
     security)
       run_security

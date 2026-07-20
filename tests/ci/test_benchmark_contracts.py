@@ -16,7 +16,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_PATH = REPO_ROOT / "tests" / "fixtures" / "benchmark_baseline.json"
 CLI_DOC_PATH = REPO_ROOT / "docs" / "cli-reference.md"
 PERF_DOC_PATH = REPO_ROOT / "docs" / "admin" / "performance-tuning.md"
-RUNNER = CliRunner()
+# The JSON-contract tests parse ``result.stdout``, so stderr must stay out of
+# it. click >= 8.2 always captures stderr separately, but click < 8.2 defaults
+# to ``mix_stderr=True`` — suite-runner warnings (``typer.echo(..., err=True)``)
+# would land in ``result.stdout`` ahead of the JSON document and break
+# ``json.loads``. Request separated streams explicitly on old click; the
+# keyword was removed in 8.2, where separation is unconditional.
+try:
+    RUNNER = CliRunner(mix_stderr=False)  # type: ignore[call-arg]  # click < 8.2
+except TypeError:
+    RUNNER = CliRunner()
 
 
 def _build_contract_payload(
@@ -161,7 +170,7 @@ def test_baseline_schema_validator_rejects_missing_metric() -> None:
         },
     }
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="p95_ms"):
         _assert_baseline_schema_contract(bad_payload)
 
 

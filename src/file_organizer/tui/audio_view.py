@@ -7,7 +7,6 @@ and AI-powered classification results.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,11 +16,11 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.tui.status import StatusMixin
+
 if TYPE_CHECKING:
     from file_organizer.services.audio.classifier import ClassificationResult
     from file_organizer.services.audio.metadata_extractor import AudioMetadata
-
-logger = logging.getLogger(__name__)
 
 # Audio file extensions to scan for
 _AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".flac", ".m4a", ".ogg"})
@@ -176,7 +175,7 @@ class AudioClassificationPanel(Static):
         self.update("\n".join(lines))
 
 
-class AudioView(Vertical):
+class AudioView(StatusMixin, Vertical):
     """Audio file browser and classifier view mounted as ``#view``.
 
     Bindings:
@@ -347,15 +346,6 @@ class AudioView(Vertical):
         _, metadata, classification = self._files[index]
         self.query_one(AudioMetadataPanel).set_metadata(metadata)
         self.query_one(AudioClassificationPanel).set_classification(classification)
-
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("AudioView status bar unavailable", exc_info=True)
 
 
 def _truncate(text: str, max_len: int) -> str:

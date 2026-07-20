@@ -228,7 +228,7 @@ class TestGenerate:
 
             model = LlamaCppTextModel(_make_config())
             # client is None, _initialized is False
-            with pytest.raises(RuntimeError):
+            with pytest.raises(RuntimeError, match="Model not initialized"):
                 model.generate("prompt")
 
     def test_generate_retries_on_token_exhaustion(self) -> None:

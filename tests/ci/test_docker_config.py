@@ -87,7 +87,7 @@ class TestDockerfileStructure:
 
     def test_dockerfile_installs_to_opt_venv(self, dockerfile_content: str) -> None:
         """Verify dependencies are installed into /opt/venv."""
-        assert "/opt/venv" in dockerfile_content, "Dependencies should be installed to /opt/venv"
+        assert "/opt/venv" in dockerfile_content, "Dependencies should be installed to /opt/venv"  # noqa: test-hardcoded-paths
 
     def test_dockerfile_runtime_installs_ffmpeg(self, dockerfile_content: str) -> None:
         """Verify runtime stage installs ffmpeg."""
@@ -455,7 +455,7 @@ class TestValidateDockerfile:
 
     def test_validate_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing Dockerfile."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             validate_dockerfile("/nonexistent/Dockerfile")
 
     def test_validate_detects_no_from(self, tmp_path: Path) -> None:
@@ -506,7 +506,7 @@ class TestParseDockerCompose:
 
     def test_parse_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing compose file."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             parse_docker_compose("/nonexistent/docker-compose.yml")
 
     def test_parse_invalid_yaml(self, tmp_path: Path) -> None:
@@ -542,7 +542,7 @@ class TestGetImageSizeEstimate:
 
     def test_estimate_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing Dockerfile."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
             get_image_size_estimate("/nonexistent/Dockerfile")
 
     def test_estimate_returns_positive_int(self) -> None:

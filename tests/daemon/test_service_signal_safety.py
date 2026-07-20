@@ -33,7 +33,7 @@ def _make_config(**kwargs) -> DaemonConfig:
     """
     defaults = {
         "watch_directories": [],
-        "output_directory": Path("tmp/organized"),
+        "output_directory": Path("tmp") / "organized",
         "pid_file": None,
         "poll_interval": 0.05,
     }
@@ -157,9 +157,9 @@ class TestPipeClosedOnRestore:
         assert daemon._sig_wakeup_w is None, "Write FD should be None after restoring handlers"
 
         # Verify fds are actually closed (os.fstat should fail)
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="Bad file descriptor"):
             os.fstat(r_fd)
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="Bad file descriptor"):
             os.fstat(w_fd)
 
 

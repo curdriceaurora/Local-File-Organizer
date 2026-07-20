@@ -21,6 +21,7 @@ from file_organizer.services.audio.transcriber import (
     TranscriptionResult,
     WordTiming,
 )
+from tests.utils.import_mocks import make_fake_import
 
 pytestmark = [pytest.mark.unit]
 
@@ -202,12 +203,12 @@ class TestAudioTranscriberInit:
                 model_size=ModelSize.LARGE_V3,
                 device="cpu",
                 compute_type=ComputeType.FLOAT32,
-                cache_dir=Path("/tmp/cache"),
+                cache_dir=Path("/") / "tmp" / "cache",  # noqa: test-hardcoded-paths
                 num_workers=4,
             )
         assert t.model_size == ModelSize.LARGE_V3
         assert t.compute_type == ComputeType.FLOAT32
-        assert t.cache_dir == Path("/tmp/cache")
+        assert t.cache_dir == Path("/") / "tmp" / "cache"  # noqa: test-hardcoded-paths
         assert t.num_workers == 4
 
 
@@ -246,15 +247,10 @@ class TestDetectDevice:
         assert result == "mps"
 
     def test_auto_cpu_no_torch(self):
-        def fake_import(name, *args, **kwargs):
-            if name == "torch":
-                raise ImportError("no torch")
-            return original_import(name, *args, **kwargs)
-
-        import builtins
-
-        original_import = builtins.__import__
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("torch",)),
+        ):
             t = AudioTranscriber.__new__(AudioTranscriber)
             result = AudioTranscriber._detect_device(t, "auto")
         assert result == "cpu"
@@ -298,15 +294,10 @@ class TestLoadModel:
         assert result is mock_model
 
     def test_import_error(self, transcriber):
-        def fake_import(name, *args, **kwargs):
-            if "faster_whisper" in name:
-                raise ImportError("no faster_whisper")
-            return original_import(name, *args, **kwargs)
-
-        import builtins
-
-        original_import = builtins.__import__
-        with patch("builtins.__import__", side_effect=fake_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("faster_whisper",)),
+        ):
             with pytest.raises(ImportError, match="faster-whisper is required"):
                 transcriber._load_model()
 

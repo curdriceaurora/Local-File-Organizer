@@ -98,22 +98,33 @@ class TestNormalizeMethodology:
     """Test the _normalize_methodology helper."""
 
     def test_known_methodology(self):
-        """Verifies known methodology names are returned unchanged."""
+        """Verifies canonical methodology names are returned unchanged."""
         assert _normalize_methodology("para") == "para"
-        assert _normalize_methodology("johnny_decimal") == "johnny_decimal"
-        assert _normalize_methodology("date_based") == "date_based"
+        assert _normalize_methodology("jd") == "jd"
+        assert _normalize_methodology("none") == "none"
+
+    def test_legacy_aliases_map_to_canonical(self):
+        """Pre-unification web values should map to their canonical equivalent."""
+        assert _normalize_methodology("johnny_decimal") == "jd"
+        assert _normalize_methodology("content_based") == "none"
 
     def test_none_returns_default(self):
-        """Verifies None input falls back to the default 'content_based' methodology."""
-        assert _normalize_methodology(None) == "content_based"
+        """Verifies None input falls back to the default 'none' methodology."""
+        assert _normalize_methodology(None) == "none"
 
     def test_empty_string_returns_default(self):
         """Verifies an empty string falls back to the default methodology."""
-        assert _normalize_methodology("") == "content_based"
+        assert _normalize_methodology("") == "none"
 
     def test_unknown_returns_default(self):
-        """Verifies an unrecognised methodology name falls back to the default."""
-        assert _normalize_methodology("unknown_method") == "content_based"
+        """Verifies an unrecognised methodology name falls back to the default.
+
+        ``date_based`` was a web-only dropdown option with no organizer
+        implementation behind it anywhere in the codebase, so it is not a
+        recognized alias either — it falls back like any other unknown value.
+        """
+        assert _normalize_methodology("unknown_method") == "none"
+        assert _normalize_methodology("date_based") == "none"
 
     def test_case_insensitive(self):
         """Verifies methodology names are matched case-insensitively."""
@@ -347,13 +358,13 @@ class TestPlanStore:
             _store_organize_plan,
         )
 
-        record = _store_organize_plan({"input_dir": "/tmp", "files": []})
+        record = _store_organize_plan({"input_dir": "/tmp", "files": []})  # noqa: test-hardcoded-paths
         plan_id = record["plan_id"]
         assert plan_id in _ORGANIZE_PLAN_STORE
 
         retrieved = _get_organize_plan(plan_id)
         assert retrieved is not None
-        assert retrieved["input_dir"] == "/tmp"
+        assert retrieved["input_dir"] == "/tmp"  # noqa: test-hardcoded-paths
 
         _delete_organize_plan(plan_id)
         assert _get_organize_plan(plan_id) is None
@@ -733,10 +744,12 @@ class TestModuleConstants:
     """Verify module-level constants are sensible."""
 
     def test_methodologies_dict(self):
-        """Verifies the methodologies dict contains all expected methodology keys."""
-        assert "johnny_decimal" in ORGANIZE_METHODOLOGIES
-        assert "para" in ORGANIZE_METHODOLOGIES
-        assert "content_based" in ORGANIZE_METHODOLOGIES
+        """Verifies the methodologies dict is exactly the canonical vocabulary.
+
+        ``date_based`` was removed: it was a web-only dropdown option with no
+        organizer implementation behind it anywhere in the codebase (#1538).
+        """
+        assert set(ORGANIZE_METHODOLOGIES) == {"none", "para", "jd"}
 
     def test_max_delay(self):
         """Verifies ORGANIZE_MAX_DELAY_MIN is positive and equals 7 days in minutes."""

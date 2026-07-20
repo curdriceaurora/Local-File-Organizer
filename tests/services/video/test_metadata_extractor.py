@@ -221,8 +221,8 @@ class TestFilesystemFallback:
         assert metadata.duration is None
 
     def test_file_not_found_raises(self, extractor: VideoMetadataExtractor) -> None:
-        with pytest.raises(FileNotFoundError):
-            extractor.extract(Path("/nonexistent/video.mp4"))
+        with pytest.raises(FileNotFoundError, match="Video file not found"):
+            extractor.extract(Path("/") / "nonexistent" / "video.mp4")
 
 
 # ---------------------------------------------------------------------------

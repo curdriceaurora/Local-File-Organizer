@@ -3,8 +3,17 @@
 // Priority chain (each stage falls through to the next on failure/unavailability):
 //   1. pywebview js_api  — desktop app, full absolute path
 //   2. Server API        — direct uvicorn on macOS, full absolute path via osascript
-//   3. showDirectoryPicker — browser File System Access API, folder name only
-//   4. <input webkitdirectory> — last resort, folder name only
+// Browser-only folder pickers intentionally are not used because they expose
+// folder names rather than absolute paths.
+const showDirectoryPickerUnavailable = (input) => {
+  const hint = document.getElementById(`${input.id}-hint`);
+  if (hint) {
+    hint.textContent = "Browse is unavailable here. Type the full absolute path.";
+    hint.classList.add("field-hint-warning");
+  }
+  input.focus();
+};
+
 window.browseDirectory = async (inputId) => {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -33,51 +42,14 @@ window.browseDirectory = async (inputId) => {
       if (data.available && data.cancelled) {
         return; // user dismissed the dialog — do nothing
       }
-      // data.available === false → server can't show dialog, fall through
+      // data.available === false → server can't show dialog, show typed-path guidance
     }
   } catch (e) {
-    // Network error or server unreachable — fall through to browser methods
+    // Network error or server unreachable — show typed-path guidance
     console.warn("browse-folder API error:", e);
   }
 
-  // 3. File System Access API (Chromium 86+, Safari 15.2+).
-  //    Can only return folder *name*, not the full path (browser security sandbox).
-  //    Intentional: only populate when empty — partial folder name should not
-  //    clobber a full path the user typed manually. Tiers 1 & 2 always overwrite
-  //    because they return a reliable absolute path.
-  //    On error (SecurityError, NotSupportedError, etc.) fall through — do NOT return.
-  if (window.showDirectoryPicker) {
-    try {
-      const handle = await window.showDirectoryPicker({ mode: "read" });
-      if (!input.value) input.value = handle.name;
-      return;
-    } catch (e) {
-      if (e.name === "AbortError") return; // user cancelled — do nothing
-      console.warn("showDirectoryPicker error, falling back:", e);
-      // Any other error (SecurityError, NotAllowedError, etc.) → fall through
-    }
-  }
-
-  // 4. Fallback: hidden <input type=file webkitdirectory>.
-  //    Shows a native Finder dialog; can only return folder name (not absolute path).
-  //    Intentional: only populate when empty (same rationale as tier 3 above).
-  const picker = document.createElement("input");
-  picker.type = "file";
-  picker.webkitdirectory = true;
-  picker.style.position = "fixed";
-  picker.style.opacity = "0";
-  picker.style.pointerEvents = "none";
-  picker.onchange = () => {
-    if (picker.files && picker.files.length > 0) {
-      const rel = picker.files[0].webkitRelativePath;
-      if (!input.value) input.value = rel.split("/")[0];
-    }
-    picker.remove();
-  };
-  // Remove the element if the user cancels without selecting (no onchange fires).
-  picker.addEventListener("cancel", () => picker.remove());
-  document.body.appendChild(picker);
-  picker.click();
+  showDirectoryPickerUnavailable(input);
 };
 
 (() => {
@@ -121,6 +93,15 @@ window.browseDirectory = async (inputId) => {
     }
   };
 
+  const showSetupMessage = (message, level = "error") => {
+    const element = document.getElementById("setup-message");
+    if (!element) return;
+    element.hidden = false;
+    element.textContent = message;
+    element.classList.remove("setup-message-error", "setup-message-info");
+    element.classList.add(level === "info" ? "setup-message-info" : "setup-message-error");
+  };
+
   const detectCapabilities = async () => {
     updateDetectionStatus("ollama-status", "checking", "Checking...");
     updateDetectionStatus("memory-status", "checking", "Checking...");
@@ -148,9 +129,12 @@ window.browseDirectory = async (inputId) => {
           `Installed (${detectionData.ollama.version || "unknown version"})`
         );
       } else if (detectionData.ollama.installed) {
-        updateDetectionStatus("ollama-status", "warning", "Installed but not running");
+        const nextStep = detectionData.ollama.next_steps?.[0] || "Start Ollama: ollama serve";
+        updateDetectionStatus("ollama-status", "warning", `Installed but not running. ${nextStep}`);
       } else {
-        updateDetectionStatus("ollama-status", "error", "Not installed");
+        const nextStep =
+          detectionData.ollama.next_steps?.[0] || "Install Ollama from https://ollama.com/download";
+        updateDetectionStatus("ollama-status", "error", `Not installed. ${nextStep}`);
       }
 
       updateDetectionStatus(
@@ -178,7 +162,14 @@ window.browseDirectory = async (inputId) => {
           `${detectionData.models.length} model(s) available`
         );
       } else {
-        updateDetectionStatus("models-status", "warning", "No models installed");
+        const pullStep = detectionData.ollama.next_steps?.find((step) =>
+          step.includes("ollama pull")
+        );
+        updateDetectionStatus(
+          "models-status",
+          "warning",
+          pullStep || "No models installed"
+        );
       }
 
       const recommendationPanel = document.getElementById("recommendation-panel");
@@ -260,7 +251,7 @@ window.browseDirectory = async (inputId) => {
     const outputDir = document.getElementById("output-dir")?.value;
 
     if (!textModel) {
-      alert("Please select a text model");
+      showSetupMessage("Please select a text model.");
       return;
     }
 
@@ -268,7 +259,7 @@ window.browseDirectory = async (inputId) => {
       models: {
         text_model: textModel,
       },
-      methodology: methodology || "content_based",
+      methodology: methodology || "none",
     };
 
     if (visionModel) {
@@ -313,14 +304,15 @@ window.browseDirectory = async (inputId) => {
       if (result.success) {
         showStep(4);
       } else {
-        alert(`Setup failed: ${result.errors.join(", ")}`);
+        const errorText = result.errors?.length ? result.errors.join(", ") : "Unknown error";
+        showSetupMessage(`Setup failed: ${errorText}`);
         if (btnComplete) {
           btnComplete.disabled = false;
           btnComplete.textContent = "Complete Setup";
         }
       }
     } catch (error) {
-      alert(`Setup error: ${error.message}`);
+      showSetupMessage(`Setup error: ${error.message}`);
       if (btnComplete) {
         btnComplete.disabled = false;
         btnComplete.textContent = "Complete Setup";

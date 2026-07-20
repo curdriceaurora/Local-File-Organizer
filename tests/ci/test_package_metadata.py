@@ -43,8 +43,15 @@ class TestPackageMetadata:
 
     def test_project_version_set(self) -> None:
         data = _load_pyproject()
-        version = data.get("project", {}).get("version", "")
-        assert version, "project.version is missing"
+        project = data.get("project", {})
+        dynamic = set(project.get("dynamic", []))
+        version = project.get("version", "")
+        dynamic_version = (
+            data.get("tool", {}).get("setuptools", {}).get("dynamic", {}).get("version")
+        )
+        assert version or ("version" in dynamic and dynamic_version), (
+            "project.version is missing and no dynamic version source is configured"
+        )
 
     def test_project_description_set(self) -> None:
         data = _load_pyproject()

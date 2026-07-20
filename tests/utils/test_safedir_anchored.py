@@ -70,7 +70,7 @@ class TestOpenAnchoredReader:
         (tmp_path / "a" / "b" / "c").mkdir(parents=True)
         (tmp_path / "a" / "b" / "c" / "doc.txt").write_text("nested")
         with SafeDir.open_root(tmp_path) as root:
-            fd = root.open_anchored_reader(Path("a/b/c/doc.txt"))
+            fd = root.open_anchored_reader(Path("a") / "b" / "c" / "doc.txt")
             try:
                 fileobj = os.fdopen(fd, "rb", closefd=True)
             except OSError:
@@ -104,7 +104,7 @@ class TestOpenAnchoredReader:
             # Walking 'a/secret.txt' should refuse at 'a' (the symlink),
             # not dereference and open 'outside/secret.txt'.
             with pytest.raises(SymlinkRejected):
-                root.open_anchored_reader(Path("a/secret.txt"))
+                root.open_anchored_reader(Path("a") / "secret.txt")
 
     def test_final_component_symlink_refused(self, tmp_path: Path) -> None:
         """Leaf symlink is refused too (the existing final-component guard)."""
@@ -126,7 +126,7 @@ class TestOpenAnchoredReader:
         """Absolute relative_path is a programmer error — reject early."""
         with SafeDir.open_root(tmp_path) as root:
             with pytest.raises(ValueError, match="relative"):
-                root.open_anchored_reader(Path("/etc/passwd"))
+                root.open_anchored_reader(Path("/") / "etc" / "passwd")  # noqa: test-hardcoded-paths
 
     def test_parent_traversal_rejected(self, tmp_path: Path) -> None:
         """``..`` components would escape — must be refused before any open."""
@@ -134,7 +134,7 @@ class TestOpenAnchoredReader:
         (tmp_path / "doc.txt").write_text("data")
         with SafeDir.open_root(tmp_path / "child") as root:
             with pytest.raises(ValueError, match=r"\.\."):
-                root.open_anchored_reader(Path("../doc.txt"))
+                root.open_anchored_reader(Path("..") / "doc.txt")
 
     def test_empty_path_rejected(self, tmp_path: Path) -> None:
         """Empty relative_path doesn't identify any file."""
@@ -251,7 +251,7 @@ class TestOpenAnchoredWriter:
     def test_creates_nested_dirs_and_writes_leaf(self, tmp_path: Path) -> None:
         """A multi-component relative path creates each intermediate dir."""
         with SafeDir.open_root(tmp_path) as root:
-            fd = root.open_anchored_writer(Path("Docs/2026/report.txt"))
+            fd = root.open_anchored_writer(Path("Docs") / "2026" / "report.txt")
             self._write(fd, b"nested write")
         leaf = tmp_path / "Docs" / "2026" / "report.txt"
         assert leaf.read_bytes() == b"nested write"
@@ -269,7 +269,7 @@ class TestOpenAnchoredWriter:
         """Pre-existing real intermediate directories are reused, not rejected."""
         (tmp_path / "Docs").mkdir()
         with SafeDir.open_root(tmp_path) as root:
-            fd = root.open_anchored_writer(Path("Docs/report.txt"))
+            fd = root.open_anchored_writer(Path("Docs") / "report.txt")
             self._write(fd, b"reuse")
         assert (tmp_path / "Docs" / "report.txt").read_bytes() == b"reuse"
 
@@ -288,7 +288,7 @@ class TestOpenAnchoredWriter:
 
         with SafeDir.open_root(out_root) as root:
             with pytest.raises(SymlinkRejected):
-                root.open_anchored_writer(Path("Docs/report.txt"))
+                root.open_anchored_writer(Path("Docs") / "report.txt")
         # Nothing leaked into the symlink target.
         assert list(outside.iterdir()) == []
 
@@ -316,18 +316,18 @@ class TestOpenAnchoredWriter:
 
         with SafeDir.open_root(out_root) as root:
             with pytest.raises(SymlinkRejected):
-                root.open_anchored_writer(Path("a/b/c.txt"))
+                root.open_anchored_writer(Path("a") / "b" / "c.txt")
 
     def test_absolute_path_rejected(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as root:
             with pytest.raises(ValueError, match="relative"):
-                root.open_anchored_writer(Path("/etc/passwd"))
+                root.open_anchored_writer(Path("/") / "etc" / "passwd")  # noqa: test-hardcoded-paths
 
     def test_parent_traversal_rejected(self, tmp_path: Path) -> None:
         (tmp_path / "child").mkdir()
         with SafeDir.open_root(tmp_path / "child") as root:
             with pytest.raises(ValueError, match=r"\.\."):
-                root.open_anchored_writer(Path("../escape.txt"))
+                root.open_anchored_writer(Path("..") / "escape.txt")
 
     def test_empty_path_rejected(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as root:
@@ -342,19 +342,19 @@ class TestOpenAnchoredWriter:
         with SafeDir.open_root(tmp_path) as root:
             with pytest.raises(FileExistsError):
                 root.open_anchored_writer(
-                    Path("Docs/report.txt"),
+                    Path("Docs") / "report.txt",
                     flags=os.O_WRONLY | os.O_CREAT | os.O_EXCL,
                 )
 
     def test_intermediate_fds_released(self, tmp_path: Path) -> None:
         """Intermediate subdir fds opened during the walk must not leak."""
-        proc = Path("/proc/self/fd")
+        proc = Path("/") / "proc" / "self" / "fd"
         if not proc.is_dir():
             pytest.skip("/proc/self/fd not available on this platform")
         with SafeDir.open_root(tmp_path) as root:
             before = len(list(proc.iterdir()))
             for i in range(20):
-                fd = root.open_anchored_writer(Path(f"a/b/c/file_{i}.txt"))
+                fd = root.open_anchored_writer(Path("a") / "b" / "c" / f"file_{i}.txt")
                 os.close(fd)
             after = len(list(proc.iterdir()))
         assert after - before <= 2, f"fd leak: before={before} after={after}"

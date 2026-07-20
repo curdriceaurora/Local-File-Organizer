@@ -16,16 +16,16 @@ def test_get_canonical_paths_uses_xdg_when_available():
     with patch.dict(
         os.environ,
         {
-            "XDG_CONFIG_HOME": "/tmp/test-xdg-config",
-            "XDG_DATA_HOME": "/tmp/test-xdg-data",
-            "XDG_STATE_HOME": "/tmp/test-xdg-state",
+            "XDG_CONFIG_HOME": "/tmp/test-xdg-config",  # noqa: test-hardcoded-paths
+            "XDG_DATA_HOME": "/tmp/test-xdg-data",  # noqa: test-hardcoded-paths
+            "XDG_STATE_HOME": "/tmp/test-xdg-state",  # noqa: test-hardcoded-paths
         },
     ):
         paths = get_canonical_paths()
 
-        assert paths["config"] == Path("/tmp/test-xdg-config/file-organizer")
-        assert paths["data"] == Path("/tmp/test-xdg-data/file-organizer")
-        assert paths["state"] == Path("/tmp/test-xdg-state/file-organizer")
+        assert paths["config"] == Path("/") / "tmp" / "test-xdg-config" / "file-organizer"  # noqa: test-hardcoded-paths
+        assert paths["data"] == Path("/") / "tmp" / "test-xdg-data" / "file-organizer"  # noqa: test-hardcoded-paths
+        assert paths["state"] == Path("/") / "tmp" / "test-xdg-state" / "file-organizer"  # noqa: test-hardcoded-paths
         # Cache uses platformdirs user_cache_dir, which is independent of XDG_DATA_HOME
         from platformdirs import user_cache_dir
 
@@ -56,7 +56,7 @@ def test_get_canonical_paths_uses_home_defaults():
 
 def test_path_manager_creates_directories():
     """PathManager should create all necessary directories"""
-    with patch.dict(os.environ, {"HOME": "/tmp/test-home"}):
+    with patch.dict(os.environ, {"HOME": "/tmp/test-home"}):  # noqa: test-hardcoded-paths
         manager = PathManager()
         # Mock mkdir to verify calls
         with patch.object(Path, "mkdir") as mock_mkdir:
@@ -67,7 +67,7 @@ def test_path_manager_creates_directories():
 
 def test_path_manager_provides_specific_paths():
     """PathManager should provide specific file paths"""
-    with patch.dict(os.environ, {"HOME": "/home/user"}):
+    with patch.dict(os.environ, {"HOME": "/home/user"}):  # noqa: test-hardcoded-paths
         manager = PathManager()
 
         assert str(manager.config_file).endswith("config.json")

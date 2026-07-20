@@ -53,7 +53,7 @@ class TestScalingConfig:
     def test_config_frozen(self) -> None:
         """Test that ScalingConfig is immutable."""
         config = ScalingConfig()
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             config.min_replicas = 5  # type: ignore[misc]
 
     def test_invalid_min_replicas(self) -> None:
@@ -118,7 +118,7 @@ class TestScalingMetrics:
     def test_metrics_frozen(self) -> None:
         """Test that ScalingMetrics is immutable."""
         metrics = ScalingMetrics()
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             metrics.cpu_percent = 50.0  # type: ignore[misc]
 
 

@@ -229,7 +229,7 @@ def test_preference_store_with_path_manager_production_workflow():
 
             # Add and save preferences
             pref_store.add_preference(
-                path=Path("/home/user/Documents"),
+                path=Path("/") / "home" / "user" / "Documents",  # noqa: test-hardcoded-paths
                 preference_data={
                     "folder_mappings": {"important": "Archive"},
                     "naming_patterns": {"pattern_1": "*.pdf"},

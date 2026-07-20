@@ -151,13 +151,22 @@ def test_noqa_safedir_required_suppresses_open(tmp_path: Path) -> None:
     assert checker.check_file(src) == []
 
 
-def test_bare_noqa_suppresses_open(tmp_path: Path) -> None:
-    src = tmp_path / "exempt_bare.py"
+def test_bare_noqa_does_not_suppress_open(tmp_path: Path) -> None:
+    src = tmp_path / "bare.py"
     src.write_text(
         "with open('file.txt') as f:  # noqa\n    pass\n",
         encoding="utf-8",
     )
-    assert checker.check_file(src) == []
+    assert len(checker.check_file(src)) == 1
+
+
+def test_string_literal_noqa_does_not_suppress_open(tmp_path: Path) -> None:
+    src = tmp_path / "string_literal.py"
+    src.write_text(
+        "msg = 'noqa: safedir-required'\nwith open('file.txt') as f:\n    pass\n",
+        encoding="utf-8",
+    )
+    assert len(checker.check_file(src)) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -197,3 +206,71 @@ def test_main_returns_one_on_violations(tmp_path: Path, monkeypatch: pytest.Monk
     (pkg / "bad.py").write_text("with open('x') as f:\n    pass\n", encoding="utf-8")
     result = checker.main()
     assert result == 1
+
+
+# ---------------------------------------------------------------------------
+# Alias imports and false validations
+# ---------------------------------------------------------------------------
+
+
+def test_flags_shutil_alias_import(tmp_path: Path) -> None:
+    src = tmp_path / "bad.py"
+    src.write_text("import shutil as sh\nsh.copy2(src, dst)\n", encoding="utf-8")
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "raw shutil.copy2()" in violations[0][1]
+
+
+def test_flags_shutil_direct_import_alias(tmp_path: Path) -> None:
+    src = tmp_path / "bad.py"
+    src.write_text("from shutil import copy2 as my_copy\nmy_copy(src, dst)\n", encoding="utf-8")
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "raw shutil.copy2()" in violations[0][1]
+
+
+def test_flags_open_alias_import(tmp_path: Path) -> None:
+    src = tmp_path / "bad.py"
+    src.write_text(
+        "from builtins import open as my_open\nwith my_open('x') as f:\n    pass\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "raw open()" in violations[0][1]
+
+
+def test_flags_builtins_open_call(tmp_path: Path) -> None:
+    src = tmp_path / "bad.py"
+    src.write_text("import builtins\nwith builtins.open('x') as f:\n    pass\n", encoding="utf-8")
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "raw open()" in violations[0][1]
+
+
+def test_flags_path_resolve_false_validation(tmp_path: Path) -> None:
+    src = tmp_path / "bad.py"
+    src.write_text(
+        "p = Path('x')\n"
+        "if p.resolve().is_relative_to('/safe') and p.exists():\n"
+        "    with p.open() as f:\n"
+        "        pass\n",
+        encoding="utf-8",
+    )
+    violations = checker.check_file(src)
+    assert len(violations) == 1
+    assert "raw Path.open()" in violations[0][1]
+
+
+def test_allows_exempt_namespaces_open(tmp_path: Path) -> None:
+    src = tmp_path / "ok.py"
+    src.write_text(
+        "import cv2\n"
+        "import zipfile\n"
+        "import wave\n"
+        "cv2.open(path)\n"
+        "zipfile.open(path)\n"
+        "wave.open(path)\n",
+        encoding="utf-8",
+    )
+    assert checker.check_file(src) == []

@@ -1,6 +1,6 @@
 # Module Diagrams
 
-This page captures the current alpha3 runtime flow for the highest-churn subsystems referenced in issue `#1025`.
+This page captures the current runtime flow for the highest-churn subsystems referenced in issue `#1025`.
 
 ## Parallel Processing
 
@@ -38,7 +38,7 @@ The executor path is selected from `ParallelConfig.executor_type`; the implement
 
 ## Pipeline Orchestration
 
-`PipelineOrchestrator` supports both the composable stage path and the legacy router-plus-processor path. The stage path is the canonical alpha3 flow.
+`PipelineOrchestrator` supports both the composable stage path and the legacy router-plus-processor path. The stage path is the canonical flow.
 
 ```mermaid
 flowchart TD

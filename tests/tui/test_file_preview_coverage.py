@@ -259,7 +259,7 @@ class TestFilePreviewViewActions:
 
     def test_action_deselect_all(self) -> None:
         view = FilePreviewView()
-        view.selection._selected.add(Path("tmp/a.txt"))
+        view.selection._selected.add(Path("tmp") / "a.txt")
         view.post_message = MagicMock()
         view._notify_selection = MagicMock()
         view.action_deselect_all()
@@ -279,5 +279,5 @@ class TestFilePreviewViewActions:
 
     def test_init_custom_path(self) -> None:
         view = FilePreviewView(path="tmp/test")
-        assert view._root_path == Path("tmp/test")
+        assert view._root_path == Path("tmp") / "test"
         assert view._current_path is None

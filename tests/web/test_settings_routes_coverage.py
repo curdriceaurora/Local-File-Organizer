@@ -7,7 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
+from file_organizer.config.schema import AppConfig
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.fixture(autouse=True)
@@ -34,6 +36,14 @@ def mock_templates():
 
 
 @pytest.fixture()
+def mock_manager():
+    """Return a mock ConfigManager backed by a fresh default AppConfig."""
+    manager = MagicMock()
+    manager.load.return_value = AppConfig()
+    return manager
+
+
+@pytest.fixture()
 def mock_base_context():
     """Patch base_context to return a minimal dict."""
     with patch(
@@ -46,12 +56,12 @@ def mock_base_context():
 class TestSettingsPageRoute:
     """Covers settings_page handler."""
 
-    def test_settings_page(self, mock_templates, mock_base_context) -> None:
+    def test_settings_page(self, mock_templates, mock_base_context, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_page
 
         request = MagicMock()
         settings_obj = MagicMock()
-        settings_page(request, settings_obj)
+        settings_page(request, settings_obj, manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
 
@@ -80,111 +90,122 @@ class TestSettingsSearchRoute:
 class TestSettingsExportRoute:
     """Covers settings_export handler."""
 
-    def test_export_returns_json(self) -> None:
+    def test_export_returns_json(self, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_export
 
-        response = settings_export()
+        response = settings_export(manager=mock_manager)
         assert response.media_type == "application/json"
         payload = json.loads(response.body)
         assert "language" in payload
+        assert "default_input_dir" in payload
+        assert "default_methodology" in payload
 
 
 class TestSettingsImportRoute:
     """Covers settings_import handler."""
 
     @pytest.mark.asyncio
-    async def test_import_valid(self, mock_templates) -> None:
+    async def test_import_valid(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_import
 
         upload = MagicMock()
         upload.read.return_value = json.dumps({"language": "fr", "theme": "dark"}).encode()
         request = MagicMock()
-        await settings_import(request, section="general", settings_file=upload)
+        await settings_import(
+            request, section="general", settings_file=upload, manager=mock_manager
+        )
         mock_templates.TemplateResponse.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_import_invalid_json(self, mock_templates) -> None:
+    async def test_import_invalid_json(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_import
 
         upload = MagicMock()
         upload.read.return_value = b"not json"
         request = MagicMock()
-        await settings_import(request, section="general", settings_file=upload)
+        await settings_import(
+            request, section="general", settings_file=upload, manager=mock_manager
+        )
         # Should render with error message
         mock_templates.TemplateResponse.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_import_non_dict(self, mock_templates) -> None:
+    async def test_import_non_dict(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_import
 
         upload = MagicMock()
         upload.read.return_value = b'"just a string"'
         request = MagicMock()
-        await settings_import(request, section="models", settings_file=upload)
+        await settings_import(request, section="models", settings_file=upload, manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
 
 class TestSettingsResetRoute:
     """Covers settings_reset handler."""
 
-    def test_reset(self, mock_templates) -> None:
+    def test_reset(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_reset
 
         request = MagicMock()
-        settings_reset(request, section="advanced")
+        settings_reset(request, section="advanced", manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
 
 class TestSettingsSectionGetRoutes:
     """Covers GET section routes."""
 
-    def test_general_get(self, mock_templates) -> None:
+    def test_general_get(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_general_get
 
-        settings_general_get(MagicMock())
+        settings_general_get(MagicMock(), manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_models_get(self, mock_templates) -> None:
+    def test_models_get(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_models_get
 
-        settings_models_get(MagicMock())
+        settings_models_get(MagicMock(), manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_get(self, mock_templates) -> None:
+    def test_organization_get(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_get
 
-        settings_organization_get(MagicMock())
+        settings_organization_get(MagicMock(), manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_appearance_get(self, mock_templates) -> None:
+    def test_appearance_get(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_appearance_get
 
-        settings_appearance_get(MagicMock())
+        settings_appearance_get(MagicMock(), manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_advanced_get(self, mock_templates) -> None:
+    def test_advanced_get(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_advanced_get
 
-        settings_advanced_get(MagicMock())
+        settings_advanced_get(MagicMock(), manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
 
 class TestSettingsSectionPostRoutes:
     """Covers POST section routes."""
 
-    def test_general_post(self, mock_templates) -> None:
+    def test_general_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_general_post
 
         settings_general_post(
-            MagicMock(), language="fr", timezone="UTC", default_input_dir="", default_output_dir=""
+            MagicMock(),
+            language="fr",
+            timezone="UTC",
+            default_input_dir="",
+            default_output_dir="",
+            manager=mock_manager,
         )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_general_post_exception(self, mock_templates) -> None:
+    def test_general_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_general_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_general_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_general_post(
@@ -193,28 +214,39 @@ class TestSettingsSectionPostRoutes:
                 timezone="UTC",
                 default_input_dir="",
                 default_output_dir="",
+                manager=mock_manager,
             )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_models_post(self, mock_templates) -> None:
+    def test_models_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_models_post
 
         settings_models_post(
-            MagicMock(), text_model="m1", vision_model="m2", ollama_url="http://localhost:11434"
+            MagicMock(),
+            text_model="m1",
+            vision_model="m2",
+            ollama_url="http://localhost:11434",
+            manager=mock_manager,
         )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_models_post_exception(self, mock_templates) -> None:
+    def test_models_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_models_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_model_settings",
             side_effect=RuntimeError("boom"),
         ):
-            settings_models_post(MagicMock(), text_model="", vision_model="", ollama_url="")
+            settings_models_post(
+                MagicMock(),
+                text_model="",
+                vision_model="",
+                ollama_url="",
+                manager=mock_manager,
+            )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_models_test_success(self, mock_templates) -> None:
+    def test_models_test_success(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_models_test
 
         mock_response = MagicMock()
@@ -225,10 +257,12 @@ class TestSettingsSectionPostRoutes:
         mock_client.get.return_value = mock_response
 
         with patch("file_organizer.web.settings_routes.httpx.Client", return_value=mock_client):
-            settings_models_test(MagicMock(), ollama_url="http://localhost:11434")
+            settings_models_test(
+                MagicMock(), ollama_url="http://localhost:11434", manager=mock_manager
+            )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_models_test_failure(self, mock_templates) -> None:
+    def test_models_test_failure(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_models_test
 
         mock_client = MagicMock()
@@ -237,10 +271,10 @@ class TestSettingsSectionPostRoutes:
         mock_client.get.side_effect = ConnectionError("refused")
 
         with patch("file_organizer.web.settings_routes.httpx.Client", return_value=mock_client):
-            settings_models_test(MagicMock(), ollama_url="http://bad:1234")
+            settings_models_test(MagicMock(), ollama_url="http://bad:1234", manager=mock_manager)
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_post(self, mock_templates) -> None:
+    def test_organization_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_post
 
         settings_organization_post(
@@ -250,10 +284,11 @@ class TestSettingsSectionPostRoutes:
             notifications_enabled="1",
             file_filter_glob="*",
             organization_rules="docs/* -> Documents",
+            manager=mock_manager,
         )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_post_invalid_rules(self, mock_templates) -> None:
+    def test_organization_post_invalid_rules(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_post
 
         settings_organization_post(
@@ -263,14 +298,15 @@ class TestSettingsSectionPostRoutes:
             notifications_enabled=None,
             file_filter_glob="*",
             organization_rules="bad line without arrow",
+            manager=mock_manager,
         )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_post_exception(self, mock_templates) -> None:
+    def test_organization_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_post
 
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes.apply_organization_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_organization_post(
@@ -280,38 +316,50 @@ class TestSettingsSectionPostRoutes:
                 notifications_enabled=None,
                 file_filter_glob="*",
                 organization_rules="docs/* -> Documents",
+                manager=mock_manager,
             )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_validate_valid(self, mock_templates) -> None:
+    def test_organization_validate_valid(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_validate
 
-        settings_organization_validate(MagicMock(), organization_rules="docs/* -> Documents")
+        settings_organization_validate(
+            MagicMock(), organization_rules="docs/* -> Documents", manager=mock_manager
+        )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_organization_validate_invalid(self, mock_templates) -> None:
+    def test_organization_validate_invalid(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_organization_validate
 
-        settings_organization_validate(MagicMock(), organization_rules="no arrow")
+        settings_organization_validate(
+            MagicMock(), organization_rules="no arrow", manager=mock_manager
+        )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_appearance_post(self, mock_templates) -> None:
+    def test_appearance_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_appearance_post
 
-        settings_appearance_post(MagicMock(), theme="dark", custom_theme_name="mytheme")
+        settings_appearance_post(
+            MagicMock(), theme="dark", custom_theme_name="mytheme", manager=mock_manager
+        )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_appearance_post_exception(self, mock_templates) -> None:
+    def test_appearance_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_appearance_post
 
+        # The handler saves via update_form_section(save=_save_web_settings).
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes._save_web_settings",
             side_effect=RuntimeError("boom"),
         ):
-            settings_appearance_post(MagicMock(), theme="dark", custom_theme_name="")
+            settings_appearance_post(
+                MagicMock(), theme="dark", custom_theme_name="", manager=mock_manager
+            )
         mock_templates.TemplateResponse.assert_called_once()
+        context = mock_templates.TemplateResponse.call_args[0][2]
+        assert "boom" in context["error_message"]
 
-    def test_advanced_post(self, mock_templates) -> None:
+    def test_advanced_post(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_advanced_post
 
         settings_advanced_post(
@@ -320,14 +368,16 @@ class TestSettingsSectionPostRoutes:
             cache_enabled="1",
             debug_mode="1",
             performance_mode="performance",
+            manager=mock_manager,
         )
         mock_templates.TemplateResponse.assert_called_once()
 
-    def test_advanced_post_exception(self, mock_templates) -> None:
+    def test_advanced_post_exception(self, mock_templates, mock_manager) -> None:
         from file_organizer.web.settings_routes import settings_advanced_post
 
+        # The handler saves via update_form_section(save=_save_web_settings).
         with patch(
-            "file_organizer.web.settings_routes._update_web_settings",
+            "file_organizer.web.settings_routes._save_web_settings",
             side_effect=RuntimeError("boom"),
         ):
             settings_advanced_post(
@@ -336,8 +386,11 @@ class TestSettingsSectionPostRoutes:
                 cache_enabled=None,
                 debug_mode=None,
                 performance_mode="balanced",
+                manager=mock_manager,
             )
         mock_templates.TemplateResponse.assert_called_once()
+        context = mock_templates.TemplateResponse.call_args[0][2]
+        assert "boom" in context["error_message"]
 
 
 class TestLoadWebSettingsEdgeCases:
@@ -365,12 +418,12 @@ class TestLoadWebSettingsEdgeCases:
         ws = _load_web_settings()
         assert ws.language == "en"
 
-    def test_save_failure_does_not_raise(self) -> None:
+    def test_save_failure_raises(self) -> None:
         from file_organizer.web.settings_routes import WebSettings, _save_web_settings
 
         with patch(
             "file_organizer.web.settings_routes._SETTINGS_DIR",
             MagicMock(mkdir=MagicMock(side_effect=PermissionError("denied"))),
         ):
-            # Should not raise
-            _save_web_settings(WebSettings())
+            with pytest.raises(PermissionError, match="denied"):
+                _save_web_settings(WebSettings())

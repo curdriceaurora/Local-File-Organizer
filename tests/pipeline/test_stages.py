@@ -51,38 +51,38 @@ class TestStageContext:
 
     def test_rejects_path_traversal_in_category(self) -> None:
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="../etc")
+            StageContext(file_path=Path("input") / "file.txt", category="../etc")
 
     def test_rejects_path_traversal_in_filename(self) -> None:
         with pytest.raises(ValueError, match="Invalid filename"):
-            StageContext(file_path=Path("input/file.txt"), filename="../../etc/passwd")
+            StageContext(file_path=Path("input") / "file.txt", filename="../../etc/passwd")
 
     def test_rejects_windows_drive_in_category(self) -> None:
         # Regression for #760: "C:" has no slash but still escapes output_dir / category
         # on Windows via PureWindowsPath.drive being non-empty.
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="C:")
+            StageContext(file_path=Path("input") / "file.txt", category="C:")
 
     def test_rejects_windows_drive_with_path_in_category(self) -> None:
         # Drive-qualified path without a separator also escapes containment.
         with pytest.raises(ValueError, match="Invalid category"):
-            StageContext(file_path=Path("input/file.txt"), category="C:docs")
+            StageContext(file_path=Path("input") / "file.txt", category="C:docs")
 
     def test_rejects_windows_drive_in_filename(self) -> None:
         with pytest.raises(ValueError, match="Invalid filename"):
-            StageContext(file_path=Path("input/file.txt"), filename="C:")
+            StageContext(file_path=Path("input") / "file.txt", filename="C:")
 
     def test_rejects_windows_drive_in_filename_via_setattr(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"))
+        ctx = StageContext(file_path=Path("input") / "file.txt")
         with pytest.raises(ValueError, match="Invalid filename"):
             ctx.filename = "C:evil"
 
     def test_accepts_normal_category(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"), category="Documents")
+        ctx = StageContext(file_path=Path("input") / "file.txt", category="Documents")
         assert ctx.category == "Documents"
 
     def test_accepts_normal_filename(self) -> None:
-        ctx = StageContext(file_path=Path("input/file.txt"), filename="report_2026")
+        ctx = StageContext(file_path=Path("input") / "file.txt", filename="report_2026")
         assert ctx.filename == "report_2026"
 
 
@@ -116,7 +116,7 @@ class TestPreprocessorStage:
         assert result.filename == "hello"
 
     def test_file_not_found(self) -> None:
-        ctx = StageContext(file_path=Path("nonexistent/file.txt"))
+        ctx = StageContext(file_path=Path("nonexistent") / "file.txt")
         result = PreprocessorStage().process(ctx)
         assert result.failed
         assert result.error is not None
@@ -234,7 +234,7 @@ class TestPostprocessorStage:
     def test_builds_destination(self, tmp_path: Path) -> None:
         stage = PostprocessorStage(output_directory=tmp_path / "out")
         ctx = StageContext(
-            file_path=Path("input/report.pdf"),
+            file_path=Path("input") / "report.pdf",
             category="Documents",
             filename="quarterly_report",
         )
@@ -244,7 +244,7 @@ class TestPostprocessorStage:
 
     def test_defaults_to_uncategorized(self, tmp_path: Path) -> None:
         stage = PostprocessorStage(output_directory=tmp_path / "out")
-        ctx = StageContext(file_path=Path("input/file.txt"))
+        ctx = StageContext(file_path=Path("input") / "file.txt")
         result = stage.process(ctx)
 
         assert "uncategorized" in str(result.destination)
@@ -256,7 +256,7 @@ class TestPostprocessorStage:
 
         stage = PostprocessorStage(output_directory=tmp_path / "out")
         ctx = StageContext(
-            file_path=Path("input/file.txt"),
+            file_path=Path("input") / "file.txt",
             category="Docs",
             filename="file",
         )
@@ -277,7 +277,7 @@ class TestPostprocessorStage:
         out = tmp_path / "out"
         stage = PostprocessorStage(output_directory=out)
         ctx = StageContext(
-            file_path=Path("input/report.pdf"),
+            file_path=Path("input") / "report.pdf",
             category="Documents",
             filename="q3",
         )
@@ -286,7 +286,7 @@ class TestPostprocessorStage:
         assert result.output_root == out
         assert result.destination is not None
         # destination is reachable as a relative path under output_root
-        assert result.destination.relative_to(result.output_root) == Path("Documents/q3.pdf")
+        assert result.destination.relative_to(result.output_root) == Path("Documents") / "q3.pdf"
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +300,7 @@ class TestCopyFdXattrs:
     """Branch coverage for the best-effort xattr helper (no real FS needed)."""
 
     def test_noop_when_listxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.delattr(w.os, "listxattr", raising=False)
         w._copy_fd_xattrs(0, 1)  # returns early, no syscalls
@@ -308,7 +308,7 @@ class TestCopyFdXattrs:
     def test_listxattr_unsupported_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.ENOTSUP, "unsupported")
@@ -319,7 +319,7 @@ class TestCopyFdXattrs:
     def test_listxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         def _raise(_fd: int) -> list[str]:
             raise OSError(_errno.EIO, "io error")
@@ -328,10 +328,17 @@ class TestCopyFdXattrs:
         with pytest.raises(OSError, match="io error"):
             w._copy_fd_xattrs(0, 1)
 
+    def test_noop_when_getxattr_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from file_organizer.utils import safe_copy as w
+
+        monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
+        monkeypatch.delattr(w.os, "getxattr", raising=False)
+        w._copy_fd_xattrs(0, 1)  # returns early when xattr copy calls are unavailable
+
     def test_setxattr_permission_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
         monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
@@ -345,7 +352,7 @@ class TestCopyFdXattrs:
     def test_setxattr_other_error_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import errno as _errno
 
-        from file_organizer.pipeline.stages import writer as w
+        from file_organizer.utils import safe_copy as w
 
         monkeypatch.setattr(w.os, "listxattr", lambda _fd: ["user.x"], raising=False)
         monkeypatch.setattr(w.os, "getxattr", lambda _fd, _name: b"v", raising=False)
@@ -417,13 +424,17 @@ class TestWriterStage:
     def test_skips_when_already_failed(self) -> None:
         ctx = StageContext(
             file_path=Path("x.txt"),
-            destination=Path("out/x.txt"),
+            destination=Path("out") / "x.txt",
             error="prior",
             dry_run=False,
         )
         result = WriterStage().process(ctx)
         assert result.error == "prior"
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX fd-copy path; Windows falls back to shutil.copy2 (see test_writer_stage_windows_platform_fallback)",
+    )
     def test_special_file_error_destination(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -458,12 +469,12 @@ class TestWriterStage:
         dest = tmp_path / "dest.txt"
 
         # Mock _copy_via_safedir to raise NotImplementedError
-        from file_organizer.pipeline.stages import writer
+        from file_organizer.utils import safe_copy
 
         def mock_copy_via_safedir(source, destination):
             raise NotImplementedError("SafeDir not implemented on this platform")
 
-        monkeypatch.setattr(writer, "_copy_via_safedir", mock_copy_via_safedir)
+        monkeypatch.setattr(safe_copy, "_copy_via_safedir", mock_copy_via_safedir)
 
         ctx = StageContext(file_path=src, destination=dest, dry_run=False)
         result = WriterStage().process(ctx)
@@ -471,6 +482,10 @@ class TestWriterStage:
         assert dest.exists()
         assert dest.read_text() == "content"
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX fd-copy path; Windows falls back to shutil.copy2 (see test_writer_stage_windows_platform_fallback)",
+    )
     def test_fdopen_os_error_closes_fd(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -524,6 +539,7 @@ class TestWriterStage:
         assert dest.exists()
         assert dest.read_text() == "fallback-content"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
     def test_copyxattr_fd_success(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify that _copy_fd_xattrs successfully copies extended attributes when they are present."""
         src = tmp_path / "src.txt"
@@ -559,6 +575,7 @@ class TestWriterStage:
         assert setxattr_calls[0][1] == b"user.comment"
         assert setxattr_calls[0][2] == b"test-comment"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="xattrs are POSIX-only")
     def test_copyxattr_fd_skipped_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

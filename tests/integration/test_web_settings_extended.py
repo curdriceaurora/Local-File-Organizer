@@ -3,8 +3,8 @@
 Covers: settings_page, settings_search, settings_export, settings_import,
 settings_reset, all section GET/POST routes (general, models, organization,
 appearance, advanced), settings_organization_validate, settings_models_test,
-and the pure helpers (_as_form_bool, _coerce_bool, _validate_choice,
-_validate_methodology, _validate_rules, WebSettings defaults).
+and the pure helpers (form_bool, coerce_bool, _validate_choice,
+_normalize_methodology, _validate_rules, WebSettings defaults).
 """
 
 from __future__ import annotations
@@ -19,9 +19,10 @@ from fastapi.responses import HTMLResponse
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.config.manager import ConfigManager
 from file_organizer.web.settings_routes import settings_router
 
 pytestmark = pytest.mark.integration
@@ -47,6 +48,9 @@ def settings_settings(tmp_path: Path) -> ApiSettings:
 def settings_client(settings_settings: ApiSettings, tmp_path: Path) -> TestClient:
     app = FastAPI()
     app.dependency_overrides[get_settings] = lambda: settings_settings
+    app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+        config_dir=tmp_path / "app-config"
+    )
     setup_exception_handlers(app)
     app.include_router(settings_router, prefix="/ui")
     client = TestClient(app, raise_server_exceptions=False)
@@ -62,43 +66,43 @@ def settings_client(settings_settings: ApiSettings, tmp_path: Path) -> TestClien
 # ---------------------------------------------------------------------------
 
 
-class TestAsFormBool:
+class TestFormBool:
     def test_none_returns_false(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
-        assert _as_form_bool(None) is False
+        assert form_bool(None) is False
 
     def test_true_string(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
         for v in ("1", "true", "True", "TRUE", "yes", "on"):
-            assert _as_form_bool(v) is True
+            assert form_bool(v) is True
 
     def test_false_string(self) -> None:
-        from file_organizer.web.settings_routes import _as_form_bool
+        from file_organizer.web._forms import form_bool
 
         for v in ("0", "false", "no", "off", ""):
-            assert _as_form_bool(v) is False
+            assert form_bool(v) is False
 
 
 class TestCoerceBool:
     def test_bool_passthrough(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool(True, False) is True
-        assert _coerce_bool(False, True) is False
+        assert coerce_bool(True, False) is True
+        assert coerce_bool(False, True) is False
 
     def test_string_truthy(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool("1", False) is True
-        assert _coerce_bool("true", False) is True
+        assert coerce_bool("1", False) is True
+        assert coerce_bool("true", False) is True
 
     def test_unknown_type_returns_default(self) -> None:
-        from file_organizer.web.settings_routes import _coerce_bool
+        from file_organizer.web._forms import coerce_bool
 
-        assert _coerce_bool(42, True) is True
-        assert _coerce_bool(42, False) is False
+        assert coerce_bool(42, True) is True
+        assert coerce_bool(42, False) is False
 
 
 class TestValidateChoice:
@@ -121,17 +125,17 @@ class TestValidateChoice:
         assert result == "dark"
 
 
-class TestValidateMethodology:
+class TestNormalizeMethodology:
     def test_valid_methodology(self) -> None:
-        from file_organizer.web.settings_routes import _validate_methodology
+        from file_organizer.web.settings_routes import _normalize_methodology
 
-        assert _validate_methodology("para") == "para"
-        assert _validate_methodology("PARA") == "para"
+        assert _normalize_methodology("para") == "para"
+        assert _normalize_methodology("PARA") == "para"
 
     def test_invalid_methodology_returns_default(self) -> None:
-        from file_organizer.web.settings_routes import _validate_methodology
+        from file_organizer.web.settings_routes import _normalize_methodology
 
-        assert _validate_methodology("unknown_meth") == "content_based"
+        assert _normalize_methodology("unknown_meth") == "none"
 
 
 class TestValidateRules:
@@ -384,9 +388,9 @@ class TestSettingsModelsPost:
                         headers=csrf_headers(settings_client),
                     )
         assert r.status_code == 200
-        if ws_file.exists():
-            data = json.loads(ws_file.read_text())
-            assert data["text_model"] == "qwen2.5:3b-instruct-q4_K_M"
+        app_config = ConfigManager(config_dir=tmp_path / "app-config").load()
+        assert app_config.models.text_model == "qwen2.5:3b-instruct-q4_K_M"
+        assert app_config.models.vision_model == "qwen2.5vl:7b-q4_K_M"
 
 
 # ---------------------------------------------------------------------------

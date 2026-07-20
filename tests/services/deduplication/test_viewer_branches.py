@@ -388,7 +388,7 @@ class TestGetImageMetadataIntegration:
     def test_raises_on_missing_file(self, tmp_path: Path) -> None:
         """_get_image_metadata raises FileNotFoundError when the image path does not exist."""
         viewer = ComparisonViewer(console=_silent_console())
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             viewer._get_image_metadata(tmp_path / "no_such_file.png")
 
     def test_modified_str_format(self, tmp_path: Path) -> None:

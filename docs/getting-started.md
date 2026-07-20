@@ -1,19 +1,34 @@
 # Getting Started with File Organizer
 
-This guide will help you install and set up File Organizer quickly.
+This document helps you to install and configure File Organizer quickly.
 
-## Installation Methods
+## First run with CLI
 
-Choose the installation method that best fits your needs:
+If you are a new user, use this terminal procedure:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after you record one organize run.
+
+Do you prefer a browser? Read the [Web UI Quick Start](web-ui/getting-started.md).
+
+## Install Methods
+
+Choose an installation method:
 
 === "Docker (Recommended)"
 
 ````markdown
-**Best for**: Production deployments, consistent environments
+**Best for**: Production deployments and consistent environments
 
-**Prerequisites**:
-- Docker & Docker Compose installed
-- 4GB+ available disk space
+**Requirements**:
+- Install Docker and Docker Compose.
+- Have 4GB or more of available disk space.
 
 **Install**:
 
@@ -24,20 +39,20 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-**Access**: Open browser to `http://localhost:8000/ui/`
+**Access**: Open your browser to `http://localhost:8000/ui/`
 
-See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
+Read the [Deployment Guide](admin/deployment.md) for more Docker setup data.
 ````
 
 === "Python Package"
 
 ````markdown
-**Best for**: Quick testing, simple deployments
+**Best for**: Quick tests and simple deployments
 
-**Prerequisites**:
-- Python 3.11 or higher
-- Ollama installed and running
-- 4GB+ available disk space
+**Requirements**:
+- Install Python 3.11 or higher.
+- Install and start Ollama.
+- Have 4GB or more of available disk space.
 
 **Install**:
 
@@ -48,20 +63,20 @@ pip install local-file-organizer
 file-organizer serve
 ```
 
-**Access**: Open browser to `http://localhost:8000/ui/`
+**Access**: Open your browser to `http://localhost:8000/ui/`
 
-See [Installation Guide](admin/installation.md) for options.
+Read the [Installation Guide](admin/installation.md) for more options.
 ````
 
 === "Desktop App"
 
 ````markdown
-**Best for**: Users who want a native window without managing a browser tab
+**Best for**: Users who want a native window.
 
-**Prerequisites**:
-- Python 3.11 or higher
-- Ollama installed and running
-- Linux only: `sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1`
+**Requirements**:
+- Install Python 3.11 or higher.
+- Install and start Ollama.
+- Linux only: run `sudo apt-get install -y libgirepository1.0-dev gir1.2-webkit2-4.1`
 
 **Install**:
 
@@ -79,24 +94,26 @@ pip install -e ".[desktop]"
 
 ```bash
 ollama serve &
-file-organizer-desktop
+file-organizer desktop   # preferred
+# fo desktop             # short alias
+# file-organizer-desktop # compatibility script (still available)
 ```
 
-A native OS window opens automatically — no browser required.
+A native OS window opens automatically. You do not need a browser.
 
-See [Desktop App Guide](desktop-app.md) for installation options, configuration, and troubleshooting.
+Read the [Desktop App Guide](desktop-app.md) for installation options and configuration procedures.
 ````
 
 === "From Source"
 
 ````markdown
-**Best for**: Development, customization
+**Best for**: Development and customization
 
-**Prerequisites**:
-- Python 3.11 or higher
-- Git
-- Ollama installed
-- Development tools (C compiler)
+**Requirements**:
+- Install Python 3.11 or higher.
+- Install Git.
+- Install Ollama.
+- Install development tools (C compiler).
 
 **Install**:
 
@@ -113,12 +130,12 @@ ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 file-organizer serve
 ```
 
-**Access**: Open browser to `http://localhost:8000/ui/`
+**Access**: Open your browser to `http://localhost:8000/ui/`
 ````
 
 ## System Requirements
 
-### Minimum
+### Minimum Requirements
 
 - **CPU**: 2-core processor
 - **RAM**: 8 GB
@@ -126,197 +143,139 @@ file-organizer serve
 - **Python**: 3.11+
 - **Ollama**: Latest version
 
-### Recommended
+### Recommended Requirements
 
-- **CPU**: 4+ cores
+- **CPU**: 4 cores or more
 - **RAM**: 16 GB or more
 - **Storage**: 20 GB SSD
-- **GPU**: NVIDIA, AMD, or Apple Silicon (optional, for faster processing)
+- **GPU**: NVIDIA, AMD, or Apple Silicon
 
-### Optional
+### Optional Requirements
 
-- **FFmpeg**: For audio/video preprocessing
-- **Node.js**: For plugin development
-- **Docker**: For containerized deployment
+- **FFmpeg**: Prepare audio and video.
+- **Node.js**: Develop plugins.
+- **Docker**: Use containers for deployment.
 
 ## Optional Features
 
-File Organizer supports modular installation through optional dependency groups. Install only the features you need:
+Find the optional extras in one matrix:
 
-| Feature | Install Command | What It Enables | Platform Notes |
-|---------|----------------|-----------------|----------------|
-| **Core** | `pip install local-file-organizer` | Basic file organization, Ollama integration, YAML/JSON/TXT parsing | All platforms |
-| **parsers** | `pip install local-file-organizer[parsers]` | PDF, Word, Excel, PowerPoint, eBook, HTML parsing | All platforms |
-| **web** | `pip install local-file-organizer[web]` | Web interface, REST API server, WebSocket support | All platforms |
-| **cloud** | `pip install local-file-organizer[cloud]` | OpenAI-compatible API providers (OpenAI, Groq, LM Studio, vLLM) | Requires `OPENAI_API_KEY` |
-| **llama** | `pip install local-file-organizer[llama]` | Direct GGUF inference via llama.cpp (no Ollama server needed) | All platforms |
-| **mlx** | `pip install local-file-organizer[mlx]` | Apple Silicon MLX acceleration for faster local inference | **macOS only** |
-| **claude** | `pip install local-file-organizer[claude]` | Anthropic Claude API provider (text and vision) | Requires `ANTHROPIC_API_KEY` |
-| **audio** | `pip install local-file-organizer[audio]` | Audio transcription (Faster Whisper), metadata extraction | GPU recommended |
-| **video** | `pip install local-file-organizer[video]` | Video frame processing, scene detection | All platforms |
-| **dedup** | `pip install local-file-organizer[dedup]` | Image and text similarity-based duplicate detection | All platforms |
-| **archive** | `pip install local-file-organizer[archive]` | 7Z and RAR archive extraction | RAR requires `unrar` tool |
-| **scientific** | `pip install local-file-organizer[scientific]` | HDF5, NetCDF, MATLAB file format support | All platforms |
-| **cad** | `pip install local-file-organizer[cad]` | DXF/DWG CAD file parsing | All platforms |
-| **build** | `pip install local-file-organizer[build]` | PyInstaller-based executable packaging | All platforms |
-| **search** | `pip install local-file-organizer[search]` | BM25-based search ranking algorithms | All platforms |
-| **all** | `pip install local-file-organizer[all]` | All optional packs above, plus development tools (`pytest`, `mypy`, `ruff`, etc.) and PyQt6 GUI dependencies | Includes `dev` and `gui` extras in addition to feature/build packs |
+- [Dependencies & Optional Extras](setup/dependencies.md#optional-extras-matrix)
 
-**Example usage:**
+Common examples:
 
 ```bash
-# Install multiple features at once
-pip install local-file-organizer[parsers,web,cloud]
+# Source checkout with parser and web features
+pip install -e ".[parsers,web]"
 
-# Install from source with features
-pip install -e .[parsers,web]
+# Add cloud and Claude providers
+pip install -e ".[cloud,claude]"
 
-# Install everything
-pip install local-file-organizer[all]
+# Install all extras
+pip install -e ".[all]"
 ```
 
 ## First Run Setup
 
-After installation, File Organizer will guide you through initial setup:
+File Organizer starts an initial setup procedure after installation:
 
 ### 1. Welcome Screen
 
-When you first access File Organizer, you'll see a welcome screen with:
+When you first open File Organizer, a welcome screen shows:
 
-- License agreement
-- Basic configuration options
-- Link to full setup guide
+- The license agreement.
+- Basic configuration options.
+- A link to the full setup guide.
 
 ### 2. AI Model Configuration
 
-File Organizer supports two provider modes:
+Use this rule to make a decision:
 
-**Option A — Ollama (default, fully local):**
+1. **Use Ollama (default)** unless you need a cloud model.
+2. If you need cloud providers, use the [AI Provider Setup](setup/ai-providers.md).
 
-- **Text Model**: `qwen2.5:3b-instruct-q4_K_M` (~1.9 GB)
-- **Vision Model**: `qwen2.5vl:7b-q4_K_M` (~6.0 GB)
+Default local models:
 
-These are automatically pulled on first run if Ollama is available.
+- `qwen2.5:3b-instruct-q4_K_M` (text)
+- `qwen2.5vl:7b-q4_K_M` (vision)
 
-**Manual pull** (if needed):
+Manual model pull:
 
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
 ```
 
-**Option B — OpenAI-compatible endpoint (cloud or local API server):**
+Read these documents to find provider-specific environment variables:
 
-No Ollama required. Install the `[cloud]` extra and set environment variables:
-
-```bash
-pip install "local-file-organizer[cloud]"   # from PyPI
-# pip install -e ".[cloud]"           # from source checkout
-
-# Example: OpenAI
-export FO_PROVIDER=openai
-export FO_OPENAI_API_KEY=sk-...
-export FO_OPENAI_MODEL=gpt-4o-mini
-
-# Example: LM Studio (local, no key needed)
-export FO_PROVIDER=openai
-export FO_OPENAI_BASE_URL=http://localhost:1234/v1
-export FO_OPENAI_MODEL=your-loaded-model
-```
-
-**Option C — Anthropic Claude:**
-
-No Ollama required. Install the `[claude]` extra and set environment variables:
-
-```bash
-pip install "local-file-organizer[claude]"  # from PyPI
-# pip install -e ".[claude]"          # from source checkout
-
-export FO_PROVIDER=claude
-export FO_CLAUDE_API_KEY=sk-ant-...
-export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
-```
-
-Claude supports both text and vision tasks natively — no separate vision model configuration is required (though you can override with `FO_CLAUDE_VISION_MODEL`).
-
-See [Configuration Guide](CONFIGURATION.md) for the full list of providers and options.
+- [AI Provider Setup](setup/ai-providers.md)
+- [Configuration Guide](CONFIGURATION.md)
 
 ### 3. Workspace Configuration
 
 Set up your workspace:
 
-- **Workspace Path**: Where to store workspace data
-- **Watch Directories**: Which folders to monitor (optional)
-- **Organization Methodology**: Choose PARA, Johnny Decimal, or Custom
+- **Workspace Path**: Give the software a location to store workspace data.
+- **Watch Directories**: Give the software folders to monitor.
+- **Organization Methodology**: Choose PARA, Johnny Decimal, or Custom.
 
-### 4. API Configuration (Optional)
+### 4. API Configuration
 
-For external integrations:
+Configure external integrations:
 
-- Generate API keys
-- Configure rate limits
-- Set security options
+- Generate API keys.
+- Configure rate limits.
+- Set security options.
 
 ## Web Interface Overview
 
-Once logged in, the web interface has these main sections:
+Use the web interface at this address:
 
-### Dashboard
+```text
+http://localhost:8000/ui/
+```
 
-- Overview of recent activity
-- Quick access to main features
-- Storage statistics
+During the first run, an incomplete setup goes to this address:
 
-### File Browser
+```text
+http://localhost:8000/ui/setup
+```
 
-- Browse and organize files
-- Upload new files
-- View file properties
+Current top navigation sections:
 
-### Organization
+- Home
+- Files
+- Organize
+- Marketplace
+- Settings
+- Profile
 
-- Select methodology
-- Configure options
-- Start organization jobs
-- Monitor progress
+Use `/docs` and `/redoc` to find API documentation.
 
-### Analysis
+## Use the CLI
 
-- Duplicate detection
-- Storage analysis
-- Metadata extraction
-
-### Search
-
-- Full-text search
-- Apply filters
-- Save searches
-- Export results
-
-### Settings
-
-- Workspace management
-- User preferences
-- API configuration
-
-## Using the CLI
-
-File Organizer also provides a command-line interface:
+File Organizer includes a command-line interface:
 
 ### Basic Commands
 
 ```bash
+# Run guided quick-start setup
+file-organizer start
+
 # Start the web server and API
 file-organizer serve
 
 # Organize files
-file-organizer organize ./Downloads ./Organized
+fo organize ~/Downloads ~/Organized
 
 # Preview without moving (dry run)
 file-organizer organize ./Downloads ./Organized --dry-run
 
 # Preview organisation plan
 file-organizer preview ./Downloads
+
+# Show advanced tuning flags for organize
+file-organizer organize --advanced-help
 
 # Search for files
 file-organizer search "*.pdf" ~/Documents
@@ -348,24 +307,22 @@ file-organizer copilot chat
 Use `fo` instead of `file-organizer`:
 
 ```bash
+fo start
 fo serve
 fo organize ./Downloads ./Organized
 fo preview ./Downloads
-fo search "*.pdf" ~/Documents
-fo analyze ./report.pdf
-fo dedupe scan ./Documents
-fo analytics ./Documents
+fo undo
 ```
 
-See [CLI Reference](cli-reference.md) for all commands.
+Use the full [CLI Reference](cli-reference.md) for advanced commands.
 
-## Choosing an Organization Methodology
+## Organization Methodology
 
-File Organizer supports multiple organization systems:
+File Organizer includes multiple organization systems:
 
-### PARA (Projects, Areas, Resources, Archives)
+### PARA
 
-**Best for**: Knowledge workers, complex projects
+**Best for**: Knowledge workers and complex projects.
 
 **Structure**:
 
@@ -377,11 +334,11 @@ PARA/
 └── Archives/        # Completed projects
 ```
 
-**Learn more**: [PARA Guide](https://forte.com/reference/PARA)
+**Learn more**: Read the [PARA Guide](https://forte.com/reference/PARA).
 
 ### Johnny Decimal
 
-**Best for**: Hierarchical organization, fixed categories
+**Best for**: Hierarchical organization and fixed categories.
 
 **Structure**:
 
@@ -394,58 +351,56 @@ JD/
 │   ├── 21 Category C
 ```
 
-**Learn more**: [Johnny Decimal Guide](https://johnnydecimal.com)
+**Learn more**: Read the [Johnny Decimal Guide](https://johnnydecimal.com).
 
 ### Custom Methodology
 
-Create your own organization system using rules and templates.
+Create your own organization system with rules and templates.
 
-**Learn more**: [Custom Methodologies](developer/plugin-development.md)
+**Learn more**: Read [Custom Methodologies](developer/plugin-development.md).
 
 ## Common First Tasks
 
 ### 1. Upload Files
 
-Click the **Upload Files** button or drag files directly into the browser.
-
-Supported formats: 43+ file types including documents, images, videos, and more.
+Click **Upload Files** or drag files into the browser. The software supports 43 or more file types.
 
 ### 2. Organize Files
 
-1. Click **Organize**
-1. Select files to organize
-1. Choose methodology (PARA, Johnny Decimal, etc.)
-1. Review preview
-1. Click **Apply** to organize
+1. Click **Organize**.
+2. Select files to organize.
+3. Choose the methodology.
+4. Review the preview.
+5. Click **Apply**.
 
 ### 3. Find Duplicates
 
-1. Click **Analysis**
-1. Select **Duplicate Detection**
-1. Choose directory to scan
-1. Review results
-1. Choose files to keep or remove
+1. Click **Analysis**.
+2. Select **Duplicate Detection**.
+3. Choose the directory to scan.
+4. Review the results.
+5. Choose the files to keep or remove.
 
 ### 4. Search Files
 
-1. Click **Search**
-1. Enter search terms
-1. Apply filters if needed
-1. View results
-1. Export or download
+1. Click **Search**.
+2. Type the search terms.
+3. Apply filters.
+4. View the results.
+5. Export or download the results.
 
 ### 5. Configure Settings
 
-1. Click **Settings** (gear icon)
-1. Update workspace preferences
-1. Generate API keys if needed
-1. Configure methodology options
+1. Click **Settings**.
+2. Update the workspace preferences.
+3. Generate API keys.
+4. Configure methodology options.
 
-## Troubleshooting Installation
+## Troubleshoot Installation
 
 ### Ollama Connection Failed
 
-**Issue**: "Cannot connect to Ollama service"
+**Problem**: The software shows "Cannot connect to Ollama service".
 
 **Solutions**:
 
@@ -453,13 +408,37 @@ Supported formats: 43+ file types including documents, images, videos, and more.
 # Start Ollama service
 ollama serve
 
-# Verify it's running
+# Verify it operates correctly
 curl http://localhost:11434/api/version
 ```
 
+### AI Provider Not Connecting
+
+**Problem**: Provider fails to connect or shows an "unknown provider" error.
+
+**Solutions**:
+
+```bash
+# Install the required extra
+pip install "local-file-organizer[cloud]"    # OpenAI / Groq / LM Studio
+pip install "local-file-organizer[claude]"   # Anthropic Claude
+
+# Set environment variables for your provider
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=sk-...
+# For OpenAI-compatible endpoints (LM Studio, Groq, custom):
+# export FO_OPENAI_BASE_URL=http://localhost:1234/v1
+
+# For Claude
+export FO_PROVIDER=claude
+export FO_CLAUDE_API_KEY=sk-ant-...
+```
+
+Read [AI Provider Setup](setup/ai-providers.md) for full configuration data.
+
 ### Port Already in Use
 
-**Issue**: "Port 8000 is already in use"
+**Problem**: The software shows "Port 8000 is already in use".
 
 **Solution**:
 
@@ -467,7 +446,7 @@ curl http://localhost:11434/api/version
 # Find process using port 8000
 lsof -i :8000
 
-# Use a different port when starting the server
+# Use a different port when you start the server
 file-organizer serve --port 8001
 
 # Or with Docker Compose, edit .env: APP_PORT=8001
@@ -475,7 +454,7 @@ file-organizer serve --port 8001
 
 ### Models Not Found
 
-**Issue**: "Model not found" error
+**Problem**: The software shows a "Model not found" error.
 
 **Solution**:
 
@@ -490,23 +469,23 @@ ollama list
 
 ### Out of Memory
 
-**Issue**: "Out of memory" when processing files
+**Problem**: The software shows "Out of memory" when it processes files.
 
 **Solutions**:
 
-- Increase available RAM
-- Process smaller batches
-- Reduce maximum file size
-- Use CPU-only mode (slower but uses less RAM)
+- Increase the available RAM.
+- Process smaller batches of files.
+- Decrease the maximum file size.
+- Use CPU-only mode.
 
-For more issues, see [Troubleshooting Guide](troubleshooting.md).
+Read the [Troubleshooting Guide](troubleshooting.md) for more solutions.
 
 ## Next Steps
 
-- **Web Users**: Continue to [Web UI Guide](web-ui/index.md)
-- **API Users**: See [API Reference](api/index.md)
-- **Administrators**: Check [Deployment Guide](admin/deployment.md)
-- **Developers**: Read [Developer Guide](developer/index.md)
+- **Web Users**: Read the [Web UI Guide](web-ui/index.md).
+- **API Users**: Read the [API Reference](api/index.md).
+- **Administrators**: Read the [Deployment Guide](admin/deployment.md).
+- **Developers**: Read the [Developer Guide](developer/index.md).
 
 ## Getting Help
 
@@ -517,4 +496,4 @@ For more issues, see [Troubleshooting Guide](troubleshooting.md).
 
 ______________________________________________________________________
 
-**Ready to start?** Access File Organizer at `http://localhost:8000/ui/` and begin organizing your files!
+**Ready to start?** Open File Organizer at `http://localhost:8000/ui/` and start to organize your files!

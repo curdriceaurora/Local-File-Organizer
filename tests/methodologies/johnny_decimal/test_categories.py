@@ -20,7 +20,7 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     get_default_scheme,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @pytest.mark.unit
@@ -110,7 +110,7 @@ class TestJohnnyDecimalNumber:
         with pytest.raises(ValueError, match="Invalid Johnny Decimal format"):
             JohnnyDecimalNumber.from_string("10.01.005.001")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid Johnny Decimal format"):
             JohnnyDecimalNumber.from_string("invalid")
 
     def test_equality(self):
@@ -300,13 +300,13 @@ class TestNumberingResult:
         """Test creating a valid numbering result."""
         number = JohnnyDecimalNumber(area=10, category=1)
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.85,
             reasons=["Matched keywords", "High confidence"],
         )
 
-        assert result.file_path == Path("/test/file.txt")
+        assert result.file_path == Path("/") / "test" / "file.txt"
         assert result.number == number
         assert result.confidence == 0.85
         assert result.is_confident
@@ -319,7 +319,7 @@ class TestNumberingResult:
 
         with pytest.raises(ValueError, match=r"confidence must be between 0.0 and 1.0"):
             NumberingResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 number=number,
                 confidence=1.5,
                 reasons=["Test"],
@@ -327,7 +327,7 @@ class TestNumberingResult:
 
         with pytest.raises(ValueError, match="reasons list cannot be empty"):
             NumberingResult(
-                file_path=Path("/test/file.txt"),
+                file_path=Path("/") / "test" / "file.txt",
                 number=number,
                 confidence=0.8,
                 reasons=[],
@@ -338,7 +338,7 @@ class TestNumberingResult:
         number = JohnnyDecimalNumber(area=10)
 
         high_confidence = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.85,
             reasons=["High"],
@@ -347,7 +347,7 @@ class TestNumberingResult:
         assert not high_confidence.requires_review
 
         low_confidence = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.5,
             reasons=["Low"],
@@ -359,7 +359,7 @@ class TestNumberingResult:
         """Test conflict handling."""
         number = JohnnyDecimalNumber(area=10)
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.8,
             reasons=["Test"],
@@ -373,7 +373,7 @@ class TestNumberingResult:
         """Test dictionary conversion."""
         number = JohnnyDecimalNumber(area=10, category=1, name="Test")
         result = NumberingResult(
-            file_path=Path("/test/file.txt"),
+            file_path=Path("/") / "test" / "file.txt",
             number=number,
             confidence=0.8,
             reasons=["Reason 1"],
@@ -383,7 +383,10 @@ class TestNumberingResult:
 
         result_dict = result.to_dict()
 
-        assert result_dict["file_path"] == "/test/file.txt"
+        # ``to_dict`` serializes with ``str(path)``, which uses the native
+        # separator — compare against the same construction so the assertion
+        # holds on Windows (``\test\file.txt``) as well as POSIX.
+        assert result_dict["file_path"] == str(Path("/") / "test" / "file.txt")
         assert result_dict["number"] == "10.01"
         assert result_dict["number_name"] == "Test"
         assert result_dict["confidence"] == 0.8

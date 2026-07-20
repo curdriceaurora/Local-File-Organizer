@@ -13,6 +13,7 @@ from file_organizer.core.setup_wizard import (
     SystemCapabilities,
     WizardMode,
     WizardResult,
+    ollama_next_steps,
 )
 
 
@@ -155,6 +156,57 @@ class TestGenerateConfig:
         assert config.models.temperature == 0.8
         assert config.models.max_tokens == 4096
 
+    def test_generate_config_default_methodology_is_none(self):
+        """Absent custom_settings, default_methodology should be canonical 'none'."""
+        wizard = SetupWizard(mode=WizardMode.QUICK_START)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config()
+
+        assert config.default_methodology == "none"
+
+    def test_generate_config_applies_custom_methodology(self):
+        """custom_settings["methodology"] must reach AppConfig.default_methodology.
+
+        Regression test: the setup wizard's methodology selector previously sent
+        this value but generate_config() silently discarded it, always writing
+        "none" regardless of what the user picked. Also verifies this isn't
+        gated to POWER_USER mode, matching profile_name's existing treatment.
+        """
+        wizard = SetupWizard(mode=WizardMode.QUICK_START)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config(custom_settings={"methodology": "para"})
+
+        assert config.default_methodology == "para"
+
+    def test_generate_config_normalizes_legacy_methodology_alias(self):
+        """An unrecognized/legacy methodology value should normalize, not pass through."""
+        wizard = SetupWizard(mode=WizardMode.POWER_USER)
+        mock_hw = Mock(spec=HardwareProfile)
+        mock_hw.recommended_text_model.return_value = "qwen2.5:3b-instruct-q4_K_M"
+        wizard.capabilities = SystemCapabilities(
+            hardware=mock_hw,
+            ollama_status=OllamaStatus(installed=True, running=True),
+            installed_models=[],
+        )
+
+        config = wizard.generate_config(custom_settings={"methodology": "content_based"})
+
+        assert config.default_methodology == "none"
+
     def test_generate_config_uses_first_available_model(self):
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
 
@@ -274,7 +326,7 @@ class TestValidateConfig:
 
         assert is_valid is False
         assert len(errors) > 0
-        assert any("Ollama" in err for err in errors)
+        assert any("ollama serve" in err for err in errors)
 
     def test_validate_config_model_not_installed(self):
         wizard = SetupWizard(mode=WizardMode.QUICK_START)
@@ -363,6 +415,7 @@ class TestSaveConfig:
         mock_manager.save.assert_called_once()
         saved_config, saved_profile = mock_manager.save.call_args[0]
         assert saved_config.setup_completed is True
+        assert saved_config.setup_deferred is False
         assert saved_profile == "test-profile"
 
     def test_save_config_with_profile_override(self):
@@ -376,7 +429,42 @@ class TestSaveConfig:
         mock_manager.save.assert_called_once()
         saved_config, saved_profile = mock_manager.save.call_args[0]
         assert saved_config.setup_completed is True
+        assert saved_config.setup_deferred is False
         assert saved_profile == "override"
+
+
+class TestOllamaNextSteps:
+    def test_not_installed_prints_install_start_and_pull(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=False, running=False),
+            "qwen2.5:3b",
+        )
+
+        assert steps == [
+            "Install Ollama from https://ollama.com/download",
+            "Start Ollama: ollama serve",
+            "Pull the recommended model: ollama pull qwen2.5:3b",
+        ]
+
+    def test_running_without_models_prints_pull_command(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=True, running=True),
+            "qwen2.5:3b",
+            [],
+        )
+
+        assert steps == ["Pull the recommended model: ollama pull qwen2.5:3b"]
+
+    def test_installed_but_not_running_prints_start_and_pull_commands(self):
+        steps = ollama_next_steps(
+            OllamaStatus(installed=True, running=False),
+            "qwen2.5:3b",
+        )
+
+        assert steps == [
+            "Start Ollama: ollama serve",
+            "Pull the recommended model if needed: ollama pull qwen2.5:3b",
+        ]
 
 
 class TestWizardRun:

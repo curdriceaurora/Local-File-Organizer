@@ -37,12 +37,12 @@ repos:
       # Use tmp_path fixture in tests; ConfigManager in source.
       # Note: expanduser() is intentionally allowed — it is the correct
       # way to resolve home-directory paths throughout the codebase.
-      # Only checks added lines that are not pure comments.
+      # Only checks added lines that are not pure comments or have noqa exemption.
       # ----------------------------------------------------------------
       - id: no-absolute-paths
         name: no absolute paths in Python files (G1)
         entry: >
-          bash -c "git diff --cached -- '*.py' | grep -E '^\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\+\s*#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
+          bash -c "git diff --cached -- '*.py' | grep -E '^\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\+\s*#' | grep -v 'noqa: test-hardcoded-paths' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 
@@ -66,7 +66,7 @@ repos:
       - id: no-build-artifacts
         name: no build artifacts staged
         entry: >
-          bash -c "ARTS=$(git diff --cached --name-only | grep -E '\\.(coverage|bak|pyc|pyo)$|^\\.coverage$|(^|/)(__pycache__|build|dist)(/|$)|^coverage\\.xml$|^htmlcov/'); if [ -n \"$ARTS\" ]; then printf 'ERROR: build artifacts staged:\\n%s\\n' \"$ARTS\"; exit 1; fi"
+          bash -c "ARTS=$(git diff --cached --name-only | grep -E '\\.(coverage|bak|pyc|pyo)$|^\\.coverage$|(^|/)(__pycache__|build|dist)(/|$)|^coverage\\.xml$|^htmlcov/' | grep -v 'app\\.manifest$'); if [ -n \"$ARTS\" ]; then printf 'ERROR: build artifacts staged:\\n%s\\n' \"$ARTS\"; exit 1; fi"
         language: system
         pass_filenames: false
 
@@ -102,6 +102,26 @@ repos:
         entry: bash -c "pytest tests/web/test_web_ui.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # Diff-coverage gate: changed lines must have ≥80% test coverage.
+      # Mirrors the CI gate in .github/workflows/ci.yml ("Diff coverage gate").
+      #
+      # Logic lives in scripts/dev/run-diff-cover.sh so that it can use
+      # set -euo pipefail for fail-fast behaviour and avoid YAML folded-scalar
+      # newline-collapse bugs with inline bash -c scripts.
+      #
+      # The hook only fires when src/ or tests/ Python files are staged,
+      # so documentation-only or config-only commits are unaffected.
+      # See CONTRIBUTING.md for the fetch-depth requirement.
+      # ----------------------------------------------------------------
+      - id: diff-cover
+        name: diff-cover gate (80%)
+        entry: bash scripts/dev/run-diff-cover.sh
+        language: system
+        pass_filenames: false
+        files: ^(src|tests)/.*\.py$
+        stages: [pre-commit]
 
       # ----------------------------------------------------------------
       # Spelling

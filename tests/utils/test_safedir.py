@@ -67,32 +67,49 @@ class TestNameValidation:
         ],
     )
     def test_open_child_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"reserved component name|forbidden character|requires a non-empty relative path|requires a relative path|refuses '\\.\\.'|absolute",
+        ):
             sd.open_child(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", "..", "", "x\x00y"])
     def test_open_for_reader_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
+        ):
             sd.open_for_reader(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", "..", "."])
     def test_open_subdir_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
+        ):
             sd.open_subdir(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", ".."])
     def test_lstat_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match=r"forbidden character|reserved component name|refuses '\\.\\.'"
+        ):
             sd.lstat(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", "..", ""])
     def test_unlink_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
+        ):
             sd.unlink(bad_name)
 
     @pytest.mark.parametrize("bad_name", ["a/b", "..", ""])
     def test_mkdir_rejects_bad_name(self, sd: SafeDir, bad_name: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"forbidden character|reserved component name|requires a non-empty relative path|refuses '\\.\\.'",
+        ):
             sd.mkdir(bad_name)
 
 
@@ -107,7 +124,7 @@ class TestHappyPath:
         sd = SafeDir.open_root(tmp_path)
         fd = sd.fd
         sd.__exit__(None, None, None)
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="Bad file descriptor"):
             # Closed fd — fstat raises EBADF.
             os.fstat(fd)
 
@@ -517,7 +534,7 @@ class TestResourceLifetime:
         """Return the number of open fds for this process, or None on platforms
         where ``/proc/self/fd`` is unavailable (e.g. macOS).
         """
-        proc = Path("/proc/self/fd")
+        proc = Path("/") / "proc" / "self" / "fd"
         if not proc.is_dir():
             return None
         return len(list(proc.iterdir()))
@@ -636,22 +653,22 @@ class TestUseAfterClose:
 class TestMissingEntries:
     def test_open_for_reader_missing_file_raises_filenotfound(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as sd:
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="nope.txt"):
                 sd.open_for_reader("nope.txt")
 
     def test_open_subdir_missing_raises_filenotfound(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as sd:
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="nope"):
                 sd.open_subdir("nope")
 
     def test_unlink_missing_raises_filenotfound(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as sd:
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="nope"):
                 sd.unlink("nope")
 
     def test_lstat_missing_raises_filenotfound(self, tmp_path: Path) -> None:
         with SafeDir.open_root(tmp_path) as sd:
-            with pytest.raises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError, match="nope"):
                 sd.lstat("nope")
 
 

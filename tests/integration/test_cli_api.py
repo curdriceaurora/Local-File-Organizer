@@ -428,7 +428,7 @@ class TestFilesListCommand:
         with _patch_build_client(client):
             result = runner.invoke(
                 api_app,
-                ["files", "/home/alice/docs", "--token", "tok"],
+                ["files", "/home/alice/docs", "--token", "tok"],  # noqa: test-hardcoded-paths
             )
 
         assert result.exit_code == 0
@@ -611,9 +611,9 @@ class TestCopilotChatCommand:
             "sys.modules",
             {"file_organizer.services.copilot.engine": mock_module},
         ):
-            runner.invoke(copilot_app, ["chat", "hello", "--dir", "/tmp/mydir"])
+            runner.invoke(copilot_app, ["chat", "hello", "--dir", "/tmp/mydir"])  # noqa: test-hardcoded-paths
 
-        mock_module.CopilotEngine.assert_called_once_with(working_directory="/tmp/mydir")
+        mock_module.CopilotEngine.assert_called_once_with(working_directory="/tmp/mydir")  # noqa: test-hardcoded-paths
 
     def test_chat_repl_exits_on_quit(self) -> None:
         """Interactive REPL exits cleanly when user types 'quit'."""

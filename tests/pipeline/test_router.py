@@ -155,7 +155,7 @@ class TestFileRouterExtensionManagement:
 
     def test_remove_nonexistent_extension_raises(self, router: FileRouter) -> None:
         """Removing a non-existent extension raises KeyError."""
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="nonexistent"):
             router.remove_extension(".nonexistent")
 
     def test_get_extension_map_returns_copy(self, router: FileRouter) -> None:
@@ -223,8 +223,8 @@ class TestFileRouterCustomRules:
             lambda p: "screenshots" in p.parts,
             ProcessorType.IMAGE,
         )
-        assert router.route(Path("screenshots/data.csv")) == ProcessorType.IMAGE
-        assert router.route(Path("documents/data.csv")) == ProcessorType.TEXT
+        assert router.route(Path("screenshots") / "data.csv") == ProcessorType.IMAGE
+        assert router.route(Path("documents") / "data.csv") == ProcessorType.TEXT
 
 
 class TestFileRouterEdgeCases:

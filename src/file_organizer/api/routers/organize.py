@@ -15,6 +15,7 @@ from file_organizer.api.jobs import create_job, get_job, update_job
 from file_organizer.api.models import (
     JobStatusResponse,
     OrganizationError,
+    OrganizationPlanPayload,
     OrganizationResultResponse,
     OrganizeExecuteResponse,
     OrganizeRequest,
@@ -32,6 +33,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
+from file_organizer.core.plan import OrganizationPlan
 
 router = APIRouter(
     tags=["organize"],
@@ -87,6 +89,11 @@ def _counts_by_type(files: list[Path]) -> dict[str, int]:
 
 def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
     """Map an OrganizationResult dataclass to the HTTP response model."""
+    plan = (
+        OrganizationPlanPayload(**result.plan.to_dict())
+        if isinstance(result.plan, OrganizationPlan)
+        else None
+    )
     return OrganizationResultResponse(
         total_files=result.total_files,
         processed_files=result.processed_files,
@@ -96,22 +103,54 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
         processing_time=result.processing_time,
         organized_structure=result.organized_structure,
         errors=[OrganizationError(file=err[0], error=err[1]) for err in result.errors],
+        plan=plan,
     )
+
+
+def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
+    """Build an OrganizationResult for a dry-run execution of a submitted plan."""
+    return OrganizationResult(
+        total_files=plan.total_files,
+        processed_files=plan.processed_files,
+        skipped_files=plan.skipped_files,
+        failed_files=plan.failed_files,
+        deduplicated_files=plan.deduplicated_files,
+        organized_structure=plan.organized_structure(),
+        errors=plan.errors,
+        plan=plan,
+    )
+
+
+def _load_request_plan(request: OrganizeRequest) -> OrganizationPlan | None:
+    """Deserialize an optional executable plan from the request."""
+    if request.plan is None:
+        return None
+    plan = OrganizationPlan.from_dict(request.plan.model_dump())
+    if not plan.roots_match(request.input_dir, request.output_dir):
+        raise ValueError("Submitted plan roots do not match request paths.")
+    return plan
 
 
 def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
     """Run a background organization job with validated paths."""
     update_job(job_id, status="running")
     try:
-        organizer = FileOrganizer(
-            dry_run=request.dry_run,
-            use_hardlinks=request.use_hardlinks,
-        )
-        result = organizer.organize(
-            input_path=request.input_dir,
-            output_path=request.output_dir,
-            skip_existing=request.skip_existing,
-        )
+        plan = _load_request_plan(request)
+        if plan is not None and request.dry_run:
+            result = _result_from_plan_preview(plan)
+        elif plan is not None:
+            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
+            result = organizer.execute_plan(plan)
+        else:
+            organizer = FileOrganizer(
+                dry_run=request.dry_run,
+                use_hardlinks=request.use_hardlinks,
+            )
+            result = organizer.organize(
+                input_path=request.input_dir,
+                output_path=request.output_dir,
+                skip_existing=request.skip_existing,
+            )
         response = _result_to_response(result).model_dump()
         update_job(job_id, status="completed", result=response)
     except Exception as exc:
@@ -224,15 +263,22 @@ def execute_organization(
         return OrganizeExecuteResponse(status="queued", job_id=job.job_id)
 
     try:
-        organizer = FileOrganizer(
-            dry_run=request.dry_run,
-            use_hardlinks=request.use_hardlinks,
-        )
-        result = organizer.organize(
-            input_path=path,
-            output_path=output,
-            skip_existing=safe_request.skip_existing,
-        )
+        plan = _load_request_plan(safe_request)
+        if plan is not None and safe_request.dry_run:
+            result = _result_from_plan_preview(plan)
+        elif plan is not None:
+            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
+            result = organizer.execute_plan(plan)
+        else:
+            organizer = FileOrganizer(
+                dry_run=request.dry_run,
+                use_hardlinks=request.use_hardlinks,
+            )
+            result = organizer.organize(
+                input_path=path,
+                output_path=output,
+                skip_existing=safe_request.skip_existing,
+            )
         return OrganizeExecuteResponse(
             status="completed",
             result=_result_to_response(result),

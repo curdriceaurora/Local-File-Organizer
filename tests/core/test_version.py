@@ -121,7 +121,7 @@ class TestVersionInfo:
     def test_frozen_dataclass(self) -> None:
         """VersionInfo instances are immutable."""
         info = VersionInfo(major=1, minor=0, patch=0)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             info.major = 2  # type: ignore[misc]
 
     def test_equality(self) -> None:

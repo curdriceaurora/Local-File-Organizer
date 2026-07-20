@@ -23,6 +23,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.migrations import compare_versions, migrate_to_current
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import (
@@ -39,6 +40,29 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_DIR = get_config_dir()
 CONFIG_FILENAME = "config.yaml"
+
+# AppConfig fields with dedicated (de)serialization behavior. Every other
+# field is copied straight through by name — adding a new plain field to
+# AppConfig requires no changes here. See #1542.
+_NESTED_DATACLASS_TYPES: dict[str, type] = {
+    "models": ModelPreset,
+    "updates": UpdateSettings,
+}
+_MODULE_OVERRIDE_FIELDS = frozenset(
+    {
+        "watcher",
+        "daemon",
+        "parallel",
+        "pipeline",
+        "events",
+        "deploy",
+        "para",
+        "johnny_decimal",
+    }
+)
+# profile_name is the dict key under "profiles" in the on-disk YAML, not a
+# serialized field of the profile body itself.
+_EXCLUDED_FIELDS = frozenset({"profile_name"})
 
 
 class UnsupportedConfigVersionError(RuntimeError):
@@ -224,6 +248,19 @@ class ConfigManager:
             yaml.dump(existing, default_flow_style=False, sort_keys=False),
         )
         logger.info("Saved profile '%s' to %s", profile, config_path)
+
+    @staticmethod
+    def mark_setup_completed(config: AppConfig) -> None:
+        """Flag *config* as having completed guided setup, in place.
+
+        Sets ``setup_completed=True`` and clears ``setup_deferred``. Does not
+        persist — callers save afterward, typically with ``force=True`` since
+        setup completion is a deliberate (re)configuration that should
+        migrate/overwrite an unsupported-version profile rather than fail the
+        save guard (#1276).
+        """
+        config.setup_completed = True
+        config.setup_deferred = False
 
     def list_profiles(self) -> list[str]:
         """List available configuration profile names.
@@ -454,71 +491,68 @@ class ConfigManager:
     def _config_to_dict(config: AppConfig) -> dict[str, Any]:
         """Serialize an AppConfig to a plain dict for YAML output.
 
+        Iterates ``dataclasses.fields(AppConfig)`` so a new plain field needs
+        no changes here; only nested dataclasses, module-override dicts, and
+        the version stamp have dedicated handling (see the module-level
+        field registries near the top of this file).
+
         F6: always stamps CURRENT_SCHEMA_VERSION into the serialized record
         rather than the in-memory config.version field. After a successful
         migration, the migrated data needs to be written back with the new
         version stamp so the next load doesn't re-trigger migration.
         """
-        data: dict[str, Any] = {
-            "version": CURRENT_SCHEMA_VERSION,
-            "default_methodology": config.default_methodology,
-            "setup_completed": config.setup_completed,
-            "models": asdict(config.models),
-            "updates": asdict(config.updates),
-        }
-
-        # Only include module overrides that are set
-        for name in (
-            "watcher",
-            "daemon",
-            "parallel",
-            "pipeline",
-            "events",
-            "deploy",
-            "para",
-            "johnny_decimal",
-        ):
-            value = getattr(config, name)
-            if value is not None:
-                data[name] = value
+        data: dict[str, Any] = {}
+        for f in fields(config):
+            name = f.name
+            if name in _EXCLUDED_FIELDS:
+                continue
+            if name == "version":
+                data[name] = CURRENT_SCHEMA_VERSION
+            elif name in _NESTED_DATACLASS_TYPES:
+                data[name] = asdict(getattr(config, name))
+            elif name in _MODULE_OVERRIDE_FIELDS:
+                # Only include module overrides that are set.
+                value = getattr(config, name)
+                if value is not None:
+                    data[name] = value
+            else:
+                data[name] = getattr(config, name)
 
         return data
 
     @staticmethod
     def _dict_to_config(data: dict[str, Any], profile: str) -> AppConfig:
-        """Deserialize a dict (from YAML) into an AppConfig."""
-        models_data = data.get("models", {})
-        if isinstance(models_data, dict):
-            # Only pass keys that ModelPreset accepts
-            valid_keys = {f.name for f in fields(ModelPreset)}
-            models_data = {k: v for k, v in models_data.items() if k in valid_keys}
-            models = ModelPreset(**models_data)
-        else:
-            models = ModelPreset()
+        """Deserialize a dict (from YAML) into an AppConfig.
 
-        updates_data = data.get("updates", {})
-        if isinstance(updates_data, dict):
-            valid_update_keys = {f.name for f in fields(UpdateSettings)}
-            updates_data = {k: v for k, v in updates_data.items() if k in valid_update_keys}
-            updates = UpdateSettings(**updates_data)
-        else:
-            updates = UpdateSettings()
+        Mirrors :meth:`_config_to_dict`: plain fields absent from *data* fall
+        through to the ``AppConfig`` dataclass's own default rather than
+        repeating it here.
+        """
+        kwargs: dict[str, Any] = {"profile_name": profile}
+        for f in fields(AppConfig):
+            name = f.name
+            if name == "profile_name":
+                continue
+            if name == "version":
+                # Normalize to str so a YAML-parsed float (``version: 1.0``)
+                # does not leak through as a float despite the ``str``
+                # annotation.
+                kwargs[name] = str(data.get("version", CURRENT_SCHEMA_VERSION))
+            elif name == "default_methodology":
+                kwargs[name] = normalize_methodology(data.get("default_methodology"))
+            elif name in _NESTED_DATACLASS_TYPES:
+                dataclass_type = _NESTED_DATACLASS_TYPES[name]
+                raw = data.get(name, {})
+                if isinstance(raw, dict):
+                    # Only pass keys the nested dataclass accepts.
+                    valid_keys = {nf.name for nf in fields(dataclass_type)}
+                    raw = {k: v for k, v in raw.items() if k in valid_keys}
+                    kwargs[name] = dataclass_type(**raw)
+                else:
+                    kwargs[name] = dataclass_type()
+            elif name in _MODULE_OVERRIDE_FIELDS:
+                kwargs[name] = data.get(name)
+            elif name in data:
+                kwargs[name] = data[name]
 
-        return AppConfig(
-            profile_name=profile,
-            # Normalize to str so a YAML-parsed float (``version: 1.0``) does not
-            # leak through as a float despite the ``str`` annotation.
-            version=str(data.get("version", CURRENT_SCHEMA_VERSION)),
-            default_methodology=data.get("default_methodology", "none"),
-            setup_completed=data.get("setup_completed", False),
-            models=models,
-            updates=updates,
-            watcher=data.get("watcher"),
-            daemon=data.get("daemon"),
-            parallel=data.get("parallel"),
-            pipeline=data.get("pipeline"),
-            events=data.get("events"),
-            deploy=data.get("deploy"),
-            para=data.get("para"),
-            johnny_decimal=data.get("johnny_decimal"),
-        )
+        return AppConfig(**kwargs)

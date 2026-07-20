@@ -163,19 +163,19 @@ class TestRequireNonNegativeNumericField:
     def test_bool_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import _require_non_negative_numeric_field
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be numeric"):
             _require_non_negative_numeric_field(True, field="count")
 
     def test_string_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import _require_non_negative_numeric_field
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be numeric"):
             _require_non_negative_numeric_field("5", field="count")
 
     def test_negative_raises_value_error(self) -> None:
         from file_organizer.cli.benchmark import _require_non_negative_numeric_field
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must be non-negative"):
             _require_non_negative_numeric_field(-1.0, field="ms")
 
     def test_zero_is_valid(self) -> None:
@@ -200,37 +200,37 @@ class TestValidateBenchmarkPayload:
 
         payload = _valid_payload()
         del payload["suite"]
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="suite"):
             validate_benchmark_payload(payload)
 
     def test_missing_multiple_fields_raises_key_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="Missing benchmark payload fields"):
             validate_benchmark_payload({})
 
     def test_suite_not_string_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be a string"):
             validate_benchmark_payload(_valid_payload(suite=123))
 
     def test_empty_suite_raises_value_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must be non-empty"):
             validate_benchmark_payload(_valid_payload(suite=""))
 
     def test_degraded_true_empty_reasons_raises(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"when 'degraded' is True.*must be non-empty"):
             validate_benchmark_payload(_valid_payload(degraded=True, degradation_reasons=[]))
 
     def test_degraded_false_nonempty_reasons_raises(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"when 'degraded' is False.*must be empty"):
             validate_benchmark_payload(
                 _valid_payload(degraded=False, degradation_reasons=["reason"])
             )
@@ -243,43 +243,43 @@ class TestValidateBenchmarkPayload:
     def test_files_count_bool_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="files_count"):
             validate_benchmark_payload(_valid_payload(files_count=True))
 
     def test_files_count_negative_raises_value_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="files_count"):
             validate_benchmark_payload(_valid_payload(files_count=-1))
 
     def test_hardware_profile_not_dict_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="hardware_profile"):
             validate_benchmark_payload(_valid_payload(hardware_profile="not-dict"))
 
     def test_results_not_dict_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="results"):
             validate_benchmark_payload(_valid_payload(results="not-dict"))
 
     def test_degraded_not_bool_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="degraded"):
             validate_benchmark_payload(_valid_payload(degraded="yes"))
 
     def test_degradation_reasons_not_list_raises_type_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="degradation_reasons"):
             validate_benchmark_payload(_valid_payload(degradation_reasons="reason"))
 
     def test_degradation_reason_empty_string_raises_value_error(self) -> None:
         from file_organizer.cli.benchmark import validate_benchmark_payload
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must be a non-empty string"):
             validate_benchmark_payload(_valid_payload(degraded=True, degradation_reasons=[""]))
 
 
@@ -300,7 +300,7 @@ class TestValidatePayloadResults:
             "throughput_fps": 100.0,
             # iterations missing
         }
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="iterations"):
             _validate_payload_results(results)
 
     def test_iterations_bool_raises_type_error(self) -> None:
@@ -314,7 +314,7 @@ class TestValidatePayloadResults:
             "throughput_fps": 100.0,
             "iterations": True,
         }
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="results.iterations"):
             _validate_payload_results(results)
 
     def test_valid_results_passes(self) -> None:

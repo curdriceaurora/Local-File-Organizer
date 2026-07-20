@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -224,8 +224,8 @@ class TestReadEpub:
             from file_organizer.utils.epub_enhanced import EnhancedEPUBReader
 
             reader = EnhancedEPUBReader()
-            with pytest.raises(FileNotFoundError):
-                reader.read_epub(Path("/nonexistent.epub"))
+            with pytest.raises(FileNotFoundError, match="File not found"):
+                reader.read_epub(Path("/") / "nonexistent.epub")
 
 
 # ---------------------------------------------------------------------------
@@ -239,4 +239,4 @@ class TestGetEpubMetadata:
             from file_organizer.utils.epub_enhanced import get_epub_metadata
 
             with pytest.raises(ImportError, match="ebooklib"):
-                get_epub_metadata(Path("/test.epub"))
+                get_epub_metadata(Path("/") / "test.epub")

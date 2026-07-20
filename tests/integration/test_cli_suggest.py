@@ -45,7 +45,7 @@ def _make_suggestion(
     s = MagicMock()
     s.suggestion_id = sid
     s.suggestion_type = _make_suggestion_type_mock(stype)
-    s.file_path = file_path or Path("/tmp/report.pdf")
+    s.file_path = file_path or Path("/") / "tmp" / "report.pdf"  # noqa: test-hardcoded-paths
     s.target_path = target_path
     s.confidence = confidence
     s.reasoning = reasoning

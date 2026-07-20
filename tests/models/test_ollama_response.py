@@ -127,5 +127,5 @@ class TestTokenExhaustionError:
             raise TokenExhaustionError("Token budget exhausted")
 
     def test_caught_as_runtime_error(self) -> None:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="test"):
             raise TokenExhaustionError("test")

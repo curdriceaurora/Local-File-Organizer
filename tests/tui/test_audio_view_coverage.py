@@ -236,7 +236,7 @@ def test_audio_classification_panel_valid() -> None:
 def test_audio_view_initialization() -> None:
     """Verify AudioView fields on creation."""
     view = AudioView(scan_dir="/some/path")
-    assert view._scan_dir == Path("/some/path")
+    assert view._scan_dir == Path("/") / "some" / "path"
     assert view._files == []
     assert view._current_index == 0
 
@@ -481,7 +481,7 @@ def test_audio_view_status_bar_updates() -> None:
 
     # 2. Exception path
     mock_app.query_one.side_effect = Exception("No status bar")
-    with patch("file_organizer.tui.audio_view.logger") as mock_logger:
+    with patch("file_organizer.tui.status.logger") as mock_logger:
         view._set_status("Playing track")
         # Should not crash, but log debug message
         mock_logger.debug.assert_called_once()

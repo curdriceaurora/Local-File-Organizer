@@ -51,12 +51,12 @@ class TestStageContext:
 
     def test_category_traversal_rejected(self, tmp_path: Path) -> None:
         ctx = StageContext(file_path=tmp_path / "f.txt")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid category:"):
             ctx.category = "../evil"
 
     def test_filename_slash_rejected(self, tmp_path: Path) -> None:
         ctx = StageContext(file_path=tmp_path / "f.txt")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid filename:"):
             ctx.filename = "a/b"
 
     def test_valid_category_accepted(self, tmp_path: Path) -> None:
@@ -162,16 +162,13 @@ class TestPreprocessorStageProcess:
         """An OSError from path.stat() (after exists()/is_file() pass) is reported."""
         f = tmp_path / "flaky.txt"
         f.write_text("content")
-        real_stat = Path.stat
-        calls = {"n": 0}
-
-        def flaky_stat(self: Path, *args: object, **kwargs: object) -> object:
-            calls["n"] += 1
-            if calls["n"] <= 2:
-                return real_stat(self, *args, **kwargs)
-            raise OSError("disk error")
-
-        monkeypatch.setattr(Path, "stat", flaky_stat)
+        monkeypatch.setattr(Path, "exists", lambda self: True)
+        monkeypatch.setattr(Path, "is_file", lambda self: True)
+        monkeypatch.setattr(
+            Path,
+            "stat",
+            lambda self, *args, **kwargs: (_ for _ in ()).throw(OSError("disk error")),
+        )
         stage = PreprocessorStage()
         ctx = StageContext(file_path=f)
         result = stage.process(ctx)

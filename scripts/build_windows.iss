@@ -10,7 +10,7 @@
 
 #define AppName "File Organizer"
 #ifndef AppVersion
-  #define AppVersion "2.0.0-alpha.1"
+  #define AppVersion "2.0.0-beta.1"
 #endif
 #define AppPublisher "File Organizer Team"
 #define AppURL "https://github.com/curdriceaurora/Local-File-Organizer"

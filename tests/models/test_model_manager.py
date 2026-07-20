@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,7 @@ import pytest
 from file_organizer.models.base import ModelType
 from file_organizer.models.model_manager import ModelManager
 from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
+from tests.utils.import_mocks import make_fake_import
 
 
 @pytest.fixture
@@ -21,6 +23,7 @@ def model_manager():
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestModelManager:
     """Tests for ModelManager class."""
 
@@ -156,6 +159,56 @@ class TestModelManager:
         """Test installed check for missing models."""
         assert ModelManager._is_installed("llama3", {"qwen2.5:3b"}) is False
 
+    @patch("file_organizer.models.model_manager.ModelManager._is_whisper_installed")
+    @patch("file_organizer.models.model_manager.ModelManager.check_installed")
+    def test_list_models_audio_uses_whisper_install_check(
+        self, mock_check: MagicMock, mock_whisper_installed: MagicMock, model_manager
+    ) -> None:
+        """Audio model installed status should come from HuggingFace cache checks, not Ollama."""
+        mock_check.return_value = {"qwen2.5:3b-instruct-q4_K_M"}
+        mock_whisper_installed.return_value = True
+
+        models = model_manager.list_models(type_filter=ModelType.AUDIO.value)
+
+        assert len(models) > 0
+        assert all(m.model_type == ModelType.AUDIO.value for m in models)
+        assert all(m.installed is True for m in models)
+        assert mock_whisper_installed.call_count == len(models)
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="clears env so Path.home() raises on Windows; asserts the POSIX ~/.cache/huggingface layout",
+    )
+    @patch.dict("os.environ", {}, clear=True)
+    @patch("pathlib.Path.is_dir", autospec=True, return_value=True)
+    @patch.dict("sys.modules", {"faster_whisper": MagicMock()})
+    def test_is_whisper_installed_uses_default_hf_cache_path(self, mock_is_dir: MagicMock) -> None:
+        assert ModelManager._is_whisper_installed("whisper:tiny") is True
+        mock_is_dir.assert_called_once()
+        checked_path = str(mock_is_dir.call_args.args[0])
+        assert checked_path.endswith("models--Systran--faster-whisper-tiny")
+        assert "/.cache/huggingface/hub/" in checked_path
+
+    @patch("pathlib.Path.is_dir", autospec=True, return_value=True)
+    @patch.dict("sys.modules", {"faster_whisper": MagicMock()})
+    def test_is_whisper_installed_honors_hf_hub_cache_env(
+        self, mock_is_dir: MagicMock, tmp_path
+    ) -> None:
+        hub_cache = tmp_path / "hf-hub"
+        with patch.dict("os.environ", {"HF_HUB_CACHE": str(hub_cache)}, clear=True):
+            assert ModelManager._is_whisper_installed("small") is True
+        checked_path = str(mock_is_dir.call_args.args[0])
+        # Build the expected path with the same ``Path`` join the source uses so
+        # the separator matches on Windows (``\``) as well as POSIX (``/``).
+        assert checked_path == str(hub_cache / "models--Systran--faster-whisper-small")
+
+    def test_is_whisper_installed_returns_false_when_dependency_missing(self) -> None:
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("faster_whisper",)),
+        ):
+            assert ModelManager._is_whisper_installed("base") is False
+
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -193,6 +246,7 @@ class TestModelRegistry:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestModelManagerDisplay:
     """Tests for ModelManager.display_models()."""
 

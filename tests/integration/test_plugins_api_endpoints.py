@@ -81,7 +81,7 @@ class TestListFilesForPlugins:
         assert r.status_code == 404
 
     def test_list_files_outside_root_returns_403(self, plugin_client: TestClient) -> None:
-        r = plugin_client.get("/api/v1/plugins/files/list", params={"path": "/etc"})
+        r = plugin_client.get("/api/v1/plugins/files/list", params={"path": "/etc"})  # noqa: test-hardcoded-paths
         assert r.status_code == 403
 
     def test_list_files_recursive(self, plugin_client: TestClient, tmp_path: Path) -> None:
@@ -174,7 +174,7 @@ class TestGetFileMetadata:
         assert r.status_code == 400
 
     def test_metadata_outside_root_returns_403(self, plugin_client: TestClient) -> None:
-        r = plugin_client.get("/api/v1/plugins/files/metadata", params={"path": "/etc/hosts"})
+        r = plugin_client.get("/api/v1/plugins/files/metadata", params={"path": "/etc/hosts"})  # noqa: test-hardcoded-paths
         assert r.status_code == 403
 
 

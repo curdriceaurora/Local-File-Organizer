@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.utils.import_mocks import make_fake_import
+
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
@@ -747,7 +749,9 @@ class TestDispatcher:
         mock_classifier_cls.return_value.classify.return_value = mock_classification
 
         mock_organizer_cls = MagicMock()
-        mock_organizer_cls.return_value.generate_path.return_value = Path("Music/Artist/Track.mp3")
+        mock_organizer_cls.return_value.generate_path.return_value = (
+            Path("Music") / "Artist" / "Track.mp3"
+        )
 
         # AudioClassifier and AudioOrganizer are imported locally inside
         # process_audio_files; patch their module-level definitions so the
@@ -1266,7 +1270,7 @@ class TestStorageAnalyzer:
 
         analyzer = StorageAnalyzer()
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Directory not found"):
             list(analyzer.walk_directory(tmp_path / "no_such_dir"))
 
     def test_walk_directory_raises_for_file(self, tmp_path: Path) -> None:
@@ -1396,25 +1400,19 @@ class TestAudioUtils:
     def test_get_audio_duration_file_not_found(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.utils import get_audio_duration
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             get_audio_duration(tmp_path / "nonexistent.mp3")
 
     def test_get_audio_duration_returns_float_when_no_libs(self, tmp_path: Path) -> None:
-        import builtins
-
         from file_organizer.services.audio.utils import get_audio_duration
 
         f = tmp_path / "dummy.mp3"
         f.write_bytes(b"\xff\xfb")
 
-        real_import = builtins.__import__
-
-        def import_without_audio_libs(name: str, *args: Any, **kwargs: Any) -> Any:
-            if name in {"pydub", "tinytag"} or name.startswith(("pydub.", "tinytag.")):
-                raise ImportError(f"no {name}")
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=import_without_audio_libs):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pydub", "tinytag")),
+        ):
             result = get_audio_duration(f)
 
         assert result == 0.0

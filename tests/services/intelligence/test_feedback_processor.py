@@ -54,8 +54,8 @@ class TestProcessCorrection:
 
     def test_basic_correction_same_location(self, processor):
         """Test processing a correction that only changes the filename."""
-        original = Path("/docs/old_name.txt")
-        corrected = Path("/docs/new_name.txt")
+        original = Path("/") / "docs" / "old_name.txt"
+        corrected = Path("/") / "docs" / "new_name.txt"
 
         result = processor.process_correction(original, corrected)
 
@@ -69,8 +69,8 @@ class TestProcessCorrection:
 
     def test_folder_change_only(self, processor):
         """Test processing a correction that only changes the folder."""
-        original = Path("/docs/report.pdf")
-        corrected = Path("/archives/report.pdf")
+        original = Path("/") / "docs" / "report.pdf"
+        corrected = Path("/") / "archives" / "report.pdf"
 
         result = processor.process_correction(original, corrected)
 
@@ -82,8 +82,8 @@ class TestProcessCorrection:
 
     def test_both_name_and_folder_change(self, processor):
         """Test correction with both name and folder change."""
-        original = Path("/docs/old.txt")
-        corrected = Path("/archives/new.txt")
+        original = Path("/") / "docs" / "old.txt"
+        corrected = Path("/") / "archives" / "new.txt"
 
         result = processor.process_correction(original, corrected)
 
@@ -93,7 +93,7 @@ class TestProcessCorrection:
 
     def test_no_change(self, processor):
         """Test correction with identical paths produces no signals."""
-        path = Path("/docs/file.txt")
+        path = Path("/") / "docs" / "file.txt"
 
         result = processor.process_correction(path, path)
 
@@ -101,8 +101,8 @@ class TestProcessCorrection:
 
     def test_correction_count_increments(self, processor):
         """Test that correction_count increments on each call."""
-        original = Path("/a/file.txt")
-        corrected = Path("/b/file.txt")
+        original = Path("/") / "a" / "file.txt"
+        corrected = Path("/") / "b" / "file.txt"
 
         for i in range(3):
             processor.process_correction(original, corrected)
@@ -110,8 +110,8 @@ class TestProcessCorrection:
 
     def test_retraining_trigger(self, processor):
         """Test retraining is triggered after threshold corrections."""
-        original = Path("/a/file.txt")
-        corrected = Path("/b/file.txt")
+        original = Path("/") / "a" / "file.txt"
+        corrected = Path("/") / "b" / "file.txt"
 
         # Process corrections up to threshold
         for _ in range(processor.learning_threshold - 1):
@@ -124,8 +124,8 @@ class TestProcessCorrection:
 
     def test_context_patterns_extracted(self, processor):
         """Test context patterns are extracted when context is provided."""
-        original = Path("/docs/file.txt")
-        corrected = Path("/docs/file.txt")
+        original = Path("/") / "docs" / "file.txt"
+        corrected = Path("/") / "docs" / "file.txt"
         context = {"operation": "rename", "suggested": "file_v2.txt", "actual": "report.txt"}
 
         result = processor.process_correction(original, corrected, context)
@@ -139,8 +139,8 @@ class TestProcessCorrection:
 
     def test_context_with_no_patterns(self, processor):
         """Test that empty context dict yields no context signal."""
-        original = Path("/docs/file.txt")
-        corrected = Path("/docs/file.txt")
+        original = Path("/") / "docs" / "file.txt"
+        corrected = Path("/") / "docs" / "file.txt"
         context = {"unrelated_key": "value"}
 
         result = processor.process_correction(original, corrected, context)
@@ -150,16 +150,16 @@ class TestProcessCorrection:
 
     def test_context_none(self, processor):
         """Test no context signal when context is None."""
-        original = Path("/docs/file.txt")
-        corrected = Path("/docs/file.txt")
+        original = Path("/") / "docs" / "file.txt"
+        corrected = Path("/") / "docs" / "file.txt"
 
         result = processor.process_correction(original, corrected, context=None)
         assert len(result["learning_signals"]) == 0
 
     def test_folder_correction_with_category_context(self, processor):
         """Test folder correction with category context."""
-        original = Path("/downloads/photo.jpg")
-        corrected = Path("/photos/vacations/photo.jpg")
+        original = Path("/") / "downloads" / "photo.jpg"
+        corrected = Path("/") / "photos" / "vacations" / "photo.jpg"
         context = {"category": "vacation_photos"}
 
         result = processor.process_correction(original, corrected, context)
@@ -445,8 +445,8 @@ class TestAnalyzeFolderCorrection:
 
     def test_basic_folder_change(self, processor):
         """Test basic folder correction analysis."""
-        original = Path("/downloads/file.pdf")
-        corrected = Path("/documents/file.pdf")
+        original = Path("/") / "downloads" / "file.pdf"
+        corrected = Path("/") / "documents" / "file.pdf"
 
         result = processor._analyze_folder_correction(original, corrected, None)
 
@@ -457,8 +457,8 @@ class TestAnalyzeFolderCorrection:
 
     def test_folder_change_with_category(self, processor):
         """Test folder correction with category context."""
-        original = Path("/downloads/file.jpg")
-        corrected = Path("/photos/file.jpg")
+        original = Path("/") / "downloads" / "file.jpg"
+        corrected = Path("/") / "photos" / "file.jpg"
         context = {"category": "photos"}
 
         result = processor._analyze_folder_correction(original, corrected, context)
@@ -468,8 +468,8 @@ class TestAnalyzeFolderCorrection:
 
     def test_subfolder_structure_detection(self, processor):
         """Test detection of subfolder structure patterns."""
-        original = Path("/downloads/file.txt")
-        corrected = Path("/projects/work/reports/file.txt")
+        original = Path("/") / "downloads" / "file.txt"
+        corrected = Path("/") / "projects" / "work" / "reports" / "file.txt"
 
         result = processor._analyze_folder_correction(original, corrected, None)
 
@@ -480,8 +480,8 @@ class TestAnalyzeFolderCorrection:
 
     def test_folder_change_with_common_ancestor(self, processor):
         """Test folder change with shared common ancestor."""
-        original = Path("/projects/work/drafts/file.txt")
-        corrected = Path("/projects/work/final/file.txt")
+        original = Path("/") / "projects" / "work" / "drafts" / "file.txt"
+        corrected = Path("/") / "projects" / "work" / "final" / "file.txt"
 
         result = processor._analyze_folder_correction(original, corrected, None)
 

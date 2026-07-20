@@ -68,7 +68,7 @@ class TestCheckSourcePaths:
     def test_nonexistent_source(self, validator: MigrationValidator) -> None:
         """Source path doesn't exist => error (line 97)."""
         rule = TransformationRule(
-            source_path=Path("/nonexistent/folder"),
+            source_path=Path("/") / "nonexistent" / "folder",
             target_name="10 Folder",
             jd_number=JohnnyDecimalNumber(area=10),
             action="rename",

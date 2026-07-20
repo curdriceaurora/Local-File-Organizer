@@ -323,9 +323,10 @@ async def test_complete_wizard_persists_setup_completed(tmp_path) -> None:
     app._config_manager = cm
     async with app.run_test():
         await app.complete_wizard_and_transition(
-            AppConfig(profile_name="default", setup_completed=False)
+            AppConfig(profile_name="default", setup_completed=False, setup_deferred=True)
         )
 
     reloaded = cm.load("default")
     assert reloaded.setup_completed is True
+    assert reloaded.setup_deferred is False
     assert reloaded.version == CURRENT_SCHEMA_VERSION  # migrated via force=True

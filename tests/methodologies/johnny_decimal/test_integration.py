@@ -213,13 +213,13 @@ class TestCompleteWorkflows:
         items = [
             OrganizationItem(
                 name="Project A",
-                path=Path("Projects/Project A"),
+                path=Path("Projects") / "Project A",
                 category="projects",
                 metadata={},
             ),
             OrganizationItem(
                 name="Finance Docs",
-                path=Path("Areas/Finance"),
+                path=Path("Areas") / "Finance",
                 category="areas",
                 metadata={},
             ),
@@ -322,7 +322,7 @@ class TestCrossComponentIntegration:
         # Test item
         item = OrganizationItem(
             name="Test",
-            path=Path("Projects/Test"),
+            path=Path("Projects") / "Test",
             category="projects",
             metadata={},
         )

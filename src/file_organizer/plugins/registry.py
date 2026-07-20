@@ -13,13 +13,10 @@ Example::
 
     from pathlib import Path
     from file_organizer.plugins.registry import PluginRegistry
-    from file_organizer.plugins.security import PluginSecurityPolicy
 
     registry = PluginRegistry()
-    registry.load_plugin(
-        Path("plugins/my-plugin"),
-        policy=PluginSecurityPolicy.unrestricted(),
-    )
+    # Capabilities are derived from the plugin's manifest (deny-by-default):
+    registry.load_plugin(Path("plugins/my-plugin"))
     registry.unload_plugin("my-plugin")
 """
 
@@ -349,18 +346,20 @@ class PluginRegistry:
 
         Returns:
             A :class:`PluginSecurityPolicy` scoped to the manifest's declared
-            allowed paths and operations.
+            allowed paths and operations. Blanket grants (``allow_all_paths`` /
+            ``allow_all_operations``) are **never** honored from a manifest —
+            they are host-only and require an explicit ``policy=`` on
+            :meth:`load_plugin`.
         """
-        # Extract operation restrictions from manifest
+        # Deny-by-default: a plugin manifest may only *enumerate* the specific
+        # paths/operations it requests. Blanket grants (``allow_all_paths`` /
+        # ``allow_all_operations``) are host-only concepts — a plugin cannot
+        # self-grant unrestricted access from its own plugin.json. A host that
+        # deliberately trusts a plugin can still pass an explicit ``policy=`` to
+        # ``load_plugin()``.
         allowed_operations = list(manifest.get("allowed_operations", []))
-        allow_all_ops = manifest.get("allow_all_operations", False)
-
-        # If no operations specified, use safe defaults (read-only)
-        if not allowed_operations and not allow_all_ops:
-            allowed_operations = ["read"]
 
         return PluginSecurityPolicy.from_permissions(
             allowed_paths=list(manifest.get("allowed_paths", [])),
             allowed_operations=allowed_operations,
-            allow_all_operations=allow_all_ops,
         )

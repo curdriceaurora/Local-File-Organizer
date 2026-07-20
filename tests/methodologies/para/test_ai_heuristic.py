@@ -1079,7 +1079,7 @@ class TestHeuristicEngineEdgeCases:
         )
 
         with pytest.raises(ValueError, match="No heuristics enabled"):
-            engine.evaluate(Path("/fake/file.txt"))
+            engine.evaluate(Path("/") / "fake" / "file.txt")
 
     def test_engine_all_heuristics_fail_returns_zero_result(self, tmp_path: Path) -> None:
         """When all heuristics raise exceptions, engine returns zero result."""

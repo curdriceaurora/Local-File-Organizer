@@ -36,13 +36,13 @@ class TestDesktopAPIBrowseDirectory:
         """browse_directory() must return the first element of the result tuple."""
         from file_organizer.desktop.app import DesktopAPI
 
-        mock_webview, _ = self._make_mock_webview(("/Users/rahul/Documents",))
+        mock_webview, _ = self._make_mock_webview(("/Users/testuser/Documents",))  # noqa: test-hardcoded-paths
 
         with patch.dict("sys.modules", {"webview": mock_webview}):
             api = DesktopAPI()
             result = api.browse_directory()
 
-        assert result == "/Users/rahul/Documents"
+        assert result == "/Users/testuser/Documents"  # noqa: test-hardcoded-paths
 
     def test_calls_folder_dialog_constant(self) -> None:
         """Must call create_file_dialog with FOLDER_DIALOG, not a file dialog."""

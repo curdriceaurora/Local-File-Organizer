@@ -48,6 +48,10 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `scripts/dev/pre-commit-validation.sh`.
 
+The MECE backlog for review anti-patterns that should become remediation and
+enforcement issues lives in
+[`guardrail-promotion-backlog.md`](guardrail-promotion-backlog.md).
+
 ## Blocking Guardrails
 
 Once a rail's backlog reaches zero, flip its registry mode to `enforce`.
@@ -136,6 +140,54 @@ Implementation detail:
 - Detector implementation lives in `src/file_organizer/review_regressions/memory_lifecycle.py`.
 - Deterministic positive/safe proofs live in `tests/unit/review_regressions/test_memory_lifecycle_detectors.py`.
 
+## Daemon PID Lifecycle Rule Index
+
+Issue `#1409` adds PID lifecycle race checks. These are semantic invariants and
+therefore belong in CI tests, not shell-script heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `daemon.pid-claim-atomic-exclusive-create` | `tests/ci/test_daemon_pid_guardrails.py` | Requires atomic `O_CREAT|O_EXCL` PID-file claims to close startup check-then-act races |
+| `daemon.pid-record-create-time` | `tests/ci/test_daemon_pid_guardrails.py` | Ensures PID records include creation time where available |
+| `daemon.pid-remove-revalidates-expected-record` | `tests/ci/test_daemon_pid_guardrails.py` | Requires PID file removal to re-read and compare the on-disk record before unlinking |
+| `daemon.start-background-propagates-startup-failure` | `tests/ci/test_daemon_pid_guardrails.py` | Ensures background startup failures reach callers instead of being swallowed |
+
+Implementation detail:
+
+- Guardrail logic lives in `tests/ci/test_daemon_pid_guardrails.py`.
+
+## Filesystem Link/Copy Rule Index
+
+Issue `#1410` adds filesystem link/copy race checks. These are semantic
+invariants and therefore belong in CI tests, not shell-script heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `filesystem.resolve-conflict-revalidates-before-unlink` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Keeps unlink operations behind current existence/symlink checks |
+| `filesystem.copy-destination-atomic-reservation` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Requires exclusive destination reservation for copy operations |
+| `filesystem.link-helpers-route-through-conflict-resolution` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Ensures hardlink/symlink helpers route through shared conflict handling before mutation |
+| `filesystem.target-root-containment` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Revalidates destination paths stay inside the intended root |
+| `filesystem.move-identity-verification` | `tests/ci/test_filesystem_link_copy_guardrails.py` | Requires post-mutation identity checks in rollback move helpers |
+
+Implementation detail:
+
+- Guardrail logic lives in `tests/ci/test_filesystem_link_copy_guardrails.py`.
+
+## Test Environment Leakage Rule Index
+
+Issue `#1414` adds an enforced rail for test process state mutations. It was
+promoted once the repo-wide finding count reached zero.
+
+| Rail | Canonical home | What it flags |
+|------|----------------|---------------|
+| `test-environment-leakage` | `scripts/ci/guardrails/check_test_environment_leakage.py` plus `tests/ci/test_check_test_environment_leakage.py` | Direct class/global state mutation, `global` writes, dynamic `globals()` entries, or `sys.modules` entries in tests without `monkeypatch`, `patch`, `patch.dict`, fixture finalizer, or `try/finally` restoration |
+
+Safe patterns:
+- `monkeypatch.setattr` / `monkeypatch.setitem`
+- `patch`, `patch.object`, and `patch.dict` context managers or decorators
+- fixture finalizers registered before mutation
+- `try/finally` blocks that restore the same mutated target
+
 ## Search Guardrail Rule Index
 
 Issue `#869` adds corpus-safety checks for the search service. These are
@@ -151,6 +203,22 @@ Implementation detail:
 
 - Guardrail logic lives in `tests/ci/test_search_code_quality.py` (function `_find_unguarded_traversals`).
 - Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
+
+## Template JavaScript Rule Index
+
+Issue `#1407` adds a semantic template check for inline JavaScript contexts.
+The detector lives in `src/file_organizer/review_regressions/template_js.py`
+and is exercised by `tests/unit/review_regressions/test_template_js_detectors.py`
+plus the repo-wide CI enforcement test.
+
+| Rule ID | Canonical home | What it flags |
+|---------|----------------|---------------|
+| `unsafe-js-interpolation` | `tests/ci/test_first_wave_repo_enforcement.py` | Jinja `{{ ... }}` interpolation or `{% include ... %}` inside `<script>` blocks / inline `on*=` handlers unless the value is emitted as a direct `tojson` JS value outside quotes/backticks |
+
+Safe patterns:
+- `{{ value|tojson }}` used directly as a JavaScript value
+- inert `data-*` attributes plus external JS that reads `dataset`
+- static inline handlers with no template interpolation
 
 ## T10 Predicate Negative-Case Rule Index
 
@@ -285,6 +353,61 @@ Run the rail directly to verify it exits 0:
 
 ```bash
 python scripts/ci/guardrails/check_atomic_write.py
+```
+
+## Test-Separator-Paths Rule (WP-6.2)
+
+Issue `#1368` promotes `test-separator-paths` to an enforced CI rail. The rail
+is declared in `scripts/ci/rails.toml`, runs via
+`scripts/ci/guardrails/check_test_separator_paths.py`, and is executed by both
+the `ci-rails` pre-commit hook and `scripts/ci/ci_rails.py` in CI.
+
+The rail is now **enforced** — commits and CI runs fail when violations are
+found.
+
+### What is flagged
+
+- `Path("foo/bar")`
+- `Path("foo\\bar")`
+
+Prefer segment composition with the division operator:
+
+```python
+Path("foo") / "bar"
+```
+
+### Inline exemptions
+
+Use only targeted, line-local exemptions for true edge cases:
+
+```python
+value = Path("payload/that/must/stay/literal")  # noqa: test-separator-paths
+```
+
+Run the rail directly to verify it exits 0:
+
+```bash
+python scripts/ci/guardrails/check_test_separator_paths.py
+```
+
+## Pytest-Raises-Hygiene Rule (WP-6.2)
+
+Issue `#1369` promotes `pytest-raises-hygiene` to an enforced CI rail. The rail
+is declared in `scripts/ci/rails.toml`, runs via
+`scripts/ci/guardrails/check_pytest_raises_hygiene.py`, and is executed by both
+the `ci-rails` pre-commit hook and `scripts/ci/ci_rails.py` in CI.
+
+The rail is now **enforced** — commits and CI runs fail when violations are
+found.
+
+Prefer `pytest.raises(..., match=...)` whenever the exception message is part
+of the contract. Use `# noqa: pytest-raises-hygiene` only for cases that are
+explicitly message-agnostic.
+
+Run the rail directly to verify it exits 0:
+
+```bash
+python scripts/ci/guardrails/check_pytest_raises_hygiene.py
 ```
 
 ## GitHub-Environment Branching Helpers

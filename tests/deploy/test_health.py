@@ -22,7 +22,7 @@ def dev_config() -> DeploymentConfig:
     return DeploymentConfig(
         environment="dev",
         redis_url="redis://localhost:6379/0",
-        data_directory=Path("/tmp/fo-test-data"),
+        data_directory=Path("/") / "tmp" / "fo-test-data",  # noqa: test-hardcoded-paths
     )
 
 
@@ -339,7 +339,7 @@ class TestHealthEndpointDiskCheck:
 
     def test_check_disk_space_uses_fallback_path(self, dev_config: DeploymentConfig) -> None:
         """Verify disk check uses fallback path when data dir doesn't exist."""
-        dev_config.data_directory = Path("/nonexistent/path/fo-test")
+        dev_config.data_directory = Path("/") / "nonexistent" / "path" / "fo-test"
         endpoint = HealthEndpoint(config=dev_config, min_disk_space_mb=1)
         # Should not raise; falls back to /
         result = endpoint.check_disk_space()

@@ -170,7 +170,7 @@ def test_integrations_reject_invalid_paths_and_names(
 ) -> None:
     forbidden = integrations_client.post(
         "/api/v1/integrations/obsidian/settings",
-        json={"settings": {"vault_path": "/etc"}},
+        json={"settings": {"vault_path": "/etc"}},  # noqa: test-hardcoded-paths
     )
     assert forbidden.status_code == 403
 
@@ -206,7 +206,7 @@ def test_integrations_settings_reject_invalid_filename_in_command_output_path(
         ("   ", "cannot be empty"),
         ("a//b", "empty path segments"),
         ("a\\\\b", "empty path segments"),
-        ("C:\\folder", "must be a relative path"),
+        ("C:\\folder", "must be a relative path"),  # noqa: test-hardcoded-paths
         ("../escape", "path traversal"),
     ],
 )

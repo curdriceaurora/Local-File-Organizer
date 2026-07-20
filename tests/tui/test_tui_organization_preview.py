@@ -13,6 +13,11 @@ from file_organizer.tui.organization_preview import (
     OrganizationSummary,
 )
 
+# Also counted for the integration coverage gate so the plan-carrying preview
+# flow added for #1504 keeps tui/organization_preview.py above its
+# integration floor.
+pytestmark = pytest.mark.integration
+
 
 def _get_content(widget: object) -> str:
     """Extract the text content from a Static widget."""
@@ -84,6 +89,7 @@ class TestOrganizationSummary:
 class TestOrganizationPreviewView:
     """Tests for OrganizationPreviewView composition."""
 
+    @pytest.mark.keep_default_paths
     def test_default_init(self) -> None:
         view = OrganizationPreviewView(id="view")
         assert str(view._input_dir) == "."

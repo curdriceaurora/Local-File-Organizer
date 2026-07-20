@@ -12,6 +12,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 
 def _walk_excluding_nested_functions(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.AST]:
     """Like ast.walk(func), but does not descend into nested function defs.
@@ -88,7 +93,9 @@ class _Visitor(ast.NodeVisitor):
         for name, lineno in wrapped.items():
             if name not in detached:
                 line_idx = lineno - 1
-                if 0 <= line_idx < len(self.lines) and "noqa" in self.lines[line_idx]:
+                if 0 <= line_idx < len(self.lines) and has_targeted_noqa(
+                    self.lines[line_idx], "textiowrapper-detach"
+                ):
                     continue
                 self.violations.append(
                     (

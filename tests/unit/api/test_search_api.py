@@ -1,7 +1,7 @@
 """Unit tests for search endpoint."""
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.dependencies import get_current_active_user
 from file_organizer.api.main import create_app

@@ -46,6 +46,10 @@ def _force_exdev(monkeypatch: pytest.MonkeyPatch) -> None:
 class TestStartedBeforeTmpOrdering:
     """#1248 #1: in-flight marker must precede the GC-visible tmp window."""
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="instruments _append_journal_line_locked, only used on the POSIX fcntl append path",
+    )
     def test_started_journaled_before_tmp_created(
         self, tmp_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -201,7 +205,7 @@ class TestJournalUtf8RoundTrip:
 
         journal = tmp_path / "u.journal"
         unicode_src = "/trash/файл-café-日本語.txt"
-        unicode_dst = "/home/файл-café-日本語.txt"
+        unicode_dst = "/home/файл-café-日本語.txt"  # noqa: test-hardcoded-paths
         line = json.dumps(
             {
                 "schema": 2,

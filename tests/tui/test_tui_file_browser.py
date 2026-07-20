@@ -7,6 +7,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+# ci: run in the PR suite so the FilterInput focus/Submitted regressions
+# are exercised on every pull request.
+pytestmark = pytest.mark.ci
+
 
 @pytest.mark.unit
 class TestFormatSize:
@@ -161,11 +165,23 @@ class TestFilterInput:
 
         assert FilterInput is not None
 
-    def test_submitted_message(self) -> None:
+    def test_filter_applied_message(self) -> None:
         from file_organizer.tui.file_browser import FilterInput
 
-        msg = FilterInput.Submitted(".py .txt")
+        msg = FilterInput.FilterApplied(".py .txt")
         assert msg.value == ".py .txt"
+
+    def test_submitted_is_not_shadowed(self) -> None:
+        """FilterInput must keep textual's Input.Submitted intact.
+
+        Overriding ``Submitted`` with a custom signature broke
+        ``Input.action_submit`` (TypeError on Enter).
+        """
+        from textual.widgets import Input
+
+        from file_organizer.tui.file_browser import FilterInput
+
+        assert FilterInput.Submitted is Input.Submitted
 
 
 @pytest.mark.unit
@@ -212,3 +228,61 @@ class TestTuiExports:
             cls is not None
             for cls in (FileBrowserTree, FileBrowserView, FileMetadataPanel, FilterInput)
         )
+
+
+# ---------------------------------------------------------------------------
+# Regression tests: hidden FilterInput must not steal focus or crash on Enter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_startup_focus_not_stolen_by_hidden_filter() -> None:
+    """The hidden FilterInput must not take the screen's initial auto-focus.
+
+    Regression: it previously did, so every keystroke went into the
+    invisible input and the app-level ``1``-``8`` view bindings were
+    dead on launch.
+    """
+    from file_organizer.tui.app import FileOrganizerApp
+    from file_organizer.tui.file_browser import FileBrowserTree, FilterInput
+
+    app = FileOrganizerApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert not isinstance(app.focused, FilterInput)
+        assert isinstance(app.focused, FileBrowserTree)
+        await pilot.press("7")
+        await pilot.pause()
+        assert app._current_view == "settings"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_filter_submit_applies_and_refocuses_tree() -> None:
+    """Enter in the filter applies it, hides the input, and refocuses the tree.
+
+    Regression: ``FilterInput.Submitted`` shadowed textual's
+    ``Input.Submitted`` with an incompatible signature, so
+    ``Input.action_submit`` raised ``TypeError`` on Enter.
+    """
+    from file_organizer.tui.app import FileOrganizerApp
+    from file_organizer.tui.file_browser import FileBrowserTree, FilterInput
+
+    app = FileOrganizerApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.press("slash")
+        await pilot.pause()
+        filter_input = app.query_one(FilterInput)
+        assert filter_input.has_class("-visible")
+        assert app.focused is filter_input
+
+        await pilot.press("p", "y", "enter")
+        await pilot.pause()
+
+        tree = app.query_one(FileBrowserTree)
+        assert tree._extension_filter == {".py"}
+        assert not filter_input.has_class("-visible")
+        assert filter_input.value == ""
+        assert app.focused is tree

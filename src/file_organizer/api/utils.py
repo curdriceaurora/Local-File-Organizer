@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import mimetypes
-import os
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from file_organizer.api.exceptions import ApiError
-from file_organizer.api.models import FileInfo
+from file_organizer.api.models import ConfigUpdateRequest, FileInfo
+from file_organizer.config.methodology import normalize as normalize_methodology
+from file_organizer.config.schema import AppConfig
 from file_organizer.utils import is_hidden as is_hidden
+from file_organizer.utils.file_times import creation_timestamp
 
 
 def resolve_path(path_value: str, allowed_paths: list[str] | None = None) -> Path:
@@ -74,14 +77,7 @@ def file_info_from_path(path: Path) -> FileInfo:
             message=f"Unable to access file metadata for {path}",
         ) from exc
     mime_type, _ = mimetypes.guess_type(path.as_posix())
-    # Cross-platform creation time: st_birthtime (macOS), st_ctime (Windows),
-    # st_mtime fallback (Linux — st_ctime is inode-change time, not creation).
-    if hasattr(stat, "st_birthtime"):
-        creation_ref = stat.st_birthtime
-    elif os.name == "nt":
-        creation_ref = getattr(stat, "st_ctime", stat.st_mtime)
-    else:
-        creation_ref = stat.st_mtime
+    creation_ref = creation_timestamp(stat)
     return FileInfo(
         path=str(path),
         name=path.name,
@@ -91,3 +87,34 @@ def file_info_from_path(path: Path) -> FileInfo:
         file_type=path.suffix.lower() or "",
         mime_type=mime_type,
     )
+
+
+_CONFIG_UPDATE_EXCLUDED_FIELDS = frozenset({"default_methodology", "models", "updates"})
+
+
+def _merge_submodel(target: object, sub: Any) -> None:
+    """Copy every set field of a pydantic submodel onto *target* by name."""
+    if sub is not None:
+        for field, value in sub.model_dump(exclude_none=True).items():
+            setattr(target, field, value)
+
+
+def apply_config_update(config: AppConfig, request: ConfigUpdateRequest) -> None:
+    """Apply a partial API config-update request onto an AppConfig, in place.
+
+    ``models``/``updates`` are merged field-by-field; ``default_methodology``
+    goes through ``normalize_methodology``; every other set request field is
+    applied via plain ``setattr`` (fields handled above, plus ``profile``
+    which isn't an AppConfig field, are excluded from that pass).
+    """
+    if request.default_methodology is not None:
+        config.default_methodology = normalize_methodology(request.default_methodology)
+
+    _merge_submodel(config.models, request.models)
+    _merge_submodel(config.updates, request.updates)
+
+    for name, value in request.model_dump(exclude_none=True).items():
+        if name in _CONFIG_UPDATE_EXCLUDED_FIELDS:
+            continue
+        if hasattr(config, name):
+            setattr(config, name, value)

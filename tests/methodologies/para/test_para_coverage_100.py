@@ -15,7 +15,6 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,6 +30,7 @@ from file_organizer.methodologies.para.ai.suggestion_engine import (
 from file_organizer.methodologies.para.categories import PARACategory
 from file_organizer.methodologies.para.config import HeuristicWeights
 from file_organizer.methodologies.para.detection.heuristics import AIHeuristic
+from tests.utils.import_mocks import make_fake_import
 
 _HEURISTICS_MODULE = "file_organizer.methodologies.para.detection.heuristics"
 
@@ -44,36 +44,27 @@ _HEURISTICS_MODULE = "file_organizer.methodologies.para.detection.heuristics"
 class TestOllamaImportGuard:
     """Cover the ``except ImportError`` branch for the ollama import (lines 24-26)."""
 
-    def test_ollama_import_error_sets_flag_false(self) -> None:
+    def test_ollama_import_error_sets_flag_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ollama is not installed, OLLAMA_AVAILABLE is False and
         ollama is set to None (lines 24-26)."""
         module_name = _HEURISTICS_MODULE
-        # Save and remove ollama from sys.modules so the import fails
-        saved_ollama = sys.modules.pop("ollama", None)
-        saved_heuristics = sys.modules.pop(module_name, None)
+        monkeypatch.delitem(sys.modules, "ollama", raising=False)
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
 
-        # Block the import of ollama
         import builtins
 
         original_import = builtins.__import__
 
-        def _blocked_import(name: str, *args: Any, **kwargs: Any) -> Any:
-            if name == "ollama":
-                raise ImportError("mocked: no ollama")
-            return original_import(name, *args, **kwargs)
-
-        try:
-            builtins.__import__ = _blocked_import  # type: ignore[assignment]
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(
+                missing_names=("ollama",),
+                original_import=original_import,
+            ),
+        ):
             mod = importlib.import_module(module_name)
-            assert mod.OLLAMA_AVAILABLE is False
-            assert mod.ollama is None
-        finally:
-            builtins.__import__ = original_import  # type: ignore[assignment]
-            # Restore original modules
-            if saved_heuristics is not None:
-                sys.modules[module_name] = saved_heuristics
-            if saved_ollama is not None:
-                sys.modules["ollama"] = saved_ollama
+        assert mod.OLLAMA_AVAILABLE is False
+        assert mod.ollama is None
 
 
 # =========================================================================
@@ -222,9 +213,9 @@ class TestFeedbackWeightAdjustment:
 
             events.append(
                 FeedbackEvent(
-                    file_path=Path(f"/{parent_dir}/file{i}.txt")
+                    file_path=Path("/") / f"{parent_dir}" / f"file{i}.txt"
                     if parent_dir
-                    else Path(f"/file{i}.txt"),
+                    else Path("/") / f"file{i}.txt",
                     suggested=PARACategory.PROJECT,
                     actual=cat,
                     confidence=0.8,
@@ -287,7 +278,7 @@ class TestFeedbackPatternLearningEdges:
 
         events = [
             FeedbackEvent(
-                file_path=Path("/noext"),
+                file_path=Path("/") / "noext",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.8,
@@ -307,7 +298,7 @@ class TestFeedbackPatternLearningEdges:
 
         events = [
             FeedbackEvent(
-                file_path=Path("/file.txt"),
+                file_path=Path("/") / "file.txt",
                 suggested=PARACategory.PROJECT,
                 actual=PARACategory.RESOURCE,
                 confidence=0.8,

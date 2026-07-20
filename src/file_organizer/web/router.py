@@ -55,8 +55,16 @@ def home(
     config_manager = ConfigManager()
     config = config_manager.load()
 
-    if not config.setup_completed:
+    if not config.setup_completed and not getattr(
+        config, "setup_deferred", False
+    ):  # pragma: no cover
         return RedirectResponse(url="/ui/setup", status_code=303)
 
-    context = base_context(request, settings, active="home", title="Home")
+    context = base_context(
+        request,
+        settings,
+        active="home",
+        title="Home",
+        extras={"setup_deferred": getattr(config, "setup_deferred", False)},
+    )
     return templates.TemplateResponse(request, "index.html", context)

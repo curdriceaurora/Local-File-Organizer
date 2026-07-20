@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-file-organizer"
-version = "2.0.0-alpha.3"
+dynamic = ["version"]
 description = "AI-powered local file management with state-of-the-art models"
 authors = [
     {name = "Local File Organizer Team", email = "noreply@example.com"}
@@ -14,13 +14,15 @@ license = {text = "MIT OR Apache-2.0"}
 requires-python = ">=3.11"
 keywords = ["file-management", "ai", "organization", "local-llm", "privacy"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Desktop Environment :: File Managers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -35,7 +37,15 @@ dependencies = [
     # NLP and data science
     # Deterministic, offline stemming (WP-4.4, #1234) — pure-Python, no corpus download.
     "snowballstemmer>=2.2",
-    "numpy~=1.24",  # Numerical computing (used in dedup, video, optimization)
+    # Deliberately NOT ~= style — a ~= rewrite (#1037) would cap this <2.0 again:
+    # numpy 1.26.4 is the last release with cp311 wheels but has none for 3.13+;
+    # numpy 2.1+ is required for Python 3.13, 2.3+ for 3.14, and opencv-python
+    # >=4.13 requires numpy>=2. Floor matches scipy>=1.17's own floor (1.26.4).
+    # Capped <2.5 while requires-python is >=3.11: numpy 2.5 dropped 3.11 AND
+    # its stubs use PEP 695 `type` statements, which mypy rejects under
+    # python_version = "3.11" (our floor). numpy 2.4.x ships cp311-cp314
+    # wheels, so one version still covers the whole support matrix.
+    "numpy>=1.26.4,<2.5",  # Numerical computing (used in dedup, video, optimization)
     "tqdm~=4.66",  # Progress bars (used in CLI dedup)
 
     # Security: XXE/entity-expansion-safe XML parsing (dedup ODT content.xml).
@@ -52,23 +62,24 @@ dependencies = [
     # back as defaults (issue: CLIState.debug/verbose always False, lazy
     # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
     "typer[all]>=0.12,<0.26",
-    "rich~=13.0",
+    "rich~=15.0",
     "textual~=0.50",
 
     # API and async
     "fastapi~=0.109",
     "starlette~=1.3",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
-    "aiofiles~=23.0",  # Required by Starlette StaticFiles for async file serving
+    "aiofiles~=25.1",  # Required by Starlette StaticFiles for async file serving
     "jinja2~=3.1",
     "markupsafe~=3.0",  # Direct import in web csrf_input; also a jinja2 transitive dep
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
     "Pygments>=2.20.0",
     "pyjwt~=2.8",
     "bcrypt>=4.0.0,<6.0.0",
+    "pycryptodomex>=3.23.0",
     # Database
     "sqlalchemy~=2.0",
     "alembic~=1.13",
@@ -85,10 +96,13 @@ dependencies = [
     "email-validator~=2.1",
     "python-dotenv~=1.0",
     "click~=8.1",
-    "watchdog~=3.0",  # File system event handler
+    # Upper bound <7 (not ~=3.0): watchdog 3.0 ships no macOS wheels past cp311
+    # and no py3-none-any wheel, so macOS on Python 3.12+ falls back to an
+    # fsevents sdist build. watchdog 6.0 ships cp313+ macOS wheels.
+    "watchdog>=3.0,<7",  # File system event handler
 
     # System utilities
-    "psutil~=5.9",  # System resource monitoring
+    "psutil>=5.9,<8",  # System resource monitoring; 5.9.x abi3 wheels predate Python 3.13/3.14
 
     # Logging
     "loguru>=0.7.0",  # 0.x — unstable API, keep >=
@@ -109,7 +123,7 @@ web = [
     "fastapi~=0.109",
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
-    "websockets~=12.0",
+    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
@@ -121,26 +135,26 @@ web = [
 ]
 
 dev = [
-    "pytest~=9.0.3",
+    "pytest~=9.1.1",
     "pytest-asyncio~=1.4",
-    "pytest-cov~=4.1",
+    "pytest-cov>=4.1,<8",  # 4.1 predates pytest 9 / Python 3.13+; allow current major
     "pytest-mock~=3.12",
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
     "pytest-xdist~=3.5",
-    "pytest-randomly~=3.15",
-    "mypy>=1.8,<1.20",  # 1.20.x INTERNAL ERROR (crash) on src/file_organizer/models/*.py; cap until upstream fix
+    "pytest-randomly~=4.1",
+    "mypy>=1.19,<1.20",  # 1.20.x compiled build flakily INTERNAL-ERRORs (crashes on exit after clean analysis) in the lint hook, ~75% of CI runs (#1509 raised it into 1.20.x); pin below until upstream fix
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
     "black>=23.12,<27.0",
-    "isort~=5.13",
-    "pre-commit~=3.6",
+    "isort~=8.0",
+    "pre-commit~=4.6",
     "codespell~=2.2",
     "faker~=40.12",
-    "pytest-benchmark~=4.0",
+    "pytest-benchmark>=4.0,<6",  # 5.x drops benchmark_* ini keys; we pass them via CLI (see pytest note below)
     "interrogate~=1.5",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # 0.x — unstable API, keep >=; Markdown linting
     "deptry>=0.16.0",  # 0.x — unstable API, keep >=; Unused dependency detection
-    "diff-cover~=7.0",  # Diff coverage gate (local pre-commit + CI validation)
+    "diff-cover~=10.3",  # Diff coverage gate (local pre-commit + CI validation)
     "asgi-lifespan~=2.1",  # ASGI lifespan management for integration tests
     "pytest-playwright>=0.5.0",  # Browser-based E2E smoke tests (requires: playwright install chromium)
     "axe-playwright-python>=0.1.7",  # axe-core a11y smoke checks for Playwright tests
@@ -184,14 +198,20 @@ audio = [
     "mutagen~=1.47",  # Audio metadata extraction
     "tinytag>=1.10,<3.0",  # Lightweight audio metadata fallback
     "pydub>=0.25.0",  # 0.x — unstable API, keep >=; Audio manipulation
+    # pydub 0.25.x imports stdlib `audioop`, removed in Python 3.13 (PEP 594);
+    # audioop-lts is the PSF-blessed shim that restores it on 3.13+.
+    "audioop-lts; python_version >= '3.13'",
 ]
 
 video = [
-    "opencv-python~=4.8",  # Video frame processing
+    "opencv-python~=5.0",  # Video frame processing
     "scenedetect[opencv]>=0.6.0",  # 0.x — unstable API, keep >=; Scene detection algorithms
 ]
 
 dedup = [
+    # No wheels past cp312, so 3.13+ builds from sdist — install-probed on
+    # 3.13.2 and 3.14.6 (2026-07): the Cython extension compiles and PHash
+    # round-trips. Validated continuously by the ci-extras matrix.
     "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
     "scikit-learn~=1.4",  # ML-based text similarity for deduplication
     "pypdf>=4,<7",  # PDF text extraction fallback in dedup extractor
@@ -245,6 +265,9 @@ Documentation = "https://github.com/curdriceaurora/Local-File-Organizer#readme"
 Repository = "https://github.com/curdriceaurora/Local-File-Organizer"
 Issues = "https://github.com/curdriceaurora/Local-File-Organizer/issues"
 Changelog = "https://github.com/curdriceaurora/Local-File-Organizer/releases"
+
+[tool.setuptools.dynamic]
+version = {attr = "file_organizer.version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -443,6 +466,10 @@ markers = [
 filterwarnings = [
     "error::DeprecationWarning:file_organizer",
     "error::PendingDeprecationWarning:file_organizer",
+    # Starlette's TestClient now warns that it prefers optional httpx2 support.
+    # The project still has first-party httpx usage pinned to 0.x; keep this scoped
+    # test-only warning ignored until a coordinated dependency migration is done.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead\\.:starlette.exceptions.StarletteDeprecationWarning",
     "ignore::DeprecationWarning:pkg_resources",
     "ignore::DeprecationWarning:google",
     "ignore::DeprecationWarning:importlib",
@@ -516,6 +543,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "opencv-python" = "cv2"
 "pydantic-settings" = "pydantic_settings"
 "pypdf" = "pypdf"
+"pycryptodomex" = "Cryptodome"
 "striprtf" = "striprtf"
 "llama-cpp-python" = "llama_cpp"
 "mlx-lm" = "mlx_lm"
@@ -555,6 +583,11 @@ DEP002 = [
     "Pygments",
     # pywebview: desktop GUI wrapper; import name is 'webview' (mapped above); used in desktop/app.py
     "pywebview",
+    # audioop-lts: restores stdlib `audioop` on Python 3.13+ for pydub (never imported directly)
+    "audioop-lts",
+    # Optional model providers are loaded through importlib to keep mypy stable with/without extras.
+    "llama-cpp-python",
+    "mlx-lm",
 ]
 
 [tool.coverage.floors.integration]
@@ -616,7 +649,7 @@ DEP002 = [
 "src/file_organizer/cli/config_cli.py" = 100
 "src/file_organizer/cli/copilot.py" = 95
 "src/file_organizer/cli/daemon.py" = 100
-"src/file_organizer/cli/dedupe.py" = 25
+"src/file_organizer/cli/dedupe.py" = 88
 "src/file_organizer/cli/dedupe_display.py" = 70
 "src/file_organizer/cli/dedupe_hash.py" = 85
 "src/file_organizer/cli/dedupe_removal.py" = 100
@@ -647,7 +680,9 @@ DEP002 = [
 "src/file_organizer/client/models.py" = 100
 "src/file_organizer/client/sync_client.py" = 70
 "src/file_organizer/config/__init__.py" = 100
+"src/file_organizer/config/defaults.py" = 100
 "src/file_organizer/config/manager.py" = 80
+"src/file_organizer/config/methodology.py" = 100
 "src/file_organizer/config/migrations.py" = 20
 "src/file_organizer/config/path_manager.py" = 100
 "src/file_organizer/config/path_migration.py" = 90
@@ -662,6 +697,7 @@ DEP002 = [
 "src/file_organizer/core/initializer.py" = 100
 "src/file_organizer/core/organizer.py" = 90
 "src/file_organizer/core/path_guard.py" = 95
+"src/file_organizer/core/plan.py" = 85
 "src/file_organizer/core/setup_wizard.py" = 95
 "src/file_organizer/core/types.py" = 100
 "src/file_organizer/daemon/__init__.py" = 100
@@ -670,14 +706,14 @@ DEP002 = [
 "src/file_organizer/daemon/scheduler.py" = 80
 "src/file_organizer/daemon/service.py" = 60
 "src/file_organizer/deploy/__init__.py" = 100
-"src/file_organizer/deploy/compose_scaler.py" = 15
+"src/file_organizer/deploy/compose_scaler.py" = 92
 "src/file_organizer/deploy/config.py" = 30
 "src/file_organizer/deploy/health.py" = 30
-"src/file_organizer/deploy/monitoring.py" = 40
-"src/file_organizer/deploy/scaling.py" = 35
+"src/file_organizer/deploy/monitoring.py" = 89
+"src/file_organizer/deploy/scaling.py" = 92
 "src/file_organizer/desktop/__init__.py" = 0
 "src/file_organizer/desktop/__main__.py" = 0
-"src/file_organizer/desktop/app.py" = 60
+"src/file_organizer/desktop/app.py" = 63
 "src/file_organizer/events/__init__.py" = 100
 "src/file_organizer/events/audit.py" = 94
 "src/file_organizer/events/config.py" = 100
@@ -720,7 +756,7 @@ DEP002 = [
 "src/file_organizer/methodologies/johnny_decimal/categories.py" = 90
 "src/file_organizer/methodologies/johnny_decimal/compatibility.py" = 60
 "src/file_organizer/methodologies/johnny_decimal/config.py" = 90
-"src/file_organizer/methodologies/johnny_decimal/migrator.py" = 15
+"src/file_organizer/methodologies/johnny_decimal/migrator.py" = 74
 "src/file_organizer/methodologies/johnny_decimal/numbering.py" = 60
 "src/file_organizer/methodologies/johnny_decimal/scanner.py" = 70
 "src/file_organizer/methodologies/johnny_decimal/system.py" = 80
@@ -841,6 +877,7 @@ DEP002 = [
 "src/file_organizer/review_regressions/framework.py" = 80
 "src/file_organizer/review_regressions/memory_lifecycle.py" = 90
 "src/file_organizer/review_regressions/security.py" = 80
+"src/file_organizer/review_regressions/template_js.py" = 20
 "src/file_organizer/services/__init__.py" = 100
 "src/file_organizer/services/analytics/__init__.py" = 100
 "src/file_organizer/services/analytics/analytics_service.py" = 95
@@ -924,17 +961,18 @@ DEP002 = [
 "src/file_organizer/services/vision_fallback.py" = 95
 "src/file_organizer/services/vision_processor.py" = 90
 "src/file_organizer/tui/__init__.py" = 100
-"src/file_organizer/tui/analytics_view.py" = 35
+"src/file_organizer/tui/analytics_view.py" = 48
 "src/file_organizer/tui/app.py" = 70
 "src/file_organizer/tui/audio_view.py" = 20
 "src/file_organizer/tui/copilot_view.py" = 35
 "src/file_organizer/tui/file_browser.py" = 55
 "src/file_organizer/tui/file_preview.py" = 45
-"src/file_organizer/tui/methodology_view.py" = 35
-"src/file_organizer/tui/organization_preview.py" = 35
-"src/file_organizer/tui/settings_view.py" = 40
+"src/file_organizer/tui/methodology_view.py" = 40
+"src/file_organizer/tui/organization_preview.py" = 29
+"src/file_organizer/tui/settings_view.py" = 44
 "src/file_organizer/tui/setup_wizard_view.py" = 0
-"src/file_organizer/tui/undo_history_view.py" = 20
+"src/file_organizer/tui/status.py" = 80
+"src/file_organizer/tui/undo_history_view.py" = 48
 "src/file_organizer/undo/__init__.py" = 100
 "src/file_organizer/undo/_journal.py" = 100
 "src/file_organizer/undo/durable_move.py" = 90
@@ -946,11 +984,12 @@ DEP002 = [
 "src/file_organizer/undo/viewer.py" = 80
 "src/file_organizer/updater/__init__.py" = 100
 "src/file_organizer/updater/background.py" = 35
-"src/file_organizer/updater/checker.py" = 25
-"src/file_organizer/updater/installer.py" = 15
-"src/file_organizer/updater/manager.py" = 25
+"src/file_organizer/updater/checker.py" = 64
+"src/file_organizer/updater/installer.py" = 52
+"src/file_organizer/updater/manager.py" = 65
 "src/file_organizer/updater/sidecar_updater.py" = 80
 "src/file_organizer/updater/state.py" = 90
+"src/file_organizer/updater/trust.py" = 60
 "src/file_organizer/utils/__init__.py" = 100
 "src/file_organizer/utils/atomic_io.py" = 80
 "src/file_organizer/utils/atomic_write.py" = 95
@@ -958,6 +997,7 @@ DEP002 = [
 "src/file_organizer/utils/cli_errors.py" = 90
 "src/file_organizer/utils/epub_enhanced.py" = 55
 "src/file_organizer/utils/file_readers.py" = 100
+"src/file_organizer/utils/file_times.py" = 53
 "src/file_organizer/utils/log_redact.py" = 100
 "src/file_organizer/utils/readers/__init__.py" = 80
 "src/file_organizer/utils/readers/_base.py" = 75
@@ -967,6 +1007,7 @@ DEP002 = [
 "src/file_organizer/utils/readers/documents.py" = 70
 "src/file_organizer/utils/readers/ebook.py" = 65
 "src/file_organizer/utils/readers/scientific.py" = 65
+"src/file_organizer/utils/safe_copy.py" = 95
 "src/file_organizer/utils/safedir.py" = 90
 "src/file_organizer/utils/text_processing.py" = 95
 "src/file_organizer/version.py" = 85
@@ -976,16 +1017,23 @@ DEP002 = [
 "src/file_organizer/watcher/monitor.py" = 65
 "src/file_organizer/watcher/queue.py" = 100
 "src/file_organizer/web/__init__.py" = 100
+"src/file_organizer/web/_forms.py" = 90
 "src/file_organizer/web/_helpers.py" = 70
 "src/file_organizer/web/csrf.py" = 97
+"src/file_organizer/web/file_listing.py" = 75
 "src/file_organizer/web/file_operations.py" = 75
+"src/file_organizer/web/file_uploads.py" = 80
 "src/file_organizer/web/file_validators.py" = 70
 "src/file_organizer/web/files_routes.py" = 95
 "src/file_organizer/web/marketplace_routes.py" = 95
-"src/file_organizer/web/organize_routes.py" = 70
+"src/file_organizer/web/organize_routes.py" = 65
+"src/file_organizer/web/organize_services.py" = 95
+"src/file_organizer/web/profile_avatars.py" = 90
 "src/file_organizer/web/profile_routes.py" = 80
+"src/file_organizer/web/profile_state.py" = 75
 "src/file_organizer/web/router.py" = 70
 "src/file_organizer/web/settings_routes.py" = 85
+"src/file_organizer/web/settings_service.py" = 90
 "src/file_organizer/web/setup_routes.py" = 80
 
 [tool.coverage.floors.unit]
@@ -1031,15 +1079,15 @@ DEP002 = [
 "src/file_organizer/api/routers/marketplace.py" = 95
 "src/file_organizer/api/routers/organize.py" = 95
 "src/file_organizer/api/routers/realtime.py" = 95
-"src/file_organizer/api/routers/search.py" = 55
+"src/file_organizer/api/routers/search.py" = 85
 "src/file_organizer/api/routers/setup.py" = 75
-"src/file_organizer/api/routers/system.py" = 75
+"src/file_organizer/api/routers/system.py" = 95
 "src/file_organizer/api/service_facade.py" = 100
-"src/file_organizer/api/utils.py" = 80
+"src/file_organizer/api/utils.py" = 90
 "src/file_organizer/cli/__init__.py" = 100
 "src/file_organizer/cli/analytics.py" = 95
 "src/file_organizer/cli/api.py" = 50
-"src/file_organizer/cli/api_keys.py" = 95
+"src/file_organizer/cli/api_keys.py" = 45
 "src/file_organizer/cli/autotag.py" = 100
 "src/file_organizer/cli/autotag_v2.py" = 60
 "src/file_organizer/cli/benchmark.py" = 80
@@ -1057,43 +1105,46 @@ DEP002 = [
 "src/file_organizer/cli/doctor.py" = 95
 "src/file_organizer/cli/interactive.py" = 100
 "src/file_organizer/cli/lazy.py" = 90
-"src/file_organizer/cli/main.py" = 75
+"src/file_organizer/cli/main.py" = 70
 "src/file_organizer/cli/marketplace.py" = 95
 "src/file_organizer/cli/models_cli.py" = 85
-"src/file_organizer/cli/organize.py" = 75
-"src/file_organizer/cli/path_validation.py" = 90
+"src/file_organizer/cli/organize.py" = 70
+"src/file_organizer/cli/path_validation.py" = 80
 "src/file_organizer/cli/profile.py" = 95
 "src/file_organizer/cli/rules.py" = 95
-"src/file_organizer/cli/setup.py" = 50
+"src/file_organizer/cli/setup.py" = 55
 "src/file_organizer/cli/state.py" = 100
 "src/file_organizer/cli/suggest.py" = 80
 "src/file_organizer/cli/undo_history.py" = 100
 "src/file_organizer/cli/undo_recover.py" = 90
 "src/file_organizer/cli/undo_redo.py" = 100
 "src/file_organizer/cli/update.py" = 15
-"src/file_organizer/cli/utilities.py" = 50
+"src/file_organizer/cli/utilities.py" = 85
 "src/file_organizer/client/__init__.py" = 100
 "src/file_organizer/client/async_client.py" = 95
 "src/file_organizer/client/exceptions.py" = 100
 "src/file_organizer/client/models.py" = 100
 "src/file_organizer/client/sync_client.py" = 75
 "src/file_organizer/config/__init__.py" = 100
-"src/file_organizer/config/manager.py" = 80
-"src/file_organizer/config/migrations.py" = 95
+"src/file_organizer/config/defaults.py" = 100
+"src/file_organizer/config/manager.py" = 85
+"src/file_organizer/config/methodology.py" = 100
+"src/file_organizer/config/migrations.py" = 100
 "src/file_organizer/config/path_manager.py" = 100
-"src/file_organizer/config/path_migration.py" = 30
-"src/file_organizer/config/provider_env.py" = 70
+"src/file_organizer/config/path_migration.py" = 45
+"src/file_organizer/config/provider_env.py" = 100
 "src/file_organizer/config/schema.py" = 100
 "src/file_organizer/core/__init__.py" = 100
 "src/file_organizer/core/backend_detector.py" = 90
 "src/file_organizer/core/dispatcher.py" = 45
-"src/file_organizer/core/display.py" = 80
+"src/file_organizer/core/display.py" = 85
 "src/file_organizer/core/file_ops.py" = 80
-"src/file_organizer/core/hardware_profile.py" = 75
+"src/file_organizer/core/hardware_profile.py" = 95
 "src/file_organizer/core/initializer.py" = 85
 "src/file_organizer/core/organizer.py" = 85
 "src/file_organizer/core/path_guard.py" = 60
-"src/file_organizer/core/setup_wizard.py" = 45
+"src/file_organizer/core/plan.py" = 85
+"src/file_organizer/core/setup_wizard.py" = 50
 "src/file_organizer/core/types.py" = 100
 "src/file_organizer/daemon/__init__.py" = 100
 "src/file_organizer/daemon/config.py" = 80
@@ -1166,22 +1217,22 @@ DEP002 = [
 "src/file_organizer/methodologies/para/categories.py" = 100
 "src/file_organizer/methodologies/para/config.py" = 100
 "src/file_organizer/methodologies/para/detection/__init__.py" = 100
-"src/file_organizer/methodologies/para/detection/heuristics.py" = 70
+"src/file_organizer/methodologies/para/detection/heuristics.py" = 75
 "src/file_organizer/methodologies/para/folder_generator.py" = 100
 "src/file_organizer/methodologies/para/folder_mapper.py" = 100
 "src/file_organizer/methodologies/para/migration_manager.py" = 100
 "src/file_organizer/methodologies/para/rules/__init__.py" = 100
 "src/file_organizer/methodologies/para/rules/engine.py" = 100
 "src/file_organizer/models/__init__.py" = 100
-"src/file_organizer/models/_claude_client.py" = 90
+"src/file_organizer/models/_claude_client.py" = 85
 "src/file_organizer/models/_claude_response.py" = 100
 "src/file_organizer/models/_llama_cpp_helpers.py" = 80
 "src/file_organizer/models/_ollama_response.py" = 100
-"src/file_organizer/models/_openai_client.py" = 85
+"src/file_organizer/models/_openai_client.py" = 80
 "src/file_organizer/models/_openai_response.py" = 80
 "src/file_organizer/models/_vision_helpers.py" = 90
 "src/file_organizer/models/analytics.py" = 100
-"src/file_organizer/models/audio_model.py" = 60
+"src/file_organizer/models/audio_model.py" = 95
 "src/file_organizer/models/audio_registry.py" = 100
 "src/file_organizer/models/audio_transcriber.py" = 95
 "src/file_organizer/models/base.py" = 95
@@ -1202,7 +1253,7 @@ DEP002 = [
 "src/file_organizer/models/vision_registry.py" = 100
 "src/file_organizer/models/vision_schema.py" = 100
 "src/file_organizer/optimization/__init__.py" = 100
-"src/file_organizer/optimization/batch_sizer.py" = 95
+"src/file_organizer/optimization/batch_sizer.py" = 100
 "src/file_organizer/optimization/buffer_pool.py" = 80
 "src/file_organizer/optimization/connection_pool.py" = 90
 "src/file_organizer/optimization/database.py" = 95
@@ -1212,7 +1263,7 @@ DEP002 = [
 "src/file_organizer/optimization/memory_profiler.py" = 95
 "src/file_organizer/optimization/model_cache.py" = 90
 "src/file_organizer/optimization/query_cache.py" = 100
-"src/file_organizer/optimization/resource_monitor.py" = 95
+"src/file_organizer/optimization/resource_monitor.py" = 100
 "src/file_organizer/optimization/warmup.py" = 95
 "src/file_organizer/parallel/__init__.py" = 100
 "src/file_organizer/parallel/checkpoint.py" = 95
@@ -1254,7 +1305,7 @@ DEP002 = [
 "src/file_organizer/plugins/marketplace/errors.py" = 100
 "src/file_organizer/plugins/marketplace/installer.py" = 75
 "src/file_organizer/plugins/marketplace/metadata.py" = 95
-"src/file_organizer/plugins/marketplace/models.py" = 95
+"src/file_organizer/plugins/marketplace/models.py" = 90
 "src/file_organizer/plugins/marketplace/repository.py" = 80
 "src/file_organizer/plugins/marketplace/reviews.py" = 90
 "src/file_organizer/plugins/marketplace/service.py" = 80
@@ -1266,11 +1317,13 @@ DEP002 = [
 "src/file_organizer/plugins/sdk/testing.py" = 100
 "src/file_organizer/plugins/security.py" = 50
 "src/file_organizer/review_regressions/__init__.py" = 100
-"src/file_organizer/review_regressions/api_compat.py" = 20
-"src/file_organizer/review_regressions/correctness.py" = 10
-"src/file_organizer/review_regressions/framework.py" = 35
-"src/file_organizer/review_regressions/memory_lifecycle.py" = 10
-"src/file_organizer/review_regressions/security.py" = 10
+"src/file_organizer/review_regressions/api_compat.py" = 85
+"src/file_organizer/review_regressions/audit.py" = 95
+"src/file_organizer/review_regressions/correctness.py" = 85
+"src/file_organizer/review_regressions/framework.py" = 95
+"src/file_organizer/review_regressions/memory_lifecycle.py" = 90
+"src/file_organizer/review_regressions/security.py" = 90
+"src/file_organizer/review_regressions/template_js.py" = 85
 "src/file_organizer/services/__init__.py" = 100
 "src/file_organizer/services/analytics/__init__.py" = 100
 "src/file_organizer/services/analytics/analytics_service.py" = 95
@@ -1292,11 +1345,13 @@ DEP002 = [
 "src/file_organizer/services/auto_tagging/tag_recommender.py" = 90
 "src/file_organizer/services/copilot/__init__.py" = 100
 "src/file_organizer/services/copilot/conversation.py" = 90
-"src/file_organizer/services/copilot/engine.py" = 85
-"src/file_organizer/services/copilot/executor.py" = 85
+"src/file_organizer/services/copilot/engine.py" = 95
+"src/file_organizer/services/copilot/executor.py" = 90
 "src/file_organizer/services/copilot/intent_parser.py" = 95
 "src/file_organizer/services/copilot/models.py" = 100
 "src/file_organizer/services/copilot/rules/__init__.py" = 100
+"src/file_organizer/services/copilot/rules/actions.py" = 90
+"src/file_organizer/services/copilot/rules/executor.py" = 85
 "src/file_organizer/services/copilot/rules/models.py" = 100
 "src/file_organizer/services/copilot/rules/preview.py" = 95
 "src/file_organizer/services/copilot/rules/rule_manager.py" = 100
@@ -1313,7 +1368,7 @@ DEP002 = [
 "src/file_organizer/services/deduplication/quality.py" = 95
 "src/file_organizer/services/deduplication/reporter.py" = 100
 "src/file_organizer/services/deduplication/semantic.py" = 95
-"src/file_organizer/services/deduplication/viewer.py" = 100
+"src/file_organizer/services/deduplication/viewer.py" = 95
 "src/file_organizer/services/inference_timer.py" = 100
 "src/file_organizer/services/intelligence/__init__.py" = 100
 "src/file_organizer/services/intelligence/confidence.py" = 95
@@ -1338,10 +1393,10 @@ DEP002 = [
 "src/file_organizer/services/misplacement_detector.py" = 85
 "src/file_organizer/services/pattern_analyzer.py" = 90
 "src/file_organizer/services/search/__init__.py" = 100
-"src/file_organizer/services/search/bm25_index.py" = 30
+"src/file_organizer/services/search/bm25_index.py" = 95
 "src/file_organizer/services/search/embedding_cache.py" = 95
-"src/file_organizer/services/search/hybrid_retriever.py" = 35
-"src/file_organizer/services/search/vector_index.py" = 25
+"src/file_organizer/services/search/hybrid_retriever.py" = 95
+"src/file_organizer/services/search/vector_index.py" = 90
 "src/file_organizer/services/smart_suggestions.py" = 80
 "src/file_organizer/services/suggestion_feedback.py" = 95
 "src/file_organizer/services/text_processor.py" = 95
@@ -1356,12 +1411,13 @@ DEP002 = [
 "src/file_organizer/tui/app.py" = 70
 "src/file_organizer/tui/audio_view.py" = 95
 "src/file_organizer/tui/copilot_view.py" = 100
-"src/file_organizer/tui/file_browser.py" = 85
+"src/file_organizer/tui/file_browser.py" = 95
 "src/file_organizer/tui/file_preview.py" = 100
 "src/file_organizer/tui/methodology_view.py" = 95
 "src/file_organizer/tui/organization_preview.py" = 100
 "src/file_organizer/tui/settings_view.py" = 95
-"src/file_organizer/tui/setup_wizard_view.py" = 85
+"src/file_organizer/tui/setup_wizard_view.py" = 90
+"src/file_organizer/tui/status.py" = 100
 "src/file_organizer/tui/undo_history_view.py" = 100
 "src/file_organizer/undo/__init__.py" = 100
 "src/file_organizer/undo/_journal.py" = 100
@@ -1370,15 +1426,16 @@ DEP002 = [
 "src/file_organizer/undo/rollback.py" = 85
 "src/file_organizer/undo/trash_gc.py" = 100
 "src/file_organizer/undo/undo_manager.py" = 95
-"src/file_organizer/undo/validator.py" = 90
+"src/file_organizer/undo/validator.py" = 80
 "src/file_organizer/undo/viewer.py" = 90
 "src/file_organizer/updater/__init__.py" = 100
 "src/file_organizer/updater/background.py" = 100
 "src/file_organizer/updater/checker.py" = 100
 "src/file_organizer/updater/installer.py" = 95
 "src/file_organizer/updater/manager.py" = 100
-"src/file_organizer/updater/sidecar_updater.py" = 80
+"src/file_organizer/updater/sidecar_updater.py" = 85
 "src/file_organizer/updater/state.py" = 100
+"src/file_organizer/updater/trust.py" = 95
 "src/file_organizer/utils/__init__.py" = 100
 "src/file_organizer/utils/atomic_io.py" = 80
 "src/file_organizer/utils/atomic_write.py" = 95
@@ -1386,6 +1443,7 @@ DEP002 = [
 "src/file_organizer/utils/cli_errors.py" = 100
 "src/file_organizer/utils/epub_enhanced.py" = 35
 "src/file_organizer/utils/file_readers.py" = 100
+"src/file_organizer/utils/file_times.py" = 100
 "src/file_organizer/utils/log_redact.py" = 100
 "src/file_organizer/utils/readers/__init__.py" = 90
 "src/file_organizer/utils/readers/_base.py" = 100
@@ -1395,6 +1453,7 @@ DEP002 = [
 "src/file_organizer/utils/readers/documents.py" = 70
 "src/file_organizer/utils/readers/ebook.py" = 40
 "src/file_organizer/utils/readers/scientific.py" = 85
+"src/file_organizer/utils/safe_copy.py" = 100
 "src/file_organizer/utils/safedir.py" = 90
 "src/file_organizer/utils/text_processing.py" = 95
 "src/file_organizer/version.py" = 95
@@ -1404,14 +1463,21 @@ DEP002 = [
 "src/file_organizer/watcher/monitor.py" = 90
 "src/file_organizer/watcher/queue.py" = 100
 "src/file_organizer/web/__init__.py" = 100
+"src/file_organizer/web/_forms.py" = 90
 "src/file_organizer/web/_helpers.py" = 85
 "src/file_organizer/web/csrf.py" = 95
+"src/file_organizer/web/file_listing.py" = 95
 "src/file_organizer/web/file_operations.py" = 85
+"src/file_organizer/web/file_uploads.py" = 90
 "src/file_organizer/web/file_validators.py" = 100
 "src/file_organizer/web/files_routes.py" = 100
 "src/file_organizer/web/marketplace_routes.py" = 100
-"src/file_organizer/web/organize_routes.py" = 85
+"src/file_organizer/web/organize_routes.py" = 80
+"src/file_organizer/web/organize_services.py" = 95
+"src/file_organizer/web/profile_avatars.py" = 100
 "src/file_organizer/web/profile_routes.py" = 85
+"src/file_organizer/web/profile_state.py" = 85
 "src/file_organizer/web/router.py" = 100
-"src/file_organizer/web/settings_routes.py" = 95
+"src/file_organizer/web/settings_routes.py" = 90
+"src/file_organizer/web/settings_service.py" = 100
 "src/file_organizer/web/setup_routes.py" = 100

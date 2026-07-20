@@ -137,7 +137,7 @@ class TestStorageReporter(unittest.TestCase):
 
     def test_export_to_csv_error(self):
         """Test CSV export with invalid path raises."""
-        bad_path = Path("/nonexistent_dir/subdir/report.csv")
+        bad_path = Path("/") / "nonexistent_dir" / "subdir" / "report.csv"
         with self.assertRaises(OSError):
             self.reporter.export_to_csv(self.sample_groups, bad_path)
 
@@ -153,7 +153,7 @@ class TestStorageReporter(unittest.TestCase):
 
     def test_export_to_json_error(self):
         """Test JSON export with invalid path raises."""
-        bad_path = Path("/nonexistent_dir/subdir/report.json")
+        bad_path = Path("/") / "nonexistent_dir" / "subdir" / "report.json"
         with self.assertRaises(OSError):
             self.reporter.export_to_json(self.sample_results, bad_path)
 

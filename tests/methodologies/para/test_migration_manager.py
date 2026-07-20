@@ -266,14 +266,14 @@ class TestMigrationFile:
     def test_valid_migration_file(self):
         """Test creating valid migration file."""
         migration_file = MigrationFile(
-            source_path=Path("/source/file.txt"),
+            source_path=Path("/") / "source" / "file.txt",
             target_category=PARACategory.PROJECT,
-            target_path=Path("/target/Projects/file.txt"),
+            target_path=Path("/") / "target" / "Projects" / "file.txt",
             confidence=0.85,
             reasoning=["Reason 1", "Reason 2"],
         )
 
-        assert migration_file.source_path == Path("/source/file.txt")
+        assert migration_file.source_path == Path("/") / "source" / "file.txt"
         assert migration_file.target_category == PARACategory.PROJECT
         assert migration_file.confidence == 0.85
         assert len(migration_file.reasoning) == 2
@@ -287,16 +287,16 @@ class TestMigrationPlan:
         """Test creating valid migration plan."""
         files = [
             MigrationFile(
-                source_path=Path("/source/file1.txt"),
+                source_path=Path("/") / "source" / "file1.txt",
                 target_category=PARACategory.PROJECT,
-                target_path=Path("/target/Projects/file1.txt"),
+                target_path=Path("/") / "target" / "Projects" / "file1.txt",
                 confidence=0.8,
                 reasoning=[],
             ),
             MigrationFile(
-                source_path=Path("/source/file2.txt"),
+                source_path=Path("/") / "source" / "file2.txt",
                 target_category=PARACategory.RESOURCE,
-                target_path=Path("/target/Resources/file2.txt"),
+                target_path=Path("/") / "target" / "Resources" / "file2.txt",
                 confidence=0.7,
                 reasoning=[],
             ),
@@ -339,7 +339,7 @@ class TestMigrationReport:
 
         report = MigrationReport(
             plan=plan,
-            migrated=[Path("/target/file1.txt")],
+            migrated=[Path("/") / "target" / "file1.txt"],
             failed=[],
             skipped=[],
             duration_seconds=1.5,
@@ -364,7 +364,7 @@ class TestMigrationReport:
         report = MigrationReport(
             plan=plan,
             migrated=[],
-            failed=[(Path("/source/file.txt"), "Permission denied")],
+            failed=[(Path("/") / "source" / "file.txt", "Permission denied")],
             skipped=[],
             duration_seconds=0.5,
             success=False,

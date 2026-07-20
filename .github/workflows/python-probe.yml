@@ -1,0 +1,102 @@
+name: Deep Python Probe
+
+# Deep functional probes for the Python 3.13/3.14 migration (issue #882).
+# ci-extras.yml answers "does it install + import"; this workflow answers
+# "does the native path actually work": C extensions loading, audioop-lts
+# shimming pydub on 3.13+, imagededup's sdist-built Cython module, watchdog's
+# fsevents/inotify event round-trip, llama.cpp's cmake build, a PyInstaller
+# bundle that runs, and the numpy-2-sensitive test suites.
+#
+# Heavy by design (torch + llama.cpp build per cell) — runs weekly and on
+# demand via workflow_dispatch, not on every PR. PRs touching the probe kit
+# itself do trigger it so the probes stay honest.
+#
+# Windows cells double as the MSVC probes: on 3.13+ both imagededup and
+# llama-cpp-python compile from sdist there, which no other lane exercises.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * 1"  # Weekly Monday 08:00 UTC, after the Extras Matrix run
+  pull_request:
+    paths:
+      - "scripts/probe_python_support.py"
+      - ".github/workflows/python-probe.yml"
+  # push runs from the branch's own copy of this file, so the probe can be
+  # exercised before the workflow ever reaches the default branch (where
+  # workflow_dispatch would become available).
+  push:
+    branches: [main, "epic/**"]
+    paths:
+      - "scripts/probe_python_support.py"
+      - ".github/workflows/python-probe.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deep-probe:
+    name: "Probe ${{ matrix.os }} py${{ matrix.python-version }}"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.11", "3.13", "3.14"]
+    # Windows default shell is pwsh; every step here is written for bash
+    # (available on all runner images).
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Windows-only: makes the interpreter default to UTF-8, matching the
+      # test-windows job in ci-full.yml (harmless elsewhere).
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install project with all risky extras
+        # llama builds llama.cpp from source (cmake + a C++ toolchain are
+        # preinstalled on all GitHub runner images, MSVC included); mlx is
+        # Darwin-only by marker. On 3.13+ imagededup also builds from sdist,
+        # which makes this step the MSVC/Cython probe on Windows.
+        run: |
+          EXTRAS="dev,audio,video,dedup,scientific,search,archive,parsers,cad,build,llama"
+          if [ "$(uname)" = "Darwin" ]; then EXTRAS="$EXTRAS,mlx"; fi
+          bash scripts/pip_install_retry.sh -e ".[$EXTRAS]"
+      - name: Deep functional probes (native paths, C extensions, stdlib shims)
+        run: python scripts/probe_python_support.py
+      - name: numpy-2-sensitive test suites
+        # The six modules that import numpy directly — NEP-50 promotion and
+        # float-output changes would surface here first.
+        run: |
+          pytest tests/services/deduplication/test_dedup_embedder.py \
+                 tests/services/deduplication/test_dedup_semantic.py \
+                 tests/services/deduplication/test_image_dedup.py \
+                 tests/services/search/test_vector_index.py \
+                 tests/services/search/test_embedding_cache.py \
+                 tests/services/video/test_scene_detector.py \
+                 tests/unit/services/video/test_scene_detector.py \
+                 --override-ini="addopts=" -p no:randomly --timeout=120 -q
+      - name: PyInstaller bundle smoke
+        # Metadata says pyinstaller supports <3.16; this proves a bundle
+        # actually builds and executes on this interpreter.
+        run: |
+          WORK="$RUNNER_TEMP/pyi-probe"
+          mkdir -p "$WORK"
+          printf 'import sys\nprint("bundle OK on", sys.version.split()[0])\n' > "$WORK/probe_hello.py"
+          pyinstaller --onefile --distpath "$WORK/dist" --workpath "$WORK/build" \
+            --specpath "$WORK" "$WORK/probe_hello.py" --log-level ERROR
+          BIN="$WORK/dist/probe_hello"
+          [ -f "$BIN.exe" ] && BIN="$BIN.exe"
+          "$BIN"

@@ -59,7 +59,7 @@ def _write_key(path: Path, api_key: str) -> None:
 
 def _print_usage() -> None:
     """Print CLI usage instructions for the api_keys script."""
-    print("Usage: python -m file_organizer.api.api_keys --output PATH [--prefix PREFIX]")
+    print("Usage: fo api-keys generate --output PATH [--prefix PREFIX]")
 
 
 def _main(argv: list[str]) -> int:

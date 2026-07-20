@@ -55,7 +55,7 @@ class TestOrganizeTranscribeFlag:
     def test_transcribe_audio_default_off(self, tmp_path: Path) -> None:
         # Without the flag, FileOrganizer must receive transcribe_audio=False.
         # Default ON would silently slow `fo organize` for every audio file
-        # and break beta testers without the [media] extra.
+        # and break beta testers without the [audio] extra.
         input_dir = tmp_path / "in"
         input_dir.mkdir()
         output_dir = tmp_path / "out"
@@ -131,6 +131,8 @@ class TestOrganizeTranscribeFlag:
                     "--transcribe-audio",
                     "--max-transcribe-seconds",
                     "120",
+                    "--whisper-model",
+                    "small",
                 ],
             )
 
@@ -138,3 +140,58 @@ class TestOrganizeTranscribeFlag:
         kwargs = mock_org_cls.call_args.kwargs
         assert kwargs.get("transcribe_audio") is True
         assert kwargs.get("max_transcribe_seconds") == 120.0
+        assert kwargs.get("whisper_model") == "small"
+
+    def test_whisper_model_flag_threads_to_organizer(self, tmp_path: Path) -> None:
+        input_dir = tmp_path / "in"
+        input_dir.mkdir()
+        output_dir = tmp_path / "out"
+
+        runner = CliRunner()
+        with (
+            patch("file_organizer.cli.organize._check_setup_completed", return_value=True),
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org_cls,
+        ):
+            mock_org_cls.return_value = MagicMock()
+            mock_org_cls.return_value.organize.return_value = MagicMock(
+                processed_files=0, skipped_files=0, failed_files=0, total_files=0
+            )
+
+            result = runner.invoke(
+                app,
+                [
+                    "organize",
+                    str(input_dir),
+                    str(output_dir),
+                    "--transcribe-audio",
+                    "--whisper-model",
+                    "base",
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        kwargs = mock_org_cls.call_args.kwargs
+        assert kwargs.get("whisper_model") == "base"
+
+    def test_whisper_model_defaults_to_tiny(self, tmp_path: Path) -> None:
+        # "tiny" keeps the default transcription path fast; larger models
+        # must be an explicit opt-in via --whisper-model.
+        input_dir = tmp_path / "in"
+        input_dir.mkdir()
+        output_dir = tmp_path / "out"
+
+        runner = CliRunner()
+        with (
+            patch("file_organizer.cli.organize._check_setup_completed", return_value=True),
+            patch("file_organizer.core.organizer.FileOrganizer") as mock_org_cls,
+        ):
+            mock_org_cls.return_value = MagicMock()
+            mock_org_cls.return_value.organize.return_value = MagicMock(
+                processed_files=0, skipped_files=0, failed_files=0, total_files=0
+            )
+
+            result = runner.invoke(app, ["organize", str(input_dir), str(output_dir)])
+
+        assert result.exit_code == 0, result.output
+        kwargs = mock_org_cls.call_args.kwargs
+        assert kwargs.get("whisper_model") == "tiny"

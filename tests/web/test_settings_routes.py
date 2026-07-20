@@ -22,7 +22,10 @@ from fastapi.responses import HTMLResponse
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
+from file_organizer.config.manager import ConfigManager
+from file_organizer.config.schema import AppConfig
+from file_organizer.web._forms import coerce_bool, form_bool
 from file_organizer.web.settings_routes import (
     LANGUAGE_OPTIONS,
     LOG_LEVEL_OPTIONS,
@@ -31,15 +34,13 @@ from file_organizer.web.settings_routes import (
     THEME_OPTIONS,
     TIMEZONE_OPTIONS,
     WebSettings,
-    _as_form_bool,
-    _coerce_bool,
     _load_web_settings,
+    _normalize_methodology,
     _render_section,
     _save_web_settings,
     _section_context,
     _update_web_settings,
     _validate_choice,
-    _validate_methodology,
     _validate_rules,
     settings_router,
 )
@@ -65,7 +66,7 @@ def mock_request():
 def settings():
     """Return an ApiSettings mock."""
     s = MagicMock(spec=ApiSettings)
-    s.allowed_paths = ["/tmp/test"]
+    s.allowed_paths = ["/tmp/test"]  # noqa: test-hardcoded-paths
     s.app_name = "File Organizer"
     s.version = "2.0.0"
     return s
@@ -82,36 +83,42 @@ def use_temp_settings_dir(monkeypatch, tmp_path):
             yield tmp_path
 
 
+@pytest.fixture()
+def app_config():
+    """Return a default ``AppConfig`` for tests that render sections directly."""
+    return AppConfig()
+
+
 # ---------------------------------------------------------------------------
-# _as_form_bool
+# form_bool
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestAsFormBool:
+class TestFormBool:
     """Test HTML form checkbox value conversion."""
 
     def test_true_values(self):
         """Should recognize true values."""
-        assert _as_form_bool("1") is True
-        assert _as_form_bool("true") is True
-        assert _as_form_bool("yes") is True
-        assert _as_form_bool("on") is True
+        assert form_bool("1") is True
+        assert form_bool("true") is True
+        assert form_bool("yes") is True
+        assert form_bool("on") is True
 
     def test_false_values(self):
         """Should treat non-true values as false."""
-        assert _as_form_bool("0") is False
-        assert _as_form_bool("false") is False
-        assert _as_form_bool("no") is False
-        assert _as_form_bool("") is False
+        assert form_bool("0") is False
+        assert form_bool("false") is False
+        assert form_bool("no") is False
+        assert form_bool("") is False
 
     def test_none_value(self):
         """Should treat None as false."""
-        assert _as_form_bool(None) is False
+        assert form_bool(None) is False
 
 
 # ---------------------------------------------------------------------------
-# _coerce_bool
+# coerce_bool
 # ---------------------------------------------------------------------------
 
 
@@ -121,21 +128,21 @@ class TestCoerceBool:
 
     def test_bool_values(self):
         """Should pass through bool values."""
-        assert _coerce_bool(True, False) is True
-        assert _coerce_bool(False, True) is False
+        assert coerce_bool(True, False) is True
+        assert coerce_bool(False, True) is False
 
     def test_string_values(self):
         """Should coerce string values."""
-        assert _coerce_bool("true", False) is True
-        assert _coerce_bool("false", True) is False
-        assert _coerce_bool("1", False) is True
+        assert coerce_bool("true", False) is True
+        assert coerce_bool("false", True) is False
+        assert coerce_bool("1", False) is True
 
     def test_fallback_to_default(self):
         """Should use default for non-bool/string values."""
-        assert _coerce_bool(123, False) is False
-        assert _coerce_bool(123, True) is True
-        assert _coerce_bool(None, False) is False
-        assert _coerce_bool([], True) is True
+        assert coerce_bool(123, False) is False
+        assert coerce_bool(123, True) is True
+        assert coerce_bool(None, False) is False
+        assert coerce_bool([], True) is True
 
 
 # ---------------------------------------------------------------------------
@@ -165,30 +172,41 @@ class TestValidateChoice:
 
 
 # ---------------------------------------------------------------------------
-# _validate_methodology
+# _normalize_methodology (canonical vocabulary — see file_organizer.config.methodology)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestValidateMethodology:
-    """Test methodology validation."""
+class TestNormalizeMethodology:
+    """Test methodology normalization against the canonical vocabulary."""
 
-    def test_valid_methodologies(self):
-        """Should accept valid methodologies."""
-        assert _validate_methodology("content_based") == "content_based"
-        assert _validate_methodology("johnny_decimal") == "johnny_decimal"
-        assert _validate_methodology("para") == "para"
-        assert _validate_methodology("date_based") == "date_based"
+    def test_canonical_values_pass_through(self):
+        """Should accept the canonical none/para/jd values unchanged."""
+        assert _normalize_methodology("none") == "none"
+        assert _normalize_methodology("para") == "para"
+        assert _normalize_methodology("jd") == "jd"
+
+    def test_legacy_aliases_map_to_canonical(self):
+        """Pre-unification web values should map to their canonical equivalent."""
+        assert _normalize_methodology("content_based") == "none"
+        assert _normalize_methodology("johnny_decimal") == "jd"
 
     def test_case_insensitive(self):
         """Should be case insensitive."""
-        assert _validate_methodology("CONTENT_BASED") == "content_based"
-        assert _validate_methodology("PARA") == "para"
+        assert _normalize_methodology("CONTENT_BASED") == "none"
+        assert _normalize_methodology("PARA") == "para"
 
-    def test_invalid_defaults_to_content_based(self):
-        """Should default to content_based for invalid."""
-        assert _validate_methodology("invalid") == "content_based"
-        assert _validate_methodology("") == "content_based"
+    def test_invalid_defaults_to_none(self):
+        """Should default to none for invalid or unimplemented values.
+
+        ``date_based`` was a web-only dropdown option with no organizer
+        implementation behind it anywhere in the codebase, so it is not a
+        recognized alias — it falls back to the default like any other
+        unrecognized value.
+        """
+        assert _normalize_methodology("invalid") == "none"
+        assert _normalize_methodology("") == "none"
+        assert _normalize_methodology("date_based") == "none"
 
 
 # ---------------------------------------------------------------------------
@@ -390,18 +408,19 @@ class TestUpdateWebSettings:
 class TestSectionContext:
     """Test section context building."""
 
-    def test_section_context_has_required_keys(self, mock_request):
+    def test_section_context_has_required_keys(self, mock_request, app_config):
         """Should include required keys."""
         ws = WebSettings()
-        ctx = _section_context(mock_request, ws, section="general")
+        ctx = _section_context(mock_request, ws, app_config, section="general")
         assert ctx["request"] == mock_request
         assert ctx["ws"] == ws
+        assert ctx["app_config"] == app_config
         assert ctx["section"] == "general"
 
-    def test_section_context_includes_options(self, mock_request):
+    def test_section_context_includes_options(self, mock_request, app_config):
         """Should include all option lists."""
         ws = WebSettings()
-        ctx = _section_context(mock_request, ws, section="general")
+        ctx = _section_context(mock_request, ws, app_config, section="general")
         assert "methodology_options" in ctx
         assert "log_level_options" in ctx
         assert "theme_options" in ctx
@@ -409,23 +428,25 @@ class TestSectionContext:
         assert "timezone_options" in ctx
         assert "performance_modes" in ctx
 
-    def test_success_message(self, mock_request):
+    def test_success_message(self, mock_request, app_config):
         """Should include success message."""
         ws = WebSettings()
         ctx = _section_context(
             mock_request,
             ws,
+            app_config,
             section="general",
             success_message="Settings saved!",
         )
         assert ctx["success_message"] == "Settings saved!"
 
-    def test_error_message(self, mock_request):
+    def test_error_message(self, mock_request, app_config):
         """Should include error message."""
         ws = WebSettings()
         ctx = _section_context(
             mock_request,
             ws,
+            app_config,
             section="general",
             error_message="Save failed!",
         )
@@ -442,7 +463,7 @@ class TestRenderSection:
     """Test section rendering."""
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_calls_template(self, mock_templates, mock_request):
+    def test_render_section_calls_template(self, mock_templates, mock_request, app_config):
         """Should call template renderer."""
         ws = WebSettings()
         mock_response = MagicMock()
@@ -451,15 +472,18 @@ class TestRenderSection:
         result = _render_section(
             mock_request,
             ws,
+            app_config,
             section="general",
             success_message="Saved!",
         )
 
         assert result == mock_response
         mock_templates.TemplateResponse.assert_called_once()
+        rendered_context = mock_templates.TemplateResponse.call_args[0][2]
+        assert rendered_context["app_config"] is app_config
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_with_error(self, mock_templates, mock_request):
+    def test_render_section_with_error(self, mock_templates, mock_request, app_config):
         """Should render with error message."""
         ws = WebSettings()
         mock_response = MagicMock()
@@ -468,11 +492,14 @@ class TestRenderSection:
         result = _render_section(
             mock_request,
             ws,
+            app_config,
             section="general",
             error_message="Save failed!",
         )
 
         assert result == mock_response
+        rendered_context = mock_templates.TemplateResponse.call_args[0][2]
+        assert rendered_context["app_config"] is app_config
 
 
 # ---------------------------------------------------------------------------
@@ -522,12 +549,7 @@ class TestWebSettings:
         ws = WebSettings()
         assert hasattr(ws, "language")
         assert hasattr(ws, "timezone")
-        assert hasattr(ws, "default_input_dir")
-        assert hasattr(ws, "default_output_dir")
-        assert hasattr(ws, "text_model")
-        assert hasattr(ws, "vision_model")
         assert hasattr(ws, "ollama_url")
-        assert hasattr(ws, "default_methodology")
         assert hasattr(ws, "auto_organize")
         assert hasattr(ws, "notifications_enabled")
         assert hasattr(ws, "file_filter_glob")
@@ -538,6 +560,15 @@ class TestWebSettings:
         assert hasattr(ws, "cache_enabled")
         assert hasattr(ws, "debug_mode")
         assert hasattr(ws, "performance_mode")
+
+    def test_shared_fields_moved_to_app_config(self):
+        """Workflow fields now live on AppConfig, not WebSettings (see #1539)."""
+        ws = WebSettings()
+        assert not hasattr(ws, "default_input_dir")
+        assert not hasattr(ws, "default_output_dir")
+        assert not hasattr(ws, "text_model")
+        assert not hasattr(ws, "vision_model")
+        assert not hasattr(ws, "default_methodology")
 
 
 # ---------------------------------------------------------------------------
@@ -550,11 +581,12 @@ class TestConstants:
     """Test that option constants are properly defined."""
 
     def test_methodology_options(self):
-        """Should have methodology options."""
-        assert "content_based" in METHODOLOGY_OPTIONS
-        assert "johnny_decimal" in METHODOLOGY_OPTIONS
-        assert "para" in METHODOLOGY_OPTIONS
-        assert "date_based" in METHODOLOGY_OPTIONS
+        """Should have the canonical methodology options and nothing else.
+
+        ``date_based`` was removed: it was a web-only dropdown option with no
+        organizer implementation behind it anywhere in the codebase (#1538).
+        """
+        assert set(METHODOLOGY_OPTIONS) == {"none", "para", "jd"}
 
     def test_theme_options(self):
         """Should have theme options."""
@@ -684,6 +716,9 @@ class TestSettingsImportPathBased:
         )
         app = FastAPI()
         app.dependency_overrides[get_settings] = lambda: api_settings
+        app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+            config_dir=tmp_path / "app-config"
+        )
         app.include_router(settings_router)
         return TestClient(app, raise_server_exceptions=False), tmp_path
 
@@ -692,7 +727,19 @@ class TestSettingsImportPathBased:
         """A valid JSON file under allowed_paths should be imported with status 200."""
         client, tmp_path = _client
         cfg_file = tmp_path / "cfg.json"
-        cfg_file.write_text(json.dumps({"theme": "dark", "language": "en"}))
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "theme": "dark",
+                    "language": "en",
+                    "default_input_dir": "/import/input",
+                    "default_output_dir": "/import/output",
+                    "text_model": "imported-text-model",
+                    "vision_model": "imported-vision-model",
+                    "default_methodology": "para",
+                }
+            )
+        )
 
         with patch("file_organizer.web.settings_routes.templates") as mock_tpl:
             mock_tpl.TemplateResponse.side_effect = _make_tpl_side_effect()
@@ -707,6 +754,13 @@ class TestSettingsImportPathBased:
         ws = _load_web_settings()
         assert ws.theme == "dark"
         assert ws.language == "en"
+        # Shared workflow fields persist to AppConfig, not web-settings.json.
+        app_config = ConfigManager(config_dir=tmp_path / "app-config").load()
+        assert app_config.default_input_dir == "/import/input"
+        assert app_config.default_output_dir == "/import/output"
+        assert app_config.models.text_model == "imported-text-model"
+        assert app_config.models.vision_model == "imported-vision-model"
+        assert app_config.default_methodology == "para"
 
     def test_import_via_path_outside_allowed_root_returns_error(self, tmp_path):
         """A path outside allowed_paths must trigger an error flash (not a 403 raise)."""
@@ -724,6 +778,9 @@ class TestSettingsImportPathBased:
 
             app = FastAPI()
             app.dependency_overrides[get_settings] = lambda: api_settings
+            app.dependency_overrides[get_config_manager] = lambda: ConfigManager(
+                config_dir=tmp_path / "app-config"
+            )
             app.include_router(settings_router)
             client = TestClient(app, raise_server_exceptions=False)
 

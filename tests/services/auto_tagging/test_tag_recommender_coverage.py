@@ -57,7 +57,7 @@ class TestTagRecommendation:
             TagSuggestion("b", 50, "content", "x"),
             TagSuggestion("c", 75, "content", "x"),
         ]
-        rec = TagRecommendation(file_path=Path("tmp/f.txt"), suggestions=suggestions)
+        rec = TagRecommendation(file_path=Path("tmp") / "f.txt", suggestions=suggestions)
         high = rec.get_high_confidence_tags()
         assert "a" in high
         assert "c" in high
@@ -69,7 +69,7 @@ class TestTagRecommendation:
             TagSuggestion("b", 50, "content", "x"),
             TagSuggestion("c", 30, "content", "x"),
         ]
-        rec = TagRecommendation(file_path=Path("tmp/f.txt"), suggestions=suggestions)
+        rec = TagRecommendation(file_path=Path("tmp") / "f.txt", suggestions=suggestions)
         medium = rec.get_medium_confidence_tags()
         assert "b" in medium
         assert "a" not in medium
@@ -78,7 +78,7 @@ class TestTagRecommendation:
     def test_to_dict(self):
         suggestions = [TagSuggestion("a", 90, "content", "x")]
         rec = TagRecommendation(
-            file_path=Path("tmp/f.txt"),
+            file_path=Path("tmp") / "f.txt",
             suggestions=suggestions,
             existing_tags=["old"],
         )
@@ -110,7 +110,7 @@ class TestRecommendTags:
 
     def test_nonexistent_file(self):
         rec = self._make_recommender()
-        result = rec.recommend_tags(Path("nonexistent/file.txt"))
+        result = rec.recommend_tags(Path("nonexistent") / "file.txt")
         assert len(result.suggestions) == 0
 
     def test_recommend_content_only(self, tmp_path):

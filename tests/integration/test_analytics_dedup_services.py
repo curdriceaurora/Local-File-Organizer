@@ -564,7 +564,7 @@ class TestRuleCondition:
 
 class TestRuleAction:
     def test_created(self) -> None:
-        ra = RuleAction(action_type=ActionType.MOVE, destination="/tmp")
+        ra = RuleAction(action_type=ActionType.MOVE, destination="/tmp")  # noqa: test-hardcoded-paths
         assert ra.action_type == ActionType.MOVE
 
     def test_action_types_exist(self) -> None:
@@ -575,7 +575,7 @@ class TestRuleAction:
         assert ra.destination == "/archive"
 
     def test_parameters_dict(self) -> None:
-        ra = RuleAction(action_type=ActionType.MOVE, destination="/tmp", parameters={"k": "v"})
+        ra = RuleAction(action_type=ActionType.MOVE, destination="/tmp", parameters={"k": "v"})  # noqa: test-hardcoded-paths
         assert ra.parameters == {"k": "v"}
 
 

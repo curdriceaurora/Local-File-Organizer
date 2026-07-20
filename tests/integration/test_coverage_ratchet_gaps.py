@@ -132,7 +132,7 @@ class TestOpenAIClientGaps:
             patch("file_organizer.models._openai_client.logger") as mock_logger,
         ):
             mock_openai.side_effect = ValueError("invalid client arguments")
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="invalid client arguments"):
                 create_openai_client(config, "text")
 
             mock_logger.error.assert_called_once()
@@ -156,7 +156,7 @@ class TestOpenAIVisionModelGaps:
         config = ModelConfig(name="gpt-4o", model_type=ModelType.TEXT, provider="openai")
         with (
             patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True),
-            pytest.raises(ValueError) as exc_info,
+            pytest.raises(ValueError, match="Expected VISION or VIDEO") as exc_info,
         ):
             OpenAIVisionModel(config)
         assert "Expected VISION or VIDEO" in str(exc_info.value)
@@ -183,7 +183,9 @@ class TestOpenAIVisionModelGaps:
         model.initialize()
 
         # Generate with neither path nor bytes
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(
+            ValueError, match="Provide exactly one of image_path or image_data"
+        ) as exc_info:
             model.generate("prompt")
         assert "Provide exactly one of image_path or image_data" in str(exc_info.value)
 
@@ -330,7 +332,7 @@ class TestVisionProcessorGaps:
         assert processor._is_circuit_open() is True
 
         # Second call: short-circuited while open
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(RuntimeError, match="Vision backend circuit open") as exc_info:
             processor._guarded_generate_structured(schema=DummySchema, prompt="test")
         assert "Vision backend circuit open" in str(exc_info.value)
 
@@ -517,7 +519,7 @@ class TestVisionProcessorGaps:
         with pytest.raises(ConnectionError):
             processor._guarded_generate(prompt="test")
         assert processor._is_circuit_open() is True
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(RuntimeError, match="Vision backend circuit open") as exc_info:
             processor._guarded_generate(prompt="test")
         assert "Vision backend circuit open" in str(exc_info.value)
 
@@ -547,11 +549,11 @@ def test_read_dwg_non_existent_file_raises() -> None:
 
 class TestWebCSRFGaps:
     def test_csrf_receive_and_decode_error(self) -> None:
-        from fastapi.testclient import TestClient
         from starlette.applications import Starlette
         from starlette.requests import Request
         from starlette.responses import Response
         from starlette.routing import Route
+        from starlette.testclient import TestClient
 
         from file_organizer.web.csrf import CSRFMiddleware
 
@@ -754,13 +756,17 @@ class TestAudioMetadataExtractorGaps:
 
             # Test tinytag not installed raising ImportError
             with patch.dict("sys.modules", {"tinytag": None}):
-                with pytest.raises(ImportError) as exc_info:
+                with pytest.raises(
+                    ImportError, match="tinytag is required as fallback"
+                ) as exc_info:
                     extractor.extract("dummy.mp3")
                 assert "tinytag is required" in str(exc_info.value)
 
             # Test no fallback raises mutagen error
             extractor_no_fallback = AudioMetadataExtractor(use_fallback=False)
-            with pytest.raises(ImportError) as exc_info:
+            with pytest.raises(
+                ImportError, match="mutagen is required for audio metadata extraction"
+            ) as exc_info:
                 extractor_no_fallback.extract("dummy.mp3")
             assert "mutagen is required" in str(exc_info.value)
 
@@ -768,7 +774,7 @@ class TestAudioMetadataExtractorGaps:
         from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
 
         extractor = AudioMetadataExtractor()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             extractor.extract("non_existent_audio_file_xyz_123.mp3")
 
     @patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.extract")
@@ -915,7 +921,7 @@ class TestVideoMetadataExtractorGaps:
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 
         extractor = VideoMetadataExtractor()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Video file not found"):
             extractor.extract(Path("non_existent_video_file_xyz_123.mp4"))
 
 
@@ -930,14 +936,14 @@ class TestEpubEnhancedGaps:
 
         with (
             patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="ebooklib is not installed"),
         ):
             EnhancedEPUBReader()
 
         with (
             patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", True),
             patch("file_organizer.utils.epub_enhanced.BS4_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="beautifulsoup4 is not installed"),
         ):
             EnhancedEPUBReader()
 
@@ -1062,7 +1068,9 @@ class TestEbookReaderGaps:
     def test_read_ebook_file_arg_validation(self) -> None:
         from file_organizer.utils.readers.ebook import read_ebook_file
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(
+            ValueError, match="read_ebook_file requires file_path or fileobj"
+        ) as exc_info:
             read_ebook_file(None, None)
         assert "requires file_path or fileobj" in str(exc_info.value)
 
@@ -1071,7 +1079,7 @@ class TestEbookReaderGaps:
 
         with (
             patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", False),
-            pytest.raises(ImportError) as exc_info,
+            pytest.raises(ImportError, match="ebooklib is not installed") as exc_info,
         ):
             read_ebook_file("dummy.epub")
         assert "ebooklib is not installed" in str(exc_info.value)
@@ -1130,9 +1138,8 @@ class TestDocumentReadersGaps:
     def test_read_text_file_arg_validation(self) -> None:
         from file_organizer.utils.readers.documents import read_text_file
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="requires file_path or fileobj"):
             read_text_file(None)
-        assert "requires file_path or fileobj" in str(exc_info.value)
 
     @patch("file_organizer.utils.readers.documents.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.documents._check_file_size")
@@ -1147,7 +1154,7 @@ class TestDocumentReadersGaps:
         # Test DOCX import error
         with (
             patch("file_organizer.utils.readers.documents.DOCX_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="python-docx is not installed"),
         ):
             read_docx_file("dummy.docx")
 
@@ -1177,7 +1184,7 @@ class TestDocumentReadersGaps:
         # Test PDF import error
         with (
             patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="PyMuPDF is not installed"),
         ):
             read_pdf_file("dummy.pdf")
 
@@ -1210,7 +1217,7 @@ class TestDocumentReadersGaps:
         from file_organizer.utils.readers.documents import read_spreadsheet_file
 
         # Test spreadsheet arg validation
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="read_spreadsheet_file requires file_path"):
             read_spreadsheet_file(None)
 
         # Test unsupported format
@@ -1221,7 +1228,7 @@ class TestDocumentReadersGaps:
         # Test Excel import error
         with (
             patch("file_organizer.utils.readers.documents.OPENPYXL_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="openpyxl is not installed"),
         ):
             read_spreadsheet_file("dummy.xlsx")
 
@@ -1261,7 +1268,7 @@ class TestDocumentReadersGaps:
         # Test PPTX import error
         with (
             patch("file_organizer.utils.readers.documents.PPTX_AVAILABLE", False),
-            pytest.raises(ImportError),
+            pytest.raises(ImportError, match="python-pptx is not installed"),
         ):
             read_presentation_file("dummy.pptx")
 

@@ -69,7 +69,7 @@ class TestWebCSRFProtection:
         assert middleware._is_exempt("/api/v1/users") is True
         assert middleware._is_exempt("/auth") is True
         assert middleware._is_exempt("/auth/login") is True
-        assert middleware._is_exempt("/home") is False
+        assert middleware._is_exempt("/home") is False  # noqa: test-hardcoded-paths
 
     def test_csrf_middleware_flow(self) -> None:
         app = FastAPI()
@@ -253,7 +253,7 @@ class TestAPIKeys:
         with patch("builtins.print") as mock_print:
             assert _main(["--help"]) == 0
             mock_print.assert_called_with(
-                "Usage: python -m file_organizer.api.api_keys --output PATH [--prefix PREFIX]"
+                "Usage: fo api-keys generate --output PATH [--prefix PREFIX]"
             )
 
         # 2. Missing output path
@@ -319,12 +319,12 @@ class TestRealtimeWebSocket:
         client = TestClient(app)
 
         # 1. Connect without token -> should fail
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
             with client.websocket_connect("/ws/client_1") as websocket:
                 pass
 
         # 2. Connect with invalid token -> should fail
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
             with client.websocket_connect("/ws/client_1?token=wrong") as websocket:
                 pass
 
@@ -376,14 +376,14 @@ class TestRealtimeWebSocket:
 
                 # Invalid User or inactive
                 mock_user.is_active = False
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
                     with client.websocket_connect("/ws/client_1?token=valid_jwt") as websocket:
                         pass
 
                 # Revoked token
                 mock_user.is_active = True
                 mock_token_store.is_access_revoked.return_value = True
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):  # noqa: B017, pytest-raises-hygiene
                     with client.websocket_connect("/ws/client_1?token=valid_jwt") as websocket:
                         pass
 

@@ -7,7 +7,6 @@ along with an organization summary with file counts and status.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 from textual import work
@@ -16,9 +15,9 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.core.plan import OrganizationPlan
 from file_organizer.tui.settings_view import load_parallel_runtime_settings
-
-logger = logging.getLogger(__name__)
+from file_organizer.tui.status import StatusMixin
 
 
 class BeforeAfterPanel(Static):
@@ -114,7 +113,7 @@ class OrganizationSummary(Static):
         self.update("\n".join(lines))
 
 
-class OrganizationPreviewView(Vertical):
+class OrganizationPreviewView(StatusMixin, Vertical):
     """Live organization preview mounted as ``#view`` for the Organized nav.
 
     Bindings:
@@ -150,6 +149,8 @@ class OrganizationPreviewView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
+        self._is_applying = False
+        self._current_plan: OrganizationPlan | None = None
 
     def compose(self) -> ComposeResult:
         """Build the preview layout."""
@@ -163,13 +164,30 @@ class OrganizationPreviewView(Vertical):
 
     def action_refresh_preview(self) -> None:
         """Re-run the dry-run organization."""
+        self._current_plan = None
         self.query_one(BeforeAfterPanel).update("[dim]Refreshing...[/dim]")
         self.query_one(OrganizationSummary).update("[dim]Calculating...[/dim]")
         self._load_preview()
 
     def action_confirm(self) -> None:
-        """Placeholder for confirming organization."""
-        self._set_status("Confirm not yet implemented.")
+        """Apply the currently previewed organization and open History."""
+        if self._is_applying:
+            self._set_status("Organization is already applying...")
+            return
+        if self._current_plan is None:
+            self._set_status("Refresh preview before applying.")
+            self.query_one(BeforeAfterPanel).update(
+                "[yellow]No reviewed plan is loaded.[/yellow]\n\n"
+                "[dim]Refresh the preview, review the proposed changes, then confirm.[/dim]"
+            )
+            return
+
+        plan = self._current_plan
+        self._is_applying = True
+        self.query_one(BeforeAfterPanel).update("[dim]Applying organization...[/dim]")
+        self.query_one(OrganizationSummary).update("[dim]Working...[/dim]")
+        self._set_status("Applying organization...")
+        self._apply_organization(plan)
 
     def action_cancel(self) -> None:
         """Go back / cancel."""
@@ -191,13 +209,36 @@ class OrganizationPreviewView(Vertical):
                 input_path=self._input_dir,
                 output_path=self._output_dir,
             )
+            plan = getattr(result, "plan", None)
+            if result.total_files == 0:
+                panel = self.query_one(BeforeAfterPanel)
+                summary = self.query_one(OrganizationSummary)
+                self.app.call_from_thread(self._set_current_plan, None)
+                self.app.call_from_thread(panel.set_structure, {}, str(self._input_dir))
+                self.app.call_from_thread(
+                    summary.set_result,
+                    total=result.total_files,
+                    processed=result.processed_files,
+                    skipped=result.skipped_files,
+                    failed=result.failed_files,
+                    folders=0,
+                    errors=result.errors,
+                )
+                self.app.call_from_thread(self._set_status, "No files to organize")
+                return
+            if not isinstance(plan, OrganizationPlan):
+                raise RuntimeError("Preview did not produce an executable plan.")
 
             panel = self.query_one(BeforeAfterPanel)
             summary = self.query_one(OrganizationSummary)
 
             self.app.call_from_thread(
+                self._set_current_plan,
+                plan,
+            )
+            self.app.call_from_thread(
                 panel.set_structure,
-                result.organized_structure,
+                plan.organized_structure(),
                 str(self._input_dir),
             )
             self.app.call_from_thread(
@@ -212,6 +253,7 @@ class OrganizationPreviewView(Vertical):
             self.app.call_from_thread(self._set_status, "Preview loaded")
 
         except Exception as exc:
+            self.app.call_from_thread(self._set_current_plan, None)
             self.app.call_from_thread(
                 self.query_one(BeforeAfterPanel).update,
                 f"[red]Models unavailable:[/red] {exc}\n\n"
@@ -222,11 +264,58 @@ class OrganizationPreviewView(Vertical):
                 "[dim]No data available.[/dim]",
             )
 
-    def _set_status(self, message: str) -> None:
-        """Update the app status bar if available."""
+    @work(thread=True)
+    def _apply_organization(self, plan: OrganizationPlan | None) -> None:
+        """Run the reviewed organization for real and navigate to history."""
         try:
-            from file_organizer.tui.app import StatusBar
+            from file_organizer.core.organizer import FileOrganizer
 
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("OrganizationPreviewView status bar unavailable", exc_info=True)
+            if plan is None:
+                raise RuntimeError("Refresh preview before applying.")
+            runtime_settings = load_parallel_runtime_settings()
+            organizer = FileOrganizer(
+                dry_run=False,
+                parallel_workers=runtime_settings.max_workers,
+                prefetch_depth=runtime_settings.prefetch_depth,
+            )
+            result = organizer.execute_plan(plan)
+
+            self.app.call_from_thread(self._handle_apply_success, result)
+        except Exception as exc:
+            self.app.call_from_thread(self._handle_apply_error, exc)
+
+    def _set_current_plan(self, plan: OrganizationPlan | None) -> None:
+        """Store the last reviewed executable plan."""
+        self._current_plan = plan
+
+    def _handle_apply_success(self, result: object) -> None:
+        """Update the preview with the applied result and switch to History."""
+        self._is_applying = False
+        panel = self.query_one(BeforeAfterPanel)
+        summary = self.query_one(OrganizationSummary)
+        organized_structure = getattr(result, "organized_structure", {})
+        panel.set_structure(organized_structure, str(self._input_dir))
+        summary.set_result(
+            total=getattr(result, "total_files", 0),
+            processed=getattr(result, "processed_files", 0),
+            skipped=getattr(result, "skipped_files", 0),
+            failed=getattr(result, "failed_files", 0),
+            folders=len(organized_structure),
+            errors=getattr(result, "errors", []),
+        )
+        self._set_status("Organization applied. Opening history.")
+        switch_view = getattr(self.app, "action_switch_view", None)
+        if switch_view is not None:
+            result = switch_view("history")
+            if hasattr(result, "__await__"):
+                self.app.run_worker(result, exclusive=False)
+
+    def _handle_apply_error(self, exc: Exception) -> None:
+        """Show apply failures without leaving the preview."""
+        self._is_applying = False
+        self.query_one(BeforeAfterPanel).update(
+            f"[red]Apply failed:[/red] {exc}\n\n"
+            "[dim]Some files may have been changed. Check History before retrying.[/dim]"
+        )
+        self.query_one(OrganizationSummary).update("[dim]No data available.[/dim]")
+        self._set_status("Apply failed")

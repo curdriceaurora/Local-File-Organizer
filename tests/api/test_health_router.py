@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -254,12 +254,12 @@ class TestHealthEndpoint:
             # Uptime should be non-decreasing (time.time() advances monotonically)
             assert uptime2 >= uptime1
 
-    def test_reset_startup_time_updates_module_state(self) -> None:
+    def test_reset_startup_time_updates_module_state(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """reset_startup_time() resets the module-level _startup_time."""
         from file_organizer.api.routers import health
 
         # Force a stale timestamp, then verify reset overwrites it
         old = health._startup_time
-        health._startup_time = old - 100.0  # artificially stale
+        monkeypatch.setattr(health, "_startup_time", old - 100.0)
         health.reset_startup_time()
         assert health._startup_time >= old  # at least as recent as before

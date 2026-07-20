@@ -7,7 +7,130 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-07-20
+
+Release recovery patch for the partially published `2.1.0` flow. This release
+keeps the `2.1.0` runtime behavior and republishes the corrected source,
+package README, documentation, and release-facing version metadata under a fresh
+PyPI version because PyPI does not allow re-uploading an existing version.
+
+### Highlights
+
+- **Version Metadata Recovery**: Republished the `2.1.0` code line as `2.1.1`
+  so public package metadata, README badges, docs, and about text agree.
+- **Broader Drift Guard**: Expanded the release version check to cover README
+  badges, docs support text, package/module docstrings, and the Windows manifest.
+
+### Changed
+
+- Corrected release-facing version stamps to `2.1.1`.
+- Strengthened `scripts/bump_version.py --check` and its tests so future release
+  cuts fail if the newly tracked version surfaces drift.
+- No runtime behavior changes from `2.1.0`.
+
+## [2.1.0] - 2026-07-20
+
+### Highlights
+
+- **Documentation Overhaul**: Rewrote all user-facing guides to conform strictly to the ASD-STE100 (Simplified Technical English) specification for improved readability.
+- **Durable Executable Plans**: Refactored the core architecture so the organization preview generates an executable plan, eliminating discrepancies between preview and application (Issue #1504).
+- **Improved Release Notes**: Adopted a new structured "Highlights" format for release notes to make them easier to scan (Issue #1500).
+
+### Changed
+
+- User documentation, CLI reference, and setup guides are now written using active voice, controlled vocabulary, and short sentences to comply with ASD-STE100.
+- Organization preview workflow generates a concrete `OrganizationPlan` mapping source files to exact destination paths, replacing the previous guess-based preview.
+- Applying an organization preview now safely executes the exact operations from the preview plan without re-evaluating duplicate logic, failing closed if sources or destinations were modified in the interim.
+- Release notes in the GitHub changelog now start with a high-level summary of the most impactful changes.
+- Fixed pre-commit issues related to trailing newlines and trailing whitespace in documentation files.
+
+## [2.0.2] - 2026-07-10
+
+Release recovery patch for the interrupted `2.0.1` publishing flow. This release republishes the `2.0.1` code state under a fresh PyPI version because PyPI does not allow re-uploading a deleted or previously published version. No runtime behavior changes.
+
+## [2.0.1] - 2026-07-09
+
+Post-GA hardening and UX release. Tightens unsafe-by-default settings, makes the plugin sandbox deny-by-default, and broadens the TUI Settings view into a single run-configuration surface. Part of the post-GA hardening & UX epic (#1501). Install/upgrade with `pip install -U local-file-organizer` (or `pipx upgrade local-file-organizer`).
+
+### Highlights
+
+- **Deny-by-default plugins**: Plugins must now explicitly declare permissions in their manifest, eliminating implicit file access grants.
+- **TUI Settings Overhaul**: Settings UI now manages methodology, model choice, and default directories in one place.
+- **Safe-by-default binding**: Local API now binds safely to `127.0.0.1` and enforces authentication placeholders.
+- **Preview Apply**: Previews can now be applied directly from the TUI with immediate undo visibility.
+
+### Security
+
+- **Plugins are now deny-by-default (#1488)** — completed across #1502 and #1533. The unrestricted and implicit read-only sandbox fallbacks were removed (#1502), and a plugin's own `plugin.json` can no longer self-grant blanket access: `_build_sandbox_from_manifest` ignores `allow_all_operations`/`allow_all_paths`, building a policy only from the specific `allowed_paths`/`allowed_operations` it enumerates (#1533). Blanket grants are host-only — a host that trusts a plugin must pass an explicit `policy=` (e.g. `PluginSecurityPolicy.unrestricted()`) to `load_plugin()`. Manifests that previously relied on implicit access now need to enumerate their grants. Phase 2 (signed-manifest / repo-pinning trust) remains scoped in #1488.
+- **Safe-by-default API/web binding and auth (#1502, closes #1490, #1491)** — local API/web runs now bind to `127.0.0.1` instead of `0.0.0.0`, and enabling authentication with a placeholder JWT secret (`change-me`) fails fast instead of starting insecurely.
+- **GitHub Actions supply-chain defaults hardened (#1502)** — workflow permissions and pinning tightened.
+
 ### Added
+
+- **TUI Settings broadened into a full run-configuration surface (#1495)** — beyond the parallelism controls, Settings now manages default input/output directories, organization methodology (none / PARA / Johnny Decimal), text-model choice, and update/privacy toggles, all persisted to the canonical `AppConfig` (new `default_input_dir` / `default_output_dir` fields). New keybindings cycle methodology/model and toggle the update/pre-release flags.
+- **TUI preview → apply (#1503, closes #1492)** — the organization-preview Confirm is a real apply action that runs the organize and navigates to History, so the undo path is immediately visible.
+- **"Defer setup" flow (#1503, closes #1493)** — persisted `setup_deferred` state with a web defer route and a home-screen reminder, cleared automatically when setup completes via the API, TUI, or core setup.
+- **Ollama next-step guidance (#1503, closes #1498)** — prints the exact install/start/pull commands without automatically downloading models.
+- **pip/pipx-aware updater fallback (#1502, closes #1497)** — suggests a `pip`/`pipx` upgrade path on macOS/Windows when no native release asset exists.
+
+### Changed
+
+- **Persisted, profile-based `/config` API (#1502, closes #1499)** — the in-memory config store is replaced with `ConfigManager` wiring, and `ServiceFacade` reads from the same source. The `/config` response shape is now the persisted `AppConfig` profile shape (intentional breaking change to the API response).
+- **Package version single-sourced from `version.py` (#1502, closes #1485)** — package metadata now resolves the version from `file_organizer.version.__version__` in one place.
+- **Directory picking clarified as browser-only where unavailable (#1503, closes #1494)** — browser-only picker fallbacks are disabled and users are guided toward typed absolute paths, with better macOS cancel/unavailable handling.
+- **Dependency & CI maintenance** — Renovate bumps across the toolchain: pytest 9.1, rich 15, aiofiles 25, diff-cover 10, opencv-python 5, pre-commit 4, isort 8, pytest-randomly 4, and several Docker/action updates (#1505–#1526). `mypy` is pinned `<1.20` to avoid a flaky 1.20.x compiled-build lint crash (#1533).
+- **Docs** — repo landing page cleanup (#1486).
+
+### Fixed
+
+- **POSIX-only CI/smoke tests guarded on Windows (#1529)** — tests that assume POSIX filesystem semantics are now skipped on Windows instead of failing.
+
+## [2.0.0] - 2026-07-05
+
+First stable **2.0.0** release. Promotes the `2.0.0-beta.1` surface to GA after stabilizing the executable-build and release pipelines and closing the last write-path symlink-hardening gap. Installable from PyPI: `pip install local-file-organizer` (or `pipx install local-file-organizer`).
+
+### Highlights
+
+- **GA Release**: Reached production stability (5 - Production/Stable) and stabilized the executable release pipeline.
+- **Symlink hardening completed**: Legacy organize copy paths hardened via `SafeDir` against TOCTOU symlink redirect attacks.
+- **Consolidated Linux binaries**: GitHub release focuses on Linux AppImage and CLI; macOS and Windows handled by pip/pipx.
+- **Deterministic release packaging**: Fixed packaging scripts to stamp the true 2.0.0 version on executable artifacts.
+
+### Security
+
+- **Legacy organize copy paths hardened (#1481, closes #1479)** — `pipeline.orchestrator._organize_file` and `core.file_ops.organize_files` now route their file copies through the shared SafeDir helper (`O_NOFOLLOW` fd-based copy with symlinked-destination/ancestor/source refusal and full `copy2` metadata parity) instead of raw `shutil.copy2`. This closes the last two unhardened copy call sites left as follow-up debt after the WP-2.2 writer-stage work, so a symlink swapped in between path validation and the copy can no longer redirect the write out of the output tree. Falls back to `shutil.copy2` on Windows.
+
+### Changed
+
+- **Correct version labeling on build artifacts** — `scripts/build_config.py` resolves the real package version via `importlib.metadata` (with an in-tree `version.py` fallback) instead of a regex that used a literal `\s` and always fell back to `0.0.0`. The Linux/macOS packaging scripts (`build_linux.sh`, `build_macos.sh`) carried the same broken regex and now reuse the shared resolver, so the CLI/desktop executables **and** the AppImage/tarball/DMG all carry the true `2.0.0` version in their filenames.
+- **Release workflows consolidated to remove a race** — `release.yml` now owns PyPI publishing only (with `skip-existing` for safety), and `build.yml` is the sole owner of the GitHub Release. Previously both workflows created/updated the same release on a tag push, making the attached assets and notes nondeterministic.
+- **Release binaries are Linux-only** — the GitHub Release ships the Linux CLI + desktop executables and an AppImage, plus the sdist/wheel and `SHA256SUMS`. macOS and Windows remain **supported and CI-verified** (the full suite runs on macOS/Windows in `ci-full.yml`, plus the `python-probe` matrix), and install via `pip`/`pipx`.
+- **GitHub release notes come from the CHANGELOG** — the release body is now the curated CHANGELOG section for the tag (via `scripts/extract_changelog.py`), with the auto-generated PR list appended after it.
+- **Install & platform docs** — README and docs now lead with `pipx`/`pip install local-file-organizer` (with `pip install -e .` kept as a from-source note); the "macOS (DMG), Windows (installer)" wording is corrected to reflect that only a Linux AppImage is produced and macOS/Windows are pip/pipx installs; the auto-update description is scoped to the Linux AppImage, with pip self-update on macOS/Windows.
+- Package metadata `Development Status` promoted from `4 - Beta` to `5 - Production/Stable`.
+- **Docs & API-version cleanup for GA** — removed stale "beta1" phrasing from the architecture/API reference pages, and the `system`/`health`/`config` API routers now source their version from `__version__` instead of hardcoded strings — including `ConfigResponse.version`/`app_version`, whose defaults were returned verbatim by `GET /config` and would otherwise drift on every bump (#1483, #1484).
+
+### Removed
+
+- **Unsigned macOS/Windows executables are no longer attached to releases** — they carried Gatekeeper/SmartScreen friction with no code signing or notarization and offered no benefit over `pip`/`pipx` for a CLI tool. Signed `.dmg`/`.app` and installer packaging is deferred as a post-GA follow-up.
+
+### Fixed
+
+- **Executable build/release lane stabilized (#1473–#1478)** — resolved the executable-build workflow blockers, narrowed and stabilized the build test-lane selection, and fixed macOS executable verification that had failed on the `2.0.0-beta.1` tag.
+
+## [2.0.0-beta.1] - 2026-07-04
+
+### Highlights
+
+- **Audio Model Integration**: Whisper (faster-whisper) implemented with size selection and native device/compute type fallbacks.
+- **Symlink TOCTOU Hardening**: Comprehensive `SafeDir`-based symlink refusal (leaf and ancestor paths) deployed across text processors, dedup, archivers, and writer stages.
+- **Crash-Safe Operations**: Cross-device durable move, trash garbage collection, atomic configuration writes, and rollback/undo hardening deployed.
+- **Desktop UI Swap**: Removed Rust/Tauri architecture in favor of a pure-Python pywebview native application.
+- **Deterministic Offline Processing**: Migrated off NLTK to offline, vendored dependencies (snowballstemmer and stopwords).
+
+### Added
+
+- **AudioModel implemented — Whisper transcription behind the shared model lifecycle (#44)** — `models.audio_model.AudioModel` is no longer a Phase 3 `NotImplementedError` placeholder; it wraps the service-level `AudioTranscriber` (faster-whisper) behind the `BaseModel` initialize/generate/cleanup contract. `generate(audio_path)` returns transcript text; a new `transcribe(audio_path)` convenience returns the full `TranscriptionResult` with segments intact, which the dispatcher prefers so the audio classifier's segment-based heuristics (speaker count, narrative length) receive real segments. This makes `--transcribe-audio` actually transcribe (previously the placeholder's `NotImplementedError` — a `RuntimeError` subclass — was silently swallowed by the dispatcher's best-effort path, degrading every file to metadata-only categorization) and lets `fo benchmark --transcribe-smoke` pass end-to-end. Model names accept bare sizes (`tiny`…`large-v3`) or registry-style `whisper:` prefixes; device resolution is CUDA-else-CPU with an explicit MPS→CPU fallback (faster-whisper's CTranslate2 backend has no MPS support, so Apple Silicon no longer degrades via a load error); compute type defaults to float16 on CUDA / int8 on CPU, overridable via `extra_params["compute_type"]`. New `--whisper-model` CLI option on `organize`/`preview` selects the model size (default `tiny`), threaded through `FileOrganizer(whisper_model=...)` (previously hardcoded to `tiny`). The audio model registry gains `whisper:tiny`/`whisper:medium`/`whisper:large-v3` entries, and `fo model list` now reports Whisper install status from the faster-whisper import + HuggingFace cache instead of always showing "No" (Whisper models are not Ollama models). Placeholder tests replaced with a real suite (lifecycle, size parsing, device/compute selection, graceful `[audio]`-extra degradation); user-facing messages that pointed at a nonexistent `[media]` extra now reference the real `[audio]` extra; docs updated (`docs/cli-reference.md`, `docs/setup/audio-video.md`).
 
 - **CI-rail framework + scaffolding for the fo-core pull-back (WP-0.1, #1222)** — mechanical Phase 0 prep, zero runtime/behavior change. Stood up an **advisory** CI-rail framework so later work packages (WP-6.x) can author rails now (warn, don't block) and flip them to enforce once the code they guard merges: a registry (`scripts/ci/rails.toml`), a runner (`scripts/ci/ci_rails.py` — advisory failures warn, enforce failures fail; `--list`/`--enforce-all`), an advisory `ci-rails` pre-commit hook, and framework tests (`tests/ci/test_ci_rails_framework.py`). Added the `tests/security/`, `tests/smoke/`, `tests/extras/` test-package skeletons (with `security`/`extras` pytest markers registered alongside the existing `smoke`). Package root stays `src/file_organizer/`.
 

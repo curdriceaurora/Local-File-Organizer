@@ -64,7 +64,7 @@ def test_event_publisher_and_pubsub_dispatch_work_together() -> None:
     assert publisher.connect() is True
     file_id = publisher.publish_file_event(
         EventType.FILE_CREATED,
-        "/tmp/example.txt",
+        "/tmp/example.txt",  # noqa: test-hardcoded-paths
         {"size": 12},
     )
     scan_id = publisher.publish_scan_event("scan-1", "completed", {"processed": 3})
@@ -86,14 +86,14 @@ def test_event_publisher_and_pubsub_dispatch_work_together() -> None:
         received.append(data)
 
     sub = pubsub.subscribe("file.*", handler, filter_fn=lambda data: data.get("ok") is True)
-    message_id = pubsub.publish("file.created", {"ok": True, "path": "/tmp/example.txt"})
+    message_id = pubsub.publish("file.created", {"ok": True, "path": "/tmp/example.txt"})  # noqa: test-hardcoded-paths
     assert message_id == "id-3"
     assert received[0]["seen_by_before_publish"] is True
     assert received[0]["seen_by_before_consume"] is True
 
     pubsub.registry.deactivate("file.*", handler)
     assert sub.active is False
-    pubsub.publish("file.created", {"ok": True, "path": "/tmp/ignored.txt"})
+    pubsub.publish("file.created", {"ok": True, "path": "/tmp/ignored.txt"})  # noqa: test-hardcoded-paths
     assert len(received) == 1
 
     pubsub.registry.activate("file.*", handler)
@@ -102,7 +102,7 @@ def test_event_publisher_and_pubsub_dispatch_work_together() -> None:
     assert len(received) == 1
 
     assert pubsub.unsubscribe("file.*", handler) is True
-    pubsub.publish("file.created", {"ok": True, "path": "/tmp/after-unsubscribe.txt"})
+    pubsub.publish("file.created", {"ok": True, "path": "/tmp/after-unsubscribe.txt"})  # noqa: test-hardcoded-paths
     assert len(received) == 1
 
 

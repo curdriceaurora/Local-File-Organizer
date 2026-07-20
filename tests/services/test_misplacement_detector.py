@@ -25,9 +25,9 @@ class TestMisplacedFile:
 
     def test_create_misplaced_file(self):
         """Test creating a misplaced file record."""
-        file_path = Path("/test/photo.jpg")
-        current_loc = Path("/documents")
-        suggested_loc = Path("/pictures")
+        file_path = Path("/") / "test" / "photo.jpg"
+        current_loc = Path("/") / "documents"
+        suggested_loc = Path("/") / "pictures"
 
         misplaced = MisplacedFile(
             file_path=file_path,
@@ -44,9 +44,9 @@ class TestMisplacedFile:
     def test_misplaced_file_to_dict(self):
         """Test conversion to dictionary."""
         misplaced = MisplacedFile(
-            file_path=Path("/test/file.txt"),
-            current_location=Path("/images"),
-            suggested_location=Path("/documents"),
+            file_path=Path("/") / "test" / "file.txt",
+            current_location=Path("/") / "images",
+            suggested_location=Path("/") / "documents",
             mismatch_score=80.0,
             reasons=["Text file in image folder"],
         )
@@ -66,12 +66,15 @@ class TestContextAnalysis:
     def test_create_context_analysis(self):
         """Test creating a context analysis."""
         context = ContextAnalysis(
-            file_path=Path("/test/document.pdf"),
+            file_path=Path("/") / "test" / "document.pdf",
             file_type=".pdf",
             mime_type="application/pdf",
             size=1024000,
-            directory=Path("/documents"),
-            sibling_files=[Path("/documents/other.pdf"), Path("/documents/report.docx")],
+            directory=Path("/") / "documents",
+            sibling_files=[
+                Path("/") / "documents" / "other.pdf",
+                Path("/") / "documents" / "report.docx",
+            ],
             sibling_types={".pdf", ".docx"},
             parent_category="documents",
             naming_patterns=["date_prefix", "snake_case"],
@@ -84,11 +87,11 @@ class TestContextAnalysis:
     def test_context_analysis_to_dict(self):
         """Test context analysis conversion to dict."""
         context = ContextAnalysis(
-            file_path=Path("/test/image.jpg"),
+            file_path=Path("/") / "test" / "image.jpg",
             file_type=".jpg",
             mime_type="image/jpeg",
             size=2048000,
-            directory=Path("/images"),
+            directory=Path("/") / "images",
             sibling_files=[],
             sibling_types={".jpg"},
             parent_category="images",
@@ -306,8 +309,8 @@ class TestEdgeCases:
         """Test that invalid directory raises error."""
         detector = MisplacementDetector()
 
-        with pytest.raises(ValueError):
-            detector.detect_misplaced(Path("/nonexistent/path"))
+        with pytest.raises(ValueError, match="Invalid directory"):
+            detector.detect_misplaced(Path("/") / "nonexistent" / "path")
 
     def test_file_instead_of_directory_raises_error(self):
         """Test that file path instead of directory raises error."""
@@ -318,5 +321,5 @@ class TestEdgeCases:
 
             detector = MisplacementDetector()
 
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="Invalid directory"):
                 detector.detect_misplaced(file_path)

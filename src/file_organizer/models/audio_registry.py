@@ -31,6 +31,15 @@ class AudioModelInfo(ModelInfo):
 
 AUDIO_MODELS: list[AudioModelInfo] = [
     AudioModelInfo(
+        name="whisper:tiny",
+        model_type="audio",
+        size="0.04 GB",
+        quantization="fp16",
+        description="Audio transcription - fastest, lowest accuracy (default).",
+        supported_formats=["wav", "mp3", "flac", "m4a", "ogg"],
+        max_duration_seconds=1800,
+    ),
+    AudioModelInfo(
         name="whisper:base",
         model_type="audio",
         size="0.1 GB",
@@ -45,6 +54,24 @@ AUDIO_MODELS: list[AudioModelInfo] = [
         size="0.5 GB",
         quantization="fp16",
         description="Audio transcription - better accuracy.",
+        supported_formats=["wav", "mp3", "flac", "m4a", "ogg"],
+        max_duration_seconds=3600,
+    ),
+    AudioModelInfo(
+        name="whisper:medium",
+        model_type="audio",
+        size="1.5 GB",
+        quantization="fp16",
+        description="Audio transcription - high accuracy.",
+        supported_formats=["wav", "mp3", "flac", "m4a", "ogg"],
+        max_duration_seconds=3600,
+    ),
+    AudioModelInfo(
+        name="whisper:large-v3",
+        model_type="audio",
+        size="3.1 GB",
+        quantization="fp16",
+        description="Audio transcription - best accuracy, slowest.",
         supported_formats=["wav", "mp3", "flac", "m4a", "ogg"],
         max_duration_seconds=3600,
     ),

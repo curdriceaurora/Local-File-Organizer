@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import (
@@ -22,9 +22,10 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 from file_organizer.config.manager import ConfigManager
 from file_organizer.core.hardware_profile import GpuType
-from file_organizer.core.setup_wizard import SetupWizard, WizardMode
+from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
 
 router = APIRouter(tags=["setup"], responses=INTERNAL_500_RESPONSE)
 
@@ -33,6 +34,7 @@ class SetupStatusResponse(BaseModel):
     """Setup completion status."""
 
     completed: bool
+    deferred: bool = False
     profile: str = "default"
 
 
@@ -54,6 +56,7 @@ class OllamaInfo(BaseModel):
     running: bool
     version: str | None = None
     models_count: int = 0
+    next_steps: list[str] = Field(default_factory=list)
 
 
 class ModelInfo(BaseModel):
@@ -96,7 +99,7 @@ class SetupResponse(BaseModel):
     responses=merge_responses(
         success_response(
             "Returned setup completion status.",
-            {"completed": True, "profile": "default"},
+            {"completed": True, "deferred": False, "profile": "default"},
         ),
     ),
 )
@@ -108,6 +111,7 @@ def get_setup_status(
     config = manager.load()
     return SetupStatusResponse(
         completed=config.setup_completed,
+        deferred=config.setup_deferred,
         profile=config.profile_name,
     )
 
@@ -125,7 +129,7 @@ def get_setup_status(
                     "gpu_vram_gb": None,
                     "gpu_name": None,
                     "cpu_cores": 8,
-                    "recommended_model": "qwen2.5:3b-instruct-q4_K_M",
+                    "recommended_model": DEFAULT_TEXT_MODEL,
                 },
                 "ollama": {
                     "installed": True,
@@ -160,6 +164,11 @@ def detect_capabilities(
         running=capabilities.ollama_status.running,
         version=capabilities.ollama_status.version,
         models_count=capabilities.ollama_status.models_count,
+        next_steps=ollama_next_steps(
+            capabilities.ollama_status,
+            hardware_info.recommended_model,
+            capabilities.installed_models,
+        ),
     )
 
     models = [
@@ -187,7 +196,7 @@ def detect_capabilities(
             {
                 "success": True,
                 "profile": "default",
-                "messages": ["Setup completed successfully with model: qwen2.5:3b-instruct-q4_K_M"],
+                "messages": [f"Setup completed successfully with model: {DEFAULT_TEXT_MODEL}"],
                 "warnings": [],
                 "errors": [],
             },
@@ -225,7 +234,7 @@ def complete_setup(
         )
 
     # Mark setup as completed
-    config.setup_completed = True
+    ConfigManager.mark_setup_completed(config)  # pragma: no cover
     config.profile_name = request.profile
 
     # Save configuration. force=True: setup completion is a deliberate
@@ -285,19 +294,16 @@ def browse_folder(
         result = subprocess.run(
             ["/usr/bin/osascript", "-e", "POSIX path of (choose folder)"],
             capture_output=True,
+            check=True,
             text=True,
             timeout=60,
         )
-    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return BrowseFolderResponse(path="", available=False)
-
-    if result.returncode != 0:
-        # osascript exit code 1 + "User canceled." in stderr → explicit cancel.
-        # Any other failure (permissions, GUI unavailable, etc.) is treated as
-        # unavailable so the browser-side fallbacks (showDirectoryPicker,
-        # webkitdirectory) still run.
-        if "user canceled" in result.stderr.lower() or "-128" in result.stderr:
+    except subprocess.CalledProcessError as exc:
+        stderr = str(exc.stderr or "")
+        if "user canceled" in stderr.lower() or "-128" in stderr:
             return BrowseFolderResponse(path="", available=True, cancelled=True)
+        return BrowseFolderResponse(path="", available=False)
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
         return BrowseFolderResponse(path="", available=False)
 
     return BrowseFolderResponse(path=result.stdout.strip(), available=True, cancelled=False)

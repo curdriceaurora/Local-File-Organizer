@@ -178,7 +178,7 @@ class TestExtractMetadataFeatures:
 
     def test_nonexistent_file_returns_defaults(self, extractor: FeatureExtractor) -> None:
         """Should return defaults with file_type for non-existent file."""
-        features = extractor.extract_metadata_features(Path("/nonexistent/file.pdf"))
+        features = extractor.extract_metadata_features(Path("/") / "nonexistent" / "file.pdf")
         assert features.file_type == ".pdf"
         assert features.file_size == 0
         assert features.creation_date is None
@@ -485,7 +485,7 @@ class TestEdgeCasesAndErrorHandling:
         extractor: FeatureExtractor,
     ) -> None:
         """Should return False for non-existent directory."""
-        result = extractor._has_project_structure(Path("/nonexistent/path"))
+        result = extractor._has_project_structure(Path("/") / "nonexistent" / "path")
         assert result is False
 
     def test_has_project_structure_with_file_not_directory(
@@ -523,7 +523,7 @@ class TestEdgeCasesAndErrorHandling:
     ) -> None:
         """Should handle file with non-existent parent directory."""
         # Use a path that doesn't exist
-        fake_file = Path("/nonexistent/directory/file.txt")
+        fake_file = Path("/") / "nonexistent" / "directory" / "file.txt"
         features = extractor.extract_structural_features(fake_file)
         # Should handle gracefully - parent doesn't exist
         assert features.sibling_count == 0

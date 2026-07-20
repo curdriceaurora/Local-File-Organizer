@@ -13,7 +13,9 @@ from typing import Any
 
 from loguru import logger
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.methodology import normalize as normalize_methodology
 from file_organizer.config.schema import AppConfig, ModelPreset
 from file_organizer.core.backend_detector import (
     InstalledModel,
@@ -93,6 +95,32 @@ class SystemCapabilities:
                 for m in self.installed_models
             ],
         }
+
+
+def ollama_next_steps(
+    status: OllamaStatus,
+    recommended_model: str,
+    installed_models: list[InstalledModel] | None = None,
+) -> list[str]:
+    """Return exact commands that move Ollama setup to the next usable state."""
+    steps: list[str] = []
+    installed_models = installed_models or []
+
+    if not status.installed:
+        steps.append("Install Ollama from https://ollama.com/download")
+        steps.append("Start Ollama: ollama serve")
+        steps.append(f"Pull the recommended model: ollama pull {recommended_model}")
+        return steps
+
+    if not status.running:
+        steps.append("Start Ollama: ollama serve")
+        steps.append(f"Pull the recommended model if needed: ollama pull {recommended_model}")
+        return steps
+
+    if not installed_models:
+        steps.append(f"Pull the recommended model: ollama pull {recommended_model}")
+
+    return steps
 
 
 class SetupWizard:
@@ -192,8 +220,8 @@ class SetupWizard:
             available_names = {m.name for m in capabilities.installed_models}
 
             # Check for recommended models
-            recommended_large = "qwen2.5:7b-instruct-q4_K_M"
-            recommended_small = "qwen2.5:3b-instruct-q4_K_M"
+            recommended_large = DEFAULT_TEXT_MODEL_LARGE
+            recommended_small = DEFAULT_TEXT_MODEL
 
             if recommended_large in available_names:
                 text_model = recommended_large
@@ -235,7 +263,9 @@ class SetupWizard:
             if custom_settings
             else "default",
             version="1.0",
-            default_methodology="none",
+            default_methodology=normalize_methodology(
+                custom_settings.get("methodology") if custom_settings else None
+            ),
             models=models,
         )
 
@@ -260,7 +290,10 @@ class SetupWizard:
                 self.detect_capabilities()
 
             if self.capabilities and not self.capabilities.ollama_status.running:
-                errors.append("Ollama framework selected but Ollama service is not running")
+                errors.append(
+                    "Ollama framework selected but Ollama service is not running. "
+                    "Start it with: ollama serve"
+                )
 
         # Validate model availability
         if self.capabilities and self.capabilities.ollama_status.running:
@@ -290,7 +323,7 @@ class SetupWizard:
             profile: Profile name override. Uses config.profile_name if None.
         """
         profile = profile or config.profile_name
-        config.setup_completed = True
+        ConfigManager.mark_setup_completed(config)
         # force=True: setup completion is a deliberate (re)configuration, so it
         # must migrate/overwrite an existing profile even if its on-disk schema
         # version is unsupported — otherwise the save guard (#1276) would make
@@ -332,12 +365,15 @@ class SetupWizard:
                     f"Ollama: Running (v{capabilities.ollama_status.version}), "
                     f"{capabilities.ollama_status.models_count} models available"
                 )
-            elif capabilities.ollama_status.installed:
-                result.warnings.append(
-                    "Ollama is installed but not running. Start it with: ollama serve"
-                )
-            else:
-                result.warnings.append("Ollama not detected. Install from: https://ollama.ai")
+
+            recommended_model = capabilities.hardware.recommended_text_model()
+            for step in ollama_next_steps(
+                capabilities.ollama_status,
+                recommended_model,
+                getattr(capabilities, "installed_models", []),
+            ):
+                if step not in result.warnings:
+                    result.warnings.append(step)
 
             # Step 2: Generate configuration
             result.messages.append("Generating configuration...")

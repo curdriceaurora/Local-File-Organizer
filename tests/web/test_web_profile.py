@@ -6,7 +6,7 @@ import html
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.auth import hash_password
 from file_organizer.api.auth_db import create_session
@@ -483,7 +483,7 @@ class TestWorkspaceAndTeamUi:
 
         create_one = client.post(
             "/ui/profile/workspaces/create",
-            data={"name": "Alpha", "root_path": "/tmp/alpha", "description": "A"},
+            data={"name": "Alpha", "root_path": "/tmp/alpha", "description": "A"},  # noqa: test-hardcoded-paths
             headers=csrf_headers(client),
         )
         assert create_one.status_code == 200
@@ -491,7 +491,7 @@ class TestWorkspaceAndTeamUi:
 
         create_two = client.post(
             "/ui/profile/workspaces/create",
-            data={"name": "Beta", "root_path": "/tmp/beta", "description": "B"},
+            data={"name": "Beta", "root_path": "/tmp/beta", "description": "B"},  # noqa: test-hardcoded-paths
             headers=csrf_headers(client),
         )
         assert create_two.status_code == 200
@@ -549,11 +549,11 @@ class TestWorkspaceAndTeamUi:
 
         add = client.post(
             "/ui/profile/shared/add",
-            data={"folder_path": "/tmp/shared", "permission": "edit"},
+            data={"folder_path": "/tmp/shared", "permission": "edit"},  # noqa: test-hardcoded-paths
             headers=csrf_headers(client),
         )
         assert add.status_code == 200
-        assert "/tmp/shared" in add.text
+        assert "/tmp/shared" in add.text  # noqa: test-hardcoded-paths
 
         import re
 
@@ -567,7 +567,7 @@ class TestWorkspaceAndTeamUi:
             headers=csrf_headers(client),
         )
         assert remove.status_code == 200
-        assert "/tmp/shared" not in remove.text
+        assert "/tmp/shared" not in remove.text  # noqa: test-hardcoded-paths
 
 
 @pytest.mark.unit
@@ -620,7 +620,7 @@ class TestAccountSettingsAndFeeds:
 
         client.post(
             "/ui/profile/workspaces/create",
-            data={"name": "Work", "root_path": "/tmp/work", "description": ""},
+            data={"name": "Work", "root_path": "/tmp/work", "description": ""},  # noqa: test-hardcoded-paths
             headers=csrf_headers(client),
         )
 

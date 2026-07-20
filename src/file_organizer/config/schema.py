@@ -16,6 +16,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_VISION_MODEL
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+
 # Schema-version constants. ``CURRENT_SCHEMA_VERSION`` is what new configs are
 # written as; ``SUPPORTED_SCHEMA_VERSIONS`` is the set ConfigManager will load
 # without falling back to defaults. It is derived from CURRENT_SCHEMA_VERSION so
@@ -38,8 +41,8 @@ class ModelPreset:
         framework: Inference framework (ollama, llama_cpp, mlx).
     """
 
-    text_model: str = "qwen2.5:3b-instruct-q4_K_M"
-    vision_model: str = "qwen2.5vl:7b-q4_K_M"
+    text_model: str = DEFAULT_TEXT_MODEL
+    vision_model: str = DEFAULT_VISION_MODEL
     temperature: float = 0.5
     max_tokens: int = 3000
     device: str = "auto"
@@ -74,8 +77,14 @@ class AppConfig:
     Args:
         profile_name: Name of this configuration profile.
         version: Configuration schema version.
-        default_methodology: Default organization methodology (none, para, jd).
+        default_methodology: Default organization methodology — one of
+            ``config.methodology.ORDER`` (currently none, para, jd).
+        default_input_dir: Default source directory pre-filled for organize runs
+            (empty string means "unset — prompt each run").
+        default_output_dir: Default destination directory pre-filled for organize
+            runs (empty string means "unset — prompt each run").
         setup_completed: Whether the guided setup wizard has been completed.
+        setup_deferred: Whether the user has chosen to finish guided setup later.
         models: AI model preset configuration.
         updates: Auto-update preferences.
         watcher: Watcher module config overrides.
@@ -90,8 +99,11 @@ class AppConfig:
 
     profile_name: str = "default"
     version: str = CURRENT_SCHEMA_VERSION
-    default_methodology: str = "none"
+    default_methodology: str = _DEFAULT_METHODOLOGY
+    default_input_dir: str = ""
+    default_output_dir: str = ""
     setup_completed: bool = False
+    setup_deferred: bool = False
     models: ModelPreset = field(default_factory=ModelPreset)
     updates: UpdateSettings = field(default_factory=UpdateSettings)
 

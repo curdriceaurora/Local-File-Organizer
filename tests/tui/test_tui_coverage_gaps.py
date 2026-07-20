@@ -111,7 +111,7 @@ class TestAnalyticsViewMountCompose:
         """compose() must yield StaticWidgets — test by verifying it's iterable."""
         from file_organizer.tui.analytics_view import AnalyticsView
 
-        view = AnalyticsView(directory="/tmp")
+        view = AnalyticsView(directory="/tmp")  # noqa: test-hardcoded-paths
         result = list(view.compose())
         # Should yield 5 widgets (header + 4 panels)
         assert len(result) == 5
@@ -347,12 +347,17 @@ class TestSettingsViewActions:
 
     # --- compose / on_mount ---
 
-    def test_compose_yields_static(self):
+    def test_compose_yields_static_and_directory_inputs(self):
+        from textual.widgets import Input, Static
+
         from file_organizer.tui.settings_view import SettingsView
 
         view = SettingsView()
         result = list(view.compose())
-        assert len(result) == 1
+        assert len(result) == 3
+        assert isinstance(result[0], Static)
+        assert isinstance(result[1], Input)
+        assert isinstance(result[2], Input)
 
     def test_on_mount_calls_reload(self):
         from file_organizer.tui.settings_view import SettingsView

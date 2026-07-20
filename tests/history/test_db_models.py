@@ -96,7 +96,7 @@ class TestWorkspaceModel:
         ws = Workspace(
             name="My Workspace",
             owner_id=user.id,
-            root_path="/tmp/ws",
+            root_path="/tmp/ws",  # noqa: test-hardcoded-paths
         )
         db_session.add(ws)
         db_session.flush()
@@ -104,7 +104,7 @@ class TestWorkspaceModel:
         assert ws.id is not None
         assert ws.name == "My Workspace"
         assert ws.owner_id == user.id
-        assert ws.root_path == "/tmp/ws"
+        assert ws.root_path == "/tmp/ws"  # noqa: test-hardcoded-paths
         assert ws.is_active is True
         assert ws.description is None
         assert isinstance(ws.created_at, datetime)
@@ -114,7 +114,7 @@ class TestWorkspaceModel:
         ws = Workspace(
             name="Described",
             owner_id=user.id,
-            root_path="/tmp/desc",
+            root_path="/tmp/desc",  # noqa: test-hardcoded-paths
             description="A test workspace",
         )
         db_session.add(ws)
@@ -122,13 +122,13 @@ class TestWorkspaceModel:
         assert ws.description == "A test workspace"
 
     def test_workspace_requires_name(self, db_session: Session, user: User) -> None:
-        ws = Workspace(owner_id=user.id, root_path="/tmp/bad")
+        ws = Workspace(owner_id=user.id, root_path="/tmp/bad")  # noqa: test-hardcoded-paths
         db_session.add(ws)
         with pytest.raises(IntegrityError):
             db_session.flush()
 
     def test_workspace_requires_owner(self, db_session: Session) -> None:
-        ws = Workspace(name="orphan", root_path="/tmp/bad")
+        ws = Workspace(name="orphan", root_path="/tmp/bad")  # noqa: test-hardcoded-paths
         db_session.add(ws)
         with pytest.raises(IntegrityError):
             db_session.flush()
@@ -140,7 +140,7 @@ class TestWorkspaceModel:
             db_session.flush()
 
     def test_workspace_repr(self, db_session: Session, user: User) -> None:
-        ws = Workspace(name="repr-test", owner_id=user.id, root_path="/tmp/r")
+        ws = Workspace(name="repr-test", owner_id=user.id, root_path="/tmp/r")  # noqa: test-hardcoded-paths
         db_session.add(ws)
         db_session.flush()
         assert "repr-test" in repr(ws)
@@ -149,7 +149,7 @@ class TestWorkspaceModel:
         ws = Workspace(
             name="bad-fk",
             owner_id="nonexistent-user-id",
-            root_path="/tmp/fk",
+            root_path="/tmp/fk",  # noqa: test-hardcoded-paths
         )
         db_session.add(ws)
         # SQLite does not enforce FK by default; we still verify the row is created.
@@ -414,13 +414,13 @@ class TestFileMetadataModel:
     """Tests for the FileMetadata model."""
 
     def test_create_file_metadata(self, db_session: Session, user: User) -> None:
-        workspace = Workspace(name="ws-meta", owner_id=user.id, root_path="/tmp/ws-meta")
+        workspace = Workspace(name="ws-meta", owner_id=user.id, root_path="/tmp/ws-meta")  # noqa: test-hardcoded-paths
         db_session.add(workspace)
         db_session.flush()
 
         row = FileMetadata(
             workspace_id=workspace.id,
-            path="/tmp/ws-meta/docs/file.txt",
+            path="/tmp/ws-meta/docs/file.txt",  # noqa: test-hardcoded-paths
             relative_path="docs/file.txt",
             name="file.txt",
             size_bytes=123,
@@ -435,13 +435,13 @@ class TestFileMetadataModel:
         assert row.size_bytes == 123
 
     def test_file_metadata_unique_workspace_path(self, db_session: Session, user: User) -> None:
-        workspace = Workspace(name="ws-meta-uq", owner_id=user.id, root_path="/tmp/ws-meta-uq")
+        workspace = Workspace(name="ws-meta-uq", owner_id=user.id, root_path="/tmp/ws-meta-uq")  # noqa: test-hardcoded-paths
         db_session.add(workspace)
         db_session.flush()
 
         one = FileMetadata(
             workspace_id=workspace.id,
-            path="/tmp/ws-meta-uq/file.txt",
+            path="/tmp/ws-meta-uq/file.txt",  # noqa: test-hardcoded-paths
             relative_path="file.txt",
             name="file.txt",
             size_bytes=10,
@@ -451,7 +451,7 @@ class TestFileMetadataModel:
 
         two = FileMetadata(
             workspace_id=workspace.id,
-            path="/tmp/ws-meta-uq/file.txt",
+            path="/tmp/ws-meta-uq/file.txt",  # noqa: test-hardcoded-paths
             relative_path="file.txt",
             name="file.txt",
             size_bytes=11,

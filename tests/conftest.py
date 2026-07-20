@@ -8,6 +8,7 @@ Requires Python 3.11+.
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 if TYPE_CHECKING:
-    from fastapi.testclient import TestClient
+    from starlette.testclient import TestClient
 
 from file_organizer.api.realtime import realtime_manager
 from file_organizer.tui.app import FileOrganizerApp
@@ -39,6 +40,23 @@ try:
     import playwright  # noqa: F401
 except ImportError:
     collect_ignore_glob.append("playwright/**")
+
+# cv2 (opencv-python) is imported lazily inside video service functions, so the
+# first real `import cv2` in a test run can land at an arbitrary point in
+# collection/execution order. Several tests mock `sys.modules["cv2"]` (and run
+# on background threads via executor/watch-loop tests), and a first cold
+# import racing against that sys.modules mutation can abort cv2's own package
+# init partway through — leaving `cv2.dnn` cached as a real submodule while
+# the top-level `cv2` entry is evicted, so every later `import cv2` in the
+# same process repeats the same failure
+# (AttributeError: module 'cv2.dnn' has no attribute 'DictValue').
+# Importing it for real here, before any test can mock or race it, ensures
+# `sys.modules["cv2"]` is always the fully-initialized real module that
+# `unittest.mock.patch.dict` restores after each test.
+try:
+    import cv2  # noqa: F401
+except ImportError:
+    pass
 
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
@@ -87,6 +105,13 @@ skip_below_py312 = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
+def default_api_auth_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give tests a non-placeholder API JWT secret unless they override it."""
+    if "FO_API_AUTH_JWT_SECRET" not in os.environ:
+        monkeypatch.setenv("FO_API_AUTH_JWT_SECRET", "test-secret-32-bytes-minimum-key!!")
+
+
+@pytest.fixture(autouse=True)
 def _skip_setup_wizard():
     """Bypass the setup wizard so the main app view is always shown."""
     with patch.object(FileOrganizerApp, "_check_setup_needed", return_value=False):
@@ -99,6 +124,83 @@ def reset_realtime_state() -> None:
     realtime_manager.reset()
     yield
     realtime_manager.reset()
+
+
+def _drop_closed_stream_sinks() -> None:
+    """Remove any loguru or stdlib logging handler bound to a *closed* stream.
+
+    Root cause (xdist-only): ``api.main.configure_logging()`` — invoked by
+    ``create_app()`` and guarded by the module-global ``_LOGGING_CONFIGURED`` —
+    binds an ``enqueue=True`` loguru sink, backed by a background writer thread,
+    to whatever ``sys.stdout`` is live at first-call time. When that first call
+    happens inside a per-test output-capture buffer (pytest capture / Typer's
+    ``CliRunner``), the sink stays bound to a stream that closes when the test
+    ends. Any later loguru write in the same worker then raises
+    ``ValueError: I/O operation on closed file`` from the background thread and
+    loguru appends its ``--- End of logging error ---`` banner to whatever is
+    being captured — corrupting the benchmark ``--json`` payload and starving
+    the ASGI portal thread (search-endpoint 60s timeouts). The same failure
+    mode exists for any stdlib ``StreamHandler`` a dependency leaves bound to a
+    closed capture buffer via ``logging.basicConfig()``.
+
+    A handler whose stream is already closed can only ever error, so removing it
+    is always safe. We target *only* closed-stream handlers, leaving loguru's
+    healthy default stderr sink (and every live handler) untouched — so tests
+    that assert on captured log output keep working.
+    """
+    # --- loguru: remove only handlers whose StreamSink wraps a closed stream ---
+    try:
+        from loguru import logger
+
+        core = getattr(logger, "_core", None)
+        handlers = dict(getattr(core, "handlers", {})) if core is not None else {}
+        for handler_id, handler in handlers.items():
+            sink = getattr(handler, "_sink", None)
+            stream = getattr(sink, "_stream", None)
+            if stream is not None and getattr(stream, "closed", False):
+                try:
+                    logger.remove(handler_id)
+                except (ValueError, RuntimeError):
+                    pass
+    except Exception:  # logging cleanup must never fail a test
+        pass
+
+    # --- stdlib: same treatment for root + named loggers ---
+    try:
+        import logging
+
+        loggers = [logging.getLogger()]
+        loggers += [
+            logger_obj
+            for logger_obj in list(logging.root.manager.loggerDict.values())
+            if isinstance(logger_obj, logging.Logger)
+        ]
+        for lg in loggers:
+            for handler in list(getattr(lg, "handlers", ())):
+                stream = getattr(handler, "stream", None)
+                if stream is not None and getattr(stream, "closed", False):
+                    lg.removeHandler(handler)
+    except Exception:  # logging cleanup must never fail a test, least of all at teardown
+        pass
+
+
+@pytest.fixture(autouse=True)
+def reset_api_logging_config() -> None:
+    """Keep a leaked ``enqueue=True`` loguru sink from poisoning later tests.
+
+    See ``_drop_closed_stream_sinks`` for the full mechanism. We sweep at
+    *setup* — the reliable point, because the poisoning test's capture buffer is
+    already closed by the time the next test starts — and again at teardown as a
+    backstop. After teardown we also clear ``api.main._LOGGING_CONFIGURED`` so a
+    subsequent ``create_app()`` re-runs ``configure_logging()`` and rebinds its
+    sink against the then-current stream instead of a stale one.
+    """
+    _drop_closed_stream_sinks()
+    yield
+    _drop_closed_stream_sinks()
+    api_main = sys.modules.get("file_organizer.api.main")
+    if api_main is not None and getattr(api_main, "_LOGGING_CONFIGURED", False):
+        api_main._LOGGING_CONFIGURED = False
 
 
 @pytest.fixture(autouse=True)
@@ -452,7 +554,7 @@ def web_client_builder(tmp_path: Path):
     Returns:
         A callable that creates TestClient instances with specified options.
     """
-    from fastapi.testclient import TestClient
+    from starlette.testclient import TestClient
 
     from file_organizer.api.main import create_app
     from file_organizer.api.test_utils import build_test_settings

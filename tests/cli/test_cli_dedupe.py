@@ -181,9 +181,9 @@ class TestSelectFilesToKeep:
 
     def _make_files(self):
         return [
-            {"path": Path("/a/file1.txt"), "size": 100, "mtime": 1000},
-            {"path": Path("/a/file2.txt"), "size": 200, "mtime": 2000},
-            {"path": Path("/a/file3.txt"), "size": 50, "mtime": 1500},
+            {"path": Path("/") / "a" / "file1.txt", "size": 100, "mtime": 1000},
+            {"path": Path("/") / "a" / "file2.txt", "size": 200, "mtime": 2000},
+            {"path": Path("/") / "a" / "file3.txt", "size": 50, "mtime": 1500},
         ]
 
     def test_oldest_strategy(self):
@@ -230,25 +230,25 @@ class TestGetUserSelection:
 
     def test_batch_mode_automatic(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
-            {"path": Path("/a/f3.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
+            {"path": Path("/") / "a" / "f3.txt", "keep": False},
         ]
         result = get_user_selection(files, "oldest", batch=True)
         assert result == [1, 2]  # Indices of files not marked as keep
 
     def test_batch_mode_all_keep(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": True},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": True},
         ]
         result = get_user_selection(files, "oldest", batch=True)
         assert result == []
 
     def test_keyboard_interrupt_is_reraised_for_auto_confirmation(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
         ]
         console = MagicMock(spec=Console)
         console.input.side_effect = KeyboardInterrupt
@@ -520,8 +520,8 @@ class TestDisplayDuplicateGroup:
     def test_displays_group(self, capsys):
         console = Console(record=True)
         files = [
-            {"path": Path("/a/file1.txt"), "size": 1024, "mtime": 1000.0, "keep": True},
-            {"path": Path("/a/file2.txt"), "size": 1024, "mtime": 2000.0, "keep": False},
+            {"path": Path("/") / "a" / "file1.txt", "size": 1024, "mtime": 1000.0, "keep": True},
+            {"path": Path("/") / "a" / "file2.txt", "size": 1024, "mtime": 2000.0, "keep": False},
         ]
         display_duplicate_group(
             console,
@@ -533,15 +533,15 @@ class TestDisplayDuplicateGroup:
         output = console.export_text()
         assert "Duplicate Group 1/3" in output
         assert "abc123def4567890..." in output
-        assert str(Path("/a/file1.txt")) in output
-        assert str(Path("/a/file2.txt")) in output
+        assert str(Path("/") / "a" / "file1.txt") in output
+        assert str(Path("/") / "a" / "file2.txt") in output
         assert "Potential space savings: 1.0 KB" in output
 
     def test_displays_group_no_keep(self, capsys):
         console = Console(record=True)
         files = [
-            {"path": Path("/x/y.txt"), "size": 500, "mtime": 100.0},
-            {"path": Path("/x/z.txt"), "size": 500, "mtime": 200.0},
+            {"path": Path("/") / "x" / "y.txt", "size": 500, "mtime": 100.0},
+            {"path": Path("/") / "x" / "z.txt", "size": 500, "mtime": 200.0},
         ]
         display_duplicate_group(
             console,
@@ -552,8 +552,8 @@ class TestDisplayDuplicateGroup:
         )
         output = console.export_text()
         assert "Duplicate Group 2/5" in output
-        assert str(Path("/x/y.txt")) in output
-        assert str(Path("/x/z.txt")) in output
+        assert str(Path("/") / "x" / "y.txt") in output
+        assert str(Path("/") / "x" / "z.txt") in output
         assert "Potential space savings: 500.0 B" in output
 
 
@@ -569,8 +569,8 @@ class TestGetUserSelectionInteractive:
     def test_manual_skip(self):
         """User types 's' to skip."""
         files = [
-            {"path": Path("/a/f1.txt")},
-            {"path": Path("/a/f2.txt")},
+            {"path": Path("/") / "a" / "f1.txt"},
+            {"path": Path("/") / "a" / "f2.txt"},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "s"
@@ -580,8 +580,8 @@ class TestGetUserSelectionInteractive:
     def test_manual_keep_all(self):
         """User types 'a' to keep all."""
         files = [
-            {"path": Path("/a/f1.txt")},
-            {"path": Path("/a/f2.txt")},
+            {"path": Path("/") / "a" / "f1.txt"},
+            {"path": Path("/") / "a" / "f2.txt"},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "a"
@@ -591,8 +591,8 @@ class TestGetUserSelectionInteractive:
     def test_manual_select_keep(self):
         """User types '1' to keep file 1, remove file 2."""
         files = [
-            {"path": Path("/a/f1.txt")},
-            {"path": Path("/a/f2.txt")},
+            {"path": Path("/") / "a" / "f1.txt"},
+            {"path": Path("/") / "a" / "f2.txt"},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "1"
@@ -602,8 +602,8 @@ class TestGetUserSelectionInteractive:
     def test_manual_invalid_then_valid(self):
         """User enters invalid input, then valid."""
         files = [
-            {"path": Path("/a/f1.txt")},
-            {"path": Path("/a/f2.txt")},
+            {"path": Path("/") / "a" / "f1.txt"},
+            {"path": Path("/") / "a" / "f2.txt"},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.side_effect = ["xyz", "1"]
@@ -613,8 +613,8 @@ class TestGetUserSelectionInteractive:
     def test_manual_invalid_index_then_valid(self):
         """User enters out-of-range index, then valid."""
         files = [
-            {"path": Path("/a/f1.txt")},
-            {"path": Path("/a/f2.txt")},
+            {"path": Path("/") / "a" / "f1.txt"},
+            {"path": Path("/") / "a" / "f2.txt"},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.side_effect = ["99", "1"]
@@ -623,7 +623,7 @@ class TestGetUserSelectionInteractive:
 
     def test_manual_keyboard_interrupt(self):
         """KeyboardInterrupt during manual selection is re-raised."""
-        files = [{"path": Path("/a/f1.txt")}]
+        files = [{"path": Path("/") / "a" / "f1.txt"}]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.side_effect = KeyboardInterrupt
             with pytest.raises(KeyboardInterrupt):
@@ -636,8 +636,8 @@ class TestGetUserSelectionConfirm:
 
     def test_confirm_yes(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "y"
@@ -646,8 +646,8 @@ class TestGetUserSelectionConfirm:
 
     def test_confirm_no(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "n"
@@ -656,8 +656,8 @@ class TestGetUserSelectionConfirm:
 
     def test_confirm_skip(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.return_value = "skip"
@@ -666,8 +666,8 @@ class TestGetUserSelectionConfirm:
 
     def test_confirm_invalid_then_yes(self):
         files = [
-            {"path": Path("/a/f1.txt"), "keep": True},
-            {"path": Path("/a/f2.txt"), "keep": False},
+            {"path": Path("/") / "a" / "f1.txt", "keep": True},
+            {"path": Path("/") / "a" / "f2.txt", "keep": False},
         ]
         with patch("file_organizer.cli.dedupe.console") as mock_console:
             mock_console.input.side_effect = ["maybe", "y"]
@@ -800,7 +800,7 @@ class TestDedupeCommandDuplicates:
         mock_detector.get_duplicate_groups.return_value = {"hash1": grp}
 
         mock_bkp = MagicMock()
-        mock_bkp.create_backup.return_value = Path("/tmp/backup")
+        mock_bkp.create_backup.return_value = Path("/") / "tmp" / "backup"  # noqa: test-hardcoded-paths
 
         with (
             patch(_DETECTOR_PATH, return_value=mock_detector),
@@ -828,7 +828,7 @@ class TestDedupeCommandDuplicates:
         # Make the second file's path a MagicMock so unlink() raises
         grp.files[1].path = MagicMock()
         grp.files[1].path.unlink.side_effect = PermissionError("denied")
-        grp.files[1].path.__str__ = lambda self: "/tmp/b.txt"
+        grp.files[1].path.__str__ = lambda self: "/tmp/b.txt"  # noqa: test-hardcoded-paths
 
         mock_detector = MagicMock()
         mock_detector.scan_directory.return_value = None

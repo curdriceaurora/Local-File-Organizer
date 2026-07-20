@@ -1,15 +1,10 @@
-# File Organizer v2.0
+# Local File Organizer
 
-[![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0--alpha.3-orange)](CHANGELOG.md)
+[![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue?style=flat-square)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-> AI-powered local file management. Local-first by default (Ollama, no cloud required) --
-> or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
-
-**840 tests** | **408 modules** | **39 file types**
+This software uses AI to organize your local files. It operates locally with Ollama. It does not need a cloud connection. You can also connect it to an OpenAI-compatible endpoint or Anthropic Claude.
 
 ![TUI overview](docs/assets/tui-overview.svg)
 
@@ -17,11 +12,10 @@
 
 - [Features](#features)
 - [How It Works](#how-it-works)
-- [Quick Start](#quick-start)
-- [Web UI](#web-ui-preview)
+- [Interfaces](#interfaces-visuals)
+- [Quick Start (Essentials)](#quick-start-essentials)
 - [Documentation](#documentation)
 - [Optional Feature Packs](#optional-feature-packs)
-- [Project Structure](#project-structure)
 - [Development](#development)
 - [Contributing](#contributing)
 - [Configuration](#configuration)
@@ -31,142 +25,159 @@
 
 ### AI and Analysis
 
-- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM) — or Anthropic Claude
-- **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
-- **Video Analysis**: Scene detection and keyframe extraction
-- **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
+- **AI-Powered Organization**: Uses Qwen 2.5 3B (text) and Qwen 2.5-VL 7B (vision) with Ollama. It also supports OpenAI-compatible endpoints and Anthropic Claude.
+- **Audio Transcription**: Uses faster-whisper to convert local speech to text. This uses the GPU.
+- **Video Analysis**: Finds scenes and gets keyframes from video files.
+- **Intelligence**: Learns patterns, tracks your preferences, suggests actions, and adds tags automatically.
 
 ### Interfaces
 
-- **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
-- **Web UI**: Browser-based interface via FastAPI and HTMX
-- **Desktop App**: Native OS window via pywebview — single Python process, no Electron, no Rust
-- **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, profiles
-- **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
+- **Terminal UI**: Gives you an 8-view Textual TUI (Files, Analytics, Audio, History, Copilot).
+- **Web UI**: Shows a browser interface with FastAPI and HTMX.
+- **Desktop App**: Shows a native OS window with pywebview. It uses a single Python process. It does not use Electron or Rust.
+- **Full CLI**: Includes commands to organize, set rules, suggest, find duplicates, run as a daemon, show analytics, update, and manage API keys.
+- **Copilot Chat**: Lets you use natural language to give commands. For example, type "organize ./Downloads" or "undo".
 
 ### Organization
 
-- **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
-- **PARA + Johnny Decimal**: Built-in organizational methodologies
-- **Deduplication**: Hash and semantic duplicate detection
-- **Undo/Redo**: Full operation history
-- **Auto-Update**: GitHub Releases checks with verified downloads and rollback
-- **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
+- **Extensive Support**: Operates on 840 tests, 408 modules, and 39 file types.
+- **Organization Rules**: Sorts files automatically with conditions and previews. It saves rules in YAML.
+- **PARA + Johnny Decimal**: Includes these organizational methodologies.
+- **Deduplication**: Finds duplicate files with hash and semantic checks.
+- **Undo/Redo**: Keeps a full history of operations so you can undo them.
+- **Auto-Update**: Updates Linux AppImage from GitHub Releases. Updates macOS and Windows with `pip` or `pipx`.
+- **Cross-Platform**: Operates on macOS, Windows, and Linux.
 
 ## How It Works
 
+```mermaid
+flowchart LR
+    subgraph Source["Source Directory"]
+        direction TB
+        A[report.pdf]
+        B[photo.jpg]
+        C[meeting.mp3]
+        D[clip.mp4]
+    end
+
+    subgraph AI["AI Analysis"]
+        direction TB
+        E[Content Extraction]
+        F[AI Categorize]
+    end
+
+    subgraph Output["Organized Output"]
+        direction TB
+        G[Work/Reports/]
+        H[Photos/Vacation/]
+        I[Audio/Meetings/]
+    end
+
+    Source --> E --> F --> Output
+    F -.-> |Learn Patterns| F
 ```
- Source Directory          AI Analysis              Organized Output
-┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  ./Downloads │     │  Content         │     │  ./Organized     │
-│              │     │  Extraction      │     │                  │
-│  report.pdf  │────>│  (text, vision,  │────>│  Work/           │
-│  photo.jpg   │     │   audio, video)  │     │    Reports/      │
-│  meeting.mp3 │     │                  │     │  Photos/         │
-│  clip.mp4    │     │  AI Categorize   │     │    Vacation/     │
-│  notes.txt   │     │  (Ollama/OpenAI/ │     │  Audio/          │
-│              │     │   Claude)        │     │    Meetings/     │
-└──────────────┘     └──────────────────┘     └──────────────────┘
-                              │
-                     ┌────────┴────────┐
-                     │  Learn & Adapt  │
-                     │  (patterns,     │
-                     │   preferences,  │
-                     │   rules)        │
-                     └─────────────────┘
-```
 
-1. **Scan** — Reads files from a source directory, extracting text, metadata, and visual content per file type (80+ formats supported)
-2. **Analyze** — Sends extracted content to an AI model (Ollama, OpenAI, or Claude) for categorization and naming
-3. **Organize** — Moves or copies files into a structured folder hierarchy with AI-generated names
-4. **Learn** — Tracks your patterns and preferences over time for smarter future suggestions
+1. **Scan** — The software reads files from a source directory. It gets text, metadata, and visual content. It supports more than 80 formats.
+2. **Analyze** — The software sends the content to an AI model. The model categorizes and names the files.
+3. **Organize** — The software moves or copies files into folders. It uses the AI-generated names.
+4. **Learn** — The software tracks your patterns and preferences to make better suggestions in the future.
 
-## Screenshots
+## Interfaces (Visuals)
 
+### Terminal UI
 ![TUI demo](docs/assets/tui-demo.gif)
 
-## Quick Start
+### Web UI (Preview)
+To start the FastAPI server and open the UI, type this command:
+
+```bash
+file-organizer serve --reload
+```
+
+Then, go to `http://localhost:8000/ui/` in your browser.
+
+## Quick Start (Essentials)
 
 ### With Ollama (local, default)
 
 ```bash
-pip install -e .
+# Install from PyPI with pipx:
+pipx install local-file-organizer
+# or with pip:
+pip install local-file-organizer
 
-# Pull models
-ollama pull qwen2.5:3b-instruct-q4_K_M
-ollama pull qwen2.5vl:7b-q4_K_M
+# 1) Set the default configuration
+fo setup
 
-# Organize files (dry run first)
-file-organizer organize ./Downloads ./Organized --dry-run
+# 2) Preview a folder before you change anything
+fo preview ~/Downloads
 
-# Launch the TUI
-file-organizer tui
+# 3) Start the organization process
+fo organize ~/Downloads ~/Organized
 
-# Launch the native desktop window
-file-organizer-desktop
+# 4) Undo the most recent organize run if necessary
+fo undo
 ```
 
-### With OpenAI or compatible API
+### Use cloud providers instead of the default local flow
+
+Read the [AI Provider Setup guide](docs/setup/ai-providers.md) for OpenAI-compatible endpoints and Claude.
 
 ```bash
-pip install -e ".[cloud]"
-
+# OpenAI-compatible providers
 export FO_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-file-organizer organize ./Downloads ./Organized --dry-run
-```
 
-### With Anthropic Claude
-
-```bash
-pip install -e ".[claude]"
-
+# Anthropic Claude
 export FO_PROVIDER=claude
-export ANTHROPIC_API_KEY=sk-ant-...
-file-organizer organize ./Downloads ./Organized --dry-run
 ```
-
-## Web UI (Preview)
-
-Start the FastAPI server and open the UI:
-
-```bash
-uvicorn file_organizer.api.main:app --reload
-```
-
-Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Documentation
 
+### Essentials
+
+- [Documentation Home](docs/index.md)
 - [Getting Started](docs/getting-started.md)
-- [User Guide](docs/USER_GUIDE.md)
-- [CLI Reference](docs/cli-reference.md)
-- [Desktop App Guide](docs/desktop-app.md)
-- [Configuration Guide](docs/CONFIGURATION.md)
+- [CLI Reference](docs/cli-reference.md#core-first-run-commands)
+- [User Guide Workflow Map](docs/USER_GUIDE.md#workflow-map-quick-paths)
+- [Web UI Quick Start](docs/web-ui/getting-started.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Installation Guide](docs/admin/installation.md)
+
+### Advanced / Admin / Developer
+
+- [Full CLI Reference](docs/cli-reference.md)
+- [Terminal UI Guide](docs/tui.md)
+- [Desktop App Guide](docs/desktop-app.md)
+- [AI Provider Setup](docs/setup/ai-providers.md)
+- [Audio & Video Processing Guide](docs/setup/audio-video.md)
+- [Configuration Guide](docs/CONFIGURATION.md)
+- [API Reference](docs/api/index.md)
+- [File Format Reference](docs/admin/file-format-reference.md)
+- [Path Standardization & Migration](docs/config/path-standardization.md)
+- [Johnny Decimal User Guide](docs/methodologies/johnny-decimal/user-guide.md)
+- [Johnny Decimal Migration Guide](docs/methodologies/johnny-decimal/migration.md)
 
 ## Optional Feature Packs
 
-| Pack | Install Command | Features |
-|------|----------------|----------|
-| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
-| Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
-| LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
-| Audio | `pip install -e ".[audio]"` | Speech-to-text (faster-whisper, torch) |
-| Video | `pip install -e ".[video]"` | Scene detection (OpenCV, scenedetect) |
-| Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
-| Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
-| Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB formats |
-| CAD | `pip install -e ".[cad]"` | DXF and CAD format support |
-| Desktop | `pip install -e ".[desktop]"` | Native desktop window via pywebview (uvicorn + WebKit/Edge) |
-| Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
-| All | `pip install -e ".[all]"` | Everything above |
+Canonical extras matrix:
+
+- [Dependencies & Optional Extras](docs/setup/dependencies.md#optional-extras-matrix)
+
+Common installation commands:
+
+```bash
+pip install "local-file-organizer[parsers,web]"
+pip install "local-file-organizer[cloud,claude]"
+pip install "local-file-organizer[all]"
+```
+
+> **From source (development):** Download the repository and use an editable install (for example, `pip install -e ".[all]"`).
 
 ### Audio system dependencies
 
-For full audio format support, the `[audio]` pack uses **FFmpeg** (all platforms) and optionally **CUDA + cuDNN** (NVIDIA GPU users).
+To get full audio format support, the `[audio]` pack uses **FFmpeg** (all platforms). It optionally uses **CUDA + cuDNN** (for NVIDIA GPU users).
 
-**FFmpeg** — required for non-`.wav` formats (MP3, M4A, FLAC, OGG); optional if you only transcribe raw `.wav`:
+**FFmpeg** — This is necessary for non-`.wav` formats (MP3, M4A, FLAC, OGG). It is optional if you only transcribe raw `.wav` files:
 
 ```bash
 # macOS
@@ -179,85 +190,50 @@ sudo apt install ffmpeg
 winget install ffmpeg
 ```
 
-**CUDA + cuDNN** — optional, for significantly faster transcription (see [faster-whisper benchmarks](https://github.com/SYSTRAN/faster-whisper) for hardware-specific numbers):
+**CUDA + cuDNN** — This is optional. It makes transcription much faster.
 
 ```bash
 # Install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads
 # Install cuDNN from https://developer.nvidia.com/cudnn
 
-# Verify the full transcription backend (not just PyTorch)
+# Verify the full transcription backend
 python3 -c "from faster_whisper import WhisperModel; print('faster-whisper OK')"
 python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
 ```
 
-**Fallback behavior**: without FFmpeg, only `.wav` files are transcribed; other formats are organized by filename/metadata but not content-analyzed. Without CUDA, transcription runs on CPU (slower but fully functional).
+**Fallback behavior**: If you do not have FFmpeg, the software only transcribes `.wav` files. It organizes other formats by filename and metadata, but it does not analyze their content. If you do not have CUDA, the transcription uses the CPU. This is slower but it operates correctly.
 
-See the [Installation Guide](docs/admin/installation.md) for troubleshooting and advanced configuration.
-
-## Project Structure
-
-<details>
-<summary>Click to expand</summary>
-
-```
-src/file_organizer/
-├── api/              # FastAPI web backend
-├── cli/              # CLI commands and entry points
-├── client/           # HTTP client utilities
-├── config/           # Configuration management
-├── core/             # Organization engine and business logic
-├── daemon/           # Background file watcher daemon
-├── deploy/           # Deployment helpers
-├── desktop/          # Native desktop app (pywebview)
-├── events/           # Event system
-├── history/          # Operation history and undo/redo
-├── integrations/     # External service integrations
-├── interfaces/       # Abstract interfaces and protocols
-├── methodologies/    # PARA, Johnny Decimal implementations
-├── models/           # Data models
-├── optimization/     # Performance optimization
-├── parallel/         # Parallel processing
-├── pipeline/         # File processing pipeline
-├── plugins/          # Plugin system (audio, video, archives, etc.)
-├── review_regressions/ # Code quality detectors
-├── services/         # Core services (analytics, dedup, text, etc.)
-├── tui/              # Textual terminal UI (8 views)
-├── undo/             # Undo/redo infrastructure
-├── updater/          # Auto-update from GitHub Releases
-├── utils/            # Shared utilities
-├── watcher/          # File system watcher
-└── web/              # HTMX web UI templates and assets
-```
-
-</details>
+Read the [Installation Guide](docs/admin/installation.md) to find troubleshooting steps and advanced configuration options.
 
 ## Development
 
 ```bash
-# Run tests
+# Start tests
 pytest
 
-# Lint
+# Find errors with ruff
 ruff check src/
 ```
 
+*(To see a full breakdown of the project structure, read [CONTRIBUTING.md](CONTRIBUTING.md))*
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit changes.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn about the development setup, coding standards, project structure, and how to submit your changes.
 
 ## Configuration
 
-Configuration is stored in platform-appropriate locations using `platformdirs`:
+The software stores configuration files in these locations:
 - **macOS**: `~/Library/Application Support/file-organizer/`
 - **Linux**: `~/.config/file-organizer/` (or `$XDG_CONFIG_HOME/file-organizer/`)
 - **Windows**: `%APPDATA%/file-organizer/`
 
-See [Configuration Guide](docs/CONFIGURATION.md) for details.
+Read the [Configuration Guide](docs/CONFIGURATION.md) for more data.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project uses the [MIT License](LICENSE).
 
 ---
 
-**Status**: Alpha 3 | **Version**: 2.0.0-alpha.3 | **Last Updated**: 2026-04-10
+**Status**: Stable | **Version**: 2.1.1 | **Last Updated**: 2026-07-20

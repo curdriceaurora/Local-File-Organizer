@@ -12,10 +12,13 @@ SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 pytestmark = pytest.mark.regression
 
 
-def test_macos_script_uses_pyproject_version() -> None:
+def test_macos_script_resolves_version_via_shared_resolver() -> None:
     script = (SCRIPTS_DIR / "build_macos.sh").read_text(encoding="utf-8")
-    assert "pyproject.toml" in script
-    assert "version" in script
+    # Version comes from the shared resolver (build_config._detect_version),
+    # not the old broken pyproject `\s` regex that always yielded 0.0.0.
+    assert "_detect_version" in script
+    assert "build_config" in script
+    assert 'VERSION="$(' in script
 
 
 def test_macos_script_names_dmg_with_version() -> None:
@@ -45,10 +48,13 @@ def test_windows_installer_names_include_version() -> None:
     assert "OutputBaseFilename=file-organizer-{#AppVersion}-windows-setup" in iss
 
 
-def test_linux_script_uses_pyproject_version() -> None:
+def test_linux_script_resolves_version_via_shared_resolver() -> None:
     script = (SCRIPTS_DIR / "build_linux.sh").read_text(encoding="utf-8")
-    assert "pyproject.toml" in script
-    assert "version" in script
+    # Version comes from the shared resolver (build_config._detect_version),
+    # not the old broken pyproject `\s` regex that always yielded 0.0.0.
+    assert "_detect_version" in script
+    assert "build_config" in script
+    assert 'VERSION="$(' in script
 
 
 def test_linux_appimage_naming_uses_version() -> None:

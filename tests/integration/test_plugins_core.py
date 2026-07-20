@@ -261,14 +261,15 @@ class TestPluginSecurityPolicy:
         assert len(policy.allowed_operations) == 0
 
 
+@pytest.mark.ci
 class TestPluginSandbox:
-    def test_unrestricted_policy_allows_any_path(self, tmp_path: Path) -> None:
+    def test_default_policy_denies_all_paths(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox
 
-        sandbox = PluginSandbox(plugin_name="test", policy=None)  # defaults to unrestricted
+        sandbox = PluginSandbox(plugin_name="test", policy=None)
 
-        assert sandbox.validate_file_access(tmp_path) is True
-        assert sandbox.validate_file_access("/etc/passwd") is True
+        assert sandbox.validate_file_access(tmp_path) is False
+        assert sandbox.validate_file_access("/etc/passwd") is False  # noqa: test-hardcoded-paths
 
     def test_restricted_policy_denies_path_outside_allowed(self, tmp_path: Path) -> None:
         from file_organizer.plugins.security import PluginSandbox, PluginSecurityPolicy
@@ -300,7 +301,7 @@ class TestPluginSandbox:
         sandbox = PluginSandbox(plugin_name="my-plugin", policy=policy)
 
         with pytest.raises(PluginPermissionError, match="my-plugin"):
-            sandbox.require_file_access("/etc/passwd")
+            sandbox.require_file_access("/etc/passwd")  # noqa: test-hardcoded-paths
 
     def test_validate_operation_returns_false_for_denied_op(self) -> None:
         from file_organizer.plugins.security import PluginSandbox, PluginSecurityPolicy

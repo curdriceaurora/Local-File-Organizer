@@ -50,7 +50,7 @@ class TestLocationPattern:
     def test_create_location_pattern(self):
         """Test creating a location pattern."""
         pattern = LocationPattern(
-            directory=Path("/documents"),
+            directory=Path("/") / "documents",
             file_types={".pdf", ".docx"},
             naming_patterns=["DATE_PREFIX"],
             file_count=15,
@@ -58,7 +58,7 @@ class TestLocationPattern:
             category="documents",
         )
 
-        assert pattern.directory == Path("/documents")
+        assert pattern.directory == Path("/") / "documents"
         assert ".pdf" in pattern.file_types
         assert pattern.file_count == 15
 
@@ -71,7 +71,7 @@ class TestContentCluster:
         """Test creating a content cluster."""
         cluster = ContentCluster(
             cluster_id="cluster_001",
-            file_paths=[Path("/file1.txt"), Path("/file2.txt")],
+            file_paths=[Path("/") / "file1.txt", Path("/") / "file2.txt"],
             common_keywords=["report", "financial"],
             file_types={".txt", ".pdf"},
             size_range=(1000, 50000),
@@ -91,7 +91,7 @@ class TestPatternAnalysisDataclass:
     def test_create_pattern_analysis(self):
         """Test creating pattern analysis result."""
         analysis = PatternAnalysis(
-            directory=Path("/test"),
+            directory=Path("/") / "test",
             naming_patterns=[],
             location_patterns=[],
             content_clusters=[],
@@ -101,7 +101,7 @@ class TestPatternAnalysisDataclass:
             total_files=15,
         )
 
-        assert analysis.directory == Path("/test")
+        assert analysis.directory == Path("/") / "test"
         assert analysis.total_files == 15
         assert analysis.file_type_distribution[".txt"] == 10
 
@@ -166,8 +166,8 @@ class TestAnalyzeDirectory:
         """Test analyzing non-existent directory raises error."""
         analyzer = PatternAnalyzer()
 
-        with pytest.raises(ValueError):
-            analyzer.analyze_directory(Path("/nonexistent/path"))
+        with pytest.raises(ValueError, match="Invalid directory"):
+            analyzer.analyze_directory(Path("/") / "nonexistent" / "path")
 
     def test_analyze_file_instead_of_directory(self):
         """Test analyzing a file instead of directory raises error."""
@@ -177,7 +177,7 @@ class TestAnalyzeDirectory:
 
             analyzer = PatternAnalyzer()
 
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="Invalid directory"):
                 analyzer.analyze_directory(file_path)
 
     def test_analyze_respects_max_depth(self):

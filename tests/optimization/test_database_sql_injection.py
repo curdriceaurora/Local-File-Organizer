@@ -154,7 +154,9 @@ class TestPragmaValueValidation:
         self, pragma_name: str, pragma_value: str
     ) -> None:
         """Unsafe pragma values must raise ValueError."""
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="Unsafe PRAGMA value|requires an integer|not an integer"
+        ):
             DatabaseOptimizer._validate_pragma_value(pragma_name, pragma_value)
 
 
@@ -209,7 +211,7 @@ class TestCreateIndexesSafe:
     ) -> None:
         """Malicious identifiers in extra_indexes must raise ValueError."""
         opt = _optimizer_with_table("logs")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid SQL identifier"):
             opt.create_indexes(extra_indexes=[bad_idx])
         opt.close()
 
@@ -266,7 +268,9 @@ class TestOptimizePragmasSafe:
     def test_invalid_pragma_values_raise_before_execution(self, kwargs: dict) -> None:
         """optimize_pragmas must raise ValueError before touching the DB."""
         opt = _make_optimizer()
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="Unsafe PRAGMA value|requires an integer|not an integer"
+        ):
             opt.optimize_pragmas(**kwargs)
         opt.close()
 

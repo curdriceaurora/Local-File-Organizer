@@ -12,7 +12,7 @@ pytestmark = [pytest.mark.ci, pytest.mark.unit]
 @pytest.fixture
 def mock_profile_manager():
     manager = MagicMock(spec=ProfileManager)
-    manager.storage_path = Path("/mock/storage")
+    manager.storage_path = Path("/") / "mock" / "storage"
     return manager
 
 
@@ -87,7 +87,7 @@ class TestProfileMigrator:
     )
     def test_migrate_version_no_path(self, mock_backup, mock_profile_manager, sample_profile):
         mock_profile_manager.get_profile.return_value = sample_profile
-        mock_backup.return_value = Path("/mock/backup.json")
+        mock_backup.return_value = Path("/") / "mock" / "backup.json"
 
         migrator = ProfileMigrator(mock_profile_manager)
         migrator.SUPPORTED_VERSIONS.append("2.0")
@@ -102,7 +102,7 @@ class TestProfileMigrator:
         self, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
     ):
         mock_profile_manager.get_profile.return_value = sample_profile
-        mock_backup.return_value = Path("/mock/backup.json")
+        mock_backup.return_value = Path("/") / "mock" / "backup.json"
         mock_profile_manager.update_profile.return_value = True
 
         migrator = ProfileMigrator(mock_profile_manager)
@@ -140,7 +140,7 @@ class TestProfileMigrator:
         self, mock_rollback, mock_backup, mock_profile_manager, sample_profile
     ):
         mock_profile_manager.get_profile.return_value = sample_profile
-        mock_backup.return_value = Path("/mock/backup.json")
+        mock_backup.return_value = Path("/") / "mock" / "backup.json"
 
         migrator = ProfileMigrator(mock_profile_manager)
         migrator.SUPPORTED_VERSIONS.append("2.0")
@@ -248,7 +248,7 @@ class TestProfileMigrator:
         self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
     ):
         mock_profile_manager.get_profile.return_value = sample_profile
-        mock_backup.return_value = Path("/mock/backup.json")
+        mock_backup.return_value = Path("/") / "mock" / "backup.json"
 
         migrator = ProfileMigrator(mock_profile_manager)
         migrator.SUPPORTED_VERSIONS.append("2.0")
@@ -277,7 +277,7 @@ class TestProfileMigrator:
         self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
     ):
         mock_profile_manager.get_profile.return_value = sample_profile
-        mock_backup.return_value = Path("/mock/backup.json")
+        mock_backup.return_value = Path("/") / "mock" / "backup.json"
         mock_profile_manager.update_profile.return_value = False
 
         migrator = ProfileMigrator(mock_profile_manager)

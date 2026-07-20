@@ -121,7 +121,7 @@ class TestJohnnyDecimalNumber:
             JohnnyDecimalNumber,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Area must be between 0 and 99"):
             JohnnyDecimalNumber(area=200)
 
     def test_item_id_without_category_raises(self) -> None:
@@ -130,7 +130,7 @@ class TestJohnnyDecimalNumber:
             JohnnyDecimalNumber,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot have item_id without category"):
             JohnnyDecimalNumber(area=10, item_id=5)
 
     def test_equality(self) -> None:
@@ -224,14 +224,14 @@ class TestAreaDefinition:
         """Verify an empty name raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import AreaDefinition
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Area name cannot be empty"):
             AreaDefinition(area_range_start=10, area_range_end=19, name="", description="d")
 
     def test_start_gt_end_raises(self) -> None:
         """Verify start > end raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import AreaDefinition
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Area start \(\d+\) must be <= end"):
             AreaDefinition(area_range_start=19, area_range_end=10, name="X", description="d")
 
 
@@ -283,7 +283,7 @@ class TestJDCategoryDefinition:
         """Verify an empty name raises ValueError."""
         from file_organizer.methodologies.johnny_decimal.categories import CategoryDefinition
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Category name cannot be empty"):
             CategoryDefinition(area=11, category=1, name="", description="d")
 
 
@@ -378,7 +378,7 @@ class TestNumberingResult:
         )
 
         n = JohnnyDecimalNumber(area=11, category=1)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
             NumberingResult(
                 file_path=tmp_path / "f.txt",
                 number=n,
@@ -868,7 +868,7 @@ class TestAdapters:
         adapter = PARAAdapter(cfg)
         item = OrganizationItem(
             name="project-doc.pdf",
-            path=Path("docs/project-doc.pdf"),
+            path=Path("docs") / "project-doc.pdf",
             category="projects",
             metadata={},
         )
@@ -887,7 +887,7 @@ class TestAdapters:
         adapter = PARAAdapter(cfg)
         item = OrganizationItem(
             name="doc.pdf",
-            path=Path("Projects/doc.pdf"),
+            path=Path("Projects") / "doc.pdf",
             category="projects",
             metadata={},
         )

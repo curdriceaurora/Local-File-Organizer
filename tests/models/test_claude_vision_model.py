@@ -303,7 +303,7 @@ class TestClaudeVisionModelGenerateWithPath:
         model = self._make_initialized(claude_vision_config, mock_claude_client)
         missing = tmp_path / "does_not_exist.png"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             model.generate("prompt", image_path=missing)
 
 
@@ -369,7 +369,7 @@ class TestClaudeVisionModelGenerateGuards:
             model = ClaudeVisionModel(claude_vision_config)
 
         with pytest.raises(RuntimeError, match="not initialized"):
-            model.generate("prompt", image_path=Path("/any"))
+            model.generate("prompt", image_path=Path("/") / "any")
 
     def test_raises_value_error_when_neither_image_nor_data(
         self,

@@ -72,7 +72,9 @@
                 </div>
 
                 <div class="step-actions">
-                    <a href="/ui/" class="btn-text" hx-select="#main">Skip setup for now</a>
+                    <form action="/ui/setup/defer" method="post">
+                        <button type="submit" class="btn-text">Skip setup for now</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -160,10 +162,9 @@
                         <div class="form-group">
                             <label for="methodology">Methodology</label>
                             <select id="methodology" name="methodology" class="form-select">
-                                <option value="content_based">Content-Based (Recommended)</option>
-                                <option value="johnny_decimal">Johnny Decimal</option>
+                                <option value="none">None (flat / content-based) (Recommended)</option>
+                                <option value="jd">Johnny Decimal</option>
                                 <option value="para">PARA</option>
-                                <option value="date_based">Date-Based</option>
                             </select>
                         </div>
                     </div>
@@ -174,20 +175,24 @@
                         <div class="form-group">
                             <label for="input-dir">Input Directory</label>
                             <div style="display:flex;gap:8px;align-items:center;">
-                                <input type="text" id="input-dir" name="input_dir" class="form-input" placeholder="/path/to/input" style="flex:1;">
+                                <input type="text" id="input-dir" name="input_dir" class="form-input" placeholder="/path/to/input" title="Type the full absolute path when Browse is unavailable." style="flex:1;">
                                 <button type="button" class="btn-ghost" onclick="window.browseDirectory('input-dir')" style="white-space:nowrap;">Browse…</button>
                             </div>
+                            <p class="field-hint" id="input-dir-hint">Use an absolute path. Browser-only mode cannot read full folder paths.</p>
                         </div>
 
                         <div class="form-group">
                             <label for="output-dir">Output Directory</label>
                             <div style="display:flex;gap:8px;align-items:center;">
-                                <input type="text" id="output-dir" name="output_dir" class="form-input" placeholder="/path/to/output" style="flex:1;">
+                                <input type="text" id="output-dir" name="output_dir" class="form-input" placeholder="/path/to/output" title="Type the full absolute path when Browse is unavailable." style="flex:1;">
                                 <button type="button" class="btn-ghost" onclick="window.browseDirectory('output-dir')" style="white-space:nowrap;">Browse…</button>
                             </div>
+                            <p class="field-hint" id="output-dir-hint">Use an absolute path. Browser-only mode cannot read full folder paths.</p>
                         </div>
                     </div>
                 </form>
+
+                <div id="setup-message" class="setup-message" role="status" aria-live="polite" hidden></div>
 
                 <div class="step-actions">
                     <button class="btn-ghost" id="btn-back-step3">Back</button>
@@ -509,6 +514,34 @@
     font-weight: 500;
     margin-bottom: 0.5rem;
     color: #333;
+}
+
+.field-hint {
+    margin: 0.35rem 0 0 0;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.field-hint-warning {
+    color: #b45309;
+    font-weight: 500;
+}
+
+.setup-message {
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+}
+
+.setup-message-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.setup-message-info {
+    background: #e0f2fe;
+    color: #075985;
 }
 
 .form-select,

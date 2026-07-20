@@ -198,8 +198,8 @@ class TestLearnFromCorrection:
     def test_learning_disabled(self, learner):
         """Test that corrections are ignored when learning is disabled."""
         learner.learning_enabled = False
-        original = Path("/docs/old.txt")
-        corrected = Path("/docs/new.txt")
+        original = Path("/") / "docs" / "old.txt"
+        corrected = Path("/") / "docs" / "new.txt"
 
         result = learner.learn_from_correction(original, corrected)
 
@@ -207,8 +207,8 @@ class TestLearnFromCorrection:
 
     def test_name_change_learning(self, learner):
         """Test learning from a name change."""
-        original = Path("/docs/old_file.txt")
-        corrected = Path("/docs/new_file.txt")
+        original = Path("/") / "docs" / "old_file.txt"
+        corrected = Path("/") / "docs" / "new_file.txt"
 
         with patch.object(
             learner.feedback_processor,
@@ -227,8 +227,8 @@ class TestLearnFromCorrection:
 
     def test_folder_change_learning(self, learner):
         """Test learning from a folder change (same filename)."""
-        original = Path("/downloads/report.pdf")
-        corrected = Path("/documents/report.pdf")
+        original = Path("/") / "downloads" / "report.pdf"
+        corrected = Path("/") / "documents" / "report.pdf"
 
         result = learner.learn_from_correction(original, corrected)
 
@@ -238,8 +238,8 @@ class TestLearnFromCorrection:
 
     def test_both_name_and_folder_change(self, learner):
         """Test learning from both name and folder change."""
-        original = Path("/downloads/old.txt")
-        corrected = Path("/documents/new.txt")
+        original = Path("/") / "downloads" / "old.txt"
+        corrected = Path("/") / "documents" / "new.txt"
 
         result = learner.learn_from_correction(original, corrected)
 
@@ -249,8 +249,8 @@ class TestLearnFromCorrection:
 
     def test_retraining_triggered(self, learner):
         """Test that retraining flag is set after threshold corrections."""
-        original = Path("/a/file.txt")
-        corrected = Path("/b/file.txt")
+        original = Path("/") / "a" / "file.txt"
+        corrected = Path("/") / "b" / "file.txt"
 
         for _ in range(learner.feedback_processor.learning_threshold):
             result = learner.learn_from_correction(original, corrected)
@@ -259,7 +259,7 @@ class TestLearnFromCorrection:
 
     def test_no_change(self, learner):
         """Test learning from identical paths."""
-        path = Path("/docs/file.txt")
+        path = Path("/") / "docs" / "file.txt"
 
         result = learner.learn_from_correction(path, path)
 
@@ -267,8 +267,8 @@ class TestLearnFromCorrection:
 
     def test_with_context(self, learner):
         """Test learning with context information."""
-        original = Path("/docs/file.txt")
-        corrected = Path("/archive/file.txt")
+        original = Path("/") / "docs" / "file.txt"
+        corrected = Path("/") / "archive" / "file.txt"
         context = {"operation": "archive"}
 
         with patch.object(
@@ -283,8 +283,8 @@ class TestLearnFromCorrection:
 
     def test_preference_tracker_called(self, learner):
         """Test that preference tracker receives the operation."""
-        original = Path("/a/old.txt")
-        corrected = Path("/b/new.txt")
+        original = Path("/") / "a" / "old.txt"
+        corrected = Path("/") / "b" / "new.txt"
 
         learner.learn_from_correction(original, corrected)
 
@@ -511,8 +511,8 @@ class TestGetLearningStats:
 
     def test_stats_after_corrections(self, learner):
         """Test stats reflect corrections."""
-        original = Path("/a/file.txt")
-        corrected = Path("/b/file.txt")
+        original = Path("/") / "a" / "file.txt"
+        corrected = Path("/") / "b" / "file.txt"
 
         learner.learn_from_correction(original, corrected)
 
@@ -639,7 +639,9 @@ class TestLearningToggle:
         """Test that corrections are ignored when disabled."""
         learner.disable_learning()
 
-        result = learner.learn_from_correction(Path("/a/old.txt"), Path("/b/new.txt"))
+        result = learner.learn_from_correction(
+            Path("/") / "a" / "old.txt", Path("/") / "b" / "new.txt"
+        )
 
         assert result == {"learning_enabled": False}
 
@@ -648,7 +650,9 @@ class TestLearningToggle:
         learner.disable_learning()
         learner.enable_learning()
 
-        result = learner.learn_from_correction(Path("/a/old.txt"), Path("/b/new.txt"))
+        result = learner.learn_from_correction(
+            Path("/") / "a" / "old.txt", Path("/") / "b" / "new.txt"
+        )
 
         assert "timestamp" in result
         assert len(result["learned"]) > 0
@@ -754,8 +758,8 @@ class TestLearnFolderPreference:
 
     def test_basic_folder_learning(self, learner):
         """Test basic folder preference learning."""
-        original = Path("/downloads/file.pdf")
-        corrected = Path("/documents/file.pdf")
+        original = Path("/") / "downloads" / "file.pdf"
+        corrected = Path("/") / "documents" / "file.pdf"
 
         learner.folder_learner.get_folder_confidence.return_value = 0.85
 
@@ -769,8 +773,8 @@ class TestLearnFolderPreference:
 
     def test_folder_learning_with_context(self, learner):
         """Test folder preference learning with context."""
-        original = Path("/downloads/file.jpg")
-        corrected = Path("/photos/file.jpg")
+        original = Path("/") / "downloads" / "file.jpg"
+        corrected = Path("/") / "photos" / "file.jpg"
         context = {"category": "photos"}
 
         learner.folder_learner.get_folder_confidence.return_value = 0.9

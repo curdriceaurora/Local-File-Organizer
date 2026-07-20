@@ -279,7 +279,7 @@ class TestImportProfileBranches:
             "included_preferences": ["global"],
             "preferences": {
                 "global": {"key": "value"},
-                "directory_specific": {"/home": {"sort_by": "name"}},
+                "directory_specific": {"/home": {"sort_by": "name"}},  # noqa: test-hardcoded-paths
             },
             "learned_patterns": {"pat1": "data"},
             "confidence_data": {"conf1": 0.9},
@@ -336,13 +336,15 @@ class TestPatternLearnerBranches:
         """learning_enabled=False returns early (lines 83-84)."""
         learner = self._make_learner(tmp_path)
         learner.learning_enabled = False
-        result = learner.learn_from_correction(Path("/src/file.txt"), Path("/dst/file.txt"))
+        result = learner.learn_from_correction(
+            Path("/") / "src" / "file.txt", Path("/") / "dst" / "file.txt"
+        )
         assert result.get("learning_enabled") is False
 
     def test_learn_from_correction_same_name_same_parent(self, tmp_path: Path) -> None:
         """Correction with no change — no naming or folder learning."""
         learner = self._make_learner(tmp_path)
-        p = Path("/src/file.txt")
+        p = Path("/") / "src" / "file.txt"
         result = learner.learn_from_correction(p, p)
         assert "learned" in result
 
@@ -354,26 +356,26 @@ class TestPatternLearnerBranches:
         propagates; we assert it to cover the call-site and naming-pattern method body.
         """
         learner = self._make_learner(tmp_path)
-        original = Path("/src/MyFile.txt")
-        corrected = Path("/src/my_file.txt")
-        with pytest.raises(KeyError):
+        original = Path("/") / "src" / "MyFile.txt"
+        corrected = Path("/") / "src" / "my_file.txt"
+        with pytest.raises(KeyError, match="case_style"):
             learner.learn_from_correction(original, corrected)
 
     def test_learn_from_correction_different_parents(self, tmp_path: Path) -> None:
         """original.parent != corrected.parent → _learn_folder_preference."""
         learner = self._make_learner(tmp_path)
-        original = Path("/docs/file.txt")
-        corrected = Path("/reports/file.txt")
+        original = Path("/") / "docs" / "file.txt"
+        corrected = Path("/") / "reports" / "file.txt"
         result = learner.learn_from_correction(original, corrected)
         assert any(r.get("type") == "folder" for r in result.get("learned", []))
 
     def test_learn_from_correction_both_differ_hits_naming_path(self, tmp_path: Path) -> None:
         """Both name and parent differ → naming path called first, KeyError propagates."""
         learner = self._make_learner(tmp_path)
-        original = Path("/docs/OldName.txt")
-        corrected = Path("/reports/new_name.txt")
+        original = Path("/") / "docs" / "OldName.txt"
+        corrected = Path("/") / "reports" / "new_name.txt"
         # Same note: _learn_naming_pattern raises KeyError due to 'case_style' bug
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="case_style"):
             learner.learn_from_correction(original, corrected)
 
     def test_get_pattern_suggestion_with_name_and_type(self, tmp_path: Path) -> None:
@@ -410,7 +412,9 @@ class TestPatternLearnerBranches:
         learner = self._make_learner(tmp_path)
         with (
             patch.object(
-                learner.folder_learner, "suggest_folder_structure", return_value=Path("/reports")
+                learner.folder_learner,
+                "suggest_folder_structure",
+                return_value=Path("/") / "reports",
             ),
             patch.object(learner.folder_learner, "get_folder_confidence", return_value=0.8),
         ):
@@ -427,7 +431,7 @@ class TestPatternLearnerBranches:
         with (
             patch.object(learner, "_get_naming_suggestions", return_value=mock_naming),
             patch.object(
-                learner.folder_learner, "suggest_folder_structure", return_value=Path("/docs")
+                learner.folder_learner, "suggest_folder_structure", return_value=Path("/") / "docs"
             ),
             patch.object(learner.folder_learner, "get_folder_confidence", return_value=0.7),
         ):
@@ -448,8 +452,8 @@ class TestPatternLearnerBranches:
         learner = self._make_learner(tmp_path)
         corrections = [
             {
-                "original": str(Path("/src/OldName.txt")),
-                "corrected": str(Path("/src/new_name.txt")),
+                "original": str(Path("/") / "src" / "OldName.txt"),
+                "corrected": str(Path("/") / "src" / "new_name.txt"),
                 "timestamp": "2026-01-01T00:00:00Z",
             }
         ]
@@ -495,7 +499,7 @@ class TestPatternLearnerBranches:
     def test_identify_folder_preference_calls_learner(self, tmp_path: Path) -> None:
         """identify_folder_preference delegates to folder_learner (line 181)."""
         learner = self._make_learner(tmp_path)
-        learner.identify_folder_preference(".pdf", Path("/reports"))
+        learner.identify_folder_preference(".pdf", Path("/") / "reports")
         # Verify it tracked without error
 
     def test_update_confidence_calls_engine(self, tmp_path: Path) -> None:

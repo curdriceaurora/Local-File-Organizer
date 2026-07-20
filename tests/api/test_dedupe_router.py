@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
@@ -58,14 +58,14 @@ def _make_mock_index(groups: dict | None = None, stats: dict | None = None):
         # Default: one group with 2 duplicate files
         now = datetime(2025, 1, 1, tzinfo=UTC)
         fm1 = FileMetadata(
-            path=Path("/tmp/a.txt"),
+            path=Path("/") / "tmp" / "a.txt",  # noqa: test-hardcoded-paths
             size=100,
             modified_time=now,
             accessed_time=now,
             hash_value="abc123",
         )
         fm2 = FileMetadata(
-            path=Path("/tmp/b.txt"),
+            path=Path("/") / "tmp" / "b.txt",  # noqa: test-hardcoded-paths
             size=100,
             modified_time=now,
             accessed_time=now,
@@ -193,8 +193,8 @@ class TestPreviewDuplicates:
         group = DedupeGroup(
             hash_value="abc123",
             files=[
-                DedupeFileInfo(path="/tmp/newer.txt", size=100, modified=newer, accessed=newer),
-                DedupeFileInfo(path="/tmp/older.txt", size=100, modified=older, accessed=older),
+                DedupeFileInfo(path="/tmp/newer.txt", size=100, modified=newer, accessed=newer),  # noqa: test-hardcoded-paths
+                DedupeFileInfo(path="/tmp/older.txt", size=100, modified=older, accessed=older),  # noqa: test-hardcoded-paths
             ],
             total_size=200,
             wasted_space=100,
@@ -202,8 +202,8 @@ class TestPreviewDuplicates:
 
         preview = _preview([group])
 
-        assert preview[0].keep == "/tmp/older.txt"
-        assert preview[0].remove == ["/tmp/newer.txt"]
+        assert preview[0].keep == "/tmp/older.txt"  # noqa: test-hardcoded-paths
+        assert preview[0].remove == ["/tmp/newer.txt"]  # noqa: test-hardcoded-paths
 
     def test_preview_breaks_equal_mtime_ties_by_path(self) -> None:
         same_time = datetime(2024, 1, 1, tzinfo=UTC)
@@ -211,10 +211,16 @@ class TestPreviewDuplicates:
             hash_value="abc123",
             files=[
                 DedupeFileInfo(
-                    path="/tmp/z-last.txt", size=100, modified=same_time, accessed=same_time
+                    path="/tmp/z-last.txt",  # noqa: test-hardcoded-paths
+                    size=100,
+                    modified=same_time,
+                    accessed=same_time,
                 ),
                 DedupeFileInfo(
-                    path="/tmp/a-first.txt", size=100, modified=same_time, accessed=same_time
+                    path="/tmp/a-first.txt",  # noqa: test-hardcoded-paths
+                    size=100,
+                    modified=same_time,
+                    accessed=same_time,
                 ),
             ],
             total_size=200,
@@ -223,8 +229,8 @@ class TestPreviewDuplicates:
 
         preview = _preview([group])
 
-        assert preview[0].keep == "/tmp/a-first.txt"
-        assert preview[0].remove == ["/tmp/z-last.txt"]
+        assert preview[0].keep == "/tmp/a-first.txt"  # noqa: test-hardcoded-paths
+        assert preview[0].remove == ["/tmp/z-last.txt"]  # noqa: test-hardcoded-paths
 
     @patch("file_organizer.api.routers.dedupe.DuplicateDetector")
     def test_preview_success(self, mock_detector_cls, tmp_path: Path) -> None:

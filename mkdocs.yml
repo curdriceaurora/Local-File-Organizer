@@ -80,15 +80,38 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - User Guide: USER_GUIDE.md
-  - Web UI Guide:
+  - Getting Started (Essentials): getting-started.md
+  - CLI Reference (Essentials): cli-reference.md
+  - User Guide (Essentials): USER_GUIDE.md
+  - Web UI Guide (Essentials):
       - Overview: web-ui/index.md
       - Getting Started: web-ui/getting-started.md
       - File Management: web-ui/file-management.md
       - Organization Workflows: web-ui/organization.md
       - Analysis & Search: web-ui/analysis-search.md
-      - Settings & Configuration: web-ui/settings.md
+      - Settings & Profile: web-ui/settings.md
+  - Interfaces:
+      - Terminal UI: tui.md
+      - Desktop App: desktop-app.md
+  - Setup & AI Providers (Advanced):
+      - AI Providers: setup/ai-providers.md
+      - Models: setup/models.md
+      - Dependencies & Optional Extras: setup/dependencies.md
+      - Audio & Video Processing: setup/audio-video.md
+  - CLI Feature Discoverability (Advanced):
+      - Search commands: cli-reference.md
+      - Duplicate detection (dedupe): cli-reference.md
+      - Undo/Redo history: cli-reference.md
+      - Profiles: cli-reference.md
+      - Plugin marketplace: cli-reference.md
+      - Copilot assistant: cli-reference.md
+      - Rules batch review: cli-reference.md
+  - Methodologies:
+      - Selection workflow: USER_GUIDE.md
+      - Johnny Decimal User Guide: methodologies/johnny-decimal/user-guide.md
+      - Johnny Decimal Migration: methodologies/johnny-decimal/migration.md
+      - JD + PARA guide: methodologies/johnny-decimal/para-compatibility.md
+      - Johnny Decimal FAQ: methodologies/johnny-decimal/faq.md
   - API Reference:
       - Overview: api/index.md
       - Error Reference: api/error-reference.md
@@ -119,7 +142,10 @@ nav:
       - API Clients: developer/api-clients.md
       - Contributing: developer/contributing.md
       - Testing: developer/testing.md
-  - CLI Reference: cli-reference.md
+  - Configuration & Migration:
+      - Configuration Guide: CONFIGURATION.md
+      - Path Standardization & Migration: config/path-standardization.md
+      - Deprecation Notice: config/deprecation-notice.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Blog:

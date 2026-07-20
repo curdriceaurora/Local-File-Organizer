@@ -22,6 +22,10 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
+from file_organizer.core.setup_wizard import ollama_next_steps
+from file_organizer.tui.status import StatusMixin
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +39,7 @@ class WizardScreen(StrEnum):
     COMPLETE = "complete"
 
 
-class SetupWizardView(Vertical):
+class SetupWizardView(StatusMixin, Vertical):
     """Interactive TUI setup wizard for first-run configuration.
 
     Guides users through initial setup with a multi-screen flow:
@@ -166,9 +170,9 @@ class SetupWizardView(Vertical):
                 # Choose the other recommended model
                 current = self._capabilities.hardware.recommended_text_model()
                 if "7b" in current:
-                    model = "qwen2.5:3b-instruct-q4_K_M"
+                    model = DEFAULT_TEXT_MODEL
                 else:
-                    model = "qwen2.5:7b-instruct-q4_K_M"
+                    model = DEFAULT_TEXT_MODEL_LARGE
                 self._selected_model = model
                 self._set_status(f"Selected model: {model}")
                 logger.info("User selected alternative model: {}", model)
@@ -400,10 +404,10 @@ class SetupWizardView(Vertical):
                 )
             elif ollama.installed:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Installed but not running")
-                lines.append("      [dim]Start with: ollama serve[/dim]")
+                lines.extend(self._render_ollama_next_steps())
             else:
                 lines.append("  [yellow]⚠[/yellow]  Ollama: Not installed")
-                lines.append("      [dim]Install from: https://ollama.ai[/dim]")
+                lines.extend(self._render_ollama_next_steps())
 
             # Recommendations section
             lines.append("\n[b]Recommended Configuration:[/b]")
@@ -445,9 +449,7 @@ class SetupWizardView(Vertical):
         hardware = self._capabilities.hardware
         recommended_model = hardware.recommended_text_model()
         alternative_model = (
-            "qwen2.5:3b-instruct-q4_K_M"
-            if "7b" in recommended_model
-            else "qwen2.5:7b-instruct-q4_K_M"
+            DEFAULT_TEXT_MODEL if "7b" in recommended_model else DEFAULT_TEXT_MODEL_LARGE
         )
 
         # Check installed models
@@ -559,12 +561,8 @@ class SetupWizardView(Vertical):
         # Backend status
         if not self._capabilities.ollama_status.running:
             lines.append("[yellow]⚠ Warning:[/yellow] Ollama is not running")
-            if self._capabilities.ollama_status.installed:
-                lines.append("  Start Ollama service before downloading models")
-                lines.append("  [dim]Command: ollama serve[/dim]\n")
-            else:
-                lines.append("  Install Ollama to download models")
-                lines.append("  [dim]Visit: https://ollama.ai[/dim]\n")
+            lines.extend(self._render_ollama_next_steps())
+            lines.append("")
 
         # Instructions
         lines.append("[dim]Press 1, 2, or 3 to select a model")
@@ -577,6 +575,21 @@ class SetupWizardView(Vertical):
         lines.append("Press Enter to continue, Esc to go back[/dim]")
 
         return "\n".join(lines)
+
+    def _render_ollama_next_steps(self) -> list[str]:
+        """Render shared Ollama next-step guidance for TUI screens."""
+        if self._capabilities is None:
+            return []
+
+        recommended_model = self._capabilities.hardware.recommended_text_model()
+        return [
+            f"      [dim]{step}[/dim]"
+            for step in ollama_next_steps(
+                self._capabilities.ollama_status,
+                recommended_model,
+                self._capabilities.installed_models,
+            )
+        ]
 
     def _render_complete_screen(self) -> str:
         """Render the setup completion screen."""
@@ -610,19 +623,6 @@ class SetupWizardView(Vertical):
         bar = "━" * filled + "╸" if filled < width else "━" * width
         empty = "─" * (width - len(bar))
         return f"[cyan]{bar}[/cyan][dim]{empty}[/dim]"
-
-    def _set_status(self, message: str) -> None:
-        """Update status bar when available.
-
-        Args:
-            message: Status message to display.
-        """
-        try:
-            from file_organizer.tui.app import StatusBar
-
-            self.app.query_one(StatusBar).set_status(message)
-        except Exception:
-            logger.debug("Failed to set status message on StatusBar.", exc_info=True)
 
     @work(thread=True)
     def _run_hardware_detection(self) -> None:

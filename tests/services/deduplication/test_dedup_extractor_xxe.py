@@ -11,6 +11,7 @@ on defusedxml (a core dependency), not the heavier dedup extras.
 
 from __future__ import annotations
 
+import builtins
 import zipfile
 from pathlib import Path
 
@@ -71,4 +72,35 @@ def test_extract_odt_handles_malformed_xml(tmp_path: Path) -> None:
     """
     odt = tmp_path / "malformed.odt"
     _write_odt(odt, f"<office:document-content {_NS}><office:body><text:p>oops")
+    assert DocumentExtractor()._extract_odt(odt) == ""
+
+
+def test_extract_odt_fails_closed_when_defusedxml_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Missing ``defusedxml`` must not silently downgrade to stdlib XML."""
+    odt = tmp_path / "clean.odt"
+    _write_odt(
+        odt,
+        f'<?xml version="1.0"?><office:document-content {_NS}>'
+        "<office:body><office:text>"
+        "<text:p>Hello without defusedxml</text:p>"
+        "</office:text></office:body></office:document-content>",
+    )
+
+    original_import = builtins.__import__
+
+    def fail_defusedxml_import(
+        name: str,
+        globalns: dict[str, object] | None = None,
+        localns: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name.startswith("defusedxml"):
+            raise ImportError("defusedxml intentionally unavailable")
+        return original_import(name, globalns, localns, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fail_defusedxml_import)
+
     assert DocumentExtractor()._extract_odt(odt) == ""

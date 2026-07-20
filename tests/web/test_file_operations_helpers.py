@@ -58,7 +58,7 @@ class TestBuildTreeContext:
 
 class TestGenerateThumbnail:
     def test_missing_file_raises_api_error(self, settings: ApiSettings) -> None:
-        missing = Path("/missing")
+        missing = Path("/") / "missing"
         with patch("file_organizer.web.file_operations.resolve_path", return_value=missing):
             with pytest.raises(ApiError, match="File not found"):
                 generate_thumbnail(str(missing), "file", settings)
@@ -171,7 +171,7 @@ class TestProcessFileUploads:
 
     def test_process_file_uploads_skips_invalid_filename(self, tmp_path: Path) -> None:
         with patch(
-            "file_organizer.web.file_validators.validate_upload_filename",
+            "file_organizer.web.file_uploads.validate_upload_filename",
             side_effect=ApiError(status_code=400, error="bad", message="bad name"),
         ):
             saved, errors = process_file_uploads([self._upload("bad.txt", b"hello")], tmp_path)
@@ -180,7 +180,7 @@ class TestProcessFileUploads:
         assert errors == ["bad name"]
 
     def test_process_file_uploads_rejects_unsanitized_name(self, tmp_path: Path) -> None:
-        with patch("file_organizer.web.file_operations.sanitize_upload_name", return_value=None):
+        with patch("file_organizer.web.file_uploads.sanitize_upload_name", return_value=None):
             saved, errors = process_file_uploads([self._upload("bad.txt", b"hello")], tmp_path)
 
         assert saved == 0
@@ -197,7 +197,7 @@ class TestProcessFileUploads:
 
     def test_process_file_uploads_cleans_up_oversized_file(self, tmp_path: Path) -> None:
         with patch(
-            "file_organizer.web.file_validators.validate_file_size",
+            "file_organizer.web.file_uploads.validate_file_size",
             side_effect=ApiError(status_code=400, error="file_too_large", message="too large"),
         ):
             saved, errors = process_file_uploads([self._upload("big.bin", b"hello")], tmp_path)

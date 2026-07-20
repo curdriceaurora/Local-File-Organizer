@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import queue
 import select
 import subprocess
@@ -38,7 +39,7 @@ import sys
 import threading
 import types
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from file_organizer.plugins.errors import PluginError, PluginLoadError
 from file_organizer.plugins.ipc import (
@@ -50,6 +51,12 @@ from file_organizer.plugins.ipc import (
 from file_organizer.plugins.security import PluginSecurityPolicy
 
 logger = logging.getLogger(__name__)
+
+# First line the worker writes to stdout, before entering the IPC loop.
+# ``start()`` blocks until it arrives, so per-call timeouts in ``call()``
+# measure call latency — never the child's multi-second (and, under
+# pytest-cov subprocess instrumentation, several-times-slower) startup.
+_READY_LINE = b'{"ready": true}\n'
 
 # ---------------------------------------------------------------------------
 # Worker entrypoint (runs inside the child process)
@@ -83,6 +90,13 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     import importlib.util
     import sys
     from pathlib import Path
+
+    stdin_bin = sys.stdin.buffer
+    stdout_bin = sys.stdout.buffer
+    # Keep stdout reserved for the JSON IPC protocol. Plugin code can run at
+    # import time and during construction, so redirect normal prints before
+    # loading any plugin-controlled module.
+    sys.stdout = sys.stderr
 
     # ------------------------------------------------------------------
     # 1. Apply resource limits (best-effort; Linux/macOS only)
@@ -141,8 +155,10 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     # ------------------------------------------------------------------
     from file_organizer.plugins.ipc import PluginResult, decode_call, encode_result
 
-    stdin_bin = sys.stdin.buffer
-    stdout_bin = sys.stdout.buffer
+    # Readiness handshake — MUST be the first bytes on stdout. The parent's
+    # start() blocks on this line; see _READY_LINE.
+    stdout_bin.write(_READY_LINE)
+    stdout_bin.flush()
 
     for raw_line in stdin_bin:
         raw_line = raw_line.strip()
@@ -197,8 +213,7 @@ class PluginExecutor:
         plugin_name: Human-readable name used for error messages.  Defaults
             to the plugin file's stem when not supplied.
         policy: Security policy serialised and forwarded to the worker.
-            Defaults to :meth:`~.security.PluginSecurityPolicy.unrestricted`
-            when not supplied.
+            Defaults to deny-by-default when not supplied.
 
     Raises:
         PluginLoadError: If :meth:`start` fails to spawn the worker.
@@ -210,11 +225,26 @@ class PluginExecutor:
         plugin_path: Path | str,
         plugin_name: str | None = None,
         policy: PluginSecurityPolicy | None = None,
+        startup_timeout: float = 30.0,
     ) -> None:
-        """Set up the executor for the plugin at the given path."""
+        """Set up the executor for the plugin at the given path.
+
+        Args:
+            plugin_path: Path (or path string) to the plugin ``.py`` file.
+            plugin_name: Human-readable name for error messages; defaults to
+                the plugin file's stem.
+            policy: Security policy forwarded to the worker; defaults to
+                the default :class:`PluginSecurityPolicy`.
+            startup_timeout: Maximum seconds :meth:`start` waits for the
+                worker's readiness line. Generous by default because the
+                child pays the full package-import cost before it can
+                answer, and instrumented runs (e.g. subprocess coverage)
+                multiply that cost.
+        """
         self._plugin_path = Path(plugin_path)
         self._plugin_name = plugin_name or self._plugin_path.stem
-        self._policy = policy or PluginSecurityPolicy.unrestricted()
+        self._policy = policy or PluginSecurityPolicy()
+        self._startup_timeout = startup_timeout
         self._proc: subprocess.Popen[bytes] | None = None
 
     # ------------------------------------------------------------------
@@ -251,17 +281,91 @@ class PluginExecutor:
             f"_worker({str(self._plugin_path)!r}, json.loads({json.dumps(policy_dict)!r}))"
         )
 
+        # The child must execute the same file_organizer tree as this
+        # process. A bare ``sys.executable -c`` child resolves imports
+        # through the interpreter environment, where a stale editable
+        # install can silently substitute another checkout's code; putting
+        # this package's own root first makes parent and child agree.
+        package_root = Path(__file__).resolve().parents[2]
+        env = dict(os.environ)
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = (
+            f"{package_root}{os.pathsep}{existing_pythonpath}"
+            if existing_pythonpath
+            else str(package_root)
+        )
+
         try:
             self._proc = subprocess.Popen(
                 [sys.executable, "-c", bootstrap],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                env=env,
             )
         except OSError as exc:
             raise PluginLoadError(
                 f"Failed to spawn worker for plugin '{self._plugin_name}': {exc}"
             ) from exc
+
+        # Block until the worker signals readiness (see _READY_LINE). This
+        # also converts a child that crashes during startup — e.g. a plugin
+        # that raises at import — into an immediate PluginLoadError carrying
+        # the child's stderr, instead of an opaque pipe error at first call.
+        first_line = b""
+        try:
+            first_line = self._readline_with_timeout(timeout=self._startup_timeout)
+        except PluginError as exc:
+            self._abort_startup(
+                f"did not signal readiness within {self._startup_timeout:.1f}s ({exc})"
+            )
+        if first_line.strip() != _READY_LINE.strip():
+            self._abort_startup(
+                "exited during startup without signalling readiness"
+                if not first_line
+                else f"sent unexpected first stdout line {first_line!r}"
+            )
+
+    def _abort_startup(self, detail: str) -> NoReturn:
+        """Kill a worker that failed its readiness handshake and raise.
+
+        Kills the child BEFORE reading stderr — draining a live child's
+        stderr pipe would block indefinitely.
+
+        Args:
+            detail: Failure description embedded in the raised error.
+
+        Raises:
+            PluginLoadError: Always; carries ``detail`` and the child's
+                stderr (best effort).
+        """
+        proc = self._proc
+        stderr_output = ""
+        if proc is not None:
+            reaped = False
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+                reaped = True
+            except OSError:
+                logger.debug("Failed to reap worker during startup abort", exc_info=True)
+            except subprocess.TimeoutExpired:
+                logger.debug("Worker did not exit after kill during startup abort")
+            if reaped and proc.stderr is not None:
+                try:
+                    stderr_output = proc.stderr.read().decode(errors="replace")
+                except OSError:
+                    stderr_output = "<unavailable>"
+            for pipe in (proc.stdin, proc.stdout, proc.stderr):
+                if pipe:
+                    try:
+                        pipe.close()
+                    except OSError:
+                        logger.debug("Failed to close worker pipe during startup abort")
+        self._proc = None
+        raise PluginLoadError(
+            f"Worker for plugin '{self._plugin_name}' {detail}. Stderr: {stderr_output!r}"
+        )
 
     def stop(self) -> None:
         """Terminate the worker subprocess and release resources.
@@ -281,7 +385,7 @@ class PluginExecutor:
                         logger.debug("Failed to close plugin worker pipe cleanly", exc_info=True)
             proc.terminate()
             try:
-                proc.wait(timeout=5)
+                proc.wait(timeout=15)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
@@ -410,7 +514,7 @@ class PluginExecutor:
                 f"Worker for '{self._plugin_name}' died before receiving call '{method}'."
             ) from exc
 
-        raw = self._readline_with_timeout(timeout=10.0)
+        raw = self._readline_with_timeout(timeout=30.0)
         if not raw:
             stderr_output = ""
             if stderr is not None:

@@ -44,27 +44,27 @@ class TestProcessCorrection:
     def test_same_path_no_signals(self) -> None:
         """No name or folder change → no learning signals."""
         fp = _fp()
-        result = fp.process_correction(Path("/a/x.txt"), Path("/a/x.txt"))
+        result = fp.process_correction(Path("/") / "a" / "x.txt", Path("/") / "a" / "x.txt")
         assert result["learning_signals"] == []
 
     def test_name_change_adds_naming_signal(self) -> None:
         """Different file names → naming signal appended."""
         fp = _fp()
-        result = fp.process_correction(Path("/a/old.txt"), Path("/a/new.txt"))
+        result = fp.process_correction(Path("/") / "a" / "old.txt", Path("/") / "a" / "new.txt")
         types = [s["type"] for s in result["learning_signals"]]
         assert "naming" in types
 
     def test_folder_change_adds_folder_signal(self) -> None:
         """Different parent folders → folder signal appended."""
         fp = _fp()
-        result = fp.process_correction(Path("/a/x.txt"), Path("/b/x.txt"))
+        result = fp.process_correction(Path("/") / "a" / "x.txt", Path("/") / "b" / "x.txt")
         types = [s["type"] for s in result["learning_signals"]]
         assert "folder" in types
 
     def test_both_changes_add_both_signals(self) -> None:
         """Name AND folder change → both signals."""
         fp = _fp()
-        result = fp.process_correction(Path("/a/old.txt"), Path("/b/new.txt"))
+        result = fp.process_correction(Path("/") / "a" / "old.txt", Path("/") / "b" / "new.txt")
         types = [s["type"] for s in result["learning_signals"]]
         assert "naming" in types
         assert "folder" in types
@@ -73,7 +73,7 @@ class TestProcessCorrection:
         """Context with 'operation' key → context signal appended."""
         fp = _fp()
         result = fp.process_correction(
-            Path("/a/x.txt"), Path("/a/x.txt"), context={"operation": "rename"}
+            Path("/") / "a" / "x.txt", Path("/") / "a" / "x.txt", context={"operation": "rename"}
         )
         types = [s["type"] for s in result["learning_signals"]]
         assert "context" in types
@@ -82,7 +82,7 @@ class TestProcessCorrection:
         """Context with no recognized keys → _extract_context_patterns returns None."""
         fp = _fp()
         result = fp.process_correction(
-            Path("/a/x.txt"), Path("/a/x.txt"), context={"unrelated": "value"}
+            Path("/") / "a" / "x.txt", Path("/") / "a" / "x.txt", context={"unrelated": "value"}
         )
         types = [s["type"] for s in result["learning_signals"]]
         assert "context" not in types
@@ -92,14 +92,16 @@ class TestProcessCorrection:
         fp = _fp()
         fp.learning_threshold = 3
         for i in range(3):
-            result = fp.process_correction(Path(f"/a/f{i}.txt"), Path(f"/b/g{i}.txt"))
+            result = fp.process_correction(
+                Path("/") / "a" / f"f{i}.txt", Path("/") / "b" / f"g{i}.txt"
+            )
         assert result.get("trigger_retraining") is True
 
     def test_below_threshold_no_trigger(self) -> None:
         """Below threshold → no trigger_retraining key."""
         fp = _fp()
         fp.learning_threshold = 10
-        result = fp.process_correction(Path("/a/x.txt"), Path("/b/y.txt"))
+        result = fp.process_correction(Path("/") / "a" / "x.txt", Path("/") / "b" / "y.txt")
         assert "trigger_retraining" not in result
 
 
@@ -325,8 +327,8 @@ class TestAnalyzeFolderCorrection:
         """Context with 'category' key → category_change pattern."""
         fp = _fp()
         result = fp._analyze_folder_correction(
-            Path("/a/x.pdf"),
-            Path("/docs/x.pdf"),
+            Path("/") / "a" / "x.pdf",
+            Path("/") / "docs" / "x.pdf",
             context={"category": "documents"},
         )
         pattern_types = [p["pattern_type"] for p in result["patterns"]]
@@ -336,8 +338,8 @@ class TestAnalyzeFolderCorrection:
         """Moving to deeper path → subfolder_structure pattern."""
         fp = _fp()
         result = fp._analyze_folder_correction(
-            Path("/a/x.pdf"),
-            Path("/docs/reports/2024/x.pdf"),
+            Path("/") / "a" / "x.pdf",
+            Path("/") / "docs" / "reports" / "2024" / "x.pdf",
             context=None,
         )
         pattern_types = [p["pattern_type"] for p in result["patterns"]]
@@ -347,8 +349,8 @@ class TestAnalyzeFolderCorrection:
         """No context → no category_change pattern."""
         fp = _fp()
         result = fp._analyze_folder_correction(
-            Path("/a/x.pdf"),
-            Path("/b/x.pdf"),
+            Path("/") / "a" / "x.pdf",
+            Path("/") / "b" / "x.pdf",
             context=None,
         )
         pattern_types = [p["pattern_type"] for p in result["patterns"]]
@@ -358,8 +360,8 @@ class TestAnalyzeFolderCorrection:
         """Context without 'category' key → no category_change pattern."""
         fp = _fp()
         result = fp._analyze_folder_correction(
-            Path("/a/x.pdf"),
-            Path("/b/x.pdf"),
+            Path("/") / "a" / "x.pdf",
+            Path("/") / "b" / "x.pdf",
             context={"other": "value"},
         )
         pattern_types = [p["pattern_type"] for p in result["patterns"]]

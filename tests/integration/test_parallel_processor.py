@@ -187,8 +187,8 @@ class TestCheckpointModel:
         """Verify to_dict/from_dict preserves completed paths, pending paths, and hashes."""
         from file_organizer.parallel.models import Checkpoint
 
-        completed = [Path("/a/b.txt"), Path("/c/d.txt")]
-        pending = [Path("/e/f.txt")]
+        completed = [Path("/") / "a" / "b.txt", Path("/") / "c" / "d.txt"]
+        pending = [Path("/") / "e" / "f.txt"]
         cp = Checkpoint(
             job_id="cp-test",
             completed_paths=completed,
@@ -444,7 +444,7 @@ class TestComputeFileHash:
         """Verify compute_file_hash raises OSError for a nonexistent file."""
         from file_organizer.parallel.checkpoint import compute_file_hash
 
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="No such file or directory"):
             compute_file_hash(tmp_path / "does_not_exist.txt")
 
 

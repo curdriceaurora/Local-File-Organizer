@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-__version__ = "2.0.0-alpha.3"
+__version__ = "2.1.1"
 
 # Pattern for semantic versioning with optional pre-release and build metadata
 _VERSION_PATTERN = re.compile(
@@ -98,7 +98,7 @@ def parse_version(version_str: str) -> VersionInfo:
     """Parse a semantic version string into a VersionInfo object.
 
     Args:
-        version_str: A version string like "2.0.0" or "2.0.0-alpha.1".
+        version_str: A version string like "2.0.0" or "2.0.0-beta.1".
 
     Returns:
         A VersionInfo instance with parsed components.

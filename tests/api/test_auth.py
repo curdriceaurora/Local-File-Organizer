@@ -30,7 +30,9 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 @pytest.fixture()
 def settings() -> ApiSettings:
     """Return default ApiSettings for testing."""
-    return load_settings()
+    return load_settings().model_copy(
+        update={"auth_jwt_secret": SecretStr("test-secret-32-bytes-minimum-key!!")}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +252,7 @@ class TestDecodeToken:
     def test_wrong_secret(self, settings: ApiSettings) -> None:
         bundle = create_token_bundle("uid-1", "alice", settings)
         other_settings = settings.model_copy(
-            update={"auth_jwt_secret": SecretStr("different-secret")}
+            update={"auth_jwt_secret": SecretStr("another-32-byte-secret-for-tests!!")}
         )
         with pytest.raises(TokenError):
             decode_token(bundle.access_token, other_settings)

@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+from tests.utils.import_mocks import make_fake_import
+
 pytestmark = [pytest.mark.unit]
 
 
@@ -67,16 +69,10 @@ class TestDocumentExtractorInit:
 
     def test_check_dependencies_missing_modules(self):
         """When optional deps are missing, a warning is logged but no error raised."""
-        import builtins
-
-        original_import = builtins.__import__
-
-        def selective_import(name, *args, **kwargs):
-            if name in ("pypdf", "docx"):
-                raise ImportError(f"no {name}")
-            return original_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=selective_import):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pypdf", "docx")),
+        ):
             from file_organizer.services.deduplication.extractor import DocumentExtractor
 
             # Should not raise
@@ -154,7 +150,7 @@ class TestExtractText:
 
     def test_file_not_found(self, extractor):
         with pytest.raises(OSError, match="File not found"):
-            extractor.extract_text(Path("/nonexistent/file.txt"))
+            extractor.extract_text(Path("/") / "nonexistent" / "file.txt")
 
     def test_unsupported_format_raises(self, extractor, tmp_path):
         p = tmp_path / "photo.jpg"
@@ -201,7 +197,10 @@ class TestExtractPdf:
         p = tmp_path / "doc.pdf"
         p.write_bytes(b"fake pdf")
 
-        with patch("builtins.__import__", side_effect=ImportError("no pypdf")):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("pypdf",)),
+        ):
             result = extractor._extract_pdf(p)
 
         assert result == ""
@@ -258,7 +257,10 @@ class TestExtractDocx:
         p = tmp_path / "doc.docx"
         p.write_bytes(b"fake docx")
 
-        with patch("builtins.__import__", side_effect=ImportError("no docx")):
+        with patch(
+            "builtins.__import__",
+            side_effect=make_fake_import(missing_names=("docx",)),
+        ):
             result = extractor._extract_docx(p)
 
         assert result == ""
@@ -367,7 +369,7 @@ class TestExtractBatch:
     def test_extract_batch_with_errors(self, extractor, tmp_path):
         good = tmp_path / "good.txt"
         good.write_text("Good text", encoding="utf-8")
-        bad = Path("/nonexistent/bad.txt")
+        bad = Path("/") / "nonexistent" / "bad.txt"
 
         results = extractor.extract_batch([good, bad])
         assert len(results) == 2

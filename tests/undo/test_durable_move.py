@@ -15,7 +15,7 @@ import os
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -1124,7 +1124,7 @@ class TestDurableMoveFailureModes:
         # ``os.path.normcase`` is a no-op on POSIX (where this test runs),
         # so we assert against the exact ``str(tmp_path / "target.txt")``.
         # On Windows the assertion uses normcase on both sides.
-        result = _normalized_path_str(Path("./sub/../target.txt"))
+        result = _normalized_path_str(Path("sub") / ".." / "target.txt")
         expected = os.path.normcase(str(tmp_path / "target.txt"))
         assert result == expected, result
 
@@ -1145,15 +1145,15 @@ class TestDurableMoveFailureModes:
 
         # POSIX no-op contract: a mixed-case path normalizes to itself.
         if os.name != "nt":
-            mixed = _normalized_path_str(Path("/Tmp/MixedCase/File.TXT"))
+            mixed = _normalized_path_str(Path("/") / "Tmp" / "MixedCase" / "File.TXT")
             assert mixed == "/Tmp/MixedCase/File.TXT", (
                 "os.path.normcase must be a no-op on POSIX so the wrapper "
                 "doesn't break case-sensitive paths"
             )
         else:  # pragma: no cover - exercised on Windows CI only
             # Windows: case-fold to lowercase + normalize separators.
-            mixed_a = _normalized_path_str(Path("C:/Foo/Bar.txt"))
-            mixed_b = _normalized_path_str(Path("c:/foo/BAR.TXT"))
+            mixed_a = _normalized_path_str(PureWindowsPath("C:/Foo/Bar.txt"))
+            mixed_b = _normalized_path_str(PureWindowsPath("c:/foo/BAR.TXT"))
             assert mixed_a == mixed_b, (
                 "Windows case-insensitive paths must normalize identically "
                 "(codex hp2G); journal lookups depend on it"
@@ -1178,7 +1178,7 @@ class TestDurableMoveFailureModes:
     def test_missing_source_raises_file_not_found(self, tmp_path: Path) -> None:
         from file_organizer.undo.durable_move import durable_move
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Source does not exist"):
             durable_move(
                 tmp_path / "ghost.txt",
                 tmp_path / "dst.txt",
@@ -1200,7 +1200,7 @@ class TestDurableMoveFailureModes:
 
         src = tmp_path / "src.txt"
         src.write_text("x")
-        with pytest.raises(PermissionError):
+        with pytest.raises(PermissionError, match="not allowed"):
             durable_move(src, tmp_path / "dst.txt", journal=tmp_path / "j")
 
     def test_copystat_failure_is_non_fatal(
@@ -1904,7 +1904,7 @@ class TestIsPathInFlightSharedLock:
         def _reader() -> None:
             reader_entered.set()
             try:
-                result_holder[0] = is_path_in_flight(Path("/x"), journal=journal)
+                result_holder[0] = is_path_in_flight(Path("/") / "x", journal=journal)
             finally:
                 reader_done.set()
 
@@ -2309,8 +2309,12 @@ class TestJournalSchemaV2Parser:
         """Equal paths are not descendants; only deeper children match."""
         from file_organizer.undo.durable_move import _is_descendant
 
-        assert _is_descendant("/trash/dir", "/trash/dir") is False
-        assert _is_descendant("/trash/dir/file.txt", "/trash/dir") is True
+        # ``_is_descendant`` compares on ``os.sep`` boundaries against inputs the
+        # caller has already normcased; build the paths with ``os.sep`` so the
+        # separator matches on Windows (``\``) as well as POSIX (``/``).
+        base = f"{os.sep}trash{os.sep}dir"
+        assert _is_descendant(base, base) is False
+        assert _is_descendant(f"{base}{os.sep}file.txt", base) is True
 
 
 # ---------------------------------------------------------------------------
@@ -2612,7 +2616,7 @@ class TestJournalLockFile:
 
         def _reader() -> None:
             try:
-                result[0] = is_path_in_flight(Path("/x"), journal=journal)
+                result[0] = is_path_in_flight(Path("/") / "x", journal=journal)
             finally:
                 reader_done.set()
 
@@ -2627,6 +2631,10 @@ class TestJournalLockFile:
         assert reader_done.wait(timeout=5.0)
         t.join(timeout=2)
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_returns_empty_when_journal_vanishes(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2654,6 +2662,10 @@ class TestJournalLockFile:
 
         assert dm.read_journal_under_shared_lock(journal) == []
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_race_returns_list_not_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2685,6 +2697,10 @@ class TestJournalLockFile:
             "read_journal_under_shared_lock must return a list, not None or other falsy"
         )
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_race_with_multi_entry_journal(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2718,6 +2734,10 @@ class TestJournalLockFile:
 
         assert dm.read_journal_under_shared_lock(journal) == []
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="mocks the POSIX fcntl reader branch; Windows uses the unlocked _read_journal fallback",
+    )
     def test_read_journal_under_shared_lock_passthrough_for_non_journal_paths(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

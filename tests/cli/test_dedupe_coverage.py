@@ -17,7 +17,7 @@ pytestmark = pytest.mark.unit
 
 def test_dedupe_config_initialization() -> None:
     """Verify DedupeConfig properties and defaults."""
-    dir_path = Path("/mock/path")
+    dir_path = Path("/") / "mock" / "path"
 
     # Test default values
     config = DedupeConfig(directory=dir_path)

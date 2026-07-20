@@ -24,7 +24,7 @@ class TestBroadcastEvent:
 
     def test_frozen(self):
         event = BroadcastEvent(channel="test", payload={})
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             event.channel = "other"  # type: ignore[misc]
 
 

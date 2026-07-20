@@ -31,9 +31,10 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
-from file_organizer.api.utils import file_info_from_path, resolve_path
+from file_organizer.api.utils import apply_config_update, file_info_from_path, resolve_path
 from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
+from file_organizer.version import __version__
 
 router = APIRouter(
     tags=["system"],
@@ -50,7 +51,7 @@ router = APIRouter(
             "Returned runtime system status.",
             {
                 "app": "File Organizer",
-                "version": "2.0.0-alpha.3",
+                "version": __version__,
                 "environment": "production",
                 "disk_total": 1000000,
                 "disk_used": 400000,
@@ -93,7 +94,7 @@ def system_status(
             "Returned configuration profile.",
             {
                 "profile": "default",
-                "config": {"default_methodology": "PARA"},
+                "config": {"default_methodology": "para"},
                 "profiles": ["default"],
             },
         ),
@@ -118,7 +119,7 @@ def get_config(
             "Updated configuration profile.",
             {
                 "profile": "default",
-                "config": {"default_methodology": "PARA"},
+                "config": {"default_methodology": "para"},
                 "profiles": ["default"],
             },
         ),
@@ -138,26 +139,7 @@ def update_config(
 ) -> ConfigResponse:
     """Apply partial updates to the configuration for a named profile."""
     config = manager.load(request.profile)
-
-    if request.default_methodology is not None:
-        config.default_methodology = request.default_methodology
-
-    if request.models is not None:
-        models = request.models
-        for field, value in models.model_dump(exclude_none=True).items():
-            setattr(config.models, field, value)
-
-    if request.updates is not None:
-        updates = request.updates
-        for field, value in updates.model_dump(exclude_none=True).items():
-            setattr(config.updates, field, value)
-
-    excluded_fields = {"profile", "default_methodology", "models", "updates"}
-    for name, value in request.model_dump(exclude_none=True).items():
-        if name in excluded_fields:
-            continue
-        if hasattr(config, name):
-            setattr(config, name, value)
+    apply_config_update(config, request)
 
     try:
         manager.save(config, request.profile)

@@ -121,7 +121,7 @@ class TestGetStorageStats:
 
     def test_delegates_to_storage_analyzer(self, mock_service, mock_storage_analyzer):
         """Test that get_storage_stats delegates to storage analyzer."""
-        directory = Path("/fake/dir")
+        directory = Path("/") / "fake" / "dir"
         result = mock_service.get_storage_stats(directory)
 
         mock_storage_analyzer.analyze_directory.assert_called_once_with(directory, None)
@@ -130,7 +130,7 @@ class TestGetStorageStats:
 
     def test_passes_max_depth(self, mock_service, mock_storage_analyzer):
         """Test that max_depth parameter is forwarded."""
-        directory = Path("/fake/dir")
+        directory = Path("/") / "fake" / "dir"
         mock_service.get_storage_stats(directory, max_depth=2)
 
         mock_storage_analyzer.analyze_directory.assert_called_once_with(directory, 2)
@@ -475,7 +475,7 @@ class TestGenerateDashboard:
 
     def test_dashboard_with_mocked_deps(self, mock_service, mock_storage_analyzer):
         """Test dashboard generation with mocked dependencies."""
-        directory = Path("/fake/dir")
+        directory = Path("/") / "fake" / "dir"
 
         # Need to mock rglob for quality metrics
         with patch.object(Path, "rglob", return_value=iter([])):

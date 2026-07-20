@@ -37,7 +37,7 @@ class TestMemorySnapshot:
     def test_snapshot_frozen(self) -> None:
         """Test that MemorySnapshot is immutable."""
         snapshot = MemorySnapshot(rss=1024, vms=2048, objects_by_type=(), timestamp=0.0)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             snapshot.rss = 999  # type: ignore[misc]
 
     def test_snapshot_equality(self) -> None:
@@ -74,7 +74,7 @@ class TestProfileResult:
     def test_profile_result_frozen(self) -> None:
         """Test that ProfileResult is immutable."""
         result = ProfileResult(peak_memory=0, allocated=0, freed=0, duration_ms=0.0, func_name="f")
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             result.peak_memory = 999  # type: ignore[misc]
 
 

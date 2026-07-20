@@ -94,9 +94,10 @@ class TestPluginSandboxInit:
         sb = PluginSandbox("my_plugin")
         assert sb is not None
 
-    def test_default_policy_unrestricted(self) -> None:
+    def test_default_policy_denies_everything(self) -> None:
         sb = PluginSandbox("my_plugin")
-        assert sb.policy.allow_all_paths is True
+        assert sb.policy.allow_all_paths is False
+        assert sb.policy.allow_all_operations is False
 
     def test_custom_policy_stored(self) -> None:
         p = PluginSecurityPolicy()

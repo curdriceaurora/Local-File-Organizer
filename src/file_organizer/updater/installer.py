@@ -11,9 +11,11 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx
 from loguru import logger
@@ -21,6 +23,10 @@ from loguru import logger
 from file_organizer.updater.checker import AssetInfo, ReleaseInfo
 
 _CHUNK_SIZE = 65536  # 64 KB download chunks
+
+# Upper bound for small text downloads (manifests, signatures, checksum lists).
+# A response larger than this is treated as hostile and discarded.
+_MAX_TEXT_DOWNLOAD_BYTES = 1024 * 1024
 
 
 def _get_platform_hints() -> list[str]:
@@ -55,6 +61,19 @@ def _get_arch_hints() -> list[str]:
         hints.append("universal")
 
     return hints
+
+
+def _looks_like_pipx_install(executable: Path) -> bool:
+    """Return whether the running Python path appears to belong to pipx."""
+    candidates = [executable, Path(sys.prefix)]
+    virtual_env = os.environ.get("VIRTUAL_ENV")
+    if virtual_env:
+        candidates.append(Path(virtual_env))
+
+    for path in candidates:
+        if "pipx" in {part.lower() for part in path.parts}:
+            return True
+    return False
 
 
 def _is_checksum_file(filename: str) -> bool:
@@ -151,11 +170,69 @@ class UpdateInstaller:
         """The installation directory."""
         return self._install_dir
 
+    def pip_upgrade_command(self) -> list[str] | None:
+        """Return a pip/pipx upgrade command when binary updates do not apply."""
+        system = platform.system().lower()
+        if system not in {"darwin", "windows"}:
+            return None
+
+        executable = Path(sys.executable)
+        if _looks_like_pipx_install(executable):
+            return ["pipx", "upgrade", "local-file-organizer"]
+
+        return [str(executable), "-m", "pip", "install", "-U", "local-file-organizer"]
+
+    def fetch_and_verify_manifest(self, release: ReleaseInfo, repo: str) -> dict[str, Any] | None:
+        """Fetch and verify the signed release manifest from the release.
+
+        Args:
+            release: The release to fetch from.
+            repo: Expected repository identity (e.g. owner/repo).
+
+        Returns:
+            Parsed manifest dictionary, or None if verification fails.
+        """
+        manifest_assets = [
+            a for a in release.assets if a.name.lower() == "file-organizer-release-manifest.json"
+        ]
+        signature_assets = [
+            a
+            for a in release.assets
+            if a.name.lower() == "file-organizer-release-manifest.json.sig"
+        ]
+
+        # Exactly one of each: duplicates would let an attacker race a second
+        # (unsigned or mismatched) copy against the legitimate one.
+        if len(manifest_assets) != 1 or len(signature_assets) != 1:
+            logger.error("Release must contain exactly one manifest and signature asset.")
+            return None
+
+        manifest_asset = manifest_assets[0]
+        signature_asset = signature_assets[0]
+
+        manifest_content = self._download_text(manifest_asset.url)
+        signature_content = self._download_text(signature_asset.url)
+
+        if not manifest_content or not signature_content:
+            logger.error("Manifest or signature asset download returned empty content.")
+            return None
+
+        from file_organizer.updater import trust
+
+        return trust.verify_release_manifest(
+            manifest_content,
+            signature_content,
+            expected_repo=repo,
+            expected_tag=release.tag,
+            expected_version=release.version,
+        )
+
     def download_asset(
         self,
         asset: AssetInfo,
         *,
         expected_sha256: str = "",
+        expected_size: int | None = None,
         progress_callback: object | None = None,
     ) -> Path | None:
         """Download an asset to a temporary file.
@@ -163,6 +240,7 @@ class UpdateInstaller:
         Args:
             asset: The asset to download.
             expected_sha256: Expected hex digest for verification.
+            expected_size: Expected size in bytes for verification.
             progress_callback: Optional callable(downloaded, total) for progress.
 
         Returns:
@@ -187,6 +265,13 @@ class UpdateInstaller:
                     tmp.write(chunk)
                     hasher.update(chunk)
                     downloaded += len(chunk)
+                    if expected_size is not None and downloaded > expected_size:
+                        logger.error(
+                            "Downloaded size exceeded expected size of {} bytes.", expected_size
+                        )
+                        tmp.close()
+                        tmp_path.unlink(missing_ok=True)
+                        return None
                     if progress_callback is not None and callable(progress_callback):
                         progress_callback(downloaded, asset.size)
 
@@ -200,6 +285,15 @@ class UpdateInstaller:
                     "SHA256 mismatch! Expected {} got {}",
                     expected_sha256,
                     actual_sha256,
+                )
+                tmp_path.unlink(missing_ok=True)
+                return None
+
+            if expected_size is not None and tmp_path.stat().st_size != expected_size:
+                logger.error(
+                    "Size mismatch! Expected {} got {}",
+                    expected_size,
+                    tmp_path.stat().st_size,
                 )
                 tmp_path.unlink(missing_ok=True)
                 return None
@@ -351,16 +445,22 @@ class UpdateInstaller:
         # Look for dedicated checksum file
         for a in release.assets:
             if a.name.lower() == f"{asset_name.lower()}.sha256":
-                return self._download_text(a.url).strip().split()[0]
+                checksum_parts = self._download_text(a.url).strip().split()
+                if checksum_parts:
+                    return str(checksum_parts[0])
 
         # Look for SHA256SUMS.txt
         for a in release.assets:
             if a.name.lower() in ("sha256sums.txt", "sha256sums"):
-                content = self._download_text(a.url)
-                for line in content.splitlines():
+                sums_content = self._download_text(a.url)
+                for line in sums_content.splitlines():
                     parts = line.strip().split()
-                    if len(parts) >= 2 and asset_name in parts[-1]:
-                        return parts[0]
+                    if len(parts) >= 2:
+                        target = parts[-1]
+                        if target.startswith("./"):
+                            target = target[2:]
+                        if target == asset_name:
+                            return str(parts[0])
 
         return ""
 
@@ -371,8 +471,6 @@ class UpdateInstaller:
     @staticmethod
     def _detect_install_dir() -> Path:
         """Detect the directory containing the running executable."""
-        import sys
-
         exe = Path(sys.executable).resolve()
         return exe.parent
 
@@ -397,17 +495,30 @@ class UpdateInstaller:
 
     @staticmethod
     def _download_text(url: str) -> str:
-        """Download a small text file.
+        """Download a small text file, capped at ``_MAX_TEXT_DOWNLOAD_BYTES``.
 
         Args:
             url: URL to download.
 
         Returns:
-            File content as string.
+            File content as string, or empty string on failure or if the
+            response exceeds the size cap.
         """
         try:
-            resp = httpx.get(url, follow_redirects=True, timeout=15.0)
-            resp.raise_for_status()
-            return resp.text
+            with httpx.stream("GET", url, follow_redirects=True, timeout=15.0) as resp:
+                resp.raise_for_status()
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in resp.iter_bytes(chunk_size=_CHUNK_SIZE):
+                    total += len(chunk)
+                    if total > _MAX_TEXT_DOWNLOAD_BYTES:
+                        logger.error(
+                            "Text download exceeded {} byte cap: {}",
+                            _MAX_TEXT_DOWNLOAD_BYTES,
+                            url,
+                        )
+                        return ""
+                    chunks.append(chunk)
+                return b"".join(chunks).decode("utf-8")
         except Exception:
             return ""

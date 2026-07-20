@@ -222,7 +222,7 @@ class TestHealthEndpoint:
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
 
-        cfg = DeploymentConfig(data_directory=Path("/nonexistent/path"))
+        cfg = DeploymentConfig(data_directory=Path("/") / "nonexistent" / "path")
         ep = HealthEndpoint(config=cfg, min_disk_space_mb=1)
         # Falls back to "/" - should still work
         result = ep._check_disk_space()
@@ -232,7 +232,7 @@ class TestHealthEndpoint:
         from file_organizer.deploy.config import DeploymentConfig
         from file_organizer.deploy.health import HealthEndpoint
 
-        cfg = DeploymentConfig(data_directory=Path("/nonexistent"))
+        cfg = DeploymentConfig(data_directory=Path("/") / "nonexistent")
         ep = HealthEndpoint(config=cfg)
         with patch("shutil.disk_usage", side_effect=OSError("disk error")):
             status = ep._check_disk_space()
@@ -2072,8 +2072,9 @@ class TestUpdateInstaller:
 
         installer = UpdateInstaller()
         mock_resp = MagicMock()
-        mock_resp.text = "checksum content"
-        with patch("httpx.get", return_value=mock_resp):
+        mock_resp.iter_bytes.return_value = [b"checksum content"]
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_resp
             result = installer._download_text("http://example.com/SHA256SUMS")
             assert result == "checksum content"
 
@@ -2081,7 +2082,7 @@ class TestUpdateInstaller:
         from file_organizer.updater.installer import UpdateInstaller
 
         installer = UpdateInstaller()
-        with patch("httpx.get", side_effect=Exception("error")):
+        with patch("httpx.stream", side_effect=Exception("error")):
             result = installer._download_text("http://bad")
             assert result == ""
 
@@ -2151,6 +2152,7 @@ class TestUpdateManager:
         release = ReleaseInfo(version="2.0.0")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(mgr._installer, "fetch_and_verify_manifest", return_value={"assets": []}),
             patch.object(mgr._installer, "select_asset", return_value=None),
         ):
             status = mgr.update()
@@ -2165,6 +2167,11 @@ class TestUpdateManager:
         asset = AssetInfo(name="app.bin", url="http://x")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(
+                mgr._installer,
+                "fetch_and_verify_manifest",
+                return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
+            ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=None),
@@ -2182,6 +2189,11 @@ class TestUpdateManager:
         download_path.write_bytes(b"data")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(
+                mgr._installer,
+                "fetch_and_verify_manifest",
+                return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
+            ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
@@ -2201,6 +2213,11 @@ class TestUpdateManager:
         install_result = InstallResult(success=True, message="installed")
         with (
             patch.object(mgr._checker, "check", return_value=release),
+            patch.object(
+                mgr._installer,
+                "fetch_and_verify_manifest",
+                return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
+            ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
             patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
@@ -2604,7 +2621,7 @@ class TestPARARulesEngine:
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
         ctx = EvaluationContext(
-            file_path=Path("/home/user/doc.pdf"),
+            file_path=Path("/") / "home" / "user" / "doc.pdf",  # noqa: test-hardcoded-paths
             file_stat={"created": datetime(2020, 1, 1, tzinfo=UTC)},
         )
         assert ctx.file_extension == ".pdf"
@@ -2614,7 +2631,7 @@ class TestPARARulesEngine:
     def test_evaluation_context_no_stat(self):
         from file_organizer.methodologies.para.rules.engine import EvaluationContext
 
-        ctx = EvaluationContext(file_path=Path("/home/user/doc.pdf"))
+        ctx = EvaluationContext(file_path=Path("/") / "home" / "user" / "doc.pdf")  # noqa: test-hardcoded-paths
         assert ctx.file_age_days is None
 
     def test_evaluation_context_naive_datetime(self):

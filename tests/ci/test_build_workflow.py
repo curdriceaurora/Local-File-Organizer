@@ -93,6 +93,13 @@ class TestDesktopBuildStep:
         run_text = _build_step_run_text()
         assert "python scripts/build.py --clean" in run_text
 
+    def test_build_test_command_targets_build_ci_suite(self) -> None:
+        """Build workflow should run deterministic build-focused CI tests."""
+        run_text = _build_step_run_text()
+        assert "tests/ci/test_build_artifacts.py" in run_text
+        assert "tests/ci/test_build_workflow.py" in run_text
+        assert "tests/ci/test_build_workflows.py" in run_text
+
 
 class TestPywebviewLinuxDeps:
     def test_pywebview_linux_deps_step(self) -> None:
@@ -145,10 +152,85 @@ class TestReleaseJob:
         assert needs == ["build"], f"release job must need only 'build', got: {needs}"
 
     def test_release_triggered_on_tags(self) -> None:
-        """release job must only run on tag pushes."""
+        """release job must support tag-triggered publishing."""
         jobs = _load_workflow().get("jobs", {})
         release = jobs.get("release", {})
         cond = release.get("if", "")
         assert "refs/tags/v" in cond, (
             f"release job must be guarded by tag condition, got if: {cond!r}"
+        )
+
+    def test_release_can_publish_from_manual_version_dispatch(self) -> None:
+        """Manual dispatch with a version should be able to publish release assets."""
+        jobs = _load_workflow().get("jobs", {})
+        release = jobs.get("release", {})
+        cond = str(release.get("if", ""))
+        assert "workflow_dispatch" in cond
+        assert "inputs.version" in cond
+
+        release_step = next(
+            (
+                step
+                for step in release.get("steps", [])
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
+            ),
+            {},
+        )
+        run_script = str(release_step.get("run", ""))
+        assert "release create" in run_script
+        assert "RELEASE_TAG" in run_script, "release step must publish against resolved release tag"
+
+    def test_release_prerelease_detection_handles_pep440_tags(self) -> None:
+        """release asset publication should treat hyphen and PEP 440 tags as prereleases."""
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+        release_step = next(
+            (
+                step
+                for step in steps
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
+            ),
+            {},
+        )
+        run_script = str(release_step.get("run", ""))
+        assert "--prerelease" in run_script, "build.yml release step must set prerelease"
+        assert "--draft" in run_script, "build.yml release step must set draft for stable releases"
+        assert '"${RELEASE_TAG}" != *-*' in run_script
+        assert '"${RELEASE_TAG}" != *a*' in run_script
+        assert '"${RELEASE_TAG}" != *b*' in run_script
+        assert '"${RELEASE_TAG}" != *rc*' in run_script
+
+    def test_release_job_signs_manifest(self) -> None:
+        """release job must install pycryptodomex and execute sign_release.py with RELEASE_SIGNING_KEY."""
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+
+        # Check the signing script's runtime dependencies are installed
+        build_step = next(s for s in steps if s.get("name") == "Build sdist and wheel")
+        assert "pycryptodomex" in build_step.get("run", "")
+        assert "loguru" in build_step.get("run", ""), (
+            "sign_release.py imports file_organizer.updater.trust which requires loguru"
+        )
+
+        # Check sign step exists and has correct environment
+        sign_step = next(s for s in steps if s.get("name") == "Generate and sign release manifest")
+        assert "sign_release.py" in sign_step.get("run", "")
+        env = sign_step.get("env", {})
+        assert env.get("RELEASE_SIGNING_KEY") == "${{ secrets.RELEASE_SIGNING_KEY }}"
+
+    def test_release_job_downloads_artifacts_flat(self) -> None:
+        """download-artifact must merge artifacts into a flat directory.
+
+        Without merge-multiple, each artifact lands in its own subdirectory and
+        sign_release.py records prefixed paths that never match the flat asset
+        names attached to the GitHub release.
+        """
+        jobs = _load_workflow().get("jobs", {})
+        steps = jobs.get("release", {}).get("steps", [])
+        download_step = next(s for s in steps if s.get("name") == "Download build artifacts")
+        with_block = download_step.get("with", {})
+        assert with_block.get("path") == "artifacts"
+        assert with_block.get("merge-multiple") is True, (
+            "build.yml release job must set merge-multiple: true so manifest "
+            "asset names match release asset names"
         )

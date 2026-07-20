@@ -7,9 +7,9 @@ typed deserialization for the client libraries.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -87,6 +87,50 @@ class OrganizationError(BaseModel):
     error: str
 
 
+class SourceFingerprintPayload(BaseModel):
+    """Source fingerprint captured when a plan is reviewed."""
+
+    size: int
+    mtime_ns: int
+    sha256: str | None = None
+
+
+class OrganizationOperationPayload(BaseModel):
+    """Executable organization operation."""
+
+    operation_id: str
+    source_path: str
+    destination_path: str
+    operation_type: Literal["copy", "hardlink"]
+    collision_action: Literal["create", "skip_existing", "rename_with_counter"]
+    status: Literal["ready", "skipped", "error"]
+    folder_name: str
+    file_name: str
+    description: str = ""
+    fingerprint: SourceFingerprintPayload | None = None
+    error: str | None = None
+
+
+class OrganizationPlanPayload(BaseModel):
+    """Executable organization plan."""
+
+    plan_id: str
+    schema_version: int
+    input_path: str
+    output_path: str
+    created_at: str
+    skip_existing: bool
+    use_hardlinks: bool
+    total_files: int
+    processed_files: int
+    skipped_files: int
+    failed_files: int
+    deduplicated_files: int
+    operations: list[OrganizationOperationPayload] = Field(default_factory=list)
+    errors: list[tuple[str, str]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class OrganizationResultResponse(BaseModel):
     """Result of an organization operation."""
 
@@ -94,9 +138,11 @@ class OrganizationResultResponse(BaseModel):
     processed_files: int
     skipped_files: int
     failed_files: int
+    deduplicated_files: int = 0
     processing_time: float
     organized_structure: dict[str, list[str]]
     errors: list[OrganizationError]
+    plan: OrganizationPlanPayload | None = None
 
 
 class OrganizeExecuteResponse(BaseModel):

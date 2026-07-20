@@ -37,10 +37,8 @@ class TestPublishConfig:
     def test_default_config_values(self) -> None:
         """Default config has standard PyPI URLs."""
         config = PublishConfig()
-        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert "pypi.org" in config.pypi_url
-        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert "test.pypi.org" in config.test_pypi_url
+        assert config.pypi_url == "https://upload.pypi.org/legacy/"
+        assert config.test_pypi_url == "https://test.pypi.org/legacy/"
 
     def test_default_token_env_var(self) -> None:
         """Default config uses PYPI_API_TOKEN env var."""
@@ -64,7 +62,7 @@ class TestPublishConfig:
     def test_config_is_frozen(self) -> None:
         """PublishConfig instances are immutable."""
         config = PublishConfig()
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             config.pypi_url = "https://other.url/"  # type: ignore[misc]
 
     def test_default_dist_dir(self) -> None:
@@ -143,7 +141,7 @@ class TestCheckPackage:
     def test_check_nonexistent_dir_raises(self) -> None:
         """Non-existent directory raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError, match="Distribution directory not found"):
-            check_package(Path("/nonexistent/dist"))
+            check_package(Path("/") / "nonexistent" / "dist")
 
     def test_check_empty_dir_raises(self, tmp_path: Path) -> None:
         """Empty dist directory raises FileNotFoundError."""
@@ -179,8 +177,8 @@ class TestPublishPypi:
 
     def test_publish_nonexistent_dir_raises(self) -> None:
         """Non-existent dist directory raises FileNotFoundError."""
-        with pytest.raises(FileNotFoundError):
-            publish_pypi(Path("/nonexistent/dist"))
+        with pytest.raises(FileNotFoundError, match="nonexistent"):
+            publish_pypi(Path("/") / "nonexistent" / "dist")
 
     @patch("publish._run_command")
     def test_publish_test_pypi_uses_test_url(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -193,8 +191,8 @@ class TestPublishPypi:
         publish_pypi(dist, test=True)
 
         call_args = mock_run.call_args[0][0]
-        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert any("test.pypi.org" in str(arg) for arg in call_args)
+        repository_url = call_args[call_args.index("--repository-url") + 1]
+        assert repository_url == PublishConfig.test_pypi_url
 
     @patch("publish._run_command")
     def test_publish_production_uses_prod_url(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -207,8 +205,8 @@ class TestPublishPypi:
         publish_pypi(dist, test=False)
 
         call_args = mock_run.call_args[0][0]
-        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert any("upload.pypi.org" in str(arg) for arg in call_args)
+        repository_url = call_args[call_args.index("--repository-url") + 1]
+        assert repository_url == PublishConfig.pypi_url
 
     @patch("publish._run_command")
     def test_publish_success_returns_true(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -255,7 +253,7 @@ class TestGetDistFiles:
 
     def test_nonexistent_dir_returns_empty(self) -> None:
         """Non-existent directory returns empty list."""
-        result = get_dist_files(Path("/nonexistent/dist"))
+        result = get_dist_files(Path("/") / "nonexistent" / "dist")
         assert result == []
 
     def test_lists_tar_and_whl_files(self, tmp_path: Path) -> None:

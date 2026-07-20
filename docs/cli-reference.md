@@ -1,10 +1,30 @@
 # File Organizer CLI Reference
 
-All commands are available via `file-organizer` or the short alias `fo`.
+All commands are available through `file-organizer` or the alias `fo`.
+
+## Core first run commands
+
+Start with this minimal workflow:
+
+```bash
+fo setup
+fo preview ~/Downloads
+fo organize ~/Downloads ~/Organized
+fo undo
+```
+
+Use `fo undo` after at least one organize run has been recorded.
+
+See the canonical command sections:
+
+- [`setup`](#setup)
+- [`preview`](#preview)
+- [`organize`](#organize)
+- [`undo`](#undo)
 
 ## Global Options
 
-These options apply to every command and may be passed before or after the command name:
+These options apply to all commands. You can pass them before or after the command name:
 
 | Flag | Short | Description |
 |------|-------|-------------|
@@ -29,6 +49,45 @@ file-organizer version
 
 ---
 
+### `start`
+
+Run the first-run setup with safe defaults. We recommend this path for beginners.
+
+**Usage:**
+
+```bash
+file-organizer start [OPTIONS]
+```
+
+**Options:**
+
+- `--profile, -p` — Profile name (default: `default`)
+- `--dry-run` — Preview setup choices without saving configuration
+
+**Examples:**
+
+```bash
+# Run quick-start setup
+file-organizer start
+
+# Configure a named profile
+file-organizer start --profile work
+```
+
+---
+
+### `quickstart`
+
+Alias of `start` for quick-start setup.
+
+**Usage:**
+
+```bash
+file-organizer quickstart [OPTIONS]
+```
+
+---
+
 ### `organize`
 
 Organize files in a directory using AI models.
@@ -48,11 +107,24 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
+- `--advanced-help` — Show advanced tuning options and exit
+
+**Advanced tuning options:**
+
+```bash
+file-organizer organize --advanced-help
+```
+
+Advanced help includes:
+
 - `--max-workers INTEGER` — Cap parallel worker count
 - `--sequential` — Force single-worker sequential processing
 - `--no-vision`, `--text-only` — Disable vision model loading and use extension fallback for images
 - `--prefetch-depth INTEGER` — Parallel task queue-ahead depth (`0` disables prefetch queueing)
 - `--no-prefetch` — Backward-compatible alias for `--prefetch-depth 0`
+- `--transcribe-audio` — Transcribe audio files with Whisper and use the transcript for content-aware categorization (requires the `[audio]` extra; off by default because transcription is the expensive step)
+- `--max-transcribe-seconds FLOAT` — Skip transcription for audio files longer than this (default: 600; `0` disables the cap)
+- `--whisper-model TEXT` — Whisper model size for `--transcribe-audio`: `tiny` (default), `base`, `small`, `medium`, `large-v2`, or `large-v3`. Larger models transcribe more accurately but are slower and need a bigger download
 
 **Examples:**
 
@@ -66,6 +138,9 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
 
+# Show advanced tuning flags
+file-organizer organize --advanced-help
+
 # Limit CPU/IO pressure on constrained machines
 file-organizer organize ~/Downloads ~/Organized --max-workers 2 --prefetch-depth 1
 
@@ -77,6 +152,12 @@ file-organizer organize ~/Downloads ~/Organized --no-vision
 
 # Backward-compatible alias
 file-organizer organize ~/Downloads ~/Organized --no-prefetch
+
+# Categorize audio by spoken content (podcasts vs. music vs. voice memos)
+file-organizer organize ~/Downloads ~/Organized --transcribe-audio
+
+# Higher-accuracy transcription with a larger Whisper model
+file-organizer organize ~/Downloads ~/Organized --transcribe-audio --whisper-model small
 ```
 
 > **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.
@@ -92,6 +173,8 @@ Preview how files would be organized without moving them (dry-run shortcut).
 ```bash
 file-organizer preview INPUT_DIR
 ```
+
+Supports the same processing options as `organize` (`--max-workers`, `--sequential`, `--no-vision`, `--prefetch-depth`, `--transcribe-audio`, `--max-transcribe-seconds`, `--whisper-model`).
 
 **Examples:**
 
@@ -138,6 +221,7 @@ file-organizer serve --workers 4
 
 ---
 
+<a id="cli-search"></a>
 ### `search`
 
 Search for files by name pattern with optional type filtering, or use hybrid
@@ -219,7 +303,7 @@ file-organizer analyze ~/Documents/report.pdf --verbose
 file-organizer analyze ~/Documents/report.pdf --json
 ```
 
-> **Note:** Requires Ollama to be installed and running with a text model available.
+> **Note:** Requires an active model provider configuration (Ollama by default, or another provider configured via `FO_PROVIDER` and related vars).
 
 ---
 
@@ -409,6 +493,7 @@ file-organizer recover --journal /path/to/durable_move.jsonl
 
 ---
 
+<a id="cli-history"></a>
 ### `history`
 
 View operation history.
@@ -495,6 +580,7 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
   - `e2e`: full `FileOrganizer.organize()` pass with real writes in an isolated temp workspace
 - `--json` — Output results as JSON instead of a Rich table
 - `--compare PATH` — Path to baseline JSON file for regression comparison
+- `--transcribe-smoke` — Run a single end-to-end audio transcription smoke test
 
 **Output Metrics (JSON schema):**
 
@@ -641,9 +727,12 @@ file-organizer model cache
 
 ---
 
+<a id="cli-copilot"></a>
 ### `copilot` — AI Assistant
 
 Interactive AI copilot for file organisation.
+
+**Workflow entry point:** Start with `copilot chat --dir <DIR>` for scoped guidance, then run suggested concrete commands from other sections (for example `dedupe`, `rules`, or `organize`).
 
 #### `copilot chat`
 
@@ -777,9 +866,12 @@ file-organizer daemon stop
 
 ---
 
+<a id="cli-dedupe"></a>
 ### `dedupe` — Duplicate File Management
 
 Find and manage duplicate files.
+
+**Workflow entry point:** Use `scan` -> `report` -> `resolve` in that order so you can review before changing anything.
 
 #### `dedupe scan`
 
@@ -822,15 +914,18 @@ file-organizer dedupe resolve DIRECTORY [OPTIONS]
 
 ```bash
 file-organizer dedupe scan ~/Images
-file-organizer dedupe report
-file-organizer dedupe resolve
+file-organizer dedupe report ~/Images
+file-organizer dedupe resolve ~/Images
 ```
 
 ---
 
+<a id="cli-rules"></a>
 ### `rules` — Organisation Rules
 
 Manage copilot organisation rules and rule sets.
+
+**Workflow entry point:** Use `rules preview <DIR>` for batch review first, then `rules apply <DIR>` when the dry run matches expectations.
 
 #### `rules list`
 
@@ -901,6 +996,42 @@ Options:
 - `--set, -s TEXT` — Rule set to evaluate (default: `default`)
 - `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
 - `--max-files INTEGER` — Maximum files to scan (default: 500)
+
+#### `rules apply`
+
+Apply enabled rules to files in a directory.
+
+```bash
+file-organizer rules apply DIRECTORY [OPTIONS]
+```
+
+**Arguments:**
+- `DIRECTORY` — Directory to apply rules against
+
+**Options:**
+- `--set, -s TEXT` — Rule set to evaluate (default: `default`)
+- `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
+- `--max-files INTEGER` — Maximum files to scan (default: 500)
+- `--dry-run` — Preview actions only
+
+#### `rules watch`
+
+Continuously apply enabled rules to a directory.
+
+```bash
+file-organizer rules watch DIRECTORY [OPTIONS]
+```
+
+**Arguments:**
+- `DIRECTORY` — Directory to watch/apply rules against
+
+**Options:**
+- `--set, -s TEXT` — Rule set to evaluate (default: `default`)
+- `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
+- `--max-files INTEGER` — Maximum files to scan (default: 500)
+- `--interval FLOAT` — Seconds between apply runs (default: `10.0`)
+- `--once` — Run one watch cycle and exit
+- `--dry-run` — Preview actions only
 
 #### `rules export`
 
@@ -990,9 +1121,12 @@ file-organizer suggest patterns ~/Projects
 
 ---
 
+<a id="cli-marketplace"></a>
 ### `marketplace` — Plugin Marketplace
 
 Browse and manage plugins from the marketplace.
+
+**Workflow entry point:** `marketplace list/search` -> `marketplace info` -> `marketplace install` -> `marketplace installed/updates`.
 
 #### `marketplace list`
 
@@ -1114,40 +1248,57 @@ Interact with a running File Organizer API server.
 Check API server health.
 
 ```bash
-file-organizer api health [--base-url URL] [--json]
+file-organizer api health [OPTIONS]
 ```
+
+**Options:**
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api login`
 
 Authenticate and store access tokens.
 
 ```bash
-file-organizer api login [--base-url URL] [--save-token PATH]
+file-organizer api login [OPTIONS]
 ```
 
 **Options:**
-- `--username` — Login username (prompted if not provided)
-- `--password` — Login password (prompted securely if not provided)
+- `--username TEXT` — Login username (required; prompted interactively)
+- `--password TEXT` — Login password (required; prompted securely)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--save-token PATH` — Optional path to save token JSON
+- `--json` — Print JSON output
 
 #### `api me`
 
 Show current authenticated user.
 
 ```bash
-file-organizer api me [--base-url URL] [--token TOKEN]
+file-organizer api me [OPTIONS]
 ```
+
+**Options:**
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api logout`
 
 Invalidate the current session token.
 
 ```bash
-file-organizer api logout [--base-url URL] [--token TOKEN]
+file-organizer api logout [OPTIONS]
 ```
 
 **Options:**
-- `--token` — Bearer token
-- `--refresh-token` — Refresh token to revoke
+- `--token TEXT` — Bearer token (required)
+- `--refresh-token TEXT` — Refresh token to revoke (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
 
 #### `api files`
 
@@ -1161,29 +1312,49 @@ file-organizer api files PATH [OPTIONS]
 - `PATH` — Directory to list
 
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--recursive/--no-recursive` — Include nested files (default: `--no-recursive`)
+- `--include-hidden/--no-include-hidden` — Include hidden files (default: `--no-include-hidden`)
+- `--limit INTEGER` — Maximum rows (default: `100`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api system-status`
 
 Show system status from the API server.
 
 ```bash
-file-organizer api system-status [--base-url URL]
+file-organizer api system-status [PATH] [OPTIONS]
 ```
 
+**Arguments:**
+- `PATH` — Path to inspect (default: `.`)
+
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 #### `api system-stats`
 
 Show system statistics from the API server.
 
 ```bash
-file-organizer api system-stats [--base-url URL]
+file-organizer api system-stats [PATH] [OPTIONS]
 ```
 
+**Arguments:**
+- `PATH` — Directory to analyze (default: `.`)
+
 **Options:**
-- `--token` — Bearer token
+- `--token TEXT` — Bearer token (required)
+- `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
+- `--max-depth INTEGER` — Optional max depth
+- `--use-cache/--no-use-cache` — Use server-side cache (default: `--use-cache`)
+- `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
+- `--json` — Print JSON output
 
 **Default base URL:** `http://localhost:8000`
 
@@ -1194,6 +1365,31 @@ file-organizer api health
 file-organizer api health --base-url http://myserver:8000
 file-organizer api login
 file-organizer api system-status
+```
+
+---
+
+### `api-keys` — Local API Key Generation
+
+Generate and store local API keys.
+
+#### `api-keys generate`
+
+Generate a secure API key and print its bcrypt hash.
+
+```bash
+file-organizer api-keys generate --output PATH [--prefix PREFIX]
+```
+
+**Options:**
+- `--output, -o PATH` — Path to safely store the generated API key
+- `--prefix TEXT` — API key prefix (default: `fo`)
+
+**Examples:**
+
+```bash
+file-organizer api-keys generate -o api-key.txt
+file-organizer api-keys generate -o api-key.txt --prefix fo
 ```
 
 ---
@@ -1228,215 +1424,25 @@ file-organizer update rollback
 
 ---
 
-### `profile` — User Preference Profiles
+<a id="cli-profile"></a>
+### `profile` — Legacy compatibility shim
 
-Manage user preference profiles (powered by the intelligence/learning system).
+`profile` is currently a compatibility command that prints guidance and exits.
+Use `file-organizer config show --profile <name>` and
+`file-organizer config edit --profile <name>` for named configuration profiles.
 
-#### `profile list`
-
-List all available profiles.
-
-```bash
-file-organizer profile list
-```
-
-#### `profile create`
-
-Create a new profile.
+If your runtime exposes `profile` subcommands, check availability first:
 
 ```bash
-file-organizer profile create PROFILE_NAME [OPTIONS]
+file-organizer --help
+file-organizer profile --help
 ```
 
-#### `profile activate`
-
-Load and activate a profile.
+In the current default runtime wiring, `file-organizer profile` is a compatibility shim and does not expose export/import/merge subcommands. Use named config profiles (`config show/edit --profile`) and settings import/export in the Web UI.
 
 ```bash
-file-organizer profile activate PROFILE_NAME
+file-organizer profile
 ```
-
-#### `profile delete`
-
-Delete a profile.
-
-```bash
-file-organizer profile delete PROFILE_NAME
-```
-
-#### `profile export`
-
-Export a profile to a file.
-
-```bash
-file-organizer profile export PROFILE_NAME [--output FILE]
-```
-
-#### `profile import`
-
-Import a profile from a file.
-
-```bash
-file-organizer profile import FILE [OPTIONS]
-```
-
-**Arguments:**
-- `FILE` — Profile file to import
-
-#### `profile current`
-
-Show the currently active profile and its statistics.
-
-```bash
-file-organizer profile current
-```
-
-Displays:
-- Active profile name
-- Description and version
-- Creation and update timestamps
-- Statistics (global preferences, directory-specific settings, learned patterns, confidence data)
-
-#### `profile merge`
-
-Merge multiple profiles into one.
-
-```bash
-file-organizer profile merge PROFILES... [OPTIONS]
-```
-
-Arguments:
-- `PROFILES...` — Profile names to merge (requires at least 2)
-
-Options:
-- `--output, -o TEXT` — Name for merged profile (required)
-- `--strategy, -s TEXT` — Merge strategy for conflicts: `recent`, `frequent`, `confident`, `first`, `last` (default: `confident`)
-- `--show-conflicts` — Show conflicts before merging
-
-**Examples:**
-
-```bash
-file-organizer profile merge work personal --output merged --strategy confident
-
-# Show conflicts before merging
-file-organizer profile merge work personal --output merged --show-conflicts
-```
-
-#### `profile migrate`
-
-Migrate a profile to a different version.
-
-```bash
-file-organizer profile migrate PROFILE_NAME [OPTIONS]
-```
-
-Arguments:
-- `PROFILE_NAME` — Name of the profile to migrate
-
-Options:
-- `--to-version TEXT` — Target version (required)
-- `--no-backup` — Skip backup before migration
-
-**Examples:**
-
-```bash
-file-organizer profile migrate work --to-version 2.0
-
-# Migrate without creating backup
-file-organizer profile migrate work --to-version 2.0 --no-backup
-```
-
-#### `profile validate`
-
-Validate a profile for integrity and compatibility.
-
-```bash
-file-organizer profile validate PROFILE_NAME
-```
-
-Arguments:
-- `PROFILE_NAME` — Name of the profile to validate
-
-**Examples:**
-
-```bash
-file-organizer profile validate work
-```
-
----
-
-### `profile template` — Profile Templates
-
-Manage profile templates for common configurations.
-
-#### `profile template list`
-
-List all available templates.
-
-```bash
-file-organizer profile template list
-```
-
-Displays all available templates with their descriptions.
-
-#### `profile template preview`
-
-Preview a template before applying it.
-
-```bash
-file-organizer profile template preview TEMPLATE_NAME
-```
-
-Arguments:
-- `TEMPLATE_NAME` — Name of the template to preview
-
-Displays:
-- Template description
-- Preferences summary (naming patterns, folder mappings, category overrides)
-- Learned patterns and confidence levels
-
-**Examples:**
-
-```bash
-file-organizer profile template preview default
-file-organizer profile template preview minimal
-```
-
-#### `profile template apply`
-
-Create a profile from a template.
-
-```bash
-file-organizer profile template apply TEMPLATE_NAME PROFILE_NAME [OPTIONS]
-```
-
-Arguments:
-- `TEMPLATE_NAME` — Name of the template to apply
-- `PROFILE_NAME` — Name for the new profile
-
-Options:
-- `--activate, -a` — Activate the profile immediately after creation
-
-**Examples:**
-
-```bash
-file-organizer profile template apply default myprofile
-
-# Apply template and activate it
-file-organizer profile template apply minimal myprofile --activate
-```
-
----
-
-**General Profile Examples:**
-
-```bash
-file-organizer profile list
-file-organizer profile create work --description "Work files config"
-file-organizer profile activate work
-```
-
-> **Note:** The `profile` command requires the intelligence/learning optional dependencies (`pip install -e ".[all]"`). It degrades gracefully if not installed.
 
 ---
 
@@ -1517,7 +1523,7 @@ file-organizer autotag batch ~/Documents --pattern "*.pdf" --json
 
 ---
 
-## `fo desktop` — Native Desktop Window
+## `desktop` — Native Desktop Window
 
 Launch the File Organizer desktop application as a native OS window powered by
 pywebview.
@@ -1566,7 +1572,7 @@ See [Desktop App Guide](desktop-app.md) for full documentation.
 
 ---
 
-## `fo docs` — Project Documentation
+## `docs` — Project Documentation
 
 Build or serve the local project documentation using mkdocs.
 

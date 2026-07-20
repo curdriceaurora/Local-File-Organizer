@@ -23,6 +23,11 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core import dispatcher, display, file_ops, initializer
+from file_organizer.core.plan import (
+    OrganizationPlan,
+    build_plan_from_processed,
+    execute_plan,
+)
 from file_organizer.core.types import (
     AUDIO_EXTENSIONS,
     CAD_EXTENSIONS,
@@ -94,6 +99,7 @@ class FileOrganizer:
         enable_vision: bool = True,
         transcribe_audio: bool = False,
         max_transcribe_seconds: float | None = 600.0,
+        whisper_model: str = "tiny",
     ) -> None:
         """Initialize file organizer.
 
@@ -109,7 +115,7 @@ class FileOrganizer:
                 organize images with extension-based fallbacks.
             no_prefetch: Backward-compatible alias for ``prefetch_depth=0``.
             transcribe_audio: If True, run audio files through Whisper for
-                content-aware categorization. Requires the ``[media]``
+                content-aware categorization. Requires the ``[audio]``
                 extra; degrades gracefully (warning + metadata-only path)
                 when the dependency is missing. Default False because
                 transcription is the expensive operation in the audio
@@ -120,6 +126,11 @@ class FileOrganizer:
                 Whisper "tiny" is roughly 5-10x realtime on CPU; the 600s
                 default keeps a single file under ~2 minutes of CPU work.
                 ``None`` disables the cap.
+            whisper_model: Whisper model size for ``transcribe_audio``
+                (tiny, base, small, medium, large-v2, large-v3; a
+                ``whisper:`` prefix is accepted). Default "tiny" — the
+                fastest model; larger sizes improve transcript quality at
+                the cost of download size and inference time.
         """
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -162,6 +173,7 @@ class FileOrganizer:
                 f"max_transcribe_seconds must be >= 0 or None (got {max_transcribe_seconds!r})"
             )
         self.max_transcribe_seconds = max_transcribe_seconds
+        self.whisper_model = whisper_model
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
@@ -216,6 +228,21 @@ class FileOrganizer:
 
         result = OrganizationResult(total_files=len(files))
         if not files:
+            result.plan = build_plan_from_processed(
+                input_path=input_path,
+                output_path=output_path,
+                processed=[],
+                skip_existing=skip_existing,
+                use_hardlinks=self.use_hardlinks,
+                total_files=0,
+                skipped_files=0,
+                deduplicated_files=0,
+                metadata={
+                    "enable_vision": self.enable_vision,
+                    "prefetch_depth": self.prefetch_depth,
+                },
+            )
+            result.processing_time = time.time() - start_time
             self.console.print("[yellow]No files found to organize[/yellow]")
             return result
 
@@ -333,51 +360,71 @@ class FileOrganizer:
 
         # Organize
         # Content‑based deduplication: remove duplicate files based on file content hash
-        if all_processed:
-            # Sort by file path to ensure deterministic deduplication order across runs
-            all_processed.sort(key=lambda x: str(x.file_path))
-            seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
-            deduped_processed: list[ProcessedFile | ProcessedImage] = []
-            for pf in all_processed:
-                # input_path is the trusted walked root: anchor the hash read so
-                # a symlink swapped into any intermediate directory under it is
-                # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
-                file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
-                if file_hash is None:
-                    # Unreadable or refused symlink — keep the file (handled later).
-                    deduped_processed.append(pf)
-                    continue
-                if file_hash not in seen_hashes:
-                    seen_hashes[file_hash] = pf
-                    deduped_processed.append(pf)
-                else:
-                    # Duplicate detected – skip this file
-                    logger.info(
-                        f"Duplicate file detected by content: {pf.file_path.name}, skipping."
-                    )
-                    result.deduplicated_files += 1
-            all_processed = deduped_processed
-            failed_cnt = len([p for p in all_processed if p.error])
-            result.processed_files = len(all_processed) - failed_cnt
-            result.failed_files = failed_cnt
+        # Sort by file path to ensure deterministic deduplication order across runs
+        all_processed.sort(key=lambda x: str(x.file_path))
+        seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
+        file_hashes: dict[Path, str | None] = {}
+        deduped_processed: list[ProcessedFile | ProcessedImage] = []
+        for pf in all_processed:
+            # input_path is the trusted walked root: anchor the hash read so
+            # a symlink swapped into any intermediate directory under it is
+            # refused, not just the leaf's parent (nested-ancestor TOCTOU; codex P1).
+            file_hash = self._sha256_via_safedir(pf.file_path, scan_root=scan_root)
+            file_hashes[pf.file_path] = file_hash
+            if file_hash is None:
+                # Unreadable or refused symlink — keep the file (handled later).
+                deduped_processed.append(pf)
+                continue
+            if file_hash not in seen_hashes:
+                seen_hashes[file_hash] = pf
+                deduped_processed.append(pf)
+            else:
+                # Duplicate detected - skip this file
+                logger.info("Duplicate file detected by content: {}, skipping.", pf.file_path.name)
+                result.deduplicated_files += 1
+        all_processed = deduped_processed
+        processed_errors = [
+            (str(processed.file_path), processed.error)
+            for processed in all_processed
+            if processed.error
+        ]
+        result.errors.extend(
+            (path, error or "Processing failed") for path, error in processed_errors
+        )
 
+        result.skipped_files = len(other_files)
+        plan = build_plan_from_processed(
+            input_path=input_path,
+            output_path=output_path,
+            processed=all_processed,
+            skip_existing=skip_existing,
+            use_hardlinks=self.use_hardlinks,
+            total_files=result.total_files,
+            skipped_files=result.skipped_files,
+            deduplicated_files=result.deduplicated_files,
+            errors=result.errors,
+            file_hashes=file_hashes,
+            metadata={
+                "enable_vision": self.enable_vision,
+                "prefetch_depth": self.prefetch_depth,
+            },
+        )
+        result.plan = plan
+        result.processed_files = plan.processed_files
+        result.skipped_files = plan.skipped_files
+        result.failed_files = plan.failed_files
+
+        if plan.ready_operations:
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 if self._undo_manager is None:
                     self._undo_manager = UndoManager()
-                self._last_transaction_id = self._undo_manager.history.start_transaction(
-                    metadata={"input_path": str(input_path), "output_path": str(output_path)}
-                )
                 self._last_output_path = output_path
 
                 try:
-                    organized = file_ops.organize_files(
-                        all_processed,
-                        output_path,
-                        skip_existing,
-                        use_hardlinks=self.use_hardlinks,
+                    organized, transaction_id, execute_errors = execute_plan(
+                        plan,
                         undo_manager=self._undo_manager,
-                        transaction_id=self._last_transaction_id,
                     )
                 except (OSError, RuntimeError):
                     logger.exception(
@@ -386,22 +433,19 @@ class FileOrganizer:
                     )
                     raise
                 else:
-                    undo_manager = self._undo_manager
-                    assert undo_manager is not None
-                    history = undo_manager.history
-                    history.commit_transaction(self._last_transaction_id)
+                    self._last_transaction_id = transaction_id
                     result.organized_structure = organized
+                    result.errors.extend(execute_errors)
+                    result.failed_files += len(execute_errors)
+                    result.processed_files = sum(len(files) for files in organized.values())
             else:
                 self.console.print(
                     "\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]"
                 )
-                result.organized_structure = file_ops.simulate_organization(
-                    all_processed, output_path
-                )
+                result.organized_structure = plan.organized_structure()
 
         # Skipped files
         if other_files:
-            result.skipped_files = len(other_files)
             self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
             for f in other_files:
                 self.console.print(f"  [yellow]•[/yellow] {f.name} (unsupported type)")
@@ -507,6 +551,45 @@ class FileOrganizer:
 
         return self._undo_manager.redo_transaction(self._last_transaction_id)
 
+    def build_plan(
+        self,
+        input_path: str | Path,
+        output_path: str | Path,
+        skip_existing: bool = True,
+    ) -> OrganizationPlan:
+        """Build an executable organization plan without applying it."""
+        original_dry_run = self.dry_run
+        self.dry_run = True
+        try:
+            result = self.organize(input_path, output_path, skip_existing=skip_existing)
+        finally:
+            self.dry_run = original_dry_run
+        if not isinstance(result.plan, OrganizationPlan):
+            raise RuntimeError("Organization did not produce an executable plan.")
+        return result.plan
+
+    def execute_plan(self, plan: OrganizationPlan) -> OrganizationResult:
+        """Execute a previously reviewed organization plan."""
+        start_time = time.time()
+        if self._undo_manager is None:
+            self._undo_manager = UndoManager()
+        organized, transaction_id, errors = execute_plan(plan, undo_manager=self._undo_manager)
+        self._last_transaction_id = transaction_id
+        self._last_output_path = Path(plan.output_path)
+        result = OrganizationResult(
+            total_files=plan.total_files,
+            processed_files=sum(len(files) for files in organized.values()),
+            skipped_files=plan.skipped_files,
+            failed_files=plan.failed_files + len(errors),
+            deduplicated_files=plan.deduplicated_files,
+            processing_time=time.time() - start_time,
+            organized_structure=organized,
+            errors=[*plan.errors, *errors],
+            plan=plan,
+        )
+        display.show_summary(self.console, result, Path(plan.output_path), dry_run=False)
+        return result
+
     # ------------------------------------------------------------------
     # Backward-compatible delegation (used by existing tests)
     # ------------------------------------------------------------------
@@ -595,7 +678,7 @@ class FileOrganizer:
         an ``AudioModel`` here and forward it to the dispatcher so each
         file within ``max_transcribe_seconds`` gets a transcript attached
         for downstream content-aware categorization. Falls back to
-        metadata-only with a warning if the ``[media]`` extra is missing.
+        metadata-only with a warning if the ``[audio]`` extra is missing.
         """
         transcriber: Any = None
         if self.transcribe_audio:
@@ -603,20 +686,20 @@ class FileOrganizer:
                 from file_organizer.services.audio.transcriber import _FASTER_WHISPER_AVAILABLE
 
                 if not _FASTER_WHISPER_AVAILABLE:
-                    raise ImportError("faster_whisper is not installed (the [media] extra)")
+                    raise ImportError("faster_whisper is not installed (the [audio] extra)")
 
                 from file_organizer.models.audio_model import AudioModel
                 from file_organizer.models.base import ModelConfig, ModelType
 
                 if self._audio_model is None:
                     self._audio_model = AudioModel(
-                        ModelConfig(name="tiny", model_type=ModelType.AUDIO)
+                        ModelConfig(name=self.whisper_model, model_type=ModelType.AUDIO)
                     )
                     self._audio_model.initialize()
                 transcriber = self._audio_model
             except ImportError as exc:
                 self.console.print(
-                    f"[yellow]--transcribe-audio requires the \\[media] extra: {exc}. "
+                    f"[yellow]--transcribe-audio requires the \\[audio] extra: {exc}. "
                     "Falling back to metadata-only categorization.[/yellow]"
                 )
 

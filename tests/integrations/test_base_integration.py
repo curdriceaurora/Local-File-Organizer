@@ -71,11 +71,11 @@ class TestIntegrationConfig:
             integration_type=IntegrationType.EDITOR,
             enabled=False,
             auth_method="token",
-            settings={"workspace": "/tmp"},
+            settings={"workspace": "/tmp"},  # noqa: test-hardcoded-paths
         )
         assert config.enabled is False
         assert config.auth_method == "token"
-        assert config.settings == {"workspace": "/tmp"}
+        assert config.settings == {"workspace": "/tmp"}  # noqa: test-hardcoded-paths
 
     def test_merge_settings_adds_new_keys(self) -> None:
         """merge_settings should add new keys."""
@@ -150,7 +150,7 @@ class TestIntegrationStatus:
             enabled=True,
             connected=False,
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             status.name = "changed"  # type: ignore[misc]
 
 

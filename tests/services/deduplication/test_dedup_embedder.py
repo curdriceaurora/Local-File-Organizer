@@ -360,7 +360,7 @@ class TestModelPersistence:
     def test_load_nonexistent_raises(self, embedder):
         """load_model raises an error when the model file does not exist."""
         with pytest.raises((FileNotFoundError, OSError, ValueError)):
-            embedder.load_model(Path("/nonexistent/model.pkl"))
+            embedder.load_model(Path("/") / "nonexistent" / "model.pkl")
 
 
 # ---------------------------------------------------------------------------

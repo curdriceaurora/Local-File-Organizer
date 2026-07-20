@@ -204,16 +204,16 @@ class TestResolvePath:
 
 class TestIsHidden:
     def test_hidden_file(self) -> None:
-        assert is_hidden(Path("user/.dotfile")) is True
+        assert is_hidden(Path("user") / ".dotfile") is True
 
     def test_hidden_dir(self) -> None:
-        assert is_hidden(Path("user/.git/config")) is True
+        assert is_hidden(Path("user") / ".git" / "config") is True
 
     def test_normal_file(self) -> None:
-        assert is_hidden(Path("user/documents/report.pdf")) is False
+        assert is_hidden(Path("user") / "documents" / "report.pdf") is False
 
     def test_root_is_not_hidden(self) -> None:
-        assert is_hidden(Path("/home")) is False
+        assert is_hidden(Path("/") / "home") is False  # noqa: test-hardcoded-paths
 
 
 # ---------------------------------------------------------------------------

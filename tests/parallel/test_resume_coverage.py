@@ -107,7 +107,7 @@ class TestResumeJob:
 
         cp = MagicMock(spec=Checkpoint)
         cp.pending_paths = []
-        cp.completed_paths = [Path("/a"), Path("/b")]
+        cp.completed_paths = [Path("/") / "a", Path("/") / "b"]
         mock_checkpoint_mgr.load_checkpoint.return_value = cp
         mock_checkpoint_mgr.has_file_changed.return_value = False
         mock_checkpoint_mgr.create_checkpoint.return_value = cp

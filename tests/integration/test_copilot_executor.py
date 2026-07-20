@@ -183,7 +183,7 @@ class TestCommandExecutorExecute:
         intent = Intent(
             intent_type=IntentType.SUGGEST,
             confidence=0.7,
-            parameters={"path": "/tmp"},
+            parameters={"path": "/tmp"},  # noqa: test-hardcoded-paths
         )
         result = executor.execute(intent)
         assert isinstance(result, ExecutionResult)

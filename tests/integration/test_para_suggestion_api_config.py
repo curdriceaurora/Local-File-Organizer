@@ -431,7 +431,7 @@ class TestApiSettings:
         from file_organizer.api.config import ApiSettings
 
         s = ApiSettings()
-        assert s.host == "0.0.0.0"
+        assert s.host == "127.0.0.1"
 
     def test_environment_default(self) -> None:
         from file_organizer.api.config import ApiSettings

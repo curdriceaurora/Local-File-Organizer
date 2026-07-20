@@ -1,21 +1,41 @@
 # AI Model Configuration
 
-## Supported Models
+## Defaults
 
-- `qwen2.5:3b-instruct-q4_K_M` — Default text model (~1.9 GB)
-- `qwen2.5vl:7b-q4_K_M` — Default vision model (~6.0 GB)
-- `faster-whisper` — Audio transcription (local, multi-language)
+- Text model: `qwen2.5:3b-instruct-q4_K_M`
+- Vision model: `qwen2.5vl:7b-q4_K_M`
+- Default provider mode: `ollama`
 
-## Device Support
+## Provider settings
+
+Model names come from these sources:
+
+1. Environment provider settings (if you set `FO_PROVIDER`)
+2. Saved configuration profile (`FO_PROFILE` or `file-organizer config`)
+3. Built-in defaults
+
+Read [AI Provider Setup](ai-providers.md) for provider variables and examples.
+
+## Configuration profile fields
+
+```yaml
+models:
+  text_model: "qwen2.5:3b-instruct-q4_K_M"
+  vision_model: "qwen2.5vl:7b-q4_K_M"
+  temperature: 0.5
+  max_tokens: 3000
+  device: "auto"     # auto, cpu, cuda, mps, metal
+  framework: "ollama"  # ollama, llama_cpp, mlx
+```
+
+## Device support
 
 ```python
 from file_organizer.models.base import DeviceType
 
-DeviceType.AUTO    # Automatic detection (recommended)
-DeviceType.CPU     # CPU inference (universal)
-DeviceType.CUDA    # NVIDIA GPU (fastest)
-DeviceType.MPS     # Apple Silicon (fast)
-DeviceType.METAL   # Apple Silicon (MLX)
+DeviceType.AUTO
+DeviceType.CPU
+DeviceType.CUDA
+DeviceType.MPS
+DeviceType.METAL
 ```
-
----

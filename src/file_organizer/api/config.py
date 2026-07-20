@@ -13,6 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt, SecretStr, field_validator
 
 from file_organizer.api.api_keys import hash_api_key
+from file_organizer.config.defaults import DEFAULT_OLLAMA_URL
 from file_organizer.version import __version__
 
 _DEFAULT_CORS = [
@@ -36,7 +37,7 @@ class ApiSettings(BaseModel):
     app_name: str = "File Organizer API"
     version: str = __version__
     environment: str = "development"
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "INFO"
     cors_origins: list[str] = Field(default_factory=lambda: list(_DEFAULT_CORS))
@@ -103,7 +104,7 @@ class ApiSettings(BaseModel):
     security_hsts_seconds: NonNegativeInt = 31536000
     security_hsts_subdomains: bool = True
     security_referrer_policy: str = "strict-origin-when-cross-origin"
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str = DEFAULT_OLLAMA_URL
 
     @field_validator("ollama_url")  # pyre-ignore[56]
     @classmethod
@@ -412,6 +413,26 @@ def _load_ollama_settings(env: Mapping[str, str], data: dict[str, Any]) -> None:
         data["ollama_url"] = env["OLLAMA_HOST"]
 
 
+_PLACEHOLDER_AUTH_SECRETS = frozenset(
+    {
+        "",
+        "change-me",
+        "changeme",
+        "secret",
+        "password",
+        "replace-me",
+        "your-secret-here",
+    }
+)
+_MIN_AUTH_SECRET_LENGTH = 16
+
+
+def _is_placeholder_auth_secret(secret: str) -> bool:
+    """Return whether a JWT secret is an obvious placeholder value."""
+    normalized = secret.strip().lower()
+    return normalized in _PLACEHOLDER_AUTH_SECRETS or len(secret.strip()) < _MIN_AUTH_SECRET_LENGTH
+
+
 def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) -> None:
     """Validate settings and log warnings or raise errors for misconfiguration.
 
@@ -422,16 +443,13 @@ def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) ->
     Raises:
         ValueError: On critical production misconfigurations.
     """
-    if settings.auth_enabled and settings.auth_jwt_secret.get_secret_value() == "change-me":
-        if settings.environment.lower() in {"development", "test"}:
-            logger.warning(
-                "FO_API_AUTH_JWT_SECRET is using the default placeholder. "
-                "Set FO_API_AUTH_JWT_SECRET before deploying."
-            )
-        else:
-            raise ValueError(
-                "FO_API_AUTH_JWT_SECRET must be set when auth is enabled outside development."
-            )
+    if settings.auth_enabled and _is_placeholder_auth_secret(
+        settings.auth_jwt_secret.get_secret_value()
+    ):
+        raise ValueError(
+            "FO_API_AUTH_JWT_SECRET must be set to a non-placeholder value "
+            f"of at least {_MIN_AUTH_SECRET_LENGTH} characters when auth is enabled."
+        )
 
     if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:
         logger.warning("API key auth is enabled but no keys are configured.")

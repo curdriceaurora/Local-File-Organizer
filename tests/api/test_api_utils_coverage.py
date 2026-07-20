@@ -19,17 +19,17 @@ class TestResolvePath:
 
     def test_no_allowed_paths(self) -> None:
         with pytest.raises(ApiError) as exc_info:
-            resolve_path("/tmp/test", allowed_paths=None)
+            resolve_path("/tmp/test", allowed_paths=None)  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
     def test_empty_allowed_paths(self) -> None:
         with pytest.raises(ApiError) as exc_info:
-            resolve_path("/tmp/test", allowed_paths=[])
+            resolve_path("/tmp/test", allowed_paths=[])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
     def test_path_outside_roots(self, tmp_path: Path) -> None:
         with pytest.raises(ApiError) as exc_info:
-            resolve_path("/etc/passwd", allowed_paths=[str(tmp_path)])
+            resolve_path("/etc/passwd", allowed_paths=[str(tmp_path)])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
     def test_path_inside_root(self, tmp_path: Path) -> None:
@@ -44,7 +44,7 @@ class TestResolvePath:
             patch("os.path.commonpath", side_effect=ValueError("different drives")),
             pytest.raises(ApiError) as exc_info,
         ):
-            resolve_path("/tmp/test", allowed_paths=["/other/path"])
+            resolve_path("/tmp/test", allowed_paths=["/other/path"])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
 
@@ -52,13 +52,13 @@ class TestIsHidden:
     """Covers is_hidden."""
 
     def test_hidden_file(self) -> None:
-        assert is_hidden(Path("/home/user/.config"))
+        assert is_hidden(Path("/") / "home" / "user" / ".config")  # noqa: test-hardcoded-paths
 
     def test_non_hidden_file(self) -> None:
-        assert not is_hidden(Path("/home/user/documents/file.txt"))
+        assert not is_hidden(Path("/") / "home" / "user" / "documents" / "file.txt")  # noqa: test-hardcoded-paths
 
     def test_hidden_parent(self) -> None:
-        assert is_hidden(Path("/home/user/.hidden/file.txt"))
+        assert is_hidden(Path("/") / "home" / "user" / ".hidden" / "file.txt")  # noqa: test-hardcoded-paths
 
 
 class TestFileInfoFromPath:

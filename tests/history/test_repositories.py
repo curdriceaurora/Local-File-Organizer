@@ -85,13 +85,13 @@ class TestWorkspaceRepository:
             db_session,
             name="Test WS",
             owner_id=user.id,
-            root_path="/tmp/test",
+            root_path="/tmp/test",  # noqa: test-hardcoded-paths
             description="desc",
         )
         assert ws.id is not None
         assert ws.name == "Test WS"
         assert ws.owner_id == user.id
-        assert ws.root_path == "/tmp/test"
+        assert ws.root_path == "/tmp/test"  # noqa: test-hardcoded-paths
         assert ws.description == "desc"
         assert ws.is_active is True
 
@@ -100,13 +100,16 @@ class TestWorkspaceRepository:
             db_session,
             name="NoDesc",
             owner_id=user.id,
-            root_path="/tmp/nd",
+            root_path="/tmp/nd",  # noqa: test-hardcoded-paths
         )
         assert ws.description is None
 
     def test_get_by_id(self, db_session: Session, user: User) -> None:
         ws = WorkspaceRepository.create(
-            db_session, name="Find Me", owner_id=user.id, root_path="/tmp/find"
+            db_session,
+            name="Find Me",
+            owner_id=user.id,
+            root_path="/tmp/find",  # noqa: test-hardcoded-paths
         )
         found = WorkspaceRepository.get_by_id(db_session, ws.id)
         assert found is not None
@@ -502,13 +505,13 @@ class TestFileMetadataRepository:
             db_session,
             name="meta-ws",
             owner_id=user.id,
-            root_path="/tmp/meta-ws",
+            root_path="/tmp/meta-ws",  # noqa: test-hardcoded-paths
         )
         cache = InMemoryCache()
         row = FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws/docs/a.txt",
+            path="/tmp/meta-ws/docs/a.txt",  # noqa: test-hardcoded-paths
             relative_path="docs/a.txt",
             name="a.txt",
             size_bytes=5,
@@ -536,12 +539,12 @@ class TestFileMetadataRepository:
             db_session,
             name="meta-ws-stale-cache",
             owner_id=user.id,
-            root_path="/tmp/meta-ws-stale",
+            root_path="/tmp/meta-ws-stale",  # noqa: test-hardcoded-paths
         )
         row = FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws-stale/a.txt",
+            path="/tmp/meta-ws-stale/a.txt",  # noqa: test-hardcoded-paths
             relative_path="a.txt",
             name="a.txt",
             size_bytes=123,
@@ -570,12 +573,12 @@ class TestFileMetadataRepository:
             db_session,
             name="meta-ws-2",
             owner_id=user.id,
-            root_path="/tmp/meta-ws-2",
+            root_path="/tmp/meta-ws-2",  # noqa: test-hardcoded-paths
         )
         first = FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws-2/a.txt",
+            path="/tmp/meta-ws-2/a.txt",  # noqa: test-hardcoded-paths
             relative_path="a.txt",
             name="a.txt",
             size_bytes=10,
@@ -583,7 +586,7 @@ class TestFileMetadataRepository:
         second = FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws-2/a.txt",
+            path="/tmp/meta-ws-2/a.txt",  # noqa: test-hardcoded-paths
             relative_path="a.txt",
             name="a.txt",
             size_bytes=22,
@@ -598,12 +601,12 @@ class TestFileMetadataRepository:
             db_session,
             name="meta-ws-3",
             owner_id=user.id,
-            root_path="/tmp/meta-ws-3",
+            root_path="/tmp/meta-ws-3",  # noqa: test-hardcoded-paths
         )
         FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws-3/a.txt",
+            path="/tmp/meta-ws-3/a.txt",  # noqa: test-hardcoded-paths
             relative_path="a.txt",
             name="a.txt",
             size_bytes=1,
@@ -611,7 +614,7 @@ class TestFileMetadataRepository:
         FileMetadataRepository.upsert(
             db_session,
             workspace_id=ws.id,
-            path="/tmp/meta-ws-3/b.txt",
+            path="/tmp/meta-ws-3/b.txt",  # noqa: test-hardcoded-paths
             relative_path="b.txt",
             name="b.txt",
             size_bytes=2,

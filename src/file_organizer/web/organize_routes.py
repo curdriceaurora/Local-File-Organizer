@@ -7,11 +7,9 @@ import csv
 import io
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import Lock, Timer
 from time import monotonic
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
@@ -21,226 +19,83 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import create_job, get_job, list_jobs, update_job
-from file_organizer.api.models import OrganizationError, OrganizationResultResponse, OrganizeRequest
-from file_organizer.api.utils import is_hidden, resolve_path
-from file_organizer.core.organizer import FileOrganizer, OrganizationResult
+from file_organizer.api.models import OrganizeRequest
+from file_organizer.api.utils import resolve_path
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
+from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.plan import OrganizationPlan
+from file_organizer.core.types import OrganizationResult
+from file_organizer.web._forms import form_bool
 from file_organizer.web._helpers import (
     allowed_roots,
-    as_bool,
     build_content_disposition,
     format_timestamp,
     templates,
 )
+from file_organizer.web.organize_services import (
+    _ORGANIZE_PLAN_STORE,
+    ORGANIZE_DEFAULT_DELAY_MIN,
+    ORGANIZE_MAX_DELAY_MIN,
+    ORGANIZE_PLAN_LIMIT,
+    _build_plan_movements,
+    _counts_by_type,
+    _delete_organize_plan,
+    _get_organize_plan,
+    _job_report_payload,
+    _parse_delay_minutes,
+    _result_to_response,
+    _scan_directory,
+    _store_organize_plan,
+    build_organize_plan,
+)
 
 organize_router = APIRouter(tags=["web"])
 
-ORGANIZE_DEFAULT_DELAY_MIN = 0
-ORGANIZE_MAX_DELAY_MIN = 7 * 24 * 60
+__all__ = [
+    "ORGANIZE_DEFAULT_DELAY_MIN",
+    "ORGANIZE_EVENT_POLL_SECONDS",
+    "ORGANIZE_HISTORY_LIMIT",
+    "ORGANIZE_JOB_TYPE",
+    "ORGANIZE_MAX_DELAY_MIN",
+    "ORGANIZE_METHODOLOGIES",
+    "ORGANIZE_PLAN_LIMIT",
+    "_ORGANIZE_PLAN_STORE",
+    "_build_job_view",
+    "_build_organize_stats",
+    "_build_plan_movements",
+    "_cancel_scheduled_job",
+    "_counts_by_type",
+    "_delete_organize_plan",
+    "_get_job_metadata",
+    "_get_organize_plan",
+    "_job_report_payload",
+    "_list_organize_jobs",
+    "_normalize_methodology",
+    "_parse_delay_minutes",
+    "_prune_job_metadata",
+    "_result_to_response",
+    "_run_organize_job",
+    "_scan_directory",
+    "_schedule_job",
+    "_set_job_metadata",
+    "_status_progress",
+    "_store_organize_plan",
+    "organize_router",
+]
+
 ORGANIZE_EVENT_POLL_SECONDS = 1
 ORGANIZE_HISTORY_LIMIT = 50
-ORGANIZE_PLAN_LIMIT = 200
 ORGANIZE_JOB_TYPE = "organize_web"
 JOB_METADATA_PRUNE_THRESHOLD = 256
 JOB_METADATA_PRUNE_INTERVAL_SECONDS = 60.0
 
-ORGANIZE_METHODOLOGIES = {
-    "johnny_decimal": "Johnny Decimal",
-    "para": "PARA",
-    "content_based": "Content-Based",
-    "date_based": "Date-Based",
-}
-
-_ORGANIZE_PLAN_STORE: dict[str, dict[str, Any]] = {}
-_ORGANIZE_PLAN_LOCK = Lock()
 _SCHEDULED_TIMERS: dict[str, Timer] = {}
 _SCHEDULED_TIMERS_LOCK = Lock()
 _JOB_METADATA: dict[str, dict[str, Any]] = {}
 _JOB_METADATA_LOCK = Lock()
 _LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _parse_delay_minutes(value: str | None) -> int:
-    """Parse and validate a schedule delay value in minutes.
-
-    Args:
-        value: Raw string from the form field.
-
-    Returns:
-        Validated delay in minutes.
-
-    Raises:
-        ApiError: If the value is not a valid non-negative integer within bounds.
-    """
-    if value is None or value.strip() == "":
-        return ORGANIZE_DEFAULT_DELAY_MIN
-    try:
-        minutes = int(value)
-    except ValueError as exc:
-        raise ApiError(
-            status_code=400,
-            error="invalid_schedule_delay",
-            message="Schedule delay must be a whole number of minutes.",
-        ) from exc
-    if minutes < 0 or minutes > ORGANIZE_MAX_DELAY_MIN:
-        raise ApiError(
-            status_code=400,
-            error="invalid_schedule_delay",
-            message=f"Schedule delay must be between 0 and {ORGANIZE_MAX_DELAY_MIN} minutes.",
-        )
-    return minutes
-
-
-def _normalize_methodology(value: str | None) -> str:
-    """Normalize a methodology string, defaulting to ``content_based``."""
-    token = (value or "").strip().lower()
-    if token in ORGANIZE_METHODOLOGIES:
-        return token
-    return "content_based"
-
-
-def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
-    """Collect files from *path*, optionally recursing and including hidden items.
-
-    Returns:
-        List of file ``Path`` objects found under *path*.
-    """
-    files: list[Path] = []
-    if path.is_file():
-        if include_hidden or not is_hidden(path):
-            files.append(path)
-        return files
-
-    iterator = path.rglob("*") if recursive else path.glob("*")
-    for entry in iterator:
-        if not entry.is_file():
-            continue
-        if not include_hidden and is_hidden(entry):
-            continue
-        files.append(entry)
-    return files
-
-
-def _counts_by_type(files: list[Path]) -> dict[str, int]:
-    """Tally files by broad type category (text, image, video, etc.).
-
-    Returns:
-        Dict mapping category names to counts.
-    """
-    counts = {
-        "text": 0,
-        "image": 0,
-        "video": 0,
-        "audio": 0,
-        "cad": 0,
-        "other": 0,
-    }
-    for path in files:
-        suffix = path.suffix.lower()
-        if suffix in FileOrganizer.TEXT_EXTENSIONS:
-            counts["text"] += 1
-        elif suffix in FileOrganizer.IMAGE_EXTENSIONS:
-            counts["image"] += 1
-        elif suffix in FileOrganizer.VIDEO_EXTENSIONS:
-            counts["video"] += 1
-        elif suffix in FileOrganizer.AUDIO_EXTENSIONS:
-            counts["audio"] += 1
-        elif suffix in FileOrganizer.CAD_EXTENSIONS:
-            counts["cad"] += 1
-        else:
-            counts["other"] += 1
-    return counts
-
-
-def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
-    """Convert an ``OrganizationResult`` to the API response model."""
-    return OrganizationResultResponse(
-        total_files=result.total_files,
-        processed_files=result.processed_files,
-        skipped_files=result.skipped_files,
-        failed_files=result.failed_files,
-        processing_time=result.processing_time,
-        organized_structure=result.organized_structure,
-        errors=[
-            OrganizationError(file=file_name, error=error) for file_name, error in result.errors
-        ],
-    )
-
-
-def _build_plan_movements(
-    files: list[Path],
-    output_dir: Path,
-    preview: OrganizationResultResponse,
-) -> list[dict[str, str]]:
-    """Build a list of planned source-to-destination movements from a dry-run preview.
-
-    Returns:
-        List of dicts with *file_name*, *source*, *destination*, and *reason*.
-    """
-    source_lookup: dict[str, list[str]] = {}
-    for file_path in sorted(files, key=lambda item: item.as_posix().lower()):
-        source_lookup.setdefault(file_path.name, []).append(str(file_path))
-
-    movements: list[dict[str, str]] = []
-    for bucket, names in sorted(
-        preview.organized_structure.items(), key=lambda item: item[0].lower()
-    ):
-        for name in sorted(names, key=str.lower):
-            sources = source_lookup.get(name, [])
-            source_path = sources.pop(0) if sources else name
-            destination = output_dir / bucket / name
-            movements.append(
-                {
-                    "file_name": name,
-                    "source": source_path,
-                    "destination": str(destination),
-                    "reason": f"Categorized into {bucket}",
-                }
-            )
-    return movements
-
-
-def _prune_plan_store() -> None:
-    """Evict the oldest plans when the in-memory store exceeds its limit."""
-    while len(_ORGANIZE_PLAN_STORE) > ORGANIZE_PLAN_LIMIT:
-        oldest_plan_id = next(iter(_ORGANIZE_PLAN_STORE))
-        _ORGANIZE_PLAN_STORE.pop(oldest_plan_id, None)
-
-
-def _store_organize_plan(plan_data: dict[str, Any]) -> dict[str, Any]:
-    """Persist *plan_data* in the in-memory plan store and return the stored record."""
-    plan_id = uuid4().hex
-    created_at = datetime.now(UTC)
-    record = {
-        "plan_id": plan_id,
-        "created_at": created_at,
-        "updated_at": created_at,
-        **plan_data,
-    }
-    with _ORGANIZE_PLAN_LOCK:
-        _ORGANIZE_PLAN_STORE[plan_id] = record
-        _prune_plan_store()
-    return record
-
-
-def _get_organize_plan(plan_id: str) -> dict[str, Any] | None:
-    """Retrieve a stored plan by *plan_id*, or ``None`` if expired/missing."""
-    with _ORGANIZE_PLAN_LOCK:
-        plan = _ORGANIZE_PLAN_STORE.get(plan_id)
-        if plan is None:
-            return None
-        plan["updated_at"] = datetime.now(UTC)
-        return dict(plan)
-
-
-def _delete_organize_plan(plan_id: str) -> None:
-    """Remove a plan from the in-memory store."""
-    with _ORGANIZE_PLAN_LOCK:
-        _ORGANIZE_PLAN_STORE.pop(plan_id, None)
 
 
 def _prune_job_metadata(*, force: bool = False) -> None:
@@ -313,6 +168,8 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
     elif total_files > 0 and job.status == "running":
         progress = max(progress, int((processed_files / max(total_files, 1)) * 100))
 
+    methodology = _normalize_methodology(metadata.get("methodology"))
+
     return {
         "job_id": job.job_id,
         "status": job.status,
@@ -325,11 +182,8 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
         "failed_files": failed_files,
         "skipped_files": skipped_files,
         "result": result,
-        "methodology": metadata.get("methodology", "content_based"),
-        "methodology_label": ORGANIZE_METHODOLOGIES.get(
-            metadata.get("methodology", "content_based"),
-            "Content-Based",
-        ),
+        "methodology": methodology,
+        "methodology_label": ORGANIZE_METHODOLOGIES[methodology],
         "input_dir": metadata.get("input_dir", ""),
         "output_dir": metadata.get("output_dir", ""),
         "dry_run": bool(metadata.get("dry_run", False)),
@@ -380,7 +234,7 @@ def _build_organize_stats() -> dict[str, Any]:
 
     methodology_counts: dict[str, int] = {}
     for job in jobs:
-        label = job.get("methodology_label", "Content-Based")
+        label = job.get("methodology_label", ORGANIZE_METHODOLOGIES[_DEFAULT_METHODOLOGY])
         methodology_counts[label] = methodology_counts.get(label, 0) + 1
 
     return {
@@ -413,6 +267,36 @@ def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
         update_job(job_id, status="failed", error=str(exc))
 
 
+def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
+    """Build an OrganizationResult for a dry-run execution of a stored plan."""
+    return OrganizationResult(
+        total_files=plan.total_files,
+        processed_files=plan.processed_files,
+        skipped_files=plan.skipped_files,
+        failed_files=plan.failed_files,
+        deduplicated_files=plan.deduplicated_files,
+        organized_structure=plan.organized_structure(),
+        errors=plan.errors,
+        plan=plan,
+    )
+
+
+def _run_organize_plan_job(job_id: str, plan_data: dict[str, Any], *, dry_run: bool) -> None:
+    """Execute a stored executable organization plan."""
+    update_job(job_id, status="running", error=None)
+    try:
+        plan = OrganizationPlan.from_dict(plan_data)
+        if dry_run:
+            result = _result_from_plan_preview(plan)
+        else:
+            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
+            result = organizer.execute_plan(plan)
+        response = _result_to_response(result).model_dump()
+        update_job(job_id, status="completed", result=response, error=None)
+    except Exception as exc:
+        update_job(job_id, status="failed", error=str(exc))
+
+
 def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes: int) -> None:
     """Schedule an organization job to run after *delay_minutes*.
 
@@ -425,6 +309,33 @@ def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes:
         with _SCHEDULED_TIMERS_LOCK:
             _SCHEDULED_TIMERS.pop(job_id, None)
         _run_organize_job(job_id, organize_request)
+
+    if delay_seconds <= 0:
+        _runner()
+        return
+
+    timer = Timer(delay_seconds, _runner)
+    timer.daemon = True
+    with _SCHEDULED_TIMERS_LOCK:
+        _SCHEDULED_TIMERS[job_id] = timer
+    timer.start()
+
+
+def _schedule_plan_job(
+    job_id: str,
+    plan_data: dict[str, Any],
+    delay_minutes: int,
+    *,
+    dry_run: bool,
+) -> None:
+    """Schedule execution of a stored organization plan."""
+    delay_seconds = delay_minutes * 60
+
+    def _runner() -> None:
+        """Execute the scheduled plan job."""
+        with _SCHEDULED_TIMERS_LOCK:
+            _SCHEDULED_TIMERS.pop(job_id, None)
+        _run_organize_plan_job(job_id, plan_data, dry_run=dry_run)
 
     if delay_seconds <= 0:
         _runner()
@@ -450,26 +361,6 @@ def _cancel_scheduled_job(job_id: str) -> bool:
     timer.cancel()
     update_job(job_id, status="failed", error="Cancelled before execution.")
     return True
-
-
-def _job_report_payload(job: dict[str, Any]) -> dict[str, Any]:
-    """Extract a serializable report payload from a job view dict."""
-    return {
-        "job_id": job["job_id"],
-        "status": job["status"],
-        "created_at": job["created_at"],
-        "updated_at": job["updated_at"],
-        "methodology": job["methodology"],
-        "input_dir": job["input_dir"],
-        "output_dir": job["output_dir"],
-        "dry_run": job["dry_run"],
-        "processed_files": job["processed_files"],
-        "total_files": job["total_files"],
-        "failed_files": job["failed_files"],
-        "skipped_files": job["skipped_files"],
-        "error": job["error"],
-        "result": job["result"],
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -514,7 +405,7 @@ def organize_scan(
     settings: ApiSettings = Depends(get_settings),
     input_dir: str = Form(""),
     output_dir: str = Form(""),
-    methodology: str = Form("content_based"),
+    methodology: str = Form(_DEFAULT_METHODOLOGY),
     recursive: str = Form("1"),
     include_hidden: str = Form("0"),
     skip_existing: str = Form("1"),
@@ -530,64 +421,16 @@ def organize_scan(
     plan: dict[str, Any] | None = None
 
     try:
-        if not input_dir.strip():
-            raise ApiError(
-                status_code=400,
-                error="missing_input_dir",
-                message="Input directory is required.",
-            )
-        if not output_dir.strip():
-            raise ApiError(
-                status_code=400,
-                error="missing_output_dir",
-                message="Output directory is required.",
-            )
-
-        safe_input = resolve_path(input_dir, settings.allowed_paths)
-        safe_output = resolve_path(output_dir, settings.allowed_paths)
-        if not safe_input.exists():
-            raise ApiError(status_code=404, error="not_found", message="Input directory not found.")
-
-        normalized_methodology = _normalize_methodology(methodology)
-        recursive_enabled = as_bool(recursive)
-        include_hidden_enabled = as_bool(include_hidden)
-        if include_hidden_enabled:
-            raise ApiError(
-                status_code=400,
-                error="include_hidden_not_supported",
-                message="Including hidden files is not supported in this dashboard flow yet.",
-            )
-        skip_existing_enabled = as_bool(skip_existing)
-        use_hardlinks_enabled = as_bool(use_hardlinks)
-
-        scan_files = _scan_directory(
-            safe_input,
-            recursive=recursive_enabled,
-            include_hidden=include_hidden_enabled,
-        )
-        counts = _counts_by_type(scan_files)
-
-        organizer = FileOrganizer(dry_run=True, use_hardlinks=use_hardlinks_enabled)
-        preview_result = organizer.organize(
-            input_path=safe_input,
-            output_path=safe_output,
-            skip_existing=skip_existing_enabled,
-        )
-        preview = _result_to_response(preview_result)
-        plan = _store_organize_plan(
-            {
-                "input_dir": str(safe_input),
-                "output_dir": str(safe_output),
-                "methodology": normalized_methodology,
-                "recursive": recursive_enabled,
-                "include_hidden": include_hidden_enabled,
-                "skip_existing": skip_existing_enabled,
-                "use_hardlinks": use_hardlinks_enabled,
-                "scan_counts": counts,
-                "scan_total_files": len(scan_files),
-                "preview": preview.model_dump(),
-                "movements": _build_plan_movements(scan_files, safe_output, preview),
-            }
+        plan = build_organize_plan(
+            input_dir=input_dir,
+            output_dir=output_dir,
+            methodology=methodology,
+            recursive=recursive,
+            include_hidden=include_hidden,
+            skip_existing=skip_existing,
+            use_hardlinks=use_hardlinks,
+            allowed_paths=settings.allowed_paths,
+            organizer_factory=FileOrganizer,
         )
         info_message = "Plan generated. Review movements and execute when ready."
     except ApiError as exc:
@@ -661,9 +504,23 @@ def organize_execute(
             )
 
         delay_minutes = _parse_delay_minutes(schedule_delay_minutes)
-        dry_run_enabled = as_bool(dry_run)
+        dry_run_enabled = form_bool(dry_run)
         safe_input = resolve_path(plan["input_dir"], settings.allowed_paths)
         safe_output = resolve_path(plan["output_dir"], settings.allowed_paths)
+        executable_plan_data = plan.get("executable_plan")
+        if not isinstance(executable_plan_data, dict):
+            raise ApiError(
+                status_code=400,
+                error="plan_not_executable",
+                message="Stored plan does not contain executable operations.",
+            )
+        executable_plan = OrganizationPlan.from_dict(executable_plan_data)
+        if not executable_plan.roots_match(safe_input, safe_output):
+            raise ApiError(
+                status_code=400,
+                error="plan_path_mismatch",
+                message="Stored plan paths do not match the requested safe paths.",
+            )
 
         organize_request = OrganizeRequest(
             input_dir=str(safe_input),
@@ -685,18 +542,29 @@ def organize_execute(
                 "plan_id": plan_id,
                 "input_dir": organize_request.input_dir,
                 "output_dir": organize_request.output_dir,
-                "methodology": str(plan.get("methodology", "content_based")),
+                "methodology": _normalize_methodology(plan.get("methodology")),
                 "dry_run": organize_request.dry_run,
                 "schedule_delay_minutes": delay_minutes,
                 "scheduled_for": scheduled_for,
+                "executable_plan_id": executable_plan.plan_id,
             },
         )
 
         if delay_minutes > 0:
-            _schedule_job(job.job_id, organize_request, delay_minutes)
+            _schedule_plan_job(
+                job.job_id,
+                executable_plan.to_dict(),
+                delay_minutes,
+                dry_run=dry_run_enabled,
+            )
             info_message = f"Job scheduled to start in {delay_minutes} minute(s)."
         else:
-            background_tasks.add_task(_run_organize_job, job.job_id, organize_request)
+            background_tasks.add_task(
+                _run_organize_plan_job,
+                job.job_id,
+                executable_plan.to_dict(),
+                dry_run=dry_run_enabled,
+            )
             info_message = "Organization job queued."
 
         job_view = _build_job_view(job.job_id)

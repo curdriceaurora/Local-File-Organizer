@@ -364,8 +364,8 @@ class TestVisionModelGenerate:
 
     def test_generate_raises_file_not_found(self) -> None:
         model = _make_vision_model()
-        with pytest.raises(FileNotFoundError):
-            model.generate("p", image_path=Path("/nonexistent/image.png"))
+        with pytest.raises(FileNotFoundError, match="Image not found"):
+            model.generate("p", image_path=Path("/") / "nonexistent" / "image.png")
 
     def test_generate_raises_on_empty_response(self, tmp_path: Path) -> None:
         model = _make_vision_model()
@@ -626,7 +626,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s1",
             suggestion_type=SuggestionType.MOVE,
-            file_path=Path("/a/b.txt"),
+            file_path=Path("/") / "a" / "b.txt",
             confidence=85.0,
         )
         assert s.confidence_level == ConfidenceLevel.VERY_HIGH
@@ -641,7 +641,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s2",
             suggestion_type=SuggestionType.RENAME,
-            file_path=Path("/a/b.txt"),
+            file_path=Path("/") / "a" / "b.txt",
             confidence=65.0,
         )
         assert s.confidence_level == ConfidenceLevel.HIGH
@@ -656,7 +656,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s3",
             suggestion_type=SuggestionType.TAG,
-            file_path=Path("/a/b.txt"),
+            file_path=Path("/") / "a" / "b.txt",
             confidence=45.0,
         )
         assert s.confidence_level == ConfidenceLevel.MEDIUM
@@ -671,7 +671,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s4",
             suggestion_type=SuggestionType.DELETE,
-            file_path=Path("/a/b.txt"),
+            file_path=Path("/") / "a" / "b.txt",
             confidence=25.0,
         )
         assert s.confidence_level == ConfidenceLevel.LOW
@@ -686,7 +686,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s5",
             suggestion_type=SuggestionType.MERGE,
-            file_path=Path("/a/b.txt"),
+            file_path=Path("/") / "a" / "b.txt",
             confidence=10.0,
         )
         assert s.confidence_level == ConfidenceLevel.VERY_LOW
@@ -697,13 +697,13 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s-123",
             suggestion_type=SuggestionType.MOVE,
-            file_path=Path("/docs/report.pdf"),
-            target_path=Path("/archive/report.pdf"),
+            file_path=Path("/") / "docs" / "report.pdf",
+            target_path=Path("/") / "archive" / "report.pdf",
             confidence=72.0,
             reasoning="Matches archive pattern",
             tags=["archive", "report"],
             new_name="report_2024.pdf",
-            related_files=[Path("/docs/appendix.pdf")],
+            related_files=[Path("/") / "docs" / "appendix.pdf"],
         )
         d = s.to_dict()
         assert d["suggestion_id"] == "s-123"
@@ -724,7 +724,7 @@ class TestSuggestionTypes:
         s = Suggestion(
             suggestion_id="s-no-target",
             suggestion_type=SuggestionType.TAG,
-            file_path=Path("/a.txt"),
+            file_path=Path("/") / "a.txt",
         )
         d = s.to_dict()
         assert d["target_path"] is None
@@ -737,8 +737,8 @@ class TestSuggestionTypes:
         )
 
         suggestions = [
-            Suggestion("s1", SuggestionType.MOVE, Path("/a.txt"), confidence=60.0),
-            Suggestion("s2", SuggestionType.MOVE, Path("/b.txt"), confidence=80.0),
+            Suggestion("s1", SuggestionType.MOVE, Path("/") / "a.txt", confidence=60.0),
+            Suggestion("s2", SuggestionType.MOVE, Path("/") / "b.txt", confidence=80.0),
         ]
         batch = SuggestionBatch(
             batch_id="b1",
@@ -767,9 +767,9 @@ class TestSuggestionTypes:
         )
 
         suggestions = [
-            Suggestion("s1", SuggestionType.MOVE, Path("/a.txt")),
-            Suggestion("s2", SuggestionType.RENAME, Path("/b.txt")),
-            Suggestion("s3", SuggestionType.TAG, Path("/c.txt")),
+            Suggestion("s1", SuggestionType.MOVE, Path("/") / "a.txt"),
+            Suggestion("s2", SuggestionType.RENAME, Path("/") / "b.txt"),
+            Suggestion("s3", SuggestionType.TAG, Path("/") / "c.txt"),
         ]
         batch = SuggestionBatch(
             batch_id="b3",
@@ -787,7 +787,7 @@ class TestSuggestionTypes:
         )
 
         suggestions = [
-            Suggestion("s1", SuggestionType.MOVE, Path("/a.txt"), confidence=50.0),
+            Suggestion("s1", SuggestionType.MOVE, Path("/") / "a.txt", confidence=50.0),
         ]
         batch = SuggestionBatch(
             batch_id="b4",
@@ -1650,8 +1650,8 @@ class TestFileInfo:
         from file_organizer.models.analytics import FileInfo
 
         now = datetime.now(tz=UTC)
-        fi = FileInfo(path=Path("/docs/report.pdf"), size=1024, type="pdf", modified=now)
-        assert fi.path == Path("/docs/report.pdf")
+        fi = FileInfo(path=Path("/") / "docs" / "report.pdf", size=1024, type="pdf", modified=now)
+        assert fi.path == Path("/") / "docs" / "report.pdf"
         assert fi.size == 1024
         assert fi.type == "pdf"
         assert fi.modified == now
@@ -1662,7 +1662,7 @@ class TestFileInfo:
 
         now = datetime.now(tz=UTC)
         fi = FileInfo(
-            path=Path("/docs/report.pdf"),
+            path=Path("/") / "docs" / "report.pdf",
             size=2048,
             type="pdf",
             modified=now,

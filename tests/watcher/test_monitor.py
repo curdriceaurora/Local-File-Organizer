@@ -125,7 +125,7 @@ class TestFileMonitorLifecycle:
             debounce_seconds=0.0,
         )
         mon = FileMonitor(config)
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="does_not_exist"):
             mon.start()
 
     def test_watched_directories_after_start(self, monitor: FileMonitor, watch_dir: Path) -> None:
@@ -356,7 +356,7 @@ class TestFileMonitorDynamicDirectories:
     def test_add_nonexistent_directory_raises(self, monitor: FileMonitor, tmp_path: Path) -> None:
         """Test that adding a non-existent directory raises FileNotFoundError."""
         monitor.start()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="nope"):
             monitor.add_directory(tmp_path / "nope")
 
     def test_remove_directory(self, monitor: FileMonitor, watch_dir: Path) -> None:

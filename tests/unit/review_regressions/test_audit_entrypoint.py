@@ -9,6 +9,8 @@ import pytest
 from file_organizer.review_regressions import audit
 from file_organizer.review_regressions.framework import Violation
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @dataclass
 class _Detector:

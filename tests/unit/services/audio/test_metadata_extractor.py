@@ -25,7 +25,7 @@ class TestAudioMetadataExtractor:
 
     def test_extract_file_not_found(self):
         extractor = AudioMetadataExtractor()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="Audio file not found"):
             extractor.extract("non_existent_file.mp3")
 
     @patch(

@@ -180,7 +180,7 @@ class TestAtomicWriteWith:
         def _writer(_fh: io.BufferedWriter) -> None:
             pass  # pragma: no cover — should not be called
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="atomic_write_with mode must be 'w' or 'wb'"):
             atomic_write_with(target, _writer, mode="r")  # type: ignore[arg-type]
 
     def test_text_mode_defaults_to_utf8(

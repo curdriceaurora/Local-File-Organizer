@@ -54,9 +54,9 @@ class TestReadContentRouting:
             ) as anchored,
         ):
             legacy.return_value = "content"
-            out = TextProcessor._read_content(Path("/x/doc.txt"), None)
+            out = TextProcessor._read_content(Path("/") / "x" / "doc.txt", None)
         assert out == "content"
-        legacy.assert_called_once_with(Path("/x/doc.txt"))
+        legacy.assert_called_once_with(Path("/") / "x" / "doc.txt")
         anchored.assert_not_called()
 
     @posix_only
@@ -68,9 +68,13 @@ class TestReadContentRouting:
             ) as anchored,
         ):
             anchored.return_value = "safe content"
-            out = TextProcessor._read_content(Path("/root/sub/doc.txt"), Path("/root"))
+            out = TextProcessor._read_content(
+                Path("/") / "root" / "sub" / "doc.txt", Path("/") / "root"
+            )
         assert out == "safe content"
-        anchored.assert_called_once_with(Path("/root/sub/doc.txt"), trusted_root=Path("/root"))
+        anchored.assert_called_once_with(
+            Path("/") / "root" / "sub" / "doc.txt", trusted_root=Path("/") / "root"
+        )
         legacy.assert_not_called()
 
     @posix_only
@@ -83,9 +87,9 @@ class TestReadContentRouting:
             ),
         ):
             legacy.return_value = "fallback"
-            out = TextProcessor._read_content(Path("/root/doc.txt"), Path("/root"))
+            out = TextProcessor._read_content(Path("/") / "root" / "doc.txt", Path("/") / "root")
         assert out == "fallback"
-        legacy.assert_called_once_with(Path("/root/doc.txt"))
+        legacy.assert_called_once_with(Path("/") / "root" / "doc.txt")
 
 
 class TestReadContentRealFilesystem:
@@ -165,7 +169,7 @@ class TestDispatcherForwardsScanRoot:
         console = MagicMock()
 
         dispatcher.process_text_files(
-            [Path("a.txt")], processor, parallel, console, scan_root=Path("/root")
+            [Path("a.txt")], processor, parallel, console, scan_root=Path("/") / "root"
         )
 
-        processor.process_file.assert_called_once_with(Path("a.txt"), scan_root=Path("/root"))
+        processor.process_file.assert_called_once_with(Path("a.txt"), scan_root=Path("/") / "root")

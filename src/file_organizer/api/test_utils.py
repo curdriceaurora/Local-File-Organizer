@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
@@ -26,7 +26,7 @@ def build_test_settings(
         "websocket_token": websocket_token,
         "auth_enabled": True,
         "auth_db_path": str(tmp_path / "auth.db"),
-        "auth_jwt_secret": "test-secret",
+        "auth_jwt_secret": "test-secret-32-bytes-minimum-key!!",
         "auth_access_token_minutes": 5,
         "auth_refresh_token_days": 1,
         "auth_redis_url": None,
@@ -103,8 +103,8 @@ def seed_csrf_token(client: TestClient) -> str:
 def csrf_headers(client: TestClient) -> dict[str, str]:
     """Return a headers dict containing the CSRF token for the given client.
 
-    Assumes :func:`seed_csrf_token` was called first (or a prior GET to /ui/
-    populated the cookie jar).
+    Calls :func:`seed_csrf_token` to ensure the token is populated and returned
+    via a typed response cookie path.
     """
-    token = client.cookies.get("_csrf_token") or ""
+    token = seed_csrf_token(client)
     return {"x-csrf-token": token}

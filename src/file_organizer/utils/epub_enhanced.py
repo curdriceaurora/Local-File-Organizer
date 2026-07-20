@@ -281,7 +281,7 @@ class EnhancedEPUBReader:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(f"EPUB file not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
 
         try:
             book = _read_epub_safedir(file_path)

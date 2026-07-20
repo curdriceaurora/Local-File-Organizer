@@ -185,7 +185,7 @@ class TestIntent:
     def test_parameters_independent(self) -> None:
         i1 = Intent(intent_type=IntentType.FIND)
         i2 = Intent(intent_type=IntentType.FIND)
-        i1.parameters["path"] = "/tmp"
+        i1.parameters["path"] = "/tmp"  # noqa: test-hardcoded-paths
         assert "path" not in i2.parameters
 
     def test_full_construction(self) -> None:
@@ -222,11 +222,11 @@ class TestExecutionResult:
             success=False,
             message="Failed",
             details={"error_code": 42},
-            affected_files=["/tmp/a.txt"],
+            affected_files=["/tmp/a.txt"],  # noqa: test-hardcoded-paths
         )
         assert result.success is False
         assert result.details["error_code"] == 42
-        assert result.affected_files == ["/tmp/a.txt"]
+        assert result.affected_files == ["/tmp/a.txt"]  # noqa: test-hardcoded-paths
 
     def test_defaults_are_independent(self) -> None:
         r1 = ExecutionResult(success=True, message="ok")
@@ -268,8 +268,8 @@ class TestCopilotSession:
         assert session.turn_count == 2
 
     def test_working_directory(self) -> None:
-        session = CopilotSession(working_directory="/home/user")
-        assert session.working_directory == "/home/user"
+        session = CopilotSession(working_directory="/home/user")  # noqa: test-hardcoded-paths
+        assert session.working_directory == "/home/user"  # noqa: test-hardcoded-paths
 
     def test_session_id(self) -> None:
         session = CopilotSession(session_id="abc-123")

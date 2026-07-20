@@ -11,6 +11,11 @@ import ast
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_comment_marker, has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_comment_marker, has_targeted_noqa
+
 VALIDATION_FUNCTIONS = {
     "resolve_cli_path",
     "validate_within_roots",
@@ -151,12 +156,8 @@ class CliPathValidationVisitor(ast.NodeVisitor):
                 line_idx = lineno - 1
                 line_content = self.lines[line_idx] if 0 <= line_idx < len(self.lines) else ""
 
-                # Check for noqa override
-                line_content_lower = line_content.lower()
-                if (
-                    "copilot: wontfix" in line_content_lower
-                    or "noqa: cli-path-validation" in line_content_lower
-                    or "noqa" in line_content_lower
+                if has_comment_marker(line_content, "copilot: wontfix") or has_targeted_noqa(
+                    line_content, "cli-path-validation"
                 ):
                     continue
 

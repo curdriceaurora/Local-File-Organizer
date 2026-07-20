@@ -88,7 +88,7 @@ class TestFileResult(unittest.TestCase):
 
     def test_result_preserves_path_type(self) -> None:
         """Test that path remains a Path object."""
-        result = FileResult(path=Path("/tmp/file.txt"), success=True)
+        result = FileResult(path=Path("/") / "tmp" / "file.txt", success=True)  # noqa: test-hardcoded-paths
         self.assertIsInstance(result.path, Path)
 
     def test_result_with_zero_duration(self) -> None:

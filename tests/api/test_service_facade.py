@@ -224,6 +224,7 @@ class TestGetStatus:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestGetConfig:
     """Tests for ServiceFacade.get_config()."""
@@ -237,10 +238,10 @@ class TestGetConfig:
 
     @pytest.mark.asyncio
     async def test_contains_expected_sections(self) -> None:
-        """get_config dict contains ai, storage and organization keys."""
+        """get_config dict contains persisted AppConfig sections."""
         facade = _make_facade()
         result = await facade.get_config()
-        for section in ("ai", "storage", "organization"):
+        for section in ("models", "updates", "default_methodology"):
             assert section in result, f"Missing config section: {section}"
 
     @pytest.mark.asyncio
@@ -249,6 +250,22 @@ class TestGetConfig:
         facade = _make_facade()
         result = await facade.get_config()
         assert "version" in result
+
+    @pytest.mark.asyncio
+    async def test_honors_fo_config_dir(self, tmp_path, monkeypatch) -> None:
+        """get_config reads from the configured config directory."""
+        from file_organizer.config.manager import ConfigManager
+        from file_organizer.config.schema import AppConfig
+
+        manager = ConfigManager(config_dir=tmp_path)
+        config = AppConfig(default_methodology="jd")
+        manager.save(config)
+        monkeypatch.setenv("FO_CONFIG_DIR", str(tmp_path))
+
+        facade = _make_facade()
+        result = await facade.get_config()
+
+        assert result["default_methodology"] == "jd"
 
 
 # ---------------------------------------------------------------------------

@@ -97,7 +97,7 @@ class TestFolderScanner:
     def test_scan_invalid_path(self, scanner):
         """Test scanning invalid path."""
         with pytest.raises(ValueError, match="does not exist"):
-            scanner.scan_directory(Path("/nonexistent"))
+            scanner.scan_directory(Path("/") / "nonexistent")
 
     def test_scan_file_not_directory(self, scanner, tmp_path):
         """Test scanning file instead of directory."""

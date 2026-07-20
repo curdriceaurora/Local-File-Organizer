@@ -1,65 +1,47 @@
-"""Configuration endpoints."""
+"""Configuration endpoints backed by the real ConfigManager."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from threading import Lock, RLock
 
-from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings, require_admin_user
+from fastapi import APIRouter, Depends, Query
+
+from file_organizer.api.dependencies import get_config_manager, require_admin_user
+from file_organizer.api.exceptions import ApiError
+from file_organizer.api.models import ConfigResponse, ConfigUpdateRequest
 from file_organizer.api.openapi_responses import (
     ADMIN_403_RESPONSE,
     INTERNAL_500_RESPONSE,
+    api_error_response,
     merge_responses,
     success_response,
     validation_error_response,
 )
+from file_organizer.api.utils import apply_config_update
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
+from file_organizer.config.manager import ConfigManager, UnsupportedConfigVersionError
+from file_organizer.config.schema import AppConfig
 
 router = APIRouter(tags=["config"], responses=INTERNAL_500_RESPONSE)
 
-
-class AISettings(BaseModel):
-    """AI model settings."""
-
-    model: str = "qwen2.5:3b-instruct-q4_K_M"
-    temperature: float = 0.5
-    max_tokens: int = 3000
+_CONFIG_UPDATE_LOCKS: dict[tuple[str, str], RLock] = {}
+_CONFIG_UPDATE_LOCKS_GUARD = Lock()
 
 
-class StorageSettings(BaseModel):
-    """Storage configuration."""
-
-    base_path: str = "/default/path"
-    auto_backup: bool = True
-
-
-class OrganizationSettings(BaseModel):
-    """Organization method settings."""
-
-    method: str = "PARA"
-    auto_organize: bool = False
+def _profile_update_lock(manager: ConfigManager, profile: str) -> RLock:
+    """Return the process-local lock for one persisted config profile."""
+    key = (str(manager.config_dir.resolve()), profile)
+    with _CONFIG_UPDATE_LOCKS_GUARD:
+        return _CONFIG_UPDATE_LOCKS.setdefault(key, RLock())
 
 
-class ConfigUpdateRequest(BaseModel):
-    """Configuration update request."""
-
-    ai: AISettings | None = None
-    storage: StorageSettings | None = None
-    organization: OrganizationSettings | None = None
-
-
-class ConfigResponse(BaseModel):
-    """Complete configuration response."""
-
-    version: str = "2.0.0"
-    ai: AISettings = AISettings()
-    storage: StorageSettings = StorageSettings()
-    organization: OrganizationSettings = OrganizationSettings()
-    app_version: str = "2.0.0"
-
-
-# Global config store (in-memory for testing)
-_config = ConfigResponse()
+def _response(manager: ConfigManager, profile: str, config: AppConfig) -> ConfigResponse:
+    """Build a ConfigResponse from an AppConfig instance."""
+    return ConfigResponse(
+        profile=profile,
+        config=manager.config_to_dict(config),
+        profiles=manager.list_profiles(),
+    )
 
 
 @router.get(
@@ -67,25 +49,28 @@ _config = ConfigResponse()
     response_model=ConfigResponse,
     responses=merge_responses(
         success_response(
-            "Returned application configuration.",
+            "Returned configuration profile.",
             {
-                "version": "2.0.0",
-                "ai": {
-                    "model": "qwen2.5:3b-instruct-q4_K_M",
-                    "temperature": 0.5,
-                    "max_tokens": 3000,
+                "profile": "default",
+                "config": {
+                    "version": "1.0",
+                    "default_methodology": "none",
+                    "setup_completed": False,
+                    "models": {"text_model": DEFAULT_TEXT_MODEL},
                 },
-                "storage": {"base_path": "/default/path", "auto_backup": True},
-                "organization": {"method": "PARA", "auto_organize": False},
-                "app_version": "2.0.0",
+                "profiles": ["default"],
             },
         ),
+        validation_error_response(),
     ),
 )
-def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
-    """Get current configuration."""
-    global _config
-    return _config
+def get_config(
+    profile: str = Query("default"),
+    manager: ConfigManager = Depends(get_config_manager),
+) -> ConfigResponse:
+    """Retrieve the persisted configuration for a named profile."""
+    config = manager.load(profile)
+    return _response(manager, profile, config)
 
 
 @router.put(
@@ -93,42 +78,45 @@ def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
     response_model=ConfigResponse,
     responses=merge_responses(
         success_response(
-            "Updated application configuration.",
+            "Updated configuration profile.",
             {
-                "version": "2.0.0",
-                "ai": {
-                    "model": "qwen2.5:3b-instruct-q4_K_M",
-                    "temperature": 0.5,
-                    "max_tokens": 3000,
+                "profile": "default",
+                "config": {
+                    "default_methodology": "para",
+                    "models": {"text_model": "llama3:8b"},
                 },
-                "storage": {"base_path": "/default/path", "auto_backup": True},
-                "organization": {"method": "PARA", "auto_organize": True},
-                "app_version": "2.0.0",
+                "profiles": ["default"],
             },
         ),
         ADMIN_403_RESPONSE,
+        api_error_response(
+            409,
+            error="unsupported_config_version",
+            message="On-disk profile schema version is unsupported for safe overwrite",
+        ),
         validation_error_response(),
     ),
 )
 def update_config(
     request: ConfigUpdateRequest,
-    settings: ApiSettings = Depends(get_settings),
+    manager: ConfigManager = Depends(get_config_manager),
     _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
-    """Update configuration with provided values."""
-    global _config
+    """Apply partial updates to a persisted configuration profile."""
+    with _profile_update_lock(manager, request.profile):
+        config = manager.load(request.profile)
+        apply_config_update(config, request)
 
-    # Update config with provided values
-    if request.organization is not None:
-        _config.organization = request.organization
+        try:
+            manager.save(config, request.profile)
+        except UnsupportedConfigVersionError as exc:
+            raise ApiError(
+                status_code=409,
+                error="unsupported_config_version",
+                message=str(exc),
+            ) from exc
 
-    if request.ai is not None:
-        _config.ai = request.ai
-
-    if request.storage is not None:
-        _config.storage = request.storage
-
-    return _config
+        return _response(manager, request.profile, config)
 
 
 @router.post(
@@ -136,27 +124,22 @@ def update_config(
     response_model=ConfigResponse,
     responses=merge_responses(
         success_response(
-            "Reset configuration to defaults.",
+            "Reset configuration profile to defaults.",
             {
-                "version": "2.0.0",
-                "ai": {
-                    "model": "qwen2.5:3b-instruct-q4_K_M",
-                    "temperature": 0.5,
-                    "max_tokens": 3000,
-                },
-                "storage": {"base_path": "/default/path", "auto_backup": True},
-                "organization": {"method": "PARA", "auto_organize": False},
-                "app_version": "2.0.0",
+                "profile": "default",
+                "config": {"default_methodology": "none", "setup_completed": False},
+                "profiles": ["default"],
             },
         ),
         ADMIN_403_RESPONSE,
     ),
 )
 def reset_config(
-    settings: ApiSettings = Depends(get_settings),
+    profile: str = Query("default"),
+    manager: ConfigManager = Depends(get_config_manager),
     _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
-    """Reset configuration to defaults."""
-    global _config
-    _config = ConfigResponse()
-    return _config
+    """Reset a persisted configuration profile to defaults."""
+    config = AppConfig(profile_name=profile)
+    manager.save(config, profile, force=True)
+    return _response(manager, profile, config)

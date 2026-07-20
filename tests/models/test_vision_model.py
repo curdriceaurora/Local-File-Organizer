@@ -70,7 +70,7 @@ class TestVisionModel:
                     assert kwargs["model"] == vision_model_config.name
                     assert kwargs["prompt"] == "Describe this image"
                     # Note: We check if images list contains the path string
-                    assert kwargs["images"][0] == str(Path("/path/to/image.jpg"))
+                    assert kwargs["images"][0] == str(Path("/") / "path" / "to" / "image.jpg")
 
     def test_generate_from_image_error(self, vision_model_config: ModelConfig) -> None:
         """Test image generation error handling."""
@@ -85,14 +85,10 @@ class TestVisionModel:
             ):
                 with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
-                    with pytest.raises(Exception) as excinfo:
+                    with pytest.raises(Exception, match="Failed to analyze image|Ollama error"):
                         model.generate(
                             prompt="Describe this image", image_path="/path/to/image.jpg"
                         )
-
-                    assert "Failed to analyze image" in str(excinfo.value) or "Ollama error" in str(
-                        excinfo.value
-                    )
 
 
 @pytest.mark.unit

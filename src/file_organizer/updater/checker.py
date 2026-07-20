@@ -58,7 +58,7 @@ def _parse_version(version_str: str) -> tuple[int, ...]:
     on ``.``.
 
     Args:
-        version_str: Version string like ``2.0.0-alpha.1`` or ``v2.1.0``.
+        version_str: Version string like ``2.0.0-beta.1`` or ``v2.1.0``.
 
     Returns:
         Tuple of integers, e.g. ``(2, 0, 0)``.

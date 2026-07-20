@@ -56,6 +56,8 @@ def _version_callback(value: bool) -> None:
 _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
     {
         "setup",
+        "start",
+        "quickstart",
         "version",
         "doctor",
         "update",
@@ -65,6 +67,7 @@ _SETUP_GATE_ALLOWLIST: frozenset[str] = frozenset(
         "serve",
         "desktop",
         "docs",
+        "profile",
     }
 )
 """Commands that work pre-setup. They're either bootstrap (`setup`,
@@ -221,6 +224,26 @@ app.command()(analyze)
 app.command()(doctor)
 
 
+def _run_quick_start_setup(profile: str, dry_run: bool) -> None:
+    """Run the setup wizard in quick-start mode."""
+    from file_organizer.cli.setup import setup_run
+
+    setup_run(mode="quick-start", profile=profile, dry_run=dry_run)
+
+
+@app.command(name="quickstart")
+@app.command(name="start")
+def start_command(
+    profile: Annotated[str, typer.Option("--profile", "-p", help="Profile name.")] = "default",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview setup choices without saving configuration."),
+    ] = False,
+) -> None:
+    """Run guided first-time setup with safe defaults."""
+    _run_quick_start_setup(profile=profile, dry_run=_merge_flag(dry_run, _get_state().dry_run))
+
+
 @app.command()
 def version() -> None:
     """Show the application version."""
@@ -231,7 +254,7 @@ def version() -> None:
 
 @app.command()
 def serve(
-    host: Annotated[str, typer.Option(help="Bind address.")] = "0.0.0.0",
+    host: Annotated[str, typer.Option(help="Bind address.")] = "127.0.0.1",
     port: Annotated[int, typer.Option(help="Port number.")] = 8000,
     reload: Annotated[bool, typer.Option(help="Auto-reload on code changes.")] = False,
     workers: Annotated[int, typer.Option(help="Number of worker processes.")] = 1,
@@ -519,6 +542,21 @@ def analytics(
     raise typer.Exit(code=code if code is not None else 1)
 
 
+@app.command(
+    name="profile", context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def profile_legacy(ctx: typer.Context) -> None:
+    """Guide users when the optional profile command set is unavailable."""
+    console.print(
+        "[yellow]`profile` subcommands are not available in this installation.[/yellow]\n"
+        "Use [bold]file-organizer config show --profile <name>[/bold] and "
+        "[bold]file-organizer config edit --profile <name>[/bold] for named configs."
+    )
+    if ctx.args:
+        console.print(f"[dim]Received extra arguments: {' '.join(ctx.args)}[/dim]")
+        raise SystemExit(2)
+
+
 # ---------------------------------------------------------------------------
 # Profile sub-app — Click interop (deferred to reduce startup latency)
 # ---------------------------------------------------------------------------
@@ -534,6 +572,11 @@ def _register_profile_command() -> None:
         from file_organizer.cli.profile import profile_command as _profile_click_group
 
         typer_click_object = typer.main.get_group(app)
+        if "profile" in typer_click_object.commands:
+            logging.getLogger(__name__).debug(
+                "Skipping legacy profile registration because the guidance shim is already registered."
+            )
+            return
         typer_click_object.add_command(_profile_click_group, "profile")
     except ImportError as exc:
         # Profile module may fail to import if intelligence services

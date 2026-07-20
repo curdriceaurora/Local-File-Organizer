@@ -36,7 +36,7 @@ class TestDeploymentConfigDefaults:
     def test_default_data_directory(self) -> None:
         """Verify default data directory is /data."""
         config = DeploymentConfig()
-        assert config.data_directory == Path("/data")
+        assert config.data_directory == Path("/") / "data"
 
     def test_default_log_level(self) -> None:
         """Verify default log level is DEBUG."""
@@ -100,9 +100,9 @@ class TestDeploymentConfigValidation:
 
     def test_string_data_directory_converted_to_path(self) -> None:
         """Verify string data_directory is converted to Path."""
-        config = DeploymentConfig(data_directory="/tmp/test")  # type: ignore[arg-type]
+        config = DeploymentConfig(data_directory="/tmp/test")  # type: ignore[arg-type]  # noqa: test-hardcoded-paths
         assert isinstance(config.data_directory, Path)
-        assert config.data_directory == Path("/tmp/test")
+        assert config.data_directory == Path("/") / "tmp" / "test"  # noqa: test-hardcoded-paths
 
     def test_all_valid_environments_accepted(self) -> None:
         """Verify all defined valid environments are accepted."""
@@ -160,7 +160,7 @@ class TestDeploymentConfigFromEnv:
         env = {"FO_DATA_DIR": "/mnt/storage"}
         with mock.patch.dict(os.environ, env, clear=True):
             config = DeploymentConfig.from_env()
-            assert config.data_directory == Path("/mnt/storage")
+            assert config.data_directory == Path("/") / "mnt" / "storage"
 
     def test_from_env_custom_log_level(self) -> None:
         """Verify from_env picks up custom log level."""

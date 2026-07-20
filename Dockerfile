@@ -42,7 +42,7 @@ FROM python:3.11-slim AS runtime
 # OCI Image Labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 LABEL org.opencontainers.image.title="File Organizer v2" \
       org.opencontainers.image.description="AI-powered local file management system with privacy-first architecture" \
-      org.opencontainers.image.version="2.0.0-alpha.1" \
+      org.opencontainers.image.version="2.0.0-beta.1" \
       org.opencontainers.image.authors="Local File Organizer Team <noreply@example.com>" \
       org.opencontainers.image.url="https://github.com/yourusername/file-organizer-v2" \
       org.opencontainers.image.source="https://github.com/yourusername/file-organizer-v2" \

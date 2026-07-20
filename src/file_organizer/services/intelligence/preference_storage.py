@@ -62,6 +62,7 @@ class PreferenceStorage(Protocol):
 
     def save_preference(self, preference: Preference) -> None:
         """Insert or update ``preference`` (idempotent on type+key)."""
+        ...
 
     def find_preferences(
         self,
@@ -69,6 +70,7 @@ class PreferenceStorage(Protocol):
         key: str | None = None,
     ) -> list[Preference]:
         """Return preferences of ``preference_type``, optionally filtered by ``key``."""
+        ...
 
     def update_preference_confidence(
         self,
@@ -76,34 +78,42 @@ class PreferenceStorage(Protocol):
         success: bool,
     ) -> None:
         """Adjust the preference's confidence: +0.05 cap 0.98 on success, -0.10 floor 0.10 on failure."""
+        ...
 
     def delete_preferences(
         self,
         preference_type: PreferenceType | None = None,
     ) -> int:
         """Delete preferences (all or by type). Returns number of rows deleted."""
+        ...
 
     # Correction history ---------------------------------------------------
 
     def save_correction(self, correction: Correction) -> None:
         """Append a correction to the history."""
+        ...
 
     def get_corrections_for_file(self, file_path: Path) -> list[Correction]:
         """Return corrections whose source OR destination equals ``file_path``."""
+        ...
 
     def get_recent_corrections(self, limit: int = 10) -> list[Correction]:
         """Return the most recent corrections, newest first, capped at ``limit``."""
+        ...
 
     # Statistics + bulk ----------------------------------------------------
 
     def get_statistics(self) -> dict[str, Any]:
         """Return aggregate counters: at minimum ``total_preferences``."""
+        ...
 
     def export_data(self) -> dict[str, Any]:
         """Serialize all storage state to a JSON-friendly dict."""
+        ...
 
     def import_data(self, data: dict[str, Any]) -> None:
         """Replace storage state with the contents of ``data`` (from :meth:`export_data`)."""
+        ...
 
 
 # ---------------------------------------------------------------------------

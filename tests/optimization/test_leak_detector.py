@@ -30,7 +30,7 @@ class TestLeakSuspect:
     def test_leak_suspect_frozen(self) -> None:
         """Test that LeakSuspect is immutable."""
         suspect = LeakSuspect(type_name="str", count_delta=5, size_delta=100)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             suspect.type_name = "int"  # type: ignore[misc]
 
     def test_leak_suspect_equality(self) -> None:

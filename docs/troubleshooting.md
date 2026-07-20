@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for Local File Organizer. For advanced deployment and production issues, see the [Admin Troubleshooting Guide](admin/troubleshooting.md).
+Find common issues and solutions for Local File Organizer. To find advanced deployment and production issues, read the [Admin Troubleshooting Guide](admin/troubleshooting.md).
 
 ## Installation Issues
 
@@ -8,7 +8,7 @@ Common issues and solutions for Local File Organizer. For advanced deployment an
 
 **Error**: `ConnectionRefusedError` or "Ollama unavailable"
 
-**Cause**: Ollama service is not running or is bound to a different port.
+**Cause**: The Ollama service is not running or it uses a different port.
 
 **Solution**:
 
@@ -16,10 +16,10 @@ Common issues and solutions for Local File Organizer. For advanced deployment an
 # Start Ollama
 ollama serve
 
-# Verify it's running
+# Verify it is running
 curl http://localhost:11434/api/version
 
-# If using a custom port, set the environment variable
+# If you use a custom port, set the environment variable
 export OLLAMA_HOST=http://localhost:12345
 ```
 
@@ -27,16 +27,16 @@ export OLLAMA_HOST=http://localhost:12345
 
 **Error**: "Model not found"
 
-**Cause**: Required Ollama models have not been downloaded.
+**Cause**: You have not downloaded the required Ollama models.
 
 **Solution**:
 
 ```bash
 # Pull the required models
-ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model (~1.9 GB)
-ollama pull qwen2.5vl:7b-q4_K_M             # Vision model (~6.0 GB)
+ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model (approximately 1.9 GB)
+ollama pull qwen2.5vl:7b-q4_K_M             # Vision model (approximately 6.0 GB)
 
-# Verify they're installed
+# Verify they are installed
 ollama list
 ```
 
@@ -44,18 +44,18 @@ ollama list
 
 **Error**: "Port 8000 is already in use"
 
-**Cause**: Another process is already using the default port.
+**Cause**: Another process uses the default port.
 
 **Solution**:
 
 ```bash
-# Use different port
+# Use a different port
 file-organizer serve --port 8001
 
-# Or find and stop the process using port 8000
+# Or find and stop the process that uses port 8000
 lsof -i :8000
 kill <PID>          # graceful shutdown (SIGTERM)
-# If the process doesn't stop:
+# If the process does not stop:
 kill -9 <PID>       # force kill (SIGKILL) as last resort
 ```
 
@@ -65,11 +65,11 @@ kill -9 <PID>       # force kill (SIGKILL) as last resort
 
 **Error**: `ModuleNotFoundError: No module named 'faster_whisper'` or similar
 
-**Cause**: Attempting to use a feature that requires optional dependencies not installed with the base package.
+**Cause**: You try to use a feature that requires optional dependencies. These are not installed with the base package.
 
 **Solution**:
 
-Install the appropriate optional dependency group based on the feature you're using:
+Install the correct optional dependency group for the feature you use:
 
 | Feature | Error Pattern | Install Command |
 |---------|---------------|-----------------|
@@ -88,17 +88,17 @@ Install the appropriate optional dependency group based on the feature you're us
 | GUI interface | `PyQt6` | `pip install "local-file-organizer[gui]"` |
 | All features | Any of the above | `pip install "local-file-organizer[all]"` |
 
-For more details, see [Dependencies & Setup](setup/dependencies.md).
+To find more data, read [Dependencies & Setup](setup/dependencies.md).
 
 ### Import Error with Specific Message
 
 **Error**: `ImportError: faster-whisper is required for audio transcription. Install it with: pip install faster-whisper`
 
-**Cause**: The error message indicates exactly which package is missing.
+**Cause**: The error message shows exactly which package is missing.
 
 **Solution**:
 
-Follow the instruction in the error message, or use the table above to install the complete feature group.
+Follow the instruction in the error message. Or, use the table above to install the complete feature group.
 
 ## Permission Errors
 
@@ -106,7 +106,7 @@ Follow the instruction in the error message, or use the table above to install t
 
 **Error**: `PermissionError: [Errno 13] Permission denied: '/Users/username/Desktop'`
 
-**Cause**: macOS protects certain directories (Desktop, Documents, Downloads) and requires explicit permission for applications to access them.
+**Cause**: macOS protects certain directories (Desktop, Documents, Downloads). It requires explicit permission for applications to access them.
 
 **Solution**:
 
@@ -127,7 +127,7 @@ cp -r ~/Desktop/files ~/file-organizer-workspace/
 
 **Error**: `PermissionError: Cannot read file: /path/to/file`
 
-**Cause**: Insufficient permissions to read the file, typically from file ownership or mode restrictions.
+**Cause**: You have insufficient permissions to read the file. This usually comes from file ownership or mode restrictions.
 
 **Solution**:
 
@@ -135,10 +135,10 @@ cp -r ~/Desktop/files ~/file-organizer-workspace/
 # Check file permissions
 ls -la /path/to/file
 
-# Make file readable
+# Make the file readable
 chmod +r /path/to/file
 
-# If owned by another user, change ownership (requires sudo)
+# If another user owns it, change ownership (requires sudo)
 sudo chown $USER /path/to/file
 ```
 
@@ -146,9 +146,9 @@ sudo chown $USER /path/to/file
 
 ### Out of Memory During Organization
 
-**Error**: Process killed or `MemoryError` when organizing large directories
+**Error**: Process killed or `MemoryError` when you organize large directories
 
-**Cause**: Processing too many files simultaneously or analyzing very large files (videos, high-res images).
+**Cause**: You process too many files at the same time or analyze very large files (videos, high-res images).
 
 **Solution**:
 
@@ -156,7 +156,7 @@ sudo chown $USER /path/to/file
 # Process sequentially instead of in parallel
 file-organizer organize /path/to/input /path/to/output --sequential
 
-# Limit number of parallel workers
+# Limit the number of parallel workers
 file-organizer organize /path/to/input /path/to/output --max-workers 2
 
 # Process subdirectories separately
@@ -168,17 +168,17 @@ done
 file-organizer organize /path/to/input /path/to/output --no-vision
 ```
 
-For production deployments with high memory demands, see [Performance Tuning](admin/performance-tuning.md).
+To find data for production deployments with high memory demands, read [Performance Tuning](admin/performance-tuning.md).
 
 ### Audio Transcription Out of Memory
 
 **Error**: `RuntimeError: CUDA out of memory` or system OOM killer
 
-**Cause**: Whisper model too large for available GPU memory, or processing very long audio files.
+**Cause**: The Whisper model is too large for the available GPU memory. Or, you process very long audio files.
 
 **Solution**:
 
-Audio transcription uses `faster-whisper` (not Ollama). Model size and device are configured via the application config. To reduce memory usage:
+Audio transcription uses `faster-whisper` (not Ollama). The application config sets the model size and device. To decrease memory usage:
 
 ```bash
 # Process files sequentially to limit concurrent memory use
@@ -188,15 +188,15 @@ file-organizer organize /audio /output --sequential
 file-organizer organize /audio /output --text-only
 ```
 
-For GPU memory issues with Ollama models, reduce the model size or restrict GPU access via environment variables like `CUDA_VISIBLE_DEVICES=""` (NVIDIA) or `HIP_VISIBLE_DEVICES=""` (AMD) to force CPU-only inference.
+For GPU memory issues with Ollama models, decrease the model size. Or, restrict GPU access via environment variables like `CUDA_VISIBLE_DEVICES=""` (NVIDIA) or `HIP_VISIBLE_DEVICES=""` (AMD) to force CPU-only inference.
 
 Available Whisper model sizes (smallest to largest):
 
-- `tiny` - ~1 GB VRAM, fastest
-- `base` - ~1 GB VRAM, good balance (default)
-- `small` - ~2 GB VRAM, better accuracy
-- `medium` - ~5 GB VRAM, high accuracy
-- `large-v3` - ~10 GB VRAM, best accuracy
+- `tiny` - approximately 1 GB VRAM, fastest
+- `base` - approximately 1 GB VRAM, good balance (default)
+- `small` - approximately 2 GB VRAM, better accuracy
+- `medium` - approximately 5 GB VRAM, high accuracy
+- `large-v3` - approximately 10 GB VRAM, best accuracy
 
 ## Configuration Issues
 
@@ -204,7 +204,7 @@ Available Whisper model sizes (smallest to largest):
 
 **Error**: `yaml.scanner.ScannerError: mapping values are not allowed here`
 
-**Cause**: Invalid YAML syntax in configuration file.
+**Cause**: You have invalid YAML syntax in the configuration file.
 
 **Solution**:
 
@@ -217,15 +217,15 @@ python -c "import yaml; yaml.safe_load(open('config.yaml'))"
 # - Missing quotes around strings with special characters
 # - Incorrect indentation
 
-# View current config to check for errors
+# View the current config to check for errors
 file-organizer config show
 ```
 
 ### Config File Not Found
 
-**Error**: `FileNotFoundError` for configuration file
+**Error**: `FileNotFoundError` for the configuration file
 
-**Cause**: Configuration file does not exist in the expected location. The config path is determined by `platformdirs` and varies by OS:
+**Cause**: The configuration file does not exist in the expected location. The `platformdirs` library determines the config path. It varies by OS:
 
 - **Linux**: `~/.config/file-organizer/`
 - **macOS**: `~/Library/Application Support/file-organizer/`
@@ -237,7 +237,7 @@ file-organizer config show
 # View the current config path and values
 file-organizer config show
 
-# Open the config file in your editor to create/edit it
+# Open the config file in your editor to create or edit it
 file-organizer config edit
 
 # List all available config keys
@@ -246,24 +246,24 @@ file-organizer config list
 
 ### XDG Config Migration
 
-**Error**: Warning about deprecated config location
+**Error**: Warning about a deprecated config location
 
-**Cause**: Old config files in a legacy location instead of the platform-appropriate directory managed by `platformdirs`.
+**Cause**: Old config files are in a legacy location. They should be in the platform-appropriate directory managed by `platformdirs`.
 
 **Solution**:
 
 ```bash
-# Check where config is currently stored
+# Check where the config is currently stored
 file-organizer config show
 
-# Edit config in the correct location
+# Edit the config in the correct location
 file-organizer config edit
 
 # Or set XDG_CONFIG_HOME explicitly (Linux only)
 export XDG_CONFIG_HOME=~/.config
 ```
 
-See [Path Standardization](config/path-standardization.md) for details on config migration.
+Read [Path Standardization](config/path-standardization.md) for details on config migration.
 
 ## Web UI Issues
 
@@ -310,7 +310,7 @@ redis-cli ping  # Should return "PONG"
 # Option 2: Use Docker
 docker run -d -p 6379:6379 redis:latest
 
-# Option 3: Configure different Redis URL
+# Option 3: Configure a different Redis URL
 export FO_REDIS_URL=redis://localhost:6379/0
 file-organizer serve
 ```
@@ -319,7 +319,7 @@ file-organizer serve
 
 **Error**: `RuntimeError: Application startup failed`
 
-**Cause**: Missing environment variables, database connection issues, or port conflicts.
+**Cause**: You have missing environment variables, database connection issues, or port conflicts.
 
 **Solution**:
 
@@ -333,9 +333,135 @@ pip install "local-file-organizer[web]"
 # Check for port conflicts
 lsof -i :8000
 
-# Use different port if needed
+# Use a different port if needed
 file-organizer serve --port 8001
 ```
+
+## AI Provider Issues
+
+### Provider Not Found / Missing Extra
+
+**Error**: `Unknown provider 'openai'. Registered providers: ['ollama']` or similar
+
+**Cause**: The required provider package is not installed.
+
+**Solution**:
+
+```bash
+# OpenAI, Groq, or LM Studio (OpenAI-compatible)
+pip install "local-file-organizer[cloud]"
+
+# Claude (Anthropic)
+pip install "local-file-organizer[claude]"
+
+# LLaMA.cpp
+pip install "local-file-organizer[llama]"
+
+# MLX (Apple Silicon)
+pip install "local-file-organizer[mlx]"
+```
+
+Read [AI Provider Setup](setup/ai-providers.md) to find full configuration details.
+
+### OpenAI-Compatible API: Auth Warning or 401
+
+**Error**: Warning `FO_PROVIDER=openai but neither FO_OPENAI_API_KEY nor FO_OPENAI_BASE_URL is set` or HTTP 401 from the API
+
+**Cause**: You did not set the API key or base URL in the environment.
+
+**Solution**:
+
+```bash
+# For OpenAI
+export FO_OPENAI_API_KEY=sk-...
+export FO_OPENAI_MODEL=gpt-4o-mini
+
+# For LM Studio (no key needed, custom base URL)
+export FO_PROVIDER=openai
+export FO_OPENAI_BASE_URL=http://localhost:1234/v1
+export FO_OPENAI_MODEL=your-loaded-model
+
+# For Groq
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=gsk_...
+export FO_OPENAI_BASE_URL=https://api.groq.com/openai/v1
+export FO_OPENAI_MODEL=llama-3.3-70b-versatile
+```
+
+The application also accepts the standard `OPENAI_API_KEY` environment variable as a fallback.
+
+### OpenAI-Compatible API: Model Not Found at Custom Endpoint
+
+**Error**: `404 Not Found` or `model not found` when you use `FO_OPENAI_BASE_URL`
+
+**Cause**: The model name set in `FO_OPENAI_MODEL` is not available at the configured endpoint. Or, the endpoint URL is missing the `/v1` path.
+
+**Solution**:
+
+```bash
+# Verify your base URL ends with /v1
+export FO_OPENAI_BASE_URL=http://localhost:1234/v1   # correct
+# export FO_OPENAI_BASE_URL=http://localhost:1234    # missing /v1
+
+# List available models at the endpoint
+curl "${FO_OPENAI_BASE_URL}/models" -H "Authorization: Bearer ${FO_OPENAI_API_KEY:-none}"
+
+# Set the model to one returned by the above command
+export FO_OPENAI_MODEL=actual-model-id-from-list
+```
+
+### Claude / Anthropic: Auth Error or Missing Extra
+
+**Error**: `AuthenticationError` or `401 Unauthorized` from the Anthropic API
+
+**Cause**: `FO_CLAUDE_API_KEY` is not set, or it is expired. Or, the `[claude]` extra is not installed.
+
+**Solution**:
+
+```bash
+# Install the Claude extra
+pip install "local-file-organizer[claude]"
+
+# Set your API key
+export FO_PROVIDER=claude
+export FO_CLAUDE_API_KEY=sk-ant-...
+export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
+```
+
+The application also accepts the standard `ANTHROPIC_API_KEY` environment variable as a fallback.
+
+### Claude / Anthropic: Rate Limit
+
+**Error**: `RateLimitError` or HTTP 429 from the Anthropic API
+
+**Cause**: The API request rate or token quota exceeded on your Anthropic account.
+
+**Solution**: Wait a moment before you retry. When you process large directories, process files sequentially to decrease concurrent API calls:
+
+```bash
+file-organizer organize /input /output --sequential
+```
+
+Check your usage and limits in the [Anthropic console](https://console.anthropic.com/).
+
+### LM Studio: Connection Refused
+
+**Error**: `ConnectionRefusedError` or `Failed to connect to http://localhost:1234`
+
+**Cause**: The LM Studio local server is not running. Or, no model is loaded.
+
+**Solution**:
+
+1. Open LM Studio and navigate to **Local Server** (left sidebar).
+2. Load a model. The server only becomes active when you select a model.
+3. Click **Start Server** and confirm the port matches `FO_OPENAI_BASE_URL`.
+4. Verify the server is responding:
+
+```bash
+curl http://localhost:1234/v1/models
+```
+
+Read [AI Provider Setup — LM Studio](setup/ai-providers.md) to find the full configuration.
 
 ## Audio Transcription Issues
 
@@ -361,23 +487,23 @@ print(f'CUDA: {torch.cuda.is_available()}')
 print(f'MPS: {torch.backends.mps.is_available() if hasattr(torch.backends, \"mps\") else False}')
 "
 
-# CPU mode works but is slower - no special flags needed,
-# the application auto-detects available hardware
+# CPU mode works but is slower - no special flags needed.
+# The application automatically detects available hardware.
 ```
 
 ### Model Download Timeout
 
-**Error**: `TimeoutError` or `ConnectionError` when downloading Whisper model
+**Error**: `TimeoutError` or `ConnectionError` when you download the Whisper model
 
-**Cause**: Network issues or slow connection when downloading large model files.
+**Cause**: Network issues or slow connection when you download large model files.
 
 **Solution**:
 
 ```bash
-# Increase timeout and retry
+# Increase the timeout and retry
 export HF_HUB_DOWNLOAD_TIMEOUT=600
 
-# Pre-download models manually
+# Pre-download the models manually
 python -c "from faster_whisper import WhisperModel; WhisperModel('base')"
 
 # Check disk space (models require several GB)
@@ -388,19 +514,19 @@ df -h
 
 **Error**: `ValueError: Unsupported audio format` or FFmpeg error
 
-**Cause**: Audio file format not supported by FFmpeg or corrupted file.
+**Cause**: FFmpeg does not support the audio file format, or the file is corrupted.
 
 **Solution**:
 
 ```bash
-# Install/update FFmpeg
+# Install or update FFmpeg
 # macOS
 brew install ffmpeg
 
 # Ubuntu/Debian
 sudo apt-get install ffmpeg
 
-# Convert unsupported format to WAV
+# Convert the unsupported format to WAV
 ffmpeg -i input.unknown output.wav
 
 # Supported formats: WAV, MP3, FLAC, OGG, M4A, AAC, WMA
@@ -425,11 +551,11 @@ Use the built-in deduplication tools to identify and manage duplicates:
 # Scan for duplicates
 file-organizer dedupe scan /path/to/files
 
-# View deduplication report
-file-organizer dedupe report
+# View the deduplication report
+file-organizer dedupe report /path/to/files
 
 # Resolve duplicates interactively
-file-organizer dedupe resolve
+file-organizer dedupe resolve /path/to/files
 
 # Preview organization without moving files
 file-organizer organize /input /output --dry-run
@@ -439,14 +565,14 @@ file-organizer organize /input /output --dry-run
 
 **Error**: `OSError: [Errno 63] File name too long` or `OSError: [Errno 36] File name too long` (ENAMETOOLONG)
 
-**Cause**: Generated filename exceeds filesystem limits (typically 255 characters on most systems).
+**Cause**: The generated filename exceeds filesystem limits (typically 255 characters on most systems).
 
 **Solution**:
 
 The application handles filename length internally. If you encounter this error:
 
 ```bash
-# Preview what filenames would be generated
+# Preview what filenames the application will generate
 file-organizer organize /path/to/input /path/to/output --dry-run
 
 # Manually rename problematic source files before organizing
@@ -461,18 +587,18 @@ done
 
 **Error**: `OSError: Invalid argument` or files with strange characters in names
 
-**Cause**: Filename contains characters not allowed by the filesystem (e.g., `:`, `<`, `>`, `|`, `*`, `?` on Windows).
+**Cause**: The filename contains characters that the filesystem does not allow (e.g., `:`, `<`, `>`, `|`, `*`, `?` on Windows).
 
 **Solution**:
 
 The application sanitizes filenames automatically during organization. To preview the results:
 
 ```bash
-# Preview organization to see how filenames will be handled
+# Preview organization to see how the application will handle filenames
 file-organizer organize /path/to/input /path/to/output --dry-run
 ```
 
-If source files have problematic names, rename them before organizing:
+If source files have problematic names, rename them before you organize them:
 
 ```bash
 # Use detox to batch-clean filenames
@@ -491,7 +617,7 @@ detox -r /path/to/files
 
 **Error**: `ValueError: Invalid EXIF data` or "Cannot read image metadata"
 
-**Cause**: Image file has corrupted or non-standard EXIF metadata, or file is not actually an image.
+**Cause**: The image file has corrupted or non-standard EXIF metadata. Or, the file is not actually an image.
 
 **Solution**:
 
@@ -506,7 +632,7 @@ sudo apt-get install libimage-exiftool-perl
 # Fix corrupted EXIF
 exiftool -all= -tagsfromfile @ -all:all -unsafe -icc_profile image.jpg
 
-# Verify file type
+# Verify the file type
 file image.jpg  # Should show "JPEG image data"
 
 # Analyze a specific file for details
@@ -517,18 +643,18 @@ file-organizer analyze image.jpg --verbose
 
 **Error**: `TimeoutError: PDF processing timed out` or process hangs on certain PDFs
 
-**Cause**: PDF file is very large, corrupted, or contains complex embedded content that takes too long to process.
+**Cause**: The PDF file is very large or corrupted. Or, it contains complex embedded content that takes too long to process.
 
 **Solution**:
 
 ```bash
-# Analyze the problematic PDF to see what's happening
+# Analyze the problematic PDF to see what is happening
 file-organizer analyze problematic.pdf --verbose
 
-# Repair corrupt PDF with Ghostscript
+# Repair a corrupt PDF with Ghostscript
 gs -o repaired.pdf -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress input.pdf
 
-# Install parsers group for better PDF support
+# Install the parsers group for better PDF support
 pip install "local-file-organizer[parsers]"
 ```
 
@@ -536,7 +662,7 @@ pip install "local-file-organizer[parsers]"
 
 **Error**: `RuntimeError: ffprobe failed` or "Cannot extract video metadata"
 
-**Cause**: FFmpeg/ffprobe is not installed or the video file is corrupted.
+**Cause**: FFmpeg or ffprobe is not installed. Or, the video file is corrupted.
 
 **Solution**:
 
@@ -565,7 +691,7 @@ file-organizer analyze video.mp4 --verbose
 
 **Error**: `ImportError: Cannot load plugin` or "Plugin not found"
 
-**Cause**: Plugin is not installed, has incompatible version, or has missing dependencies.
+**Cause**: The plugin is not installed, has an incompatible version, or has missing dependencies.
 
 **Solution**:
 
@@ -590,7 +716,7 @@ file-organizer marketplace installed
 
 **Error**: `ValueError: Invalid plugin configuration` or plugin crashes during execution
 
-**Cause**: Plugin configuration file has invalid values or required settings are missing.
+**Cause**: The plugin configuration file has invalid values or required settings are missing.
 
 **Solution**:
 
@@ -612,7 +738,7 @@ file-organizer marketplace install <plugin-name>
 
 **Error**: `RuntimeError: Archive extraction failed` or "Unsupported archive format"
 
-**Cause**: Archive is corrupted, password-protected, or format is not supported.
+**Cause**: The archive is corrupted or password-protected. Or, the format is not supported.
 
 **Solution**:
 
@@ -622,7 +748,7 @@ pip install "local-file-organizer[archive]"
 
 # Supported formats: ZIP, TAR, GZ, BZ2, XZ, 7Z, RAR (read-only)
 
-# Test archive integrity before processing
+# Test archive integrity before you process it
 7z t archive.7z
 unzip -t archive.zip
 tar -tzf archive.tar.gz
@@ -632,7 +758,7 @@ tar -tzf archive.tar.gz
 
 **Error**: `SecurityError: Archive bomb detected` or "Archive extraction aborted"
 
-**Cause**: Archive contains excessive compression ratio (potential zip bomb) as a security measure.
+**Cause**: The archive contains an excessive compression ratio (potential zip bomb) as a security measure.
 
 **Solution**:
 
@@ -643,10 +769,90 @@ tar -tzf archive.tar.gz
 # Extract to a sandboxed location to inspect
 mkdir /tmp/archive-inspect
 cd /tmp/archive-inspect
-unzip -l suspicious.zip  # List only, don't extract
+unzip -l suspicious.zip  # List only, do not extract
 ```
 
-Archive bomb detection is a built-in safety feature. If you trust the archive source, extract it manually before organizing its contents.
+Archive bomb detection is a built-in safety feature. If you trust the archive source, extract it manually before you organize its contents.
+
+## Scientific Format Errors
+
+### HDF5 / NetCDF / MATLAB File Not Processed
+
+**Error**: `ModuleNotFoundError: No module named 'h5py'`, `No module named 'netCDF4'`, or `No module named 'scipy'` when you organize `.h5`, `.nc`, `.mat`, or `.hdf` files
+
+**Cause**: Scientific file format dependencies are not installed.
+
+**Solution**:
+
+```bash
+# Install scientific format support
+pip install "local-file-organizer[scientific]"
+
+# Verify installation
+python -c "import h5py, netCDF4, scipy; print('Scientific extras OK')"
+
+# Then retry analysis
+file-organizer analyze data.h5 --verbose
+```
+
+Supported formats after install: HDF5 (`.h5`, `.hdf`, `.hdf5`), NetCDF (`.nc`, `.nc4`), MATLAB (`.mat`).
+
+### Scientific File Metadata Unreadable
+
+**Error**: `OSError: Unable to open file` or corrupt HDF5/NetCDF error
+
+**Cause**: The file is truncated. Or, an incompatible library version wrote it. Or, it is on a network filesystem with locking issues.
+
+**Solution**:
+
+```bash
+# Check file integrity with h5py
+python -c "import h5py; h5py.File('data.h5', 'r').close(); print('OK')"
+
+# For NetCDF files
+python -c "import netCDF4; netCDF4.Dataset('data.nc').close(); print('OK')"
+
+# Analyze the file directly for details
+file-organizer analyze data.h5 --verbose
+```
+
+If the file is intact but on a network drive, copy it locally before you process it.
+
+## CAD Format Errors
+
+### DXF / DWG File Not Processed
+
+**Error**: `ModuleNotFoundError: No module named 'ezdxf'` when you organize `.dxf` files
+
+**Cause**: CAD file format dependencies are not installed.
+
+**Solution**:
+
+```bash
+# Install CAD format support
+pip install "local-file-organizer[cad]"
+
+# Verify installation
+python -c "import ezdxf; print('CAD extras OK')"
+```
+
+Note: `.dwg` support requires `ezdxf` (read-only). It is limited to DWG versions that ezdxf can parse. If a `.dwg` file fails, try to export it to `.dxf` from your CAD application.
+
+### DXF Parse Error
+
+**Error**: `ezdxf.lldxf.const.DXFStructureError` or "DXF version not supported"
+
+**Cause**: The DXF file uses an older version (pre-R12). Or, software created it that writes non-standard DXF.
+
+**Solution**:
+
+```bash
+# Analyze the file to see the detected DXF version
+file-organizer analyze drawing.dxf --verbose
+
+# Re-export from your CAD application as DXF R2010 or later
+# Most applications: Save As → DXF → select version R2010/R2013/R2018
+```
 
 ## Video Processing Errors
 
@@ -654,7 +860,7 @@ Archive bomb detection is a built-in safety feature. If you trust the archive so
 
 **Error**: `ModuleNotFoundError: No module named 'scenedetect'` or "Scene detection error"
 
-**Cause**: Video processing dependencies not installed or video format not supported.
+**Cause**: Video processing dependencies are not installed. Or, the video format is not supported.
 
 **Solution**:
 
@@ -672,7 +878,7 @@ python -c "import cv2; from scenedetect import detect, ContentDetector; print('O
 
 **Error**: `RuntimeError: Cannot generate thumbnail` or FFmpeg error during thumbnail extraction
 
-**Cause**: Video codec not supported, video is corrupted, or FFmpeg cannot seek to the specified position.
+**Cause**: Video codec is not supported, the video is corrupted, or FFmpeg cannot seek to the specified position.
 
 **Solution**:
 
@@ -695,7 +901,7 @@ file-organizer analyze video.mp4 --verbose
 
 **Error**: `TimeoutError: Video processing exceeded time limit`
 
-**Cause**: Video file is very large or high resolution, causing processing to take too long.
+**Cause**: The video file is very large or high resolution. This causes processing to take too long.
 
 **Solution**:
 
@@ -716,7 +922,7 @@ file-organizer analyze large-video.mp4 --verbose
 
 **Error**: `ModuleNotFoundError: No module named 'imagededup'` or "Deduplication failed"
 
-**Cause**: Image deduplication dependencies not installed.
+**Cause**: Image deduplication dependencies are not installed.
 
 **Solution**:
 
@@ -728,22 +934,22 @@ pip install "local-file-organizer[dedup]"
 file-organizer dedupe scan /path/to/images
 
 # View the deduplication report
-file-organizer dedupe report
+file-organizer dedupe report /path/to/images
 
 # Resolve duplicates interactively
-file-organizer dedupe resolve
+file-organizer dedupe resolve /path/to/images
 ```
 
 ### Image Format Conversion Failed
 
 **Error**: `ValueError: Cannot convert image format` or PIL/Pillow error
 
-**Cause**: Source image format is not supported by Pillow, or image is corrupted.
+**Cause**: Pillow does not support the source image format. Or, the image is corrupted.
 
 **Solution**:
 
 ```bash
-# Update Pillow to latest version
+# Update Pillow to the latest version
 pip install --upgrade Pillow
 
 # Install additional image format support
@@ -752,7 +958,7 @@ pip install pillow-heif  # For HEIC/HEIF support
 # Check supported formats
 python -c "from PIL import Image; print(Image.registered_extensions())"
 
-# Convert using external tool for unsupported formats
+# Convert using an external tool for unsupported formats
 # Install ImageMagick
 brew install imagemagick  # macOS
 sudo apt-get install imagemagick  # Ubuntu/Debian
@@ -765,7 +971,7 @@ convert input.rare output.jpg
 
 **Error**: `OSError: cannot write mode P as JPEG` or "Image optimization failed"
 
-**Cause**: Image has transparency or palette mode that's incompatible with target format.
+**Cause**: The image has transparency or a palette mode that is incompatible with the target format.
 
 **Solution**:
 
@@ -785,9 +991,9 @@ file-organizer analyze input.png --verbose
 
 ### Search Returns No Results
 
-**Error**: No results returned when searching, or "Search index not built"
+**Error**: No results return when you search, or "Search index not built"
 
-**Cause**: Search dependencies not installed or search has not been run against the target directory.
+**Cause**: Search dependencies are not installed. Or, the search has not run against the target directory.
 
 **Solution**:
 
@@ -812,7 +1018,7 @@ file-organizer search "query terms" --json
 
 **Error**: `ValueError` during index building or "Corpus too small"
 
-**Cause**: Not enough documents to build vector index, or documents are empty/too short.
+**Cause**: You do not have enough documents to build a vector index. Or, documents are empty or too short.
 
 **Solution**:
 
@@ -826,9 +1032,59 @@ file-organizer analyze /path/to/files --verbose
 file-organizer search "query" --type all
 ```
 
+## Operation Undo / Rollback Issues
+
+> **Note**: This section covers *file operation undo* — reversing file moves, renames, or copies that `file-organizer organize` and related commands perform. To roll back a Docker deployment to a previous app version, read [Deployment Rollback](admin/troubleshooting.md#deployment-rollback) in the Admin Troubleshooting Guide.
+
+### History Shows No Operations
+
+**Error**: `file-organizer history` returns an empty list
+
+**Cause**: No operations have run yet in this workspace. Or, the history limit hides older entries.
+
+**Solution**:
+
+```bash
+# Check current workspace configuration
+file-organizer config show
+
+# Show more history entries (default is 10)
+file-organizer history --limit 50
+
+# Show all operation types with statistics
+file-organizer history --stats --verbose
+
+# Run an actual organize operation (not a dry run) to create history
+file-organizer organize /input /output
+```
+
+### Undo Fails or Reports "Nothing to Undo"
+
+**Error**: `file-organizer undo` reports "No operations to undo" or similar
+
+**Cause**: The operation history is empty. Or, the last operation was already undone. Or, the files have moved or deleted since the operation was recorded.
+
+**Solution**:
+
+```bash
+# Review the full operation history first
+file-organizer history --limit 20 --verbose
+
+# Preview what undo would do without making changes
+file-organizer undo --dry-run
+
+# Undo the most recent operation
+file-organizer undo
+
+# Undo a specific operation by its numeric ID (shown in history output)
+file-organizer undo --operation-id <id>
+```
+
+If you manually moved files after the organize operation, undo may not find them. In that case, review the history to see the original file paths and restore them manually.
+
 ## Getting Help
 
-If you can't find a solution here:
+If you cannot find a solution here:
 
 1. **Check documentation**:
    - [Getting Started Guide](getting-started.md)
@@ -852,7 +1108,7 @@ If you can't find a solution here:
 3. **Community Support**:
    - [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues) - Report bugs
    - [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions) - Ask questions
-   - Include: OS, Python version, error message, and steps to reproduce
+   - Include your OS, Python version, error message, and steps to reproduce.
 
 4. **Diagnostic Information**:
 

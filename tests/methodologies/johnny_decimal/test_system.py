@@ -82,7 +82,7 @@ class TestJohnnyDecimalSystem:
 
     def test_extract_number_from_path_area(self, system):
         """Test extracting area number from path."""
-        path = Path("/test/10 Finance")
+        path = Path("/") / "test" / "10 Finance"
         number = system._extract_number_from_path(path)
 
         assert number is not None
@@ -91,7 +91,7 @@ class TestJohnnyDecimalSystem:
 
     def test_extract_number_from_path_category(self, system):
         """Test extracting category number from path."""
-        path = Path("/test/10.01 Budgets")
+        path = Path("/") / "test" / "10.01 Budgets"
         number = system._extract_number_from_path(path)
 
         assert number is not None
@@ -101,7 +101,7 @@ class TestJohnnyDecimalSystem:
 
     def test_extract_number_from_path_id(self, system):
         """Test extracting ID number from path."""
-        path = Path("/test/10.01.005 Q1 Budget.xlsx")
+        path = Path("/") / "test" / "10.01.005 Q1 Budget.xlsx"
         number = system._extract_number_from_path(path)
 
         assert number is not None
@@ -112,7 +112,7 @@ class TestJohnnyDecimalSystem:
 
     def test_extract_number_from_path_no_number(self, system):
         """Test extracting from path with no number."""
-        path = Path("/test/random_file.txt")
+        path = Path("/") / "test" / "random_file.txt"
         number = system._extract_number_from_path(path)
 
         assert number is None
@@ -134,7 +134,7 @@ class TestJohnnyDecimalSystem:
     def test_initialize_from_nonexistent_directory(self, system):
         """Test initializing from non-existent directory."""
         with pytest.raises(ValueError, match="Directory does not exist"):
-            system.initialize_from_directory(Path("/nonexistent"))
+            system.initialize_from_directory(Path("/") / "nonexistent")
 
     def test_assign_number_to_file(self, system, temp_dir):
         """Test assigning number to a file."""
@@ -252,11 +252,11 @@ class TestJohnnyDecimalSystem:
         # Register some numbers in area 10
         system.generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file1.txt"),
+            Path("/") / "test" / "file1.txt",
         )
         system.generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=2),
-            Path("/test/file2.txt"),
+            Path("/") / "test" / "file2.txt",
         )
 
         summary = system.get_area_summary(10)
@@ -280,7 +280,7 @@ class TestJohnnyDecimalSystem:
         # Register some numbers
         system.generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file.txt"),
+            Path("/") / "test" / "file.txt",
         )
 
         report = system.get_usage_report()
@@ -341,7 +341,7 @@ class TestJohnnyDecimalSystem:
         """Test clearing all registrations."""
         system.generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file.txt"),
+            Path("/") / "test" / "file.txt",
         )
 
         assert len(system.generator._used_numbers) > 0
@@ -363,7 +363,7 @@ class TestConfiguration:
         # Register some numbers
         system.generator.register_existing_number(
             JohnnyDecimalNumber(area=10, category=1),
-            Path("/test/file.txt"),
+            Path("/") / "test" / "file.txt",
         )
 
         system.save_configuration(config_path)
@@ -417,8 +417,8 @@ class TestConfiguration:
         num1 = JohnnyDecimalNumber(area=10, category=1, name="Test1")
         num2 = JohnnyDecimalNumber(area=10, category=2, name="Test2")
 
-        system.generator.register_existing_number(num1, Path("/test/file1.txt"))
-        system.generator.register_existing_number(num2, Path("/test/file2.txt"))
+        system.generator.register_existing_number(num1, Path("/") / "test" / "file1.txt")
+        system.generator.register_existing_number(num2, Path("/") / "test" / "file2.txt")
 
         # Reserve a number
         reserved = JohnnyDecimalNumber(area=15, category=1)
@@ -438,8 +438,8 @@ class TestConfiguration:
 
     def test_load_nonexistent_file(self, system):
         """Test loading from non-existent file."""
-        with pytest.raises(FileNotFoundError):
-            system.load_configuration(Path("/nonexistent/config.json"))
+        with pytest.raises(FileNotFoundError, match="Configuration file not found"):
+            system.load_configuration(Path("/") / "nonexistent" / "config.json")
 
 
 @pytest.mark.unit

@@ -50,9 +50,9 @@ class TestCopilotEngineInit:
 
     def test_init_with_working_directory(self):
         """Test initialization with custom working directory."""
-        engine = CopilotEngine(working_directory="/tmp/test")
+        engine = CopilotEngine(working_directory="/tmp/test")  # noqa: test-hardcoded-paths
 
-        assert engine._session.working_directory == "/tmp/test"
+        assert engine._session.working_directory == "/tmp/test"  # noqa: test-hardcoded-paths
 
     def test_init_with_text_model(self):
         """Test initialization with custom text model."""
@@ -278,8 +278,8 @@ class TestSessionProperty:
 
     def test_session_working_directory(self):
         """Test session working directory."""
-        engine = CopilotEngine(working_directory="/tmp")
-        assert engine.session.working_directory == "/tmp"
+        engine = CopilotEngine(working_directory="/tmp")  # noqa: test-hardcoded-paths
+        assert engine.session.working_directory == "/tmp"  # noqa: test-hardcoded-paths
 
     def test_session_messages_updated(self):
         """Test that session messages are updated during chat."""

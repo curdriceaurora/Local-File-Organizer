@@ -12,6 +12,11 @@ import re
 import sys
 from pathlib import Path
 
+try:
+    from scripts.ci.guardrails.suppressions import has_targeted_noqa
+except ModuleNotFoundError:  # pragma: no cover - direct script execution path
+    from suppressions import has_targeted_noqa
+
 # Match absolute paths:
 # 1. Unix absolute paths starting with common system roots (to avoid URL paths like /api/v1)
 UNIX_ABS_PATH_PAT = re.compile(r"^/(tmp|usr|var|etc|private|Users|home|bin|opt|var|srv)(/|$)")
@@ -40,8 +45,7 @@ class TestHardcodedPathVisitor(ast.NodeVisitor):
         line_idx = lineno - 1
         if 0 <= line_idx < len(self.lines):
             line_content = self.lines[line_idx]
-            # Support noqa override
-            if "noqa: test-hardcoded-paths" in line_content or "noqa" in line_content:
+            if has_targeted_noqa(line_content, "test-hardcoded-paths"):
                 return
             self.violations.append((lineno, message, line_content.strip()))
 

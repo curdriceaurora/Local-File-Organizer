@@ -117,10 +117,12 @@ def apply(
     tags: Annotated[list[str], typer.Argument(help="Tags to apply.")],
 ) -> None:
     """Apply tags to a file."""
+    from file_organizer.cli.path_validation import validate_regular_file
     from file_organizer.services.auto_tagging import AutoTaggingService
 
     # A.cli: file arg — exists + not-dir.
     resolved = resolve_cli_path(file_path, must_exist=True, must_be_dir=False)
+    validate_regular_file(resolved, param_name="file_path")
 
     try:
         service = AutoTaggingService()

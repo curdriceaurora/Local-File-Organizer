@@ -53,7 +53,7 @@ class TestMetricsSnapshot:
             active_connections=0,
             processing_rate=0.0,
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             snap.cpu_usage = 99.0  # type: ignore[misc]
 
 
@@ -95,7 +95,7 @@ class TestAlert:
             threshold=0.0,
             message="test",
         )
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             alert.level = AlertLevel.CRITICAL  # type: ignore[misc]
 
 

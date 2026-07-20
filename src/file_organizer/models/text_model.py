@@ -14,6 +14,7 @@ except ImportError:
 
 from loguru import logger
 
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 from file_organizer.models._ollama_response import (
     compute_retry_num_predict,
     format_exhaustion_diagnostics,
@@ -319,7 +320,7 @@ class TextModel(BaseModel):
             self.client = None
 
     @staticmethod
-    def get_default_config(model_name: str = "qwen2.5:3b-instruct-q4_K_M") -> ModelConfig:
+    def get_default_config(model_name: str = DEFAULT_TEXT_MODEL) -> ModelConfig:
         """Get default configuration for text model.
 
         Args:

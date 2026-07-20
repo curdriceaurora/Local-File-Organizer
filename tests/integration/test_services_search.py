@@ -331,6 +331,6 @@ class TestEmbeddingCache:
     def test_file_not_found_raises(self, tmp_path: Path) -> None:
         cache = self._make_cache(tmp_path)
         missing = tmp_path / "missing.txt"
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError, match="File not found"):
             cache.get_or_compute(missing, compute=lambda text: np.array([0.0]))
         cache.close()

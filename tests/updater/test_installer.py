@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -70,6 +71,49 @@ class TestInstallerInit:
 
         expected = Path(sys.executable).resolve().parent
         assert inst.install_dir == expected
+
+    @patch("platform.system", return_value="Darwin")
+    def test_pip_upgrade_command_macos(self, _system, monkeypatch):
+        monkeypatch.delenv("PIPX_HOME", raising=False)
+        monkeypatch.delenv("PIPX_BIN_DIR", raising=False)
+        inst = UpdateInstaller()
+        command = inst.pip_upgrade_command()
+        assert command is not None
+        assert command[-4:] == ["-m", "pip", "install", "-U", "local-file-organizer"][-4:]
+
+    @patch("platform.system", return_value="Windows")
+    def test_pip_upgrade_command_pipx(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            sys,
+            "executable",
+            str(tmp_path / "pipx" / "venvs" / "local-file-organizer" / "bin" / "python"),
+        )
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+
+    @patch("platform.system", return_value="Darwin")
+    def test_pip_upgrade_command_ignores_global_pipx_env(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setenv("PIPX_HOME", str(tmp_path / "pipx"))
+        monkeypatch.setenv("PIPX_BIN_DIR", str(tmp_path / "bin"))
+        inst = UpdateInstaller()
+        command = inst.pip_upgrade_command()
+        assert command is not None
+        assert command[0] == sys.executable
+        assert command[1:] == ["-m", "pip", "install", "-U", "local-file-organizer"]
+
+    @patch("platform.system", return_value="Windows")
+    def test_pip_upgrade_command_detects_pipx_virtualenv(self, _system, monkeypatch, tmp_path):
+        monkeypatch.setenv(
+            "VIRTUAL_ENV",
+            str(tmp_path / "pipx" / "venvs" / "local-file-organizer"),
+        )
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+
+    @patch("platform.system", return_value="Linux")
+    def test_pip_upgrade_command_linux_none(self, _system):
+        inst = UpdateInstaller()
+        assert inst.pip_upgrade_command() is None
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +291,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_select_linux_x64(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-linux-x86_64.AppImage",
@@ -262,7 +306,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Darwin")
     @patch("platform.machine", return_value="arm64")
     def test_select_macos_arm(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-macos-universal.tar.gz",
@@ -276,7 +320,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Windows")
     @patch("platform.machine", return_value="AMD64")
     def test_select_windows(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-windows-amd64.exe",
@@ -290,7 +334,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_no_matching_asset(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(["app-macos-arm64.zip"])
         asset = inst.select_asset(release)
         assert asset is None
@@ -298,7 +342,7 @@ class TestSelectAsset:
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
     def test_skips_checksum_files(self, _m, _s):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
                 "app-linux-x86_64.sha256",
@@ -321,7 +365,7 @@ class TestFindChecksum:
 
     @patch.object(UpdateInstaller, "_download_text", return_value="abc123  app.bin")
     def test_dedicated_checksum_file(self, mock_dl):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -336,10 +380,10 @@ class TestFindChecksum:
     @patch.object(
         UpdateInstaller,
         "_download_text",
-        return_value="def456  app.bin\nghi789  other.bin",
+        return_value="def456  ./app.bin\nghi789  other.bin",
     )
     def test_sha256sums_file(self, mock_dl):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -352,7 +396,7 @@ class TestFindChecksum:
         assert result == "def456"
 
     def test_no_checksum_file(self):
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -385,9 +429,9 @@ class TestResolveTarget:
 
     def test_appimage_target(self, tmp_path):
         inst = UpdateInstaller(install_dir=tmp_path)
-        inst._appimage_path = Path("/opt/app.AppImage")
+        inst._appimage_path = Path("/") / "opt" / "app.AppImage"  # noqa: test-hardcoded-paths
         target = inst._resolve_target("my-app")
-        assert target == Path("/opt/app.AppImage")
+        assert target == Path("/") / "opt" / "app.AppImage"  # noqa: test-hardcoded-paths
 
 
 # ---------------------------------------------------------------------------
@@ -418,14 +462,14 @@ class TestDownloadText:
     @patch("file_organizer.updater.installer.httpx")
     def test_success(self, mock_httpx):
         mock_resp = MagicMock()
-        mock_resp.text = "file content"
-        mock_httpx.get.return_value = mock_resp
+        mock_resp.iter_bytes.return_value = [b"file content"]
+        mock_httpx.stream.return_value.__enter__.return_value = mock_resp
         result = UpdateInstaller._download_text("https://example.com/file.txt")
         assert result == "file content"
 
     @patch("file_organizer.updater.installer.httpx")
     def test_failure(self, mock_httpx):
-        mock_httpx.get.side_effect = Exception("error")
+        mock_httpx.stream.side_effect = Exception("error")
         result = UpdateInstaller._download_text("https://example.com/file.txt")
         assert result == ""
 
@@ -613,7 +657,7 @@ class TestFindChecksumEdgeCases:
     )
     def test_sha256sums_no_match(self, mock_dl):
         """find_checksum returns empty string when SHA256SUMS exists but asset not listed."""
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -632,7 +676,7 @@ class TestFindChecksumEdgeCases:
     )
     def test_sha256sums_short_lines(self, mock_dl):
         """find_checksum handles SHA256SUMS lines with < 2 parts."""
-        inst = UpdateInstaller(install_dir=Path("/tmp"))
+        inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = ReleaseInfo(
             tag="v1",
             version="1.0",
@@ -643,3 +687,392 @@ class TestFindChecksumEdgeCases:
         )
         result = inst.find_checksum(release, "app.bin")
         assert result == ""
+
+
+# ---------------------------------------------------------------------------
+# Trust and Signed Manifest Verification
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestTrustAndManifestVerification:
+    """Test signed release manifest verification and trust logic."""
+
+    def test_verify_manifest_success(self, monkeypatch):
+        import base64
+        import json
+
+        from Cryptodome.PublicKey import ECC
+        from Cryptodome.Signature import eddsa
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        manifest = {
+            "schema_version": 1,
+            "repo": "owner/repo",
+            "tag": "v1.0.0",
+            "version": "1.0.0",
+            "published_at": "2026-07-17T12:00:00Z",
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
+        }
+        canonical_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        signer = eddsa.new(test_key, "rfc8032")
+        sig_bytes = signer.sign(canonical_bytes)
+        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+
+        result = trust.verify_release_manifest(
+            json.dumps(manifest),
+            sig_b64,
+            expected_repo="owner/repo",
+            expected_tag="v1.0.0",
+            expected_version="1.0.0",
+        )
+        assert result is not None
+        assert result["schema_version"] == 1
+        assert result["assets"][0]["name"] == "asset1.bin"
+
+    def test_verify_manifest_failures(self, monkeypatch):
+        import base64
+        import json
+
+        from Cryptodome.PublicKey import ECC
+        from Cryptodome.Signature import eddsa
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        manifest = {
+            "schema_version": 1,
+            "repo": "owner/repo",
+            "tag": "v1.0.0",
+            "version": "1.0.0",
+            "published_at": "2026-07-17T12:00:00Z",
+            "assets": [],
+        }
+        canonical_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        signer = eddsa.new(test_key, "rfc8032")
+        sig_b64 = base64.b64encode(signer.sign(canonical_bytes)).decode("utf-8")
+
+        # Bad signature
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), "bad_sig", "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+        # Repo mismatch
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), sig_b64, "other/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+        # Tag mismatch
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), sig_b64, "owner/repo", "v2.0.0", "1.0.0"
+            )
+            is None
+        )
+
+        # Version mismatch
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), sig_b64, "owner/repo", "v1.0.0", "2.0.0"
+            )
+            is None
+        )
+
+        # Schema version mismatch
+        manifest_bad_schema = manifest.copy()
+        manifest_bad_schema["schema_version"] = 2
+        canonical_bytes_bad = json.dumps(
+            manifest_bad_schema, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        sig_bad_schema = base64.b64encode(
+            eddsa.new(test_key, "rfc8032").sign(canonical_bytes_bad)
+        ).decode("utf-8")
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest_bad_schema), sig_bad_schema, "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+    def test_verify_release_manifest_rejects_invalid_manifest_json(self):
+        from file_organizer.updater import trust
+
+        with patch.object(trust, "verify_manifest_signature", return_value=True):
+            result = trust.verify_release_manifest(
+                "{not-json",
+                "signature",
+                expected_repo="owner/repo",
+                expected_tag="v1.0.0",
+                expected_version="1.0.0",
+            )
+
+        assert result is None
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_missing_manifest_asset(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
+        mock_download.assert_not_called()
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_rejects_empty_download(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="url1"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+        mock_download.side_effect = ["{}", ""]
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_helper(self, mock_download, monkeypatch):
+        import base64
+        import json
+
+        from Cryptodome.PublicKey import ECC
+        from Cryptodome.Signature import eddsa
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        manifest = {
+            "schema_version": 1,
+            "repo": "owner/repo",
+            "tag": "v1.0.0",
+            "version": "1.0.0",
+            "published_at": "2026-07-17T12:00:00Z",
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
+        }
+        canonical_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        sig_b64 = base64.b64encode(eddsa.new(test_key, "rfc8032").sign(canonical_bytes)).decode(
+            "utf-8"
+        )
+
+        # Mock download returns manifest and then signature
+        mock_download.side_effect = [json.dumps(manifest), sig_b64]
+
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="url1"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+
+        res = inst.fetch_and_verify_manifest(release, "owner/repo")
+        assert res is not None
+        assert res["repo"] == "owner/repo"
+
+    @staticmethod
+    def _sign_payload(test_key, payload):
+        """Sign an arbitrary JSON payload the same way sign_release.py does."""
+        import base64
+        import json
+
+        from Cryptodome.Signature import eddsa
+
+        canonical_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return base64.b64encode(eddsa.new(test_key, "rfc8032").sign(canonical_bytes)).decode(
+            "utf-8"
+        )
+
+    def test_verify_manifest_rejects_non_object_payload(self, monkeypatch):
+        """A validly signed JSON list must fail closed, not crash on .get()."""
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        payload = ["not", "a", "manifest"]
+        sig_b64 = self._sign_payload(test_key, payload)
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(payload), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+    def test_verify_manifest_rejects_malformed_assets(self, monkeypatch):
+        """Signed manifests with anomalous asset entries must fail closed."""
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        good_asset = {"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}
+        bad_asset_lists = [
+            [],  # empty
+            ["not-an-object"],  # entry is not a dict
+            [{"size": 100, "sha256": "a1" * 32}],  # missing name
+            [good_asset, dict(good_asset)],  # duplicate names
+            [{**good_asset, "size": True}],  # bool masquerading as int
+            [{**good_asset, "size": -1}],  # negative size
+            [{**good_asset, "size": 11 * 1024**3}],  # absurdly large size
+            [{**good_asset, "sha256": "abc123hash"}],  # not a 64-char digest
+            [{**good_asset, "sha256": "Z" * 64}],  # non-hex characters
+            [{**good_asset, "sha256": 12345}],  # digest is not a string
+        ]
+
+        for assets in bad_asset_lists:
+            manifest = {
+                "schema_version": 1,
+                "repo": "owner/repo",
+                "tag": "v1.0.0",
+                "version": "1.0.0",
+                "published_at": "2026-07-17T12:00:00Z",
+                "assets": assets,
+            }
+            sig_b64 = self._sign_payload(test_key, manifest)
+            assert (
+                trust.verify_release_manifest(
+                    json.dumps(manifest), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+                )
+                is None
+            ), f"manifest with assets={assets!r} should have been rejected"
+
+    def test_verify_manifest_rejects_missing_published_at(self, monkeypatch):
+        import json
+
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        manifest = {
+            "schema_version": 1,
+            "repo": "owner/repo",
+            "tag": "v1.0.0",
+            "version": "1.0.0",
+            "assets": [{"name": "asset1.bin", "size": 100, "sha256": "a1" * 32}],
+        }
+        sig_b64 = self._sign_payload(test_key, manifest)
+        assert (
+            trust.verify_release_manifest(
+                json.dumps(manifest), sig_b64, "owner/repo", "v1.0.0", "1.0.0"
+            )
+            is None
+        )
+
+    def test_signature_requires_strict_base64(self, monkeypatch):
+        """Non-base64 signature content must be rejected, never reinterpreted."""
+        from Cryptodome.PublicKey import ECC
+
+        from file_organizer.updater import trust
+
+        test_key = ECC.generate(curve="ed25519")
+        monkeypatch.setattr(
+            trust, "PINNED_PUBLIC_KEY", test_key.public_key().export_key(format="PEM")
+        )
+
+        assert trust.verify_manifest_signature("{}", "!!not-valid-base64!!") is False
+
+    @patch.object(UpdateInstaller, "_download_text")
+    def test_fetch_and_verify_manifest_rejects_duplicate_assets(self, mock_download):
+        inst = UpdateInstaller()
+        release = ReleaseInfo(
+            tag="v1.0.0",
+            version="1.0.0",
+            assets=[
+                AssetInfo(name="file-organizer-release-manifest.json", url="url1"),
+                AssetInfo(name="File-Organizer-Release-Manifest.JSON", url="url1b"),
+                AssetInfo(name="file-organizer-release-manifest.json.sig", url="url2"),
+            ],
+        )
+
+        assert inst.fetch_and_verify_manifest(release, "owner/repo") is None
+        mock_download.assert_not_called()
+
+    def test_download_text_enforces_size_cap(self):
+        from file_organizer.updater import installer as installer_mod
+
+        oversized = b"x" * (installer_mod._MAX_TEXT_DOWNLOAD_BYTES + 1)
+        mock_response = MagicMock()
+        mock_response.iter_bytes.return_value = [oversized]
+
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response
+            assert UpdateInstaller._download_text("https://example.com/big.txt") == ""
+
+        mock_response_ok = MagicMock()
+        mock_response_ok.iter_bytes.return_value = [b"small content"]
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response_ok
+            assert UpdateInstaller._download_text("https://example.com/ok.txt") == "small content"
+
+    def test_download_asset_with_size_check(self, tmp_path):
+        inst = UpdateInstaller(install_dir=tmp_path)
+        asset = AssetInfo(name="test.bin", url="https://example.com/test.bin", size=10)
+
+        # Mock httpx.stream to return 15 bytes instead of 10
+        mock_response = MagicMock()
+        mock_response.iter_bytes.return_value = [b"123456789012345"]
+
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response
+            res = inst.download_asset(asset, expected_size=10)
+            assert res is None  # Fails due to size mismatch (too large)
+
+        # Mock httpx.stream to return 5 bytes instead of 10
+        mock_response_short = MagicMock()
+        mock_response_short.iter_bytes.return_value = [b"12345"]
+        with patch("httpx.stream") as mock_stream:
+            mock_stream.return_value.__enter__.return_value = mock_response_short
+            res = inst.download_asset(asset, expected_size=10)
+            assert res is None  # Fails due to size mismatch (too small)

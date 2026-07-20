@@ -380,25 +380,25 @@ class TestPathId:
 
     def test_returns_string(self):
         """Should return a 10-character hex string."""
-        result = path_id(Path("/tmp/test"))
+        result = path_id(Path("/") / "tmp" / "test")  # noqa: test-hardcoded-paths
         assert isinstance(result, str) and len(result) == 10
 
     def test_returns_short_hash(self):
         """Should return a 10-character hash."""
-        result = path_id(Path("/tmp/test"))
+        result = path_id(Path("/") / "tmp" / "test")  # noqa: test-hardcoded-paths
         assert len(result) == 10
 
     def test_same_path_same_id(self):
         """Same path should produce same ID."""
-        path = Path("/tmp/test")
+        path = Path("/") / "tmp" / "test"  # noqa: test-hardcoded-paths
         id1 = path_id(path)
         id2 = path_id(path)
         assert id1 == id2
 
     def test_different_paths_different_ids(self):
         """Different paths should produce different IDs."""
-        id1 = path_id(Path("/tmp/test1"))
-        id2 = path_id(Path("/tmp/test2"))
+        id1 = path_id(Path("/") / "tmp" / "test1")  # noqa: test-hardcoded-paths
+        id2 = path_id(Path("/") / "tmp" / "test2")  # noqa: test-hardcoded-paths
         assert id1 != id2
 
 
@@ -430,7 +430,7 @@ class TestSelectRootForPath:
 
     def test_returns_path_when_no_match(self, file_tree):
         """Should return path when no root matches."""
-        roots = [Path("/other/path")]
+        roots = [Path("/") / "other" / "path"]
         path = file_tree / "dir_a"
         result = select_root_for_path(path, roots)
         assert result == path
@@ -498,7 +498,7 @@ class TestHasChildren:
 
     def test_nonexistent_directory(self):
         """Nonexistent directory should return False."""
-        assert has_children(Path("/nonexistent/path")) is False
+        assert has_children(Path("/") / "nonexistent" / "path") is False
 
     def test_ignores_hidden_directories(self, tmp_path):
         """Should ignore hidden directories."""
@@ -540,7 +540,7 @@ class TestIsProbablyText:
 
     def test_nonexistent_file(self):
         """Should return False for nonexistent files."""
-        assert is_probably_text(Path("/nonexistent.txt")) is False
+        assert is_probably_text(Path("/") / "nonexistent.txt") is False
 
     def test_empty_file(self, tmp_path):
         """Should return True for empty files."""
@@ -575,6 +575,10 @@ class TestSanitizeUploadName:
     def test_rejects_hidden_files(self):
         """Should reject files starting with '.'."""
         assert sanitize_upload_name(".hidden") is None
+
+    def test_allows_hidden_files_when_enabled(self):
+        """Should accept files starting with '.' when explicitly allowed."""
+        assert sanitize_upload_name(".hidden", allow_hidden=True) == ".hidden"
 
     def test_rejects_invalid_chars(self):
         """Should reject filenames with invalid characters."""

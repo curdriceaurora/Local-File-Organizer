@@ -33,7 +33,7 @@
                 id="settings-text-model"
                 name="text_model"
                 type="text"
-                value="{{ ws.text_model }}"
+                value="{{ app_config.models.text_model }}"
                 placeholder="qwen2.5:3b-instruct-q4_K_M"
             >
             <p class="form-hint">Ollama model identifier for text analysis and generation.</p>
@@ -45,7 +45,7 @@
                 id="settings-vision-model"
                 name="vision_model"
                 type="text"
-                value="{{ ws.vision_model }}"
+                value="{{ app_config.models.vision_model }}"
                 placeholder="qwen2.5vl:7b-q4_K_M"
             >
             <p class="form-hint">Ollama model identifier for image and video analysis.</p>

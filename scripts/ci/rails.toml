@@ -31,6 +31,12 @@ mode = "enforce"
 description = "Ensures all CLI command path arguments are validated before use (WP-6.1)."
 
 [[rail]]
+name = "cli-file-kind-validation"
+command = ["python", "scripts/ci/guardrails/check_cli_file_kind_validation.py"]
+mode = "advisory"
+description = "Ensures file/directory kind is validated at CLI boundaries after resolve_cli_path (WP-6.1)."
+
+[[rail]]
 name = "defusedxml-fallback"
 command = ["python", "scripts/ci/guardrails/check_defusedxml_fallback.py"]
 mode = "enforce"
@@ -39,19 +45,19 @@ description = "Enforces using defusedxml instead of standard library xml (WP-6.1
 [[rail]]
 name = "test-hardcoded-paths"
 command = ["python", "scripts/ci/guardrails/check_test_hardcoded_paths.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags hardcoded absolute system paths in tests, promoting tmp_path instead (WP-6.2)."
 
 [[rail]]
 name = "test-separator-paths"
 command = ["python", "scripts/ci/guardrails/check_test_separator_paths.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags hardcoded path separators in Path() calls in tests, promoting the / operator (WP-6.2)."
 
 [[rail]]
 name = "pytest-raises-hygiene"
 command = ["python", "scripts/ci/guardrails/check_pytest_raises_hygiene.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Ensures pytest.raises on generic/built-in exceptions specifies a match regex (WP-6.2)."
 
 [[rail]]
@@ -77,3 +83,15 @@ name = "xdist-loadgroup"
 command = ["python", "scripts/ci/guardrails/check_xdist_loadgroup.py"]
 mode = "enforce"
 description = "Reminds to mark tests sharing xdist-wide temp state with xdist_group (WP-6.2)."
+
+[[rail]]
+name = "subprocess-returncode"
+command = ["python", "scripts/ci/guardrails/check_subprocess_returncode.py"]
+mode = "advisory"
+description = "Flags subprocess.run() calls where returncode is not checked and check=True is absent (issue #1408)."
+
+[[rail]]
+name = "test-environment-leakage"
+command = ["python", "scripts/ci/guardrails/check_test_environment_leakage.py"]
+mode = "enforce"
+description = "Flags tests that mutate class/global state or sys.modules without scoped restoration (issue #1414)."

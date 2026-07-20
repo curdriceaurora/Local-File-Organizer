@@ -19,7 +19,8 @@ from file_organizer.tui.file_browser import (
     _format_size,
 )
 
-pytestmark = pytest.mark.unit
+# ci: these tests carry the diff-coverage for file_browser.py in the PR suite.
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +227,10 @@ class TestFileMetadataPanel:
 class TestFilterInput:
     """Test FilterInput toggle and submit behavior."""
 
+    def test_not_focusable_while_hidden(self) -> None:
+        fi = FilterInput()
+        assert fi.can_focus is False
+
     def test_toggle_visibility_shows_and_focuses(self) -> None:
         fi = FilterInput()
         fi.toggle_class = MagicMock()
@@ -234,17 +239,36 @@ class TestFilterInput:
         fi.toggle_visibility()
         fi.toggle_class.assert_called_with("-visible")
         fi.focus.assert_called_once()
+        assert fi.can_focus is True
 
-    def test_toggle_visibility_hides_and_clears(self) -> None:
+    def test_toggle_visibility_hides_clears_and_drops_focusability(self) -> None:
         fi = FilterInput()
         fi.toggle_class = MagicMock()
         fi.has_class = MagicMock(return_value=False)
+        fi.can_focus = True
         fi.toggle_visibility()
         assert fi.value == ""
+        assert fi.can_focus is False
 
-    def test_submitted_message_has_value(self) -> None:
-        msg = FilterInput.Submitted("test value")
+    def test_filter_applied_message_has_value(self) -> None:
+        msg = FilterInput.FilterApplied("test value")
         assert msg.value == "test value"
+
+    def test_on_input_submitted_posts_filter_and_hides(self) -> None:
+        fi = FilterInput()
+        fi.post_message = MagicMock()
+        fi.remove_class = MagicMock()
+        fi.can_focus = True
+        event = MagicMock()
+        event.value = ".py"
+        fi.on_input_submitted(event)
+        event.stop.assert_called_once()
+        posted = fi.post_message.call_args[0][0]
+        assert isinstance(posted, FilterInput.FilterApplied)
+        assert posted.value == ".py"
+        fi.remove_class.assert_called_with("-visible")
+        assert fi.value == ""
+        assert fi.can_focus is False
 
 
 # ---------------------------------------------------------------------------
@@ -261,19 +285,47 @@ class TestFileBrowserView:
 
     def test_custom_path_init(self) -> None:
         view = FileBrowserView(path="tmp/test")
-        assert view._root_path == Path("tmp/test")
+        assert view._root_path == Path("tmp") / "test"
 
     def test_file_highlighted_message(self) -> None:
-        msg = FileBrowserView.FileHighlighted(Path("tmp/file.txt"))
-        assert msg.path == Path("tmp/file.txt")
+        msg = FileBrowserView.FileHighlighted(Path("tmp") / "file.txt")
+        assert msg.path == Path("tmp") / "file.txt"
 
     def test_bindings(self) -> None:
         keys = [b.key for b in FileBrowserView.BINDINGS]
         assert "slash" in keys
 
-    def test_action_toggle_filter(self) -> None:
+    def test_action_toggle_filter_shown_keeps_input_focus(self) -> None:
         view = FileBrowserView()
         mock_fi = MagicMock()
+        mock_fi.has_class.return_value = True
         view.query_one = MagicMock(return_value=mock_fi)
         view.action_toggle_filter()
         mock_fi.toggle_visibility.assert_called_once()
+        view.query_one.assert_called_once()  # tree not queried while visible
+
+    def test_action_toggle_filter_hidden_refocuses_tree(self) -> None:
+        view = FileBrowserView()
+        mock_fi = MagicMock()
+        mock_fi.has_class.return_value = False
+        mock_tree = MagicMock()
+        view.query_one = MagicMock(side_effect=[mock_fi, mock_tree])
+        view.action_toggle_filter()
+        mock_fi.toggle_visibility.assert_called_once()
+        mock_tree.focus.assert_called_once()
+
+    def test_on_filter_applied_sets_filter_and_refocuses_tree(self) -> None:
+        view = FileBrowserView()
+        mock_tree = MagicMock()
+        view.query_one = MagicMock(return_value=mock_tree)
+        view._on_filter_applied(FilterInput.FilterApplied(" .py, txt "))
+        mock_tree.set_extension_filter.assert_called_once_with({".py", "txt"})
+        mock_tree.focus.assert_called_once()
+
+    def test_on_filter_applied_empty_clears_filter(self) -> None:
+        view = FileBrowserView()
+        mock_tree = MagicMock()
+        view.query_one = MagicMock(return_value=mock_tree)
+        view._on_filter_applied(FilterInput.FilterApplied("   "))
+        mock_tree.set_extension_filter.assert_called_once_with(set())
+        mock_tree.focus.assert_called_once()

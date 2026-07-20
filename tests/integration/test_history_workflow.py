@@ -65,14 +65,14 @@ def populated_history(history: OperationHistory, tmp_path: Path) -> OperationHis
     # Rename (file does not need to exist for non-hashing path)
     history.log_operation(
         OperationType.RENAME,
-        source_path=Path("/virtual/old_name.txt"),
-        destination_path=Path("/virtual/new_name.txt"),
+        source_path=Path("/") / "virtual" / "old_name.txt",
+        destination_path=Path("/") / "virtual" / "new_name.txt",
     )
 
     # Failed operation
     history.log_operation(
         OperationType.DELETE,
-        source_path=Path("/virtual/missing.txt"),
+        source_path=Path("/") / "virtual" / "missing.txt",
         status=OperationStatus.FAILED,
         error_message="File not found",
     )
@@ -122,7 +122,7 @@ class TestOperationHistoryTracker:
     def test_log_failed_operation(self, history: OperationHistory) -> None:
         history.log_operation(
             OperationType.DELETE,
-            source_path=Path("/no/such/file.txt"),
+            source_path=Path("/") / "no" / "such" / "file.txt",
             status=OperationStatus.FAILED,
             error_message="Permission denied",
         )
@@ -151,7 +151,7 @@ class TestOperationHistoryTracker:
         assert len(ops) == 2
 
     def test_date_range_filter(self, history: OperationHistory) -> None:
-        history.log_operation(OperationType.CREATE, source_path=Path("/virtual/x.txt"))
+        history.log_operation(OperationType.CREATE, source_path=Path("/") / "virtual" / "x.txt")
         before = datetime.now(UTC) + timedelta(seconds=1)
         ops = history.get_operations(end_date=before)
         assert len(ops) == 1
@@ -170,8 +170,8 @@ class TestOperationHistoryTracker:
 
         history.log_operation(
             OperationType.MOVE,
-            source_path=Path("/virtual/src.txt"),
-            destination_path=Path("/virtual/dst.txt"),
+            source_path=Path("/") / "virtual" / "src.txt",
+            destination_path=Path("/") / "virtual" / "dst.txt",
             transaction_id=txn_id,
         )
 
@@ -188,8 +188,8 @@ class TestOperationHistoryTracker:
         txn_id = history.start_transaction()
         history.log_operation(
             OperationType.MOVE,
-            source_path=Path("/virtual/src.txt"),
-            destination_path=Path("/virtual/dst.txt"),
+            source_path=Path("/") / "virtual" / "src.txt",
+            destination_path=Path("/") / "virtual" / "dst.txt",
             transaction_id=txn_id,
         )
 
@@ -217,8 +217,8 @@ class TestOperationTransaction:
 
     def test_auto_commit_on_success(self, history: OperationHistory) -> None:
         with OperationTransaction(history, metadata={"note": "batch"}) as txn:
-            txn.log_move(Path("/src/a.txt"), Path("/dst/a.txt"))
-            txn.log_rename(Path("/src/b.txt"), Path("/src/b_new.txt"))
+            txn.log_move(Path("/") / "src" / "a.txt", Path("/") / "dst" / "a.txt")
+            txn.log_rename(Path("/") / "src" / "b.txt", Path("/") / "src" / "b_new.txt")
             txn_id = txn.get_transaction_id()
 
         assert txn._committed is True
@@ -234,7 +234,7 @@ class TestOperationTransaction:
         def _log_and_fail() -> None:
             nonlocal txn_id, txn
             with OperationTransaction(history) as txn:
-                txn.log_move(Path("/src/a.txt"), Path("/dst/a.txt"))
+                txn.log_move(Path("/") / "src" / "a.txt", Path("/") / "dst" / "a.txt")
                 txn_id = txn.get_transaction_id()
                 raise ValueError("test error")
 
@@ -249,16 +249,16 @@ class TestOperationTransaction:
 
     def test_log_all_operation_types(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn:
-            txn.log_move(Path("/src/move.txt"), Path("/dst/move.txt"))
-            txn.log_rename(Path("/src/old.txt"), Path("/src/new.txt"))
-            txn.log_delete(Path("/src/del.txt"))
-            txn.log_copy(Path("/src/orig.txt"), Path("/dst/copy.txt"))
-            txn.log_create(Path("/src/new.txt"))
+            txn.log_move(Path("/") / "src" / "move.txt", Path("/") / "dst" / "move.txt")
+            txn.log_rename(Path("/") / "src" / "old.txt", Path("/") / "src" / "new.txt")
+            txn.log_delete(Path("/") / "src" / "del.txt")
+            txn.log_copy(Path("/") / "src" / "orig.txt", Path("/") / "dst" / "copy.txt")
+            txn.log_create(Path("/") / "src" / "new.txt")
             txn.log_failed_operation(
                 OperationType.MOVE,
-                Path("/src/fail.txt"),
+                Path("/") / "src" / "fail.txt",
                 error_message="Disk full",
-                destination_path=Path("/dst/fail.txt"),
+                destination_path=Path("/") / "dst" / "fail.txt",
             )
 
         ops = history.get_operations()
@@ -275,7 +275,7 @@ class TestOperationTransaction:
 
     def test_explicit_commit_before_exit(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn:
-            txn.log_move(Path("/s.txt"), Path("/d.txt"))
+            txn.log_move(Path("/") / "s.txt", Path("/") / "d.txt")
             txn.commit()
             assert txn._committed is True
         # __exit__ should not double-commit
@@ -283,7 +283,7 @@ class TestOperationTransaction:
 
     def test_explicit_rollback_before_exit(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn:
-            txn.log_move(Path("/s.txt"), Path("/d.txt"))
+            txn.log_move(Path("/") / "s.txt", Path("/") / "d.txt")
             txn.rollback()
             assert txn._rolled_back is True
         assert txn._rolled_back is True
@@ -291,11 +291,11 @@ class TestOperationTransaction:
     def test_log_operation_outside_context_raises(self, history: OperationHistory) -> None:
         txn = OperationTransaction(history)
         with pytest.raises(RuntimeError, match="outside of transaction context"):
-            txn.log_move(Path("/s.txt"), Path("/d.txt"))
+            txn.log_move(Path("/") / "s.txt", Path("/") / "d.txt")
 
     def test_commit_idempotent(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn:
-            txn.log_move(Path("/s.txt"), Path("/d.txt"))
+            txn.log_move(Path("/") / "s.txt", Path("/") / "d.txt")
             first = txn.commit()
             second = txn.commit()  # should return False, not raise
         assert first is True
@@ -303,14 +303,14 @@ class TestOperationTransaction:
 
     def test_cannot_rollback_committed(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn:
-            txn.log_move(Path("/s.txt"), Path("/d.txt"))
+            txn.log_move(Path("/") / "s.txt", Path("/") / "d.txt")
             txn.commit()
             result = txn.rollback()
         assert result is False
 
     def test_nested_transactions_independent(self, history: OperationHistory) -> None:
         with OperationTransaction(history) as txn1:
-            txn1.log_move(Path("/s1.txt"), Path("/d1.txt"))
+            txn1.log_move(Path("/") / "s1.txt", Path("/") / "d1.txt")
 
         txn1_id = txn1.get_transaction_id()
 
@@ -319,10 +319,10 @@ class TestOperationTransaction:
         def _log_and_abort() -> None:
             nonlocal txn2
             with OperationTransaction(history) as txn2:
-                txn2.log_move(Path("/s2.txt"), Path("/d2.txt"))
+                txn2.log_move(Path("/") / "s2.txt", Path("/") / "d2.txt")
                 raise RuntimeError("abort txn2")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="abort txn2"):
             _log_and_abort()
 
         txn2_id = txn2.get_transaction_id()
@@ -380,7 +380,7 @@ class TestHistoryCleanup:
     ) -> None:
         self._add_old_ops(history, 5, days_old=100)
         # Add recent op that should survive
-        history.log_operation(OperationType.CREATE, Path("/recent.txt"))
+        history.log_operation(OperationType.CREATE, Path("/") / "recent.txt")
 
         deleted = cleanup.cleanup_old_operations(max_age_days=30)
         assert deleted == 5
@@ -392,7 +392,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(10):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=3)
         remaining = history.get_operations()
@@ -406,7 +406,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=10)
         assert deleted == 0
@@ -416,7 +416,7 @@ class TestHistoryCleanup:
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/file_{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"file_{i}.txt")
 
         deleted = cleanup.cleanup_by_count(max_operations=0)
         assert deleted == 5
@@ -454,7 +454,7 @@ class TestHistoryCleanup:
         history.db.get_connection().commit()
 
         # Add a recent completed op that must survive
-        history.log_operation(OperationType.CREATE, Path("/ok.txt"))
+        history.log_operation(OperationType.CREATE, Path("/") / "ok.txt")
 
         deleted = cleanup.cleanup_failed_operations(older_than_days=1)
         assert deleted == 1
@@ -468,8 +468,8 @@ class TestHistoryCleanup:
         txn_id = history.start_transaction()
         history.log_operation(
             OperationType.MOVE,
-            Path("/s.txt"),
-            Path("/d.txt"),
+            Path("/") / "s.txt",
+            Path("/") / "d.txt",
             transaction_id=txn_id,
         )
         history.rollback_transaction(txn_id)
@@ -490,7 +490,7 @@ class TestHistoryCleanup:
         cleanup = HistoryCleanup(history.db, config)
 
         for i in range(3):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
 
         assert cleanup.should_cleanup() is True
 
@@ -498,13 +498,13 @@ class TestHistoryCleanup:
         config = HistoryCleanupConfig(max_operations=1, auto_cleanup_enabled=False)
         cleanup = HistoryCleanup(history.db, config)
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
         assert cleanup.should_cleanup() is False
 
     def test_clear_all_without_confirm_is_noop(
         self, history: OperationHistory, cleanup: HistoryCleanup
     ) -> None:
-        history.log_operation(OperationType.CREATE, Path("/f.txt"))
+        history.log_operation(OperationType.CREATE, Path("/") / "f.txt")
         result = cleanup.clear_all(confirm=False)
         assert result is False
         assert len(history.get_operations()) == 1
@@ -514,7 +514,7 @@ class TestHistoryCleanup:
     ) -> None:
         txn_id = history.start_transaction()
         history.log_operation(
-            OperationType.MOVE, Path("/s.txt"), Path("/d.txt"), transaction_id=txn_id
+            OperationType.MOVE, Path("/") / "s.txt", Path("/") / "d.txt", transaction_id=txn_id
         )
         history.commit_transaction(txn_id)
 
@@ -523,10 +523,10 @@ class TestHistoryCleanup:
         assert len(history.get_operations()) == 0
 
     def test_get_statistics(self, history: OperationHistory, cleanup: HistoryCleanup) -> None:
-        history.log_operation(OperationType.MOVE, Path("/s.txt"), Path("/d.txt"))
+        history.log_operation(OperationType.MOVE, Path("/") / "s.txt", Path("/") / "d.txt")
         history.log_operation(
             OperationType.DELETE,
-            Path("/x.txt"),
+            Path("/") / "x.txt",
             status=OperationStatus.FAILED,
         )
 
@@ -547,7 +547,7 @@ class TestHistoryCleanup:
         cleanup = HistoryCleanup(history.db, config)
 
         for i in range(5):
-            history.log_operation(OperationType.CREATE, Path(f"/f{i}.txt"))
+            history.log_operation(OperationType.CREATE, Path("/") / f"f{i}.txt")
 
         stats = cleanup.auto_cleanup()
         assert stats["deleted_operations"] > 0
@@ -615,20 +615,20 @@ class TestHistoryExporter:
         txn_id = history.start_transaction({"note": "export_test"})
         history.log_operation(
             OperationType.MOVE,
-            source_path=Path("/src/a.txt"),
-            destination_path=Path("/dst/a.txt"),
+            source_path=Path("/") / "src" / "a.txt",
+            destination_path=Path("/") / "dst" / "a.txt",
             transaction_id=txn_id,
         )
         history.log_operation(
             OperationType.RENAME,
-            source_path=Path("/src/b.txt"),
-            destination_path=Path("/src/b_new.txt"),
+            source_path=Path("/") / "src" / "b.txt",
+            destination_path=Path("/") / "src" / "b_new.txt",
             transaction_id=txn_id,
         )
         history.commit_transaction(txn_id)
         history.log_operation(
             OperationType.DELETE,
-            source_path=Path("/trash/c.txt"),
+            source_path=Path("/") / "trash" / "c.txt",
             status=OperationStatus.FAILED,
             error_message="No permission",
         )

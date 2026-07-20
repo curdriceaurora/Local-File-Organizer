@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -23,7 +23,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
     settings = ApiSettings(
         environment="test",
         auth_enabled=False,
-        allowed_paths=["/tmp"],
+        allowed_paths=["/tmp"],  # noqa: test-hardcoded-paths
         auth_jwt_secret="test-secret",
         rate_limit_enabled=False,
     )

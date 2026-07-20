@@ -50,13 +50,16 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | enforced |
 | `atomic-write` | Raw file-write operations bypassing `atomic_write()` | enforced |
 | `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | enforced |
+| `cli-file-kind-validation` | A CLI path resolved with `must_be_dir=False` without a subsequent file/directory kind check | advisory |
 | `defusedxml-fallback` | Importing from stdlib `xml` instead of `defusedxml` | enforced |
-| `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | advisory |
-| `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | advisory |
-| `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | advisory |
+| `test-hardcoded-paths` | Hardcoded absolute paths in tests (use `tmp_path`) | enforced |
+| `test-separator-paths` | Hardcoded path separators in `Path(...)` calls in tests | enforced |
+| `pytest-raises-hygiene` | `pytest.raises()` without a `match=` regex on a generic/built-in exception | enforced |
 | `safedir-valueerror` | A broad `except Exception`/bare `except` around a `SafeDir` call that doesn't re-raise or catch `ValueError` explicitly | enforced |
 | `textiowrapper-detach` | An `io.TextIOWrapper` that is never `.detach()`-ed before going out of scope (use-after-close risk on the wrapped buffer/fd) | enforced |
 | `called-attribute-assertion` | Weak `assert mock.called` / bare `assert mock.call_count` test assertions | enforced |
+| `subprocess-returncode` | `subprocess.run()` call without `check=True` or `.returncode` inspection (issue #1408) | advisory |
+| `test-environment-leakage` | Tests mutating class/global state or `sys.modules` without scoped restoration (issue #1414) | enforced |
 | `xdist-loadgroup` | A test using the xdist-wide `tmp_path_factory.getbasetemp()` without an `xdist_group` marker | enforced |
 
 Per-file coverage floors (`check-integration-floors.py` for the
@@ -95,12 +98,10 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").
   New files get full enforcement; the 41 existing ones are fixed
   incrementally — remove an entry as its file is cleaned up.
-- **Three lint rails above are still advisory.** The remaining advisory
-  rails (`test-hardcoded-paths`, `test-separator-paths`, and
-  `pytest-raises-hygiene`) each have pre-existing violations that
-  predate enforcement. Flipping a rail to `enforce` requires first
-  reducing its violation count to zero (or to an explicitly
-  accepted/`noqa`-tagged remainder).
+- **Two lint rails above remain advisory (`cli-file-kind-validation`
+  and `subprocess-returncode`).** They are
+  intentionally non-blocking while remediation and detector tuning continue
+  prior to promotion to enforced.
 
 ## Reporting a Vulnerability
 

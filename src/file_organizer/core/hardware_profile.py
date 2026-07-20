@@ -17,9 +17,7 @@ from typing import Any
 
 from loguru import logger
 
-# Model name constants — must match models/registry.py AVAILABLE_MODELS entries
-_DEFAULT_TEXT_MODEL_SMALL = "qwen2.5:3b-instruct-q4_K_M"
-_DEFAULT_TEXT_MODEL_LARGE = "qwen2.5:7b-instruct-q4_K_M"
+from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 
 
 class GpuType(Enum):
@@ -71,8 +69,8 @@ class HardwareProfile:
         """
         ram_gb = self.ram_gb
         if ram_gb >= 16:
-            return _DEFAULT_TEXT_MODEL_LARGE
-        return _DEFAULT_TEXT_MODEL_SMALL
+            return DEFAULT_TEXT_MODEL_LARGE
+        return DEFAULT_TEXT_MODEL
 
     def recommended_workers(self) -> int:
         """Suggest a default worker count for parallel processing.

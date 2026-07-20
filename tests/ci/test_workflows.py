@@ -158,15 +158,16 @@ class TestCIWorkflow:
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
+    def test_ci_uses_python_311_to_314(self, workflow: dict[str, Any]) -> None:
         """Verify the split PR/push test structure uses correct Python versions.
 
         ci.yml uses two separate jobs:
-        - 'test': PR-only, Python 3.11+3.12 (~2 400 tests, ci marker)
-        - 'test-full': push-only, 6 shards x Python 3.11+3.12 (~17 000 tests)
+        - 'test': PR-only, Python 3.11-3.14 (~2 400 tests, ci marker)
+        - 'test-full': push-only, 6 shards x Python 3.11-3.14 (~17 000 tests)
 
-        Both jobs cover 3.12 directly on PRs rather than waiting until after
-        merge (or the daily ci-full.yml run) to catch version-specific issues.
+        Both jobs cover every supported version directly on PRs rather than
+        waiting until after merge (or the daily ci-full.yml run) to catch
+        version-specific issues. 3.13/3.14 were added in issue #882.
         """
         jobs = workflow.get("jobs", {})
 
@@ -179,12 +180,12 @@ class TestCIWorkflow:
             "'test' job must have if: github.event_name == 'pull_request'"
         )
 
-        # Must run both Python versions so 3.12 is validated on every PR
+        # Must run all supported Python versions so each is validated on every PR
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert set(python_versions) == {"3.11", "3.12"}, (
-            f"'test' (PR) job must include both 3.11 and 3.12, got {python_versions}"
+        assert set(python_versions) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test' (PR) job must include 3.11-3.14, got {python_versions}"
         )
 
         # Must have a timeout to prevent indefinite hangs
@@ -199,12 +200,12 @@ class TestCIWorkflow:
             "'test-full' job must have if: github.event_name == 'push'"
         )
 
-        # Must run both Python versions
+        # Must run all supported Python versions
         full_strategy = full_job.get("strategy", {})
         full_matrix = full_strategy.get("matrix", {})
         full_python = full_matrix.get("python-version", [])
-        assert set(full_python) == {"3.11", "3.12"}, (
-            f"'test-full' job must include both 3.11 and 3.12, got {full_python}"
+        assert set(full_python) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test-full' job must include 3.11-3.14, got {full_python}"
         )
 
         # Must use 6 shards so the suite stays domain-shaped instead of
@@ -429,8 +430,8 @@ class TestCIFullWorkflow:
         strategy = job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert set(python_versions) == {"3.11", "3.12"}, (
-            f"'test-linux-full' must include both 3.11 and 3.12, got {python_versions}"
+        assert set(python_versions) == {"3.11", "3.12", "3.13", "3.14"}, (
+            f"'test-linux-full' must include 3.11-3.14, got {python_versions}"
         )
         shards = matrix.get("shard", [])
         assert shards == [1, 2, 3, 4, 5, 6], (
@@ -554,11 +555,21 @@ class TestReleaseWorkflow:
         has_publish = any("publish" in job_name for job_name in jobs)
         assert has_publish, "Release workflow should have a publish job"
 
-    def test_release_has_github_release_job(self, workflow: dict[str, Any]) -> None:
-        """Verify release workflow creates a GitHub release."""
-        jobs = workflow.get("jobs", {})
-        has_release = any("release" in job_name for job_name in jobs)
-        assert has_release, "Release workflow should create a GitHub release"
+    def test_github_release_owned_by_build_workflow(self) -> None:
+        """The GitHub Release is created by build.yml, not release.yml.
+
+        The two tag-triggered workflows were consolidated so they don't race to
+        create the same release: release.yml is PyPI-only, and build.yml
+        ("Build Executables") is the sole owner of the GitHub Release.
+        """
+        release_wf = load_workflow("release.yml")
+        assert "github-release" not in release_wf.get("jobs", {}), (
+            "release.yml must not create a GitHub release; build.yml owns it"
+        )
+        build_wf = load_workflow("build.yml")
+        assert "release" in build_wf.get("jobs", {}), (
+            "build.yml must define the 'release' job that creates the GitHub release"
+        )
 
     def test_release_uses_oidc_for_pypi(self, workflow: dict[str, Any]) -> None:
         """Verify release uses OIDC trusted publishing for PyPI (no API token needed)."""
@@ -576,6 +587,27 @@ class TestReleaseWorkflow:
         assert environment_name == "pypi", (
             "publish-pypi job must use the 'pypi' GitHub environment for OIDC"
         )
+
+    def test_prerelease_detection_handles_pep440_tags(self) -> None:
+        """The GitHub-release step (now in build.yml) marks hyphen/PEP 440 tags as prereleases."""
+        build_wf = load_workflow("build.yml")
+        steps = build_wf.get("jobs", {}).get("release", {}).get("steps", [])
+        release_step = next(
+            (
+                step
+                for step in steps
+                if isinstance(step, dict) and step.get("name") == "Create GitHub Release"
+            ),
+            {},
+        )
+        run_script = str(release_step.get("run", ""))
+        assert 'gh "${args[@]}"' in run_script
+        assert "--prerelease" in run_script
+        assert "--draft" in run_script
+        assert '"${RELEASE_TAG}" != *-*' in run_script
+        assert '"${RELEASE_TAG}" != *a*' in run_script
+        assert '"${RELEASE_TAG}" != *b*' in run_script
+        assert '"${RELEASE_TAG}" != *rc*' in run_script
 
 
 @pytest.mark.unit
@@ -722,7 +754,7 @@ class TestShardCoverage:
 
     @pytest.fixture
     def shard_script(self) -> str:
-        path = Path("scripts/ci_shard_paths.sh")
+        path = Path("scripts") / "ci_shard_paths.sh"
         assert path.exists(), "scripts/ci_shard_paths.sh must exist"
         return path.read_text()
 
@@ -746,4 +778,136 @@ class TestShardCoverage:
             f"The following test directories are not assigned to any shard in "
             f"scripts/ci_shard_paths.sh: {unassigned}. "
             f"Add them to an appropriate shard or to _EXCLUDED if intentional."
+        )
+
+
+@pytest.mark.unit
+class TestExtrasMatrixWorkflow:
+    """Tests for the Extras Matrix workflow (ci-extras.yml).
+
+    ci-extras is the cheap install+import probe for every optional extra;
+    its matrix is part of the Python 3.13/3.14 migration evidence (#882).
+    """
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("ci-extras.yml")
+
+    def test_linux_matrix_covers_migration_pythons(self, workflow: dict[str, Any]) -> None:
+        """Verify the Linux extras job installs on 3.12 through 3.14."""
+        job = workflow["jobs"]["install-extra"]
+        matrix = job["strategy"]["matrix"]
+        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
+            f"install-extra must cover 3.12-3.14, got {matrix['python-version']}"
+        )
+        assert job["strategy"].get("fail-fast") is False, (
+            "install-extra must not fail-fast: each extra/python cell is independent evidence"
+        )
+
+    def test_linux_matrix_includes_llama_build_probe(self, workflow: dict[str, Any]) -> None:
+        """Verify the llama extra stays in the matrix.
+
+        llama-cpp-python publishes no wheels; this row is the only ongoing
+        cmake source-build probe in CI (#882).
+        """
+        matrix = workflow["jobs"]["install-extra"]["strategy"]["matrix"]
+        assert "llama" in matrix["extra"], (
+            "install-extra must include the llama extra — it is the cmake build probe"
+        )
+
+    def test_macos_lane_covers_darwin_extras(self, workflow: dict[str, Any]) -> None:
+        """Verify the Darwin lane exists and exercises what Linux cannot.
+
+        The mlx extra is Darwin-only by environment marker, so the Linux
+        matrix silently skips it; torch/opencv/h5py/netCDF4 also ship
+        separate macOS wheels that must not be assumed from Linux results.
+        """
+        job = workflow["jobs"].get("install-extra-macos")
+        assert job is not None, "ci-extras must keep the macOS lane (install-extra-macos)"
+        assert job["runs-on"] == "macos-latest"
+        matrix = job["strategy"]["matrix"]
+        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
+            f"install-extra-macos must cover 3.12-3.14, got {matrix['python-version']}"
+        )
+        assert "mlx" in matrix["extra"], (
+            "install-extra-macos must include mlx — no other lane can exercise it"
+        )
+
+
+@pytest.mark.unit
+class TestDeepPythonProbeWorkflow:
+    """Tests for the Deep Python Probe workflow (python-probe.yml).
+
+    The deep probe is the functional (beyond install+import) evidence for
+    the 3.13/3.14 migration: native extensions, stdlib shims, sdist builds,
+    numpy-2 behavior, and PyInstaller bundles (#882).
+    """
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("python-probe.yml")
+
+    def test_probe_script_exists(self) -> None:
+        """Verify the probe script the workflow runs is present."""
+        assert (PROJECT_ROOT / "scripts" / "probe_python_support.py").exists(), (
+            "python-probe.yml depends on scripts/probe_python_support.py"
+        )
+
+    def test_matrix_covers_all_platforms_and_pythons(self, workflow: dict[str, Any]) -> None:
+        """Verify the probe runs on all three OSes and migration Pythons."""
+        job = workflow["jobs"]["deep-probe"]
+        matrix = job["strategy"]["matrix"]
+        assert matrix["os"] == ["ubuntu-latest", "macos-latest", "windows-latest"], (
+            f"deep-probe must cover all three OSes, got {matrix['os']}"
+        )
+        assert matrix["python-version"] == ["3.11", "3.13", "3.14"], (
+            f"deep-probe must cover 3.11 (baseline), 3.13, 3.14 — got {matrix['python-version']}"
+        )
+        assert job["strategy"].get("fail-fast") is False, (
+            "deep-probe must not fail-fast: each OS/python cell is independent evidence"
+        )
+        assert job.get("timeout-minutes") is not None, (
+            "deep-probe must set timeout-minutes (llama.cpp builds can hang)"
+        )
+
+    def test_probe_stages_present(self, workflow: dict[str, Any]) -> None:
+        """Verify all three evidence stages exist: probes, numpy tests, bundle."""
+        steps = workflow["jobs"]["deep-probe"]["steps"]
+        runs = " ".join(step.get("run") or "" for step in steps)
+        assert "scripts/probe_python_support.py" in runs, (
+            "deep-probe must run the functional probe script"
+        )
+        assert "test_dedup_embedder.py" in runs, (
+            "deep-probe must run the numpy-2-sensitive test suites"
+        )
+        assert "pyinstaller --onefile" in runs, (
+            "deep-probe must build and execute a PyInstaller bundle"
+        )
+
+    def test_probe_triggers_and_permissions(self, workflow: dict[str, Any]) -> None:
+        """Verify schedule + dispatch + probe-kit path triggers, and read-only perms."""
+        triggers = get_triggers(workflow)
+        assert "schedule" in triggers, "deep-probe must keep its weekly schedule"
+        assert "workflow_dispatch" in triggers, "deep-probe must stay manually dispatchable"
+        push = triggers.get("push") or {}
+        assert push.get("branches") == ["main", "epic/**"], (
+            "deep-probe push trigger must be scoped to main and epic/** branches"
+        )
+        for event in ("pull_request", "push"):
+            paths = (triggers.get(event) or {}).get("paths", [])
+            assert "scripts/probe_python_support.py" in paths, (
+                f"deep-probe {event} trigger must be scoped to the probe kit paths"
+            )
+        assert workflow.get("permissions") == {"contents": "read"}, (
+            "deep-probe must run with read-only permissions"
+        )
+
+    def test_probe_timeout_accounts_for_slowest_windows_cell(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """Verify timeout budget covers the slowest cold-cache probe matrix cell."""
+        timeout = workflow["jobs"]["deep-probe"].get("timeout-minutes")
+        assert isinstance(timeout, int), "deep-probe timeout-minutes must be an integer"
+        assert timeout >= 90, (
+            "deep-probe timeout must allow the cold-cache Windows py3.14 install+probe sequence"
         )

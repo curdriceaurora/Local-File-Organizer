@@ -72,7 +72,7 @@ class TestInfoLevelDoesNotLeakContent:
                 return_value="healthcare content",
             ),
         ):
-            processor.process_file("/tmp/test.txt")
+            processor.process_file("/tmp/test.txt")  # noqa: test-hardcoded-paths
 
         info_messages = [str(c) for c in mock_logger.info.call_args_list]
         combined = " ".join(info_messages)
@@ -90,7 +90,7 @@ class TestInfoLevelDoesNotLeakContent:
                 "file_organizer.services.text_processor.read_file", return_value="medical records"
             ),
         ):
-            processor.process_file("/tmp/records.txt")
+            processor.process_file("/tmp/records.txt")  # noqa: test-hardcoded-paths
 
         info_messages = [str(c) for c in mock_logger.info.call_args_list]
         combined = " ".join(info_messages)
@@ -111,7 +111,7 @@ class TestInfoLevelDoesNotLeakContent:
                 return_value="financial planning",
             ),
         ):
-            processor.process_file("/tmp/budget.txt")
+            processor.process_file("/tmp/budget.txt")  # noqa: test-hardcoded-paths
 
         # At least one INFO call should mention "chars" (length-based log)
         info_messages = [str(c) for c in mock_logger.info.call_args_list]
@@ -146,7 +146,7 @@ class TestWarningLevelDoesNotLeakContent:
                 "file_organizer.services.text_processor.clean_text", return_value="fallback_folder"
             ),
         ):
-            processor.process_file("/tmp/short_folder.txt")
+            processor.process_file("/tmp/short_folder.txt")  # noqa: test-hardcoded-paths
 
         warning_messages = [str(c) for c in mock_logger.warning.call_args_list]
         combined = " ".join(warning_messages)
@@ -170,7 +170,7 @@ class TestWarningLevelDoesNotLeakContent:
             patch("file_organizer.services.text_processor.read_file", return_value="some code"),
             patch("file_organizer.services.text_processor.clean_text", return_value="code_snippet"),
         ):
-            processor.process_file("/tmp/short_fn.txt")
+            processor.process_file("/tmp/short_fn.txt")  # noqa: test-hardcoded-paths
 
         warning_messages = [str(c) for c in mock_logger.warning.call_args_list]
         combined = " ".join(warning_messages)
@@ -189,7 +189,7 @@ class TestWarningLevelDoesNotLeakContent:
             patch("file_organizer.services.text_processor.read_file", return_value="content"),
             patch("file_organizer.services.text_processor.clean_text", return_value="fallback"),
         ):
-            processor.process_file("/tmp/warn_test.txt")
+            processor.process_file("/tmp/warn_test.txt")  # noqa: test-hardcoded-paths
 
         # The warning call should exist and contain generic text
         warning_calls = mock_logger.warning.call_args_list
@@ -225,7 +225,7 @@ class TestDebugLevelDoesNotLeakAiResponses:
             patch("file_organizer.services.text_processor.logger") as mock_logger,
             patch("file_organizer.services.text_processor.read_file", return_value="text"),
         ):
-            processor.process_file("/tmp/debug_test.txt")
+            processor.process_file("/tmp/debug_test.txt")  # noqa: test-hardcoded-paths
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
         combined = " ".join(debug_messages)
@@ -246,7 +246,7 @@ class TestDebugLevelDoesNotLeakAiResponses:
             patch("file_organizer.services.text_processor.logger") as mock_logger,
             patch("file_organizer.services.text_processor.read_file", return_value="text"),
         ):
-            processor.process_file("/tmp/debug_fn_test.txt")
+            processor.process_file("/tmp/debug_fn_test.txt")  # noqa: test-hardcoded-paths
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
         combined = " ".join(debug_messages)
@@ -267,7 +267,7 @@ class TestDebugLevelDoesNotLeakAiResponses:
             patch("file_organizer.services.text_processor.logger") as mock_logger,
             patch("file_organizer.services.text_processor.read_file", return_value="python code"),
         ):
-            processor.process_file("/tmp/code_guide.txt")
+            processor.process_file("/tmp/code_guide.txt")  # noqa: test-hardcoded-paths
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
         combined = " ".join(debug_messages)
@@ -302,7 +302,7 @@ class TestLogMessageFormats:
                 "file_organizer.services.text_processor.read_file", return_value="recipe content"
             ),
         ):
-            processor.process_file("/tmp/recipe.txt")
+            processor.process_file("/tmp/recipe.txt")  # noqa: test-hardcoded-paths
 
         # Check that info was called with "Folder name generated" message
         info_call_strings = [str(c) for c in mock_logger.info.call_args_list]
@@ -323,7 +323,7 @@ class TestLogMessageFormats:
                 "file_organizer.services.text_processor.read_file", return_value="cooking content"
             ),
         ):
-            processor.process_file("/tmp/cooking.txt")
+            processor.process_file("/tmp/cooking.txt")  # noqa: test-hardcoded-paths
 
         info_call_strings = [str(c) for c in mock_logger.info.call_args_list]
         filename_info_calls = [s for s in info_call_strings if "Filename generated" in s]

@@ -18,21 +18,42 @@ from pathlib import Path
 APP_NAME = "file-organizer"
 
 
-def _read_pyproject_version() -> str:
-    """Read the project version from pyproject.toml.
+def _detect_version() -> str:
+    """Resolve the package version for build artifact naming.
 
-    Falls back to "0.0.0" if the file or version field is missing.
+    Prefers the in-tree ``src/file_organizer/version.py`` when this script is
+    running from a source checkout, so local/manual packaging cannot pick up a
+    stale globally installed distribution. Falls back to installed distribution
+    metadata for copied/out-of-tree use.
+    Returns ``"0.0.0"`` only if neither source is available.
     """
-    project_root = Path(__file__).resolve().parent.parent
-    pyproject = project_root / "pyproject.toml"
-    if not pyproject.exists():
-        return "0.0.0"
-    text = pyproject.read_text(encoding="utf-8")
-    match = re.search(r'(?m)^version\\s*=\\s*"([^"]+)"', text)
-    return match.group(1) if match else "0.0.0"
+    # Read version.py directly without importing the full package (keeps the
+    # build script importable with no runtime deps installed).
+    version_file = Path(__file__).resolve().parent.parent / "src" / "file_organizer" / "version.py"
+    try:
+        text = version_file.read_text(encoding="utf-8")
+    except OSError:
+        pass
+    else:
+        match = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', text)
+        if match:
+            return match.group(1)
+
+    try:
+        from importlib.metadata import PackageNotFoundError
+        from importlib.metadata import version as _dist_version
+
+        try:
+            return _dist_version("local-file-organizer")
+        except PackageNotFoundError:
+            pass
+    except ImportError:  # pragma: no cover - importlib.metadata is stdlib since Python 3.8
+        pass
+
+    return "0.0.0"
 
 
-APP_VERSION = _read_pyproject_version()
+APP_VERSION = _detect_version()
 APP_DESCRIPTION = "AI-powered local file management"
 
 # ---------------------------------------------------------------------------
@@ -126,7 +147,7 @@ EXCLUDES: list[str] = [
 
 # Data files to include: (source_glob, destination_directory)
 DATA_FILES: list[tuple[str, str]] = [
-    ("src/file_organizer/config/*.yaml", "file_organizer/config"),
+    # Config is generated at runtime; no static YAML files are bundled from src/file_organizer/config.
 ]
 
 # Additional hidden imports for the pywebview desktop build.

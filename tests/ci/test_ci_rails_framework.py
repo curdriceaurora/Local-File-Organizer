@@ -39,7 +39,7 @@ def _write_registry(tmp_path: Path, rails: list[tuple[str, list[str], str]]) -> 
 
 
 def test_missing_registry_is_noop() -> None:
-    assert ci_rails.load_rails(Path("/nonexistent/ci-rails.toml")) == []
+    assert ci_rails.load_rails(Path("/") / "nonexistent" / "ci-rails.toml") == []
     assert ci_rails.main(["--registry", "/nonexistent/ci-rails.toml"]) == 0
 
 
@@ -134,13 +134,16 @@ def test_repo_registry_loads_registered_rails() -> None:
         "safedir-required": "enforce",
         "atomic-write": "enforce",
         "cli-path-validation": "enforce",
+        "cli-file-kind-validation": "advisory",
         "defusedxml-fallback": "enforce",
-        "test-hardcoded-paths": "advisory",
-        "test-separator-paths": "advisory",
-        "pytest-raises-hygiene": "advisory",
+        "test-hardcoded-paths": "enforce",
+        "test-separator-paths": "enforce",
+        "pytest-raises-hygiene": "enforce",
         "safedir-valueerror": "enforce",
         "textiowrapper-detach": "enforce",
         "called-attribute-assertion": "enforce",
         "xdist-loadgroup": "enforce",
+        "subprocess-returncode": "advisory",
+        "test-environment-leakage": "enforce",
     }
     assert {rail.name: rail.mode for rail in rails} == expected_modes

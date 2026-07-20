@@ -1,193 +1,110 @@
-# File Organizer v2 Configuration Guide
+# File Organizer Configuration Guide
 
-## Overview
+This page documents core app configuration (profiles, model/provider behavior, and paths).
 
-Configuration is managed via a YAML file located at `config/file-organizer/config.yaml` (relative to your system's config directory). You can also manage configuration via the CLI or TUI.
+For API/server-only runtime variables, see [Admin Configuration](admin/configuration.md).
 
-## CLI Configuration
+## Where configuration is stored
 
-You can view and edit configuration using the `config` command:
+`ConfigManager` persists profile data to `config.yaml` under the platform config directory.
+
+- macOS: `~/Library/Application Support/file-organizer/config.yaml`
+- Linux: `~/.config/file-organizer/config.yaml` (or `$XDG_CONFIG_HOME/file-organizer/config.yaml`)
+- Windows: `%APPDATA%/file-organizer/config.yaml`
+
+## Profile structure
+
+`config.yaml` stores named profiles under a top-level `profiles` map:
+
+```yaml
+profiles:
+  default:
+    profile_name: default
+    version: "1.0"
+    default_methodology: none
+    setup_completed: false
+    models:
+      text_model: qwen2.5:3b-instruct-q4_K_M
+      vision_model: qwen2.5vl:7b-q4_K_M
+      temperature: 0.5
+      max_tokens: 3000
+      device: auto
+      framework: ollama
+```
+
+## CLI profile management
 
 ```bash
-# View current config
+# Show default profile
 file-organizer config show
 
-# Edit specific settings
-file-organizer config edit --text-model "qwen2.5:3b-instruct-q4_K_M"
-file-organizer config edit --temperature 0.7
-```
+# Show named profile
+file-organizer config show --profile work
 
-## Configuration File Structure
+# List profiles
+file-organizer config list
 
-### Global Settings
-
-| Key | Description | Default |
-|-----|-------------|---------|
-| `default_methodology` | Organization style (`none`, `para`, `jd`) | `none` |
-| `version` | Config version | `1.0` |
-
-### Models
-
-Settings for Local LLM inference.
-
-```yaml
-models:
-  text_model: "qwen2.5:3b-instruct-q4_K_M"
-  vision_model: "qwen2.5vl:7b-q4_K_M"
-  temperature: 0.5
-  max_tokens: 3000
-  device: "auto"     # auto, cpu, cuda, mps
-  framework: "ollama"
-```
-
-**See also:** [AI Provider Setup Guide](setup/ai-providers.md) for detailed setup instructions for all native providers (Ollama, OpenAI, Claude, LLaMA.cpp, MLX) plus OpenAI-compatible services (Groq, LM Studio).
-
-### OpenAI-Compatible Provider (Cloud or Local API)
-
-File Organizer can route model calls to any OpenAI-compatible endpoint instead of
-Ollama. This covers hosted providers (OpenAI) and local servers
-(LM Studio, vLLM, Ollama's built-in OpenAI-compat endpoint).
-
-Install the optional dependency first:
-
-```bash
-# From PyPI (installed package)
-pip install "local-file-organizer[cloud]"
-
-# From source checkout
-pip install -e ".[cloud]"
-```
-
-Then configure via environment variables — no config file changes needed:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `FO_PROVIDER` | `ollama` or `openai` | `ollama` |
-| `FO_OPENAI_API_KEY` | API key (omit for local endpoints) | — |
-| `FO_OPENAI_BASE_URL` | API base URL | — (OpenAI SDK default: `https://api.openai.com/v1`) |
-| `FO_OPENAI_MODEL` | Text model name | `gpt-4o-mini` |
-| `FO_OPENAI_VISION_MODEL` | Vision model name (falls back to `FO_OPENAI_MODEL`) | — |
-
-**Examples:**
-
-```bash
-# OpenAI
-FO_PROVIDER=openai \
-FO_OPENAI_API_KEY=sk-... \
-FO_OPENAI_MODEL=gpt-4o \
-fo organize ~/Downloads
-
-# LM Studio (fully local, no API key)
-FO_PROVIDER=openai \
-FO_OPENAI_BASE_URL=http://localhost:1234/v1 \
-FO_OPENAI_MODEL=your-loaded-model \
-fo organize ~/Downloads
-```
-
-> **Privacy note**: When `FO_PROVIDER=openai`, file content is sent to the
-> configured endpoint. Use a local server (LM Studio, vLLM) to keep data
-> on-device while using the OpenAI-compatible interface.
-
-### Anthropic Claude Provider
-
-File Organizer supports Anthropic's Claude models for both text and vision analysis.
-Claude provides strong reasoning and vision capabilities via Anthropic's hosted API.
-
-Install the optional dependency first:
-
-```bash
-# From PyPI (installed package)
-pip install "local-file-organizer[claude]"
-
-# From source checkout
-pip install -e ".[claude]"
-```
-
-Then configure via environment variables — no config file changes needed:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `FO_PROVIDER` | Set to `claude` | `ollama` |
-| `FO_CLAUDE_API_KEY` | Anthropic API key | falls back to `ANTHROPIC_API_KEY` env var |
-| `FO_CLAUDE_MODEL` | Text model name | `claude-3-5-sonnet-20241022` |
-| `FO_CLAUDE_VISION_MODEL` | Vision model name (falls back to `FO_CLAUDE_MODEL`) | — |
-
-**Example:**
-
-```bash
-# Anthropic Claude
-FO_PROVIDER=claude \
-FO_CLAUDE_API_KEY=sk-ant-... \
-FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022 \
-fo organize ~/Downloads
-```
-
-> **Privacy note**: When `FO_PROVIDER=claude`, file content (including image data
-> for vision tasks) is sent to Anthropic's API. Review
-> [Anthropic's privacy policy](https://www.anthropic.com/privacy) before use.
-
-### Watcher
-
-Configuration for the file system watcher.
-
-```yaml
-watcher:
-  watch_directories:
-    - "/Users/username/Downloads"
-  recursive: true
-  debounce_seconds: 2.0
-  exclude_patterns:
-    - "*.tmp"
-    - ".DS_Store"
-```
-
-### Profiles
-
-You can define multiple profiles (e.g., `work`, `personal`) and switch between them.
-
-```bash
+# Edit profile values
+file-organizer config edit --profile work --text-model "qwen2.5:3b-instruct-q4_K_M"
+file-organizer config edit --profile work --temperature 0.7
 file-organizer config edit --profile work --methodology para
 ```
 
-### Environment Variables
+## Model/provider precedence
 
-| Variable | Description |
-|----------|-------------|
-| `FILE_ORGANIZER_CONFIG` | Custom path to config file |
-| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) |
-| `FO_DISABLE_UPDATE_CHECK` | Set to `1` to disable update checks |
-| `FO_PROVIDER` | AI provider: `ollama` (default), `openai`, or `claude` |
-| `FO_OPENAI_API_KEY` | API key for OpenAI-compatible provider |
-| `FO_OPENAI_BASE_URL` | Custom endpoint URL (LM Studio, Groq, vLLM, etc.) |
-| `FO_OPENAI_MODEL` | Text model name when `FO_PROVIDER=openai` |
-| `FO_OPENAI_VISION_MODEL` | Vision model name (defaults to `FO_OPENAI_MODEL`) |
-| `FO_CLAUDE_API_KEY` | Anthropic API key (falls back to `ANTHROPIC_API_KEY`) |
-| `FO_CLAUDE_MODEL` | Text model name when `FO_PROVIDER=claude` |
-| `FO_CLAUDE_VISION_MODEL` | Vision model name (defaults to `FO_CLAUDE_MODEL`) |
+Model configs are resolved in this order:
 
-## Advanced Configuration
+1. Explicit `ModelConfig` parameters passed to `FileOrganizer`.
+2. Environment variables (`FO_PROVIDER`, `FO_OPENAI_*`, `FO_LLAMA_CPP_*`, `FO_MLX_*`, `FO_CLAUDE_*`).
+3. Profile config loaded from `FO_PROFILE` (or `default`).
+4. Built-in defaults.
 
-### PARA Methodology
+## Provider environment variables
 
-Configure folder names for Projects, Areas, Resources, and Archives.
+| Variable | Description | Notes |
+|---|---|---|
+| `FO_PROVIDER` | Provider mode: `ollama`, `openai`, `llama_cpp`, `mlx`, `claude` | Set this to activate env-based provider override |
+| `FO_OPENAI_API_KEY` | OpenAI-compatible API key | Preferred for consistency |
+| `FO_OPENAI_BASE_URL` | OpenAI-compatible endpoint URL | Use for LM Studio, vLLM, Groq, etc. |
+| `FO_OPENAI_MODEL` | OpenAI-compatible text model | Default: `gpt-4o-mini` |
+| `FO_OPENAI_VISION_MODEL` | OpenAI-compatible vision model | Falls back to `FO_OPENAI_MODEL` |
+| `FO_CLAUDE_API_KEY` | Claude API key | Preferred for consistency |
+| `FO_CLAUDE_MODEL` | Claude text model | Default: `claude-3-5-sonnet-20241022` |
+| `FO_CLAUDE_VISION_MODEL` | Claude vision model | Falls back to `FO_CLAUDE_MODEL` |
+| `FO_LLAMA_CPP_MODEL_PATH` | Local `.gguf` path | Required for `FO_PROVIDER=llama_cpp` |
+| `FO_LLAMA_CPP_N_GPU_LAYERS` | llama.cpp GPU layer offload | Optional |
+| `FO_MLX_MODEL_PATH` | MLX model path or HF repo id | Required for `FO_PROVIDER=mlx` |
+| `FO_PROFILE` | Profile name to load when `FO_PROVIDER` is unset | Default: `default` |
+| `OLLAMA_HOST` | Ollama host URL | Optional override for Ollama client |
 
-```yaml
-para:
-  project_dir: "Projects"
-  area_dir: "Areas"
-  resource_dir: "Resources"
-  archive_dir: "Archive"
-  auto_categorize: true
+SDK-native key fallbacks are supported:
+
+- `OPENAI_API_KEY` (fallback when `FO_PROVIDER=openai`)
+- `ANTHROPIC_API_KEY` (fallback when `FO_PROVIDER=claude`)
+
+## Methodology defaults
+
+`default_methodology` supports:
+
+- `none`
+- `para`
+- `jd`
+
+Set via CLI:
+
+```bash
+file-organizer config edit --methodology para
 ```
 
-### Johnny Decimal
+## Path and migration notes
 
-Configure your specific numbering scheme.
+File Organizer uses platformdirs/XDG-compatible paths. See:
 
-```yaml
-johnny_decimal:
-  scheme:
-    name: "default"
-    areas:
-      - { name: "Finance", range_start: 10, range_end: 19 }
-```
+- [Path Standardization & Migration](config/path-standardization.md)
+- [Path Deprecation Notice](config/deprecation-notice.md)
+
+## Related docs
+
+- [AI Provider Setup](setup/ai-providers.md)
+- [Dependencies & Optional Extras](setup/dependencies.md)
+- [Getting Started](getting-started.md)

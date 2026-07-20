@@ -1,275 +1,211 @@
 # Terminal User Interface (TUI)
 
-> **Version**: 2.0.0-alpha.3
+> **Version**: 2.1.1
 
-File Organizer includes a full-featured Terminal User Interface (TUI) built with [Textual](https://textual.textualize.io/). It provides an interactive, keyboard-driven experience for organizing files without leaving your terminal.
+The Textual framework builds the TUI. You start the TUI from the CLI.
+
+## Start the TUI
+
+```bash
+file-organizer tui
+# or
+fo tui
+```
+
+## Quick workflow
+
+1. Start the TUI. Wait for the main layout. Complete the setup wizard if necessary.
+2. Press `1` to `8` to change main views. You can see files, results, history, settings, and copilot.
+3. Press `Tab` to change focus. Press `?` to see active keyboard shortcuts.
+4. Press `4` to open the Methodology view. Verify your strategy before you start large organization jobs.
 
 ## Overview
 
+The Files view shows the directory tree, the metadata panel, and a live preview of the selected file.
+
 ![TUI Overview](assets/tui-overview.svg)
 
-*The TUI provides a rich terminal experience with a file browser, live organization preview, and integrated AI copilot.*
-
-## Demo
+This is a quick demonstration of the main views:
 
 ![TUI Demo](assets/tui-demo.gif)
 
-*Navigating the TUI: browsing files, selecting an organization methodology, previewing changes, and applying.*
+## View gallery
 
----
+### Organized (`2`)
 
-## Launching the TUI
+This view shows a preview. It shows how the software will organize the current directory.
 
-```bash
-# Launch the TUI
-file-organizer tui
+![Organization Preview](assets/organization-preview.svg)
 
-# Short alias
-fo tui
+### Analytics (`3`)
 
-# Launch with a specific directory
-file-organizer tui --path ~/Downloads
-```
-
----
-
-## Key Views
-
-### 1. File Browser
-
-Browse and manage your files with a full-featured file manager:
-
-- **Navigation**: Arrow keys to move, `Enter` to open folders
-- **Selection**: `Space` to select/deselect files, `a` to select all
-- **Preview**: Side panel shows file metadata and content preview
-- **Sorting**: Sort by name, size, date, or type
-- **Filtering**: Filter by extension or search by name
-
-### 2. Organization Preview
-
-![Organization Preview](assets/tui-overview.svg)
-
-Before applying any changes, the TUI shows a live preview of what will happen:
-
-- Side-by-side view: current location vs. proposed location
-- Colour-coded changes: moves (blue), renames (yellow), new folders (green)
-- Confidence score for each AI suggestion
-- Ability to accept, reject, or edit individual suggestions
-
-**Keyboard shortcuts**:
-
-| Key | Action |
-|-----|--------|
-| `p` | Toggle preview panel |
-| `a` | Accept all suggestions |
-| `r` | Reject selected suggestion |
-| `e` | Edit suggestion manually |
-| `Enter` | Apply accepted changes |
-
-### 3. Methodology Selector
-
-Choose and configure your organization methodology:
-
-- **PARA**: Projects, Areas, Resources, Archives
-- **Johnny Decimal**: Hierarchical numbered system
-- **Custom**: Rule-based organization
-
-Switch methodology mid-session without losing your file selection.
-
-### 4. Analytics Dashboard
+This dashboard shows storage data, file types, quality scores, and duplicate statistics for the current directory.
 
 ![Analytics Dashboard](assets/analytics-dashboard.svg)
 
-Monitor your file organization at a glance:
+### Methodology (`4`)
 
-- Storage breakdown by file type and age
-- Duplicate file summary with space savings estimate
-- Recent activity log
-- Organization health score
+Select a flat, PARA, or Johnny Decimal organization system.
 
-### 5. Audio Panel
+![Methodology View](assets/methodology-view.svg)
+
+### Audio (`5`)
+
+The software searches the directory for audio files. It shows tag metadata and classification for the selected file.
 
 ![Audio Panel](assets/audio-panel.svg)
 
-Dedicated view for audio file management:
+### History (`6`)
 
-- Waveform preview (for supported formats)
-- Transcription display (powered by faster-whisper)
-- Metadata editor (artist, album, genre, year)
-- Batch organize by genre or date
+This view shows recent operations. It includes undo and redo options.
 
-### 6. AI Copilot Chat
+![History View](assets/history-view.svg)
+
+### Copilot (`8`)
+
+The local intent engine lets you manage files with natural language.
 
 ![Copilot Chat](assets/copilot-chat.svg)
 
-Natural language interface for file organization:
+## Keyboard shortcuts
 
-- Type commands like *"organize all PDFs by year"*
-- Ask questions like *"which files haven't been accessed in 6 months?"*
-- Save custom rules from chat conversations
-- Multi-turn conversations with context awareness
-
-**Example prompts**:
-
-```text
-> Organize all invoices in ~/Downloads by year and month
-> Find duplicate images in ~/Photos
-> Move all files older than 2 years to the archive folder
-> Rename all meeting notes to include the date
-```
-
-**Workflow Integration Payloads**
-
-When the copilot exports a file via workflow integration, it generates launcher-compatible JSON payloads (see `WorkflowIntegration` in `src/file_organizer/integrations/workflow.py`):
-
-*Alfred payload:*
-
-```json
-{
-  "items": [
-    {
-      "arg": "/home/user/Documents/report.pdf",
-      "subtitle": "Quarterly financial report",
-      "title": "report.pdf",
-      "uid": "report-20260301T120000Z"
-    }
-  ]
-}
-```
-
-*Raycast payload:*
-
-```json
-{
-  "generated_at": "2026-03-01T12:00:00Z",
-  "metadata": {
-    "summary": "Quarterly financial report"
-  },
-  "name": "Open report.pdf",
-  "path": "/home/user/Documents/report.pdf"
-}
-```
-
-Payloads are written to `~/.config/file-organizer/integrations/workflow/`.
-
-### 7. Undo / Redo History
-
-Full undo and redo support for all file operations:
-
-- Step through every operation with `u` (undo) and `y` (redo)
-- History persists across sessions
-- Filter history by date, file type, or operation type
-- Export history as a CSV or JSON log
-
----
-
-## Keyboard Shortcuts
+These are the global keyboard shortcuts from `FileOrganizerApp.BINDINGS`.
 
 ### Global
 
 | Key | Action |
 |-----|--------|
-| `q` / `Ctrl+c` | Quit |
-| `?` | Show help |
-| `Tab` | Switch panel focus |
-| `1`–`8` | Jump to view |
-| `Ctrl+w` | Complete setup wizard |
+| `q` / `Ctrl+c` | Stop the application |
+| `?` | Show or hide help |
+| `Tab` | Focus the next panel |
+| `1`–`8` | Change the main view |
+| `Ctrl+w` | Complete the setup wizard |
 
-### File Browser
+### View map (`1`–`8`)
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Navigate files |
-| `Enter` | Open folder / preview file |
-| `Space` | Select / deselect |
-| `a` | Select all |
-| `d` | Deselect all |
-| `/` | Search / filter |
-| `s` | Sort menu |
-| `o` | Organize selected files |
-| `Delete` | Move to trash |
+| Key | View |
+|-----|------|
+| `1` | Files |
+| `2` | Organized |
+| `3` | Analytics |
+| `4` | Methodology |
+| `5` | Audio |
+| `6` | History |
+| `7` | Settings |
+| `8` | Copilot |
 
-### Organization Preview
+## Local keyboard shortcuts
 
-| Key | Action |
-|-----|--------|
-| `p` | Toggle preview |
-| `a` | Accept all |
-| `r` | Reject selected |
-| `e` | Edit suggestion |
-| `Enter` | Apply changes |
+The TUI also has local keyboard shortcuts for specific views.
 
-### Copilot
+Examples:
 
-| Key | Action |
-|-----|--------|
-| `c` | Open copilot |
-| `Esc` | Close copilot |
-| `Enter` | Send message |
-| `↑` / `↓` | Browse message history |
+- The file browser supports vim-style navigation keys (`h`, `j`, `k`, `l`).
+- Press `/` to toggle the file browser filter.
+- Other views have their own `BINDINGS` properties for local controls.
 
----
+## Setup wizard
 
-## TUI Configuration
-
-Customize the TUI in your config file (`~/.config/file-organizer/config.yaml`):
-
-```yaml
-tui:
-  theme: dark          # dark | light | auto
-  show_hidden: false   # Show hidden files
-  preview_panel: true  # Show preview panel by default
-  sort_by: name        # name | size | date | type
-  sort_order: asc      # asc | desc
-  auto_preview: true   # Auto-preview on file selection
-  copilot_enabled: true
-```
-
----
-
-## Accessibility
-
-The TUI follows terminal accessibility standards:
-
-- Full keyboard navigation — no mouse required
-- Screen reader compatible via terminal emulator
-- High-contrast mode available (`--theme high-contrast`)
-- Configurable font size via terminal settings
-
----
+If you did not complete the setup, the TUI shows the setup wizard. After setup, the main layout shows.
 
 ## Troubleshooting
 
-### TUI Won't Launch
+### Incorrect colors or broken display
+
+**Symptom**: The display shows raw escape codes. Colors are missing. The layout is broken.
+
+**Cause**: The `TERM` environment variable is incorrect. The terminal does not support colors correctly.
+
+**Solution**:
 
 ```bash
-# Check Textual is installed
-python3 -c "import textual; print(textual.__version__)"
+# Force 256-color or true-color mode
+export TERM=xterm-256color
+file-organizer tui
 
-# Reinstall if needed
-pip install "local-file-organizer[tui]"
+# If colors are incorrect, disable color
+export NO_COLOR=1
+file-organizer tui
+
+# Force color output
+export FORCE_COLOR=1
+file-organizer tui
 ```
 
-### Display Issues
+If you use a multiplexer (tmux, screen), configure it to allow true-color sequences:
 
 ```bash
-# Check terminal supports colours
-echo $TERM   # Should be xterm-256color or similar
-
-# Force 256 colour mode
-TERM=xterm-256color file-organizer tui
+# In ~/.tmux.conf
+set -g default-terminal "tmux-256color"
+set -ag terminal-overrides ",xterm-256color:RGB"
 ```
 
-### Slow Performance
+### Blank screen
 
-- Use `--no-preview` to disable file preview for large directories
-- Set `auto_preview: false` in config
-- Limit directory depth with `--max-depth 3`
+**Symptom**: The TUI opens but shows a blank window. It stays blank or recovers after a delay.
 
----
+**Cause**: The terminal size is too small. The terminal reports incorrect dimensions.
 
-## Related
+**Solution**:
 
-- [CLI Reference](cli-reference.md) — Full command-line reference
-- [Getting Started](getting-started.md) — Installation and first run
-- [FAQ](faq.md) — Common questions
+```bash
+# Make the terminal window larger than 80x24
+file-organizer tui
+
+# If the screen stays blank, reset the terminal
+reset
+file-organizer tui
+```
+
+### Setup wizard does not complete
+
+**Symptom**: The setup wizard does not continue. Keyboard inputs have no effect.
+
+**Cause**: You did not fill a required field. The terminal captures your keyboard inputs.
+
+**Solution**:
+
+- Press `Ctrl+W` to complete the wizard.
+- Make sure the wizard panel has focus. Click the panel or press `Tab`.
+- If the problem continues, restart the TUI:
+
+```bash
+file-organizer tui
+```
+
+### Multiplexer captures keyboard shortcuts
+
+**Symptom**: Global shortcuts (`Ctrl+C`, `Ctrl+W`) do not work in tmux or screen.
+
+**Cause**: The multiplexer captures the key sequences.
+
+**Solution**:
+
+In **tmux**, use `send-keys` to send the keys to the application:
+
+```bash
+# Send Ctrl+W to the TUI pane
+tmux send-keys C-w
+```
+
+Remove conflicting tmux bindings:
+
+```bash
+# In ~/.tmux.conf
+unbind -T copy-mode C-w
+```
+
+In **GNU screen**, press `Ctrl+a` then `a` to send `Ctrl+a`. Use `stuff` to send keys:
+
+```bash
+# From the screen command line (Ctrl+a :)
+:stuff ^W
+```
+
+If problems continue, use a standard terminal window instead of a multiplexer.
+
+## Related documents
+
+- [CLI Reference](cli-reference.md)
+- [Desktop App Guide](desktop-app.md)
+- [Web UI Guide](web-ui/index.md)

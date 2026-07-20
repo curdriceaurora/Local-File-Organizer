@@ -29,7 +29,7 @@ pytestmark = [pytest.mark.unit]
 def settings():
     """Return a mocked ApiSettings."""
     s = MagicMock(spec=ApiSettings)
-    s.allowed_paths = ["/tmp/test"]
+    s.allowed_paths = ["/tmp/test"]  # noqa: test-hardcoded-paths
     s.db_url = "sqlite://"
     s.auth_enabled = True
     s.auth_db_path = ":memory:"

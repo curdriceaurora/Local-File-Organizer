@@ -102,7 +102,7 @@ class TestCorpusHiddenFileFiltering:
         normal.write_text("content")
 
         # tmp_path itself may have dot components, so test relative behavior
-        assert not is_hidden(Path("documents/report.txt"))
+        assert not is_hidden(Path("documents") / "report.txt")
 
 
 # ---------------------------------------------------------------------------

@@ -7,9 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. 2.0.0-alpha.3)'
+        description: 'Version to build (e.g. 2.0.0)'
         required: false
         default: ''
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -17,18 +20,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            platform: macos
-            arch: arm64
-          # Keep the Intel macOS build explicit because macos-latest is arm64.
-          - os: macos-15-intel
-            platform: macos
-            arch: x86_64
+          # Linux-only: we ship binaries (CLI + desktop + AppImage) for Linux
+          # only. macOS and Windows are supported and CI-verified — the full
+          # suite runs on those OSes in ci-full.yml plus the python-probe
+          # matrix — but their unsigned executables carry Gatekeeper/SmartScreen
+          # friction, so those platforms install via pip/pipx instead.
           - os: ubuntu-latest
             platform: linux
-            arch: x86_64
-          - os: windows-latest
-            platform: windows
             arch: x86_64
 
     runs-on: ${{ matrix.os }}
@@ -37,12 +35,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install pywebview Linux build dependencies
         if: matrix.platform == 'linux'
@@ -63,7 +62,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -q --override-ini="addopts=" -p no:cacheprovider --tb=short
+          pytest -q --override-ini="addopts=" --tb=short tests/ci/test_build_artifacts.py tests/ci/test_build_workflow.py tests/ci/test_build_workflows.py
 
       - name: Build CLI executable
         run: |
@@ -81,14 +80,8 @@ jobs:
       - name: Verify executables
         shell: bash
         run: |
-          # Find CLI executable
-          if [ "${{ matrix.platform }}" = "windows" ]; then
-            cli_exe=$(find dist -name "file-organizer-*" -not -name "*desktop*" -name "*.exe" -type f | head -1)
-            desktop_exe=$(find dist -name "file-organizer-desktop-*.exe" -type f | head -1)
-          else
-            cli_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-*" -not -name "*desktop*" -perm /111 | head -1)
-            desktop_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-desktop-*" -perm /111 | head -1)
-          fi
+          cli_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-*" -not -name "*desktop*" | head -1)
+          desktop_exe=$(find dist -maxdepth 1 -type f -name "file-organizer-desktop-*" | head -1)
 
           if [ -z "$cli_exe" ]; then
             echo "ERROR: No CLI executable found in dist/"
@@ -116,30 +109,84 @@ jobs:
 
   release:
     needs: [build]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', inputs.version) }}
 
     steps:
-      - name: Download all artifacts
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          # No later step pushes/pulls with the token (softprops uses the job's
+          # GITHUB_TOKEN directly), so don't persist git credentials on disk.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Download build artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: artifacts
+          merge-multiple: true
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build pycryptodomex loguru httpx
+          python -m build --outdir dist/
+          cp dist/*.whl dist/*.tar.gz artifacts/
+
+      - name: Generate and sign release manifest
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          python scripts/sign_release.py
 
       - name: Create checksums
         run: |
           cd artifacts
-          find . -type f \( -name "file-organizer*" -o -name "*.exe" \) | while read f; do
+          find . -type f \( -name "file-organizer*" -o -name "*.exe" -o -name "*.whl" -o -name "*.tar.gz" \) | while read -r f; do
             sha256sum "$f" >> SHA256SUMS.txt
           done
           cat SHA256SUMS.txt
 
+      - name: Build release notes from CHANGELOG
+        run: |
+          if python scripts/extract_changelog.py "${RELEASE_TAG}" > release-notes.md; then
+            echo "Using CHANGELOG section for ${RELEASE_TAG}."
+          else
+            echo "No CHANGELOG section for ${RELEASE_TAG}; relying on generated notes."
+            : > release-notes.md
+          fi
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
-        with:
-          files: |
-            artifacts/**/*
-            artifacts/SHA256SUMS.txt
-          draft: true
-          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t release_files < <(find artifacts -type f | sort)
+          if [ "${#release_files[@]}" -eq 0 ]; then
+            echo "No release files found under artifacts/"
+            exit 1
+          fi
+
+          args=(
+            release create "${RELEASE_TAG}"
+            "${release_files[@]}"
+            --notes-file release-notes.md
+            --generate-notes
+          )
+
+          if [[ "${RELEASE_TAG}" != *-* && "${RELEASE_TAG}" != *a* && "${RELEASE_TAG}" != *b* && "${RELEASE_TAG}" != *rc* ]]; then
+            args+=(--draft)
+          else
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"

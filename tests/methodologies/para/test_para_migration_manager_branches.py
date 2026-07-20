@@ -276,9 +276,9 @@ class TestGeneratePreview:
     ) -> None:
         files = [
             MigrationFile(
-                source_path=Path(f"/src/file{i}.txt"),
+                source_path=Path("/") / "src" / f"file{i}.txt",
                 target_category=PARACategory.RESOURCE,
-                target_path=Path(f"/dst/file{i}.txt"),
+                target_path=Path("/") / "dst" / f"file{i}.txt",
                 confidence=0.7,
             )
             for i in range(25)

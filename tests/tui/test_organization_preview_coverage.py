@@ -6,11 +6,14 @@ action_refresh_preview, action_confirm, action_cancel, _set_status.
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 
+from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.tui.organization_preview import (
     BeforeAfterPanel,
     OrganizationPreviewView,
@@ -18,7 +21,33 @@ from file_organizer.tui.organization_preview import (
 )
 from file_organizer.tui.settings_view import ParallelRuntimeSettings
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
+
+def _make_plan(tmp_path: Path):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    source = input_dir / "a.pdf"
+    source.write_text("hello")
+    return build_plan_from_processed(
+        input_path=input_dir,
+        output_path=output_dir,
+        processed=[
+            ProcessedFile(
+                file_path=source,
+                description="Categorized into Docs",
+                folder_name="Docs",
+                filename="a",
+            )
+        ],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +125,7 @@ class TestOrganizationSummaryCoverage:
 class TestOrganizationPreviewViewLoadPreview:
     """Test _load_preview worker thread paths."""
 
-    def test_load_preview_success(self) -> None:
+    def test_load_preview_success(self, tmp_path: Path) -> None:
         view = OrganizationPreviewView()
         before_after_panel = MagicMock()
         summary_panel = MagicMock()
@@ -118,6 +147,8 @@ class TestOrganizationPreviewViewLoadPreview:
             failed_files=1,
             errors=[("bad.txt", "corrupt")],
         )
+        mock_plan = _make_plan(tmp_path)
+        mock_result.plan = mock_plan
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
@@ -141,7 +172,8 @@ class TestOrganizationPreviewViewLoadPreview:
             parallel_workers=2,
             prefetch_depth=1,
         )
-        assert mock_app.call_from_thread.call_count == 3
+        assert mock_app.call_from_thread.call_count == 4
+        assert view._current_plan is mock_plan
         before_after_panel.set_structure.assert_called_once_with(
             {"Docs": ["a.pdf"]},
             str(view._input_dir),
@@ -188,7 +220,8 @@ class TestOrganizationPreviewViewLoadPreview:
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count == 2
+        assert mock_app.call_from_thread.call_count == 3
+        assert view._current_plan is None
         before_after_panel.update.assert_called_once_with(
             "[red]Models unavailable:[/red] model not found\n\n"
             "[dim]Ensure Ollama is running with required models.[/dim]"
@@ -202,6 +235,238 @@ class TestOrganizationPreviewViewLoadPreview:
         view._load_preview = MagicMock()
         view.action_refresh_preview()
         view._load_preview.assert_called_once()
+
+    def test_action_confirm_starts_apply_worker(self) -> None:
+        view = OrganizationPreviewView()
+        view._current_plan = object()
+        mock_panel = MagicMock()
+        view.query_one = MagicMock(return_value=mock_panel)
+        view._set_status = MagicMock()
+        view._apply_organization = MagicMock()
+
+        view.action_confirm()
+
+        assert mock_panel.update.call_args_list == [
+            call("[dim]Applying organization...[/dim]"),
+            call("[dim]Working...[/dim]"),
+        ]
+        view._set_status.assert_called_once_with("Applying organization...")
+        view._apply_organization.assert_called_once_with(view._current_plan)
+        assert view._is_applying is True
+
+    def test_action_confirm_ignores_duplicate_apply(self) -> None:
+        view = OrganizationPreviewView()
+        view._is_applying = True
+        view.query_one = MagicMock()
+        view._set_status = MagicMock()
+        view._apply_organization = MagicMock()
+
+        view.action_confirm()
+
+        view.query_one.assert_not_called()
+        view._set_status.assert_called_once_with("Organization is already applying...")
+        view._apply_organization.assert_not_called()
+
+    def test_apply_organization_success_executes_stored_plan(self, tmp_path) -> None:
+        input_dir = tmp_path / "in"
+        output_dir = tmp_path / "out"
+        view = OrganizationPreviewView(input_dir=input_dir, output_dir=output_dir)
+        plan = MagicMock()
+        view._current_plan = plan
+        mock_result = SimpleNamespace(
+            organized_structure={"Docs": ["a.pdf"]},
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            failed_files=0,
+            errors=[],
+        )
+        mock_organizer = MagicMock()
+        mock_organizer.execute_plan.return_value = mock_result
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        view._handle_apply_success = MagicMock()
+
+        with (
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
+                return_value=ParallelRuntimeSettings(max_workers=3, prefetch_depth=4),
+            ),
+            patch(
+                "file_organizer.core.organizer.FileOrganizer",
+                return_value=mock_organizer,
+            ) as mock_org_cls,
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
+        ):
+            OrganizationPreviewView._apply_organization.__wrapped__(view, plan)
+
+        mock_org_cls.assert_called_once_with(
+            dry_run=False,
+            parallel_workers=3,
+            prefetch_depth=4,
+        )
+        mock_organizer.execute_plan.assert_called_once_with(plan)
+        view._handle_apply_success.assert_called_once_with(mock_result)
+
+    def test_apply_organization_without_plan_reports_error(self) -> None:
+        view = OrganizationPreviewView()
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        view._handle_apply_error = MagicMock()
+
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            OrganizationPreviewView._apply_organization.__wrapped__(view, None)
+
+        view._handle_apply_error.assert_called_once()
+        assert "Refresh preview" in str(view._handle_apply_error.call_args.args[0])
+
+    def test_handle_apply_success_switches_to_history(self, tmp_path) -> None:
+        input_dir = tmp_path / "in"
+        view = OrganizationPreviewView(input_dir=input_dir)
+        view._is_applying = True
+        before_after_panel = MagicMock()
+        summary_panel = MagicMock()
+
+        class AwaitableSwitch:
+            def __await__(self):
+                if False:
+                    yield None
+                return None
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                BeforeAfterPanel: before_after_panel,
+                OrganizationSummary: summary_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
+        view._set_status = MagicMock()
+        mock_app = MagicMock()
+        mock_app.action_switch_view = MagicMock(return_value=AwaitableSwitch())
+        mock_app.run_worker = MagicMock()
+        mock_result = SimpleNamespace(
+            organized_structure={"Docs": ["a.pdf"]},
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            failed_files=0,
+            errors=[],
+        )
+
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._handle_apply_success(mock_result)
+
+        assert view._is_applying is False
+        before_after_panel.set_structure.assert_called_once_with(
+            {"Docs": ["a.pdf"]}, str(input_dir)
+        )
+        summary_panel.set_result.assert_called_once_with(
+            total=1,
+            processed=1,
+            skipped=0,
+            failed=0,
+            folders=1,
+            errors=[],
+        )
+        view._set_status.assert_called_once_with("Organization applied. Opening history.")
+        mock_app.action_switch_view.assert_called_once_with("history")
+        mock_app.run_worker.assert_called_once()
+
+    def test_handle_apply_success_without_switch_view_action(self, tmp_path) -> None:
+        """An app without action_switch_view still applies the result cleanly."""
+        input_dir = tmp_path / "in"
+        view = OrganizationPreviewView(input_dir=input_dir)
+        view._is_applying = True
+        before_after_panel = MagicMock()
+        summary_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                BeforeAfterPanel: before_after_panel,
+                OrganizationSummary: summary_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
+        view._set_status = MagicMock()
+        mock_app = MagicMock()
+        del mock_app.action_switch_view
+        mock_result = SimpleNamespace(
+            organized_structure={"Docs": ["a.pdf"]},
+            total_files=1,
+            processed_files=1,
+            skipped_files=0,
+            failed_files=0,
+            errors=[],
+        )
+
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._handle_apply_success(mock_result)
+
+        assert view._is_applying is False
+        before_after_panel.set_structure.assert_called_once_with(
+            {"Docs": ["a.pdf"]}, str(input_dir)
+        )
+        summary_panel.set_result.assert_called_once_with(
+            total=1,
+            processed=1,
+            skipped=0,
+            failed=0,
+            folders=1,
+            errors=[],
+        )
+        view._set_status.assert_called_once_with("Organization applied. Opening history.")
+        mock_app.run_worker.assert_not_called()
+
+    def test_apply_organization_exception_shows_apply_error(self) -> None:
+        view = OrganizationPreviewView()
+        view._current_plan = object()
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        view._handle_apply_error = MagicMock()
+
+        with (
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
+                return_value=ParallelRuntimeSettings(max_workers=1, prefetch_depth=1),
+            ),
+            patch(
+                "file_organizer.core.organizer.FileOrganizer",
+                side_effect=RuntimeError("model offline"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
+        ):
+            OrganizationPreviewView._apply_organization.__wrapped__(view, view._current_plan)
+
+        view._handle_apply_error.assert_called_once()
+        assert isinstance(view._handle_apply_error.call_args.args[0], RuntimeError)
+
+    def test_handle_apply_error_updates_panels_and_status(self) -> None:
+        view = OrganizationPreviewView()
+        view._is_applying = True
+        before_after_panel = MagicMock()
+        summary_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                BeforeAfterPanel: before_after_panel,
+                OrganizationSummary: summary_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
+        view._set_status = MagicMock()
+
+        view._handle_apply_error(RuntimeError("disk full"))
+
+        assert view._is_applying is False
+        before_after_panel.update.assert_called_once_with(
+            "[red]Apply failed:[/red] disk full\n\n"
+            "[dim]Some files may have been changed. Check History before retrying.[/dim]"
+        )
+        summary_panel.update.assert_called_once_with("[dim]No data available.[/dim]")
+        view._set_status.assert_called_once_with("Apply failed")
 
     def test_set_status_no_app(self) -> None:
         view = OrganizationPreviewView()

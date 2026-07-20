@@ -410,7 +410,7 @@ class TestDataclassCompatibility:
             y: int
 
         p = ImmutablePoint(x=1, y=2)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             p.x = 3  # type: ignore[misc]
 
 
@@ -444,7 +444,7 @@ class TestIsinstanceTupleForm:
 
     def test_isinstance_path_types(self) -> None:
         """isinstance with Path types should work."""
-        p = Path("/tmp/test")
+        p = Path("/") / "tmp" / "test"  # noqa: test-hardcoded-paths
         assert isinstance(p, (str, Path))
         assert not isinstance(42, (str, Path))
 
