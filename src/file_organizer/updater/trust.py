@@ -14,7 +14,7 @@ from Cryptodome.Signature import eddsa
 from loguru import logger
 
 PINNED_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAnirlcO8/RIANG5F9tLrXR+QJR6Vshpcz+TDnlrV2gIY=
+MCowBQYDK2VwAyEAmCb+J0JCdcaZxagg/fUcCmg7vr+q99q8brcToILAn7M=
 -----END PUBLIC KEY-----"""
 
 # Upper bound on a single release asset size recorded in the manifest (10 GiB).
