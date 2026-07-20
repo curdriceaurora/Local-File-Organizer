@@ -1,14 +1,14 @@
-# Dependencies & Optional Extras
+# Dependencies and Optional Extras
 
-This page is the canonical dependency matrix for installation extras defined in `pyproject.toml`.
+This document shows the dependency matrix for installation extras in `pyproject.toml`.
 
 ## Base requirements
 
-- Python 3.11+
-- Ollama (for default local provider mode)
-- Recommended resources: 8 GB RAM minimum, 16 GB preferred, ~10 GB storage for local models
+- Python 3.11 or newer
+- Ollama (for the default local provider mode)
+- Recommended resources: 8 GB RAM minimum, 16 GB preferred, 10 GB storage for local models
 
-## Install base package
+## Install the base package
 
 ```bash
 # PyPI
@@ -20,48 +20,49 @@ pip install -e .
 
 ## Optional extras matrix
 
-These commands assume a source checkout. For PyPI installs, use `pip install "local-file-organizer[extra]"` instead of `-e`.
+These commands use a source checkout. For PyPI installations, use `pip install "local-file-organizer[extra]"` instead of `-e`.
 
-| Extra | Install command | What it enables | Type |
+| Extra | Install command | Description | Type |
 |------|---|---|---|
-| `parsers` | `pip install -e ".[parsers]"` | PDF/Office/eBook/HTML parsing | Runtime |
-| `web` | `pip install -e ".[web]"` | FastAPI/WS web stack dependencies | Runtime |
-| `cloud` | `pip install -e ".[cloud]"` | OpenAI-compatible provider client (`openai`) | Runtime |
-| `llama` | `pip install -e ".[llama]"` | Local llama.cpp GGUF inference | Runtime |
-| `mlx` | `pip install -e ".[mlx]"` | Apple Silicon MLX inference | Runtime (macOS) |
-| `claude` | `pip install -e ".[claude]"` | Anthropic Claude provider client | Runtime |
-| `gui` | `pip install -e ".[gui]"` | PyQt6 GUI dependencies | Runtime/UI |
-| `desktop` | `pip install -e ".[desktop]"` | Native desktop window (`pywebview`) | Runtime/UI |
-| `audio` | `pip install -e ".[audio]"` | Audio transcription + metadata packages | Runtime |
-| `video` | `pip install -e ".[video]"` | Video scene analysis packages | Runtime |
-| `dedup` | `pip install -e ".[dedup]"` | Similarity dedupe dependencies | Runtime |
-| `archive` | `pip install -e ".[archive]"` | 7z/RAR archive handling | Runtime |
-| `scientific` | `pip install -e ".[scientific]"` | HDF5/NetCDF/MATLAB formats | Runtime |
-| `cad` | `pip install -e ".[cad]"` | DXF/CAD parsing | Runtime |
-| `build` | `pip install -e ".[build]"` | PyInstaller packaging tooling | Build |
-| `docs` | `pip install -e ".[docs]"` | MkDocs documentation tooling | Docs |
-| `dev` | `pip install -e ".[dev]"` | Test/lint/type/dev tooling | Development |
-| `search` | `pip install -e ".[search]"` | BM25 ranking dependencies | Runtime |
-| `all` | `pip install -e ".[all]"` | All extras above | Aggregate |
+| `parsers` | `pip install -e ".[parsers]"` | Read PDF, Office, eBook, and HTML files | Runtime |
+| `web` | `pip install -e ".[web]"` | Run the FastAPI and WS web stack | Runtime |
+| `cloud` | `pip install -e ".[cloud]"` | Use the OpenAI-compatible provider client | Runtime |
+| `llama` | `pip install -e ".[llama]"` | Run local llama.cpp GGUF inference | Runtime |
+| `mlx` | `pip install -e ".[mlx]"` | Run Apple Silicon MLX inference | Runtime (macOS) |
+| `claude` | `pip install -e ".[claude]"` | Use the Anthropic Claude provider client | Runtime |
+| `gui` | `pip install -e ".[gui]"` | Use PyQt6 GUI dependencies | Runtime/UI |
+| `desktop` | `pip install -e ".[desktop]"` | Run the native desktop window | Runtime/UI |
+| `audio` | `pip install -e ".[audio]"` | Transcribe audio and read metadata | Runtime |
+| `video` | `pip install -e ".[video]"` | Analyze video scenes | Runtime |
+| `dedup` | `pip install -e ".[dedup]"` | Find and remove duplicate files | Runtime |
+| `archive` | `pip install -e ".[archive]"` | Read 7z and RAR archives | Runtime |
+| `scientific` | `pip install -e ".[scientific]"` | Read HDF5, NetCDF, and MATLAB files | Runtime |
+| `cad` | `pip install -e ".[cad]"` | Read DXF and CAD files | Runtime |
+| `build` | `pip install -e ".[build]"` | Build PyInstaller packages | Build |
+| `docs` | `pip install -e ".[docs]"` | Build MkDocs documentation | Docs |
+| `dev` | `pip install -e ".[dev]"` | Test, lint, and type code | Development |
+| `search` | `pip install -e ".[search]"` | Rank BM25 search results | Runtime |
+| `all` | `pip install -e ".[all]"` | Install all extras above | Aggregate |
 
-## Common install combinations
+## Common installation combinations
 
 ```bash
-# Source checkout required for -e commands below
+# A source checkout is necessary for the -e commands below
 
 # Local default workflow
 pip install -e ".[parsers,web]"
 
-# Cloud/OpenAI-compatible or Claude providers
+# Cloud or Claude providers
 pip install -e ".[cloud,claude]"
 
-# Full media + dedupe workflow
+# Full media and deduplication workflow
 pip install -e ".[audio,video,dedup,archive]"
 ```
 
-## System-level dependencies
+## System requirements
 
-- FFmpeg is required for most non-WAV audio inputs and recommended for richer media handling.
-- Some extras have platform-specific requirements (for example, `mlx` on macOS only).
+- You must install FFmpeg for most audio inputs.
+- We recommend FFmpeg for advanced media processing.
+- Some extras have platform requirements (for example, `mlx` operates on macOS only).
 
-See [Audio & Video Processing](audio-video.md) for FFmpeg and acceleration details.
+Read [Audio and Video Processing](audio-video.md) for FFmpeg and acceleration instructions.

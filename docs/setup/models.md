@@ -6,17 +6,17 @@
 - Vision model: `qwen2.5vl:7b-q4_K_M`
 - Default provider mode: `ollama`
 
-## Provider-driven model settings
+## Provider settings
 
-Model names can come from:
+Model names come from these sources:
 
-1. Environment provider settings (when `FO_PROVIDER` is set)
-2. Saved config profile (`FO_PROFILE` / `file-organizer config ...`)
+1. Environment provider settings (if you set `FO_PROVIDER`)
+2. Saved configuration profile (`FO_PROFILE` or `file-organizer config`)
 3. Built-in defaults
 
-See [AI Provider Setup](ai-providers.md) for provider-specific variables and examples.
+Read [AI Provider Setup](ai-providers.md) for provider variables and examples.
 
-## Config profile model fields
+## Configuration profile fields
 
 ```yaml
 models:

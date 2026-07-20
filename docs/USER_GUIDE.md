@@ -2,11 +2,11 @@
 
 ## Introduction
 
-File Organizer v2 is an AI-powered local file management system built with a privacy-first architecture. It is local-first (Ollama by default) and also supports optional cloud providers when explicitly configured.
+File Organizer v2 is an AI-powered local file management system. It uses a privacy-first architecture. It operates locally by default. It supports optional cloud providers.
 
 ## Essentials First Run (CLI)
 
-Use this workflow to get a successful first organization run before exploring advanced features:
+Use this workflow to complete a first organization run. Do this before you explore advanced features:
 
 ```bash
 fo setup
@@ -15,18 +15,18 @@ fo organize ~/Downloads ~/Organized
 fo undo
 ```
 
-Use `fo undo` after at least one organize run has been recorded.
+Use `fo undo` after you record at least one organize run.
 
-Prefer a browser? Start with [Web UI Quick Start](web-ui/getting-started.md).
+Do you prefer a browser? Start with the [Web UI Quick Start](web-ui/getting-started.md).
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- [Ollama](https://ollama.ai/) installed and running
-- 8 GB RAM minimum (16 GB recommended)
-- ~10 GB disk space for AI models
+- You must install Python 3.11 or higher.
+- You must install and start [Ollama](https://ollama.ai/).
+- You must have 8 GB RAM minimum. We recommend 16 GB.
+- You must have 10 GB disk space for AI models.
 
 ### Setup
 
@@ -57,11 +57,11 @@ Use the canonical extras matrix:
 - [Dependencies & Optional Extras](setup/dependencies.md#optional-extras-matrix)
 
 !!! note
-    The audio and video packs require FFmpeg and optionally a CUDA-capable GPU. See the [Audio & Video Setup Guide](setup/audio-video.md) for detailed installation instructions, model selection, and configuration.
+    The audio and video packs require FFmpeg and optionally a CUDA-capable GPU. Read the [Audio & Video Setup Guide](setup/audio-video.md) to find detailed installation instructions, model selection data, and configuration steps.
 
 ## Workflow Map (Quick Paths)
 
-Use this routing table to jump directly to a practical workflow.
+Use this routing table to jump directly to a workflow.
 
 | Goal | Start here | Go deeper |
 |------|------------|-----------|
@@ -78,44 +78,44 @@ Use this routing table to jump directly to a practical workflow.
 
 ## CLI Commands Overview
 
-File Organizer provides two equivalent entrypoints: `file-organizer` and the short alias `fo`.
+File Organizer includes two equivalent commands: `file-organizer` and the short alias `fo`.
 
-If you're new, start with `setup`, `preview`, `organize`, and `undo` before exploring the full command catalog.
+If you are a new user, start with `setup`, `preview`, `organize`, and `undo`. Then, explore the full command list.
 
 | Command | Description |
 |---------|-------------|
-| `organize` | Organize files from an input directory to an output directory |
-| `preview` | Preview organization changes without moving files |
-| `search` | Search files by filename pattern/keyword with optional `--type` filter |
-| `analyze` | Analyze a file and display AI-generated metadata |
-| `tui` | Launch the Terminal User Interface |
-| `serve` | Start the web UI server |
-| `desktop` | Launch the native desktop window application |
-| `docs` | Build or serve the project documentation |
-| `undo` | Undo the last file operation |
-| `redo` | Redo a previously undone operation |
-| `history` | Show operation history |
-| `analytics` | Display storage analytics and insights |
-| `version` | Show the application version |
-| `config` | View and edit configuration |
-| `model` | Manage AI models |
-| `autotag` | Auto-tagging suggestions and batch operations |
-| `copilot` | AI assistant for file management questions |
-| `daemon` | Background file watching and auto-organization |
-| `dedupe` | Find and resolve duplicate files |
-| `rules` | Manage custom organization rules |
-| `suggest` | Get smart file placement suggestions |
-| `update` | Check for and install application updates |
-| `api-keys` | Generate local API keys |
-| `marketplace` | Browse and install community plugins |
-| `benchmark` | Run performance benchmarks |
-| `api` | Start the REST API server |
+| `organize` | Move files from an input directory to an output directory. |
+| `preview` | Show organization changes without moving files. |
+| `search` | Find files by filename pattern or keyword. Use the optional `--type` filter. |
+| `analyze` | Examine a file and show AI-generated metadata. |
+| `tui` | Start the Terminal User Interface. |
+| `serve` | Start the web UI server. |
+| `desktop` | Open the native desktop window application. |
+| `docs` | Build or serve the project documentation. |
+| `undo` | Revert the last file operation. |
+| `redo` | Apply a previously undone operation again. |
+| `history` | Show the operation history. |
+| `analytics` | Show storage analytics and insights. |
+| `version` | Show the application version. |
+| `config` | Show and change configuration. |
+| `model` | Control AI models. |
+| `autotag` | Get auto-tagging suggestions and do batch operations. |
+| `copilot` | Start the AI assistant for file management questions. |
+| `daemon` | Watch files in the background and organize them automatically. |
+| `dedupe` | Find and resolve duplicate files. |
+| `rules` | Manage custom organization rules. |
+| `suggest` | Get smart file placement suggestions. |
+| `update` | Find and install application updates. |
+| `api-keys` | Make local API keys. |
+| `marketplace` | Find and install community plugins. |
+| `benchmark` | Start performance benchmarks. |
+| `api` | Start the REST API server. |
 
 ## Organizing Files
 
 ### Basic Organization
 
-The `organize` command analyzes files in an input directory and moves them to categorized folders in an output directory:
+The `organize` command analyzes files in an input directory. It moves them to categorized folders in an output directory:
 
 ```bash
 # Dry run first to preview changes
@@ -130,7 +130,7 @@ file-organizer organize ~/Downloads ~/Organized --verbose
 
 ### Previewing Changes
 
-Use `preview` for a quick dry-run view:
+Use `preview` to get a quick dry-run view:
 
 ```bash
 file-organizer preview ~/Downloads
@@ -146,7 +146,7 @@ file-organizer search "quarterly report" ~/Organized
 
 ### Analyzing Individual Files
 
-Inspect what the AI detects about a specific file:
+Examine what the AI detects about a specific file:
 
 ```bash
 file-organizer analyze ~/Documents/report.pdf
@@ -154,7 +154,7 @@ file-organizer analyze ~/Documents/report.pdf
 
 ## Terminal UI (TUI)
 
-The TUI provides a rich, interactive terminal interface for managing your files.
+The TUI gives an interactive terminal interface to manage your files.
 
 ![TUI overview](assets/tui-overview.svg)
 
@@ -177,14 +177,14 @@ file-organizer tui
 | `7` | Settings |
 | `8` | Copilot chat |
 
-Navigation: Use arrow keys to move, `Enter` to select, `q` to quit, `?` for help.
+Navigation: Use arrow keys to move, press `Enter` to select, press `q` to quit, press `?` for help.
 
 !!! tip
-    The Audio view (key `5`) provides transcription and analysis features. See the [Audio & Video Setup Guide](setup/audio-video.md) to enable audio transcription.
+    The Audio view (key `5`) includes transcription and analysis features. Read the [Audio & Video Setup Guide](setup/audio-video.md) to enable audio transcription.
 
 ## Copilot
 
-The Copilot is an AI assistant that can answer questions about your files and perform management tasks using natural language.
+The Copilot is an AI assistant. It answers questions about your files and does management tasks with natural language.
 
 ![Copilot chat in the TUI](assets/copilot-chat.svg)
 
@@ -218,11 +218,11 @@ file-organizer copilot chat --dir ~/Documents
 file-organizer dedupe scan ~/Documents
 ```
 
-For additional command patterns, see [CLI `copilot` entry points](cli-reference.md#cli-copilot).
+To find more command patterns, read [CLI `copilot` entry points](cli-reference.md#cli-copilot).
 
 ## Daemon and Background Processing
 
-The daemon watches directories for new files and organizes them automatically.
+The daemon monitors directories for new files. It organizes them automatically.
 
 ### Starting the Daemon
 
@@ -252,15 +252,15 @@ file-organizer daemon stop
 
 ## Organization Methodologies
 
-File Organizer supports multiple organization systems. Configure these through the `config edit` command or the TUI settings view.
+File Organizer includes multiple organization systems. Configure these methodologies with the `config edit` command or the TUI settings view.
 
 ### Default AI Organization
 
-The default method uses AI to analyze file content and suggest categories based on the content itself, not just file extensions.
+The default method uses AI. It analyzes file content and suggests categories based on the content itself. It does not only use file extensions.
 
 ### PARA Method
 
-Projects, Areas, Resources, Archive -- a productivity-focused system:
+Projects, Areas, Resources, Archive. This is a productivity-focused system:
 
 - **Projects**: Active work with deadlines
 - **Areas**: Ongoing responsibilities
@@ -269,7 +269,7 @@ Projects, Areas, Resources, Archive -- a productivity-focused system:
 
 ### Johnny Decimal
 
-A numerical categorization system using `XX.YY` numbering:
+A numerical categorization system that uses `XX.YY` numbering:
 
 - **Areas** (10-19, 20-29, ...): Broad categories
 - **Categories** (X1, X2, ...): Specific sub-categories
@@ -277,19 +277,19 @@ A numerical categorization system using `XX.YY` numbering:
 
 ### Quick workflow: choose a methodology
 
-1. **Web UI (`/ui/organize`) values:** start with `content_based` if you do not already follow a folder system; choose `para` for actionability; choose `johnny_decimal` for stable numeric indexing.
+1. **Web UI (`/ui/organize`) values:** start with `content_based` if you do not follow a folder system. Choose `para` for actionability. Choose `johnny_decimal` for stable numeric indexing.
 2. **CLI config values (`file-organizer config edit --methodology ...`):** use `none` (content-based/default), `para`, or `jd`.
-3. Run a dry run and compare output quality before committing:
+3. Start a dry run and compare the output quality before you commit:
 
 ```bash
 file-organizer organize ~/Inbox ~/Organized --dry-run
 ```
 
-Continue with [Johnny Decimal getting started](methodologies/johnny-decimal/user-guide.md#getting-started) when selecting a numeric methodology.
+Read [Johnny Decimal getting started](methodologies/johnny-decimal/user-guide.md#getting-started) when you select a numeric methodology.
 
 ## Deduplication
 
-Find and resolve duplicate files using perceptual hashing (for images) and content-based comparison (for documents).
+Find and resolve duplicate files with perceptual hashing (for images) and content-based comparison (for documents).
 
 ![Dedupe dry-run report](assets/dedupe-report.svg)
 
@@ -316,7 +316,7 @@ file-organizer dedupe report ~/Documents
 
 ## Auto-Tagging
 
-The auto-tagging system suggests and applies tags to files based on AI analysis of their content.
+The auto-tagging system suggests and applies tags to files. It uses AI analysis of their content.
 
 ### Getting Tag Suggestions
 
@@ -351,7 +351,7 @@ file-organizer autotag recent
 
 ## Organization Rules
 
-Rules let you override AI decisions with explicit patterns. When a file matches a rule, it is organized according to that rule instead of the AI suggestion.
+Rules let you stop AI decisions and use explicit patterns. When a file matches a rule, the software organizes it with that rule instead of the AI suggestion.
 
 ### Listing Rules
 
@@ -398,17 +398,17 @@ file-organizer rules apply ~/Documents --set default --dry-run
 file-organizer rules apply ~/Documents --set default
 ```
 
-See [CLI `rules` entry points](cli-reference.md#cli-rules) for full command options.
+Read [CLI `rules` entry points](cli-reference.md#cli-rules) to find all command options.
 
 ## Plugin Marketplace
 
-Use marketplace commands to discover and install plugins.
+Use marketplace commands to find and install plugins.
 
 ```bash
 # Browse
 file-organizer marketplace list --page 1 --per-page 20
 
-# Inspect + install
+# Inspect and install
 file-organizer marketplace info example-plugin
 file-organizer marketplace install example-plugin
 
@@ -417,11 +417,11 @@ file-organizer marketplace installed
 file-organizer marketplace updates
 ```
 
-See [CLI `marketplace` entry points](cli-reference.md#cli-marketplace) for all subcommands.
+Read [CLI `marketplace` entry points](cli-reference.md#cli-marketplace) for all subcommands.
 
 ## Smart Suggestions
 
-Get AI-powered suggestions for where to place files based on your existing directory structure and past organization patterns.
+Get AI-powered suggestions for where you should put files. The software uses your existing directory structure and past organization patterns.
 
 ### Getting Suggestions
 
@@ -441,7 +441,7 @@ file-organizer suggest apply ~/Unsorted
 
 ## Analytics
 
-View storage analytics, file distribution, and organization metrics.
+Look at storage analytics, file distribution, and organization metrics.
 
 ```bash
 # Display analytics dashboard
@@ -465,7 +465,7 @@ file-organizer config edit --profile work --temperature 0.7
 
 ### Profile workflow (current stable path)
 
-In current mainstream installs, profile workflows are centered on named config profiles plus settings import/export.
+In current mainstream installs, profile workflows use named config profiles and settings import/export procedures.
 
 ```bash
 # 1) Inspect profile-specific settings
@@ -475,12 +475,12 @@ file-organizer config show --profile work
 file-organizer config edit --profile work --temperature 0.7
 ```
 
-Use [Web Settings import/export](web-ui/settings.md#settings-uisettings) for UI-based transfer flows.
-For runtime status of CLI `profile` subcommands, see [CLI profile behavior](cli-reference.md#cli-profile).
+Use [Web Settings import/export](web-ui/settings.md#settings-uisettings) for UI-based transfer procedures.
+To find the runtime status of CLI `profile` subcommands, read [CLI profile behavior](cli-reference.md#cli-profile).
 
 ## Undo and Redo
 
-All file move operations are tracked and reversible.
+The software tracks all file move operations. You can reverse them.
 
 ```bash
 # Undo the last operation
@@ -495,7 +495,7 @@ file-organizer history
 
 ## Web UI
 
-File Organizer includes a browser-based interface for managing files visually.
+File Organizer includes a browser-based interface to manage files visually.
 
 ### Starting the Web Server
 
@@ -507,14 +507,14 @@ file-organizer serve
 file-organizer serve --host 0.0.0.0 --port 9000
 ```
 
-Then open `http://localhost:8000/ui/` in your browser.
-If setup is incomplete, the web UI redirects to `http://localhost:8000/ui/setup`.
+Then, open `http://localhost:8000/ui/` in your browser.
+If setup is incomplete, the web UI goes to `http://localhost:8000/ui/setup`.
 
 Quick path: [plan, review, run, and export from Web Organize](web-ui/organization.md#quick-workflow-plan-review-run-export).
 
 ## Desktop UI
 
-File Organizer includes a native desktop window application for managing files.
+File Organizer includes a native desktop window application to manage files.
 
 ### Launching the Desktop Application
 
@@ -534,7 +534,7 @@ Quick path: [Desktop launch/configuration workflow](desktop-app.md#quick-workflo
 
 ## Project Documentation
 
-You can build or serve the local project documentation using the `docs` subcommand.
+You can build or serve the local project documentation with the `docs` subcommand.
 
 ### Serving Documentation Locally
 
@@ -644,20 +644,20 @@ file-organizer update install --dry-run
 | Scientific | `.hdf5`, `.h5`, `.hdf`, `.nc`, `.nc4`, `.netcdf`, `.mat` |
 | CAD | `.dxf`, `.dwg`, `.step`, `.stp`, `.iges`, `.igs` |
 
-*Legacy formats (`.doc`, `.xls`) have limited support and may return `None` or require additional dependencies. See the [File Format Reference](admin/file-format-reference.md) for details.
+*Legacy formats (`.doc`, `.xls`) have limited support. The software can return `None` or require additional dependencies. Read the [File Format Reference](admin/file-format-reference.md) for more data.
 
 !!! tip
-    Some format categories require optional feature packs. See [Optional Feature Packs](#optional-feature-packs) above. For audio transcription and video analysis features, see the [Audio & Video Setup Guide](setup/audio-video.md).
+    Some format categories require optional feature packs. Read [Optional Feature Packs](#optional-feature-packs) above. To find audio transcription and video analysis features, read the [Audio & Video Setup Guide](setup/audio-video.md).
 
 ## Privacy and Security
 
-File Organizer is designed to keep your data completely private:
+File Organizer keeps your data completely private:
 
-- All AI processing runs locally through Ollama -- no files or content are uploaded to any cloud service.
-- Network requests are limited to:
-  - Communicating with your local Ollama instance (localhost only)
-  - Checking for application updates (optional, can be disabled)
-- No telemetry, analytics, or usage tracking of any kind.
+- All AI operations run locally with Ollama. The software does not upload files or content to any cloud service.
+- Network requests only:
+  - Communicate with your local Ollama instance (localhost only)
+  - Check for application updates (this is optional and you can stop it)
+- The software does not collect telemetry, analytics, or usage tracking data.
 
 ## Troubleshooting
 
@@ -669,7 +669,7 @@ If you see connection errors, ensure Ollama is running:
 ollama ps
 ```
 
-If no models are listed, pull the required models:
+If the software does not list models, pull the required models:
 
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
@@ -678,7 +678,7 @@ ollama pull qwen2.5vl:7b-q4_K_M
 
 ### Verbose Output
 
-Add `--verbose` (or `-v`) to any command for detailed logging:
+Add `--verbose` (or `-v`) to any command to see detailed logs:
 
 ```bash
 file-organizer organize ~/Downloads ~/Organized --verbose
@@ -686,10 +686,10 @@ file-organizer organize ~/Downloads ~/Organized --verbose
 
 ### Checking Health
 
-Verify the API server is responding:
+Verify the API server is operating correctly:
 
 ```bash
 curl http://localhost:8000/api/v1/health
 ```
 
-For more detailed troubleshooting, see [Troubleshooting](troubleshooting.md).
+To find more detailed troubleshooting procedures, read [Troubleshooting](troubleshooting.md).

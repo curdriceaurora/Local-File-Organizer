@@ -6,7 +6,7 @@
 
 ### Affected Paths
 
-The following hardcoded path patterns are **deprecated** and will be removed in a future major release:
+These hardcoded path patterns are deprecated. We will remove them in a future major release:
 
 ```python
 # DEPRECATED - Do not use in new code
@@ -15,27 +15,27 @@ DEFAULT_DATA_DIR = Path.home() / ".file-organizer"
 DEFAULT_PREFERENCES_DIR = Path.home() / ".file_organizer" / "preferences"
 ```
 
-### Why This Change?
+### Reason for Change
 
-The hardcoded paths were inflexible and non-standard:
+The hardcoded paths were not flexible. They were not standard:
 
-- No support for XDG Base Directory Specification
-- No environment variable configuration
-- No centralized path management
-- Difficult to test and customize
+- They do not support the XDG Base Directory Specification.
+- They do not use environment variables.
+- They do not have centralized path management.
+- They are difficult to test and change.
 
 ### Migration Path
 
 **Timeline**:
 
-- **Current**: PathManager-based paths are the recommended approach.
-- **Future major release**: Legacy hardcoded path handling is expected to be removed.
+- **Current**: Use PathManager-based paths.
+- **Future major release**: We will remove legacy hardcoded paths.
 
-**Action Required**:
+**Required Actions**:
 
-1. Update your code to use `PathManager`
-2. Test with new XDG paths
-3. Update documentation and scripts
+1. Update your code. Use `PathManager`.
+2. Test your code with new XDG paths.
+3. Update your documentation and scripts.
 
 ### Before & After
 
@@ -71,7 +71,7 @@ if config_file.exists():
 
 ### Deprecation Warnings
 
-Starting in v2.0, the following patterns will generate warnings:
+Starting in v2.0, these patterns will show warnings:
 
 ```python
 import warnings
@@ -84,9 +84,9 @@ config_dir = Path.home() / ".config" / "file-organizer"
 # Use PathManager instead: from file_organizer.config.path_manager import PathManager
 ```
 
-### Modules Being Updated
+### Modules to Update
 
-The following modules will be updated to use `PathManager`:
+We will update these modules to use `PathManager`:
 
 | Module | Path Type | Status | PR/Issue |
 |--------|-----------|--------|----------|
@@ -98,24 +98,24 @@ The following modules will be updated to use `PathManager`:
 
 ### FAQ
 
-**Q: Can I still use legacy paths?**
-A: Yes, current versions still support legacy paths via automatic migration. This is planned to change in a future major release.
+**Q: Can I use legacy paths?**
+A: Yes, current versions support legacy paths with automatic migration. We will remove this support in a future major release.
 
-**Q: Will my data be migrated automatically?**
-A: Yes, PathMigrator handles automatic migration with backups on first run.
+**Q: Will you migrate my data automatically?**
+A: Yes, PathMigrator does automatic migration with backups during the first run.
 
 **Q: How do I update my code?**
-A: See the [Path Standardization Guide](./path-standardization.md) for migration examples.
+A: Read the [Path Standardization Guide](./path-standardization.md) for migration examples.
 
-**Q: What if I have custom path configuration?**
-A: Use environment variables (XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_STATE_HOME) or pass PathManager to relevant classes.
+**Q: How do I use custom path configuration?**
+A: Use environment variables (XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_STATE_HOME) or send PathManager to relevant classes.
 
-**Q: When will legacy support be removed?**
-A: Planned for a future major release; follow release notes for the finalized schedule.
+**Q: When will you remove legacy support?**
+A: We plan to remove it in a future major release. Read release notes for the final schedule.
 
-### Suppressing Deprecation Warnings
+### Stop Deprecation Warnings
 
-If you need to suppress warnings temporarily (not recommended):
+To stop warnings temporarily (not recommended):
 
 ```python
 import warnings
@@ -130,12 +130,12 @@ warnings.filterwarnings("ignore", message=".*hardcoded path.*")
 
 ### Getting Help
 
-If you encounter issues with path migration:
+If you find problems with path migration:
 
-1. **Check the guide**: [Path Standardization Guide](./path-standardization.md)
-2. **Run diagnostics**: `file-organizer config paths --verbose`
-3. **File an issue**: https://github.com/curdriceaurora/Local-File-Organizer/issues
-4. **Check backups**: Migration backups are preserved with `.backup.TIMESTAMP` suffix
+1. **Read the guide**: [Path Standardization Guide](./path-standardization.md)
+2. **Start diagnostics**: `file-organizer config paths --verbose`
+3. **Report a problem**: https://github.com/curdriceaurora/Local-File-Organizer/issues
+4. **Examine backups**: We save migration backups with a `.backup.TIMESTAMP` suffix.
 
 ## See Also
 

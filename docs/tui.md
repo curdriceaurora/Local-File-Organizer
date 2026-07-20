@@ -2,9 +2,9 @@
 
 > **Version**: 2.0.2
 
-The TUI is built with Textual and launched from the unified CLI.
+The Textual framework builds the TUI. You start the TUI from the CLI.
 
-## Launch
+## Start the TUI
 
 ```bash
 file-organizer tui
@@ -12,21 +12,20 @@ file-organizer tui
 fo tui
 ```
 
-## Quick workflow: navigate, inspect, and adjust
+## Quick workflow
 
-1. Launch the TUI and wait for the main layout (or finish setup wizard).
-2. Jump across main views with `1`–`8` to inspect files, organization results, history, settings, and copilot.
-3. Use `Tab` to move focus and `?` to confirm active bindings.
-4. Open the Methodology view (`4`) to verify current strategy before running large organization jobs.
+1. Start the TUI. Wait for the main layout. Complete the setup wizard if necessary.
+2. Press `1` to `8` to change main views. You can see files, results, history, settings, and copilot.
+3. Press `Tab` to change focus. Press `?` to see active keyboard shortcuts.
+4. Press `4` to open the Methodology view. Verify your strategy before you start large organization jobs.
 
 ## Overview
 
-The Files view combines the directory tree, metadata panel, and a live
-type-aware preview of the highlighted file:
+The Files view shows the directory tree, the metadata panel, and a live preview of the selected file.
 
 ![TUI Overview](assets/tui-overview.svg)
 
-A quick walkthrough of the main views:
+This is a quick demonstration of the main views:
 
 ![TUI Demo](assets/tui-demo.gif)
 
@@ -34,55 +33,53 @@ A quick walkthrough of the main views:
 
 ### Organized (`2`)
 
-Dry-run preview of how the current directory would be organized:
+This view shows a preview. It shows how the software will organize the current directory.
 
 ![Organization Preview](assets/organization-preview.svg)
 
 ### Analytics (`3`)
 
-Storage overview, file-type distribution, quality score, and duplicate
-statistics for the current directory:
+This dashboard shows storage data, file types, quality scores, and duplicate statistics for the current directory.
 
 ![Analytics Dashboard](assets/analytics-dashboard.svg)
 
 ### Methodology (`4`)
 
-Choose between flat, PARA, and Johnny Decimal organization systems:
+Select a flat, PARA, or Johnny Decimal organization system.
 
 ![Methodology View](assets/methodology-view.svg)
 
 ### Audio (`5`)
 
-Scans the directory for audio files and shows tag metadata and
-classification for the selected file:
+The software searches the directory for audio files. It shows tag metadata and classification for the selected file.
 
 ![Audio Panel](assets/audio-panel.svg)
 
 ### History (`6`)
 
-Recent operations with undo/redo stacks:
+This view shows recent operations. It includes undo and redo options.
 
 ![History View](assets/history-view.svg)
 
 ### Copilot (`8`)
 
-Natural-language file management backed by the local intent engine:
+The local intent engine lets you manage files with natural language.
 
 ![Copilot Chat](assets/copilot-chat.svg)
 
 ## Keyboard shortcuts
 
-These are the global app-level bindings from `FileOrganizerApp.BINDINGS`.
+These are the global keyboard shortcuts from `FileOrganizerApp.BINDINGS`.
 
 ### Global
 
 | Key | Action |
 |-----|--------|
-| `q` / `Ctrl+c` | Quit |
-| `?` | Toggle help |
-| `Tab` | Focus next panel |
-| `1`–`8` | Switch main view |
-| `Ctrl+w` | Complete setup wizard (wizard flow) |
+| `q` / `Ctrl+c` | Stop the application |
+| `?` | Show or hide help |
+| `Tab` | Focus the next panel |
+| `1`–`8` | Change the main view |
+| `Ctrl+w` | Complete the setup wizard |
 
 ### View map (`1`–`8`)
 
@@ -97,27 +94,27 @@ These are the global app-level bindings from `FileOrganizerApp.BINDINGS`.
 | `7` | Settings |
 | `8` | Copilot |
 
-## View-local bindings (examples)
+## Local keyboard shortcuts
 
-The TUI also defines view-local bindings across modules (for example in `file_browser.py`, `organization_preview.py`, `settings_view.py`, `copilot_view.py`, and other view files).
+The TUI also has local keyboard shortcuts for specific views.
 
 Examples:
 
-- File browser tree supports vim-style navigation (`h`, `j`, `k`, `l`)
-- File browser filter toggle: `/`
-- Other views expose local controls through their own `BINDINGS` declarations
+- The file browser supports vim-style navigation keys (`h`, `j`, `k`, `l`).
+- Press `/` to toggle the file browser filter.
+- Other views have their own `BINDINGS` properties for local controls.
 
-## Setup wizard behavior
+## Setup wizard
 
-If setup is not completed, the TUI opens the setup wizard first and then transitions to the main app layout.
+If you did not complete the setup, the TUI shows the setup wizard. After setup, the main layout shows.
 
 ## Troubleshooting
 
-### Garbled Display or Broken Colors
+### Incorrect colors or broken display
 
-**Symptom**: Characters appear as raw escape codes, colors are missing, or the layout looks broken.
+**Symptom**: The display shows raw escape codes. Colors are missing. The layout is broken.
 
-**Cause**: The terminal's `TERM` environment variable is set to a value that Textual cannot detect color support for, or the terminal emulator itself has limited color support.
+**Cause**: The `TERM` environment variable is incorrect. The terminal does not support colors correctly.
 
 **Solution**:
 
@@ -126,16 +123,16 @@ If setup is not completed, the TUI opens the setup wizard first and then transit
 export TERM=xterm-256color
 file-organizer tui
 
-# If colors are completely wrong, try disabling color
+# If colors are incorrect, disable color
 export NO_COLOR=1
 file-organizer tui
 
-# Force color output on if the terminal supports it but detection fails
+# Force color output
 export FORCE_COLOR=1
 file-organizer tui
 ```
 
-If you use a multiplexer (tmux, screen), ensure it is configured to pass through true-color sequences:
+If you use a multiplexer (tmux, screen), configure it to allow true-color sequences:
 
 ```bash
 # In ~/.tmux.conf
@@ -143,71 +140,71 @@ set -g default-terminal "tmux-256color"
 set -ag terminal-overrides ",xterm-256color:RGB"
 ```
 
-### Blank Screen on Launch
+### Blank screen
 
-**Symptom**: The TUI opens but shows a blank or mostly-empty window for several seconds, then may recover or stay blank.
+**Symptom**: The TUI opens but shows a blank window. It stays blank or recovers after a delay.
 
-**Cause**: Rare Textual rendering issue, typically triggered by very small terminal sizes or a terminal that mis-reports its dimensions.
+**Cause**: The terminal size is too small. The terminal reports incorrect dimensions.
 
 **Solution**:
 
 ```bash
-# Resize the terminal window to at least 80x24 before launching
+# Make the terminal window larger than 80x24
 file-organizer tui
 
-# If the terminal stays blank, try resetting it first
+# If the screen stays blank, reset the terminal
 reset
 file-organizer tui
 ```
 
-### Wizard Stuck or Not Completing
+### Setup wizard does not complete
 
-**Symptom**: The setup wizard does not advance, or pressing keys has no effect.
+**Symptom**: The setup wizard does not continue. Keyboard inputs have no effect.
 
-**Cause**: A required field may be unfilled, or the terminal is swallowing keypresses.
+**Cause**: You did not fill a required field. The terminal captures your keyboard inputs.
 
 **Solution**:
 
-- Press `Ctrl+W` (shown in the keyboard shortcuts table above) to complete/advance the wizard.
-- Ensure the wizard panel has focus — click on it or press `Tab` to cycle focus.
-- If the wizard loop persists after completing setup, restart the TUI:
+- Press `Ctrl+W` to complete the wizard.
+- Make sure the wizard panel has focus. Click the panel or press `Tab`.
+- If the problem continues, restart the TUI:
 
 ```bash
 file-organizer tui
 ```
 
-### Keyboard Shortcuts Swallowed by Terminal Multiplexer
+### Multiplexer captures keyboard shortcuts
 
-**Symptom**: Global shortcuts like `Ctrl+C`, `Ctrl+W`, or function keys do not reach the TUI when running inside tmux or screen.
+**Symptom**: Global shortcuts (`Ctrl+C`, `Ctrl+W`) do not work in tmux or screen.
 
-**Cause**: tmux/screen intercepts certain key sequences before they reach the application.
+**Cause**: The multiplexer captures the key sequences.
 
 **Solution**:
 
-In **tmux**, use `send-keys` to inject the key directly into the foreground pane without going through tmux's binding layer:
+In **tmux**, use `send-keys` to send the keys to the application:
 
 ```bash
-# From another tmux window/pane, send Ctrl+W to the pane running the TUI
+# Send Ctrl+W to the TUI pane
 tmux send-keys C-w
 ```
 
-If the shortcut conflicts with a tmux binding, unbind it for the copy-mode table (where `C-w` is most commonly bound):
+Remove conflicting tmux bindings:
 
 ```bash
 # In ~/.tmux.conf
 unbind -T copy-mode C-w
 ```
 
-In **GNU screen**, press `Ctrl+a` then `a` to send a literal `Ctrl+a`, or use `stuff` to inject keys programmatically. For `Ctrl+W` specifically:
+In **GNU screen**, press `Ctrl+a` then `a` to send `Ctrl+a`. Use `stuff` to send keys:
 
 ```bash
 # From the screen command line (Ctrl+a :)
 :stuff ^W
 ```
 
-For persistent conflicts in either multiplexer, consider running the TUI in a dedicated terminal window outside the multiplexer.
+If problems continue, use a standard terminal window instead of a multiplexer.
 
-## Related docs
+## Related documents
 
 - [CLI Reference](cli-reference.md)
 - [Desktop App Guide](desktop-app.md)
