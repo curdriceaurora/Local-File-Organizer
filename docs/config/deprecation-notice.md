@@ -142,4 +142,3 @@ If you find problems with path migration:
 - [Path Standardization Guide](./path-standardization.md)
 - [PathManager Guide](./path-standardization.md)
 - [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
-
