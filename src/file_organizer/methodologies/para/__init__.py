@@ -13,7 +13,7 @@ Components:
 - migration_manager: Migration from flat structures to PARA
 - ai: AI-powered smart suggestions, feedback, and file organization
 
-Author: File Organizer v2.1.0
+Author: File Organizer v2.1.1
 License: MIT
 """
 

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-07-20
+
+Release recovery patch for the partially published `2.1.0` flow. This release
+keeps the `2.1.0` runtime behavior and republishes the corrected source,
+package README, documentation, and release-facing version metadata under a fresh
+PyPI version because PyPI does not allow re-uploading an existing version.
+
+### Highlights
+
+- **Version Metadata Recovery**: Republished the `2.1.0` code line as `2.1.1`
+  so public package metadata, README badges, docs, and about text agree.
+- **Broader Drift Guard**: Expanded the release version check to cover README
+  badges, docs support text, package/module docstrings, and the Windows manifest.
+
+### Changed
+
+- Corrected release-facing version stamps to `2.1.1`.
+- Strengthened `scripts/bump_version.py --check` and its tests so future release
+  cuts fail if the newly tracked version surfaces drift.
+- No runtime behavior changes from `2.1.0`.
+
 ## [2.1.0] - 2026-07-20
 
 ### Highlights
