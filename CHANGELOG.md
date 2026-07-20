@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-20
+
+### Highlights
+
+- **Documentation Overhaul**: Rewrote all user-facing guides to conform strictly to the ASD-STE100 (Simplified Technical English) specification for improved readability.
+- **Durable Executable Plans**: Refactored the core architecture so the organization preview generates an executable plan, eliminating discrepancies between preview and application (Issue #1504).
+- **Improved Release Notes**: Adopted a new structured "Highlights" format for release notes to make them easier to scan (Issue #1500).
+
+### Changed
+
+- User documentation, CLI reference, and setup guides are now written using active voice, controlled vocabulary, and short sentences to comply with ASD-STE100.
+- Organization preview workflow generates a concrete `OrganizationPlan` mapping source files to exact destination paths, replacing the previous guess-based preview.
+- Applying an organization preview now safely executes the exact operations from the preview plan without re-evaluating duplicate logic, failing closed if sources or destinations were modified in the interim.
+- Release notes in the GitHub changelog now start with a high-level summary of the most impactful changes.
+- Fixed pre-commit issues related to trailing newlines and trailing whitespace in documentation files.
+
 ## [2.0.2] - 2026-07-10
 
 Release recovery patch for the interrupted `2.0.1` publishing flow. This release republishes the `2.0.1` code state under a fresh PyPI version because PyPI does not allow re-uploading a deleted or previously published version. No runtime behavior changes.

@@ -45,9 +45,7 @@ def update_version_files(version: str, *, root: Path = REPO_ROOT) -> list[Path]:
     normalized = normalize_version(version)
     touched: list[Path] = []
     replacements = [
-        (root / "pyproject.toml", _PYPROJECT_VERSION),
         (root / "src" / "file_organizer" / "version.py", _VERSION_ASSIGNMENT),
-        (root / "src" / "file_organizer" / "__init__.py", _VERSION_ASSIGNMENT),
     ]
     for path, pattern in replacements:
         if _replace_once(path, pattern, normalized):
@@ -88,6 +86,8 @@ def ensure_changelog_section(
     section = (
         f"{marker}\n"
         f"## [{normalized}] - {release_date.isoformat()}\n\n"
+        "### Highlights\n\n"
+        "- TODO: add 3-5 bullets summarizing the most impactful changes.\n\n"
         "### Changed\n\n"
         "- TODO: summarize the user-visible changes for this release.\n"
     )

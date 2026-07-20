@@ -181,7 +181,7 @@ Read the [Installation Guide](admin/installation.md) to find detailed instructio
 This documentation supports File Organizer `2.0.2`. To read older versions, look at the [GitHub releases](https://github.com/curdriceaurora/Local-File-Organizer/releases).
 
 **Last Updated**: 2026-07-09
-**Version**: 2.0.2
+**Version**: 2.1.0
 
 ______________________________________________________________________
 
