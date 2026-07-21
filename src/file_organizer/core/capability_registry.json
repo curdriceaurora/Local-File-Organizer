@@ -1465,11 +1465,13 @@
       ],
       "surfaces": {
         "cli": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
-            "fo config edit"
+            "fo config edit",
+            "fo organize --methodology",
+            "fo preview --methodology"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "python-sdk": {
@@ -1607,7 +1609,7 @@
       ],
       "surfaces": {
         "cli": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "fo organize"
           ],
@@ -1750,7 +1752,7 @@
       ],
       "surfaces": {
         "cli": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "fo preview",
             "fo organize --dry-run"

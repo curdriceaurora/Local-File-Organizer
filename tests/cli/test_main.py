@@ -9,6 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+from file_organizer.core.types import OrganizationResult
 
 runner = CliRunner()
 
@@ -108,13 +109,11 @@ def test_organize_advanced_help_lists_hidden_tuning_flags():
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
-@patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_live(mock_organizer_cls, _mock_setup, tmp_path):
-    """Test organize command executes FileOrganizer correctly."""
-    mock_instance = MagicMock()
-    mock_result = MagicMock(processed_files=5, skipped_files=1, failed_files=0)
-    mock_instance.organize.return_value = mock_result
-    mock_organizer_cls.return_value = mock_instance
+@patch("file_organizer.cli.organize._create_service")
+def test_organize_command_live(mock_create_service, _mock_setup, tmp_path):
+    """Test organize command executes the canonical service."""
+    service = mock_create_service.return_value
+    service.execute.return_value = OrganizationResult(processed_files=5, skipped_files=1)
 
     in_dir = tmp_path / "in"
     out_dir = tmp_path / "out"
@@ -125,27 +124,18 @@ def test_organize_command_live(mock_organizer_cls, _mock_setup, tmp_path):
 
     assert result.exit_code == 0
     assert "Organizing" in result.stdout
-    mock_organizer_cls.assert_called_once_with(
-        dry_run=False,
-        parallel_workers=None,
-        prefetch_depth=2,
-        enable_vision=True,
-        no_prefetch=False,
-        transcribe_audio=False,
-        max_transcribe_seconds=600.0,
-        whisper_model="tiny",
-    )
-    mock_instance.organize.assert_called_once_with(in_dir, out_dir)
+    request, plan = service.execute.call_args.args
+    assert plan is None
+    assert request.input_path == in_dir.resolve()
+    assert request.output_path == out_dir.resolve()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
-@patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
+@patch("file_organizer.cli.organize._create_service")
+def test_organize_command_dry_run(mock_create_service, _mock_setup, tmp_path):
     """Test organize command processes dry-run flag."""
-    mock_instance = MagicMock()
-    mock_result = MagicMock(processed_files=3, skipped_files=0, failed_files=0)
-    mock_instance.organize.return_value = mock_result
-    mock_organizer_cls.return_value = mock_instance
+    service = mock_create_service.return_value
+    service.preview.return_value = OrganizationResult(total_files=3, processed_files=3)
 
     in_dir = tmp_path / "in"
     out_dir = tmp_path / "out"
@@ -156,28 +146,16 @@ def test_organize_command_dry_run(mock_organizer_cls, _mock_setup, tmp_path):
 
     assert result.exit_code == 0
     assert "Dry run mode" in result.stdout
-    mock_organizer_cls.assert_called_once_with(
-        dry_run=True,
-        parallel_workers=None,
-        prefetch_depth=2,
-        enable_vision=True,
-        no_prefetch=False,
-        transcribe_audio=False,
-        max_transcribe_seconds=600.0,
-        whisper_model="tiny",
-    )
-    # A.cli resolves the path args before dispatching; the service sees
-    # the canonical absolute form.
-    mock_instance.organize.assert_called_once_with(in_dir.resolve(), out_dir.resolve())
+    request = service.preview.call_args.args[0]
+    assert request.input_path == in_dir.resolve()
+    assert request.output_path == out_dir.resolve()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
-@patch("file_organizer.core.organizer.FileOrganizer")
-def test_organize_command_error(mock_organizer_cls, _mock_setup, tmp_path):
+@patch("file_organizer.cli.organize._create_service")
+def test_organize_command_error(mock_create_service, _mock_setup, tmp_path):
     """Test organize command handles exceptions gracefully."""
-    mock_instance = MagicMock()
-    mock_instance.organize.side_effect = RuntimeError("Something broke")
-    mock_organizer_cls.return_value = mock_instance
+    mock_create_service.return_value.execute.side_effect = RuntimeError("Something broke")
 
     # A.cli: real directories required so the service-layer error path
     # (not CLI-arg-validation path) is exercised.
@@ -191,13 +169,11 @@ def test_organize_command_error(mock_organizer_cls, _mock_setup, tmp_path):
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
-@patch("file_organizer.core.organizer.FileOrganizer")
-def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
-    """Test preview command runs organizer in dry_run mode."""
-    mock_instance = MagicMock()
-    mock_result = MagicMock(total_files=10)
-    mock_instance.organize.return_value = mock_result
-    mock_organizer_cls.return_value = mock_instance
+@patch("file_organizer.cli.organize._create_service")
+def test_preview_command(mock_create_service, _mock_setup, tmp_path):
+    """Test preview command uses canonical scan and preview calls."""
+    service = mock_create_service.return_value
+    service.preview.return_value = OrganizationResult(total_files=10)
 
     in_dir = tmp_path / "in_dir"
     in_dir.mkdir()
@@ -205,27 +181,17 @@ def test_preview_command(mock_organizer_cls, _mock_setup, tmp_path):
 
     assert result.exit_code == 0
     assert "Previewing" in result.stdout
-    mock_organizer_cls.assert_called_once_with(
-        dry_run=True,
-        parallel_workers=None,
-        prefetch_depth=2,
-        enable_vision=True,
-        no_prefetch=False,
-        transcribe_audio=False,
-        max_transcribe_seconds=600.0,
-        whisper_model="tiny",
-    )
     resolved = in_dir.resolve()
-    mock_instance.organize.assert_called_once_with(resolved, resolved)
+    request = service.preview.call_args.args[0]
+    assert request.input_path == request.output_path == resolved
+    service.scan.assert_called_once_with(request)
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
-@patch("file_organizer.core.organizer.FileOrganizer")
-def test_preview_command_error(mock_organizer_cls, _mock_setup, tmp_path):
+@patch("file_organizer.cli.organize._create_service")
+def test_preview_command_error(mock_create_service, _mock_setup, tmp_path):
     """Test preview command handles exceptions."""
-    mock_instance = MagicMock()
-    mock_instance.organize.side_effect = ValueError("Bad input")
-    mock_organizer_cls.return_value = mock_instance
+    mock_create_service.return_value.preview.side_effect = ValueError("Bad input")
 
     in_dir = tmp_path / "in_dir"
     in_dir.mkdir()
