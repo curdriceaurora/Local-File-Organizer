@@ -22,14 +22,14 @@ from uuid import uuid4
 from loguru import logger
 
 from file_organizer._compat import StrEnum
-from file_organizer.core.organize_options import OrganizeOptions
+from file_organizer.core.organize_options import OrganizeOptions, TransferMode
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
 from file_organizer.undo import UndoManager
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
-PLAN_SCHEMA_VERSION = 2
-_LEGACY_PLAN_SCHEMA_VERSION = 1
+PLAN_SCHEMA_VERSION = 3
+_LEGACY_PLAN_SCHEMA_VERSIONS = frozenset({1, 2})
 _CHUNK_SIZE = 65536
 
 
@@ -63,6 +63,7 @@ class PlanConflictType(StrEnum):
     SOURCE_NOT_FILE = "source_not_file"
     SOURCE_SYMLINK = "source_symlink"
     SOURCE_CHANGED = "source_changed"
+    HARDLINK_CROSS_DEVICE = "hardlink_cross_device"
     SOURCE_OUTSIDE_INPUT = "source_outside_input"
     DESTINATION_EXISTS = "destination_exists"
     DESTINATION_OUTSIDE_OUTPUT = "destination_outside_output"
@@ -231,6 +232,8 @@ class OrganizationPlan:
     def to_dict(self) -> dict[str, Any]:
         """Serialize the plan into JSON-compatible primitives."""
         data = asdict(self)
+        data["options"] = self.options.to_dict()
+        data["use_hardlinks"] = self.options.effective_transfer_mode == TransferMode.HARDLINK
         for operation in data["operations"]:
             operation["operation_type"] = str(operation["operation_type"])
             operation["collision_action"] = str(operation["collision_action"])
@@ -241,14 +244,14 @@ class OrganizationPlan:
     def from_dict(cls, data: dict[str, Any]) -> OrganizationPlan:
         """Deserialize a plan previously returned by :meth:`to_dict`."""
         schema_version = int(data.get("schema_version", PLAN_SCHEMA_VERSION))
-        if schema_version not in {_LEGACY_PLAN_SCHEMA_VERSION, PLAN_SCHEMA_VERSION}:
+        if schema_version not in {*_LEGACY_PLAN_SCHEMA_VERSIONS, PLAN_SCHEMA_VERSION}:
             raise ValueError(
                 f"Unsupported organization plan schema_version {schema_version}; "
-                f"expected {_LEGACY_PLAN_SCHEMA_VERSION} or {PLAN_SCHEMA_VERSION}."
+                f"expected 1, 2, or {PLAN_SCHEMA_VERSION}."
             )
 
         metadata = dict(data.get("metadata", {}))
-        if schema_version == _LEGACY_PLAN_SCHEMA_VERSION:
+        if schema_version == 1:
             options = OrganizeOptions(
                 skip_existing=bool(data.get("skip_existing", True)),
                 use_hardlinks=bool(data.get("use_hardlinks", True)),
@@ -258,11 +261,15 @@ class OrganizationPlan:
         else:
             raw_options = data.get("options")
             if not isinstance(raw_options, dict):
-                raise ValueError("Organization plan schema 2 requires an options object.")
+                raise ValueError(
+                    f"Organization plan schema {schema_version} requires an options object."
+                )
+            if schema_version == PLAN_SCHEMA_VERSION and "transfer_mode" not in raw_options:
+                raise ValueError("Organization plan schema 3 requires transfer_mode.")
             options = OrganizeOptions.from_dict(raw_options)
             if options.skip_existing != bool(data.get("skip_existing", True)):
                 raise ValueError("Organization plan skip_existing does not match its options.")
-            if options.use_hardlinks != bool(data.get("use_hardlinks", True)):
+            if options.use_hardlinks != bool(data.get("use_hardlinks", options.use_hardlinks)):
                 raise ValueError("Organization plan use_hardlinks does not match its options.")
 
         operations: list[OrganizationOperation] = []
@@ -303,6 +310,14 @@ class OrganizationPlan:
                 )
             )
 
+        expected_operation_type = (
+            OrganizationOperationType.HARDLINK
+            if options.effective_transfer_mode == TransferMode.HARDLINK
+            else OrganizationOperationType.COPY
+        )
+        if any(operation.operation_type != expected_operation_type for operation in operations):
+            raise ValueError("Organization plan operation types do not match transfer_mode.")
+
         return cls(
             plan_id=data["plan_id"],
             schema_version=PLAN_SCHEMA_VERSION,
@@ -310,7 +325,7 @@ class OrganizationPlan:
             output_path=data["output_path"],
             created_at=data["created_at"],
             skip_existing=bool(data.get("skip_existing", True)),
-            use_hardlinks=bool(data.get("use_hardlinks", True)),
+            use_hardlinks=options.effective_transfer_mode == TransferMode.HARDLINK,
             total_files=int(data.get("total_files", 0)),
             processed_files=int(data.get("processed_files", 0)),
             skipped_files=int(data.get("skipped_files", 0)),
@@ -344,11 +359,14 @@ def build_plan_from_processed(
     output_path = Path(output_path)
     file_hashes = file_hashes or {}
 
-    options = replace(
-        options or OrganizeOptions(),
-        skip_existing=skip_existing,
-        use_hardlinks=use_hardlinks,
-    )
+    if options is None:
+        options = OrganizeOptions(
+            skip_existing=skip_existing,
+            use_hardlinks=use_hardlinks,
+        )
+    else:
+        options = replace(options, skip_existing=skip_existing)
+        use_hardlinks = options.effective_transfer_mode == TransferMode.HARDLINK
 
     for result in sorted(processed, key=lambda item: str(item.file_path)):
         source = Path(result.file_path)
@@ -413,6 +431,9 @@ def build_plan_from_processed(
         1 for op in operations if op.status == OrganizationOperationStatus.SKIPPED
     )
 
+    plan_metadata = dict(metadata or {})
+    plan_metadata.setdefault("methodology", options.effective_methodology.value)
+
     return OrganizationPlan(
         plan_id=uuid4().hex,
         schema_version=PLAN_SCHEMA_VERSION,
@@ -429,7 +450,7 @@ def build_plan_from_processed(
         options=options,
         operations=operations,
         errors=list(errors or []),
-        metadata=dict(metadata or {}),
+        metadata=plan_metadata,
     )
 
 
@@ -564,6 +585,33 @@ def validate_plan(plan: OrganizationPlan) -> PlanValidationResult:  # noqa: C901
                 )
             )
             continue
+
+        if operation.operation_type == OrganizationOperationType.HARDLINK:
+            try:
+                source_device = source.stat().st_dev
+                destination_device = _filesystem_device(destination.parent)
+            except OSError as exc:
+                conflicts.append(
+                    PlanConflict(
+                        PlanConflictType.HARDLINK_CROSS_DEVICE,
+                        str(destination),
+                        f"Unable to verify hardlink filesystem precondition: {exc}",
+                        operation_id=operation.operation_id,
+                    )
+                )
+                continue
+            if source_device != destination_device:
+                conflicts.append(
+                    PlanConflict(
+                        PlanConflictType.HARDLINK_CROSS_DEVICE,
+                        str(destination),
+                        "Hardlinks require source and destination on the same filesystem.",
+                        operation_id=operation.operation_id,
+                        expected=f"device={source_device}",
+                        actual=f"device={destination_device}",
+                    )
+                )
+                continue
 
         parent = destination.parent
         for candidate in _parents_from_root(output_root, parent):
@@ -891,3 +939,14 @@ def _parents_from_root(root: Path, leaf_parent: Path) -> list[Path]:
         current = current / part
         candidates.append(current)
     return candidates
+
+
+def _filesystem_device(path: Path) -> int:
+    """Return the device for *path* or its nearest existing ancestor."""
+    candidate = path
+    while not candidate.exists():
+        parent = candidate.parent
+        if parent == candidate:
+            break
+        candidate = parent
+    return candidate.stat().st_dev

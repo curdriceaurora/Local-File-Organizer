@@ -29,17 +29,13 @@ from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.undo import UndoManager
 from file_organizer.web.organize_services import (
     _ORGANIZE_PLAN_STORE,
-    _apply_plan_methodology,
-    _apply_preview_methodology,
     _build_plan_movements,
     _counts_by_type,
     _delete_organize_plan,
     _get_organize_plan,
-    _methodology_preview_bucket,
     _parse_delay_minutes,
     _prune_plan_store,
     _scan_directory,
-    _split_name_suffix,
     _store_organize_plan,
 )
 
@@ -191,17 +187,6 @@ def test_api_preview_plan_executes_round_trip(tmp_path: Path) -> None:
     organizer.execute_plan.assert_called_once()
 
 
-def test_methodology_remap_preserves_non_operation_skips(tmp_path: Path) -> None:
-    plan = _single_plan(tmp_path)
-    plan.total_files = 2
-    plan.skipped_files = 1
-
-    remapped = _apply_plan_methodology(plan, "para")
-
-    assert remapped.processed_files == 1
-    assert remapped.skipped_files == 1
-
-
 def test_plan_deserialization_rejects_missing_or_invalid_fingerprint(tmp_path: Path) -> None:
     plan_data = _single_plan(tmp_path).to_dict()
     plan_data["operations"][0]["fingerprint"] = None
@@ -306,7 +291,7 @@ def test_file_organizer_plan_helpers_execute_and_restore_state(tmp_path: Path) -
     assert any((tmp_path / "preview-output").rglob("*.txt"))
 
 
-def test_web_organize_helpers_cover_methodology_and_store_paths(tmp_path: Path) -> None:
+def test_web_organize_helpers_cover_scan_and_store_paths(tmp_path: Path) -> None:
     visible = tmp_path / "visible.txt"
     hidden = tmp_path / ".hidden.txt"
     cad = tmp_path / "drawing.dwg"
@@ -319,16 +304,8 @@ def test_web_organize_helpers_cover_methodology_and_store_paths(tmp_path: Path) 
 
     files = _scan_directory(tmp_path, recursive=True, include_hidden=False)
     counts = _counts_by_type(files)
-    preview = MagicMock(
-        organized_structure={
-            "Documents": ["visible.txt"],
-            "30 Operations & Projects/Keep": ["done.txt"],
-        }
-    )
-    preview.model_copy.side_effect = lambda update: MagicMock(**update)
-
-    remapped = _apply_preview_methodology(preview, "jd")
-    movements = _build_plan_movements(files, tmp_path / "out", remapped)
+    preview = MagicMock(organized_structure={"Documents": ["visible.txt"]})
+    movements = _build_plan_movements(files, tmp_path / "out", preview)
     record = _store_organize_plan({"payload": True})
     fetched = _get_organize_plan(record["plan_id"])
     _delete_organize_plan(record["plan_id"])
@@ -337,66 +314,9 @@ def test_web_organize_helpers_cover_methodology_and_store_paths(tmp_path: Path) 
     assert counts["text"] == 1
     assert counts["cad"] == 1
     assert counts["video"] == 1
-    assert _methodology_preview_bucket("Inbox", "para") == "Resources/Inbox"
-    assert _methodology_preview_bucket("30.01 Existing", "jd") == "30.01 Existing"
-    assert _methodology_preview_bucket("Inbox", "jd") == "30 Operations & Projects/Inbox"
-    assert _apply_preview_methodology(preview, "none") is preview
-    assert any(movement["destination"].endswith("done.txt") for movement in movements)
+    assert any(movement["destination"].endswith("visible.txt") for movement in movements)
     assert fetched is not None and fetched["payload"] is True
     assert _get_organize_plan(record["plan_id"]) is None
-
-
-def test_apply_plan_methodology_handles_error_skip_and_rename(tmp_path: Path) -> None:
-    input_dir = tmp_path / "input"
-    first_dir = input_dir / "one"
-    second_dir = input_dir / "two"
-    output_dir = tmp_path / "output"
-    first_dir.mkdir(parents=True)
-    second_dir.mkdir(parents=True)
-    (output_dir / "Resources" / "Docs").mkdir(parents=True)
-    first = first_dir / "same.txt"
-    second = second_dir / "same.txt"
-    blocked = first_dir / "blocked.txt"
-    first.write_text("first")
-    second.write_text("second")
-    blocked.write_text("blocked")
-    (output_dir / "Resources" / "Docs" / "blocked.txt").write_text("existing")
-
-    plan = build_plan_from_processed(
-        input_path=input_dir,
-        output_path=output_dir,
-        processed=[
-            _processed(first, "Docs"),
-            _processed(second, "Resources/Docs"),
-            _processed(blocked, "Docs"),
-            ProcessedFile(
-                file_path=first_dir / "bad.txt",
-                description="failed",
-                folder_name="Docs",
-                filename="bad",
-                error="classifier failed",
-            ),
-        ],
-        skip_existing=True,
-        use_hardlinks=False,
-        total_files=4,
-        skipped_files=0,
-        deduplicated_files=0,
-    )
-
-    remapped = _apply_plan_methodology(plan, "para")
-
-    operations = {operation.source.name: operation for operation in remapped.operations}
-    assert operations["bad.txt"].status == OrganizationOperationStatus.ERROR
-    assert operations["blocked.txt"].status == OrganizationOperationStatus.SKIPPED
-    assert operations["blocked.txt"].collision_action == CollisionAction.SKIP_EXISTING
-    assert operations["same.txt"].destination.name in {"same.txt", "same_1.txt"}
-    same_destinations = [
-        operation.destination.name
-        for operation in remapped.operations
-        if operation.source.name == "same.txt"
-    ]
-    assert sorted(same_destinations) == ["same.txt", "same_1.txt"]
 
 
 def test_web_organize_helper_validation_branches(tmp_path: Path) -> None:
@@ -407,10 +327,6 @@ def test_web_organize_helper_validation_branches(tmp_path: Path) -> None:
 
     assert _parse_delay_minutes(None) == 0
     assert _parse_delay_minutes("  ") == 0
-    assert _split_name_suffix("README") == ("README", "")
-    assert _split_name_suffix(".env") == (".env", "")
-    assert _split_name_suffix("archive.tar") == ("archive", ".tar")
-
     _ORGANIZE_PLAN_STORE.clear()
     for index in range(205):
         _ORGANIZE_PLAN_STORE[str(index)] = {"index": index}
