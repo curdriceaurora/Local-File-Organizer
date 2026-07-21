@@ -29,7 +29,8 @@ revision cannot reduce any completed counter.
 
 Callers may supply an idempotency key when creating a job. The key is scoped by job type. Repeated
 or concurrent creation with the same `(job_type, idempotency_key)` returns the original job rather
-than scheduling duplicate work. Persistent stores enforce the same pair as a unique constraint.
+than scheduling duplicate work. Persistent stores enforce the same pair as a unique constraint and
+recover a concurrent insert conflict by reading and returning the winning job.
 
 ## Scheduling ownership
 
@@ -56,6 +57,10 @@ A cancelled job uses `cancelled`, never `failed`.
   manual inspection is required.
 - `rolled_back`: the transaction associated with that job—not the globally latest operation—was
   undone successfully.
+
+Recovery transitions preserve the error that caused recovery, so observers retain the original
+structured evidence while rollback is in progress and after its outcome is recorded. A retry
+transition clears the old error before the next execution attempt.
 
 Copy and hardlink rollback both remove only destinations and preserve sources. Crash recovery for
 durable moves remains separate because true move is not a supported organization transfer mode.

@@ -54,6 +54,25 @@ def test_scheduled_partial_recovery_lifecycle_round_trips() -> None:
     assert JobSnapshot.from_dict(rolled_back.to_dict()) == rolled_back
 
 
+def test_rollback_preserves_original_failure_evidence() -> None:
+    queued = create_job_snapshot(job_id="job-1", job_type="organize", now=_now())
+    running = transition_job(queued, JobStatus.RUNNING)
+    failure = DomainError(
+        DomainErrorCode.EXECUTION_FAILED,
+        "Destination write failed.",
+        details={"path": "/output/report.txt"},
+    )
+    failed = transition_job(running, JobStatus.FAILED, error=failure)
+
+    rolling_back = transition_job(failed, JobStatus.ROLLING_BACK)
+    rolled_back = transition_job(rolling_back, JobStatus.ROLLED_BACK)
+
+    assert rolling_back.error is failure
+    assert rolled_back.error is failure
+    assert rolled_back.error.to_dict()["details"] == {"path": "/output/report.txt"}
+    assert transition_job(failed, JobStatus.QUEUED).error is None
+
+
 def test_duplicate_and_illegal_transitions_have_stable_errors() -> None:
     queued = create_job_snapshot(job_id="job-1", job_type="organize", now=_now())
 

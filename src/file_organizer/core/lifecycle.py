@@ -34,6 +34,8 @@ class RecoveryAction(StrEnum):
     MANUAL = "manual"
 
 
+# These states end one execution attempt. Some still permit an explicit retry
+# or recovery transition; only CANCELLED and ROLLED_BACK are graph-terminal.
 TERMINAL_JOB_STATUSES = frozenset(
     {
         JobStatus.COMPLETED,
@@ -284,6 +286,13 @@ def transition_job(
         if recovery_action is not None
         else _default_recovery_action(target_status)
     )
+    next_error = error
+    if next_error is None and target_status in {
+        JobStatus.ROLLING_BACK,
+        JobStatus.ROLLED_BACK,
+        JobStatus.RECOVERY_REQUIRED,
+    }:
+        next_error = job.error
     return replace(
         job,
         status=target_status,
@@ -293,7 +302,7 @@ def transition_job(
         transaction_id=transaction_id or job.transaction_id,
         recovery_action=next_recovery,
         result=result if result is not None else job.result,
-        error=error,
+        error=next_error,
     )
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -80,8 +81,29 @@ class JobRepository:
         job.scheduled_for = scheduled_for
         job.revision = 0
         job.recovery_action = RecoveryAction.NONE.value
-        session.add(job)
-        session.flush()
+        if idempotency_key is None:
+            session.add(job)
+            session.flush()
+            return job
+
+        try:
+            # Isolate the insert so a concurrent unique-key winner does not
+            # invalidate the caller's outer transaction.
+            with session.begin_nested():
+                session.add(job)
+                session.flush()
+        except IntegrityError:
+            existing = (
+                session.query(OrganizationJob)
+                .filter(
+                    OrganizationJob.job_type == job_type,
+                    OrganizationJob.idempotency_key == idempotency_key,
+                )
+                .one_or_none()
+            )
+            if existing is None:
+                raise
+            return existing
         return job
 
     # ------------------------------------------------------------------
