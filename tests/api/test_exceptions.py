@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from file_organizer.api.exceptions import ApiError
+from file_organizer.api.exceptions import ApiError, setup_exception_handlers
+from file_organizer.core.errors import optional_feature_unavailable
 
 
 class TestApiErrorInit:
@@ -85,3 +88,23 @@ class TestApiErrorRaiseCatch:
         assert isinstance(exc_info.value, ApiError)
         assert exc_info.value.status_code == 418
         assert exc_info.value.details == {"brew": "earl_grey"}
+
+
+def test_domain_error_handler_preserves_stable_contract() -> None:
+    app = FastAPI()
+    setup_exception_handlers(app)
+
+    @app.get("/optional")
+    def optional_route() -> None:
+        raise optional_feature_unavailable("transcription", "Install the audio extra.")
+
+    response = TestClient(app).get("/optional")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": "optional_feature_unavailable",
+        "code": "optional_feature_unavailable",
+        "message": "Install the audio extra.",
+        "retryable": False,
+        "details": {"feature": "transcription"},
+    }

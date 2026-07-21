@@ -567,6 +567,18 @@ class TestGetJobStatus:
             "errors": [],
         }
         mock_job.error = None
+        mock_job.error_code = None
+        mock_job.error_retryable = False
+        mock_job.error_details = None
+        mock_job.revision = 1
+        mock_job.scheduled_for = None
+        mock_job.progress.total = 5
+        mock_job.progress.completed = 5
+        mock_job.progress.failed = 0
+        mock_job.progress.skipped = 0
+        mock_job.progress.percent = 100.0
+        mock_job.transaction_id = "txn-1"
+        mock_job.recovery_action = "none"
         mock_get_job.return_value = mock_job
         _, client, _ = _build_app(tmp_path)
 
@@ -596,6 +608,18 @@ class TestGetJobStatus:
         mock_job.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
         mock_job.result = None
         mock_job.error = None
+        mock_job.error_code = None
+        mock_job.error_retryable = False
+        mock_job.error_details = None
+        mock_job.revision = 1
+        mock_job.scheduled_for = None
+        mock_job.progress.total = 5
+        mock_job.progress.completed = 2
+        mock_job.progress.failed = 0
+        mock_job.progress.skipped = 0
+        mock_job.progress.percent = 40.0
+        mock_job.transaction_id = None
+        mock_job.recovery_action = "none"
         mock_get_job.return_value = mock_job
         _, client, _ = _build_app(tmp_path)
 
@@ -615,6 +639,18 @@ class TestGetJobStatus:
         mock_job.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
         mock_job.result = None
         mock_job.error = "Something went wrong"
+        mock_job.error_code.value = "execution_failed"
+        mock_job.error_retryable = True
+        mock_job.error_details = {"phase": "execution"}
+        mock_job.revision = 2
+        mock_job.scheduled_for = None
+        mock_job.progress.total = 1
+        mock_job.progress.completed = 0
+        mock_job.progress.failed = 1
+        mock_job.progress.skipped = 0
+        mock_job.progress.percent = 100.0
+        mock_job.transaction_id = None
+        mock_job.recovery_action = "retry"
         mock_get_job.return_value = mock_job
         _, client, _ = _build_app(tmp_path)
 

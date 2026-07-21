@@ -24,6 +24,13 @@ from file_organizer.api.utils import resolve_path
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
 from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.core.errors import DomainError
+from file_organizer.core.lifecycle import (
+    TERMINAL_JOB_STATUSES,
+    JobProgress,
+    JobStatus,
+    RecoveryAction,
+)
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
@@ -133,11 +140,18 @@ def _get_job_metadata(job_id: str) -> dict[str, Any]:
 
 def _status_progress(status: str) -> int:
     """Map a job status string to an approximate progress percentage."""
-    if status == "queued":
+    if status in {"scheduled", "queued"}:
         return 5
-    if status == "running":
+    if status in {"running", "rolling_back"}:
         return 65
-    if status in {"completed", "failed"}:
+    if status in {
+        "completed",
+        "partial",
+        "failed",
+        "cancelled",
+        "recovery_required",
+        "rolled_back",
+    }:
         return 100
     return 0
 
@@ -155,8 +169,8 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
     metadata = _get_job_metadata(job_id)
     result = job.result or {}
     schedule_delay_minutes = int(metadata.get("schedule_delay_minutes", 0) or 0)
-    scheduled_for = str(metadata.get("scheduled_for", ""))
-    is_scheduled = job.status == "queued" and bool(scheduled_for) and schedule_delay_minutes > 0
+    scheduled_for = format_timestamp(job.scheduled_for) if job.scheduled_for is not None else ""
+    is_scheduled = job.status == JobStatus.SCHEDULED
     processed_files = int(result.get("processed_files", 0) or 0)
     total_files = int(result.get("total_files", 0) or 0)
     failed_files = int(result.get("failed_files", 0) or 0)
@@ -177,6 +191,9 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
         "created_at": format_timestamp(job.created_at),
         "updated_at": format_timestamp(job.updated_at),
         "error": job.error,
+        "error_code": job.error_code.value if job.error_code is not None else None,
+        "error_retryable": job.error_retryable,
+        "error_details": job.error_details,
         "processed_files": processed_files,
         "total_files": total_files,
         "failed_files": failed_files,
@@ -190,8 +207,15 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
         "schedule_delay_minutes": schedule_delay_minutes,
         "scheduled_for": scheduled_for,
         "can_cancel": is_scheduled,
-        "can_rollback": job.status == "completed" and not bool(metadata.get("dry_run", False)),
-        "is_terminal": job.status in {"completed", "failed"},
+        "transaction_id": job.transaction_id,
+        "recovery_action": job.recovery_action.value,
+        "revision": job.revision,
+        "can_rollback": (
+            job.status in {JobStatus.COMPLETED, JobStatus.PARTIAL}
+            and job.transaction_id is not None
+            and not bool(metadata.get("dry_run", False))
+        ),
+        "is_terminal": job.status in TERMINAL_JOB_STATUSES,
     }
 
 
@@ -226,7 +250,9 @@ def _build_organize_stats() -> dict[str, Any]:
     total_jobs = len(jobs)
     completed_jobs = sum(1 for job in jobs if job["status"] == "completed")
     failed_jobs = sum(1 for job in jobs if job["status"] == "failed")
-    active_jobs = sum(1 for job in jobs if job["status"] in {"queued", "running"})
+    active_jobs = sum(
+        1 for job in jobs if job["status"] in {"scheduled", "queued", "running", "rolling_back"}
+    )
     total_files = sum(int(job["processed_files"]) for job in jobs if job["status"] == "completed")
     success_rate = 0.0
     if total_jobs:
@@ -262,7 +288,16 @@ def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
             skip_existing=organize_request.skip_existing,
         )
         response = _result_to_response(result).model_dump()
-        update_job(job_id, status="completed", result=response, error=None)
+        _complete_job_from_result(job_id, result, response)
+    except DomainError as exc:
+        update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            error=exc.message,
+            error_code=exc.code,
+            error_retryable=exc.retryable,
+            error_details=exc.details,
+        )
     except Exception as exc:
         update_job(job_id, status="failed", error=str(exc))
 
@@ -292,7 +327,16 @@ def _run_organize_plan_job(job_id: str, plan_data: dict[str, Any], *, dry_run: b
             organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
             result = organizer.execute_plan(plan)
         response = _result_to_response(result).model_dump()
-        update_job(job_id, status="completed", result=response, error=None)
+        _complete_job_from_result(job_id, result, response)
+    except DomainError as exc:
+        update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            error=exc.message,
+            error_code=exc.code,
+            error_retryable=exc.retryable,
+            error_details=exc.details,
+        )
     except Exception as exc:
         update_job(job_id, status="failed", error=str(exc))
 
@@ -359,8 +403,37 @@ def _cancel_scheduled_job(job_id: str) -> bool:
     if timer is None:
         return False
     timer.cancel()
-    update_job(job_id, status="failed", error="Cancelled before execution.")
+    update_job(
+        job_id,
+        status=JobStatus.CANCELLED,
+        error="Cancelled before execution.",
+        error_code="cancelled",
+    )
     return True
+
+
+def _complete_job_from_result(
+    job_id: str,
+    result: OrganizationResult,
+    response: dict[str, Any],
+) -> None:
+    """Record complete or partial execution with recovery metadata."""
+    progress = JobProgress(
+        total=result.total_files,
+        completed=result.processed_files,
+        failed=result.failed_files,
+        skipped=result.skipped_files + result.deduplicated_files,
+    )
+    status = JobStatus.PARTIAL if result.failed_files else JobStatus.COMPLETED
+    update_job(
+        job_id,
+        status=status,
+        result=response,
+        error=None,
+        progress=progress,
+        transaction_id=result.transaction_id,
+        recovery_action=(RecoveryAction.ROLLBACK if result.transaction_id else None),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -531,11 +604,13 @@ def organize_execute(
             run_in_background=True,
         )
 
-        job = create_job(ORGANIZE_JOB_TYPE)
+        scheduled_at_datetime: datetime | None = None
         scheduled_for = ""
         if delay_minutes > 0:
             scheduled_at = datetime.now(UTC).timestamp() + (delay_minutes * 60)
-            scheduled_for = format_timestamp(datetime.fromtimestamp(scheduled_at, tz=UTC))
+            scheduled_at_datetime = datetime.fromtimestamp(scheduled_at, tz=UTC)
+            scheduled_for = format_timestamp(scheduled_at_datetime)
+        job = create_job(ORGANIZE_JOB_TYPE, scheduled_for=scheduled_at_datetime)
         _set_job_metadata(
             job.job_id,
             {
@@ -809,15 +884,33 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
         try:
             from file_organizer.undo.undo_manager import UndoManager
 
+            transaction_id = str(job["transaction_id"])
+            update_job(job_id, status=JobStatus.ROLLING_BACK)
             manager = UndoManager()
-            success = manager.undo_last_operation()
+            success = manager.undo_transaction(transaction_id)
+            update_job(
+                job_id,
+                status=(JobStatus.ROLLED_BACK if success else JobStatus.RECOVERY_REQUIRED),
+                error=(None if success else "Rollback did not complete."),
+                error_code=(None if success else "recovery_required"),
+                recovery_action=(RecoveryAction.NONE if success else RecoveryAction.MANUAL),
+            )
             rollback_message = (
-                "Rollback completed for the latest tracked operation."
+                "Rollback completed for this job's transaction."
                 if success
-                else "No rollback candidates were available."
+                else "Rollback requires manual recovery."
             )
         except Exception:
             logger.exception("Rollback execution failed for job {}", job_id)
+            current = get_job(job_id)
+            if current is not None and current.status == JobStatus.ROLLING_BACK:
+                update_job(
+                    job_id,
+                    status=JobStatus.RECOVERY_REQUIRED,
+                    error="Rollback failed.",
+                    error_code="recovery_required",
+                    recovery_action=RecoveryAction.MANUAL,
+                )
             error_message = "Rollback failed."
 
     refreshed_job = _build_job_view(job_id)

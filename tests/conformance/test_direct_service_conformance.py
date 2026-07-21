@@ -519,7 +519,8 @@ def test_plan_roots_mismatch_rejected(conformance: ConformanceContext, tmp_path:
     )
 
     assert envelope["outcome"] == "error"
-    assert envelope["error"]["error_type"] == "ValueError"
+    assert envelope["error"]["code"] == "plan_mismatch"
+    assert envelope["error"]["retryable"] is False
     assert "roots do not match" in envelope["error"]["message"]
 
 
@@ -533,7 +534,8 @@ def test_plan_options_mismatch_rejected(conformance: ConformanceContext) -> None
     )
 
     assert envelope["outcome"] == "error"
-    assert envelope["error"]["error_type"] == "ValueError"
+    assert envelope["error"]["code"] == "plan_mismatch"
+    assert envelope["error"]["retryable"] is False
     assert "options do not match" in envelope["error"]["message"]
 
 
@@ -561,7 +563,8 @@ def test_missing_input_is_rejected(conformance: ConformanceContext) -> None:
     envelope = conformance.driver.scan(conformance.request())
 
     assert envelope["outcome"] == "error"
-    assert envelope["error"]["error_type"] == "ValueError"
+    assert envelope["error"]["code"] == "not_found"
+    assert envelope["error"]["retryable"] is False
     assert envelope["error"]["message"] == "Input path does not exist: <input>"
 
 
@@ -610,25 +613,27 @@ def test_methodology_seed_golden(
 
 
 def test_job_event_normalization_is_stable() -> None:
-    """Provisional job-event contract: order preserved, volatile keys dropped.
-
-    #1604 replaces this with the canonical job/recovery lifecycle schema.
-    """
+    """Canonical job-event order and recovery fields survive normalization."""
     events = [
         {"state": "queued", "job_id": "abc", "timestamp": "2026-01-01T00:00:00Z"},
-        {"state": "running", "job_id": "abc", "duration": 1.5},
+        {"state": "running", "job_id": "abc", "duration": 1.5, "revision": 1},
         {
             "state": "completed",
             "job_id": "abc",
             "created_at": "x",
             "capability": "organize",
+            "recovery_action": "rollback",
         },
     ]
 
     assert normalize_job_events(events) == [
         {"state": "queued"},
-        {"state": "running"},
-        {"capability": "organize", "state": "completed"},
+        {"revision": 1, "state": "running"},
+        {
+            "capability": "organize",
+            "recovery_action": "rollback",
+            "state": "completed",
+        },
     ]
 
 

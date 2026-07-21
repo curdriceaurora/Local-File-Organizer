@@ -32,6 +32,8 @@ from file_organizer.api.openapi_responses import (
     validation_error_response,
 )
 from file_organizer.api.utils import is_hidden, resolve_path
+from file_organizer.core.errors import DomainError
+from file_organizer.core.lifecycle import JobProgress, JobStatus, RecoveryAction
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 from file_organizer.core.plan import OrganizationPlan
 
@@ -104,6 +106,7 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
         organized_structure=result.organized_structure,
         errors=[OrganizationError(file=err[0], error=err[1]) for err in result.errors],
         plan=plan,
+        transaction_id=result.transaction_id,
     )
 
 
@@ -152,7 +155,30 @@ def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
                 skip_existing=request.skip_existing,
             )
         response = _result_to_response(result).model_dump()
-        update_job(job_id, status="completed", result=response)
+        progress = JobProgress(
+            total=result.total_files,
+            completed=result.processed_files,
+            failed=result.failed_files,
+            skipped=result.skipped_files + result.deduplicated_files,
+        )
+        status = JobStatus.PARTIAL if result.failed_files else JobStatus.COMPLETED
+        update_job(
+            job_id,
+            status=status,
+            result=response,
+            progress=progress,
+            transaction_id=result.transaction_id,
+            recovery_action=(RecoveryAction.ROLLBACK if result.transaction_id else None),
+        )
+    except DomainError as exc:
+        update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            error=exc.message,
+            error_code=exc.code,
+            error_retryable=exc.retryable,
+            error_details=exc.details,
+        )
     except Exception as exc:
         update_job(job_id, status="failed", error=str(exc))
 
@@ -318,6 +344,20 @@ def get_job_status(job_id: str) -> JobStatusResponse:
         updated_at=job.updated_at,
         result=result,
         error=job.error,
+        error_code=job.error_code.value if job.error_code is not None else None,
+        error_retryable=job.error_retryable,
+        error_details=job.error_details,
+        revision=job.revision,
+        scheduled_for=job.scheduled_for,
+        progress={
+            "total": job.progress.total,
+            "completed": job.progress.completed,
+            "failed": job.progress.failed,
+            "skipped": job.progress.skipped,
+            "percent": job.progress.percent,
+        },
+        transaction_id=job.transaction_id,
+        recovery_action=job.recovery_action,
     )
 
 

@@ -224,6 +224,7 @@ class OrganizationResultResponse(BaseModel):
     organized_structure: dict[str, list[str]]
     errors: list[OrganizationError]
     plan: OrganizationPlanPayload | None = None
+    transaction_id: str | None = None
 
 
 class OrganizeExecuteResponse(BaseModel):
@@ -239,11 +240,30 @@ class JobStatusResponse(BaseModel):
     """Status of a background organization job."""
 
     job_id: str
-    status: Literal["queued", "running", "completed", "failed"]
+    status: Literal[
+        "scheduled",
+        "queued",
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled",
+        "recovery_required",
+        "rolling_back",
+        "rolled_back",
+    ]
     created_at: datetime
     updated_at: datetime
     result: OrganizationResultResponse | None = None
     error: str | None = None
+    error_code: str | None = None
+    error_retryable: bool = False
+    error_details: dict[str, Any] | None = None
+    revision: int = 0
+    scheduled_for: datetime | None = None
+    progress: dict[str, int | float] = Field(default_factory=dict)
+    transaction_id: str | None = None
+    recovery_action: Literal["none", "retry", "rollback", "manual"] = "none"
 
 
 class DedupeScanRequest(BaseModel):

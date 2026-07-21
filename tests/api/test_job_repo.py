@@ -61,6 +61,9 @@ class TestJobRepositoryGetById:
     def test_get_existing_job(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         result = JobRepository.get_by_id(session, "job-1")
@@ -118,6 +121,9 @@ class TestJobRepositoryUpdateStatus:
     def test_update_status_existing_job(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         result = JobRepository.update_status(session, "job-1", "running")
@@ -129,6 +135,9 @@ class TestJobRepositoryUpdateStatus:
     def test_update_status_with_error(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         JobRepository.update_status(session, "job-1", "failed", error="OOM")

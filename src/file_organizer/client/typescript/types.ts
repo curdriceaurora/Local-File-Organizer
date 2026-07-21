@@ -167,6 +167,7 @@ export interface OrganizationResultResponse {
   organized_structure: Record<string, string[]>;
   errors: OrganizationError[];
   plan: OrganizationPlanPayload | null;
+  transaction_id: string | null;
 }
 
 export interface OrganizeRequest {
@@ -188,11 +189,35 @@ export interface OrganizeExecuteResponse {
 
 export interface JobStatusResponse {
   job_id: string;
-  status: "queued" | "running" | "completed" | "failed";
+  status:
+    | "scheduled"
+    | "queued"
+    | "running"
+    | "completed"
+    | "partial"
+    | "failed"
+    | "cancelled"
+    | "recovery_required"
+    | "rolling_back"
+    | "rolled_back";
   created_at: string;
   updated_at: string;
   result: OrganizationResultResponse | null;
   error: string | null;
+  error_code: string | null;
+  error_retryable: boolean;
+  error_details: Record<string, unknown> | null;
+  revision: number;
+  scheduled_for: string | null;
+  progress: {
+    total: number;
+    completed: number;
+    failed: number;
+    skipped: number;
+    percent: number;
+  };
+  transaction_id: string | null;
+  recovery_action: "none" | "retry" | "rollback" | "manual";
 }
 
 // -- System -----------------------------------------------------------------

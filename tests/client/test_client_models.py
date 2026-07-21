@@ -396,6 +396,26 @@ class TestJobStatusResponse:
         assert resp.result is not None
         assert resp.error == "partial failure"
 
+    def test_canonical_recovery_fields(self):
+        resp = JobStatusResponse(
+            job_id="j-3",
+            status="recovery_required",
+            created_at=_NOW_STR,
+            updated_at=_NOW_STR,
+            error_code="recovery_required",
+            error_retryable=False,
+            error_details={"transaction_id": "txn-3"},
+            revision=4,
+            progress={"total": 2, "completed": 1, "failed": 1, "skipped": 0},
+            transaction_id="txn-3",
+            recovery_action="manual",
+        )
+        assert resp.status == "recovery_required"
+        assert resp.revision == 4
+        assert resp.transaction_id == "txn-3"
+        assert resp.recovery_action == "manual"
+        assert resp.error_details == {"transaction_id": "txn-3"}
+
 
 # ===================================================================
 # TokenResponse
