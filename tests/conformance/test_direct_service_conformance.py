@@ -18,15 +18,22 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from file_organizer.core.plan import OrganizationPlan
+from file_organizer.history.models import Operation, OperationType
 from tests.conformance.conftest import ConformanceContext
 from tests.conformance.corpus import FIXED_MTIME_NS, get_case, materialize_case
 from tests.conformance.driver import DirectServiceDriver, OrganizationConformanceDriver
-from tests.conformance.normalize import normalize_job_events
+from tests.conformance.normalize import (
+    normalize_audit_events,
+    normalize_job_events,
+    normalize_path,
+    normalize_plan,
+)
 
 pytestmark = [pytest.mark.conformance]
 
@@ -211,9 +218,69 @@ def test_plan_is_deterministic_and_round_trips(conformance: ConformanceContext) 
 
     payload = json.loads(json.dumps(first["plan_payload"], sort_keys=True))
     revived = OrganizationPlan.from_dict(payload)
-    from tests.conformance.normalize import normalize_plan
 
     assert normalize_plan(revived, conformance.input_root, conformance.output_root) == first["plan"]
+
+
+def test_plan_normalization_preserves_execution_order_and_full_fingerprint(
+    conformance: ConformanceContext,
+) -> None:
+    """Normalization must not erase behavior used by reviewed-plan execution."""
+    conformance.stage("flat-documents")
+    preview = _ok(conformance.driver.preview(conformance.request(use_hardlinks=False)))
+    plan = OrganizationPlan.from_dict(preview["plan_payload"])
+
+    assert [
+        operation["fingerprint"]["mtime_ns"] for operation in preview["plan"]["operations"]
+    ] == [FIXED_MTIME_NS] * 3
+
+    expected_reversed_sources = [
+        operation["source"] for operation in reversed(preview["plan"]["operations"])
+    ]
+    plan.operations.reverse()
+
+    assert [
+        operation["source"]
+        for operation in normalize_plan(plan, conformance.input_root, conformance.output_root)[
+            "operations"
+        ]
+    ] == expected_reversed_sources
+
+
+def test_normalize_path_prefers_nested_output_root(tmp_path: Path) -> None:
+    """The common ``input/organized_output`` layout keeps output identity."""
+    input_root = tmp_path / "input"
+    output_root = input_root / "organized_output"
+
+    assert (
+        normalize_path(output_root / "Documents" / "alpha.txt", input_root, output_root)
+        == "<output>/Documents/alpha.txt"
+    )
+    assert normalize_path(input_root / "alpha.txt", input_root, output_root) == "<input>/alpha.txt"
+
+
+def test_audit_normalization_preserves_recorded_order(tmp_path: Path) -> None:
+    """An adapter cannot pass conformance after reordering audit events."""
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    operations = [
+        Operation(
+            operation_type=OperationType.COPY,
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            source_path=input_root / "bravo.txt",
+            destination_path=output_root / "Documents" / "bravo.txt",
+        ),
+        Operation(
+            operation_type=OperationType.COPY,
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            source_path=input_root / "alpha.txt",
+            destination_path=output_root / "Documents" / "alpha.txt",
+        ),
+    ]
+
+    assert [
+        event["source"] for event in normalize_audit_events(operations, input_root, output_root)
+    ] == ["<input>/bravo.txt", "<input>/alpha.txt"]
 
 
 def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None:

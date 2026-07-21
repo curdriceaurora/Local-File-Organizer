@@ -35,11 +35,14 @@ def normalize_path(path: str | Path, input_root: Path, output_root: Path) -> str
     """Map an absolute path onto a root-relative, POSIX-style token path."""
     candidate = Path(path)
     resolved = candidate.resolve(strict=False)
-    for root, token in (
-        (input_root, INPUT_ROOT_TOKEN),
-        (output_root, OUTPUT_ROOT_TOKEN),
-    ):
-        resolved_root = root.resolve(strict=False)
+    roots = (
+        (input_root.resolve(strict=False), INPUT_ROOT_TOKEN),
+        (output_root.resolve(strict=False), OUTPUT_ROOT_TOKEN),
+    )
+    # A number of surfaces default to an output directory below the input
+    # root (for example ``./organized_output``). Match the most-specific root
+    # first so destinations are not mislabeled as input files.
+    for resolved_root, token in sorted(roots, key=lambda item: len(item[0].parts), reverse=True):
         for probe in (candidate, resolved):
             try:
                 relative = probe.relative_to(resolved_root)
@@ -79,10 +82,12 @@ def _normalize_operation(
 ) -> dict[str, Any]:
     fingerprint = None
     if operation.fingerprint is not None:
-        # mtime_ns is environment-echo (the corpus pins it); size and content
-        # hash are the behavior-affecting identity of the planned source.
+        # All three fields participate in reviewed-plan validation. The
+        # corpus pins mtime_ns specifically so it is safe to compare across
+        # drivers and must not be normalized away.
         fingerprint = {
             "size": operation.fingerprint.size,
+            "mtime_ns": operation.fingerprint.mtime_ns,
             "sha256": operation.fingerprint.sha256,
         }
     error = operation.error
@@ -107,10 +112,12 @@ def normalize_plan(plan: OrganizationPlan, input_root: Path, output_root: Path) 
     ``plan_id``, ``created_at``, per-operation ids, and prose descriptions are
     presentation/bookkeeping; everything needed to reproduce execution stays.
     """
-    operations = sorted(
-        (_normalize_operation(operation, input_root, output_root) for operation in plan.operations),
-        key=lambda item: (item["source"], item["destination"]),
-    )
+    # Operation order is executable plan behavior: it controls collision
+    # allocation and the order in which mutations are attempted. Preserve it
+    # so normalization cannot hide adapter reordering.
+    operations = [
+        _normalize_operation(operation, input_root, output_root) for operation in plan.operations
+    ]
     return {
         "schema_version": plan.schema_version,
         "input_path": normalize_path(plan.input_path, input_root, output_root),
@@ -197,7 +204,9 @@ def normalize_audit_events(
     committed transaction.  #1604 owns extending this with job and recovery
     lifecycle events.
     """
-    normalized = [
+    # History order is observable recovery behavior. Preserve the store's
+    # order rather than sorting it into a presentation-friendly shape.
+    return [
         {
             "operation_type": operation.operation_type.value,
             "status": operation.status.value,
@@ -212,7 +221,6 @@ def normalize_audit_events(
         }
         for operation in operations
     ]
-    return sorted(normalized, key=lambda item: (item["source"], item["destination"] or ""))
 
 
 def normalize_job_events(events: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:

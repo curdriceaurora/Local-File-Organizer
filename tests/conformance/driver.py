@@ -255,7 +255,13 @@ class DirectServiceDriver:
         if not isinstance(result.plan, OrganizationPlan):
             raise AssertionError("Canonical execution must retain its executable plan.")
         assert self._last_history is not None  # execute always builds a non-dry organizer
-        events = normalize_audit_events(self._last_history.get_operations(), *roots)
+        recorded_operations = self._last_history.get_operations()
+        # OperationHistory is a newest-first query API. Conformance exposes
+        # audit events in their stable insertion/execution order instead.
+        recorded_operations.sort(
+            key=lambda operation: operation.id if operation.id is not None else -1
+        )
+        events = normalize_audit_events(recorded_operations, *roots)
         return {
             "outcome": "ok",
             "plan": normalize_plan(result.plan, *roots),

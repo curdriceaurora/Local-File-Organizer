@@ -12,7 +12,7 @@ never from any adapter.
 | Module | Role |
 | --- | --- |
 | `tests/conformance/corpus.py` | Deterministic fixture corpus: pinned bytes and mtimes, tagged cases |
-| `tests/conformance/normalize.py` | Strips presentation-only differences from scans, plans, results, errors, audit events, and (provisionally) job events |
+| `tests/conformance/normalize.py` | Strips presentation-only differences while preserving executable ordering and complete source fingerprints |
 | `tests/conformance/driver.py` | `OrganizationConformanceDriver` protocol and the `DirectServiceDriver` reference oracle |
 | `tests/conformance/test_direct_service_conformance.py` | Golden expectations for canonical semantics |
 
@@ -56,6 +56,9 @@ Rules for adapter drivers (#1595–#1598):
   the reviewed-plan handoff must cross your surface as serialized data.
 - Normalize with `tests/conformance/normalize.py` helpers; do not hand-roll
   comparisons.
+- Preserve plan operation order. Return audit events in chronological
+  execution order; identifiers and timestamps are removed, but ordering is
+  part of the conformance contract.
 - Reuse the corpus and the golden expectations unchanged. A mismatch is
   either an adapter bug or a contract decision that belongs in the parity
   epic — not a reason to fork expectations.

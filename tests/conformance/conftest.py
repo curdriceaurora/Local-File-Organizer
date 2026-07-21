@@ -9,7 +9,7 @@ import pytest
 
 from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from tests.conformance.corpus import CorpusCase, get_case, materialize_case
-from tests.conformance.driver import DirectServiceDriver
+from tests.conformance.driver import DirectServiceDriver, OrganizationConformanceDriver
 
 
 @dataclass
@@ -18,7 +18,7 @@ class ConformanceContext:
 
     input_root: Path
     output_root: Path
-    driver: DirectServiceDriver
+    driver: OrganizationConformanceDriver
 
     def stage(self, case_id: str) -> CorpusCase:
         """Materialize the corpus case under this context's roots."""
