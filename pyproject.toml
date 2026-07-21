@@ -462,6 +462,7 @@ markers = [
     "uses_setup_gate: opts out of the autouse setup-gate bypass to exercise the real gate",
     "asyncio: marks tests as async (requires pytest-asyncio)",
     "keep_default_paths: opts out of the autouse tmp_path re-routing in TUI conftest (use on tests that verify default '.' path behaviour)",
+    "conformance: cross-surface conformance scaffold (tests/conformance; advisory in CI until #1606 promotes required gates)",
     "playwright: browser-based E2E tests (requires `playwright install <browser>` for chromium, firefox, or webkit; select with --browser=<name>; run with --override-ini='addopts=')",
 ]
 filterwarnings = [

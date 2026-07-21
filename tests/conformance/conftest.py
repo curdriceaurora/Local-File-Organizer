@@ -1,0 +1,45 @@
+"""Shared fixtures for the cross-surface conformance scaffold (#1605)."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+import pytest
+
+from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
+from tests.conformance.corpus import CorpusCase, get_case, materialize_case
+from tests.conformance.driver import DirectServiceDriver
+
+
+@dataclass
+class ConformanceContext:
+    """A staged conformance workspace bound to one driver instance."""
+
+    input_root: Path
+    output_root: Path
+    driver: DirectServiceDriver
+
+    def stage(self, case_id: str) -> CorpusCase:
+        """Materialize the corpus case under this context's roots."""
+        case = get_case(case_id)
+        materialize_case(case, self.input_root, self.output_root)
+        return case
+
+    def request(self, **option_overrides: object) -> OrganizeRequest:
+        """Build a canonical request for the staged roots."""
+        return OrganizeRequest(
+            self.input_root,
+            self.output_root,
+            OrganizeOptions(**option_overrides),  # type: ignore[arg-type]
+        )
+
+
+@pytest.fixture
+def conformance(tmp_path: Path) -> ConformanceContext:
+    """Fully isolated conformance context: fresh roots, fresh audit workspace."""
+    return ConformanceContext(
+        input_root=tmp_path / "input",
+        output_root=tmp_path / "output",
+        driver=DirectServiceDriver(tmp_path / "workspace"),
+    )
