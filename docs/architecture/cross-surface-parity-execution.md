@@ -51,11 +51,58 @@ agent/parity-1607-cli-adapter
 Separating target, implementation, and conformance status prevents an early generated matrix from
 presenting planned support as shipped behavior.
 
+## Tracking hierarchy
+
+The epic has two complementary views. The seven workstreams preserve the claims-completeness
+scope, while the contributor queue contains the independently assignable execution units.
+
+### Workstream roll-up
+
+| Workstream | Scope |
+| --- | --- |
+| [#1594](https://github.com/curdriceaurora/Local-File-Organizer/issues/1594) | Canonical capability registry and application contracts |
+| [#1595](https://github.com/curdriceaurora/Local-File-Organizer/issues/1595) | CLI parity |
+| [#1596](https://github.com/curdriceaurora/Local-File-Organizer/issues/1596) | REST API and official SDK parity |
+| [#1597](https://github.com/curdriceaurora/Local-File-Organizer/issues/1597) | Web and Desktop parity |
+| [#1598](https://github.com/curdriceaurora/Local-File-Organizer/issues/1598) | TUI parity |
+| [#1599](https://github.com/curdriceaurora/Local-File-Organizer/issues/1599) | Conformance fixtures, drivers, and enforcement |
+| [#1600](https://github.com/curdriceaurora/Local-File-Organizer/issues/1600) | Generated capability matrix and evidence-backed claims |
+
+#1594, #1595, #1599, and #1600 are parent roll-ups whose implementation is assigned through the
+slices below. #1596, #1597, and #1598 are intentionally both workstream roll-ups and executable
+items because they were not sub-sliced. This is not duplicate scope.
+
+### Authoritative contributor queue
+
+- Coordination: [#1611](https://github.com/curdriceaurora/Local-File-Organizer/pull/1611)
+- Foundation and oracle: [#1601](https://github.com/curdriceaurora/Local-File-Organizer/issues/1601),
+  [#1603](https://github.com/curdriceaurora/Local-File-Organizer/issues/1603),
+  [#1605](https://github.com/curdriceaurora/Local-File-Organizer/issues/1605),
+  [#1602](https://github.com/curdriceaurora/Local-File-Organizer/issues/1602), and
+  [#1604](https://github.com/curdriceaurora/Local-File-Organizer/issues/1604)
+- Adapters: [#1607](https://github.com/curdriceaurora/Local-File-Organizer/issues/1607),
+  [#1596](https://github.com/curdriceaurora/Local-File-Organizer/issues/1596),
+  [#1597](https://github.com/curdriceaurora/Local-File-Organizer/issues/1597),
+  [#1598](https://github.com/curdriceaurora/Local-File-Organizer/issues/1598), and
+  [#1608](https://github.com/curdriceaurora/Local-File-Organizer/issues/1608)
+- Enforcement and claims: [#1606](https://github.com/curdriceaurora/Local-File-Organizer/issues/1606),
+  [#1609](https://github.com/curdriceaurora/Local-File-Organizer/issues/1609), and
+  [#1610](https://github.com/curdriceaurora/Local-File-Organizer/issues/1610)
+
+### Precise workstream dependencies
+
+- #1595 starts after #1603 and #1605, and merges after #1602 and #1604 stabilize. Its #1608
+  `fo api` slice additionally waits for #1596.
+- #1599 starts #1605 after #1603. #1606 lands incrementally with #1595 through #1598 and completes
+  after their supported adapters are integrated.
+- #1600 starts #1609 after #1601. #1610 waits for both #1606 and #1609.
+
 ## Dependency graph
 
 ```mermaid
 flowchart TD
-    A["#1601 Capability registry"] --> B["#1603 OrganizeOptions and plan schema"]
+    P["#1611 Execution plan"] --> A["#1601 Capability registry"]
+    A --> B["#1603 OrganizeOptions and plan schema"]
     B --> C["#1605 Conformance scaffold"]
     B --> D["#1602 Transfer and methodologies"]
     A --> E["#1604 Jobs, recovery, and concurrency"]
@@ -79,6 +126,11 @@ flowchart TD
 ```
 
 ## Execution phases
+
+### Coordination prerequisite
+
+Merge #1611 into `feature/cross-surface-parity` before implementation begins so every contributor
+branches from the same execution contract and integration policy.
 
 ### Phase 0: foundation in reviewable slices
 
@@ -148,7 +200,7 @@ benchmark output.
 When one contributor performs the entire epic, use this order:
 
 ```text
-#1601 → #1603 → #1605 → #1602 → #1604 → #1607 → #1596 → #1608
+#1611 → #1601 → #1603 → #1605 → #1602 → #1604 → #1607 → #1596 → #1608
 → #1597 → #1598 → #1606 → #1609 → #1610
 ```
 
