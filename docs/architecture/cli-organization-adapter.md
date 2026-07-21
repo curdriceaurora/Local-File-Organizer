@@ -20,9 +20,10 @@ fo organize INPUT OUTPUT --plan plan.json
 
 The plan's roots and resolved `OrganizeOptions` are validated again before any
 operation runs. When `--plan` is supplied without behavior flags, its embedded
-options are authoritative. Supplying behavior flags explicitly causes the
-service to compare them with the reviewed plan and reject a mismatch. Schema-1
-plans remain load/inspect-only; create a new preview before execution.
+options are authoritative. Explicit behavior flags overlay only their matching
+plan fields; the service rejects the request before mutation if that result no
+longer equals the reviewed plan. Schema-1 plans remain load/inspect-only; create
+a new preview before execution.
 
 The legacy `fo preview INPUT` invocation remains supported and uses `INPUT` as
 the display-only destination root. Use `--output-dir` for a plan intended to be

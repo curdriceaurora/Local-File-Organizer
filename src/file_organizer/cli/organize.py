@@ -8,6 +8,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Annotated, Any
 
+import click
 import typer
 from click.core import ParameterSource
 from rich.console import Console
@@ -28,6 +29,25 @@ from file_organizer.utils.atomic_write import atomic_write_text
 
 console = Console()
 _JSON_SCHEMA_VERSION = 1
+_PLAN_PARAMETER_FIELDS: dict[str, tuple[str, ...]] = {
+    "recursive": ("recursive",),
+    "include_hidden": ("include_hidden",),
+    "skip_existing": ("skip_existing",),
+    "transfer_mode": ("transfer_mode",),
+    "methodology": ("methodology",),
+    "max_workers": ("parallel_workers",),
+    "sequential": ("parallel_workers", "prefetch_depth"),
+    "no_vision": ("enable_vision",),
+    "prefetch_depth": ("prefetch_depth",),
+    "no_prefetch": ("prefetch_depth",),
+    "transcribe_audio": ("transcribe_audio",),
+    "max_transcribe_seconds": ("max_transcribe_seconds",),
+    "whisper_model": ("whisper_model",),
+    "text_model": ("text_model",),
+    "vision_model": ("vision_model",),
+    "text_provider": ("text_provider",),
+    "vision_provider": ("vision_provider",),
+}
 
 
 def _check_setup_completed() -> bool:
@@ -36,6 +56,22 @@ def _check_setup_completed() -> bool:
 
     config = ConfigManager().load()
     if not config.setup_completed:
+        if _get_state().json_output:
+            context = click.get_current_context(silent=True)
+            _emit_json(
+                {
+                    "schema_version": _JSON_SCHEMA_VERSION,
+                    "outcome": "error",
+                    "command": context.invoked_subcommand if context is not None else None,
+                    "error": {
+                        "code": "setup_required",
+                        "message": "First-time setup is required. Run `fo setup` to continue.",
+                        "retryable": False,
+                        "details": {"action": "fo setup"},
+                    },
+                }
+            )
+            raise typer.Exit(code=1)
         console.print()
         console.print(
             Panel.fit(
@@ -66,8 +102,7 @@ def _resolve_parallel_settings(
 ) -> tuple[int | None, int]:
     """Validate and normalize CLI performance aliases."""
     if sequential and max_workers not in (None, 1):
-        console.print("[red]Error: --sequential cannot be combined with --max-workers > 1[/red]")
-        raise typer.Exit(code=2)
+        raise typer.BadParameter("--sequential cannot be combined with --max-workers > 1")
     return (1 if sequential else max_workers, 0 if (sequential or no_prefetch) else prefetch_depth)
 
 
@@ -147,6 +182,22 @@ def _build_options(
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
+
+
+def _merge_explicit_plan_options(
+    ctx: typer.Context,
+    plan_options: OrganizeOptions,
+    cli_options: OrganizeOptions,
+) -> OrganizeOptions:
+    """Overlay only explicit CLI option fields onto reviewed plan options."""
+    merged = plan_options.to_dict()
+    explicit = cli_options.to_dict()
+    for parameter, fields in _PLAN_PARAMETER_FIELDS.items():
+        if ctx.get_parameter_source(parameter) != ParameterSource.COMMANDLINE:
+            continue
+        for field in fields:
+            merged[field] = explicit[field]
+    return OrganizeOptions.from_dict(merged)
 
 
 def _result_payload(result: OrganizationResult) -> dict[str, Any]:
@@ -301,7 +352,14 @@ def organize(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Preview without applying files.")
     ] = False,
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Compatibility flag; canonical organization progress is already detailed.",
+        ),
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json", help="Emit stable JSON output.")] = False,
     plan_path: Annotated[
         Path | None, typer.Option("--plan", help="Apply a canonical plan JSON file.")
@@ -370,33 +428,14 @@ def organize(
             raise typer.BadParameter(
                 "--plan applies a reviewed plan and cannot be used with --dry-run"
             )
-        behavior_parameters = {
-            "recursive",
-            "include_hidden",
-            "skip_existing",
-            "transfer_mode",
-            "methodology",
-            "max_workers",
-            "sequential",
-            "no_vision",
-            "prefetch_depth",
-            "no_prefetch",
-            "transcribe_audio",
-            "max_transcribe_seconds",
-            "whisper_model",
-            "text_model",
-            "vision_model",
-            "text_provider",
-            "vision_provider",
-        }
         has_explicit_options = any(
             ctx.get_parameter_source(name) == ParameterSource.COMMANDLINE
-            for name in behavior_parameters
+            for name in _PLAN_PARAMETER_FIELDS
         )
-        options = (
-            plan.options
-            if plan is not None and not has_explicit_options
-            else _build_options(
+        if plan is not None and not has_explicit_options:
+            options = plan.options
+        else:
+            cli_options = _build_options(
                 recursive=recursive,
                 include_hidden=include_hidden,
                 skip_existing=skip_existing,
@@ -415,7 +454,11 @@ def organize(
                 text_provider=text_provider,
                 vision_provider=vision_provider,
             )
-        )
+            options = (
+                _merge_explicit_plan_options(ctx, plan.options, cli_options)
+                if plan is not None
+                else cli_options
+            )
         request = OrganizeRequest(input_dir, output_dir, options)
         if not json_output:
             console.print(f"[bold]Organizing[/bold] {input_dir} -> {output_dir}")

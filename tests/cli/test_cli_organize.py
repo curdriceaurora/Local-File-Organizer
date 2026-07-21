@@ -193,6 +193,30 @@ def test_incompatible_worker_flags_exit_two(service: MagicMock, tmp_path: Path) 
     service.execute.assert_not_called()
 
 
+def test_incompatible_worker_flags_preserve_json_contract(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    input_dir, output_dir = _roots(tmp_path)
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--json",
+            "--sequential",
+            "--max-workers",
+            "2",
+        ],
+    )
+    assert result.exit_code == 2
+    payload = json.loads(result.output)
+    assert payload["outcome"] == "error"
+    assert payload["error"]["code"] == "invalid_request"
+    assert "--sequential cannot be combined" in payload["error"]["message"]
+    service.execute.assert_not_called()
+
+
 def test_invalid_canonical_option_is_usage_error(service: MagicMock, tmp_path: Path) -> None:
     input_dir, output_dir = _roots(tmp_path)
     result = runner.invoke(
@@ -270,6 +294,30 @@ def test_organize_applies_serialized_plan_with_embedded_options(
     request, applied_plan = service.execute.call_args.args
     assert applied_plan == plan
     assert request.options == plan.options
+
+
+def test_plan_overlays_only_explicit_behavior_fields(service: MagicMock, tmp_path: Path) -> None:
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan(input_dir, output_dir)
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--recursive",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, _ = service.execute.call_args.args
+    assert request.options.recursive is True
+    assert request.options.transfer_mode == TransferMode.COPY
+    assert request.options.methodology == OrganizationMethodology.PARA
+    assert request.options.text_model == plan.options.text_model
 
 
 def test_domain_errors_have_stable_json_and_exit_code(service: MagicMock, tmp_path: Path) -> None:

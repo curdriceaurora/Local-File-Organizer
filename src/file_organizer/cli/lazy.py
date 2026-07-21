@@ -176,7 +176,7 @@ class LazyTyperGroup(typer.core.TyperGroup):
     """A TyperGroup that integrates with LazyCommandProxy for deferred loading."""
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
-        """Stash help-flag presence in ctx.meta before Click consumes the args.
+        """Stash presentation-flag presence in ctx.meta before Click consumes args.
 
         Click's ``Group.parse_args`` calls ``resolve_command``, which removes
         ``--help`` / ``-h`` from ``ctx.args`` before the group callback fires.
@@ -203,6 +203,12 @@ class LazyTyperGroup(typer.core.TyperGroup):
         # option (e.g. ``--type -h``) and must not trigger a gate bypass.
         args_before_terminator = args[: args.index("--")] if "--" in args else args
         ctx.meta["help_requested"] = "--help" in args_before_terminator
+        # Command-local ``--json`` is parsed only after the root callback, but
+        # the first-run setup gate executes inside that callback. Preserve the
+        # raw intent so even setup-gate failures honor the JSON-only stdout
+        # contract. The root ``--json`` option remains the canonical source
+        # for normal command execution.
+        ctx.meta["json_requested"] = "--json" in args_before_terminator
         return super().parse_args(ctx, args)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
