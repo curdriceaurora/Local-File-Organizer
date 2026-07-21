@@ -61,6 +61,10 @@ registry = get_capability_registry()
 payload = registry.to_json()
 ```
 
+The packaged JSON is stored in that canonical serialized form. The registry tests compare the
+file byte-for-byte with `to_json()`, so edits must preserve canonical key and capability ordering
+as well as the explicit defaults emitted by the serializer.
+
 The serialization schema is versioned independently through
 `CAPABILITY_REGISTRY_SCHEMA_VERSION`. Change that version only when consumers cannot safely read
 the prior shape.

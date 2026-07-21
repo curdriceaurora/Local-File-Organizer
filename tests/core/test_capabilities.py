@@ -58,6 +58,12 @@ def test_serialization_is_deterministic_and_round_trips() -> None:
     assert ids == sorted(ids)
 
 
+def test_packaged_registry_uses_canonical_serialization() -> None:
+    registry_path = Path("src") / "file_organizer" / "core" / "capability_registry.json"
+
+    assert registry_path.read_text(encoding="utf-8") == get_capability_registry().to_json()
+
+
 def test_duplicate_capability_ids_are_rejected() -> None:
     data = _registry_data()
     capabilities = cast(list[dict[str, object]], data["capabilities"])
@@ -228,19 +234,25 @@ def test_optional_dependencies_name_project_extras() -> None:
 
 
 def test_official_client_product_methods_are_inventoried() -> None:
-    registry_text = get_capability_registry().to_json(indent=None)
     ignored_methods = {"aclose", "close", "set_token"}
+    registered = {
+        entry_point
+        for capability in get_capability_registry().capabilities
+        for entry_point in capability.support_for(Surface.PYTHON_SDK).entry_points
+    }
+    live: set[str] = set()
 
     for client_type in (FileOrganizerClient, AsyncFileOrganizerClient):
-        methods = {
-            name
+        live.update(
+            f"{client_type.__name__}.{name}"
             for name, member in inspect.getmembers(client_type, inspect.isfunction)
             if not name.startswith("_") and name not in ignored_methods
-        }
-        missing = {
-            name for name in methods if f"{client_type.__name__}.{name}" not in registry_text
-        }
-        assert not missing, f"unregistered {client_type.__name__} methods: {sorted(missing)}"
+        )
+
+    missing = live - registered
+    stale = registered - live
+    assert not missing, f"unregistered Python client methods: {sorted(missing)}"
+    assert not stale, f"stale Python SDK registry entry points: {sorted(stale)}"
 
 
 def test_typescript_client_product_methods_are_inventoried() -> None:
@@ -248,7 +260,14 @@ def test_typescript_client_product_methods_are_inventoried() -> None:
     source = source_path.read_text(encoding="utf-8")
     methods = set(re.findall(r"^  (?:async )?([A-Za-z][A-Za-z0-9]*)\(", source, re.MULTILINE))
     methods -= {"constructor", "setToken"}
-    registry_text = get_capability_registry().to_json(indent=None)
-    missing = {name for name in methods if f"FileOrganizerClient.{name}" not in registry_text}
+    live = {f"FileOrganizerClient.{name}" for name in methods}
+    registered = {
+        entry_point
+        for capability in get_capability_registry().capabilities
+        for entry_point in capability.support_for(Surface.TYPESCRIPT_SDK).entry_points
+    }
+    missing = live - registered
+    stale = registered - live
 
     assert not missing, f"unregistered TypeScript client methods: {sorted(missing)}"
+    assert not stale, f"stale TypeScript SDK registry entry points: {sorted(stale)}"

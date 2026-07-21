@@ -1,533 +1,2283 @@
 {
-  "schema_version": 1,
   "capabilities": [
     {
-      "id": "setup.configure",
-      "name": "Initial setup",
-      "description": "Discover local capabilities and persist an initial working configuration.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo setup run", "fo start", "fo quickstart"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/setup/status", "GET /api/v1/setup/capabilities", "GET /api/v1/setup/browse-folder", "POST /api/v1/setup/complete"]},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/setup", "POST /ui/setup/defer"]},
-        "tui": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["SetupWizardView"]}
-      }
-    },
-    {
-      "id": "organization.scan",
-      "name": "Organization scan",
-      "description": "Collect candidate files using the canonical traversal and filtering policy.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo preview", "fo organize"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/organize/scan"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.scan", "AsyncFileOrganizerClient.scan"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.scan"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /ui/organize/scan"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileBrowserView", "OrganizationPreviewView"]}
-      }
-    },
-    {
-      "id": "organization.preview",
-      "name": "Organization preview",
-      "description": "Build and inspect an organization plan without applying filesystem changes.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo preview", "fo organize --dry-run"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/organize/preview"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.preview_organize", "AsyncFileOrganizerClient.preview_organize"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.previewOrganize"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/organize", "POST /ui/organize/scan", "POST /ui/organize/plan/clear"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["OrganizationPreviewView"]}
-      }
-    },
-    {
-      "id": "organization.execute",
-      "name": "Organization execution",
-      "description": "Apply an approved organization plan and return normalized operation results.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo organize"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/organize", "POST /api/v1/organize/execute"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.organize", "AsyncFileOrganizerClient.organize"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.organize"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /ui/organize/execute"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["OrganizationPreviewView"]}
-      }
-    },
-    {
-      "id": "organization.jobs-recovery",
-      "name": "Organization jobs and recovery",
-      "description": "Observe, cancel, roll back, and recover organization work using stable lifecycle semantics.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo recover", "fo undo", "fo history"]},
-        "rest-api": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /api/v1/organize/status/{job_id}", "WS /api/v1/ws/{client_id}"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.get_job", "AsyncFileOrganizerClient.get_job"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.getJob"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/organize/jobs/{job_id}/status", "GET /ui/organize/jobs/{job_id}/events", "POST /ui/organize/jobs/{job_id}/cancel", "POST /ui/organize/jobs/{job_id}/rollback"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["UndoHistoryView"]}
-      }
-    },
-    {
-      "id": "files.browse",
-      "name": "File browsing",
-      "description": "Browse directory contents with filtering, sorting, pagination, and hidden-file policy.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo api files"]},
-        "rest-api": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/files"]},
-        "python-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.list_files", "AsyncFileOrganizerClient.list_files"]},
-        "typescript-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.listFiles"]},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/files", "GET /ui/files/list", "GET /ui/files/tree"]},
-        "tui": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileBrowserView"]}
-      }
-    },
-    {
-      "id": "files.inspect",
-      "name": "File inspection",
-      "description": "Read file metadata, supported content, previews, thumbnails, and downloads.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["parsers", "audio", "video"],
-      "surfaces": {
-        "cli": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo analyze"]},
-        "rest-api": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/files/info", "GET /api/v1/files/content", "GET /api/v1/files/{file_id}"]},
-        "python-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.get_file_info", "FileOrganizerClient.read_file_content", "AsyncFileOrganizerClient.get_file_info", "AsyncFileOrganizerClient.read_file_content"]},
-        "typescript-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.getFileInfo", "FileOrganizerClient.readFileContent"]},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/files/preview", "GET /ui/files/raw", "GET /ui/files/thumbnail"]},
-        "tui": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FilePreviewView"]}
-      }
-    },
-    {
-      "id": "files.mutate",
-      "name": "Direct file mutations",
-      "description": "Upload, move, and delete individual files through guarded public operations.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/files/upload", "POST /api/v1/files/move", "DELETE /api/v1/files", "DELETE /api/v1/files/{file_id}"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.move_file", "FileOrganizerClient.delete_file", "AsyncFileOrganizerClient.move_file", "AsyncFileOrganizerClient.delete_file"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.moveFile", "FileOrganizerClient.deleteFile"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["POST /ui/files/upload"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
-      }
-    },
-    {
-      "id": "search.query",
-      "name": "File search",
-      "description": "Search indexed or local files with consistent query and result semantics.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["search"],
-      "surfaces": {
-        "cli": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo search"]},
-        "rest-api": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/search"]},
-        "python-sdk": {"target_support": "read-only", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "read-only", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/settings/search"]},
-        "tui": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileBrowserView"]}
-      }
-    },
-    {
-      "id": "analysis.inspect",
-      "name": "AI-assisted file analysis",
-      "description": "Analyze file content and metadata, including optional vision, audio, and video features.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["parsers", "audio", "video", "cloud", "claude", "llama", "mlx"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo analyze", "fo organize --vision", "fo organize --transcribe-audio"]},
-        "rest-api": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["POST /api/v1/analyze"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/files/preview", "POST /ui/settings/models/test"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["AudioView", "FilePreviewView"]}
-      }
-    },
-    {
-      "id": "deduplication.manage",
-      "name": "Duplicate management",
-      "description": "Scan, preview, report, and resolve duplicate file groups.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["dedup"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo dedupe scan", "fo dedupe report", "fo dedupe resolve"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/dedupe/scan", "POST /api/v1/dedupe/preview", "POST /api/v1/dedupe/execute"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.dedupe_scan", "FileOrganizerClient.dedupe_preview", "FileOrganizerClient.dedupe_execute", "AsyncFileOrganizerClient.dedupe_scan", "AsyncFileOrganizerClient.dedupe_preview", "AsyncFileOrganizerClient.dedupe_execute"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.dedupeScan", "FileOrganizerClient.dedupePreview", "FileOrganizerClient.dedupeExecute"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []}
-      }
-    },
-    {
-      "id": "audio.transcribe",
-      "name": "Audio transcription",
-      "description": "Transcribe supported local audio content for analysis and organization.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["audio"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo organize --transcribe-audio"]},
-        "rest-api": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["POST /api/v1/analyze"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["AudioView"]}
-      }
-    },
-    {
-      "id": "video.analyze",
-      "name": "Video analysis",
-      "description": "Detect scenes and extract representative keyframes from supported videos.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": ["video"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo analyze"]},
-        "rest-api": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["POST /api/v1/analyze"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/files/preview"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
-      }
-    },
-    {
-      "id": "automation.tags",
-      "name": "Automatic tagging",
-      "description": "Suggest, apply, inspect, and batch-manage file tags.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo autotag suggest", "fo autotag apply", "fo autotag popular", "fo autotag batch", "fo autotag recent"]},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []}
-      }
-    },
-    {
-      "id": "automation.rules",
-      "name": "Organization rules",
-      "description": "Create, preview, apply, import, export, and watch declarative organization rules.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo rules list", "fo rules sets", "fo rules add", "fo rules remove", "fo rules toggle", "fo rules preview", "fo rules apply", "fo rules watch", "fo rules export", "fo rules import"]},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []}
-      }
-    },
-    {
-      "id": "automation.suggestions",
-      "name": "Smart suggestions",
-      "description": "Generate, inspect, and apply learned file-placement suggestions.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo suggest files", "fo suggest patterns", "fo suggest apply"]},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []}
-      }
-    },
-    {
-      "id": "automation.watcher",
-      "name": "Background watcher",
-      "description": "Start, stop, inspect, and configure continuous directory watching.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo daemon start", "fo daemon stop", "fo daemon status", "fo daemon watch", "fo daemon process"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/daemon/start", "POST /api/v1/daemon/stop", "POST /api/v1/daemon/toggle", "GET /api/v1/daemon/status"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/settings/advanced", "POST /ui/settings/advanced"]},
-        "tui": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []}
-      }
-    },
-    {
-      "id": "methodology.configure",
-      "name": "Organization methodology",
-      "description": "Select and configure default, PARA, or Johnny Decimal organization policy.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo organize --methodology", "fo config edit"]},
-        "rest-api": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /api/v1/config", "PUT /api/v1/config"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.get_config", "FileOrganizerClient.update_config", "AsyncFileOrganizerClient.get_config", "AsyncFileOrganizerClient.update_config"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.getConfig", "FileOrganizerClient.updateConfig"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/settings/organization", "POST /ui/settings/organization/validate", "POST /ui/settings/organization"]},
-        "tui": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["MethodologyView"]}
-      }
-    },
-    {
-      "id": "analytics.inspect",
-      "name": "Organization analytics",
-      "description": "Inspect organization activity, storage metrics, trends, and exported reports.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo analytics"]},
-        "rest-api": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /api/v1/system/stats"]},
-        "python-sdk": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.system_stats", "AsyncFileOrganizerClient.system_stats"]},
-        "typescript-sdk": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.systemStats"]},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/organize/stats", "GET /ui/organize/stats/events", "GET /ui/organize/report/{job_id}"]},
-        "tui": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["AnalyticsView"]}
-      }
-    },
-    {
-      "id": "history.manage",
-      "name": "Operation history and undo",
-      "description": "Review operation history and perform supported undo and redo actions.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo history", "fo undo", "fo redo"]},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/organize/history", "GET /ui/organize/history/events", "POST /ui/organize/jobs/{job_id}/rollback"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["UndoHistoryView"]}
-      }
-    },
-    {
-      "id": "copilot.chat",
-      "name": "Copilot chat",
-      "description": "Interpret natural-language file-management requests and propose explicit actions.",
-      "maturity": "experimental",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": ["cloud", "claude", "llama", "mlx"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo copilot chat", "fo copilot status"]},
-        "rest-api": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["CopilotView"]}
-      }
-    },
-    {
-      "id": "configuration.manage",
-      "name": "Configuration management",
-      "description": "Read, validate, update, import, export, and reset application configuration.",
-      "maturity": "stable",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo config show", "fo config list", "fo config edit"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/config", "PUT /api/v1/config", "POST /api/v1/config/reset", "GET /api/v1/system/config", "PATCH /api/v1/system/config"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.get_config", "FileOrganizerClient.update_config", "AsyncFileOrganizerClient.get_config", "AsyncFileOrganizerClient.update_config"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.getConfig", "FileOrganizerClient.updateConfig"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/settings", "GET /ui/settings/general", "POST /ui/settings/general", "GET /ui/settings/appearance", "POST /ui/settings/appearance", "GET /ui/settings/export", "POST /ui/settings/import", "POST /ui/settings/reset"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["SettingsView"]}
-      }
-    },
-    {
-      "id": "configuration.profiles",
-      "name": "Named configuration profiles",
-      "description": "Create, activate, merge, migrate, validate, import, and export named local profiles.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo profile list", "fo profile create", "fo profile activate", "fo profile delete", "fo profile current", "fo profile export", "fo profile import", "fo profile merge", "fo profile template list", "fo profile template preview", "fo profile template apply", "fo profile migrate", "fo profile validate"]},
-        "rest-api": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
-      }
-    },
-    {
-      "id": "models.manage",
-      "name": "AI model management",
-      "description": "Inspect, acquire, select, test, and cache supported AI models.",
-      "maturity": "beta",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": ["cloud", "claude", "llama", "mlx"],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo model list", "fo model pull", "fo model cache"]},
-        "rest-api": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/settings/models", "POST /ui/settings/models", "POST /ui/settings/models/test"]},
-        "tui": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["SettingsView"]}
-      }
-    },
-    {
-      "id": "authentication.manage",
-      "name": "User authentication",
-      "description": "Register, sign in, refresh identity, inspect the current user, and sign out.",
-      "maturity": "stable",
-      "execution_scopes": ["remote", "auth-gated"],
-      "optional_dependencies": [],
-      "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo api login", "fo api me", "fo api logout"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["POST /api/v1/auth/register", "POST /api/v1/auth/login", "POST /api/v1/auth/refresh", "GET /api/v1/auth/me", "POST /api/v1/auth/logout"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.register", "FileOrganizerClient.login", "FileOrganizerClient.refresh_token", "FileOrganizerClient.me", "FileOrganizerClient.logout", "AsyncFileOrganizerClient.register", "AsyncFileOrganizerClient.login", "AsyncFileOrganizerClient.refresh_token", "AsyncFileOrganizerClient.me", "AsyncFileOrganizerClient.logout"]},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.register", "FileOrganizerClient.login", "FileOrganizerClient.refreshToken", "FileOrganizerClient.me", "FileOrganizerClient.logout"]},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/profile/register", "POST /ui/profile/register", "GET /ui/profile/login", "POST /ui/profile/login", "POST /ui/profile/logout", "GET /ui/profile/reset-password", "POST /ui/profile/reset-password"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
-      }
-    },
-    {
-      "id": "accounts.manage",
-      "name": "Account and workspace management",
       "description": "Manage account details, security, activity, teams, sharing, notifications, and workspaces.",
+      "execution_scopes": [
+        "remote",
+        "auth-gated"
+      ],
+      "id": "accounts.manage",
       "maturity": "beta",
-      "execution_scopes": ["remote", "auth-gated"],
+      "name": "Account and workspace management",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/profile", "GET /ui/profile/account-settings", "POST /ui/profile/account-settings/2fa", "POST /ui/profile/account-settings/password", "GET /ui/profile/activity", "GET /ui/profile/avatar/{user_id}", "GET /ui/profile/edit", "POST /ui/profile/edit", "POST /ui/profile/edit-avatar", "GET /ui/profile/forgot-password", "POST /ui/profile/forgot-password", "GET /ui/profile/team", "POST /ui/profile/team/invite", "POST /ui/profile/team/role", "GET /ui/profile/shared", "POST /ui/profile/shared/add", "POST /ui/profile/shared/remove", "GET /ui/profile/notifications", "POST /ui/profile/notifications/mark-read", "GET /ui/profile/workspaces", "POST /ui/profile/workspaces/create", "POST /ui/profile/workspaces/switch"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/profile",
+            "GET /ui/profile/account-settings",
+            "POST /ui/profile/account-settings/2fa",
+            "POST /ui/profile/account-settings/password",
+            "GET /ui/profile/activity",
+            "GET /ui/profile/avatar/{user_id}",
+            "GET /ui/profile/edit",
+            "POST /ui/profile/edit",
+            "POST /ui/profile/edit-avatar",
+            "GET /ui/profile/forgot-password",
+            "POST /ui/profile/forgot-password",
+            "GET /ui/profile/team",
+            "POST /ui/profile/team/invite",
+            "POST /ui/profile/team/role",
+            "GET /ui/profile/shared",
+            "POST /ui/profile/shared/add",
+            "POST /ui/profile/shared/remove",
+            "GET /ui/profile/notifications",
+            "POST /ui/profile/notifications/mark-read",
+            "GET /ui/profile/workspaces",
+            "POST /ui/profile/workspaces/create",
+            "POST /ui/profile/workspaces/switch"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
       }
     },
     {
-      "id": "api-keys.manage",
-      "name": "API key management",
+      "description": "Analyze file content and metadata, including optional vision, audio, and video features.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "analysis.inspect",
+      "maturity": "beta",
+      "name": "AI-assisted file analysis",
+      "optional_dependencies": [
+        "parsers",
+        "audio",
+        "video",
+        "cloud",
+        "claude",
+        "llama",
+        "mlx"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo analyze",
+            "fo organize",
+            "fo organize --transcribe-audio"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/analyze"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "AudioView",
+            "FilePreviewView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/files/preview",
+            "POST /ui/settings/models/test"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Inspect organization activity, storage metrics, trends, and exported reports.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "analytics.inspect",
+      "maturity": "beta",
+      "name": "Organization analytics",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo analytics"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.system_stats",
+            "AsyncFileOrganizerClient.system_stats"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/system/stats"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "AnalyticsView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.systemStats"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/organize/stats",
+            "GET /ui/organize/stats/events",
+            "GET /ui/organize/report/{job_id}"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        }
+      }
+    },
+    {
       "description": "Generate, list, and revoke credentials used for authenticated API access.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "api-keys.manage",
       "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
+      "name": "API key management",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["fo api-keys generate"]},
-        "rest-api": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/profile/api-keys", "POST /ui/profile/api-keys/generate", "POST /ui/profile/api-keys/revoke"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo api-keys generate"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/profile/api-keys",
+            "POST /ui/profile/api-keys/generate",
+            "POST /ui/profile/api-keys/revoke"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
       }
     },
     {
-      "id": "system.inspect",
-      "name": "System health and status",
-      "description": "Inspect service health, runtime status, hardware capabilities, and storage statistics.",
+      "description": "Transcribe supported local audio content for analysis and organization.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "audio.transcribe",
+      "maturity": "beta",
+      "name": "Audio transcription",
+      "optional_dependencies": [
+        "audio"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo organize --transcribe-audio"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/analyze"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "AudioView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Register, sign in, refresh identity, inspect the current user, and sign out.",
+      "execution_scopes": [
+        "remote",
+        "auth-gated"
+      ],
+      "id": "authentication.manage",
       "maturity": "stable",
-      "execution_scopes": ["local-only", "remote"],
+      "name": "User authentication",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo version", "fo doctor", "fo hardware-info", "fo api health", "fo api system-status", "fo api system-stats"]},
-        "rest-api": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/health", "GET /api/v1/system/status", "GET /api/v1/system/stats"]},
-        "python-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.health", "FileOrganizerClient.system_status", "FileOrganizerClient.system_stats", "AsyncFileOrganizerClient.health", "AsyncFileOrganizerClient.system_status", "AsyncFileOrganizerClient.system_stats"]},
-        "typescript-sdk": {"target_support": "read-only", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["FileOrganizerClient.health", "FileOrganizerClient.systemStatus", "FileOrganizerClient.systemStats"]},
-        "web-desktop": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["GET /ui/"]},
-        "tui": {"target_support": "read-only", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["AnalyticsView"]}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo api login",
+            "fo api me",
+            "fo api logout"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.register",
+            "FileOrganizerClient.login",
+            "FileOrganizerClient.refresh_token",
+            "FileOrganizerClient.me",
+            "FileOrganizerClient.logout",
+            "AsyncFileOrganizerClient.register",
+            "AsyncFileOrganizerClient.login",
+            "AsyncFileOrganizerClient.refresh_token",
+            "AsyncFileOrganizerClient.me",
+            "AsyncFileOrganizerClient.logout"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/auth/register",
+            "POST /api/v1/auth/login",
+            "POST /api/v1/auth/refresh",
+            "GET /api/v1/auth/me",
+            "POST /api/v1/auth/logout"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.register",
+            "FileOrganizerClient.login",
+            "FileOrganizerClient.refreshToken",
+            "FileOrganizerClient.me",
+            "FileOrganizerClient.logout"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/profile/register",
+            "POST /ui/profile/register",
+            "GET /ui/profile/login",
+            "POST /ui/profile/login",
+            "POST /ui/profile/logout",
+            "GET /ui/profile/reset-password",
+            "POST /ui/profile/reset-password"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
       }
     },
     {
-      "id": "integrations.manage",
-      "name": "External integrations",
+      "description": "Create, preview, apply, import, export, and watch declarative organization rules.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "automation.rules",
+      "maturity": "beta",
+      "name": "Organization rules",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo rules list",
+            "fo rules sets",
+            "fo rules add",
+            "fo rules remove",
+            "fo rules toggle",
+            "fo rules preview",
+            "fo rules apply",
+            "fo rules watch",
+            "fo rules export",
+            "fo rules import"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Generate, inspect, and apply learned file-placement suggestions.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "automation.suggestions",
+      "maturity": "beta",
+      "name": "Smart suggestions",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo suggest files",
+            "fo suggest patterns",
+            "fo suggest apply"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Suggest, apply, inspect, and batch-manage file tags.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "automation.tags",
+      "maturity": "beta",
+      "name": "Automatic tagging",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo autotag suggest",
+            "fo autotag apply",
+            "fo autotag popular",
+            "fo autotag batch",
+            "fo autotag recent"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Start, stop, inspect, and configure continuous directory watching.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "automation.watcher",
+      "maturity": "stable",
+      "name": "Background watcher",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo daemon start",
+            "fo daemon stop",
+            "fo daemon status",
+            "fo daemon watch",
+            "fo daemon process"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/daemon/start",
+            "POST /api/v1/daemon/stop",
+            "POST /api/v1/daemon/toggle",
+            "GET /api/v1/daemon/status"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/settings/advanced",
+            "POST /ui/settings/advanced"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Read, validate, update, import, export, and reset application configuration.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "configuration.manage",
+      "maturity": "stable",
+      "name": "Configuration management",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo config show",
+            "fo config list",
+            "fo config edit"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.get_config",
+            "FileOrganizerClient.update_config",
+            "AsyncFileOrganizerClient.get_config",
+            "AsyncFileOrganizerClient.update_config"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/config",
+            "PUT /api/v1/config",
+            "POST /api/v1/config/reset",
+            "GET /api/v1/system/config",
+            "PATCH /api/v1/system/config"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "SettingsView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.getConfig",
+            "FileOrganizerClient.updateConfig"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/settings",
+            "GET /ui/settings/general",
+            "POST /ui/settings/general",
+            "GET /ui/settings/appearance",
+            "POST /ui/settings/appearance",
+            "GET /ui/settings/export",
+            "POST /ui/settings/import",
+            "POST /ui/settings/reset"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Create, activate, merge, migrate, validate, import, and export named local profiles.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "configuration.profiles",
+      "maturity": "beta",
+      "name": "Named configuration profiles",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo profile"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
+      }
+    },
+    {
+      "description": "Interpret natural-language file-management requests and propose explicit actions.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "copilot.chat",
+      "maturity": "experimental",
+      "name": "Copilot chat",
+      "optional_dependencies": [
+        "cloud",
+        "claude",
+        "llama",
+        "mlx"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo copilot chat",
+            "fo copilot status"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "CopilotView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
+      }
+    },
+    {
+      "description": "Scan, preview, report, and resolve duplicate file groups.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "deduplication.manage",
+      "maturity": "stable",
+      "name": "Duplicate management",
+      "optional_dependencies": [
+        "dedup"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo dedupe scan",
+            "fo dedupe report",
+            "fo dedupe resolve"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.dedupe_scan",
+            "FileOrganizerClient.dedupe_preview",
+            "FileOrganizerClient.dedupe_execute",
+            "AsyncFileOrganizerClient.dedupe_scan",
+            "AsyncFileOrganizerClient.dedupe_preview",
+            "AsyncFileOrganizerClient.dedupe_execute"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/dedupe/scan",
+            "POST /api/v1/dedupe/preview",
+            "POST /api/v1/dedupe/execute"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.dedupeScan",
+            "FileOrganizerClient.dedupePreview",
+            "FileOrganizerClient.dedupeExecute"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Browse directory contents with filtering, sorting, pagination, and hidden-file policy.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "files.browse",
+      "maturity": "stable",
+      "name": "File browsing",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo api files"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.list_files",
+            "AsyncFileOrganizerClient.list_files"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/files"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileBrowserView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.listFiles"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/files",
+            "GET /ui/files/list",
+            "GET /ui/files/tree"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        }
+      }
+    },
+    {
+      "description": "Read file metadata, supported content, previews, thumbnails, and downloads.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "files.inspect",
+      "maturity": "stable",
+      "name": "File inspection",
+      "optional_dependencies": [
+        "parsers",
+        "audio",
+        "video"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo analyze"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.get_file_info",
+            "FileOrganizerClient.read_file_content",
+            "AsyncFileOrganizerClient.get_file_info",
+            "AsyncFileOrganizerClient.read_file_content"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/files/info",
+            "GET /api/v1/files/content",
+            "GET /api/v1/files/{file_id}"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FilePreviewView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.getFileInfo",
+            "FileOrganizerClient.readFileContent"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/files/preview",
+            "GET /ui/files/raw",
+            "GET /ui/files/thumbnail"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        }
+      }
+    },
+    {
+      "description": "Upload, move, and delete individual files through guarded public operations.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "files.mutate",
+      "maturity": "beta",
+      "name": "Direct file mutations",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.move_file",
+            "FileOrganizerClient.delete_file",
+            "AsyncFileOrganizerClient.move_file",
+            "AsyncFileOrganizerClient.delete_file"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/files/upload",
+            "POST /api/v1/files/move",
+            "DELETE /api/v1/files",
+            "DELETE /api/v1/files/{file_id}"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.moveFile",
+            "FileOrganizerClient.deleteFile"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /ui/files/upload"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Review operation history and perform supported undo and redo actions.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "history.manage",
+      "maturity": "stable",
+      "name": "Operation history and undo",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo history",
+            "fo undo",
+            "fo redo"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "UndoHistoryView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/organize/history",
+            "GET /ui/organize/history/events",
+            "POST /ui/organize/jobs/{job_id}/rollback"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        }
+      }
+    },
+    {
       "description": "Configure, connect, disconnect, and send files through supported integrations.",
+      "execution_scopes": [
+        "remote",
+        "auth-gated"
+      ],
+      "id": "integrations.manage",
       "maturity": "experimental",
-      "execution_scopes": ["remote", "auth-gated"],
+      "name": "External integrations",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/integrations", "POST /api/v1/integrations/{integration_name}/settings", "POST /api/v1/integrations/{integration_name}/connect", "POST /api/v1/integrations/{integration_name}/disconnect", "POST /api/v1/integrations/{integration_name}/send", "GET /api/v1/integrations/browser/config", "POST /api/v1/integrations/browser/token", "POST /api/v1/integrations/browser/verify"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/integrations",
+            "POST /api/v1/integrations/{integration_name}/settings",
+            "POST /api/v1/integrations/{integration_name}/connect",
+            "POST /api/v1/integrations/{integration_name}/disconnect",
+            "POST /api/v1/integrations/{integration_name}/send",
+            "GET /api/v1/integrations/browser/config",
+            "POST /api/v1/integrations/browser/token",
+            "POST /api/v1/integrations/browser/verify"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
       }
     },
     {
-      "id": "interfaces.launch",
-      "name": "Interactive interface launchers",
       "description": "Launch the supported local Web, Desktop, and terminal user interfaces.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "interfaces.launch",
       "maturity": "stable",
-      "execution_scopes": ["local-only"],
-      "optional_dependencies": ["desktop"],
+      "name": "Interactive interface launchers",
+      "optional_dependencies": [
+        "desktop"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo serve", "fo desktop", "fo tui"]},
-        "rest-api": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo serve",
+            "fo desktop",
+            "fo tui"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
       }
     },
     {
-      "id": "marketplace.manage",
-      "name": "Plugin marketplace",
       "description": "Browse, inspect, install, remove, update, and review marketplace plugins.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "marketplace.manage",
       "maturity": "beta",
-      "execution_scopes": ["local-only", "remote", "auth-gated"],
+      "name": "Plugin marketplace",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo marketplace list", "fo marketplace search", "fo marketplace info", "fo marketplace install", "fo marketplace uninstall", "fo marketplace update", "fo marketplace installed", "fo marketplace updates", "fo marketplace review"]},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/marketplace/plugins", "GET /api/v1/marketplace/plugins/{name}", "GET /api/v1/marketplace/installed", "GET /api/v1/marketplace/updates", "POST /api/v1/marketplace/plugins/{name}/install", "DELETE /api/v1/marketplace/plugins/{name}", "POST /api/v1/marketplace/plugins/{name}/update", "GET /api/v1/marketplace/plugins/{name}/reviews", "POST /api/v1/marketplace/plugins/{name}/reviews"]},
-        "python-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "typescript-sdk": {"target_support": "full", "implementation_status": "not-implemented", "conformance_status": "unverified", "entry_points": []},
-        "web-desktop": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /ui/marketplace", "GET /ui/marketplace/plugins/{name}/details", "POST /ui/marketplace/plugins/{name}/install", "POST /ui/marketplace/plugins/{name}/uninstall", "POST /ui/marketplace/plugins/{name}/update"]},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo marketplace list",
+            "fo marketplace search",
+            "fo marketplace info",
+            "fo marketplace install",
+            "fo marketplace uninstall",
+            "fo marketplace update",
+            "fo marketplace installed",
+            "fo marketplace updates",
+            "fo marketplace review"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/marketplace/plugins",
+            "GET /api/v1/marketplace/plugins/{name}",
+            "GET /api/v1/marketplace/installed",
+            "GET /api/v1/marketplace/updates",
+            "POST /api/v1/marketplace/plugins/{name}/install",
+            "DELETE /api/v1/marketplace/plugins/{name}",
+            "POST /api/v1/marketplace/plugins/{name}/update",
+            "GET /api/v1/marketplace/plugins/{name}/reviews",
+            "POST /api/v1/marketplace/plugins/{name}/reviews"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/marketplace",
+            "GET /ui/marketplace/plugins/{name}/details",
+            "POST /ui/marketplace/plugins/{name}/install",
+            "POST /ui/marketplace/plugins/{name}/uninstall",
+            "POST /ui/marketplace/plugins/{name}/update"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
       }
     },
     {
-      "id": "plugins.runtime",
-      "name": "Plugin runtime API",
-      "description": "Expose guarded file, configuration, and lifecycle hook operations to plugins.",
-      "maturity": "experimental",
-      "execution_scopes": ["remote", "auth-gated"],
+      "description": "Select and configure default, PARA, or Johnny Decimal organization policy.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "methodology.configure",
+      "maturity": "beta",
+      "name": "Organization methodology",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "rest-api": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["GET /api/v1/plugins/files/list", "GET /api/v1/plugins/files/metadata", "POST /api/v1/plugins/files/organize", "GET /api/v1/plugins/config/get", "GET /api/v1/plugins/hooks", "POST /api/v1/plugins/hooks/register", "POST /api/v1/plugins/hooks/unregister", "POST /api/v1/plugins/hooks/trigger"]},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo config edit"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.get_config",
+            "FileOrganizerClient.update_config",
+            "AsyncFileOrganizerClient.get_config",
+            "AsyncFileOrganizerClient.update_config"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/config",
+            "PUT /api/v1/config"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "MethodologyView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.getConfig",
+            "FileOrganizerClient.updateConfig"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/settings/organization",
+            "POST /ui/settings/organization/validate",
+            "POST /ui/settings/organization"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        }
       }
     },
     {
-      "id": "updates.manage",
-      "name": "Application updates",
-      "description": "Check, install, and roll back supported application updates.",
+      "description": "Inspect, acquire, select, test, and cache supported AI models.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "models.manage",
+      "maturity": "beta",
+      "name": "AI model management",
+      "optional_dependencies": [
+        "cloud",
+        "claude",
+        "llama",
+        "mlx"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo model list",
+            "fo model pull",
+            "fo model cache"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "SettingsView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/settings/models",
+            "POST /ui/settings/models",
+            "POST /ui/settings/models/test"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Apply an approved organization plan and return normalized operation results.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "organization.execute",
       "maturity": "stable",
-      "execution_scopes": ["local-only"],
+      "name": "Organization execution",
       "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
       "surfaces": {
-        "cli": {"target_support": "full", "implementation_status": "implemented", "conformance_status": "unverified", "entry_points": ["fo update check", "fo update install", "fo update rollback"]},
-        "rest-api": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "python-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "typescript-sdk": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "web-desktop": {"target_support": "not-applicable", "implementation_status": "not-applicable", "conformance_status": "not-applicable", "entry_points": []},
-        "tui": {"target_support": "redirect/deep-link", "implementation_status": "partial", "conformance_status": "unverified", "entry_points": ["FileOrganizerApp._check_for_updates"]}
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo organize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.organize",
+            "AsyncFileOrganizerClient.organize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/organize",
+            "POST /api/v1/organize/execute"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "OrganizationPreviewView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.organize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /ui/organize/execute"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Observe, cancel, roll back, and recover organization work using stable lifecycle semantics.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "organization.jobs-recovery",
+      "maturity": "beta",
+      "name": "Organization jobs and recovery",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo recover",
+            "fo undo",
+            "fo history"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.get_job",
+            "AsyncFileOrganizerClient.get_job"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/organize/status/{job_id}",
+            "WS /api/v1/ws/{client_id}"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "UndoHistoryView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.getJob"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/organize/jobs/{job_id}/status",
+            "GET /ui/organize/jobs/{job_id}/events",
+            "POST /ui/organize/jobs/{job_id}/cancel",
+            "POST /ui/organize/jobs/{job_id}/rollback"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Build and inspect an organization plan without applying filesystem changes.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "organization.preview",
+      "maturity": "stable",
+      "name": "Organization preview",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo preview",
+            "fo organize --dry-run"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.preview_organize",
+            "AsyncFileOrganizerClient.preview_organize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/organize/preview"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "OrganizationPreviewView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.previewOrganize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/organize",
+            "POST /ui/organize/scan",
+            "POST /ui/organize/plan/clear"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Collect candidate files using the canonical traversal and filtering policy.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "organization.scan",
+      "maturity": "stable",
+      "name": "Organization scan",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo preview",
+            "fo organize"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.scan",
+            "AsyncFileOrganizerClient.scan"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/organize/scan"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileBrowserView",
+            "OrganizationPreviewView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.scan"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /ui/organize/scan"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Expose guarded file, configuration, and lifecycle hook operations to plugins.",
+      "execution_scopes": [
+        "remote",
+        "auth-gated"
+      ],
+      "id": "plugins.runtime",
+      "maturity": "experimental",
+      "name": "Plugin runtime API",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/plugins/files/list",
+            "GET /api/v1/plugins/files/metadata",
+            "POST /api/v1/plugins/files/organize",
+            "GET /api/v1/plugins/config/get",
+            "GET /api/v1/plugins/hooks",
+            "POST /api/v1/plugins/hooks/register",
+            "POST /api/v1/plugins/hooks/unregister",
+            "POST /api/v1/plugins/hooks/trigger"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
+      }
+    },
+    {
+      "description": "Search indexed or local files with consistent query and result semantics.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "search.query",
+      "maturity": "stable",
+      "name": "File search",
+      "optional_dependencies": [
+        "search"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo search"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "read-only"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/search"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileBrowserView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "read-only"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/settings/search"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        }
+      }
+    },
+    {
+      "description": "Discover local capabilities and persist an initial working configuration.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "setup.configure",
+      "maturity": "stable",
+      "name": "Initial setup",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo setup run",
+            "fo start",
+            "fo quickstart"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/setup/status",
+            "GET /api/v1/setup/capabilities",
+            "GET /api/v1/setup/browse-folder",
+            "POST /api/v1/setup/complete"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "SetupWizardView"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/setup",
+            "POST /ui/setup/defer"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Inspect service health, runtime status, hardware capabilities, and storage statistics.",
+      "execution_scopes": [
+        "local-only",
+        "remote"
+      ],
+      "id": "system.inspect",
+      "maturity": "stable",
+      "name": "System health and status",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo version",
+            "fo doctor",
+            "fo hardware-info",
+            "fo api health",
+            "fo api system-status",
+            "fo api system-stats"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.health",
+            "FileOrganizerClient.system_status",
+            "FileOrganizerClient.system_stats",
+            "AsyncFileOrganizerClient.health",
+            "AsyncFileOrganizerClient.system_status",
+            "AsyncFileOrganizerClient.system_stats"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /api/v1/health",
+            "GET /api/v1/system/status",
+            "GET /api/v1/system/stats"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "AnalyticsView"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.health",
+            "FileOrganizerClient.systemStatus",
+            "FileOrganizerClient.systemStats"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "read-only"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        }
+      }
+    },
+    {
+      "description": "Check, install, and roll back supported application updates.",
+      "execution_scopes": [
+        "local-only"
+      ],
+      "id": "updates.manage",
+      "maturity": "stable",
+      "name": "Application updates",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo update check",
+            "fo update install",
+            "fo update rollback"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "rest-api": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerApp._check_for_updates"
+          ],
+          "implementation_status": "partial",
+          "target_support": "redirect/deep-link"
+        },
+        "typescript-sdk": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "web-desktop": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        }
+      }
+    },
+    {
+      "description": "Detect scenes and extract representative keyframes from supported videos.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "video.analyze",
+      "maturity": "beta",
+      "name": "Video analysis",
+      "optional_dependencies": [
+        "video"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "fo analyze"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/analyze"
+          ],
+          "implementation_status": "partial",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "not-applicable",
+          "entry_points": [],
+          "implementation_status": "not-applicable",
+          "target_support": "not-applicable"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "GET /ui/files/preview"
+          ],
+          "implementation_status": "partial",
+          "target_support": "read-only"
+        }
       }
     }
+  ],
+  "schema_version": 1,
+  "surfaces": [
+    "cli",
+    "rest-api",
+    "python-sdk",
+    "typescript-sdk",
+    "web-desktop",
+    "tui"
   ]
 }
