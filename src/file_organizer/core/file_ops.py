@@ -30,12 +30,20 @@ from file_organizer.undo import UndoManager
 from file_organizer.utils.safe_copy import safe_copy2
 
 
-def collect_files(path: Path, console: Console) -> list[Path]:
+def collect_files(
+    path: Path,
+    console: Console | None = None,
+    *,
+    recursive: bool = True,
+    include_hidden: bool = False,
+) -> list[Path]:
     """Collect all non-hidden files from *path*.
 
     Args:
         path: Directory to scan or single file.
-        console: Rich console for status output.
+        console: Optional Rich console for status output.
+        recursive: Whether to descend into nested directories.
+        include_hidden: Whether to include dot-prefixed entries.
 
     Returns:
         List of discovered file paths.
@@ -49,15 +57,26 @@ def collect_files(path: Path, console: Console) -> list[Path]:
         # (fo-core#270, WP-2.2 #1227).
         if path.is_symlink():
             logger.warning("Skipping symlinked input file: {}", path)
+        elif not include_hidden and path.name.startswith("."):
+            logger.debug("Skipping hidden input file: {}", path)
         else:
             files.append(path)
     else:
         # safe_walk skips symlinked files/dirs and hidden entries: a symlink
         # planted in the scan tree (e.g. ``escape -> /etc/passwd``) is no longer
         # collected, organized, or read downstream (fo-core#270, WP-2.2 #1227).
-        files.extend(safe_walk(path, only_files=True))
+        files.extend(
+            safe_walk(
+                path,
+                only_files=True,
+                recursive=recursive,
+                include_hidden=include_hidden,
+            )
+        )
 
-    console.print(f"[green]✓[/green] Found {len(files)} files")
+    files.sort(key=lambda item: item.as_posix())
+    if console is not None:
+        console.print(f"[green]✓[/green] Found {len(files)} files")
     return files
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import (
     CollisionAction,
     OrganizationOperationStatus,
@@ -102,6 +103,64 @@ def test_plan_roots_display_rows_and_serialization_round_trip(tmp_path: Path) ->
     assert restored.operations[0].operation_type == plan.operations[0].operation_type
     assert restored.operations[0].fingerprint == plan.operations[0].fingerprint
     assert restored.metadata == {"methodology": "none"}
+
+
+def test_plan_serializes_behavior_affecting_options(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    plan.options = OrganizeOptions(
+        recursive=False,
+        include_hidden=True,
+        use_hardlinks=plan.use_hardlinks,
+        enable_vision=False,
+        text_model="qwen",
+        vision_model="llava",
+    )
+
+    restored = OrganizationPlan.from_dict(plan.to_dict())
+
+    assert restored.options == plan.options
+
+
+def test_schema_one_plan_is_upgraded_with_legacy_defaults(tmp_path: Path) -> None:
+    data = _single_op_plan(tmp_path).to_dict()
+    data["schema_version"] = 1
+    data.pop("options")
+    data["metadata"] = {"enable_vision": False, "prefetch_depth": 0}
+
+    restored = OrganizationPlan.from_dict(data)
+
+    assert restored.schema_version == 2
+    assert restored.options.enable_vision is False
+    assert restored.options.prefetch_depth == 0
+    assert restored.options.skip_existing is True
+
+
+def test_schema_two_plan_requires_matching_options(tmp_path: Path) -> None:
+    data = _single_op_plan(tmp_path).to_dict()
+    data["options"]["skip_existing"] = False
+
+    with pytest.raises(ValueError, match="skip_existing does not match"):
+        OrganizationPlan.from_dict(data)
+
+
+def test_plan_operations_are_sorted_by_source_path(tmp_path: Path) -> None:
+    first = tmp_path / "a.txt"
+    second = tmp_path / "b.txt"
+    first.write_text("a")
+    second.write_text("b")
+
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(second), _processed(first)],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=2,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    assert [operation.source for operation in plan.operations] == [first, second]
 
 
 def test_from_dict_rejects_unsupported_schema_version(tmp_path: Path) -> None:

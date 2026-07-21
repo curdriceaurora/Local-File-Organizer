@@ -181,6 +181,7 @@ class OrganizationPlanPayload(BaseModel):
     skipped_files: int
     failed_files: int
     deduplicated_files: int
+    options: dict[str, Any] | None = None
     operations: list[OrganizationOperationPayload] = Field(default_factory=list)
     errors: list[tuple[str, str]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
