@@ -16,6 +16,7 @@ import hashlib
 import os
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -23,6 +24,7 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core import dispatcher, display, file_ops, initializer
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import (
     OrganizationPlan,
     build_plan_from_processed,
@@ -100,6 +102,9 @@ class FileOrganizer:
         transcribe_audio: bool = False,
         max_transcribe_seconds: float | None = 600.0,
         whisper_model: str = "tiny",
+        recursive: bool = True,
+        include_hidden: bool = False,
+        organize_options: OrganizeOptions | None = None,
     ) -> None:
         """Initialize file organizer.
 
@@ -131,7 +136,23 @@ class FileOrganizer:
                 ``whisper:`` prefix is accepted). Default "tiny" — the
                 fastest model; larger sizes improve transcript quality at
                 the cost of download size and inference time.
+            recursive: Whether collection descends into nested directories.
+            include_hidden: Whether collection includes dot-prefixed entries.
+            organize_options: Canonical options to persist with generated plans.
         """
+        self._organize_options_supplied = organize_options is not None
+        if organize_options is not None:
+            use_hardlinks = organize_options.use_hardlinks
+            parallel_workers = organize_options.parallel_workers
+            prefetch_depth = organize_options.prefetch_depth
+            no_prefetch = organize_options.prefetch_depth == 0
+            enable_vision = organize_options.enable_vision
+            transcribe_audio = organize_options.transcribe_audio
+            max_transcribe_seconds = organize_options.max_transcribe_seconds
+            whisper_model = organize_options.whisper_model
+            recursive = organize_options.recursive
+            include_hidden = organize_options.include_hidden
+
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
 
@@ -141,9 +162,22 @@ class FileOrganizer:
         else:
             self.text_model_config = text_model_config
             self.vision_model_config = vision_model_config
+        if organize_options is not None:
+            self.text_model_config = replace(
+                self.text_model_config,
+                name=organize_options.text_model or self.text_model_config.name,
+                provider=organize_options.text_provider or self.text_model_config.provider,
+            )
+            self.vision_model_config = replace(
+                self.vision_model_config,
+                name=organize_options.vision_model or self.vision_model_config.name,
+                provider=organize_options.vision_provider or self.vision_model_config.provider,
+            )
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
         self.enable_vision = enable_vision
+        self.recursive = recursive
+        self.include_hidden = include_hidden
         self.no_prefetch = no_prefetch
         self.prefetch_depth = prefetch_depth
         if no_prefetch and prefetch_depth != 0:
@@ -174,6 +208,46 @@ class FileOrganizer:
             )
         self.max_transcribe_seconds = max_transcribe_seconds
         self.whisper_model = whisper_model
+        if organize_options is not None:
+            self.organize_options = replace(
+                organize_options,
+                text_model=self.text_model_config.name,
+                vision_model=self.vision_model_config.name,
+                text_provider=self.text_model_config.provider,
+                vision_provider=self.vision_model_config.provider,
+            )
+        else:
+            self.organize_options = OrganizeOptions(
+                recursive=recursive,
+                include_hidden=include_hidden,
+                use_hardlinks=use_hardlinks,
+                enable_vision=enable_vision,
+                transcribe_audio=transcribe_audio,
+                max_transcribe_seconds=max_transcribe_seconds,
+                whisper_model=whisper_model,
+                parallel_workers=parallel_workers,
+                prefetch_depth=self.prefetch_depth,
+                text_model=(
+                    self.text_model_config.name
+                    if isinstance(self.text_model_config, ModelConfig)
+                    else None
+                ),
+                vision_model=(
+                    self.vision_model_config.name
+                    if isinstance(self.vision_model_config, ModelConfig)
+                    else None
+                ),
+                text_provider=(
+                    self.text_model_config.provider
+                    if isinstance(self.text_model_config, ModelConfig)
+                    else None
+                ),
+                vision_provider=(
+                    self.vision_model_config.provider
+                    if isinstance(self.vision_model_config, ModelConfig)
+                    else None
+                ),
+            )
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
@@ -214,6 +288,8 @@ class FileOrganizer:
         start_time = time.time()
         input_path = Path(input_path)
         output_path = Path(output_path)
+        if self._organize_options_supplied:
+            skip_existing = self.organize_options.skip_existing
 
         if not input_path.exists():
             raise ValueError(f"Input path does not exist: {input_path}")
@@ -224,7 +300,12 @@ class FileOrganizer:
         scan_root = input_path if input_path.is_dir() else input_path.parent
 
         self.console.print(f"\n[bold blue]Scanning:[/bold blue] {input_path}")
-        files = file_ops.collect_files(input_path, self.console)
+        files = file_ops.collect_files(
+            input_path,
+            self.console,
+            recursive=self.recursive,
+            include_hidden=self.include_hidden,
+        )
 
         result = OrganizationResult(total_files=len(files))
         if not files:
@@ -237,10 +318,7 @@ class FileOrganizer:
                 total_files=0,
                 skipped_files=0,
                 deduplicated_files=0,
-                metadata={
-                    "enable_vision": self.enable_vision,
-                    "prefetch_depth": self.prefetch_depth,
-                },
+                options=self.organize_options,
             )
             result.processing_time = time.time() - start_time
             self.console.print("[yellow]No files found to organize[/yellow]")
@@ -404,10 +482,7 @@ class FileOrganizer:
             deduplicated_files=result.deduplicated_files,
             errors=result.errors,
             file_hashes=file_hashes,
-            metadata={
-                "enable_vision": self.enable_vision,
-                "prefetch_depth": self.prefetch_depth,
-            },
+            options=self.organize_options,
         )
         result.plan = plan
         result.processed_files = plan.processed_files
@@ -596,7 +671,12 @@ class FileOrganizer:
 
     def _collect_files(self, path: Path) -> list[Path]:
         """Walk the input root and return the list of files eligible for organization."""
-        return file_ops.collect_files(path, self.console)
+        return file_ops.collect_files(
+            path,
+            self.console,
+            recursive=self.recursive,
+            include_hidden=self.include_hidden,
+        )
 
     def _fallback_by_extension(self, files: list[Path]) -> list[ProcessedFile]:
         """Return a target subdirectory chosen from the file extension when the classifier fails."""

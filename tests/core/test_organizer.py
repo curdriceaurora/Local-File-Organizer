@@ -15,8 +15,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.organizer import FileOrganizer
-from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.core.plan import (
+    OrganizationOperationStatus,
+    OrganizationPlan,
+    build_plan_from_processed,
+)
 from file_organizer.core.types import OrganizationResult
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.text_processor import ProcessedFile
@@ -111,6 +116,82 @@ class TestFileOrganizer:
         """Test organizing fails when input path does not exist."""
         with pytest.raises(ValueError, match="Input path does not exist"):
             organizer.organize(tmp_path / "missing", tmp_path / "out")
+
+    def test_canonical_options_override_legacy_behavior_kwargs(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        options = OrganizeOptions(
+            recursive=False,
+            include_hidden=True,
+            skip_existing=False,
+            use_hardlinks=False,
+            enable_vision=False,
+            transcribe_audio=True,
+            max_transcribe_seconds=None,
+            whisper_model="base",
+            parallel_workers=1,
+            prefetch_depth=0,
+            text_model="canonical-text",
+            vision_model="canonical-vision",
+            text_provider="openai",
+            vision_provider="claude",
+        )
+
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            use_hardlinks=True,
+            parallel_workers=8,
+            prefetch_depth=9,
+            enable_vision=True,
+            transcribe_audio=False,
+            max_transcribe_seconds=30,
+            whisper_model="tiny",
+            recursive=True,
+            include_hidden=False,
+            organize_options=options,
+        )
+
+        assert org.recursive is False
+        assert org.include_hidden is True
+        assert org.use_hardlinks is False
+        assert org.enable_vision is False
+        assert org.transcribe_audio is True
+        assert org.max_transcribe_seconds is None
+        assert org.whisper_model == "base"
+        assert org.parallel_config.max_workers == 1
+        assert org.parallel_config.prefetch_depth == 0
+        assert org.text_model_config.name == "canonical-text"
+        assert org.text_model_config.provider == "openai"
+        assert org.vision_model_config.name == "canonical-vision"
+        assert org.vision_model_config.provider == "claude"
+        assert org.organize_options == options
+
+    def test_canonical_options_override_organize_skip_argument(
+        self, text_config: ModelConfig, vision_config: ModelConfig, tmp_path: Path
+    ) -> None:
+        input_path = tmp_path / "input"
+        input_path.mkdir()
+        source = input_path / "notes.txt"
+        source.write_text("new")
+        output_path = tmp_path / "out"
+        destination = output_path / FileOrganizer._TEXT_FALLBACK_MAP[".txt"] / source.name
+        destination.parent.mkdir(parents=True)
+        destination.write_text("existing")
+        options = OrganizeOptions(skip_existing=True, use_hardlinks=False, enable_vision=False)
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            organize_options=options,
+        )
+
+        with patch.object(org, "_init_text_processor"):
+            result = org.organize(input_path, output_path, skip_existing=False)
+
+        assert isinstance(result.plan, OrganizationPlan)
+        assert result.plan.options.skip_existing is True
+        assert result.plan.operations[0].status is OrganizationOperationStatus.SKIPPED
+        assert destination.read_text() == "existing"
 
     @patch("file_organizer.core.file_ops.collect_files")
     def test_organize_empty_directory(

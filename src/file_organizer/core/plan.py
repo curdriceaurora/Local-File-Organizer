@@ -13,7 +13,7 @@ import hashlib
 import os
 import sqlite3
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path, PurePath
 from typing import Any
@@ -22,12 +22,14 @@ from uuid import uuid4
 from loguru import logger
 
 from file_organizer._compat import StrEnum
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
 from file_organizer.undo import UndoManager
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
-PLAN_SCHEMA_VERSION = 1
+PLAN_SCHEMA_VERSION = 2
+_LEGACY_PLAN_SCHEMA_VERSION = 1
 _CHUNK_SIZE = 65536
 
 
@@ -173,6 +175,7 @@ class OrganizationPlan:
     skipped_files: int
     failed_files: int
     deduplicated_files: int
+    options: OrganizeOptions = field(default_factory=OrganizeOptions)
     operations: list[OrganizationOperation] = field(default_factory=list)
     errors: list[tuple[str, str]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -238,11 +241,29 @@ class OrganizationPlan:
     def from_dict(cls, data: dict[str, Any]) -> OrganizationPlan:
         """Deserialize a plan previously returned by :meth:`to_dict`."""
         schema_version = int(data.get("schema_version", PLAN_SCHEMA_VERSION))
-        if schema_version != PLAN_SCHEMA_VERSION:
+        if schema_version not in {_LEGACY_PLAN_SCHEMA_VERSION, PLAN_SCHEMA_VERSION}:
             raise ValueError(
                 f"Unsupported organization plan schema_version {schema_version}; "
-                f"expected {PLAN_SCHEMA_VERSION}."
+                f"expected {_LEGACY_PLAN_SCHEMA_VERSION} or {PLAN_SCHEMA_VERSION}."
             )
+
+        metadata = dict(data.get("metadata", {}))
+        if schema_version == _LEGACY_PLAN_SCHEMA_VERSION:
+            options = OrganizeOptions(
+                skip_existing=bool(data.get("skip_existing", True)),
+                use_hardlinks=bool(data.get("use_hardlinks", True)),
+                enable_vision=bool(metadata.get("enable_vision", True)),
+                prefetch_depth=int(metadata.get("prefetch_depth", 2)),
+            )
+        else:
+            raw_options = data.get("options")
+            if not isinstance(raw_options, dict):
+                raise ValueError("Organization plan schema 2 requires an options object.")
+            options = OrganizeOptions.from_dict(raw_options)
+            if options.skip_existing != bool(data.get("skip_existing", True)):
+                raise ValueError("Organization plan skip_existing does not match its options.")
+            if options.use_hardlinks != bool(data.get("use_hardlinks", True)):
+                raise ValueError("Organization plan use_hardlinks does not match its options.")
 
         operations: list[OrganizationOperation] = []
         for raw in data.get("operations", []):
@@ -284,7 +305,7 @@ class OrganizationPlan:
 
         return cls(
             plan_id=data["plan_id"],
-            schema_version=schema_version,
+            schema_version=PLAN_SCHEMA_VERSION,
             input_path=data["input_path"],
             output_path=data["output_path"],
             created_at=data["created_at"],
@@ -295,9 +316,10 @@ class OrganizationPlan:
             skipped_files=int(data.get("skipped_files", 0)),
             failed_files=int(data.get("failed_files", 0)),
             deduplicated_files=int(data.get("deduplicated_files", 0)),
+            options=options,
             operations=operations,
             errors=[tuple(error) for error in data.get("errors", [])],
-            metadata=dict(data.get("metadata", {})),
+            metadata=metadata,
         )
 
 
@@ -314,6 +336,7 @@ def build_plan_from_processed(
     errors: list[tuple[str, str]] | None = None,
     file_hashes: dict[Path, str | None] | None = None,
     metadata: dict[str, Any] | None = None,
+    options: OrganizeOptions | None = None,
 ) -> OrganizationPlan:
     """Create an executable plan from processed file classifications."""
     operations: list[OrganizationOperation] = []
@@ -321,7 +344,13 @@ def build_plan_from_processed(
     output_path = Path(output_path)
     file_hashes = file_hashes or {}
 
-    for result in processed:
+    options = replace(
+        options or OrganizeOptions(),
+        skip_existing=skip_existing,
+        use_hardlinks=use_hardlinks,
+    )
+
+    for result in sorted(processed, key=lambda item: str(item.file_path)):
         source = Path(result.file_path)
         base_name = f"{result.filename}{source.suffix}"
         destination = output_path / result.folder_name / base_name
@@ -397,6 +426,7 @@ def build_plan_from_processed(
         skipped_files=skipped_count,
         failed_files=error_count,
         deduplicated_files=deduplicated_files,
+        options=options,
         operations=operations,
         errors=list(errors or []),
         metadata=dict(metadata or {}),

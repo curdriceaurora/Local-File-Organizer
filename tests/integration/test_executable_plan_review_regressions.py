@@ -236,10 +236,11 @@ def test_plan_records_skipped_collisions_and_fingerprint_errors(tmp_path: Path) 
         deduplicated_files=0,
     )
 
-    assert plan.operations[0].status == OrganizationOperationStatus.SKIPPED
-    assert plan.operations[0].collision_action == CollisionAction.SKIP_EXISTING
-    assert plan.operations[1].status == OrganizationOperationStatus.ERROR
-    assert "Unable to fingerprint source" in (plan.operations[1].error or "")
+    operations = {operation.source: operation for operation in plan.operations}
+    assert operations[source].status == OrganizationOperationStatus.SKIPPED
+    assert operations[source].collision_action == CollisionAction.SKIP_EXISTING
+    assert operations[missing].status == OrganizationOperationStatus.ERROR
+    assert "Unable to fingerprint source" in (operations[missing].error or "")
 
 
 def test_validate_plan_reports_source_and_destination_conflicts(tmp_path: Path) -> None:
