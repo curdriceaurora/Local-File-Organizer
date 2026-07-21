@@ -275,6 +275,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 file_organizer = [
     "py.typed",
+    "core/*.json",
     "config/*.yaml",
     "web/templates/**/*.html",
     "web/static/**/*",
