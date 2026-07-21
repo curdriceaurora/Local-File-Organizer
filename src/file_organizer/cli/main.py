@@ -123,10 +123,11 @@ def main_callback(
         version_flag (bool): Eager version callback value (accepted and ignored here).
     """
     _ = version_flag
+    effective_json_output = json_output or bool(ctx.meta.get("json_requested", False))
     ctx.obj = CLIState(
         verbose=verbose,
         dry_run=dry_run,
-        json_output=json_output,
+        json_output=effective_json_output,
         yes=yes,
         no_interactive=not interactive,
         debug=debug,

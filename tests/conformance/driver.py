@@ -25,16 +25,22 @@ identical inputs.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+from unittest.mock import patch
 
+from typer.testing import CliRunner
+
+from file_organizer.cli.main import app
 from file_organizer.core import dispatcher
 from file_organizer.core.errors import DomainError
-from file_organizer.core.organization_service import OrganizationService
+from file_organizer.core.organization_service import OrganizationScan, OrganizationService
 from file_organizer.core.organize_options import OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
+from file_organizer.core.types import OrganizationResult
 from file_organizer.history.tracker import OperationHistory
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.audio.metadata_extractor import (
@@ -46,9 +52,11 @@ from file_organizer.services.video.metadata_extractor import (
     VideoMetadataExtractor,
 )
 from file_organizer.undo import UndoManager
+from file_organizer.utils.atomic_write import atomic_write_text
 from tests.conformance.normalize import (
     normalize_audit_events,
     normalize_error,
+    normalize_path,
     normalize_plan,
     normalize_result,
     normalize_scan,
@@ -268,4 +276,180 @@ class DirectServiceDriver:
             "plan": normalize_plan(result.plan, *roots),
             "result": normalize_result(result, *roots),
             "audit_events": events,
+        }
+
+
+class CLIConformanceDriver:
+    """Drive the local CLI through JSON, with the direct service as its oracle seam."""
+
+    name = "cli"
+
+    def __init__(self, workspace: Path) -> None:
+        self._workspace = workspace
+        self._workspace.mkdir(parents=True, exist_ok=True)
+        self._oracle = DirectServiceDriver(workspace / "service")
+        self._invocations = 0
+
+    @staticmethod
+    def _option_args(request: OrganizeRequest) -> list[str]:
+        options = request.options
+        args = [
+            "--recursive" if options.recursive else "--no-recursive",
+            "--include-hidden" if options.include_hidden else "--exclude-hidden",
+            "--skip-existing" if options.skip_existing else "--overwrite-existing",
+            "--transfer-mode",
+            options.effective_transfer_mode.value,
+            "--methodology",
+            options.effective_methodology.value,
+            "--prefetch-depth",
+            str(options.prefetch_depth),
+            "--whisper-model",
+            options.whisper_model,
+            "--max-transcribe-seconds",
+            str(options.max_transcribe_seconds or 0),
+        ]
+        if not options.enable_vision:
+            args.append("--no-vision")
+        if options.transcribe_audio:
+            args.append("--transcribe-audio")
+        if options.parallel_workers is not None:
+            args.extend(("--max-workers", str(options.parallel_workers)))
+        for flag, value in (
+            ("--text-model", options.text_model),
+            ("--vision-model", options.vision_model),
+            ("--text-provider", options.text_provider),
+            ("--vision-provider", options.vision_provider),
+        ):
+            if value is not None:
+                args.extend((flag, value))
+        return args
+
+    def _invoke(self, args: list[str]) -> dict[str, Any]:
+        self._invocations += 1
+        with (
+            patch("file_organizer.cli.organize._check_setup_completed", return_value=True),
+            patch(
+                "file_organizer.cli.organize._create_service",
+                return_value=self._oracle._service,
+            ),
+        ):
+            result = CliRunner().invoke(app, args)
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise AssertionError(
+                f"CLI did not emit valid JSON (exit {result.exit_code}): {result.stdout}"
+            ) from exc
+        if result.exit_code == 0 and payload.get("outcome") != "ok":
+            raise AssertionError(f"CLI succeeded with a non-success envelope: {payload}")
+        return payload
+
+    @staticmethod
+    def _result(payload: dict[str, Any], plan: OrganizationPlan | None) -> OrganizationResult:
+        return OrganizationResult(
+            total_files=payload["total_files"],
+            processed_files=payload["processed_files"],
+            skipped_files=payload["skipped_files"],
+            failed_files=payload["failed_files"],
+            deduplicated_files=payload["deduplicated_files"],
+            processing_time=payload["processing_time"],
+            organized_structure=payload["organized_structure"],
+            errors=[tuple(error) for error in payload["errors"]],
+            plan=plan,
+            transaction_id=payload["transaction_id"],
+        )
+
+    @staticmethod
+    def _normalize_cli_error(
+        payload: dict[str, Any], input_root: Path, output_root: Path
+    ) -> dict[str, Any]:
+        error = dict(payload["error"])
+        if "code" in error:
+            error.setdefault("details", {})
+            return normalize_error(DomainError.from_dict(error), input_root, output_root)
+        error["message"] = (
+            error.get("message", "")
+            .replace(str(input_root.resolve(strict=False)), "<input>")
+            .replace(str(output_root.resolve(strict=False)), "<output>")
+        )
+        if "conflicts" in error:
+            for conflict in error["conflicts"]:
+                conflict["path"] = normalize_path(conflict["path"], input_root, output_root)
+            error["conflicts"].sort(
+                key=lambda conflict: (conflict["conflict_type"], conflict["path"])
+            )
+        return error
+
+    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        payload = self._invoke(
+            [
+                "preview",
+                str(request.input_path),
+                "--output-dir",
+                str(request.output_path),
+                "--json",
+                *self._option_args(request),
+            ]
+        )
+        if payload["outcome"] == "error":
+            return {"outcome": "error", "error": self._normalize_cli_error(payload, *roots)}
+        raw = payload["scan"]
+        scan = OrganizationScan(
+            Path(raw["input_path"]), tuple(Path(path) for path in raw["files"]), raw["counts"]
+        )
+        return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
+
+    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        payload = self._invoke(
+            [
+                "preview",
+                str(request.input_path),
+                "--output-dir",
+                str(request.output_path),
+                "--json",
+                *self._option_args(request),
+            ]
+        )
+        if payload["outcome"] == "error":
+            return {"outcome": "error", "error": self._normalize_cli_error(payload, *roots)}
+        plan = OrganizationPlan.from_dict(payload["plan"])
+        result = self._result(payload["result"], plan)
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(plan, *roots),
+            "result": normalize_result(result, *roots),
+            "plan_payload": payload["plan"],
+        }
+
+    def execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        args = [
+            "organize",
+            str(request.input_path),
+            str(request.output_path),
+            "--json",
+            *self._option_args(request),
+        ]
+        if plan_payload is not None:
+            plan_path = self._workspace / f"plan-{self._invocations + 1}.json"
+            atomic_write_text(plan_path, json.dumps(plan_payload))
+            args.extend(("--plan", str(plan_path)))
+        payload = self._invoke(args)
+        if payload["outcome"] == "error":
+            return {"outcome": "error", "error": self._normalize_cli_error(payload, *roots)}
+        plan = OrganizationPlan.from_dict(payload["plan"])
+        result = self._result(payload["result"], plan)
+        history = self._oracle._last_history
+        assert history is not None
+        operations = history.get_operations()
+        operations.sort(key=lambda operation: operation.id if operation.id is not None else -1)
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(plan, *roots),
+            "result": normalize_result(result, *roots),
+            "audit_events": normalize_audit_events(operations, *roots),
         }
