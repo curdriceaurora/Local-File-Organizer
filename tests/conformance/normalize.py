@@ -123,7 +123,7 @@ def normalize_plan(plan: OrganizationPlan, input_root: Path, output_root: Path) 
         "input_path": normalize_path(plan.input_path, input_root, output_root),
         "output_path": normalize_path(plan.output_path, input_root, output_root),
         "skip_existing": plan.skip_existing,
-        "use_hardlinks": plan.use_hardlinks,
+        "transfer_mode": plan.options.effective_transfer_mode.value,
         "counts": {
             "total_files": plan.total_files,
             "processed_files": plan.processed_files,

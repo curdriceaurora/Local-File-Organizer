@@ -8,6 +8,7 @@ import pytest
 
 from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import (
+    PLAN_SCHEMA_VERSION,
     CollisionAction,
     OrganizationOperationStatus,
     OrganizationPlan,
@@ -129,18 +130,32 @@ def test_schema_one_plan_is_upgraded_with_legacy_defaults(tmp_path: Path) -> Non
 
     restored = OrganizationPlan.from_dict(data)
 
-    assert restored.schema_version == 2
+    assert restored.schema_version == PLAN_SCHEMA_VERSION
     assert restored.options.enable_vision is False
     assert restored.options.prefetch_depth == 0
     assert restored.options.skip_existing is True
 
 
-def test_schema_two_plan_requires_matching_options(tmp_path: Path) -> None:
+def test_current_plan_requires_matching_options(tmp_path: Path) -> None:
     data = _single_op_plan(tmp_path).to_dict()
     data["options"]["skip_existing"] = False
 
     with pytest.raises(ValueError, match="skip_existing does not match"):
         OrganizationPlan.from_dict(data)
+
+
+def test_schema_two_plan_upgrades_legacy_transfer_selector(tmp_path: Path) -> None:
+    data = _single_op_plan(tmp_path).to_dict()
+    data["schema_version"] = 2
+    data["options"].pop("transfer_mode")
+    data["options"].pop("methodology")
+    data["options"]["use_hardlinks"] = data["use_hardlinks"]
+
+    restored = OrganizationPlan.from_dict(data)
+
+    assert restored.schema_version == PLAN_SCHEMA_VERSION
+    assert restored.options.to_dict()["transfer_mode"] == "copy"
+    assert restored.options.to_dict()["methodology"] == "none"
 
 
 def test_plan_operations_are_sorted_by_source_path(tmp_path: Path) -> None:
@@ -658,6 +673,69 @@ def test_execute_plan_uses_hardlinks_when_requested(tmp_path: Path) -> None:
     assert errors == []
     assert organized == {"Docs": ["input.txt"]}
     assert destination.stat().st_ino == (tmp_path / "input.txt").stat().st_ino
+
+
+def test_execute_plan_copy_preserves_source_and_creates_independent_file(
+    tmp_path: Path,
+) -> None:
+    plan = _single_op_plan(tmp_path)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+
+    organized, _, errors = execute_plan(plan, undo_manager=manager)
+
+    source = tmp_path / "input.txt"
+    destination = tmp_path / "out" / "Docs" / "input.txt"
+    assert errors == []
+    assert organized == {"Docs": ["input.txt"]}
+    assert source.read_text() == destination.read_text() == "hello"
+    assert source.stat().st_ino != destination.stat().st_ino
+
+
+@pytest.mark.parametrize("use_hardlinks", [False, True])
+def test_undo_transfer_removes_destination_but_preserves_source(
+    tmp_path: Path, use_hardlinks: bool
+) -> None:
+    plan = _single_op_plan(tmp_path, use_hardlinks=use_hardlinks)
+    manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
+    _, transaction_id, errors = execute_plan(plan, undo_manager=manager)
+
+    assert errors == []
+    assert transaction_id is not None
+    assert manager.undo_transaction(transaction_id)
+    assert (tmp_path / "input.txt").read_text() == "hello"
+    assert not (tmp_path / "out" / "Docs" / "input.txt").exists()
+
+
+def test_validate_plan_rejects_cross_device_hardlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = _single_op_plan(tmp_path, use_hardlinks=True)
+    source_device = (tmp_path / "input.txt").stat().st_dev
+    monkeypatch.setattr("file_organizer.core.plan._filesystem_device", lambda _: source_device + 1)
+
+    validation = validate_plan(plan)
+
+    assert not validation.can_proceed
+    assert "hardlink_cross_device" in validation.error_message
+
+
+def test_plan_rejects_operation_type_that_disagrees_with_transfer_mode(
+    tmp_path: Path,
+) -> None:
+    data = _single_op_plan(tmp_path).to_dict()
+    data["operations"][0]["operation_type"] = "hardlink"
+
+    with pytest.raises(ValueError, match="do not match transfer_mode"):
+        OrganizationPlan.from_dict(data)
+
+
+def test_plan_serialization_derives_legacy_transfer_flag_from_options(
+    tmp_path: Path,
+) -> None:
+    plan = _single_op_plan(tmp_path)
+    plan.use_hardlinks = True
+
+    assert plan.to_dict()["use_hardlinks"] is False
 
 
 def test_execute_plan_records_error_when_operation_fails(

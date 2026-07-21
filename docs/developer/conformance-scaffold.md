@@ -65,8 +65,8 @@ Rules for adapter drivers (#1595–#1598):
 
 ## Extension points
 
-- Transfer semantics and methodologies (#1602) extend the `media`,
-  `methodology`, and transfer expectations.
+- Transfer semantics and methodologies (#1602) define the `methodology` fixture and canonical
+  copy/hardlink expectations. Adapter suites reuse these assertions as they migrate.
 - Errors, jobs, scheduling, and recovery (#1604) replace the provisional
   `normalize_job_events` contract and extend audit-event coverage.
 - Required gates (#1606) promote adapter suites from advisory to blocking

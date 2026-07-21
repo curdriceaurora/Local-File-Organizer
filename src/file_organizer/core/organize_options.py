@@ -5,24 +5,77 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
+
+from file_organizer._compat import StrEnum
 
 ModelProvider = Literal["ollama", "openai", "llama_cpp", "mlx", "claude"]
+
+
+class TransferMode(StrEnum):
+    """Canonical filesystem transfer behavior supported by organization."""
+
+    COPY = "copy"
+    HARDLINK = "hardlink"
+
+
+class OrganizationMethodology(StrEnum):
+    """Canonical destination-layout policies supported by organization."""
+
+    NONE = "none"
+    PARA = "para"
+    JOHNNY_DECIMAL = "jd"
+
+
+def _resolve_transfer_mode(
+    transfer_mode: TransferMode | str | None,
+    use_hardlinks: bool | None,
+) -> TransferMode:
+    """Normalize canonical and legacy transfer selectors into one mode."""
+    if use_hardlinks is not None and not isinstance(use_hardlinks, bool):
+        raise ValueError("use_hardlinks must be a boolean or None")
+    if transfer_mode is None:
+        return TransferMode.HARDLINK if use_hardlinks is not False else TransferMode.COPY
+    try:
+        resolved = TransferMode(transfer_mode)
+    except (TypeError, ValueError) as exc:
+        if str(transfer_mode) == "move":
+            raise ValueError(
+                "transfer_mode 'move' is not supported; use 'copy' or 'hardlink'"
+            ) from exc
+        raise ValueError("transfer_mode must be 'copy' or 'hardlink'") from exc
+    if use_hardlinks is not None and use_hardlinks != (resolved == TransferMode.HARDLINK):
+        raise ValueError("use_hardlinks conflicts with transfer_mode")
+    return resolved
+
+
+def _resolve_methodology(
+    methodology: OrganizationMethodology | str,
+) -> OrganizationMethodology:
+    """Normalize and validate the destination-layout methodology."""
+    try:
+        return OrganizationMethodology(methodology)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("methodology must be 'none', 'para', or 'jd'") from exc
 
 
 @dataclass(frozen=True, slots=True)
 class OrganizeOptions:
     """Behavior-affecting options shared by every organization surface.
 
-    ``use_hardlinks`` is the existing transfer selector.  Parity slice #1602
-    will replace it with the canonical transfer-mode contract while retaining
-    plan compatibility.
+    ``transfer_mode`` is the canonical selector. ``use_hardlinks`` remains an
+    input-only compatibility alias for callers that have not migrated yet;
+    :meth:`to_dict` emits only ``transfer_mode``. True move is deliberately
+    unsupported until crash-safe source deletion and cross-device recovery are
+    specified by the lifecycle contract.
     """
 
     recursive: bool = True
     include_hidden: bool = False
     skip_existing: bool = True
-    use_hardlinks: bool = True
+    transfer_mode: TransferMode | str | None = None
+    use_hardlinks: bool | None = None
+    methodology: OrganizationMethodology | str = OrganizationMethodology.NONE
     enable_vision: bool = True
     transcribe_audio: bool = False
     max_transcribe_seconds: float | None = 600.0
@@ -36,11 +89,16 @@ class OrganizeOptions:
 
     def __post_init__(self) -> None:
         """Reject invalid combinations before filesystem or model work starts."""
+        transfer_mode = _resolve_transfer_mode(self.transfer_mode, self.use_hardlinks)
+        methodology = _resolve_methodology(self.methodology)
+        object.__setattr__(self, "transfer_mode", transfer_mode)
+        object.__setattr__(self, "use_hardlinks", transfer_mode == TransferMode.HARDLINK)
+        object.__setattr__(self, "methodology", methodology)
+
         for field_name in (
             "recursive",
             "include_hidden",
             "skip_existing",
-            "use_hardlinks",
             "enable_vision",
             "transcribe_audio",
         ):
@@ -80,8 +138,22 @@ class OrganizeOptions:
                 raise ValueError(f"{field_name} is not a supported model provider")
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a stable JSON-compatible representation."""
-        return asdict(self)
+        """Return the stable canonical representation without legacy aliases."""
+        data = asdict(self)
+        data.pop("use_hardlinks")
+        data["transfer_mode"] = self.effective_transfer_mode.value
+        data["methodology"] = self.effective_methodology.value
+        return data
+
+    @property
+    def effective_transfer_mode(self) -> TransferMode:
+        """Return the validated canonical transfer mode."""
+        return cast(TransferMode, self.transfer_mode)
+
+    @property
+    def effective_methodology(self) -> OrganizationMethodology:
+        """Return the validated canonical methodology."""
+        return cast(OrganizationMethodology, self.methodology)
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> OrganizeOptions:

@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
+from file_organizer.core.organize_options import (
+    OrganizationMethodology,
+    OrganizeOptions,
+    OrganizeRequest,
+    TransferMode,
+)
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -16,6 +21,9 @@ def test_options_defaults_round_trip() -> None:
     assert options.recursive is True
     assert options.include_hidden is False
     assert options.skip_existing is True
+    assert options.effective_transfer_mode == TransferMode.HARDLINK
+    assert options.effective_methodology == OrganizationMethodology.NONE
+    assert "use_hardlinks" not in options.to_dict()
 
 
 @pytest.mark.parametrize(
@@ -29,6 +37,13 @@ def test_options_defaults_round_trip() -> None:
         ({"vision_provider": "unknown"}, "vision_provider"),
         ({"recursive": "yes"}, "recursive"),
         ({"prefetch_depth": True}, "prefetch_depth"),
+        ({"transfer_mode": "move"}, "move.*not supported"),
+        ({"transfer_mode": "rename"}, "transfer_mode"),
+        ({"methodology": "folders"}, "methodology"),
+        (
+            {"transfer_mode": "copy", "use_hardlinks": True},
+            "conflicts with transfer_mode",
+        ),
         ({"future_option": True}, "unknown organization option"),
     ],
 )
@@ -42,3 +57,12 @@ def test_request_normalizes_path_like_values() -> None:
 
     assert request.input_path == Path("input")
     assert request.output_path == Path("output")
+
+
+def test_legacy_hardlink_selector_migrates_to_canonical_transfer_mode() -> None:
+    options = OrganizeOptions.from_dict({"use_hardlinks": False, "methodology": "para"})
+
+    assert options.effective_transfer_mode == TransferMode.COPY
+    assert options.effective_methodology == OrganizationMethodology.PARA
+    assert options.to_dict()["transfer_mode"] == "copy"
+    assert "use_hardlinks" not in options.to_dict()

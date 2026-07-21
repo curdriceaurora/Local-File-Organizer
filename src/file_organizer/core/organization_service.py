@@ -7,7 +7,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from file_organizer.core import file_ops
-from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
+from file_organizer.core.organize_options import (
+    OrganizeOptions,
+    OrganizeRequest,
+    TransferMode,
+)
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import (
@@ -140,7 +144,7 @@ class OrganizationService:
             text_model_config=text_model_config,
             vision_model_config=vision_model_config,
             dry_run=dry_run,
-            use_hardlinks=options.use_hardlinks,
+            use_hardlinks=options.effective_transfer_mode == TransferMode.HARDLINK,
             parallel_workers=options.parallel_workers,
             prefetch_depth=options.prefetch_depth,
             enable_vision=options.enable_vision,
