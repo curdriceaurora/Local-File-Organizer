@@ -34,6 +34,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError, setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.core.lifecycle import JobStatus, RecoveryAction
 from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
@@ -77,8 +78,15 @@ def _mock_job(
         "organized_structure": {"docs": ["a.txt"], "images": ["b.jpg"]},
     }
     job.error = None
+    job.error_code = None
+    job.error_retryable = False
+    job.error_details = {}
     job.created_at = datetime(2026, 1, 1, tzinfo=UTC)
     job.updated_at = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
+    job.scheduled_for = None
+    job.transaction_id = "txn-1" if status in {"completed", "partial"} else None
+    job.recovery_action = RecoveryAction.NONE
+    job.revision = 0
     return job
 
 
@@ -462,7 +470,8 @@ class TestBuildJobView:
         assert view["progress_percent"] == 65
 
     def test_scheduled_job_can_cancel(self) -> None:
-        mock = _mock_job("j3", status="queued")
+        mock = _mock_job("j3", status=JobStatus.SCHEDULED)
+        mock.scheduled_for = datetime(2026, 1, 1, 1, tzinfo=UTC)
         with patch("file_organizer.web.organize_routes.get_job", return_value=mock):
             _set_job_metadata(
                 "j3", {"schedule_delay_minutes": 30, "scheduled_for": "2026-01-01T01:00:00"}

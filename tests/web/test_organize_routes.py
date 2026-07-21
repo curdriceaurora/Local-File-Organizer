@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.lifecycle import RecoveryAction
 from file_organizer.web.organize_routes import (
     ORGANIZE_MAX_DELAY_MIN,
     ORGANIZE_METHODOLOGIES,
@@ -527,6 +528,10 @@ class TestBuildJobView:
         mock_job.created_at = datetime(2025, 1, 1, tzinfo=UTC)
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
+        mock_job.scheduled_for = None
+        mock_job.transaction_id = "txn-1"
+        mock_job.recovery_action = RecoveryAction.ROLLBACK
+        mock_job.revision = 1
 
         with (
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
@@ -566,6 +571,10 @@ class TestBuildJobView:
         mock_job.created_at = datetime(2025, 1, 1, tzinfo=UTC)
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
+        mock_job.scheduled_for = None
+        mock_job.transaction_id = None
+        mock_job.recovery_action = RecoveryAction.NONE
+        mock_job.revision = 1
 
         with (
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
@@ -584,11 +593,15 @@ class TestBuildJobView:
 
         mock_job = MagicMock()
         mock_job.job_id = "job-3"
-        mock_job.status = "queued"
+        mock_job.status = "scheduled"
         mock_job.result = None
         mock_job.created_at = datetime(2025, 1, 1, tzinfo=UTC)
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
+        mock_job.scheduled_for = datetime(2025, 1, 1, 1, tzinfo=UTC)
+        mock_job.transaction_id = None
+        mock_job.recovery_action = RecoveryAction.NONE
+        mock_job.revision = 0
 
         with (
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
@@ -721,11 +734,12 @@ class TestCancelScheduledJob:
         mock_timer = MagicMock(spec=Timer)
         _SCHEDULED_TIMERS["cancel-test"] = mock_timer
 
-        with patch("file_organizer.web.organize_routes.update_job"):
+        with patch("file_organizer.web.organize_routes.update_job") as update:
             result = _cancel_scheduled_job("cancel-test")
 
         assert result is True
         mock_timer.cancel.assert_called_once()
+        assert update.call_args.kwargs["status"] == "cancelled"
         assert "cancel-test" not in _SCHEDULED_TIMERS
 
     def test_cancel_nonexistent_timer(self):

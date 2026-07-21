@@ -36,6 +36,7 @@ def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
     result.processing_time = 0.01
     result.organized_structure = structure
     result.errors = []
+    result.transaction_id = None
     return result
 
 

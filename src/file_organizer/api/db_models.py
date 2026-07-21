@@ -68,9 +68,31 @@ class OrganizationJob(Base):  # type: ignore[misc]
     failed_files = Column(Integer, default=0)
     skipped_files = Column(Integer, default=0)
     error = Column(String, nullable=True)
+    error_code = Column(String, nullable=True)
+    error_retryable = Column(Boolean, nullable=False, default=False)
+    error_details_json = Column(Text, nullable=True)
     result_json = Column(String, nullable=True)
+    revision = Column(Integer, nullable=False, default=0)
+    idempotency_key = Column(String, nullable=True)
+    scheduled_for = Column(DateTime(timezone=True), nullable=True)
+    transaction_id = Column(String, nullable=True)
+    recovery_action = Column(String, nullable=False, default="none")
     created_at = Column(DateTime(timezone=True), default=_utcnow)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "job_type",
+            "idempotency_key",
+            name="uq_organization_jobs_type_idempotency",
+        ),
+    )
+    __mapper_args__ = {
+        "version_id_col": revision,
+        # Repositories increment revision explicitly so persisted values start at
+        # zero while SQLAlchemy still adds revision to every UPDATE predicate.
+        "version_id_generator": False,
+    }
 
     def __repr__(self) -> str:
         """Return string representation of OrganizationJob."""

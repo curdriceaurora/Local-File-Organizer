@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from file_organizer.core import file_ops
+from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organize_options import (
     OrganizeOptions,
     OrganizeRequest,
@@ -66,7 +67,11 @@ class OrganizationService:
     def scan(self, request: OrganizeRequest) -> OrganizationScan:
         """Collect exactly the files that preview and execution will consume."""
         if not request.input_path.exists():
-            raise ValueError(f"Input path does not exist: {request.input_path}")
+            raise DomainError(
+                DomainErrorCode.NOT_FOUND,
+                f"Input path does not exist: {request.input_path}",
+                details={"path": str(request.input_path)},
+            )
         files = tuple(
             file_ops.collect_files(
                 request.input_path,
@@ -109,13 +114,24 @@ class OrganizationService:
         if plan is None:
             preview = self.preview(request)
             if not isinstance(preview.plan, OrganizationPlan):
-                raise RuntimeError("Organization preview did not produce an executable plan.")
+                raise DomainError(
+                    DomainErrorCode.EXECUTION_FAILED,
+                    "Organization preview did not produce an executable plan.",
+                )
             plan = preview.plan
         if not plan.roots_match(request.input_path, request.output_path):
-            raise ValueError("Organization plan roots do not match request paths.")
+            raise DomainError(
+                DomainErrorCode.PLAN_MISMATCH,
+                "Organization plan roots do not match request paths.",
+                details={"plan_id": getattr(plan, "plan_id", "unknown")},
+            )
         resolved_options = self._resolve_options(request.options)
         if plan.options != resolved_options:
-            raise ValueError("Organization plan options do not match request options.")
+            raise DomainError(
+                DomainErrorCode.PLAN_MISMATCH,
+                "Organization plan options do not match request options.",
+                details={"plan_id": getattr(plan, "plan_id", "unknown")},
+            )
         return self._create_organizer(resolved_options, dry_run=False).execute_plan(plan)
 
     def _resolve_options(self, options: OrganizeOptions) -> OrganizeOptions:

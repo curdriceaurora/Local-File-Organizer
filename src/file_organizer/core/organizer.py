@@ -668,6 +668,7 @@ class FileOrganizer:
             organized_structure=organized,
             errors=[*plan.errors, *errors],
             plan=plan,
+            transaction_id=transaction_id,
         )
         display.show_summary(self.console, result, Path(plan.output_path), dry_run=False)
         return result

@@ -25,6 +25,7 @@ class OrganizationResult:
         processing_time: Total time taken in seconds
         organized_structure: Dictionary mapping folder names to file lists
         errors: List of (file_path, error_message) tuples
+        transaction_id: History transaction used for execution and recovery
 
     Invariant:
         processed_files + skipped_files + failed_files + deduplicated_files == total_files
@@ -39,6 +40,7 @@ class OrganizationResult:
     organized_structure: dict[str, list[str]] = field(default_factory=dict)
     errors: list[tuple[str, str]] = field(default_factory=list)  # (file, error)
     plan: OrganizationPlan | None = None
+    transaction_id: str | None = None
 
 
 # ---------------------------------------------------------------------------

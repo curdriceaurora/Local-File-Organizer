@@ -237,13 +237,13 @@ class TestOperationHistoryBranches:
         assert op_id > 0
 
     def test_commit_transaction_failure_returns_false(self, tmp_path: Path) -> None:
-        """commit_transaction returns False when db.execute_query raises (lines 195-197)."""
+        """commit_transaction returns False when the DB transaction fails."""
         from file_organizer.history.tracker import OperationHistory
 
         tracker = OperationHistory(tmp_path / "h3.db")
         txn_id = tracker.start_transaction()
 
-        with patch.object(tracker.db, "execute_query", side_effect=Exception("write error")):
+        with patch.object(tracker.db, "transaction", side_effect=Exception("write error")):
             result = tracker.commit_transaction(txn_id)
 
         assert result is False

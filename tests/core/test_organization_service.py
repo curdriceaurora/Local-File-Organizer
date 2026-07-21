@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organization_service import OrganizationService
 from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
@@ -114,8 +115,9 @@ def test_scan_excludes_direct_hidden_file_unless_requested(tmp_path: Path) -> No
 
 
 def test_scan_rejects_missing_input(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="Input path does not exist"):
+    with pytest.raises(DomainError, match="Input path does not exist") as exc_info:
         _service().scan(OrganizeRequest(tmp_path / "missing", tmp_path / "out"))
+    assert exc_info.value.code == DomainErrorCode.NOT_FOUND
 
 
 def test_preview_persists_resolved_options(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -191,8 +193,9 @@ def test_execute_rejects_plan_from_different_options(tmp_path: Path) -> None:
     plan.roots_match.return_value = True
     plan.options = OrganizeOptions(use_hardlinks=True)
 
-    with pytest.raises(ValueError, match="options do not match"):
+    with pytest.raises(DomainError, match="options do not match") as exc_info:
         service.execute(request, plan)
+    assert exc_info.value.code == DomainErrorCode.PLAN_MISMATCH
 
 
 def test_execute_applies_reviewed_plan_with_resolved_options(tmp_path: Path) -> None:
@@ -240,15 +243,17 @@ def test_execute_rejects_missing_preview_plan(tmp_path: Path) -> None:
     service = _service(organizer_factory=MagicMock(return_value=organizer))
     request = OrganizeRequest(tmp_path, tmp_path / "out")
 
-    with pytest.raises(RuntimeError, match="did not produce an executable plan"):
+    with pytest.raises(DomainError, match="did not produce an executable plan") as exc_info:
         service.execute(request)
+    assert exc_info.value.code == DomainErrorCode.EXECUTION_FAILED
 
 
 def test_execute_rejects_plan_from_different_roots(tmp_path: Path) -> None:
     plan = _empty_plan(tmp_path, _resolved_options())
 
-    with pytest.raises(ValueError, match="roots do not match"):
+    with pytest.raises(DomainError, match="roots do not match") as exc_info:
         _service().execute(OrganizeRequest(tmp_path / "other", tmp_path / "out"), plan)
+    assert exc_info.value.code == DomainErrorCode.PLAN_MISMATCH
 
 
 def test_service_resolves_missing_model_dependencies() -> None:

@@ -13,6 +13,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.errors import DomainError
 from file_organizer.core.organization_service import OrganizationScan
 from file_organizer.core.plan import (
     OrganizationOperation,
@@ -27,7 +28,7 @@ INPUT_ROOT_TOKEN = "<input>"
 OUTPUT_ROOT_TOKEN = "<output>"
 EXTERNAL_TOKEN = "<external>"
 
-#: Job-event keys treated as volatile until #1604 finalizes job semantics.
+#: Volatile job-event keys excluded from cross-surface comparisons.
 VOLATILE_JOB_KEYS = frozenset({"job_id", "timestamp", "created_at", "updated_at", "duration"})
 
 
@@ -176,10 +177,23 @@ def normalize_result(
 
 def normalize_error(exc: BaseException, input_root: Path, output_root: Path) -> dict[str, Any]:
     """Normalize a raised error into a surface-neutral envelope payload."""
-    normalized: dict[str, Any] = {
-        "error_type": type(exc).__name__,
-        "message": redact_roots(str(exc), input_root, output_root),
-    }
+    if isinstance(exc, DomainError):
+        normalized: dict[str, Any] = {
+            "code": exc.code.value,
+            "message": redact_roots(exc.message, input_root, output_root),
+            "retryable": exc.retryable,
+            "details": {
+                key: redact_roots(value, input_root, output_root)
+                if isinstance(value, str)
+                else value
+                for key, value in exc.details.items()
+            },
+        }
+    else:
+        normalized = {
+            "error_type": type(exc).__name__,
+            "message": redact_roots(str(exc), input_root, output_root),
+        }
     if isinstance(exc, PlanValidationError):
         normalized["conflicts"] = sorted(
             (
@@ -224,13 +238,7 @@ def normalize_audit_events(
 
 
 def normalize_job_events(events: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    """Normalize job lifecycle events (provisional until #1604 lands).
-
-    Drops volatile identifiers/timestamps and preserves ordering, which is the
-    part of the lifecycle contract already observable today.  #1604 replaces
-    this with the canonical job/recovery event schema; keeping the seam here
-    lets adapter drivers adopt it without changing the oracle.
-    """
+    """Normalize canonical lifecycle events while preserving transition order."""
     return [
         {key: value for key, value in sorted(event.items()) if key not in VOLATILE_JOB_KEYS}
         for event in events
