@@ -16,6 +16,7 @@ import hashlib
 import os
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -139,6 +140,19 @@ class FileOrganizer:
             include_hidden: Whether collection includes dot-prefixed entries.
             organize_options: Canonical options to persist with generated plans.
         """
+        self._organize_options_supplied = organize_options is not None
+        if organize_options is not None:
+            use_hardlinks = organize_options.use_hardlinks
+            parallel_workers = organize_options.parallel_workers
+            prefetch_depth = organize_options.prefetch_depth
+            no_prefetch = organize_options.prefetch_depth == 0
+            enable_vision = organize_options.enable_vision
+            transcribe_audio = organize_options.transcribe_audio
+            max_transcribe_seconds = organize_options.max_transcribe_seconds
+            whisper_model = organize_options.whisper_model
+            recursive = organize_options.recursive
+            include_hidden = organize_options.include_hidden
+
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
 
@@ -148,6 +162,17 @@ class FileOrganizer:
         else:
             self.text_model_config = text_model_config
             self.vision_model_config = vision_model_config
+        if organize_options is not None:
+            self.text_model_config = replace(
+                self.text_model_config,
+                name=organize_options.text_model or self.text_model_config.name,
+                provider=organize_options.text_provider or self.text_model_config.provider,
+            )
+            self.vision_model_config = replace(
+                self.vision_model_config,
+                name=organize_options.vision_model or self.vision_model_config.name,
+                provider=organize_options.vision_provider or self.vision_model_config.provider,
+            )
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
         self.enable_vision = enable_vision
@@ -183,37 +208,46 @@ class FileOrganizer:
             )
         self.max_transcribe_seconds = max_transcribe_seconds
         self.whisper_model = whisper_model
-        self.organize_options = organize_options or OrganizeOptions(
-            recursive=recursive,
-            include_hidden=include_hidden,
-            use_hardlinks=use_hardlinks,
-            enable_vision=enable_vision,
-            transcribe_audio=transcribe_audio,
-            max_transcribe_seconds=max_transcribe_seconds,
-            whisper_model=whisper_model,
-            parallel_workers=parallel_workers,
-            prefetch_depth=self.prefetch_depth,
-            text_model=(
-                self.text_model_config.name
-                if isinstance(self.text_model_config, ModelConfig)
-                else None
-            ),
-            vision_model=(
-                self.vision_model_config.name
-                if isinstance(self.vision_model_config, ModelConfig)
-                else None
-            ),
-            text_provider=(
-                self.text_model_config.provider
-                if isinstance(self.text_model_config, ModelConfig)
-                else None
-            ),
-            vision_provider=(
-                self.vision_model_config.provider
-                if isinstance(self.vision_model_config, ModelConfig)
-                else None
-            ),
-        )
+        if organize_options is not None:
+            self.organize_options = replace(
+                organize_options,
+                text_model=self.text_model_config.name,
+                vision_model=self.vision_model_config.name,
+                text_provider=self.text_model_config.provider,
+                vision_provider=self.vision_model_config.provider,
+            )
+        else:
+            self.organize_options = OrganizeOptions(
+                recursive=recursive,
+                include_hidden=include_hidden,
+                use_hardlinks=use_hardlinks,
+                enable_vision=enable_vision,
+                transcribe_audio=transcribe_audio,
+                max_transcribe_seconds=max_transcribe_seconds,
+                whisper_model=whisper_model,
+                parallel_workers=parallel_workers,
+                prefetch_depth=self.prefetch_depth,
+                text_model=(
+                    self.text_model_config.name
+                    if isinstance(self.text_model_config, ModelConfig)
+                    else None
+                ),
+                vision_model=(
+                    self.vision_model_config.name
+                    if isinstance(self.vision_model_config, ModelConfig)
+                    else None
+                ),
+                text_provider=(
+                    self.text_model_config.provider
+                    if isinstance(self.text_model_config, ModelConfig)
+                    else None
+                ),
+                vision_provider=(
+                    self.vision_model_config.provider
+                    if isinstance(self.vision_model_config, ModelConfig)
+                    else None
+                ),
+            )
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
@@ -254,6 +288,8 @@ class FileOrganizer:
         start_time = time.time()
         input_path = Path(input_path)
         output_path = Path(output_path)
+        if self._organize_options_supplied:
+            skip_existing = self.organize_options.skip_existing
 
         if not input_path.exists():
             raise ValueError(f"Input path does not exist: {input_path}")

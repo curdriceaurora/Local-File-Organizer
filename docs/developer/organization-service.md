@@ -49,6 +49,13 @@ are upgraded in memory using their legacy `skip_existing`, `use_hardlinks`, and 
 Unknown schema versions are rejected with an actionable error. Schema-2 plans reject conflicting
 legacy and canonical values rather than silently choosing one.
 
+Schema-1 compatibility is load/inspect compatibility. The direct service requires callers to
+re-preview before execution because legacy plans do not record resolved model identity and cannot
+match a fully resolved schema-2 request safely.
+
+The REST plan payload exposes schema-2 options. Updating the Python SDK's mirrored plan model is
+owned by the REST/SDK adapter migration in #1596.
+
 Operations are ordered by source path before serialization. Existing `SourceFingerprint`
 validation remains the authority for detecting changed sources between preview and execution.
 
