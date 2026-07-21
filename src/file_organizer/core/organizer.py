@@ -24,7 +24,7 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core import dispatcher, display, file_ops, initializer
-from file_organizer.core.organize_options import OrganizeOptions
+from file_organizer.core.organize_options import OrganizeOptions, TransferMode
 from file_organizer.core.plan import (
     OrganizationPlan,
     build_plan_from_processed,
@@ -39,6 +39,7 @@ from file_organizer.core.types import (
     VIDEO_EXTENSIONS,
     OrganizationResult,
 )
+from file_organizer.methodologies import apply_organization_methodology
 from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
@@ -142,7 +143,7 @@ class FileOrganizer:
         """
         self._organize_options_supplied = organize_options is not None
         if organize_options is not None:
-            use_hardlinks = organize_options.use_hardlinks
+            use_hardlinks = organize_options.effective_transfer_mode == TransferMode.HARDLINK
             parallel_workers = organize_options.parallel_workers
             prefetch_depth = organize_options.prefetch_depth
             no_prefetch = organize_options.prefetch_depth == 0
@@ -437,6 +438,11 @@ class FileOrganizer:
                 self.vision_processor.cleanup()
 
         # Organize
+        all_processed = apply_organization_methodology(
+            all_processed,
+            input_root=scan_root,
+            methodology=self.organize_options.effective_methodology,
+        )
         # Content‑based deduplication: remove duplicate files based on file content hash
         # Sort by file path to ensure deterministic deduplication order across runs
         all_processed.sort(key=lambda x: str(x.file_path))

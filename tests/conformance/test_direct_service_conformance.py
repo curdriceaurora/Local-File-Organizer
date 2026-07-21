@@ -172,7 +172,7 @@ def test_media_routing_golden(conformance: ConformanceContext) -> None:
     """Optional media routes through canonical policy on pinned metadata."""
     conformance.stage("media-optional")
 
-    envelope = _ok(conformance.driver.preview(conformance.request(use_hardlinks=False)))
+    envelope = _ok(conformance.driver.preview(conformance.request(transfer_mode="copy")))
 
     assert _operation_routes(envelope) == [
         ("<input>/clip.mp4", "<output>/Short_Clips/clip.mp4", "ready", "create"),
@@ -293,7 +293,8 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
         "recursive": True,
         "include_hidden": False,
         "skip_existing": True,
-        "use_hardlinks": False,
+        "transfer_mode": "copy",
+        "methodology": "none",
         "enable_vision": True,
         "transcribe_audio": False,
         "max_transcribe_seconds": 600.0,
@@ -305,7 +306,7 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
         "text_provider": "ollama",
         "vision_provider": "ollama",
     }
-    assert envelope["plan"]["schema_version"] == 2
+    assert envelope["plan"]["schema_version"] == 3
 
 
 def test_collision_skip_existing_golden(conformance: ConformanceContext) -> None:
@@ -537,9 +538,9 @@ def test_plan_options_mismatch_rejected(conformance: ConformanceContext) -> None
 
 
 def test_transfer_mode_hardlink_golden(conformance: ConformanceContext) -> None:
-    """``use_hardlinks`` selects the plan-wide operation type (#1602 extends)."""
+    """Canonical hardlink mode selects the plan-wide operation type."""
     conformance.stage("flat-documents")
-    request = conformance.request(use_hardlinks=True)
+    request = conformance.request(transfer_mode="hardlink")
     preview = _ok(conformance.driver.preview(request))
 
     assert {op["operation_type"] for op in preview["plan"]["operations"]} == {"hardlink"}
@@ -564,39 +565,48 @@ def test_missing_input_is_rejected(conformance: ConformanceContext) -> None:
     assert envelope["error"]["message"] == "Input path does not exist: <input>"
 
 
-def test_methodology_seed_golden(conformance: ConformanceContext) -> None:
-    """Canonical routing for the methodology tree today; #1602 will extend
-    these expectations when PARA/Johnny Decimal remapping becomes canonical."""
+@pytest.mark.parametrize(
+    ("methodology", "expected_destinations"),
+    [
+        (
+            "para",
+            [
+                "<output>/Archive/Documents/notes.md",
+                "<output>/Areas/Spreadsheets/budget.csv",
+                "<output>/Projects/Documents/plan.txt",
+                "<output>/Resources/PDFs/paper.pdf",
+            ],
+        ),
+        (
+            "jd",
+            [
+                "<output>/30 Operations & Projects/30.01 Documents/notes.md",
+                "<output>/10 Finance & Administration/10.01 Spreadsheets/budget.csv",
+                "<output>/30 Operations & Projects/30.01 Documents/plan.txt",
+                "<output>/30 Operations & Projects/30.01 PDFs/paper.pdf",
+            ],
+        ),
+    ],
+)
+def test_methodology_seed_golden(
+    conformance: ConformanceContext,
+    methodology: str,
+    expected_destinations: list[str],
+) -> None:
+    """PARA and Johnny Decimal destinations come from the canonical service."""
     conformance.stage("methodology-seed")
 
-    envelope = _ok(conformance.driver.preview(conformance.request(use_hardlinks=False)))
+    envelope = _ok(
+        conformance.driver.preview(
+            conformance.request(transfer_mode="copy", methodology=methodology)
+        )
+    )
 
-    assert _operation_routes(envelope) == [
-        (
-            "<input>/archive/2020/notes.md",
-            "<output>/Documents/notes.md",
-            "ready",
-            "create",
-        ),
-        (
-            "<input>/areas/finance/budget.csv",
-            "<output>/Spreadsheets/budget.csv",
-            "ready",
-            "create",
-        ),
-        (
-            "<input>/projects/alpha/plan.txt",
-            "<output>/Documents/plan.txt",
-            "ready",
-            "create",
-        ),
-        (
-            "<input>/resources/reading/paper.pdf",
-            "<output>/PDFs/paper.pdf",
-            "ready",
-            "create",
-        ),
-    ]
+    assert [operation["destination"] for operation in envelope["plan"]["operations"]] == (
+        expected_destinations
+    )
+    assert envelope["plan"]["options"]["methodology"] == methodology
+    assert envelope["plan"]["metadata"]["methodology"] == methodology
 
 
 def test_job_event_normalization_is_stable() -> None:

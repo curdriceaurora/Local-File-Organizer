@@ -13,18 +13,11 @@ from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import OrganizationError, OrganizationResultResponse
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.config.methodology import (
-    JOHNNY_DECIMAL,
-    PARA,
-)
-from file_organizer.config.methodology import (
     normalize as _normalize_methodology,
 )
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.organizer import FileOrganizer
-from file_organizer.core.plan import (
-    CollisionAction,
-    OrganizationOperationStatus,
-    OrganizationPlan,
-)
+from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
 from file_organizer.web._forms import form_bool
 
@@ -118,36 +111,6 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
     )
 
 
-def _methodology_preview_bucket(bucket: str, methodology: str) -> str:
-    """Return the dashboard preview bucket for a selected methodology."""
-    if methodology == PARA:
-        para_roots = {"Projects", "Areas", "Resources", "Archive"}
-        if bucket in para_roots or any(bucket.startswith(f"{root}/") for root in para_roots):
-            return bucket
-        return f"Resources/{bucket}"
-    if methodology == JOHNNY_DECIMAL:
-        if bucket[:2].isdigit() and len(bucket) > 2 and bucket[2] in {" ", "/", "."}:
-            return bucket
-        return f"30 Operations & Projects/{bucket}"
-    return bucket
-
-
-def _apply_preview_methodology(
-    preview: OrganizationResultResponse,
-    methodology: str,
-) -> OrganizationResultResponse:
-    """Apply methodology-specific destination shape to a dry-run preview."""
-    if methodology not in {PARA, JOHNNY_DECIMAL}:
-        return preview
-
-    organized_structure: dict[str, list[str]] = {}
-    for bucket, names in preview.organized_structure.items():
-        mapped_bucket = _methodology_preview_bucket(bucket, methodology)
-        organized_structure.setdefault(mapped_bucket, []).extend(names)
-
-    return preview.model_copy(update={"organized_structure": organized_structure})
-
-
 def _build_plan_movements(
     files: list[Path],
     output_dir: Path,
@@ -175,71 +138,6 @@ def _build_plan_movements(
                 }
             )
     return movements
-
-
-def _apply_plan_methodology(plan: OrganizationPlan, methodology: str) -> OrganizationPlan:
-    """Return a copy of *plan* with methodology-specific destination buckets."""
-    if methodology not in {PARA, JOHNNY_DECIMAL}:
-        return plan
-
-    remapped = OrganizationPlan.from_dict(plan.to_dict())
-    original_operation_skips = sum(
-        operation.status == OrganizationOperationStatus.SKIPPED for operation in remapped.operations
-    )
-    non_operation_skips = remapped.skipped_files - original_operation_skips
-    reserved_destinations: set[str] = set()
-    output_dir = remapped.output_root
-
-    for operation in remapped.operations:
-        mapped_bucket = _methodology_preview_bucket(operation.folder_name, methodology)
-        operation.folder_name = mapped_bucket
-        base_destination = output_dir / mapped_bucket / operation.file_name
-        operation.destination_path = str(base_destination)
-        if operation.status == OrganizationOperationStatus.ERROR:
-            continue
-
-        if remapped.skip_existing and base_destination.exists():
-            operation.status = OrganizationOperationStatus.SKIPPED
-            operation.collision_action = CollisionAction.SKIP_EXISTING
-            continue
-
-        operation.status = OrganizationOperationStatus.READY
-        operation.collision_action = CollisionAction.CREATE
-        if str(base_destination) in reserved_destinations or not remapped.skip_existing:
-            counter = 1
-            planned = base_destination
-            stem, suffix = _split_name_suffix(operation.file_name)
-            while planned.exists() or str(planned) in reserved_destinations:
-                planned = output_dir / mapped_bucket / f"{stem}_{counter}{suffix}"
-                counter += 1
-            if planned != base_destination:
-                operation.destination_path = str(planned)
-                operation.file_name = planned.name
-                operation.collision_action = CollisionAction.RENAME_WITH_COUNTER
-
-        reserved_destinations.add(operation.destination_path)
-
-    remapped.processed_files = len(remapped.ready_operations)
-    remapped.skipped_files = non_operation_skips + sum(
-        1
-        for operation in remapped.operations
-        if operation.status == OrganizationOperationStatus.SKIPPED
-    )
-    remapped.failed_files = sum(
-        1
-        for operation in remapped.operations
-        if operation.status == OrganizationOperationStatus.ERROR
-    )
-    remapped.metadata["methodology"] = methodology
-    return remapped
-
-
-def _split_name_suffix(file_name: str) -> tuple[str, str]:
-    """Split a file name into stem and suffix without constructing a Path."""
-    stem, dot, suffix = file_name.rpartition(".")
-    if not dot or not stem:
-        return file_name, ""
-    return stem, f".{suffix}"
 
 
 def _prune_plan_store() -> None:
@@ -331,7 +229,20 @@ def build_organize_plan(
     )
     counts = _counts_by_type(scan_files)
 
-    organizer = organizer_factory(dry_run=True, use_hardlinks=use_hardlinks_enabled)
+    options = OrganizeOptions(
+        recursive=recursive_enabled,
+        include_hidden=include_hidden_enabled,
+        skip_existing=skip_existing_enabled,
+        use_hardlinks=use_hardlinks_enabled,
+        methodology=normalized_methodology,
+    )
+    organizer = organizer_factory(
+        dry_run=True,
+        use_hardlinks=use_hardlinks_enabled,
+        recursive=recursive_enabled,
+        include_hidden=include_hidden_enabled,
+        organize_options=options,
+    )
     preview_result = organizer.organize(
         input_path=safe_input,
         output_path=safe_output,
@@ -344,7 +255,6 @@ def build_organize_plan(
             error="plan_unavailable",
             message="Dry-run did not produce an executable organization plan.",
         )
-    plan = _apply_plan_methodology(plan, normalized_methodology)
     preview_result.organized_structure = plan.organized_structure()
     preview_result.processed_files = plan.processed_files
     preview_result.skipped_files = plan.skipped_files
@@ -358,6 +268,7 @@ def build_organize_plan(
             "include_hidden": include_hidden_enabled,
             "skip_existing": skip_existing_enabled,
             "use_hardlinks": use_hardlinks_enabled,
+            "transfer_mode": options.effective_transfer_mode.value,
             "scan_counts": counts,
             "scan_total_files": len(scan_files),
             "preview": preview.model_dump(),

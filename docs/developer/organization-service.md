@@ -39,21 +39,35 @@ controls. Defaults are validated once before work begins. The direct service res
 text and vision model names/providers before placing the options in a plan, so a plan records the
 behavioral inputs used to produce it rather than an unstable “current default.”
 
-`use_hardlinks` is deliberately retained as the existing transfer selector in this slice. The
-transfer-semantics work in #1602 owns its replacement with an explicit copy/hardlink/move model.
+`transfer_mode` is the canonical transfer selector and supports `copy` and `hardlink`.
+`use_hardlinks` remains an input-only compatibility alias and is not emitted in canonical options.
+
+- `copy` preserves the source and creates an independent destination file.
+- `hardlink` preserves the source and creates a destination sharing the same inode. Preview
+  execution is rejected if source and destination are on different filesystems.
+- Undo removes the created destination for either mode and never removes the source.
+
+True move is intentionally unsupported. Crash-safe source deletion and cross-device recovery must
+be specified by the job/recovery contract before a move mode can be added.
+
+`methodology` selects `none`, `para`, or `jd`. The domain organizer applies the selected policy
+before collision handling and plan construction. PARA routing uses the existing PARA category
+primitives; Johnny Decimal routing uses the repository's default area scheme and numbering
+primitives. Presentation adapters must not rewrite destinations after a plan is built.
 
 ## Plan compatibility
 
-Organization plan schema 2 adds the canonical `options` object. Schema-1 plans remain loadable and
-are upgraded in memory using their legacy `skip_existing`, `use_hardlinks`, and metadata fields.
-Unknown schema versions are rejected with an actionable error. Schema-2 plans reject conflicting
-legacy and canonical values rather than silently choosing one.
+Organization plan schema 3 records canonical `transfer_mode` and `methodology` options. Schema-1
+and schema-2 plans remain loadable and are upgraded in memory using their legacy
+`skip_existing`, `use_hardlinks`, and metadata fields. Unknown schema versions are rejected with
+an actionable error. Current plans reject conflicting legacy and canonical values and reject
+operation types that disagree with `transfer_mode`.
 
-Schema-1 compatibility is load/inspect compatibility. The direct service requires callers to
-re-preview before execution because legacy plans do not record resolved model identity and cannot
-match a fully resolved schema-2 request safely.
+Legacy-plan compatibility is load/inspect compatibility. The direct service requires callers to
+re-preview before execution because legacy plans do not record the complete canonical contract and
+cannot match a fully resolved schema-3 request safely.
 
-The REST plan payload exposes schema-2 options. Updating the Python SDK's mirrored plan model is
+The REST plan payload exposes schema-3 options. Updating the Python SDK's mirrored plan model is
 owned by the REST/SDK adapter migration in #1596.
 
 Operations are ordered by source path before serialization. Existing `SourceFingerprint`

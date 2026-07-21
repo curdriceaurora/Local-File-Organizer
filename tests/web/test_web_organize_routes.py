@@ -51,6 +51,7 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
             processed=processed,
             skip_existing=bool(kwargs.get("skip_existing", True)),
             use_hardlinks=bool(organizer_options["use_hardlinks"]),
+            options=organizer_options["organize_options"],
             total_files=len(files),
             skipped_files=0,
             deduplicated_files=0,
@@ -143,7 +144,17 @@ class TestOrganizeScan:
         # Verify plan was generated (success path, not error path)
         assert "Plan generated" in response.text
         # Verify FileOrganizer was instantiated and organize() was called
-        mock_file_organizer.assert_called_once_with(dry_run=True, use_hardlinks=True)
+        call = mock_file_organizer.call_args.kwargs
+        assert call["dry_run"] is True
+        assert call["use_hardlinks"] is True
+        assert call["recursive"] is True
+        assert call["include_hidden"] is False
+        expected = {
+            "content_based": "none",
+            "para": "para",
+            "johnny_decimal": "jd",
+        }[methodology]
+        assert call["organize_options"].effective_methodology.value == expected
         mock_file_organizer.return_value.organize.assert_called_once()
 
 
