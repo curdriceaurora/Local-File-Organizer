@@ -55,9 +55,9 @@ def _operation_routes(envelope: dict) -> list[tuple[str, str, str, str]]:
     ]
 
 
-def test_direct_driver_satisfies_protocol(conformance: ConformanceContext) -> None:
+def test_driver_satisfies_protocol(conformance: ConformanceContext) -> None:
     assert isinstance(conformance.driver, OrganizationConformanceDriver)
-    assert conformance.driver.name == "direct-service"
+    assert conformance.driver.name in {"direct-service", "cli"}
 
 
 def test_corpus_materialization_is_deterministic(tmp_path: Path) -> None:

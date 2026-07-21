@@ -12,6 +12,7 @@ import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+from file_organizer.core.types import OrganizationResult
 
 pytestmark = [pytest.mark.smoke, pytest.mark.ci, pytest.mark.unit]
 runner = CliRunner()
@@ -21,12 +22,12 @@ _SETUP_PATCH = "file_organizer.cli.organize._check_setup_completed"
 class TestOrganizeSmoke:
     """fo organize --dry-run exits 0 and reports processed count."""
 
-    # FileOrganizer is lazy-imported inside organize(); patching at definition
-    # site because cli.organize holds no module-level reference to the class.
     # _SETUP_PATCH uses new= so its mock is not injected as a parameter (PT019).
-    @patch("file_organizer.core.organizer.FileOrganizer")
+    @patch("file_organizer.cli.organize._create_service")
     @patch(_SETUP_PATCH, new=MagicMock(return_value=True))
-    def test_organize_dry_run_exits_zero(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+    def test_organize_dry_run_exits_zero(
+        self, mock_create_service: MagicMock, tmp_path: Path
+    ) -> None:
         input_dir = tmp_path / "input"
         output_dir = tmp_path / "output"
         input_dir.mkdir()
@@ -34,14 +35,8 @@ class TestOrganizeSmoke:
         for name in ("a.txt", "b.md", "c.csv"):
             (input_dir / name).write_text("x")
 
-        mock_org = MagicMock()
-        mock_cls.return_value = mock_org
-        result_obj = MagicMock()
-        result_obj.total_files = 3
-        result_obj.processed_files = 3
-        result_obj.skipped_files = 0
-        result_obj.failed_files = 0
-        mock_org.organize.return_value = result_obj
+        service = mock_create_service.return_value
+        service.preview.return_value = OrganizationResult(total_files=3, processed_files=3)
 
         result = runner.invoke(
             app,
@@ -49,16 +44,7 @@ class TestOrganizeSmoke:
         )
 
         assert result.exit_code == 0, result.output
-        mock_cls.assert_called_once_with(
-            dry_run=True,
-            parallel_workers=None,
-            prefetch_depth=2,
-            enable_vision=True,
-            no_prefetch=False,
-            transcribe_audio=False,
-            max_transcribe_seconds=600.0,
-            whisper_model="tiny",
-        )
+        service.preview.assert_called_once()
 
 
 class TestSearchSmoke:

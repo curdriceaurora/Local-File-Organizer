@@ -14,6 +14,7 @@ non-organize command crashes pre-setup with a cryptic stack trace.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -102,6 +103,40 @@ def test_organize_blocked_pre_setup(fresh_config: Path, tmp_path: Path) -> None:
     result = runner.invoke(app, ["organize", str(in_dir), str(out_dir)])
     # The gate exits the process; result.output carries the panel.
     assert "First-time setup required" in result.output
+
+
+@pytest.mark.integration
+@pytest.mark.ci
+@pytest.mark.uses_setup_gate
+@pytest.mark.parametrize("local_json", [False, True], ids=["global", "command-local"])
+def test_organize_setup_gate_honors_json_contract(
+    local_json: bool, fresh_config: Path, tmp_path: Path
+) -> None:
+    """Both global and command-local JSON modes emit one setup error object."""
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    args = ["organize", str(input_dir), str(output_dir)]
+    if local_json:
+        args.append("--json")
+    else:
+        args.insert(0, "--json")
+
+    result = CliRunner().invoke(app, args)
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload == {
+        "command": "organize",
+        "error": {
+            "code": "setup_required",
+            "details": {"action": "fo setup"},
+            "message": "First-time setup is required. Run `fo setup` to continue.",
+            "retryable": False,
+        },
+        "outcome": "error",
+        "schema_version": 1,
+    }
 
 
 @pytest.mark.integration

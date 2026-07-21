@@ -9,7 +9,11 @@ import pytest
 
 from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from tests.conformance.corpus import CorpusCase, get_case, materialize_case
-from tests.conformance.driver import DirectServiceDriver, OrganizationConformanceDriver
+from tests.conformance.driver import (
+    CLIConformanceDriver,
+    DirectServiceDriver,
+    OrganizationConformanceDriver,
+)
 
 
 @dataclass
@@ -35,11 +39,12 @@ class ConformanceContext:
         )
 
 
-@pytest.fixture
-def conformance(tmp_path: Path) -> ConformanceContext:
-    """Fully isolated conformance context: fresh roots, fresh audit workspace."""
+@pytest.fixture(params=(DirectServiceDriver, CLIConformanceDriver), ids=("direct", "cli"))
+def conformance(tmp_path: Path, request: pytest.FixtureRequest) -> ConformanceContext:
+    """Run the golden corpus against the oracle and each migrated adapter."""
+    driver_type = request.param
     return ConformanceContext(
         input_root=tmp_path / "input",
         output_root=tmp_path / "output",
-        driver=DirectServiceDriver(tmp_path / "workspace"),
+        driver=driver_type(tmp_path / "workspace"),
     )
