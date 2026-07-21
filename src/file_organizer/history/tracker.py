@@ -158,8 +158,8 @@ class OperationHistory:
             metadata_json,
         )
 
-        self.db.execute_query(query, params)
-        self.db.get_connection().commit()
+        with self.db.transaction() as conn:
+            conn.execute(query, params)
 
         logger.info(f"Started transaction {transaction_id}")
         return transaction_id
@@ -188,8 +188,10 @@ class OperationHistory:
         )
 
         try:
-            self.db.execute_query(query, params)
-            self.db.get_connection().commit()
+            with self.db.transaction() as conn:
+                cursor = conn.execute(query, params)
+                if cursor.rowcount == 0:
+                    return False
             logger.info(f"Committed transaction {transaction_id}")
             return True
         except Exception as e:

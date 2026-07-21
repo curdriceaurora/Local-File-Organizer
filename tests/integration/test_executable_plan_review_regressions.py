@@ -165,6 +165,7 @@ def test_api_preview_plan_executes_round_trip(tmp_path: Path) -> None:
             organized_structure=plan.organized_structure(),
             errors=[],
             plan=plan,
+            transaction_id=None,
         )
         organizer.execute_plan.return_value = organizer.organize.return_value
 

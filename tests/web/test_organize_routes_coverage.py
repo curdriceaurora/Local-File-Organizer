@@ -396,15 +396,17 @@ class TestOrganizeJobRollbackRoute:
             "job_id": "j1",
             "status": "completed",
             "can_rollback": True,
+            "transaction_id": "txn-1",
         }
         request = MagicMock()
         mock_manager = MagicMock()
-        mock_manager.undo_last_operation.return_value = True
+        mock_manager.undo_transaction.return_value = True
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
             patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
         ):
             organize_job_rollback(request, "j1")
+        mock_manager.undo_transaction.assert_called_once_with("txn-1")
         mock_templates.TemplateResponse.assert_called_once()
 
     def test_rollback_exception(self, mock_templates) -> None:
@@ -414,6 +416,7 @@ class TestOrganizeJobRollbackRoute:
             "job_id": "j1",
             "status": "completed",
             "can_rollback": True,
+            "transaction_id": "txn-1",
         }
         request = MagicMock()
         with (

@@ -67,8 +67,8 @@ Rules for adapter drivers (#1595–#1598):
 
 - Transfer semantics and methodologies (#1602) define the `methodology` fixture and canonical
   copy/hardlink expectations. Adapter suites reuse these assertions as they migrate.
-- Errors, jobs, scheduling, and recovery (#1604) replace the provisional
-  `normalize_job_events` contract and extend audit-event coverage.
+- Errors, jobs, scheduling, and recovery (#1604) define stable domain error envelopes,
+  ordered lifecycle events, recovery actions, and transaction-specific rollback expectations.
 - Required gates (#1606) promote adapter suites from advisory to blocking
   per the gate-promotion policy in the
   [parity execution plan](../architecture/cross-surface-parity-execution.md).

@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from file_organizer.api.db_models import OrganizationJob
@@ -54,6 +55,29 @@ class TestJobRepositoryCreate:
         assert added.methodology == "para"
         assert added.dry_run is True
 
+    def test_concurrent_idempotency_conflict_returns_winner(self):
+        session = MagicMock(spec=Session)
+        winner = MagicMock(spec=OrganizationJob)
+        query = session.query.return_value
+        query.filter.return_value = query
+        query.one_or_none.side_effect = [None, winner]
+        session.flush.side_effect = IntegrityError(
+            "INSERT INTO organization_jobs",
+            {"idempotency_key": "request-1"},
+            Exception("unique constraint"),
+        )
+
+        result = JobRepository.create(
+            session,
+            "/input",
+            "/output",
+            idempotency_key="request-1",
+        )
+
+        assert result is winner
+        session.begin_nested.assert_called_once_with()
+        assert query.one_or_none.call_count == 2
+
 
 class TestJobRepositoryGetById:
     """Tests for JobRepository.get_by_id."""
@@ -61,6 +85,9 @@ class TestJobRepositoryGetById:
     def test_get_existing_job(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         result = JobRepository.get_by_id(session, "job-1")
@@ -118,6 +145,9 @@ class TestJobRepositoryUpdateStatus:
     def test_update_status_existing_job(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         result = JobRepository.update_status(session, "job-1", "running")
@@ -129,6 +159,9 @@ class TestJobRepositoryUpdateStatus:
     def test_update_status_with_error(self):
         session = MagicMock(spec=Session)
         job = MagicMock(spec=OrganizationJob)
+        job.status = "queued"
+        job.revision = 0
+        job.transaction_id = None
         session.get.return_value = job
 
         JobRepository.update_status(session, "job-1", "failed", error="OOM")

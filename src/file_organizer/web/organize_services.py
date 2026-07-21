@@ -108,6 +108,7 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
         errors=[
             OrganizationError(file=file_name, error=error) for file_name, error in result.errors
         ],
+        transaction_id=result.transaction_id,
     )
 
 

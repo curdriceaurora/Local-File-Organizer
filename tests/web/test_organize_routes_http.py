@@ -18,6 +18,7 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.core.lifecycle import RecoveryAction
 from file_organizer.web.organize_routes import organize_router
 
 pytestmark = [pytest.mark.unit]
@@ -76,6 +77,13 @@ def _mock_job(
     job.created_at = datetime(2025, 6, 1, tzinfo=UTC)
     job.updated_at = datetime(2025, 6, 1, 0, 5, tzinfo=UTC)
     job.error = error
+    job.error_code = None
+    job.error_retryable = False
+    job.error_details = None
+    job.scheduled_for = None
+    job.transaction_id = "txn-1" if status == "completed" else None
+    job.recovery_action = RecoveryAction.NONE
+    job.revision = 0
     return job
 
 
@@ -351,12 +359,13 @@ class TestOrganizeJobRollback:
             ),
             patch("file_organizer.undo.undo_manager.UndoManager") as mock_undo_cls,
         ):
-            mock_undo_cls.return_value.undo_last_operation.return_value = True
+            mock_undo_cls.return_value.undo_transaction.return_value = True
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<div>rolled back</div>")
             response = client.post("/ui/organize/jobs/test-job-1/rollback")
         assert response.status_code == 200
         trigger = json.loads(response.headers["HX-Trigger"])
         assert trigger == {"refreshHistory": True, "refreshStats": True}
+        mock_undo_cls.return_value.undo_transaction.assert_called_once_with("txn-1")
 
     def test_rollback_not_found(self, client):
         with patch(

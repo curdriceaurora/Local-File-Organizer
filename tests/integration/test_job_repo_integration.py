@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 import file_organizer.api.db_models  # noqa: F401 — registers models with Base
 from file_organizer.api.auth_models import Base
 from file_organizer.api.repositories.job_repo import JobRepository
+from file_organizer.core.errors import DomainError, DomainErrorCode
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
@@ -65,6 +66,23 @@ class TestJobRepositoryCreate:
         j2 = JobRepository.create(db_session, "/c", "/d")
         db_session.flush()
         assert j1.id != j2.id
+
+    def test_idempotency_key_returns_existing_job(self, db_session: Session) -> None:
+        first = JobRepository.create(
+            db_session,
+            "/a",
+            "/b",
+            idempotency_key="request-1",
+        )
+        second = JobRepository.create(
+            db_session,
+            "/different",
+            "/different-output",
+            idempotency_key="request-1",
+        )
+
+        assert second.id == first.id
+        assert second.input_dir == "/a"
 
 
 class TestJobRepositoryGetById:
@@ -130,15 +148,52 @@ class TestJobRepositoryUpdateStatus:
     def test_sets_error_on_failure(self, db_session: Session) -> None:
         job = JobRepository.create(db_session, "/in", "/out")
         db_session.flush()
-        updated = JobRepository.update_status(db_session, job.id, "failed", error="disk full")
+        updated = JobRepository.update_status(
+            db_session,
+            job.id,
+            "failed",
+            error="disk full",
+            error_code="execution_failed",
+            error_retryable=True,
+            error_details={"device": "output"},
+        )
         db_session.flush()
         assert updated is not None
         assert updated.status == "failed"
         assert updated.error == "disk full"
+        assert updated.error_code == "execution_failed"
+        assert updated.error_retryable is True
+        assert updated.error_details_json == '{"device": "output"}'
 
     def test_returns_none_for_unknown_id(self, db_session: Session) -> None:
         result = JobRepository.update_status(db_session, "ghost-id", "running")
         assert result is None
+
+    def test_stale_session_cannot_overwrite_newer_revision(self) -> None:
+        engine = create_engine(
+            "sqlite+pysqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        with Session(engine) as setup:
+            job = JobRepository.create(setup, "/in", "/out")
+            setup.commit()
+            job_id = job.id
+
+        with Session(engine) as winner, Session(engine) as stale:
+            winner_job = JobRepository.get_by_id(winner, job_id)
+            stale_job = JobRepository.get_by_id(stale, job_id)
+            assert winner_job is not None and stale_job is not None
+
+            JobRepository.update_status(winner, job_id, "running")
+            winner.commit()
+
+            with pytest.raises(DomainError) as exc_info:
+                JobRepository.update_status(stale, job_id, "failed")
+
+        assert exc_info.value.code == DomainErrorCode.STALE_JOB_REVISION
+        Base.metadata.drop_all(engine)
 
 
 class TestJobRepositoryUpdateResult:

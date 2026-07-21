@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from file_organizer.core import dispatcher
+from file_organizer.core.errors import DomainError
 from file_organizer.core.organization_service import OrganizationService
 from file_organizer.core.organize_options import OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
@@ -222,7 +223,7 @@ class DirectServiceDriver:
         roots = (request.input_path, request.output_path)
         try:
             scan = self._service.scan(request)
-        except (ValueError, RuntimeError, OSError) as exc:
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
             return {"outcome": "error", "error": normalize_error(exc, *roots)}
         return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
 
@@ -231,7 +232,7 @@ class DirectServiceDriver:
         roots = (request.input_path, request.output_path)
         try:
             result = self._service.preview(request)
-        except (ValueError, RuntimeError, OSError) as exc:
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
             return {"outcome": "error", "error": normalize_error(exc, *roots)}
         if not isinstance(result.plan, OrganizationPlan):
             raise AssertionError("Canonical preview must produce an executable plan.")
@@ -250,7 +251,7 @@ class DirectServiceDriver:
         try:
             plan = OrganizationPlan.from_dict(plan_payload) if plan_payload is not None else None
             result = self._service.execute(request, plan)
-        except (ValueError, RuntimeError, OSError) as exc:
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
             return {"outcome": "error", "error": normalize_error(exc, *roots)}
         if not isinstance(result.plan, OrganizationPlan):
             raise AssertionError("Canonical execution must retain its executable plan.")

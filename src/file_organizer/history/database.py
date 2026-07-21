@@ -11,7 +11,7 @@ import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 from typing import cast
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,9 @@ class DatabaseManager:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._connection: sqlite3.Connection | None = None
-        self._lock = Lock()
+        # One re-entrant lock covers connection creation, cursor consumption,
+        # and commit/rollback boundaries for all threads sharing this manager.
+        self._lock = RLock()
         self._initialized = False
 
         logger.info(f"Database manager initialized with path: {self.db_path}")
@@ -158,14 +160,15 @@ class DatabaseManager:
         Returns:
             SQLite database connection
         """
-        if self._connection is None:
-            self._connection = sqlite3.connect(
-                str(self.db_path), check_same_thread=False, timeout=30.0
-            )
-            # Enable row factory for easier data access
-            self._connection.row_factory = sqlite3.Row
+        with self._lock:
+            if self._connection is None:
+                self._connection = sqlite3.connect(
+                    str(self.db_path), check_same_thread=False, timeout=30.0
+                )
+                # Enable row factory for easier data access
+                self._connection.row_factory = sqlite3.Row
 
-        return self._connection
+            return self._connection
 
     @contextmanager
     def transaction(self) -> Generator[sqlite3.Connection, None, None]:
@@ -225,8 +228,9 @@ class DatabaseManager:
         Returns:
             Single row result or None
         """
-        cursor = self.execute_query(query, params)
-        return cast("sqlite3.Row | None", cursor.fetchone())
+        with self._lock:
+            cursor = self.execute_query(query, params)
+            return cast("sqlite3.Row | None", cursor.fetchone())
 
     def fetch_all(self, query: str, params: tuple[object, ...] | None = None) -> list[sqlite3.Row]:
         """Execute query and fetch all results.
@@ -238,8 +242,9 @@ class DatabaseManager:
         Returns:
             List of row results
         """
-        cursor = self.execute_query(query, params)
-        return cursor.fetchall()
+        with self._lock:
+            cursor = self.execute_query(query, params)
+            return cursor.fetchall()
 
     def get_database_size(self) -> int:
         """Get current database file size in bytes.
@@ -263,19 +268,21 @@ class DatabaseManager:
     def vacuum(self) -> None:
         """Vacuum the database to reclaim space and optimize performance."""
         logger.info("Vacuuming database...")
-        conn = self.get_connection()
-        conn.execute("VACUUM")
+        with self._lock:
+            conn = self.get_connection()
+            conn.execute("VACUUM")
         logger.info("Database vacuum complete")
 
     def close(self) -> None:
         """Close database connection."""
-        if self._connection is not None:
-            try:
-                self._connection.close()
-                self._connection = None
-                logger.info("Database connection closed")
-            except Exception as e:
-                logger.error(f"Error closing database connection: {e}")
+        with self._lock:
+            if self._connection is not None:
+                try:
+                    self._connection.close()
+                    self._connection = None
+                    logger.info("Database connection closed")
+                except Exception:
+                    logger.exception("Error closing database connection")
 
     def __enter__(self) -> DatabaseManager:
         """Context manager entry."""

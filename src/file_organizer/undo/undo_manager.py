@@ -109,15 +109,15 @@ class UndoManager:
             # prior status; a re-undo then fails safely via validate_undo's
             # file-missing check. Full journal-backed crash recovery is WP-1.2b,
             # #1248.)
-            cursor = self.history.db.execute_query(
-                "UPDATE operations SET status = ? WHERE id = ? AND status != ?",
-                (
-                    OperationStatus.ROLLED_BACK.value,
-                    operation_id,
-                    OperationStatus.ROLLED_BACK.value,
-                ),
-            )
-            self.history.db.get_connection().commit()
+            with self.history.db.transaction() as conn:
+                cursor = conn.execute(
+                    "UPDATE operations SET status = ? WHERE id = ? AND status != ?",
+                    (
+                        OperationStatus.ROLLED_BACK.value,
+                        operation_id,
+                        OperationStatus.ROLLED_BACK.value,
+                    ),
+                )
             if cursor.rowcount == 0:
                 logger.warning(
                     "Operation %s was already rolled back concurrently; "
@@ -176,12 +176,12 @@ class UndoManager:
 
         if result.success:
             # Update all rolled-back operations to ROLLED_BACK status in DB
-            for operation in operations:
-                self.history.db.execute_query(
-                    "UPDATE operations SET status = ? WHERE id = ?",
-                    (OperationStatus.ROLLED_BACK.value, operation.id),
-                )
-            self.history.db.get_connection().commit()
+            with self.history.db.transaction() as conn:
+                for operation in operations:
+                    conn.execute(
+                        "UPDATE operations SET status = ? WHERE id = ?",
+                        (OperationStatus.ROLLED_BACK.value, operation.id),
+                    )
 
             logger.info(
                 f"Successfully undid transaction {transaction_id}: "
@@ -230,29 +230,29 @@ class UndoManager:
                 )
                 return False
 
-        # Execute redo in chronological (forward) order as a single DB transaction
-        conn = self.history.db.get_connection()
+        # Apply filesystem operations first. Persist their statuses together only
+        # after every operation succeeds, so other threads never observe a
+        # partially updated transaction.
         try:
             for operation in forward_ops:
                 success = self.executor.redo_operation(operation)
                 if success:
-                    self.history.db.execute_query(
-                        "UPDATE operations SET status = ? WHERE id = ?",
-                        (OperationStatus.COMPLETED.value, operation.id),
-                    )
                     logger.info(f"Successfully redid operation {operation.id}")
                 else:
                     logger.error(
                         f"Failed to redo operation {operation.id} in transaction {transaction_id}"
                     )
-                    conn.rollback()
                     return False
         except Exception:
             logger.exception(f"Unexpected error while redoing transaction {transaction_id}")
-            conn.rollback()
             return False
 
-        conn.commit()
+        with self.history.db.transaction() as conn:
+            for operation in forward_ops:
+                conn.execute(
+                    "UPDATE operations SET status = ? WHERE id = ?",
+                    (OperationStatus.COMPLETED.value, operation.id),
+                )
         logger.info(
             f"Successfully redid transaction {transaction_id}: {len(forward_ops)} operations"
         )
@@ -318,15 +318,15 @@ class UndoManager:
             # Transactional status flip (race B3): flip ROLLED_BACK → COMPLETED
             # only if it is still rolled back, via a single conditional UPDATE +
             # commit. rowcount == 0 means a concurrent redo already flipped it.
-            cursor = self.history.db.execute_query(
-                "UPDATE operations SET status = ? WHERE id = ? AND status = ?",
-                (
-                    OperationStatus.COMPLETED.value,
-                    operation_id,
-                    OperationStatus.ROLLED_BACK.value,
-                ),
-            )
-            self.history.db.get_connection().commit()
+            with self.history.db.transaction() as conn:
+                cursor = conn.execute(
+                    "UPDATE operations SET status = ? WHERE id = ? AND status = ?",
+                    (
+                        OperationStatus.COMPLETED.value,
+                        operation_id,
+                        OperationStatus.ROLLED_BACK.value,
+                    ),
+                )
             if cursor.rowcount == 0:
                 logger.warning(
                     "Operation %s was already redone concurrently; skipping duplicate status flip",
