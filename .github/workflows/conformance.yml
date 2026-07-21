@@ -1,0 +1,39 @@
+name: Conformance
+
+# Parity conformance scaffold (#1605). The main CI workflow only triggers for
+# PRs based at main/epic/**, so this workflow adds coverage for the parity
+# integration branch itself. Advisory while contracts stabilize:
+# continue-on-error keeps a red run from blocking merges until #1606 promotes
+# adapter suites to required gates per the gate-promotion policy in
+# docs/architecture/cross-surface-parity-execution.md.
+on:
+  push:
+    branches: [main, "epic/**", feature/cross-surface-parity]
+  pull_request:
+    branches: [main, "epic/**", feature/cross-surface-parity]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  conformance-advisory:
+    name: "Conformance scaffold (advisory)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev,search]"
+      - name: Run conformance suite
+        run: pytest tests/conformance --strict-markers -m conformance --timeout=30 --override-ini="addopts="
