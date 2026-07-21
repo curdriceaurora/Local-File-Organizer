@@ -41,6 +41,9 @@ LAZY_COMMANDS: dict[str, tuple[str, str, str]] = {
     ),
 }
 
+DEVELOPER_ONLY_COMMANDS: frozenset[str] = frozenset({"benchmark", "docs"})
+"""Commands excluded from the public product capability registry."""
+
 COMMAND_CATEGORIES: dict[str, str] = {
     # Core
     "start": "Core",
