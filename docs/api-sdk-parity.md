@@ -39,6 +39,9 @@ REST and Python verification comes from golden corpus vectors, while future Type
 will cite strict compilation, AST inventory, type contracts, and fetch-stub behavior tests rather
 than claiming the Python-hosted corpus ran against TypeScript.
 
+Organization execution remains unverified because background submission, idempotency,
+cancellation, and rollback paths are not yet covered by the corpus.
+
 ## Errors and operation IDs
 
 Public errors use the stable `{error, message, details?}` envelope, including
