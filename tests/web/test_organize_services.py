@@ -8,6 +8,7 @@ import pytest
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.core import file_ops
+from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organization_service import count_files_by_type
 from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import build_plan_from_processed
@@ -417,7 +418,7 @@ class TestBuildOrganizePlan:
     def test_rejects_missing_input_path_before_preview(self, tmp_path) -> None:
         organizer_factory = MagicMock()
 
-        with pytest.raises(ApiError) as exc_info:
+        with pytest.raises(DomainError) as exc_info:
             build_organize_plan(
                 input_dir=str(tmp_path / "missing"),
                 output_dir=str(tmp_path),
@@ -430,7 +431,7 @@ class TestBuildOrganizePlan:
                 organizer_factory=organizer_factory,
             )
 
-        assert exc_info.value.error == "not_found"
+        assert exc_info.value.code is DomainErrorCode.NOT_FOUND
         organizer_factory.assert_not_called()
 
     def test_supports_hidden_inclusion_through_canonical_options(self, tmp_path) -> None:

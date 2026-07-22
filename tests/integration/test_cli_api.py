@@ -199,8 +199,8 @@ class TestHealthCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["status"] == "ok"
-        assert parsed["version"] == "1.2.3"
+        assert parsed["result"]["status"] == "ok"
+        assert parsed["result"]["version"] == "1.2.3"
 
     def test_health_client_error_exits_1(self) -> None:
         """ClientError exits with code 1 and shows error message."""
@@ -258,7 +258,7 @@ class TestLoginCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["access_token"] == "at-xyz"
+        assert parsed["result"]["access_token"] == "at-xyz"
 
     def test_login_saves_token_to_file(self, tmp_path: Path) -> None:
         """--save-token writes a JSON token file to the specified path."""
@@ -362,8 +362,8 @@ class TestMeCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["username"] == "bob"
-        assert parsed["email"] == "bob@y.com"
+        assert parsed["result"]["username"] == "bob"
+        assert parsed["result"]["email"] == "bob@y.com"
 
     def test_me_client_error_exits_1(self) -> None:
         """ClientError exits with code 1."""
@@ -448,23 +448,45 @@ class TestFilesListCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["total"] == 3
-        assert len(parsed["items"]) == 3
+        assert parsed["result"]["total"] == 3
+        assert len(parsed["result"]["items"]) == 3
 
-    def test_files_client_error_exits_1(self) -> None:
-        """ClientError exits with code 1."""
+    def test_files_not_found_exits_2(self) -> None:
+        """A remote not-found response exits with the shared usage/not-found code."""
         from file_organizer.client.exceptions import ClientError
 
         client = MagicMock()
-        client.list_files.side_effect = ClientError("not found", status_code=404, detail="x")
+        client.list_files.side_effect = ClientError(
+            "not found", status_code=404, detail="not found"
+        )
         with _patch_build_client(client):
             result = runner.invoke(
                 api_app,
                 ["files", "/missing", "--token", "tok"],
             )
 
-        assert result.exit_code == 1
-        assert "Request failed" in result.output or "error" in result.output.lower()
+        assert result.exit_code == 2
+        assert "Error: not found" in result.output
+
+    def test_files_conflict_exits_3(self) -> None:
+        """A remote conflict uses the shared conflict/recovery exit category."""
+        from file_organizer.client.exceptions import ClientError
+
+        client = MagicMock()
+        client.list_files.side_effect = ClientError(
+            "conflict",
+            status_code=409,
+            detail="conflict",
+            error_code="client_error",
+        )
+        with _patch_build_client(client):
+            result = runner.invoke(
+                api_app,
+                ["files", "/conflict", "--token", "tok"],
+            )
+
+        assert result.exit_code == 3
+        assert "Error: conflict" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -501,8 +523,8 @@ class TestSystemStatusCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["disk_free"] == 600_000
-        assert parsed["active_jobs"] == 3
+        assert parsed["result"]["disk_free"] == 600_000
+        assert parsed["result"]["active_jobs"] == 3
 
     def test_system_status_client_error_exits_1(self) -> None:
         """ClientError exits with code 1."""
@@ -553,8 +575,8 @@ class TestSystemStatsCommand:
         output = result.output
         start = output.find("{")
         parsed = json.loads(output[start:])
-        assert parsed["file_count"] == 42
-        assert parsed["directory_count"] == 7
+        assert parsed["result"]["file_count"] == 42
+        assert parsed["result"]["directory_count"] == 7
 
     def test_system_stats_client_error_exits_1(self) -> None:
         """ClientError exits with code 1."""
