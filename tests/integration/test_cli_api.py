@@ -456,7 +456,9 @@ class TestFilesListCommand:
         from file_organizer.client.exceptions import ClientError
 
         client = MagicMock()
-        client.list_files.side_effect = ClientError("not found", status_code=404, detail="x")
+        client.list_files.side_effect = ClientError(
+            "not found", status_code=404, detail="not found"
+        )
         with _patch_build_client(client):
             result = runner.invoke(
                 api_app,
@@ -464,7 +466,27 @@ class TestFilesListCommand:
             )
 
         assert result.exit_code == 2
-        assert "Request failed" in result.output or "error" in result.output.lower()
+        assert "Error: not found" in result.output
+
+    def test_files_conflict_exits_3(self) -> None:
+        """A remote conflict uses the shared conflict/recovery exit category."""
+        from file_organizer.client.exceptions import ClientError
+
+        client = MagicMock()
+        client.list_files.side_effect = ClientError(
+            "conflict",
+            status_code=409,
+            detail="conflict",
+            error_code="client_error",
+        )
+        with _patch_build_client(client):
+            result = runner.invoke(
+                api_app,
+                ["files", "/conflict", "--token", "tok"],
+            )
+
+        assert result.exit_code == 3
+        assert "Error: conflict" in result.output
 
 
 # ---------------------------------------------------------------------------

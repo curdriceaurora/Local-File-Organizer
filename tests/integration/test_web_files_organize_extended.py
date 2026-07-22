@@ -565,7 +565,7 @@ class TestOrganizeRollback:
             patch(
                 "file_organizer.web.organize_routes.update_job",
                 side_effect=(MagicMock(revision=2), MagicMock(revision=3)),
-            ),
+            ) as update_job,
             patch("file_organizer.undo.undo_manager.UndoManager") as manager,
         ):
             tpl.TemplateResponse.return_value = _HTML
@@ -575,6 +575,14 @@ class TestOrganizeRollback:
             )
         assert r.status_code == 200
         manager.return_value.undo_transaction.assert_called_once_with("txn-1")
+        assert update_job.call_args_list[1].kwargs["status"] == "rolled_back"
+        template_call = tpl.TemplateResponse.call_args
+        context = (
+            template_call.kwargs["context"]
+            if "context" in template_call.kwargs
+            else template_call.args[2]
+        )
+        assert context["rollback_message"] == "Rollback completed for this job's transaction."
 
     def test_rollback_without_transaction_is_unavailable(self, org_client: TestClient) -> None:
         completed_job = _mock_job(status="completed", transaction_id=None)
@@ -589,7 +597,13 @@ class TestOrganizeRollback:
             )
 
         assert r.status_code == 200
-        assert tpl.TemplateResponse.call_args.args[2]["error_message"] == (
+        template_call = tpl.TemplateResponse.call_args
+        context = (
+            template_call.kwargs["context"]
+            if "context" in template_call.kwargs
+            else template_call.args[2]
+        )
+        assert context["error_message"] == (
             "Rollback is only available for completed non-dry-run jobs."
         )
         manager.assert_not_called()
