@@ -1566,7 +1566,9 @@
           "entry_points": [
             "fo config edit",
             "fo organize --methodology",
-            "fo preview --methodology"
+            "fo preview --methodology",
+            "fo api organize --methodology",
+            "fo api preview --methodology"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1708,7 +1710,8 @@
         "cli": {
           "conformance_status": "verified",
           "entry_points": [
-            "fo organize"
+            "fo organize",
+            "fo api organize"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1778,7 +1781,11 @@
           "entry_points": [
             "fo recover",
             "fo undo",
-            "fo history"
+            "fo history",
+            "fo api job",
+            "fo api jobs",
+            "fo api cancel",
+            "fo api rollback"
           ],
           "implementation_status": "partial",
           "target_support": "full"
@@ -1863,7 +1870,8 @@
           "conformance_status": "verified",
           "entry_points": [
             "fo preview",
-            "fo organize --dry-run"
+            "fo organize --dry-run",
+            "fo api preview"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1934,7 +1942,8 @@
           "conformance_status": "unverified",
           "entry_points": [
             "fo preview",
-            "fo organize"
+            "fo organize",
+            "fo api scan"
           ],
           "implementation_status": "partial",
           "target_support": "full"
@@ -2002,8 +2011,10 @@
       "surfaces": {
         "cli": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "fo api suggest"
+          ],
+          "implementation_status": "partial",
           "target_support": "full"
         },
         "python-sdk": {
@@ -2307,6 +2318,7 @@
             "fo version",
             "fo doctor",
             "fo hardware-info",
+            "fo api capabilities",
             "fo api health",
             "fo api system-status",
             "fo api system-stats"

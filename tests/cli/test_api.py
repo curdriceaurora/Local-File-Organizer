@@ -67,6 +67,18 @@ def test_health_command_error(mock_client_cls):
     assert "Connection failed" in result.stdout
 
 
+def test_remote_capabilities_distinguish_commands_from_sdk_only_access():
+    """Remote inventory must make unsupported fo api operations explicit."""
+    result = runner.invoke(api_app, ["capabilities", "--json"])
+
+    assert result.exit_code == 0
+    rows = {row["capability_id"]: row for row in json.loads(result.stdout)}
+    assert rows["organization.preview"]["availability"] == "available"
+    assert "fo api preview" in rows["organization.preview"]["commands"]
+    assert rows["deduplication.manage"]["availability"] == "sdk-only"
+    assert rows["organization.preview"]["auth_gated"] is True
+
+
 def test_login_command(mock_client_cls, tmp_path):
     """Test the login command success."""
     mock_instance = MagicMock()
@@ -180,3 +192,189 @@ def test_system_stats_command(mock_client_cls):
     assert result.exit_code == 0
     assert "100" in result.stdout
     assert "1MB" in result.stdout
+
+
+def test_remote_scan_maps_traversal_and_emits_machine_json(mock_client_cls):
+    """Remote scan must preserve traversal flags through the official SDK."""
+    mock_instance = MagicMock()
+    response = MagicMock(total_files=2, counts={"text": 2})
+    response.model_dump.return_value = {
+        "input_dir": "/remote/input",
+        "total_files": 2,
+        "files": ["/remote/input/a.txt", "/remote/input/b.txt"],
+        "counts": {"text": 2},
+    }
+    mock_instance.scan.return_value = response
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(
+        api_app,
+        ["scan", "/remote/input", "--no-recursive", "--include-hidden", "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["total_files"] == 2
+    mock_instance.scan.assert_called_once_with(
+        "/remote/input", recursive=False, include_hidden=True
+    )
+
+
+def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
+    """Remote preview must pass every behavior option as one SDK payload."""
+    mock_instance = MagicMock()
+    response = MagicMock(total_files=1, plan=None)
+    response.model_dump.return_value = {"total_files": 1, "plan": None}
+    mock_instance.preview_organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(
+        api_app,
+        [
+            "preview",
+            "/remote/input",
+            "/remote/output",
+            "--no-recursive",
+            "--include-hidden",
+            "--overwrite-existing",
+            "--transfer-mode",
+            "copy",
+            "--methodology",
+            "para",
+            "--no-vision",
+            "--transcribe-audio",
+            "--max-transcribe-seconds",
+            "0",
+            "--whisper-model",
+            "small",
+            "--sequential",
+            "--no-prefetch",
+            "--text-model",
+            "text-model",
+            "--vision-model",
+            "vision-model",
+            "--text-provider",
+            "ollama",
+            "--vision-provider",
+            "openai",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    options = mock_instance.preview_organize.call_args.kwargs["options"]
+    assert options.model_dump() == {
+        "recursive": False,
+        "include_hidden": True,
+        "skip_existing": False,
+        "transfer_mode": "copy",
+        "methodology": "para",
+        "enable_vision": False,
+        "transcribe_audio": True,
+        "max_transcribe_seconds": None,
+        "whisper_model": "small",
+        "parallel_workers": 1,
+        "prefetch_depth": 0,
+        "text_model": "text-model",
+        "vision_model": "vision-model",
+        "text_provider": "ollama",
+        "vision_provider": "openai",
+    }
+
+
+def test_remote_organize_applies_reviewed_plan_without_default_overrides(mock_client_cls, tmp_path):
+    """A plan-only invocation must let the server resolve the reviewed options."""
+    mock_instance = MagicMock()
+    response = MagicMock(job_id="job-1", result=None, status="queued")
+    response.model_dump.return_value = {"status": "queued", "job_id": "job-1"}
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+    plan = object()
+
+    with patch("file_organizer.cli.api._load_remote_plan", return_value=plan):
+        result = runner.invoke(
+            api_app,
+            [
+                "organize",
+                "/remote/input",
+                "/remote/output",
+                "--plan",
+                str(tmp_path / "plan.json"),
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    mock_instance.organize.assert_called_once_with(
+        "/remote/input",
+        "/remote/output",
+        options=None,
+        plan=plan,
+        run_in_background=True,
+        idempotency_key=None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "method"),
+    [("cancel", "cancel_job"), ("rollback", "rollback_job")],
+)
+def test_remote_job_mutations_preserve_revision_guard(mock_client_cls, command, method):
+    """Remote lifecycle mutations must forward optimistic revision guards."""
+    mock_instance = MagicMock()
+    job = MagicMock(job_id="job-1", status="cancelled", revision=4)
+    job.model_dump.return_value = {"job_id": "job-1", "status": job.status, "revision": 4}
+    getattr(mock_instance, method).return_value = job
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(
+        api_app,
+        [command, "job-1", "--expected-revision", "3", "--json"],
+    )
+
+    assert result.exit_code == 0
+    getattr(mock_instance, method).assert_called_once_with("job-1", expected_revision=3)
+
+
+def test_remote_json_error_preserves_sdk_auth_evidence(mock_client_cls):
+    """Machine output must distinguish authentication failures from local-only gaps."""
+    mock_instance = MagicMock()
+    mock_instance.scan.side_effect = ClientError(
+        "Unauthorized",
+        status_code=401,
+        detail="Authentication required.",
+        error_code="unauthorized",
+    )
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(api_app, ["scan", "/remote/input", "--json"])
+
+    assert result.exit_code == 1
+    assert json.loads(result.stdout) == {
+        "details": {},
+        "error": "unauthorized",
+        "message": "Authentication required.",
+        "retryable": False,
+        "status_code": 401,
+    }
+
+
+def test_remote_preview_invalid_options_preserve_json_contract(mock_client_cls):
+    """Local option validation must not replace JSON output with a usage banner."""
+    mock_client_cls.return_value = MagicMock()
+
+    result = runner.invoke(
+        api_app,
+        [
+            "preview",
+            "/remote/input",
+            "/remote/output",
+            "--methodology",
+            "invented",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["error"] == "invalid_request"
+    assert payload["retryable"] is False

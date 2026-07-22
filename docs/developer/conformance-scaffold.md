@@ -13,7 +13,7 @@ never from any adapter.
 | --- | --- |
 | `tests/conformance/corpus.py` | Deterministic fixture corpus: pinned bytes and mtimes, tagged cases |
 | `tests/conformance/normalize.py` | Strips presentation-only differences while preserving executable ordering and complete source fingerprints |
-| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK/Web-form adapters |
+| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and local CLI/`fo api`/REST/Python SDK/Web-form adapters |
 | `tests/conformance/test_direct_service_conformance.py` | Golden expectations for canonical semantics |
 
 ## Fixture corpus
@@ -37,6 +37,13 @@ through in-process HTTP transports. This verifies traversal, complete option
 mapping, executable-plan round trips, stable errors, execution results, and
 audit effects against the direct-service oracle without relying on route
 construction alone.
+
+The `fo api` driver runs the same corpus through Typer, the synchronous
+official SDK, and the REST routes. It proves remote option mapping, exact
+reviewed-plan execution, stable machine output, and local-versus-remote
+behavioral equivalence. Background submission and lifecycle commands have
+focused adapter tests and remain unverified until #1606 extends the shared job
+corpus.
 
 The Web form driver sends the corpus through the real `/ui/organize`,
 `/ui/organize/scan`, and `/ui/organize/plan/clear` routes. It round-trips every
