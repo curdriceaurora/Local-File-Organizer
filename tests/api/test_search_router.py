@@ -49,7 +49,8 @@ class TestSearch:
         resp = client.get("/api/v1/search?q=")
         assert resp.status_code == 400
         body = resp.json()
-        assert "Query parameter 'q' is required" in body["detail"]
+        assert body["error"] == "invalid_request"
+        assert "Query parameter 'q' is required" in body["message"]
 
     def test_search_basic_query(self, tmp_path: Path) -> None:
         """Test basic search matching files."""

@@ -27,6 +27,9 @@ import type {
   HealthResponse,
   JobStatusResponse,
   MoveFileResponse,
+  OrganizationCallOptions,
+  OrganizationOptionsInput,
+  OrganizationPlanPayload,
   OrganizationResultResponse,
   OrganizeExecuteResponse,
   ScanResponse,
@@ -43,33 +46,81 @@ const API_PREFIX = "/api/v1";
 export class ClientError extends Error {
   public readonly statusCode: number;
   public readonly detail: string;
+  public readonly errorCode: string;
+  public readonly retryable: boolean;
+  public readonly details: unknown;
 
-  constructor(message: string, statusCode: number, detail: string = "") {
+  constructor(
+    message: string,
+    statusCode: number,
+    detail: string = "",
+    errorCode: string = "",
+    retryable: boolean = false,
+    details: unknown = undefined
+  ) {
     super(message);
     this.name = "ClientError";
     this.statusCode = statusCode;
     this.detail = detail;
+    this.errorCode = errorCode;
+    this.retryable = retryable;
+    this.details = details;
   }
 }
 
 export class AuthenticationError extends ClientError {
-  constructor(message: string, statusCode: number, detail: string = "") {
-    super(message, statusCode, detail);
+  constructor(
+    message: string,
+    statusCode: number,
+    detail: string = "",
+    errorCode: string = "",
+    retryable: boolean = false,
+    details: unknown = undefined
+  ) {
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "AuthenticationError";
   }
 }
 
 export class NotFoundError extends ClientError {
-  constructor(message: string, statusCode: number, detail: string = "") {
-    super(message, statusCode, detail);
+  constructor(
+    message: string,
+    statusCode: number,
+    detail: string = "",
+    errorCode: string = "",
+    retryable: boolean = false,
+    details: unknown = undefined
+  ) {
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "NotFoundError";
   }
 }
 
 export class ServerError extends ClientError {
-  constructor(message: string, statusCode: number, detail: string = "") {
-    super(message, statusCode, detail);
+  constructor(
+    message: string,
+    statusCode: number,
+    detail: string = "",
+    errorCode: string = "",
+    retryable: boolean = false,
+    details: unknown = undefined
+  ) {
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "ServerError";
+  }
+}
+
+export class ValidationError extends ClientError {
+  constructor(
+    message: string,
+    statusCode: number,
+    detail: string = "",
+    errorCode: string = "",
+    retryable: boolean = false,
+    details: unknown = undefined
+  ) {
+    super(message, statusCode, detail, errorCode, retryable, details);
+    this.name = "ValidationError";
   }
 }
 
@@ -111,6 +162,7 @@ export class FileOrganizerClient {
       body?: unknown;
       params?: Record<string, string | number | boolean | undefined>;
       formData?: URLSearchParams;
+      multipart?: FormData;
     } = {}
   ): Promise<T> {
     const targetUrl = new URL(url);
@@ -126,8 +178,11 @@ export class FileOrganizerClient {
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
     const headers = { ...this.headers };
-    let body: string | URLSearchParams | undefined;
-    if (options.formData) {
+    let body: string | URLSearchParams | FormData | undefined;
+    if (options.multipart) {
+      body = options.multipart;
+      delete headers["Content-Type"];
+    } else if (options.formData) {
       body = options.formData;
       delete headers["Content-Type"];
     } else if (options.body !== undefined) {
@@ -144,9 +199,15 @@ export class FileOrganizerClient {
 
       if (!response.ok) {
         let detail = "";
+        let errorCode = "";
+        let retryable = false;
+        let details: unknown = undefined;
         try {
           const errorBody = await response.json();
           detail = errorBody.detail ?? errorBody.message ?? "";
+          errorCode = errorBody.code ?? errorBody.error ?? "";
+          retryable = errorBody.retryable ?? false;
+          details = errorBody.details;
         } catch {
           try {
             detail = await response.text();
@@ -160,15 +221,53 @@ export class FileOrganizerClient {
         const message = `HTTP ${response.status}: ${detail}`;
 
         if (response.status === 401 || response.status === 403) {
-          throw new AuthenticationError(message, response.status, detail);
+          throw new AuthenticationError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
         if (response.status === 404) {
-          throw new NotFoundError(message, response.status, detail);
+          throw new NotFoundError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
+        }
+        if (response.status === 422) {
+          throw new ValidationError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
         if (response.status >= 500) {
-          throw new ServerError(message, response.status, detail);
+          throw new ServerError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
-        throw new ClientError(message, response.status, detail);
+        throw new ClientError(
+          message,
+          response.status,
+          detail,
+          errorCode,
+          retryable,
+          details
+        );
       }
 
       if (response.status === 204) {
@@ -310,7 +409,7 @@ export class FileOrganizerClient {
   async previewOrganize(
     inputDir: string,
     outputDir: string,
-    options: { skipExisting?: boolean; useHardlinks?: boolean } = {}
+    options: OrganizationCallOptions = {}
   ): Promise<OrganizationResultResponse> {
     return this.request<OrganizationResultResponse>(
       "POST",
@@ -319,9 +418,11 @@ export class FileOrganizerClient {
         body: {
           input_dir: inputDir,
           output_dir: outputDir,
-          skip_existing: options.skipExisting ?? true,
+          options: options.options,
+          plan: options.plan,
+          skip_existing: options.skipExisting,
           dry_run: true,
-          use_hardlinks: options.useHardlinks ?? true,
+          use_hardlinks: options.useHardlinks,
           run_in_background: false,
         },
       }
@@ -333,9 +434,12 @@ export class FileOrganizerClient {
     outputDir: string,
     options: {
       dryRun?: boolean;
+      options?: OrganizationOptionsInput;
+      plan?: OrganizationPlanPayload;
       skipExisting?: boolean;
       useHardlinks?: boolean;
       runInBackground?: boolean;
+      idempotencyKey?: string;
     } = {}
   ): Promise<OrganizeExecuteResponse> {
     return this.request<OrganizeExecuteResponse>(
@@ -345,10 +449,13 @@ export class FileOrganizerClient {
         body: {
           input_dir: inputDir,
           output_dir: outputDir,
+          options: options.options,
+          plan: options.plan,
           dry_run: options.dryRun ?? false,
-          skip_existing: options.skipExisting ?? true,
-          use_hardlinks: options.useHardlinks ?? true,
+          skip_existing: options.skipExisting,
+          use_hardlinks: options.useHardlinks,
           run_in_background: options.runInBackground ?? true,
+          idempotency_key: options.idempotencyKey,
         },
       }
     );
@@ -359,6 +466,24 @@ export class FileOrganizerClient {
       "GET",
       this.url(`/organize/status/${jobId}`)
     );
+  }
+
+  async listJobs(options: { status?: string; limit?: number } = {}): Promise<JobStatusResponse[]> {
+    return this.request("GET", this.url("/organize/jobs"), {
+      params: { status: options.status, limit: options.limit ?? 100 },
+    });
+  }
+
+  async cancelJob(jobId: string, expectedRevision?: number): Promise<JobStatusResponse> {
+    return this.request("POST", this.url(`/organize/jobs/${jobId}/cancel`), {
+      body: { expected_revision: expectedRevision },
+    });
+  }
+
+  async rollbackJob(jobId: string, expectedRevision?: number): Promise<JobStatusResponse> {
+    return this.request("POST", this.url(`/organize/jobs/${jobId}/rollback`), {
+      body: { expected_revision: expectedRevision },
+    });
   }
 
   // -- system ---------------------------------------------------------------
@@ -460,6 +585,256 @@ export class FileOrganizerClient {
         },
       }
     );
+  }
+
+  // -- extended public API -------------------------------------------------
+
+  async analyze(content: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/analyze"), { params: { content } });
+  }
+
+  async search(
+    query: string,
+    options: {
+      fileType?: string;
+      limit?: number;
+      offset?: number;
+      path?: string;
+      semantic?: boolean;
+    } = {}
+  ): Promise<Record<string, unknown>[]> {
+    return this.request("GET", this.url("/search"), {
+      params: {
+        q: query,
+        type: options.fileType,
+        limit: options.limit,
+        offset: options.offset,
+        path: options.path,
+        semantic: options.semantic ?? false,
+      },
+    });
+  }
+
+  async getApplicationConfig(profile = "default"): Promise<ConfigResponse> {
+    return this.request("GET", this.url("/config"), { params: { profile } });
+  }
+
+  async updateApplicationConfig(payload: ConfigUpdateRequest): Promise<ConfigResponse> {
+    return this.request("PUT", this.url("/config"), { body: payload });
+  }
+
+  async resetApplicationConfig(profile = "default"): Promise<ConfigResponse> {
+    return this.request("POST", this.url("/config/reset"), { params: { profile } });
+  }
+
+  async getFileById(fileId: string): Promise<FileInfo> {
+    return this.request("GET", this.url(`/files/${fileId}`));
+  }
+
+  async deleteFileById(fileId: string, permanent = false): Promise<DeleteFileResponse> {
+    return this.request("DELETE", this.url(`/files/${fileId}`), {
+      params: { permanent },
+    });
+  }
+
+  async uploadFiles(files: File[]): Promise<Record<string, unknown> | Record<string, unknown>[]> {
+    const multipart = new FormData();
+    for (const file of files) multipart.append("files", file);
+    return this.request("POST", this.url("/files/upload"), { multipart });
+  }
+
+  async suggestOrganization(
+    filename: string,
+    folderSuggestion?: string
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/organize"), {
+      body: { filename, folder_suggestion: folderSuggestion },
+    });
+  }
+
+  async toggleDaemon(): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/daemon/toggle"));
+  }
+
+  async startDaemon(): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/daemon/start"));
+  }
+
+  async stopDaemon(): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/daemon/stop"));
+  }
+
+  async daemonStatus(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/daemon/status"));
+  }
+
+  async listIntegrations(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/integrations"));
+  }
+
+  async updateIntegrationSettings(
+    integrationName: string,
+    settings: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/integrations/${integrationName}/settings`), {
+      body: { settings },
+    });
+  }
+
+  async connectIntegration(integrationName: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/integrations/${integrationName}/connect`));
+  }
+
+  async disconnectIntegration(integrationName: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/integrations/${integrationName}/disconnect`));
+  }
+
+  async sendToIntegration(
+    integrationName: string,
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/integrations/${integrationName}/send`), {
+      body: payload,
+    });
+  }
+
+  async getBrowserIntegrationConfig(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/integrations/browser/config"));
+  }
+
+  async issueBrowserIntegrationToken(extensionId: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/integrations/browser/token"), {
+      body: { extension_id: extensionId },
+    });
+  }
+
+  async verifyBrowserIntegrationToken(token: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/integrations/browser/verify"), {
+      body: { token },
+    });
+  }
+
+  async listMarketplacePlugins(
+    params: Record<string, string | number | boolean | undefined> = {}
+  ): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/marketplace/plugins"), { params });
+  }
+
+  async getMarketplacePlugin(name: string): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url(`/marketplace/plugins/${name}`));
+  }
+
+  async listInstalledPlugins(): Promise<Record<string, unknown>[]> {
+    return this.request("GET", this.url("/marketplace/installed"));
+  }
+
+  async listMarketplaceUpdates(): Promise<string[]> {
+    return this.request("GET", this.url("/marketplace/updates"));
+  }
+
+  async installMarketplacePlugin(
+    name: string,
+    version?: string
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/marketplace/plugins/${name}/install`), {
+      params: { version },
+    });
+  }
+
+  async uninstallMarketplacePlugin(name: string): Promise<void> {
+    await this.request("DELETE", this.url(`/marketplace/plugins/${name}`));
+  }
+
+  async updateMarketplacePlugin(name: string): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/marketplace/plugins/${name}/update`));
+  }
+
+  async listMarketplaceReviews(
+    name: string,
+    limit = 10
+  ): Promise<Record<string, unknown>[]> {
+    return this.request("GET", this.url(`/marketplace/plugins/${name}/reviews`), {
+      params: { limit },
+    });
+  }
+
+  async addMarketplaceReview(
+    name: string,
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url(`/marketplace/plugins/${name}/reviews`), {
+      body: payload,
+    });
+  }
+
+  async getSetupStatus(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/setup/status"));
+  }
+
+  async detectSetupCapabilities(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/setup/capabilities"));
+  }
+
+  async completeSetup(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/setup/complete"), { body: payload });
+  }
+
+  async browseSetupFolder(): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/setup/browse-folder"));
+  }
+
+  async listPluginFiles(
+    path: string,
+    options: { recursive?: boolean; includeHidden?: boolean; maxItems?: number } = {}
+  ): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/plugins/files/list"), {
+      params: {
+        path,
+        recursive: options.recursive ?? false,
+        include_hidden: options.includeHidden ?? false,
+        max_items: options.maxItems ?? 200,
+      },
+    });
+  }
+
+  async getPluginFileMetadata(path: string): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/plugins/files/metadata"), { params: { path } });
+  }
+
+  async organizePluginFile(
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/plugins/files/organize"), { body: payload });
+  }
+
+  async getPluginConfig(key: string, profile = "default"): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/plugins/config/get"), {
+      params: { key, profile },
+    });
+  }
+
+  async registerPluginHook(
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/plugins/hooks/register"), { body: payload });
+  }
+
+  async unregisterPluginHook(
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/plugins/hooks/unregister"), { body: payload });
+  }
+
+  async listPluginHooks(event?: string): Promise<Record<string, unknown>> {
+    return this.request("GET", this.url("/plugins/hooks"), {
+      params: { event },
+    });
+  }
+
+  async triggerPluginHook(
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request("POST", this.url("/plugins/hooks/trigger"), { body: payload });
   }
 }
 

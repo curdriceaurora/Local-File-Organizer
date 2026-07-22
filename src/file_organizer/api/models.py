@@ -6,7 +6,18 @@ import re
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
+
+from file_organizer.core.organize_options import OrganizeOptions
+from file_organizer.core.plan import OrganizationPlan
 
 _MAX_PATH_LENGTH = 4096
 _USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$")
@@ -139,6 +150,7 @@ class ScanResponse(BaseModel):
 
     input_dir: str
     total_files: int
+    files: list[str]
     counts: dict[str, int]
 
 
@@ -166,6 +178,30 @@ class OrganizationOperationPayload(BaseModel):
     error: str | None = None
 
 
+class OrganizationOptionsPayload(BaseModel):
+    """Canonical behavior-affecting options exposed by organization transports."""
+
+    recursive: bool = True
+    include_hidden: bool = False
+    skip_existing: bool = True
+    transfer_mode: Literal["copy", "hardlink"] = "hardlink"
+    methodology: Literal["none", "para", "jd"] = "none"
+    enable_vision: bool = True
+    transcribe_audio: bool = False
+    max_transcribe_seconds: float | None = 600.0
+    whisper_model: str = "tiny"
+    parallel_workers: int | None = Field(default=None, ge=1)
+    prefetch_depth: int = Field(default=2, ge=0)
+    text_model: str | None = None
+    vision_model: str | None = None
+    text_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
+    vision_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
+
+    def to_domain(self) -> OrganizeOptions:
+        """Convert the transport payload into the canonical domain contract."""
+        return OrganizeOptions.from_dict(self.model_dump())
+
+
 class OrganizationPlanPayload(BaseModel):
     """Serialized executable organization plan."""
 
@@ -181,7 +217,7 @@ class OrganizationPlanPayload(BaseModel):
     skipped_files: int
     failed_files: int
     deduplicated_files: int
-    options: dict[str, Any] | None = None
+    options: OrganizationOptionsPayload | None = None
     operations: list[OrganizationOperationPayload] = Field(default_factory=list)
     errors: list[tuple[str, str]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -192,17 +228,42 @@ class OrganizeRequest(BaseModel):
 
     input_dir: str
     output_dir: str
-    skip_existing: bool = True
+    options: OrganizationOptionsPayload | None = None
+    skip_existing: bool | None = None
     dry_run: bool = False
-    use_hardlinks: bool = True
+    use_hardlinks: bool | None = None
     run_in_background: bool = True
     plan: OrganizationPlanPayload | None = None
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
 
     @field_validator("input_dir", "output_dir")  # pyre-ignore[56]
     @classmethod
     def validate_paths(cls, value: str) -> str:
         """Validate and return input or output directory paths."""
         return _validate_path(value)
+
+    @model_validator(mode="after")
+    def validate_option_compatibility(self) -> OrganizeRequest:
+        """Reject contradictory canonical and legacy option selectors."""
+        if self.options is None:
+            return self
+        if self.skip_existing is not None and self.skip_existing != self.options.skip_existing:
+            raise ValueError("skip_existing conflicts with options.skip_existing")
+        expected_hardlinks = self.options.transfer_mode == "hardlink"
+        if self.use_hardlinks is not None and self.use_hardlinks != expected_hardlinks:
+            raise ValueError("use_hardlinks conflicts with options.transfer_mode")
+        return self
+
+    def to_domain_options(self, plan: OrganizationPlan | None = None) -> OrganizeOptions:
+        """Resolve canonical, legacy, and reviewed-plan options without data loss."""
+        if self.options is not None:
+            return self.options.to_domain()
+        if plan is not None and self.skip_existing is None and self.use_hardlinks is None:
+            return plan.options
+        return OrganizeOptions(
+            skip_existing=self.skip_existing if self.skip_existing is not None else True,
+            use_hardlinks=self.use_hardlinks,
+        )
 
 
 class OrganizationError(BaseModel):

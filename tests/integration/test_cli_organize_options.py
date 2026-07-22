@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import typer
+from click import BadParameter
 
 from file_organizer.cli.organize import _resolve_parallel_settings
 
@@ -21,9 +21,8 @@ class TestResolveParallelSettings:
     """Unit-level tests for the _resolve_parallel_settings helper."""
 
     def test_sequential_and_max_workers_conflict_raises(self) -> None:
-        with pytest.raises(typer.Exit) as exc_info:
+        with pytest.raises(BadParameter, match="--sequential cannot be combined"):
             _resolve_parallel_settings(sequential=True, max_workers=4, prefetch_depth=2)
-        assert exc_info.value.exit_code == 2
 
     def test_sequential_with_no_max_workers_is_ok(self) -> None:
         workers, depth = _resolve_parallel_settings(

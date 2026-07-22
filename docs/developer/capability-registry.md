@@ -37,12 +37,21 @@ is intended. `auth-gated` qualifies remote execution and therefore must appear w
    not-implemented surfaces have no entry points.
 6. List relevant project extras in `optional_dependencies` and restrict `platforms` when support is
    not cross-platform.
-7. Leave conformance `unverified` until an executable adapter driver proves the declared behavior.
+7. Leave conformance `unverified` until executable, surface-appropriate evidence proves every entry
+   point declared for that capability and surface.
 8. Update tests when a public client method or surface entry point changes.
 
 Never mark a capability verified because a route, command, view, or method exists. Verification is
-owned by the conformance workstream and requires behavior-level evidence against the canonical
-application service.
+owned by the conformance workstream and requires behavior-level evidence. A shared corpus driver
+is the preferred evidence for adapters that can invoke the canonical application-service vectors.
+For surfaces that cannot host that corpus directly, equivalent executable evidence can combine
+compiler checks, contract inventory, and transport behavior tests. `verified` therefore means the
+declared behavior has suitable executable evidence; it does not imply that every surface uses the
+same harness or that its workflow has already been promoted from advisory to required.
+
+Generated capability matrices must preserve that distinction. Link each verified cell to its
+evidence and identify the evidence shape instead of flattening all verified cells into a claim that
+one common harness ran everywhere.
 
 ## Validation and serialization
 

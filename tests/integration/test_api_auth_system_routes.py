@@ -491,7 +491,8 @@ class TestAuthRegisterEmailDuplicate:
             },
         )
         assert r2.status_code == 400
-        assert "Email already registered" in r2.json()["detail"]
+        assert r2.json()["error"] == "invalid_request"
+        assert "Email already registered" in r2.json()["message"]
 
     def test_register_different_email_succeeds(self, tmp_path: Path) -> None:
         client, _, _ = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
@@ -558,7 +559,8 @@ class TestAuthLoginRateLimit:
             data={"username": "anyuser", "password": "AnyPass1!"},
         )
         assert r.status_code == 429
-        assert "Too many login attempts" in r.json()["detail"]
+        assert r.json()["error"] == "rate_limited"
+        assert "Too many login attempts" in r.json()["message"]
 
     def test_login_rate_limit_header_present(self, tmp_path: Path) -> None:
         client, mock_limiter = self._make_rate_limit_client(tmp_path, rate_limit_enabled=True)
@@ -604,7 +606,10 @@ class TestAuthRefreshExpiredToken:
             json={"refresh_token": "not.a.jwt"},
         )
         assert r.status_code == 401
-        assert r.json()["detail"] == "Invalid refresh token"
+        assert r.json() == {
+            "error": "unauthorized",
+            "message": "Invalid refresh token",
+        }
 
     def test_refresh_with_access_token_as_refresh_returns_401(self, tmp_path: Path) -> None:
         client, _, tokens = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])

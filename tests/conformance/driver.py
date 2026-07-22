@@ -25,17 +25,33 @@ identical inputs.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from unittest.mock import patch
 
+import httpx
+from fastapi import FastAPI
+from starlette.testclient import TestClient
 from typer.testing import CliRunner
 
+from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.routers.organize import get_organization_service
+from file_organizer.api.routers.organize import router as organize_router
 from file_organizer.cli.main import app
+from file_organizer.client.async_client import AsyncFileOrganizerClient
+from file_organizer.client.exceptions import ClientError
+from file_organizer.client.models import (
+    OrganizationOptionsPayload as ClientOrganizationOptions,
+)
+from file_organizer.client.models import OrganizationPlanPayload as ClientOrganizationPlan
+from file_organizer.client.sync_client import FileOrganizerClient
 from file_organizer.core import dispatcher
-from file_organizer.core.errors import DomainError
+from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organization_service import OrganizationScan, OrganizationService
 from file_organizer.core.organize_options import OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
@@ -60,6 +76,7 @@ from tests.conformance.normalize import (
     normalize_plan,
     normalize_result,
     normalize_scan,
+    redact_roots,
 )
 
 #: Model identity every driver must resolve requests against, so plans are
@@ -453,3 +470,366 @@ class CLIConformanceDriver:
             "result": normalize_result(result, *roots),
             "audit_events": normalize_audit_events(operations, *roots),
         }
+
+
+class _TransportFailure(Exception):
+    """Carry a stable HTTP error payload across conformance driver helpers."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self.payload = payload
+        super().__init__(str(payload.get("message", payload)))
+
+
+class _HTTPConformanceDriver:
+    """Shared normalization and deterministic API setup for HTTP-backed drivers."""
+
+    name = "http"
+
+    def __init__(self, workspace: Path) -> None:
+        self._workspace = workspace
+        self._workspace.mkdir(parents=True, exist_ok=True)
+        self._oracle = DirectServiceDriver(workspace / "service")
+        settings = ApiSettings(
+            environment="test",
+            auth_enabled=False,
+            allowed_paths=[str(workspace.parent)],
+            auth_jwt_secret="conformance-secret",
+            rate_limit_enabled=False,
+        )
+        self._app = FastAPI()
+        setup_exception_handlers(self._app)
+        self._app.dependency_overrides[get_settings] = lambda: settings
+        self._app.dependency_overrides[get_current_active_user] = lambda: object()
+        self._app.dependency_overrides[get_organization_service] = lambda: self._oracle._service
+        self._app.include_router(organize_router, prefix="/api/v1")
+        self._test_client = TestClient(self._app, raise_server_exceptions=False)
+
+    @staticmethod
+    def _request_payload(
+        request: OrganizeRequest,
+        *,
+        plan_payload: dict[str, Any] | None = None,
+        dry_run: bool,
+    ) -> dict[str, Any]:
+        return {
+            "input_dir": str(request.input_path),
+            "output_dir": str(request.output_path),
+            "options": request.options.to_dict(),
+            "plan": plan_payload,
+            "dry_run": dry_run,
+            "run_in_background": False,
+        }
+
+    @staticmethod
+    def _response_payload(response: httpx.Response) -> dict[str, Any]:
+        payload = response.json()
+        if not response.is_success:
+            raise _TransportFailure(payload)
+        return payload
+
+    @staticmethod
+    def _sdk_failure(exc: ClientError) -> _TransportFailure:
+        return _TransportFailure(
+            {
+                "error": exc.error_code,
+                "message": exc.detail,
+                "retryable": exc.retryable,
+                "details": exc.details,
+            }
+        )
+
+    @staticmethod
+    def _normalize_failure(
+        failure: _TransportFailure,
+        input_root: Path,
+        output_root: Path,
+    ) -> dict[str, Any]:
+        payload = failure.payload
+        code = str(payload.get("code") or payload.get("error") or "")
+        if code == "plan_validation_failed":
+            details = payload.get("details") or {}
+            return {
+                "error_type": str(details.get("error_type", "PlanValidationError")),
+                "message": redact_roots(str(payload.get("message", "")), input_root, output_root),
+                "conflicts": sorted(
+                    (
+                        {
+                            "conflict_type": str(conflict["conflict_type"]),
+                            "path": normalize_path(conflict["path"], input_root, output_root),
+                        }
+                        for conflict in details.get("conflicts", [])
+                    ),
+                    key=lambda conflict: (conflict["conflict_type"], conflict["path"]),
+                ),
+            }
+        try:
+            error_code = DomainErrorCode(code)
+        except ValueError:
+            return {
+                "error_type": code or "HTTPError",
+                "message": redact_roots(str(payload.get("message", "")), input_root, output_root),
+            }
+        error = DomainError(
+            error_code,
+            str(payload.get("message", "Request failed.")),
+            retryable=bool(payload.get("retryable", False)),
+            details=dict(payload.get("details") or {}),
+        )
+        return normalize_error(error, input_root, output_root)
+
+    @staticmethod
+    def _scan_envelope(
+        payload: dict[str, Any], input_root: Path, output_root: Path
+    ) -> dict[str, Any]:
+        scan = OrganizationScan(
+            Path(payload["input_dir"]),
+            tuple(Path(path) for path in payload["files"]),
+            dict(payload["counts"]),
+        )
+        return {"outcome": "ok", "scan": normalize_scan(scan, input_root, output_root)}
+
+    @staticmethod
+    def _result_envelope(
+        payload: dict[str, Any], input_root: Path, output_root: Path
+    ) -> dict[str, Any]:
+        plan_payload = payload.get("plan")
+        if not isinstance(plan_payload, dict):
+            raise AssertionError("Organization transport omitted its executable plan.")
+        plan = OrganizationPlan.from_dict(plan_payload)
+        result = OrganizationResult(
+            total_files=payload["total_files"],
+            processed_files=payload["processed_files"],
+            skipped_files=payload["skipped_files"],
+            failed_files=payload["failed_files"],
+            deduplicated_files=payload["deduplicated_files"],
+            processing_time=payload["processing_time"],
+            organized_structure=payload["organized_structure"],
+            errors=[(error["file"], error["error"]) for error in payload["errors"]],
+            plan=plan,
+            transaction_id=payload.get("transaction_id"),
+        )
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(plan, input_root, output_root),
+            "result": normalize_result(result, input_root, output_root),
+            "plan_payload": plan_payload,
+        }
+
+    def _audit_events(self, roots: tuple[Path, Path]) -> list[dict[str, Any]]:
+        history = self._oracle._last_history
+        assert history is not None
+        operations = history.get_operations()
+        operations.sort(key=lambda operation: operation.id if operation.id is not None else -1)
+        return normalize_audit_events(operations, *roots)
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        try:
+            payload = self._scan(request)
+        except _TransportFailure as exc:
+            return {"outcome": "error", "error": self._normalize_failure(exc, *roots)}
+        return self._scan_envelope(payload, *roots)
+
+    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        try:
+            payload = self._preview(request)
+        except _TransportFailure as exc:
+            return {"outcome": "error", "error": self._normalize_failure(exc, *roots)}
+        return self._result_envelope(payload, *roots)
+
+    def execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        roots = (request.input_path, request.output_path)
+        try:
+            payload = self._execute(request, plan_payload)
+        except _TransportFailure as exc:
+            return {"outcome": "error", "error": self._normalize_failure(exc, *roots)}
+        envelope = self._result_envelope(payload, *roots)
+        envelope.pop("plan_payload")
+        envelope["audit_events"] = self._audit_events(roots)
+        return envelope
+
+
+class RESTConformanceDriver(_HTTPConformanceDriver):
+    """Drive canonical organization behavior through the public REST routes."""
+
+    name = "rest"
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        response = self._test_client.post(
+            "/api/v1/organize/scan",
+            json={
+                "input_dir": str(request.input_path),
+                "recursive": request.options.recursive,
+                "include_hidden": request.options.include_hidden,
+            },
+        )
+        return self._response_payload(response)
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        response = self._test_client.post(
+            "/api/v1/organize/preview",
+            json=self._request_payload(request, dry_run=True),
+        )
+        return self._response_payload(response)
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        response = self._test_client.post(
+            "/api/v1/organize/execute",
+            json=self._request_payload(request, plan_payload=plan_payload, dry_run=False),
+        )
+        outer = self._response_payload(response)
+        result = outer.get("result")
+        if not isinstance(result, dict):
+            raise AssertionError(f"REST execution omitted its result: {outer}")
+        return result
+
+
+class PythonSDKConformanceDriver(_HTTPConformanceDriver):
+    """Drive the shared corpus through the synchronous official Python SDK."""
+
+    name = "python-sdk"
+
+    def __init__(self, workspace: Path) -> None:
+        super().__init__(workspace)
+        self._sdk = FileOrganizerClient(base_url="http://testserver")
+        self._sdk._client.close()
+        self._sdk._client = self._test_client  # type: ignore[assignment]
+
+    @staticmethod
+    def _options(request: OrganizeRequest) -> ClientOrganizationOptions:
+        return ClientOrganizationOptions.model_validate(request.options.to_dict())
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        try:
+            response = self._sdk.scan(
+                str(request.input_path),
+                recursive=request.options.recursive,
+                include_hidden=request.options.include_hidden,
+            )
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        return response.model_dump(mode="json")
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        try:
+            response = self._sdk.preview_organize(
+                str(request.input_path),
+                str(request.output_path),
+                options=self._options(request),
+            )
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        return response.model_dump(mode="json")
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        plan = (
+            ClientOrganizationPlan.model_validate(plan_payload)
+            if plan_payload is not None
+            else None
+        )
+        try:
+            response = self._sdk.organize(
+                str(request.input_path),
+                str(request.output_path),
+                options=self._options(request),
+                plan=plan,
+                run_in_background=False,
+            )
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        if response.result is None:
+            raise AssertionError(f"Python SDK execution omitted its result: {response}")
+        return response.result.model_dump(mode="json")
+
+
+class AsyncPythonSDKConformanceDriver(_HTTPConformanceDriver):
+    """Drive the shared corpus through the asynchronous official Python SDK."""
+
+    name = "python-async-sdk"
+
+    async def _with_sdk(self, operation: Any) -> Any:
+        transport = httpx.ASGITransport(app=self._app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as http_client:
+            sdk = AsyncFileOrganizerClient(base_url="http://testserver")
+            await sdk._client.aclose()
+            sdk._client = http_client
+            return await operation(sdk)
+
+    @staticmethod
+    def _options(request: OrganizeRequest) -> ClientOrganizationOptions:
+        return ClientOrganizationOptions.model_validate(request.options.to_dict())
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        async def invoke(sdk: AsyncFileOrganizerClient) -> Any:
+            return await sdk.scan(
+                str(request.input_path),
+                recursive=request.options.recursive,
+                include_hidden=request.options.include_hidden,
+            )
+
+        try:
+            response = asyncio.run(self._with_sdk(invoke))
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        return response.model_dump(mode="json")
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        async def invoke(sdk: AsyncFileOrganizerClient) -> Any:
+            return await sdk.preview_organize(
+                str(request.input_path),
+                str(request.output_path),
+                options=self._options(request),
+            )
+
+        try:
+            response = asyncio.run(self._with_sdk(invoke))
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        return response.model_dump(mode="json")
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        plan = (
+            ClientOrganizationPlan.model_validate(plan_payload)
+            if plan_payload is not None
+            else None
+        )
+
+        async def invoke(sdk: AsyncFileOrganizerClient) -> Any:
+            return await sdk.organize(
+                str(request.input_path),
+                str(request.output_path),
+                options=self._options(request),
+                plan=plan,
+                run_in_background=False,
+            )
+
+        try:
+            response = asyncio.run(self._with_sdk(invoke))
+        except ClientError as exc:
+            raise self._sdk_failure(exc) from exc
+        if response.result is None:
+            raise AssertionError(f"Async Python SDK execution omitted its result: {response}")
+        return response.result.model_dump(mode="json")

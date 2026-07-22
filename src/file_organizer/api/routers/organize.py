@@ -4,14 +4,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import ApiError
-from file_organizer.api.jobs import create_job, get_job, update_job
+from file_organizer.api.jobs import (
+    JobState,
+    create_job_with_disposition,
+    get_job,
+    list_jobs,
+    update_job,
+)
 from file_organizer.api.models import (
     JobStatusResponse,
     OrganizationError,
@@ -31,11 +37,15 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
-from file_organizer.api.utils import is_hidden, resolve_path
-from file_organizer.core.errors import DomainError
+from file_organizer.api.utils import resolve_path
+from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.lifecycle import JobProgress, JobStatus, RecoveryAction
-from file_organizer.core.organizer import FileOrganizer, OrganizationResult
+from file_organizer.core.organization_service import OrganizationService
+from file_organizer.core.organize_options import OrganizeOptions
+from file_organizer.core.organize_options import OrganizeRequest as CoreRequest
+from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
+from file_organizer.core.types import OrganizationResult
 
 router = APIRouter(
     tags=["organize"],
@@ -44,49 +54,9 @@ router = APIRouter(
 )
 
 
-def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
-    """Scan a directory and return a list of file paths matching the filter criteria."""
-    files: list[Path] = []
-    if path.is_file():
-        if include_hidden or not is_hidden(path):
-            files.append(path)
-        return files
-
-    iterator = path.rglob("*") if recursive else path.glob("*")
-    for entry in iterator:
-        if not entry.is_file():
-            continue
-        if not include_hidden and is_hidden(entry):
-            continue
-        files.append(entry)
-    return files
-
-
-def _counts_by_type(files: list[Path]) -> dict[str, int]:
-    """Count the number of files in each category based on file extension."""
-    counts = {
-        "text": 0,
-        "image": 0,
-        "video": 0,
-        "audio": 0,
-        "cad": 0,
-        "other": 0,
-    }
-    for path in files:
-        ext = path.suffix.lower()
-        if ext in FileOrganizer.TEXT_EXTENSIONS:
-            counts["text"] += 1
-        elif ext in FileOrganizer.IMAGE_EXTENSIONS:
-            counts["image"] += 1
-        elif ext in FileOrganizer.VIDEO_EXTENSIONS:
-            counts["video"] += 1
-        elif ext in FileOrganizer.AUDIO_EXTENSIONS:
-            counts["audio"] += 1
-        elif ext in FileOrganizer.CAD_EXTENSIONS:
-            counts["cad"] += 1
-        else:
-            counts["other"] += 1
-    return counts
+def get_organization_service() -> OrganizationService:
+    """Provide the canonical application service for HTTP adapter calls."""
+    return OrganizationService(organizer_factory=FileOrganizer)
 
 
 def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
@@ -110,17 +80,30 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
     )
 
 
-def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
-    """Build an OrganizationResult for a dry-run execution of a submitted plan."""
-    return OrganizationResult(
-        total_files=plan.total_files,
-        processed_files=plan.processed_files,
-        skipped_files=plan.skipped_files,
-        failed_files=plan.failed_files,
-        deduplicated_files=plan.deduplicated_files,
-        organized_structure=plan.organized_structure(),
-        errors=plan.errors,
-        plan=plan,
+def _job_to_response(job: JobState) -> JobStatusResponse:
+    """Map canonical job state to its stable HTTP representation."""
+    result = OrganizationResultResponse(**job.result) if job.result is not None else None
+    return JobStatusResponse(
+        job_id=job.job_id,
+        status=job.status,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        result=result,
+        error=job.error,
+        error_code=job.error_code.value if job.error_code is not None else None,
+        error_retryable=job.error_retryable,
+        error_details=job.error_details,
+        revision=job.revision,
+        scheduled_for=job.scheduled_for,
+        progress={
+            "total": job.progress.total,
+            "completed": job.progress.completed,
+            "failed": job.progress.failed,
+            "skipped": job.progress.skipped,
+            "percent": job.progress.percent,
+        },
+        transaction_id=job.transaction_id,
+        recovery_action=job.recovery_action,
     )
 
 
@@ -128,32 +111,56 @@ def _load_request_plan(request: OrganizeRequest) -> OrganizationPlan | None:
     """Deserialize an optional executable plan from the request."""
     if request.plan is None:
         return None
-    plan = OrganizationPlan.from_dict(request.plan.model_dump())
-    if not plan.roots_match(request.input_dir, request.output_dir):
-        raise ValueError("Submitted plan roots do not match request paths.")
-    return plan
+    try:
+        return OrganizationPlan.from_dict(request.plan.model_dump())
+    except (KeyError, TypeError, ValueError) as exc:
+        raise DomainError(
+            DomainErrorCode.INVALID_REQUEST,
+            f"Invalid organization plan: {exc}",
+        ) from exc
 
 
-def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
+def _core_request(
+    request: OrganizeRequest,
+    input_path: Path,
+    output_path: Path,
+    plan: OrganizationPlan | None = None,
+) -> CoreRequest:
+    """Map a validated HTTP payload into the transport-neutral request."""
+    return CoreRequest(input_path, output_path, request.to_domain_options(plan))
+
+
+def _execute_request(
+    service: OrganizationService,
+    request: OrganizeRequest,
+    input_path: Path,
+    output_path: Path,
+) -> OrganizationResult:
+    """Execute or preview one HTTP request through canonical service methods."""
+    plan = _load_request_plan(request)
+    core_request = _core_request(request, input_path, output_path, plan)
+    if request.dry_run:
+        if plan is not None:
+            raise DomainError(
+                DomainErrorCode.INVALID_REQUEST,
+                "A reviewed plan cannot be combined with dry_run; submit it for execution.",
+            )
+        return service.preview(core_request)
+    return service.execute(core_request, plan)
+
+
+def _run_organize_job(
+    job_id: str,
+    request: OrganizeRequest,
+    input_path: Path,
+    output_path: Path,
+    service: OrganizationService | None = None,
+) -> None:
     """Run a background organization job with validated paths."""
+    service = service or get_organization_service()
     update_job(job_id, status="running")
     try:
-        plan = _load_request_plan(request)
-        if plan is not None and request.dry_run:
-            result = _result_from_plan_preview(plan)
-        elif plan is not None:
-            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
-            result = organizer.execute_plan(plan)
-        else:
-            organizer = FileOrganizer(
-                dry_run=request.dry_run,
-                use_hardlinks=request.use_hardlinks,
-            )
-            result = organizer.organize(
-                input_path=request.input_dir,
-                output_path=request.output_dir,
-                skip_existing=request.skip_existing,
-            )
+        result = _execute_request(service, request, input_path, output_path)
         response = _result_to_response(result).model_dump()
         progress = JobProgress(
             total=result.total_files,
@@ -195,25 +202,39 @@ def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
                 "counts": {"text": 1, "image": 1, "video": 0, "audio": 0, "cad": 0, "other": 1},
             },
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
 def scan_directory(
     request: ScanRequest,
     settings: ApiSettings = Depends(get_settings),
+    service: OrganizationService = Depends(get_organization_service),
 ) -> ScanResponse:
     """Scan a directory and return file counts by type."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
-    files = _scan_directory(path, request.recursive, request.include_hidden)
-    counts = _counts_by_type(files)
+    scan = service.scan(
+        CoreRequest(
+            path,
+            path,
+            OrganizeOptions(
+                recursive=request.recursive,
+                include_hidden=request.include_hidden,
+            ),
+        )
+    )
     return ScanResponse(
-        input_dir=str(path),
-        total_files=len(files),
-        counts=counts,
+        input_dir=str(scan.input_path),
+        total_files=scan.total_files,
+        files=[str(path) for path in scan.files],
+        counts=scan.counts,
     )
 
 
@@ -234,27 +255,29 @@ def scan_directory(
                 "errors": [],
             },
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
 def preview_organization(
     request: OrganizeRequest,
     settings: ApiSettings = Depends(get_settings),
+    service: OrganizationService = Depends(get_organization_service),
 ) -> OrganizationResultResponse:
     """Preview organization results without moving files."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
-    organizer = FileOrganizer(dry_run=True, use_hardlinks=request.use_hardlinks)
-    result = organizer.organize(
-        input_path=path,
-        output_path=output,
-        skip_existing=request.skip_existing,
+    safe_request = request.model_copy(
+        update={"input_dir": str(path), "output_dir": str(output), "dry_run": True}
     )
-    return _result_to_response(result)
+    return _result_to_response(_execute_request(service, safe_request, path, output))
 
 
 @router.post(
@@ -265,7 +288,7 @@ def preview_organization(
             "Queued or completed an organization run.",
             {"status": "queued", "job_id": "job_123", "result": None, "error": None},
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
@@ -273,44 +296,48 @@ def execute_organization(
     request: OrganizeRequest,
     background_tasks: BackgroundTasks,
     settings: ApiSettings = Depends(get_settings),
+    service: OrganizationService = Depends(get_organization_service),
 ) -> OrganizeExecuteResponse:
     """Execute file organization, optionally in the background."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
     safe_request = request.model_copy(
         update={"input_dir": str(path), "output_dir": str(output)},
     )
     if request.run_in_background:
-        job = create_job("organize")
-        background_tasks.add_task(_run_organize_job, job.job_id, safe_request)
+        job, created = create_job_with_disposition(
+            "organize",
+            idempotency_key=request.idempotency_key,
+        )
+        if created:
+            background_tasks.add_task(
+                _run_organize_job,
+                job.job_id,
+                safe_request,
+                path,
+                output,
+                service,
+            )
         return OrganizeExecuteResponse(status="queued", job_id=job.job_id)
 
-    try:
-        plan = _load_request_plan(safe_request)
-        if plan is not None and safe_request.dry_run:
-            result = _result_from_plan_preview(plan)
-        elif plan is not None:
-            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
-            result = organizer.execute_plan(plan)
-        else:
-            organizer = FileOrganizer(
-                dry_run=request.dry_run,
-                use_hardlinks=request.use_hardlinks,
-            )
-            result = organizer.organize(
-                input_path=path,
-                output_path=output,
-                skip_existing=safe_request.skip_existing,
-            )
-        return OrganizeExecuteResponse(
-            status="completed",
-            result=_result_to_response(result),
+    if request.idempotency_key is not None:
+        raise DomainError(
+            DomainErrorCode.INVALID_REQUEST,
+            "idempotency_key requires run_in_background=true.",
         )
-    except Exception as exc:
-        return OrganizeExecuteResponse(status="failed", error=str(exc))
+
+    result = _execute_request(service, safe_request, path, output)
+    return OrganizeExecuteResponse(
+        status="completed",
+        result=_result_to_response(result),
+    )
 
 
 @router.get(
@@ -336,29 +363,121 @@ def get_job_status(job_id: str) -> JobStatusResponse:
     job = get_job(job_id)
     if not job:
         raise ApiError(status_code=404, error="not_found", message="Job not found")
-    result = OrganizationResultResponse(**job.result) if job.result is not None else None
-    return JobStatusResponse(
-        job_id=job.job_id,
-        status=job.status,
-        created_at=job.created_at,
-        updated_at=job.updated_at,
-        result=result,
-        error=job.error,
-        error_code=job.error_code.value if job.error_code is not None else None,
-        error_retryable=job.error_retryable,
-        error_details=job.error_details,
-        revision=job.revision,
-        scheduled_for=job.scheduled_for,
-        progress={
-            "total": job.progress.total,
-            "completed": job.progress.completed,
-            "failed": job.progress.failed,
-            "skipped": job.progress.skipped,
-            "percent": job.progress.percent,
-        },
-        transaction_id=job.transaction_id,
-        recovery_action=job.recovery_action,
+    return _job_to_response(job)
+
+
+class JobMutationRequest(BaseModel):
+    """Compare-and-swap guard for job lifecycle mutations."""
+
+    expected_revision: int | None = None
+
+
+@router.get(
+    "/organize/jobs",
+    response_model=list[JobStatusResponse],
+    responses=validation_error_response(),
+)
+def get_job_history(
+    status: JobStatus | None = Query(None),
+    limit: int = Query(100, ge=1, le=1000),
+) -> list[JobStatusResponse]:
+    """List recent organization jobs, newest first."""
+    statuses = {status} if status is not None else None
+    return [
+        _job_to_response(job)
+        for job in list_jobs(job_type="organize", statuses=statuses, limit=limit)
+    ]
+
+
+@router.post(
+    "/organize/jobs/{job_id}/cancel",
+    response_model=JobStatusResponse,
+    responses=merge_responses(
+        api_error_response(404, error="not_found", message="Job not found"),
+        api_error_response(409, error="invalid_job_transition", message="Job cannot be cancelled"),
+        validation_error_response(),
+    ),
+)
+def cancel_organization_job(
+    job_id: str,
+    request: JobMutationRequest,
+) -> JobStatusResponse:
+    """Cancel a queued or scheduled organization job."""
+    job = get_job(job_id)
+    if job is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+    updated = update_job(
+        job_id,
+        status=JobStatus.CANCELLED,
+        expected_revision=request.expected_revision,
     )
+    if updated is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+    return _job_to_response(updated)
+
+
+@router.post(
+    "/organize/jobs/{job_id}/rollback",
+    response_model=JobStatusResponse,
+    responses=merge_responses(
+        api_error_response(400, error="invalid_request", message="Job has no transaction"),
+        api_error_response(404, error="not_found", message="Job not found"),
+        api_error_response(
+            409, error="invalid_job_transition", message="Job cannot be rolled back"
+        ),
+        validation_error_response(),
+    ),
+)
+def rollback_organization_job(
+    job_id: str,
+    request: JobMutationRequest,
+) -> JobStatusResponse:
+    """Rollback a completed organization job's transaction."""
+    job = get_job(job_id)
+    if job is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+    if not job.transaction_id:
+        raise DomainError(
+            DomainErrorCode.INVALID_REQUEST,
+            "Job does not have a transaction that can be rolled back.",
+            details={"job_id": job_id},
+        )
+
+    rolling_back = update_job(
+        job_id,
+        status=JobStatus.ROLLING_BACK,
+        expected_revision=request.expected_revision,
+    )
+    if rolling_back is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+
+    from file_organizer.undo.undo_manager import UndoManager
+
+    try:
+        success = UndoManager().undo_transaction(job.transaction_id)
+    except Exception as exc:
+        update_job(
+            job_id,
+            status=JobStatus.RECOVERY_REQUIRED,
+            error="Rollback failed.",
+            error_code=DomainErrorCode.RECOVERY_REQUIRED,
+            recovery_action=RecoveryAction.MANUAL,
+        )
+        raise DomainError(
+            DomainErrorCode.RECOVERY_REQUIRED,
+            "Rollback failed and requires manual recovery.",
+            details={"job_id": job_id, "transaction_id": job.transaction_id},
+        ) from exc
+    updated = update_job(
+        job_id,
+        status=(JobStatus.ROLLED_BACK if success else JobStatus.RECOVERY_REQUIRED),
+        error=(None if success else "Rollback did not complete."),
+        error_code=(None if success else DomainErrorCode.RECOVERY_REQUIRED),
+        recovery_action=(RecoveryAction.NONE if success else RecoveryAction.MANUAL),
+    )
+    if updated is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+    return _job_to_response(updated)
 
 
 class SimpleOrganizeRequest(BaseModel):
@@ -388,8 +507,8 @@ class SimpleOrganizeResponse(BaseModel):
     ),
 )
 async def organize_file(
+    http_request: Request,
     file: UploadFile | None = File(None),
-    request: SimpleOrganizeRequest | None = None,
     settings: ApiSettings = Depends(get_settings),
 ) -> SimpleOrganizeResponse | JSONResponse:
     """Organize a single file with naming and folder suggestions.
@@ -399,15 +518,21 @@ async def organize_file(
     import os
 
     # Get filename from file upload or request body
+    organize_request: SimpleOrganizeRequest | None = None
     if file:
         filename = file.filename or "unknown"
-    elif request:
-        filename = request.filename
     else:
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Either file upload or request body must be provided"},
-        )
+        try:
+            organize_request = SimpleOrganizeRequest.model_validate(await http_request.json())
+        except (ValueError, TypeError):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "message": "Either file upload or request body must be provided",
+                },
+            )
+        filename = organize_request.filename
 
     # Simple logic: extract base name and suggest folder
     base_name = os.path.basename(filename)
@@ -415,7 +540,9 @@ async def organize_file(
 
     # Simple category detection
     ext = name_parts[1].lower()
-    if ext in [".txt", ".md", ".pdf", ".doc", ".docx"]:
+    if organize_request is not None and organize_request.folder_suggestion:
+        folder = organize_request.folder_suggestion
+    elif ext in [".txt", ".md", ".pdf", ".doc", ".docx"]:
         folder = "Documents"
     elif ext in [".jpg", ".png", ".gif", ".bmp"]:
         folder = "Images"

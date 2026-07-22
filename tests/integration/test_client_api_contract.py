@@ -96,6 +96,11 @@ def _handle_organize_request(request: httpx.Request, path: str) -> httpx.Respons
             {
                 "input_dir": payload["input_dir"],
                 "total_files": 3,
+                "files": [
+                    f"{payload['input_dir']}/alpha.txt",
+                    f"{payload['input_dir']}/beta.txt",
+                    f"{payload['input_dir']}/image.jpg",
+                ],
                 "counts": {"text": 2, "image": 1},
             }
         )

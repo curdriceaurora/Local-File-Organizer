@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from file_organizer.api.exceptions import ApiError, setup_exception_handlers
@@ -108,3 +108,28 @@ def test_domain_error_handler_preserves_stable_contract() -> None:
         "retryable": False,
         "details": {"feature": "transcription"},
     }
+
+
+def test_framework_not_found_uses_normalized_http_error_contract() -> None:
+    app = FastAPI()
+    setup_exception_handlers(app)
+
+    response = TestClient(app).get("/missing")
+
+    assert response.status_code == 404
+    assert response.json() == {"error": "not_found", "message": "Not Found"}
+
+
+def test_application_http_error_preserves_status_and_headers() -> None:
+    app = FastAPI()
+    setup_exception_handlers(app)
+
+    @app.get("/limited")
+    def limited_route() -> None:
+        raise HTTPException(status_code=429, detail="Slow down.", headers={"Retry-After": "5"})
+
+    response = TestClient(app).get("/limited")
+
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "5"
+    assert response.json() == {"error": "rate_limited", "message": "Slow down."}

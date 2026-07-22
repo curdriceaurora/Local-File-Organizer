@@ -111,6 +111,7 @@ export interface ScanRequest {
 export interface ScanResponse {
   input_dir: string;
   total_files: number;
+  files: string[];
   counts: Record<string, number>;
 }
 
@@ -139,6 +140,26 @@ export interface OrganizationOperationPayload {
   error: string | null;
 }
 
+export interface OrganizationOptionsPayload {
+  recursive: boolean;
+  include_hidden: boolean;
+  skip_existing: boolean;
+  transfer_mode: "copy" | "hardlink";
+  methodology: "none" | "para" | "jd";
+  enable_vision: boolean;
+  transcribe_audio: boolean;
+  max_transcribe_seconds: number | null;
+  whisper_model: string;
+  parallel_workers: number | null;
+  prefetch_depth: number;
+  text_model: string | null;
+  vision_model: string | null;
+  text_provider: "ollama" | "openai" | "llama_cpp" | "mlx" | "claude" | null;
+  vision_provider: "ollama" | "openai" | "llama_cpp" | "mlx" | "claude" | null;
+}
+
+export type OrganizationOptionsInput = Partial<OrganizationOptionsPayload>;
+
 export interface OrganizationPlanPayload {
   plan_id: string;
   schema_version: number;
@@ -152,6 +173,7 @@ export interface OrganizationPlanPayload {
   skipped_files: number;
   failed_files: number;
   deduplicated_files: number;
+  options: OrganizationOptionsPayload | null;
   operations: OrganizationOperationPayload[];
   errors: [string, string][];
   metadata: Record<string, unknown>;
@@ -173,11 +195,19 @@ export interface OrganizationResultResponse {
 export interface OrganizeRequest {
   input_dir: string;
   output_dir: string;
+  options?: OrganizationOptionsInput;
   skip_existing?: boolean;
   dry_run?: boolean;
   use_hardlinks?: boolean;
   run_in_background?: boolean;
   plan?: OrganizationPlanPayload | null;
+}
+
+export interface OrganizationCallOptions {
+  options?: OrganizationOptionsInput;
+  plan?: OrganizationPlanPayload;
+  skipExisting?: boolean;
+  useHardlinks?: boolean;
 }
 
 export interface OrganizeExecuteResponse {

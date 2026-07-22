@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.routing import APIRouter
+from fastapi.routing import APIRoute, APIRouter
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
@@ -52,6 +52,12 @@ except (
 _LOGGING_CONFIGURED = False
 _app: FastAPI | None = None
 _app_lock = threading.Lock()
+
+
+def stable_operation_id(route: APIRoute) -> str:
+    """Build a stable, human-readable OpenAPI operation identifier."""
+    tag = route.tags[0] if route.tags else "api"
+    return f"{tag}_{route.name}"
 
 
 def configure_logging(settings: ApiSettings) -> None:
@@ -109,6 +115,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         docs_url=docs_url,
         redoc_url=redoc_url,
         lifespan=lifespan,
+        generate_unique_id_function=stable_operation_id,
     )
 
     if STATIC_DIR.exists():

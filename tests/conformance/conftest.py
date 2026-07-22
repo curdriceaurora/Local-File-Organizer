@@ -10,9 +10,12 @@ import pytest
 from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from tests.conformance.corpus import CorpusCase, get_case, materialize_case
 from tests.conformance.driver import (
+    AsyncPythonSDKConformanceDriver,
     CLIConformanceDriver,
     DirectServiceDriver,
     OrganizationConformanceDriver,
+    PythonSDKConformanceDriver,
+    RESTConformanceDriver,
 )
 
 
@@ -39,7 +42,16 @@ class ConformanceContext:
         )
 
 
-@pytest.fixture(params=(DirectServiceDriver, CLIConformanceDriver), ids=("direct", "cli"))
+@pytest.fixture(
+    params=(
+        DirectServiceDriver,
+        CLIConformanceDriver,
+        RESTConformanceDriver,
+        PythonSDKConformanceDriver,
+        AsyncPythonSDKConformanceDriver,
+    ),
+    ids=("direct", "cli", "rest", "python-sdk", "python-async-sdk"),
+)
 def conformance(tmp_path: Path, request: pytest.FixtureRequest) -> ConformanceContext:
     """Run the golden corpus against the oracle and each migrated adapter."""
     driver_type = request.param
