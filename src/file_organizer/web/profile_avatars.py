@@ -23,11 +23,11 @@ def avatar_path(user_id: str, avatar_dir: Path) -> Path:
     clean_id = os.path.basename(user_id)
     if not clean_id or clean_id != user_id or ".." in clean_id or not SAFE_USER_ID.match(clean_id):
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    avatar_root = avatar_dir.resolve()
-    target = (avatar_root / f"{clean_id}.png").resolve()
-    if not target.is_relative_to(avatar_root) or target == avatar_root:
+    avatar_root = str(avatar_dir.resolve())
+    fullpath = os.path.normpath(os.path.join(avatar_root, f"{clean_id}.png"))
+    if not fullpath.startswith(f"{avatar_root}{os.sep}"):
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    return target
+    return Path(fullpath)
 
 
 def resolve_avatar_for_read(
