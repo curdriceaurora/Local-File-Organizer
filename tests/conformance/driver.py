@@ -77,6 +77,8 @@ from file_organizer.services.video.metadata_extractor import (
     VideoMetadata,
     VideoMetadataExtractor,
 )
+from file_organizer.tui.organization_adapter import TUIOrganizationAdapter
+from file_organizer.tui.workspace import TUIWorkspace
 from file_organizer.undo import UndoManager
 from file_organizer.utils.atomic_write import atomic_write_text
 from file_organizer.web.organize_routes import (
@@ -314,6 +316,80 @@ class DirectServiceDriver:
             "plan": normalize_plan(result.plan, *roots),
             "result": normalize_result(result, *roots),
             "audit_events": events,
+        }
+
+
+class TUIConformanceDriver:
+    """Drive the production TUI state adapter against the golden corpus."""
+
+    name = "tui-workspace-adapter"
+
+    def __init__(self, workspace: Path) -> None:
+        self._workspace_root = workspace
+        self._workspace_root.mkdir(parents=True, exist_ok=True)
+        self._oracle = DirectServiceDriver(workspace / "service")
+        self._state = TUIWorkspace()
+        self._adapter = TUIOrganizationAdapter(self._state, self._oracle._service)
+
+    def _map(self, request: OrganizeRequest) -> None:
+        """Round-trip every canonical option through shared TUI session state."""
+        self._state.set_roots(request.input_path, request.output_path)
+        self._state.set_options(**request.options.to_dict())
+        self._state.set_selected_files(set())
+
+    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Return the canonical scan reached from TUI workspace state."""
+        self._map(request)
+        roots = (request.input_path, request.output_path)
+        try:
+            scan = self._adapter.scan()
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
+
+    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Preview and retain the exact plan represented by TUI state."""
+        self._map(request)
+        roots = (request.input_path, request.output_path)
+        try:
+            result = self._adapter.preview()
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        plan = self._state.reviewed_plan
+        if plan is None:
+            raise AssertionError("TUI preview must retain an executable plan.")
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(plan, *roots),
+            "result": normalize_result(result, *roots),
+            "plan_payload": plan.to_dict(),
+        }
+
+    def execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Apply the reviewed serialized plan through the TUI adapter."""
+        self._map(request)
+        roots = (request.input_path, request.output_path)
+        try:
+            plan = OrganizationPlan.from_dict(plan_payload) if plan_payload is not None else None
+            if plan is None:
+                self._adapter.preview()
+                plan = self._state.reviewed_plan
+            result = self._adapter.execute(plan)
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        if not isinstance(result.plan, OrganizationPlan):
+            raise AssertionError("TUI execution must retain its executable plan.")
+        history = self._oracle._last_history
+        assert history is not None
+        operations = history.get_operations()
+        operations.sort(key=lambda operation: operation.id if operation.id is not None else -1)
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(result.plan, *roots),
+            "result": normalize_result(result, *roots),
+            "audit_events": normalize_audit_events(operations, *roots),
         }
 
 

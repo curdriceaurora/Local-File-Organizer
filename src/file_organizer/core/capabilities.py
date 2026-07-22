@@ -12,6 +12,7 @@ import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from importlib.resources import files
 from typing import Any, TypeVar
 
@@ -272,6 +273,7 @@ class CapabilityRegistry:
         )
 
 
+@lru_cache(maxsize=1)
 def get_capability_registry() -> CapabilityRegistry:
     """Load the packaged canonical capability registry."""
     resource = files("file_organizer.core").joinpath("capability_registry.json")

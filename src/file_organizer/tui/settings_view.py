@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -34,6 +34,9 @@ from file_organizer.config.methodology import LABELS as _METHODOLOGY_LABELS
 from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
 from file_organizer.config.methodology import normalize as _normalize_methodology
 from file_organizer.tui.status import StatusMixin
+
+if TYPE_CHECKING:
+    from file_organizer.tui.workspace import TUIWorkspace
 
 _DEFAULT_PREFETCH_DEPTH = 2
 _MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
@@ -228,6 +231,12 @@ class SettingsView(StatusMixin, Vertical):
         Binding("t", "cycle_text_model", "Model", show=True),
         Binding("u", "toggle_update_check", "Updates", show=True),
         Binding("p", "toggle_prereleases", "Pre-releases", show=True),
+        Binding("c", "toggle_recursive", "Recursive", show=False),
+        Binding("h", "toggle_hidden", "Hidden", show=False),
+        Binding("x", "toggle_transfer", "Transfer", show=False),
+        Binding("k", "toggle_skip_existing", "Collisions", show=False),
+        Binding("v", "toggle_vision", "Vision", show=False),
+        Binding("d", "toggle_transcription", "Transcription", show=False),
         Binding("enter", "save_settings", "Save", show=True),
         Binding("r", "reload_settings", "Reload", show=True),
     ]
@@ -236,6 +245,7 @@ class SettingsView(StatusMixin, Vertical):
         self,
         *,
         profile: str = "default",
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
@@ -243,6 +253,7 @@ class SettingsView(StatusMixin, Vertical):
         """Create the settings view with profile-backed persisted state."""
         super().__init__(name=name, id=id, classes=classes)
         self._profile = profile
+        self._workspace = workspace
         # Parallelism controls
         self._max_workers: int | None = None
         self._prefetch_depth: int = _DEFAULT_PREFETCH_DEPTH
@@ -255,6 +266,22 @@ class SettingsView(StatusMixin, Vertical):
         self._text_model: str = DEFAULT_TEXT_MODEL
         self._check_updates: bool = True
         self._include_prereleases: bool = False
+        options = workspace.options if workspace is not None else None
+        self._recursive = options.recursive if options is not None else True
+        self._include_hidden = options.include_hidden if options is not None else False
+        self._skip_existing = options.skip_existing if options is not None else True
+        self._transfer_mode = (
+            options.effective_transfer_mode.value if options is not None else "hardlink"
+        )
+        self._enable_vision = options.enable_vision if options is not None else True
+        self._transcribe_audio = options.transcribe_audio if options is not None else False
+        if workspace is not None:
+            self._input_dir = str(workspace.active_root or "")
+            self._output_dir = str(workspace.output_root or "")
+            self._methodology = workspace.options.effective_methodology.value
+            self._text_model = workspace.options.text_model or DEFAULT_TEXT_MODEL
+            self._max_workers = workspace.options.parallel_workers
+            self._prefetch_depth = workspace.options.prefetch_depth
 
     def compose(self) -> ComposeResult:
         """Render settings panel content."""
@@ -264,7 +291,11 @@ class SettingsView(StatusMixin, Vertical):
 
     def on_mount(self) -> None:
         """Load persisted settings when mounted."""
-        self.action_reload_settings()
+        if self._workspace is None:
+            self.action_reload_settings()
+        else:
+            self._sync_dir_inputs()
+            self._refresh_panel()
 
     # ------------------------------------------------------------------
     # Parallelism actions
@@ -282,6 +313,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = current + 1
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_workers_down(self) -> None:
@@ -294,6 +326,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = self._max_workers - 1 if self._max_workers > 1 else None
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_prefetch_up(self) -> None:
@@ -303,6 +336,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._prefetch_depth += 1
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_prefetch_down(self) -> None:
@@ -312,6 +346,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._prefetch_depth = max(0, self._prefetch_depth - 1)
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_auto_workers(self) -> None:
@@ -321,6 +356,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = 1 if self._max_workers is None else None
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_sequential(self) -> None:
@@ -334,6 +370,7 @@ class SettingsView(StatusMixin, Vertical):
             self._max_workers = 1
             self._prefetch_depth = 0
             self._set_status("Sequential mode enabled.")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     # ------------------------------------------------------------------
@@ -346,6 +383,7 @@ class SettingsView(StatusMixin, Vertical):
         index = _METHODOLOGY_ORDER.index(current)
         self._methodology = _METHODOLOGY_ORDER[(index + 1) % len(_METHODOLOGY_ORDER)]
         self._set_status(f"Methodology: {_METHODOLOGY_LABELS[self._methodology]}")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_cycle_text_model(self) -> None:
@@ -357,6 +395,7 @@ class SettingsView(StatusMixin, Vertical):
             index = -1
         self._text_model = options[(index + 1) % len(options)]
         self._set_status(f"Text model: {self._text_model}")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_update_check(self) -> None:
@@ -371,6 +410,42 @@ class SettingsView(StatusMixin, Vertical):
         self._include_prereleases = not self._include_prereleases
         state = "on" if self._include_prereleases else "off"
         self._set_status(f"Include pre-releases: {state}")
+        self._refresh_panel()
+
+    def action_toggle_recursive(self) -> None:
+        """Toggle recursive traversal for this TUI session."""
+        self._recursive = not self._recursive
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_toggle_hidden(self) -> None:
+        """Toggle hidden-file inclusion for this TUI session."""
+        self._include_hidden = not self._include_hidden
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_toggle_transfer(self) -> None:
+        """Toggle between canonical hardlink and copy transfer modes."""
+        self._transfer_mode = "copy" if self._transfer_mode == "hardlink" else "hardlink"
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_toggle_skip_existing(self) -> None:
+        """Toggle collision behavior between skip and counter rename."""
+        self._skip_existing = not self._skip_existing
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_toggle_vision(self) -> None:
+        """Toggle vision-backed analysis for this TUI session."""
+        self._enable_vision = not self._enable_vision
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_toggle_transcription(self) -> None:
+        """Toggle optional transcription-backed audio analysis."""
+        self._transcribe_audio = not self._transcribe_audio
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def on_input_changed(self, event: Input.Changed) -> None:
@@ -388,10 +463,12 @@ class SettingsView(StatusMixin, Vertical):
         """Reload persisted settings from configuration."""
         self._reload_parallel_settings()
         self._reload_workflow_settings()
+        self._sync_workspace()
         self._refresh_panel()
 
     def action_save_settings(self) -> None:
         """Persist current settings to configuration."""
+        self._sync_workspace()
         try:
             save_parallel_runtime_settings(
                 ParallelRuntimeSettings(
@@ -405,7 +482,12 @@ class SettingsView(StatusMixin, Vertical):
                 profile=self._profile,
             )
         except Exception as exc:
-            self._set_status(f"Failed to save settings: {exc}")
+            message = (
+                f"Session updated; failed to save settings: {exc}"
+                if self._workspace is not None
+                else f"Failed to save settings: {exc}"
+            )
+            self._set_status(message)
         else:
             self._set_status("Settings saved.")
         self._refresh_panel()
@@ -453,6 +535,30 @@ class SettingsView(StatusMixin, Vertical):
             include_prereleases=self._include_prereleases,
         )
 
+    def _sync_workspace(self) -> None:
+        """Apply the displayed settings to the shared canonical session state."""
+        if self._workspace is None:
+            return
+        self._workspace.set_roots(self._input_dir, self._output_dir)
+        self._sync_workspace_options()
+
+    def _sync_workspace_options(self) -> None:
+        """Apply behavior controls immediately without persisting path edits."""
+        if self._workspace is None:
+            return
+        self._workspace.set_options(
+            recursive=self._recursive,
+            include_hidden=self._include_hidden,
+            skip_existing=self._skip_existing,
+            transfer_mode=self._transfer_mode,
+            methodology=self._methodology,
+            enable_vision=self._enable_vision,
+            transcribe_audio=self._transcribe_audio,
+            parallel_workers=self._max_workers,
+            prefetch_depth=self._prefetch_depth,
+            text_model=self._text_model,
+        )
+
     def _text_model_options(self) -> list[str]:
         """Return cycle options, prepending any persisted custom model."""
         if self._text_model in _TEXT_MODEL_PRESETS:
@@ -491,6 +597,11 @@ class SettingsView(StatusMixin, Vertical):
         output_text = self._output_dir or "[dim](unset)[/dim]"
         update_text = "on" if self._check_updates else "off"
         prerelease_text = "on" if self._include_prereleases else "off"
+        recursive_text = "on" if self._recursive else "off"
+        hidden_text = "include" if self._include_hidden else "exclude"
+        collision_text = "skip existing" if self._skip_existing else "rename with counter"
+        vision_text = "on" if self._enable_vision else "off"
+        transcription_text = "on" if self._transcribe_audio else "off"
         return (
             "[b]Settings[/b]\n\n"
             "[b]Workflow[/b]\n"
@@ -498,6 +609,12 @@ class SettingsView(StatusMixin, Vertical):
             f"  output dir    : {output_text}\n"
             f"  methodology   : {_METHODOLOGY_LABELS[self._methodology]}\n"
             f"  text model    : {self._text_model}\n"
+            f"  recursive     : {recursive_text}\n"
+            f"  hidden files  : {hidden_text}\n"
+            f"  transfer mode : {self._transfer_mode}\n"
+            f"  collisions    : {collision_text}\n"
+            f"  vision        : {vision_text}\n"
+            f"  transcription : {transcription_text}\n"
             f"  update check  : {update_text}\n"
             f"  pre-releases  : {prerelease_text}\n\n"
             "[b]Persistent Runtime Controls[/b]\n"
@@ -506,5 +623,7 @@ class SettingsView(StatusMixin, Vertical):
             f"  sequential    : {sequential_text}\n\n"
             "[dim]Arrows: workers/prefetch · s: sequential · a: auto workers[/dim]\n"
             "[dim]m: methodology · t: model · u: update check · p: pre-releases[/dim]\n"
+            "[dim]c: recursive · h: hidden · x: transfer · k: collisions · "
+            "v: vision · d: transcription[/dim]\n"
             "[dim]Type in the fields below to set directories · Enter: save · r: reload[/dim]"
         )

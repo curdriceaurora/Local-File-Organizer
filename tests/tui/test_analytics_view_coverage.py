@@ -6,6 +6,7 @@ action_refresh_analytics, and _set_status.
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
@@ -50,7 +51,7 @@ class TestAnalyticsViewLoadAnalytics:
     """Test _load_analytics worker thread paths."""
 
     def test_load_analytics_success(self) -> None:
-        view = AnalyticsView()
+        view = AnalyticsView(directory=Path("."))
         storage_panel = MagicMock()
         distribution_panel = MagicMock()
         quality_panel = MagicMock()
@@ -131,7 +132,7 @@ class TestAnalyticsViewLoadAnalytics:
         )
 
     def test_load_analytics_exception(self) -> None:
-        view = AnalyticsView()
+        view = AnalyticsView(directory=Path("."))
         storage_panel = MagicMock()
         distribution_panel = MagicMock()
         quality_panel = MagicMock()

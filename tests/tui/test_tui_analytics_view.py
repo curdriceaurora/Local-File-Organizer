@@ -125,7 +125,7 @@ class TestAnalyticsView:
 
     def test_default_init(self) -> None:
         view = AnalyticsView(id="view")
-        assert str(view._directory) == "."
+        assert view._directory is None
 
     def test_custom_directory(self) -> None:
         view = AnalyticsView(directory="/tmp/data", id="view")  # noqa: test-hardcoded-paths

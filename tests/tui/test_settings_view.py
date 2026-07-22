@@ -562,12 +562,19 @@ async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
     )
 
     app = FileOrganizerApp()
+    app.workspace.set_roots("/seed/in", "/seed/out")
+    app.workspace.set_options(
+        methodology="para",
+        text_model="qwen2.5:7b-instruct-q4_K_M",
+        parallel_workers=2,
+        prefetch_depth=2,
+    )
     async with app.run_test() as pilot:
         await app.action_switch_view("settings")
         await pilot.pause()
         view = app.query_one(SettingsView)
 
-        # on_mount ran reload; loaded workflow values pushed into the inputs.
+        # Mount reflects the shared session rather than replacing it with stale config.
         input_field = view.query_one("#settings-input-dir", Input)
         output_field = view.query_one("#settings-output-dir", Input)
         assert input_field.value == "/seed/in"

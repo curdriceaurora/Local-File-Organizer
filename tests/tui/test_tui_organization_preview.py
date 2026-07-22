@@ -90,10 +90,10 @@ class TestOrganizationPreviewView:
     """Tests for OrganizationPreviewView composition."""
 
     @pytest.mark.keep_default_paths
-    def test_default_init(self) -> None:
+    def test_default_init_has_no_implicit_roots(self) -> None:
         view = OrganizationPreviewView(id="view")
-        assert str(view._input_dir) == "."
-        assert str(view._output_dir) == "organized_output"
+        assert view._input_dir is None
+        assert view._output_dir is None
 
     def test_custom_dirs(self) -> None:
         view = OrganizationPreviewView(

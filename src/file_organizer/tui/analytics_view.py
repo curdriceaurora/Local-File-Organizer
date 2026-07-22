@@ -8,6 +8,7 @@ and duplicate statistics in a scrollable panel layout.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual import work
 from textual.app import ComposeResult
@@ -16,6 +17,9 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from file_organizer.tui.status import StatusMixin
+
+if TYPE_CHECKING:
+    from file_organizer.tui.workspace import TUIWorkspace
 
 
 class StorageOverviewPanel(Static):
@@ -192,19 +196,27 @@ class AnalyticsView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        directory: str | Path = ".",
+        directory: str | Path | None = None,
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the analytics view for the given directory."""
         super().__init__(name=name, id=id, classes=classes)
-        self._directory = Path(directory)
+        self._workspace = workspace
+        resolved_directory = workspace.active_root if workspace is not None else directory
+        self._directory = Path(resolved_directory) if resolved_directory is not None else None
 
     def compose(self) -> ComposeResult:
         """Build the analytics dashboard layout."""
-        yield Static("[b]Analytics Dashboard[/b]\n", id="analytics-header")
+        selected = len(self._workspace.selected_files) if self._workspace is not None else 0
+        yield Static(
+            "[b]Analytics Dashboard[/b]\n"
+            f"[dim]Active-root analysis; workspace selection retained ({selected} files).[/dim]\n",
+            id="analytics-header",
+        )
         yield StorageOverviewPanel("[dim]Loading...[/dim]")
         yield FileDistributionPanel("[dim]Loading...[/dim]")
         yield QualityScorePanel("[dim]Loading...[/dim]")
@@ -234,6 +246,8 @@ class AnalyticsView(StatusMixin, Vertical):
             )
 
             service = AnalyticsService()
+            if self._directory is None:
+                raise ValueError("Set a source directory in Settings before loading analytics.")
             dashboard = service.generate_dashboard(self._directory)
 
             ss = dashboard.storage_stats

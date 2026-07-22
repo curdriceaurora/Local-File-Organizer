@@ -149,8 +149,8 @@ class TestOrganizationPreviewViewLoadPreview:
         )
         mock_plan = _make_plan(tmp_path)
         mock_result.plan = mock_plan
-        mock_organizer = MagicMock()
-        mock_organizer.organize.return_value = mock_result
+        mock_service = MagicMock()
+        mock_service.preview.return_value = mock_result
 
         mock_app = MagicMock()
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
@@ -159,20 +159,15 @@ class TestOrganizationPreviewViewLoadPreview:
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
                 return_value=ParallelRuntimeSettings(max_workers=2, prefetch_depth=1),
             ),
-            patch(
-                "file_organizer.core.organizer.FileOrganizer",
-                return_value=mock_organizer,
-            ) as mock_org_cls,
+            patch.object(view, "_create_service", return_value=mock_service),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
-        mock_org_cls.assert_called_once_with(
-            dry_run=True,
-            parallel_workers=2,
-            prefetch_depth=1,
-        )
-        assert mock_app.call_from_thread.call_count == 4
+        request = mock_service.preview.call_args.args[0]
+        assert request.options.parallel_workers == 2
+        assert request.options.prefetch_depth == 1
+        assert mock_app.call_from_thread.call_count == 5
         assert view._current_plan is mock_plan
         before_after_panel.set_structure.assert_called_once_with(
             {"Docs": ["a.pdf"]},
@@ -212,8 +207,9 @@ class TestOrganizationPreviewViewLoadPreview:
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
                 return_value=ParallelRuntimeSettings(max_workers=None, prefetch_depth=2),
             ),
-            patch(
-                "file_organizer.core.organizer.FileOrganizer",
+            patch.object(
+                view,
+                "_create_service",
                 side_effect=RuntimeError("model not found"),
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
@@ -223,8 +219,8 @@ class TestOrganizationPreviewViewLoadPreview:
         assert mock_app.call_from_thread.call_count == 3
         assert view._current_plan is None
         before_after_panel.update.assert_called_once_with(
-            "[red]Models unavailable:[/red] model not found\n\n"
-            "[dim]Ensure Ollama is running with required models.[/dim]"
+            "[red]Preview unavailable:[/red] model not found\n\n"
+            "[dim]Review the workspace paths, selection scope, options, and model setup.[/dim]"
         )
         summary_panel.update.assert_called_once_with("[dim]No data available.[/dim]")
 
@@ -281,8 +277,8 @@ class TestOrganizationPreviewViewLoadPreview:
             failed_files=0,
             errors=[],
         )
-        mock_organizer = MagicMock()
-        mock_organizer.execute_plan.return_value = mock_result
+        mock_service = MagicMock()
+        mock_service.execute.return_value = mock_result
         mock_app = MagicMock()
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         view._handle_apply_success = MagicMock()
@@ -292,20 +288,15 @@ class TestOrganizationPreviewViewLoadPreview:
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
                 return_value=ParallelRuntimeSettings(max_workers=3, prefetch_depth=4),
             ),
-            patch(
-                "file_organizer.core.organizer.FileOrganizer",
-                return_value=mock_organizer,
-            ) as mock_org_cls,
+            patch.object(view, "_create_service", return_value=mock_service),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             OrganizationPreviewView._apply_organization.__wrapped__(view, plan)
 
-        mock_org_cls.assert_called_once_with(
-            dry_run=False,
-            parallel_workers=3,
-            prefetch_depth=4,
-        )
-        mock_organizer.execute_plan.assert_called_once_with(plan)
+        request, executed_plan = mock_service.execute.call_args.args
+        assert request.options.parallel_workers == 3
+        assert request.options.prefetch_depth == 4
+        assert executed_plan is plan
         view._handle_apply_success.assert_called_once_with(mock_result)
 
     def test_apply_organization_without_plan_reports_error(self) -> None:
@@ -431,8 +422,9 @@ class TestOrganizationPreviewViewLoadPreview:
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
                 return_value=ParallelRuntimeSettings(max_workers=1, prefetch_depth=1),
             ),
-            patch(
-                "file_organizer.core.organizer.FileOrganizer",
+            patch.object(
+                view,
+                "_create_service",
                 side_effect=RuntimeError("model offline"),
             ),
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
