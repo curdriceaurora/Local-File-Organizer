@@ -7,7 +7,7 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 from file_organizer.core.capabilities import Surface, get_capability_registry
-from tests.api.route_inventory import iter_effective_routes
+from tests._route_inventory import iter_effective_routes
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 

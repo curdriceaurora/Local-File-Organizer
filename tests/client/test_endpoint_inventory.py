@@ -13,7 +13,7 @@ from file_organizer.client.async_client import AsyncFileOrganizerClient
 from file_organizer.client.endpoint_spec import INTENTIONAL_EXCLUSIONS, PUBLIC_ENDPOINTS
 from file_organizer.client.sync_client import FileOrganizerClient
 from file_organizer.core.capabilities import Surface, get_capability_registry
-from tests.api.route_inventory import iter_effective_routes
+from tests._route_inventory import iter_effective_routes
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 

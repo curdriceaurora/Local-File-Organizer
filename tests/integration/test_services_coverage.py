@@ -800,17 +800,16 @@ class TestServiceAudioTranscriber:
 
 @pytest.fixture
 def require_sklearn() -> None:
-    """Skip positive DocumentEmbedder behavior when the dedup extra is absent."""
+    """Skip positive behavior unless scikit-learn is provided by dedup or search."""
     pytest.importorskip("sklearn")
 
 
-@pytest.mark.extras
 class TestDocumentEmbedder:
     def test_document_embedder_constructor_import_error(self) -> None:
         real_import = builtins.__import__
 
         def reject_sklearn(name: str, *args, **kwargs):
-            if name.startswith("sklearn"):
+            if name == "sklearn" or name.startswith("sklearn."):
                 raise ImportError("simulated missing optional dependency")
             return real_import(name, *args, **kwargs)
 
@@ -819,6 +818,7 @@ class TestDocumentEmbedder:
                 DocumentEmbedder()
             assert "scikit-learn is required" in str(exc.value)
 
+    @pytest.mark.extras
     def test_embedder_fit_transform_and_caching(
         self, tmp_path: Path, require_sklearn: None
     ) -> None:
@@ -875,6 +875,7 @@ class TestDocumentEmbedder:
         emb_batch = embedder.transform_batch([doc, "cherry date"])
         assert emb_batch.shape == (2, 5)
 
+    @pytest.mark.extras
     def test_vocabulary_features_and_top_terms(self, require_sklearn: None) -> None:
         embedder = DocumentEmbedder(max_features=10, max_df=1.0, ngram_range=(1, 1))
 
@@ -906,6 +907,7 @@ class TestDocumentEmbedder:
         assert len(top) == 2
         assert top[0][0] in ["apple", "banana"]
 
+    @pytest.mark.extras
     def test_save_load_model_and_cache_persistency(
         self, tmp_path: Path, require_sklearn: None
     ) -> None:
@@ -944,6 +946,7 @@ class TestDocumentEmbedder:
         embedder3.clear_cache()
         assert len(embedder3.embedding_cache) == 0
 
+    @pytest.mark.extras
     def test_embedder_error_and_edge_cases(self, tmp_path: Path, require_sklearn: None) -> None:
         # 1. fit_transform with 1 document (triggers length * max_df < 1)
         embedder = DocumentEmbedder(max_features=5, max_df=0.95, ngram_range=(1, 1))
