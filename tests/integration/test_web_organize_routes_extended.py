@@ -3,8 +3,8 @@
 Covers uncovered lines including:
 - _parse_delay_minutes: None/empty → 0, non-int raises, negative raises, over-max raises
 - _normalize_methodology: known key, unknown key → none (canonical default)
-- _scan_directory: single file input (hidden/not hidden), non-recursive glob
-- _counts_by_type: image, video, audio, cad, other categories
+- canonical collection: single file input (hidden/not hidden), non-recursive traversal
+- canonical organization counts: image, video, audio, cad, other categories
 - _store_organize_plan / _get_organize_plan / _delete_organize_plan
 - _set_job_metadata / _get_job_metadata / _prune_job_metadata (force=True)
 - _status_progress: queued, running, failed, unknown
@@ -34,14 +34,15 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError, setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.core.file_ops import collect_files as _scan_directory
 from file_organizer.core.lifecycle import JobStatus, RecoveryAction
+from file_organizer.core.organization_service import count_files_by_type as _counts_by_type
 from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_routes import (
     ORGANIZE_MAX_DELAY_MIN,
     _build_job_view,
-    _counts_by_type,
     _delete_organize_plan,
     _get_job_metadata,
     _get_organize_plan,
@@ -49,7 +50,6 @@ from file_organizer.web.organize_routes import (
     _parse_delay_minutes,
     _prune_job_metadata,
     _run_organize_plan_job,
-    _scan_directory,
     _set_job_metadata,
     _status_progress,
     _store_organize_plan,
@@ -311,7 +311,14 @@ class TestPlanStore:
             def __init__(self, **_: object) -> None:
                 pass
 
-            def organize(self, **_: object) -> OrganizationResult:
+            def organize(
+                self,
+                _input_path: Path,
+                _output_path: Path,
+                *,
+                skip_existing: bool,
+            ) -> OrganizationResult:
+                assert skip_existing is True
                 return OrganizationResult(
                     total_files=1,
                     processed_files=1,
@@ -366,15 +373,17 @@ class TestPlanStore:
             plan=plan,
         )
 
+        service = MagicMock()
+        service.execute.return_value = result
+        current = MagicMock(status=JobStatus.QUEUED, revision=0)
         with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=current),
             patch("file_organizer.web.organize_routes.update_job") as mock_update,
-            patch("file_organizer.web.organize_routes.FileOrganizer") as mock_organizer_cls,
         ):
-            mock_organizer_cls.return_value.execute_plan.return_value = result
-            _run_organize_plan_job("job-1", plan.to_dict(), dry_run=False)
+            _run_organize_plan_job("job-1", plan.to_dict(), service, dry_run=False)
 
-        mock_organizer_cls.return_value.execute_plan.assert_called_once()
-        executed_plan = mock_organizer_cls.return_value.execute_plan.call_args.args[0]
+        service.execute.assert_called_once()
+        executed_plan = service.execute.call_args.args[1]
         assert executed_plan.plan_id == plan.plan_id
         assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
 

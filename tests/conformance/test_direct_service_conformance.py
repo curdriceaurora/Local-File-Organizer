@@ -63,6 +63,7 @@ def test_driver_satisfies_protocol(conformance: ConformanceContext) -> None:
         "rest",
         "python-sdk",
         "python-async-sdk",
+        "web-form-adapter",
     }
 
 
@@ -172,6 +173,26 @@ def test_preview_sources_match_scan(conformance: ConformanceContext) -> None:
 
     assert [op["source"] for op in preview["plan"]["operations"]] == scan["files"]
     assert preview["plan"]["counts"]["total_files"] == scan["total_files"]
+
+
+def test_non_recursive_execution_applies_only_reviewed_top_level_files(
+    conformance: ConformanceContext,
+) -> None:
+    """Unchecked recursion must remain unchanged through reviewed execution (#1597)."""
+    conformance.stage("nested-mixed")
+    request = conformance.request(recursive=False, transfer_mode="copy")
+    preview = _ok(conformance.driver.preview(request))
+
+    executed = _ok(conformance.driver.execute(request, preview["plan_payload"]))
+
+    assert executed["plan"]["counts"]["total_files"] == 1
+    assert [operation["source"] for operation in executed["plan"]["operations"]] == [
+        "<input>/top.txt"
+    ]
+    assert executed["result"]["counts"]["processed_files"] == 1
+    assert [path.name for path in conformance.output_root.rglob("*") if path.is_file()] == [
+        "top.txt"
+    ]
 
 
 def test_media_routing_golden(conformance: ConformanceContext) -> None:

@@ -14,7 +14,7 @@ The page is organized as:
 ## Quick workflow: plan, review, run, export
 
 1. Open `/ui/organize` and enter input/output directories.
-2. Select methodology (`content_based`, `johnny_decimal`, `para`, or `date_based`).
+2. Select methodology (`none`, `para`, or `jd`) and any canonical processing options.
 3. Generate the plan and review proposed output paths before execution.
 4. Start the run and watch live progress/status updates.
 5. Export run output/history as JSON/CSV for follow-up or audit.
@@ -27,15 +27,24 @@ Use the scan form to provide:
 - output directory
 - methodology
 - recursive scan toggle
+- hidden-file toggle
 - skip-existing toggle
-- hardlink toggle
+- copy or hardlink transfer mode
+- image analysis and audio transcription controls
+- text, vision, and transcription model settings
+- provider and performance settings
 
 Supported methodology options in the current UI:
 
-- `content_based`
-- `johnny_decimal`
+- `none`
 - `para`
-- `date_based`
+- `jd`
+
+The form maps directly to the shared `OrganizeOptions` contract. Scan counts,
+preview operations, and execution use the same recursion and hidden-file
+policy. The server stores the canonical serialized plan shown for review and
+executes that exact version; it does not recompute or rewrite destinations in
+the Web layer.
 
 ## Run and monitor
 
@@ -47,6 +56,12 @@ The page includes:
 - progress rendering
 - periodic history refresh
 - periodic stats refresh
+- queued and scheduled cancellation
+- transaction-specific rollback when a completed run supports it
+
+The capability-status panel is generated from the shared registry. It shows
+implemented, unverified, and unavailable organization workflows explicitly
+instead of inferring support from which buttons happen to be visible.
 
 ## History and exports
 

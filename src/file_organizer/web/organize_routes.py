@@ -16,14 +16,15 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingRes
 from loguru import logger
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_config_manager, get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import create_job, get_job, list_jobs, update_job
-from file_organizer.api.models import OrganizeRequest
 from file_organizer.api.utils import resolve_path
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.config.methodology import LABELS as ORGANIZE_METHODOLOGIES
 from file_organizer.config.methodology import normalize as _normalize_methodology
+from file_organizer.core.capabilities import Surface, get_capability_registry
 from file_organizer.core.errors import DomainError
 from file_organizer.core.lifecycle import (
     TERMINAL_JOB_STATUSES,
@@ -31,6 +32,8 @@ from file_organizer.core.lifecycle import (
     JobStatus,
     RecoveryAction,
 )
+from file_organizer.core.organization_service import OrganizationService
+from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
@@ -46,16 +49,14 @@ from file_organizer.web.organize_services import (
     ORGANIZE_DEFAULT_DELAY_MIN,
     ORGANIZE_MAX_DELAY_MIN,
     ORGANIZE_PLAN_LIMIT,
-    _build_plan_movements,
-    _counts_by_type,
     _delete_organize_plan,
     _get_organize_plan,
     _job_report_payload,
     _parse_delay_minutes,
     _result_to_response,
-    _scan_directory,
     _store_organize_plan,
     build_organize_plan,
+    parse_organize_options,
 )
 
 organize_router = APIRouter(tags=["web"])
@@ -71,9 +72,7 @@ __all__ = [
     "_ORGANIZE_PLAN_STORE",
     "_build_job_view",
     "_build_organize_stats",
-    "_build_plan_movements",
     "_cancel_scheduled_job",
-    "_counts_by_type",
     "_delete_organize_plan",
     "_get_job_metadata",
     "_get_organize_plan",
@@ -83,9 +82,6 @@ __all__ = [
     "_parse_delay_minutes",
     "_prune_job_metadata",
     "_result_to_response",
-    "_run_organize_job",
-    "_scan_directory",
-    "_schedule_job",
     "_set_job_metadata",
     "_status_progress",
     "_store_organize_plan",
@@ -94,7 +90,7 @@ __all__ = [
 
 ORGANIZE_EVENT_POLL_SECONDS = 1
 ORGANIZE_HISTORY_LIMIT = 50
-ORGANIZE_JOB_TYPE = "organize_web"
+ORGANIZE_JOB_TYPE = "organize"
 JOB_METADATA_PRUNE_THRESHOLD = 256
 JOB_METADATA_PRUNE_INTERVAL_SECONDS = 60.0
 
@@ -103,6 +99,38 @@ _SCHEDULED_TIMERS_LOCK = Lock()
 _JOB_METADATA: dict[str, dict[str, Any]] = {}
 _JOB_METADATA_LOCK = Lock()
 _LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
+
+_ORGANIZATION_CAPABILITY_IDS = (
+    "organization.scan",
+    "organization.preview",
+    "organization.execute",
+    "organization.jobs-recovery",
+    "organization.suggest",
+)
+
+
+def get_web_organization_service() -> OrganizationService:
+    """Provide the canonical application service to Web adapter routes."""
+    return OrganizationService(organizer_factory=FileOrganizer)
+
+
+def _web_capability_views() -> list[dict[str, str]]:
+    """Return registry-backed organization support states for dashboard rendering."""
+    registry = get_capability_registry()
+    rows: list[dict[str, str]] = []
+    for capability_id in _ORGANIZATION_CAPABILITY_IDS:
+        capability = registry.get(capability_id)
+        support = capability.support_for(Surface.WEB_DESKTOP)
+        rows.append(
+            {
+                "id": capability.capability_id,
+                "name": capability.name,
+                "target_support": support.target_support.value,
+                "implementation_status": support.implementation_status.value,
+                "conformance_status": support.conformance_status.value,
+            }
+        )
+    return rows
 
 
 def _prune_job_metadata(*, force: bool = False) -> None:
@@ -170,7 +198,7 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
     result = job.result or {}
     schedule_delay_minutes = int(metadata.get("schedule_delay_minutes", 0) or 0)
     scheduled_for = format_timestamp(job.scheduled_for) if job.scheduled_for is not None else ""
-    is_scheduled = job.status == JobStatus.SCHEDULED
+    is_cancellable = job.status in {JobStatus.SCHEDULED, JobStatus.QUEUED}
     processed_files = int(result.get("processed_files", 0) or 0)
     total_files = int(result.get("total_files", 0) or 0)
     failed_files = int(result.get("failed_files", 0) or 0)
@@ -206,7 +234,7 @@ def _build_job_view(job_id: str) -> dict[str, Any] | None:
         "dry_run": bool(metadata.get("dry_run", False)),
         "schedule_delay_minutes": schedule_delay_minutes,
         "scheduled_for": scheduled_for,
-        "can_cancel": is_scheduled,
+        "can_cancel": is_cancellable,
         "transaction_id": job.transaction_id,
         "recovery_action": job.recovery_action.value,
         "revision": job.revision,
@@ -274,34 +302,6 @@ def _build_organize_stats() -> dict[str, Any]:
     }
 
 
-def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
-    """Execute an organization job synchronously, updating job state on completion."""
-    update_job(job_id, status="running", error=None)
-    try:
-        organizer = FileOrganizer(
-            dry_run=organize_request.dry_run,
-            use_hardlinks=organize_request.use_hardlinks,
-        )
-        result = organizer.organize(
-            input_path=organize_request.input_dir,
-            output_path=organize_request.output_dir,
-            skip_existing=organize_request.skip_existing,
-        )
-        response = _result_to_response(result).model_dump()
-        _complete_job_from_result(job_id, result, response)
-    except DomainError as exc:
-        update_job(
-            job_id,
-            status=JobStatus.FAILED,
-            error=exc.message,
-            error_code=exc.code,
-            error_retryable=exc.retryable,
-            error_details=exc.details,
-        )
-    except Exception as exc:
-        update_job(job_id, status="failed", error=str(exc))
-
-
 def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
     """Build an OrganizationResult for a dry-run execution of a stored plan."""
     return OrganizationResult(
@@ -316,19 +316,42 @@ def _result_from_plan_preview(plan: OrganizationPlan) -> OrganizationResult:
     )
 
 
-def _run_organize_plan_job(job_id: str, plan_data: dict[str, Any], *, dry_run: bool) -> None:
+def _run_organize_plan_job(
+    job_id: str,
+    plan_data: dict[str, Any],
+    organization_service: OrganizationService,
+    *,
+    dry_run: bool,
+) -> None:
     """Execute a stored executable organization plan."""
-    update_job(job_id, status="running", error=None)
     try:
+        current = get_job(job_id)
+        if current is None or current.status == JobStatus.CANCELLED:
+            return
+        started = update_job(
+            job_id,
+            status=JobStatus.RUNNING,
+            error=None,
+            expected_revision=current.revision,
+        )
+        if started is None:
+            return
         plan = OrganizationPlan.from_dict(plan_data)
         if dry_run:
             result = _result_from_plan_preview(plan)
         else:
-            organizer = FileOrganizer(dry_run=False, use_hardlinks=plan.use_hardlinks)
-            result = organizer.execute_plan(plan)
+            organization_request = OrganizeRequest(
+                plan.input_path,
+                plan.output_path,
+                plan.options,
+            )
+            result = organization_service.execute(organization_request, plan)
         response = _result_to_response(result).model_dump()
         _complete_job_from_result(job_id, result, response)
     except DomainError as exc:
+        current = get_job(job_id)
+        if current is None or current.status == JobStatus.CANCELLED:
+            return
         update_job(
             job_id,
             status=JobStatus.FAILED,
@@ -341,33 +364,10 @@ def _run_organize_plan_job(job_id: str, plan_data: dict[str, Any], *, dry_run: b
         update_job(job_id, status="failed", error=str(exc))
 
 
-def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes: int) -> None:
-    """Schedule an organization job to run after *delay_minutes*.
-
-    If *delay_minutes* is zero or negative the job runs immediately.
-    """
-    delay_seconds = delay_minutes * 60
-
-    def _runner() -> None:
-        """Execute the scheduled organization job."""
-        with _SCHEDULED_TIMERS_LOCK:
-            _SCHEDULED_TIMERS.pop(job_id, None)
-        _run_organize_job(job_id, organize_request)
-
-    if delay_seconds <= 0:
-        _runner()
-        return
-
-    timer = Timer(delay_seconds, _runner)
-    timer.daemon = True
-    with _SCHEDULED_TIMERS_LOCK:
-        _SCHEDULED_TIMERS[job_id] = timer
-    timer.start()
-
-
 def _schedule_plan_job(
     job_id: str,
     plan_data: dict[str, Any],
+    organization_service: OrganizationService,
     delay_minutes: int,
     *,
     dry_run: bool,
@@ -379,7 +379,12 @@ def _schedule_plan_job(
         """Execute the scheduled plan job."""
         with _SCHEDULED_TIMERS_LOCK:
             _SCHEDULED_TIMERS.pop(job_id, None)
-        _run_organize_plan_job(job_id, plan_data, dry_run=dry_run)
+        _run_organize_plan_job(
+            job_id,
+            plan_data,
+            organization_service,
+            dry_run=dry_run,
+        )
 
     if delay_seconds <= 0:
         _runner()
@@ -393,7 +398,7 @@ def _schedule_plan_job(
 
 
 def _cancel_scheduled_job(job_id: str) -> bool:
-    """Cancel a scheduled job timer if it exists.
+    """Cancel and remove a scheduled job timer if it exists.
 
     Returns:
         ``True`` if the job was successfully cancelled, ``False`` otherwise.
@@ -403,12 +408,6 @@ def _cancel_scheduled_job(job_id: str) -> bool:
     if timer is None:
         return False
     timer.cancel()
-    update_job(
-        job_id,
-        status=JobStatus.CANCELLED,
-        error="Cancelled before execution.",
-        error_code="cancelled",
-    )
     return True
 
 
@@ -443,7 +442,9 @@ def _complete_job_from_result(
 
 @organize_router.get("/organize", response_class=HTMLResponse)
 def organize_dashboard(
-    request: Request, settings: ApiSettings = Depends(get_settings)
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    manager: ConfigManager = Depends(get_config_manager),
 ) -> HTMLResponse:
     """Render the organization dashboard with defaults and aggregate stats.
 
@@ -453,8 +454,14 @@ def organize_dashboard(
     from file_organizer.web._helpers import base_context
 
     roots = allowed_roots(settings)
-    default_input = str(roots[0]) if roots else ""
-    default_output = str(roots[0] / "organized") if roots else ""
+    app_config = manager.load()
+    default_input = app_config.default_input_dir or (str(roots[0]) if roots else "")
+    default_output = app_config.default_output_dir or (str(roots[0] / "organized") if roots else "")
+    default_options = OrganizeOptions(
+        methodology=_normalize_methodology(app_config.default_methodology),
+        text_model=app_config.models.text_model,
+        vision_model=app_config.models.vision_model,
+    )
     stats = _build_organize_stats()
     context = base_context(
         request,
@@ -466,6 +473,8 @@ def organize_dashboard(
             "default_input_dir": default_input,
             "default_output_dir": default_output,
             "methodology_options": ORGANIZE_METHODOLOGIES,
+            "organization_defaults": default_options.to_dict(),
+            "organization_capabilities": _web_capability_views(),
             "stats": stats,
         },
     )
@@ -476,6 +485,7 @@ def organize_dashboard(
 def organize_scan(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
+    organization_service: OrganizationService = Depends(get_web_organization_service),
     input_dir: str = Form(""),
     output_dir: str = Form(""),
     methodology: str = Form(_DEFAULT_METHODOLOGY),
@@ -483,6 +493,17 @@ def organize_scan(
     include_hidden: str = Form("0"),
     skip_existing: str = Form("1"),
     use_hardlinks: str = Form("1"),
+    transfer_mode: str = Form(""),
+    enable_vision: str = Form("1"),
+    transcribe_audio: str = Form("0"),
+    max_transcribe_seconds: str = Form("600"),
+    whisper_model: str = Form("tiny"),
+    parallel_workers: str = Form(""),
+    prefetch_depth: str = Form("2"),
+    text_model: str = Form(""),
+    vision_model: str = Form(""),
+    text_provider: str = Form(""),
+    vision_provider: str = Form(""),
 ) -> HTMLResponse:
     """Scan the input directory and generate a dry-run organization plan.
 
@@ -490,27 +511,57 @@ def organize_scan(
         HTMX partial showing the generated plan or an error message.
     """
     error_message: str | None = None
+    error_payload: dict[str, Any] | None = None
     info_message: str | None = None
     plan: dict[str, Any] | None = None
 
     try:
-        plan = build_organize_plan(
-            input_dir=input_dir,
-            output_dir=output_dir,
+        options = parse_organize_options(
             methodology=methodology,
             recursive=recursive,
             include_hidden=include_hidden,
             skip_existing=skip_existing,
+            transfer_mode=transfer_mode,
             use_hardlinks=use_hardlinks,
+            enable_vision=enable_vision,
+            transcribe_audio=transcribe_audio,
+            max_transcribe_seconds=max_transcribe_seconds,
+            whisper_model=whisper_model,
+            parallel_workers=parallel_workers,
+            prefetch_depth=prefetch_depth,
+            text_model=text_model,
+            vision_model=vision_model,
+            text_provider=text_provider,
+            vision_provider=vision_provider,
+        )
+        plan = build_organize_plan(
+            input_dir=input_dir,
+            output_dir=output_dir,
+            options=options,
             allowed_paths=settings.allowed_paths,
-            organizer_factory=FileOrganizer,
+            organization_service=organization_service,
         )
         info_message = "Plan generated. Review movements and execute when ready."
     except ApiError as exc:
         error_message = exc.message
+        error_payload = {
+            "code": exc.error,
+            "message": exc.message,
+            "retryable": False,
+            "details": exc.details or {},
+        }
+    except DomainError as exc:
+        error_message = exc.message
+        error_payload = {**exc.to_dict(), "details": exc.details}
     except Exception:
         logger.exception("Failed to generate organize plan")
         error_message = "Failed to generate plan."
+        error_payload = {
+            "code": "execution_failed",
+            "message": error_message,
+            "retryable": False,
+            "details": {},
+        }
 
     return templates.TemplateResponse(
         request,
@@ -518,6 +569,7 @@ def organize_scan(
         {
             "plan": plan,
             "error_message": error_message,
+            "error_payload": error_payload,
             "info_message": info_message,
             "methodology_options": ORGANIZE_METHODOLOGIES,
         },
@@ -543,6 +595,7 @@ def organize_clear_plan(
             "plan": None,
             "info_message": "Plan dismissed.",
             "error_message": None,
+            "error_payload": None,
             "methodology_options": ORGANIZE_METHODOLOGIES,
         },
     )
@@ -553,6 +606,7 @@ def organize_execute(
     request: Request,
     background_tasks: BackgroundTasks,
     settings: ApiSettings = Depends(get_settings),
+    organization_service: OrganizationService = Depends(get_web_organization_service),
     plan_id: str = Form(""),
     dry_run: str = Form("0"),
     schedule_delay_minutes: str = Form(str(ORGANIZE_DEFAULT_DELAY_MIN)),
@@ -595,15 +649,6 @@ def organize_execute(
                 message="Stored plan paths do not match the requested safe paths.",
             )
 
-        organize_request = OrganizeRequest(
-            input_dir=str(safe_input),
-            output_dir=str(safe_output),
-            skip_existing=bool(plan.get("skip_existing", True)),
-            dry_run=dry_run_enabled,
-            use_hardlinks=bool(plan.get("use_hardlinks", True)),
-            run_in_background=True,
-        )
-
         scheduled_at_datetime: datetime | None = None
         scheduled_for = ""
         if delay_minutes > 0:
@@ -615,10 +660,10 @@ def organize_execute(
             job.job_id,
             {
                 "plan_id": plan_id,
-                "input_dir": organize_request.input_dir,
-                "output_dir": organize_request.output_dir,
-                "methodology": _normalize_methodology(plan.get("methodology")),
-                "dry_run": organize_request.dry_run,
+                "input_dir": str(safe_input),
+                "output_dir": str(safe_output),
+                "methodology": executable_plan.options.effective_methodology.value,
+                "dry_run": dry_run_enabled,
                 "schedule_delay_minutes": delay_minutes,
                 "scheduled_for": scheduled_for,
                 "executable_plan_id": executable_plan.plan_id,
@@ -629,6 +674,7 @@ def organize_execute(
             _schedule_plan_job(
                 job.job_id,
                 executable_plan.to_dict(),
+                organization_service,
                 delay_minutes,
                 dry_run=dry_run_enabled,
             )
@@ -638,6 +684,7 @@ def organize_execute(
                 _run_organize_plan_job,
                 job.job_id,
                 executable_plan.to_dict(),
+                organization_service,
                 dry_run=dry_run_enabled,
             )
             info_message = "Organization job queued."
@@ -646,6 +693,8 @@ def organize_execute(
         if job_view is None:
             raise ApiError(status_code=500, error="job_error", message="Failed to queue job.")
     except ApiError as exc:
+        error_message = exc.message
+    except DomainError as exc:
         error_message = exc.message
     except Exception:
         logger.exception("Failed to queue organize job")
@@ -837,7 +886,7 @@ async def organize_history_events(
 
 @organize_router.post("/organize/jobs/{job_id}/cancel", response_class=HTMLResponse)
 def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
-    """Cancel a scheduled organization job.
+    """Cancel a queued or scheduled organization job.
 
     Returns:
         Updated job status partial.
@@ -848,10 +897,19 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
 
     info_message: str | None = None
     error_message: str | None = None
-    if _cancel_scheduled_job(job_id):
-        info_message = "Scheduled job cancelled."
+    if not job["can_cancel"]:
+        error_message = "Only queued or scheduled jobs can be cancelled."
     else:
-        error_message = "Only scheduled jobs can be cancelled."
+        if job["status"] == JobStatus.SCHEDULED:
+            _cancel_scheduled_job(job_id)
+        updated = update_job(
+            job_id,
+            status=JobStatus.CANCELLED,
+            expected_revision=job["revision"],
+        )
+        if updated is None:
+            raise ApiError(status_code=404, error="not_found", message="Job not found.")
+        info_message = "Organization job cancelled."
     refreshed_job = _build_job_view(job_id)
     return templates.TemplateResponse(
         request,
@@ -881,25 +939,18 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
     if not job["can_rollback"]:
         error_message = "Rollback is only available for completed non-dry-run jobs."
     else:
-        try:
-            from file_organizer.undo.undo_manager import UndoManager
+        from file_organizer.undo.undo_manager import UndoManager
 
-            transaction_id = str(job["transaction_id"])
-            update_job(job_id, status=JobStatus.ROLLING_BACK)
-            manager = UndoManager()
-            success = manager.undo_transaction(transaction_id)
-            update_job(
-                job_id,
-                status=(JobStatus.ROLLED_BACK if success else JobStatus.RECOVERY_REQUIRED),
-                error=(None if success else "Rollback did not complete."),
-                error_code=(None if success else "recovery_required"),
-                recovery_action=(RecoveryAction.NONE if success else RecoveryAction.MANUAL),
-            )
-            rollback_message = (
-                "Rollback completed for this job's transaction."
-                if success
-                else "Rollback requires manual recovery."
-            )
+        transaction_id = str(job["transaction_id"])
+        rolling_back = update_job(
+            job_id,
+            status=JobStatus.ROLLING_BACK,
+            expected_revision=job["revision"],
+        )
+        if rolling_back is None:
+            raise ApiError(status_code=404, error="not_found", message="Job not found.")
+        try:
+            success = UndoManager().undo_transaction(transaction_id)
         except Exception:
             logger.exception("Rollback execution failed for job {}", job_id)
             current = get_job(job_id)
@@ -910,8 +961,25 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
                     error="Rollback failed.",
                     error_code="recovery_required",
                     recovery_action=RecoveryAction.MANUAL,
+                    expected_revision=current.revision,
                 )
             error_message = "Rollback failed."
+        else:
+            updated = update_job(
+                job_id,
+                status=(JobStatus.ROLLED_BACK if success else JobStatus.RECOVERY_REQUIRED),
+                error=(None if success else "Rollback did not complete."),
+                error_code=(None if success else "recovery_required"),
+                recovery_action=(RecoveryAction.NONE if success else RecoveryAction.MANUAL),
+                expected_revision=rolling_back.revision,
+            )
+            if updated is None:
+                raise ApiError(status_code=404, error="not_found", message="Job not found.")
+            rollback_message = (
+                "Rollback completed for this job's transaction."
+                if success
+                else "Rollback requires manual recovery."
+            )
 
     refreshed_job = _build_job_view(job_id)
     response = templates.TemplateResponse(

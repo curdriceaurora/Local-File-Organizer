@@ -222,7 +222,7 @@ class TestOrganizeExecute:
                 return_value=mock_job,
             ),
             patch("file_organizer.web.organize_routes._set_job_metadata"),
-            patch("file_organizer.web.organize_routes._run_organize_job"),
+            patch("file_organizer.web.organize_routes._run_organize_plan_job"),
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
             patch(
                 "file_organizer.web.organize_routes._get_job_metadata",
@@ -323,6 +323,7 @@ class TestOrganizeJobCancel:
                 "file_organizer.web.organize_routes._cancel_scheduled_job",
                 return_value=True,
             ),
+            patch("file_organizer.web.organize_routes.update_job", return_value=mock_job),
         ):
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<div>cancelled</div>")
             response = client.post("/ui/organize/jobs/test-job-1/cancel")
@@ -358,6 +359,7 @@ class TestOrganizeJobRollback:
                 return_value={"dry_run": False, "methodology": "para"},
             ),
             patch("file_organizer.undo.undo_manager.UndoManager") as mock_undo_cls,
+            patch("file_organizer.web.organize_routes.update_job", return_value=mock_job),
         ):
             mock_undo_cls.return_value.undo_transaction.return_value = True
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<div>rolled back</div>")

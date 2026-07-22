@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -43,6 +43,26 @@ class OrganizationScan:
 OrganizerFactory = Callable[..., FileOrganizer]
 
 
+def count_files_by_type(files: Iterable[Path]) -> dict[str, int]:
+    """Count files using the canonical organization type buckets."""
+    counts = dict.fromkeys(("text", "image", "video", "audio", "cad", "other"), 0)
+    for path in files:
+        extension = path.suffix.lower()
+        if extension in TEXT_EXTENSIONS:
+            counts["text"] += 1
+        elif extension in IMAGE_EXTENSIONS:
+            counts["image"] += 1
+        elif extension in VIDEO_EXTENSIONS:
+            counts["video"] += 1
+        elif extension in AUDIO_EXTENSIONS:
+            counts["audio"] += 1
+        elif extension in CAD_EXTENSIONS:
+            counts["cad"] += 1
+        else:
+            counts["other"] += 1
+    return counts
+
+
 class OrganizationService:
     """Transport-neutral entry point for scan, preview, and execution."""
 
@@ -79,21 +99,7 @@ class OrganizationService:
                 include_hidden=request.options.include_hidden,
             )
         )
-        counts = dict.fromkeys(("text", "image", "video", "audio", "cad", "other"), 0)
-        for path in files:
-            extension = path.suffix.lower()
-            if extension in TEXT_EXTENSIONS:
-                counts["text"] += 1
-            elif extension in IMAGE_EXTENSIONS:
-                counts["image"] += 1
-            elif extension in VIDEO_EXTENSIONS:
-                counts["video"] += 1
-            elif extension in AUDIO_EXTENSIONS:
-                counts["audio"] += 1
-            elif extension in CAD_EXTENSIONS:
-                counts["cad"] += 1
-            else:
-                counts["other"] += 1
+        counts = count_files_by_type(files)
         return OrganizationScan(request.input_path, files, counts)
 
     def preview(self, request: OrganizeRequest) -> OrganizationResult:

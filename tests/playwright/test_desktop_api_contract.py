@@ -52,6 +52,19 @@ class TestBridgeMockInjection:
         result: str = page.evaluate("() => window.pywebview.api.browse_directory().then(v => v)")
         assert result == "/mock/dir"
 
+    def test_browse_directory_is_noop_when_bridge_method_is_missing(
+        self, page: Page, pywebview_mock: PywebviewMockHandle
+    ) -> None:
+        """The shared UI must tolerate a pywebview bridge without the new method."""
+        page.goto("/ui/organize")
+        input_path = page.locator("#organize-input-dir")
+        original_value = input_path.input_value()
+        page.evaluate(
+            "() => { delete window.pywebview.api.browse_directory; "
+            "window.desktopBrowseDirectory('organize-input-dir'); }"
+        )
+        expect(input_path).to_have_value(original_value)
+
     def test_browse_file_returns_mock_path(
         self, page: Page, pywebview_mock: PywebviewMockHandle
     ) -> None:

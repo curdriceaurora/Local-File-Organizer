@@ -1,30 +1,25 @@
 """Unit tests for web organize_routes helpers.
 
-Tests internal helpers (_parse_delay_minutes, _normalize_methodology,
-_scan_directory, _counts_by_type, _status_progress, _job_report_payload),
-plan-store operations, job-metadata operations, job-view builders,
-and cancel/schedule helpers.
+Tests presentation helpers, plan-store operations, job metadata, job views,
+and lifecycle adaptation.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import Timer
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.exceptions import ApiError
-from file_organizer.core.lifecycle import RecoveryAction
+from file_organizer.core.lifecycle import JobStatus, RecoveryAction
 from file_organizer.web.organize_routes import (
     ORGANIZE_MAX_DELAY_MIN,
     ORGANIZE_METHODOLOGIES,
     _cancel_scheduled_job,
-    _counts_by_type,
     _normalize_methodology,
     _parse_delay_minutes,
-    _scan_directory,
     _status_progress,
 )
 
@@ -134,140 +129,6 @@ class TestNormalizeMethodology:
     def test_whitespace_trimmed(self):
         """Verifies leading/trailing whitespace is stripped before matching."""
         assert _normalize_methodology("  para  ") == "para"
-
-
-# ---------------------------------------------------------------------------
-# _scan_directory
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestScanDirectory:
-    """Test the _scan_directory helper."""
-
-    def test_scan_flat(self, tmp_path):
-        """Verifies non-recursive scan returns only top-level files, not subdirectory files."""
-        (tmp_path / "a.txt").write_text("x")
-        (tmp_path / "b.txt").write_text("y")
-        (tmp_path / "sub").mkdir()
-        (tmp_path / "sub" / "c.txt").write_text("z")
-
-        files = _scan_directory(tmp_path, recursive=False, include_hidden=False)
-        names = {f.name for f in files}
-        assert "a.txt" in names
-        assert "b.txt" in names
-        # sub/c.txt should NOT be included (non-recursive)
-        assert "c.txt" not in names
-
-    def test_scan_recursive(self, tmp_path):
-        """Verifies recursive scan includes files in subdirectories."""
-        (tmp_path / "a.txt").write_text("x")
-        (tmp_path / "sub").mkdir()
-        (tmp_path / "sub" / "c.txt").write_text("z")
-
-        files = _scan_directory(tmp_path, recursive=True, include_hidden=False)
-        names = {f.name for f in files}
-        assert "a.txt" in names
-        assert "c.txt" in names
-
-    def test_exclude_hidden(self, tmp_path):
-        """Verifies visible files are returned when hidden files are excluded."""
-        (tmp_path / "visible.txt").write_text("x")
-        (tmp_path / ".hidden.txt").write_text("y")
-
-        files = _scan_directory(tmp_path, recursive=False, include_hidden=False)
-        names = {f.name for f in files}
-        assert "visible.txt" in names
-        # Hidden file might or might not be excluded depending on is_hidden impl
-        # The function calls is_hidden() so we check at least visible is there
-
-    def test_include_hidden(self, tmp_path):
-        """Verifies hidden files are returned when include_hidden is True."""
-        (tmp_path / ".hidden.txt").write_text("y")
-
-        files = _scan_directory(tmp_path, recursive=False, include_hidden=True)
-        names = {f.name for f in files}
-        assert ".hidden.txt" in names
-
-    def test_single_file(self, tmp_path):
-        """Verifies a single visible file path is returned as a one-element list."""
-        f = tmp_path / "solo.txt"
-        f.write_text("data")
-
-        files = _scan_directory(f, recursive=False, include_hidden=True)
-        assert len(files) == 1
-        assert files[0].name == "solo.txt"
-
-    def test_single_hidden_file_excluded(self, tmp_path):
-        """Verifies a single hidden file path is excluded when include_hidden is False."""
-        f = tmp_path / ".hidden_solo"
-        f.write_text("data")
-
-        files = _scan_directory(f, recursive=False, include_hidden=False)
-        # is_hidden should filter this out
-        assert len(files) == 0
-
-    def test_nonexistent_path(self, tmp_path):
-        """Verifies a nonexistent path returns an empty list without raising."""
-        missing = tmp_path / "nope"
-        files = _scan_directory(missing, recursive=False, include_hidden=False)
-        assert files == []
-
-
-# ---------------------------------------------------------------------------
-# _counts_by_type
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestCountsByType:
-    """Test the _counts_by_type helper."""
-
-    def test_empty_list(self):
-        """Verifies an empty file list returns zeroed counts for all type buckets."""
-        result = _counts_by_type([])
-        assert result == {"text": 0, "image": 0, "video": 0, "audio": 0, "cad": 0, "other": 0}
-
-    def test_text_file(self):
-        """Verifies .txt and .md files are counted in the 'text' bucket."""
-        result = _counts_by_type([Path("doc.txt"), Path("notes.md")])
-        assert result["text"] == 2
-
-    def test_image_file(self):
-        """Verifies .jpg and .png files are counted in the 'image' bucket."""
-        result = _counts_by_type([Path("photo.jpg"), Path("diagram.png")])
-        assert result["image"] == 2
-
-    def test_video_file(self):
-        """Verifies .mp4 files are counted in the 'video' bucket."""
-        result = _counts_by_type([Path("clip.mp4")])
-        assert result["video"] == 1
-
-    def test_audio_file(self):
-        """Verifies .mp3 files are counted in the 'audio' bucket."""
-        result = _counts_by_type([Path("song.mp3")])
-        assert result["audio"] == 1
-
-    def test_unknown_extension(self):
-        """Verifies files with unrecognised extensions are counted in the 'other' bucket."""
-        result = _counts_by_type([Path("mystery.xyz")])
-        assert result["other"] == 1
-
-    def test_mixed(self):
-        """Verifies a mixed set of file types is counted correctly across all buckets."""
-        files = [
-            Path("a.txt"),
-            Path("b.jpg"),
-            Path("c.mp4"),
-            Path("d.mp3"),
-            Path("e.unknown"),
-        ]
-        result = _counts_by_type(files)
-        assert result["text"] == 1
-        assert result["image"] == 1
-        assert result["video"] == 1
-        assert result["audio"] == 1
-        assert result["other"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +479,31 @@ class TestBuildJobView:
         assert view is not None
         assert view["can_cancel"] is True
 
+    def test_builds_view_queued_as_cancellable(self):
+        """Queued work can be cancelled before the background task starts."""
+        from file_organizer.web.organize_routes import _build_job_view
+
+        mock_job = MagicMock()
+        mock_job.job_id = "job-queued"
+        mock_job.status = JobStatus.QUEUED
+        mock_job.result = None
+        mock_job.created_at = datetime(2025, 1, 1, tzinfo=UTC)
+        mock_job.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
+        mock_job.error = None
+        mock_job.scheduled_for = None
+        mock_job.transaction_id = None
+        mock_job.recovery_action = RecoveryAction.NONE
+        mock_job.revision = 0
+
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
+            patch("file_organizer.web.organize_routes._get_job_metadata", return_value={}),
+        ):
+            view = _build_job_view("job-queued")
+
+        assert view is not None
+        assert view["can_cancel"] is True
+
 
 # ---------------------------------------------------------------------------
 # _list_organize_jobs
@@ -734,12 +620,10 @@ class TestCancelScheduledJob:
         mock_timer = MagicMock(spec=Timer)
         _SCHEDULED_TIMERS["cancel-test"] = mock_timer
 
-        with patch("file_organizer.web.organize_routes.update_job") as update:
-            result = _cancel_scheduled_job("cancel-test")
+        result = _cancel_scheduled_job("cancel-test")
 
         assert result is True
         mock_timer.cancel.assert_called_once()
-        assert update.call_args.kwargs["status"] == "cancelled"
         assert "cancel-test" not in _SCHEDULED_TIMERS
 
     def test_cancel_nonexistent_timer(self):

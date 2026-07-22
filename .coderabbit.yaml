@@ -6,6 +6,11 @@ language: en
 
 reviews:
   request_changes_workflow: false
+  pre_merge_checks:
+    # The repository's source-only interrogate gate enforces 95% coverage.
+    # CodeRabbit's PR-wide calculation also counts intentionally undocumented tests.
+    docstrings:
+      mode: "off"
   auto_review:
     enabled: true
   review_status: true
