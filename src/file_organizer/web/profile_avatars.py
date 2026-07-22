@@ -22,10 +22,11 @@ def avatar_path(user_id: str, avatar_dir: Path) -> Path:
     """
     if not user_id or not SAFE_USER_ID.match(user_id):
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    result = avatar_dir / f"{user_id}.png"
-    if not result.resolve().is_relative_to(avatar_dir.resolve()):
+    avatar_root = avatar_dir.resolve()
+    target = (avatar_root / f"{user_id}.png").resolve()
+    if not target.is_relative_to(avatar_root) or target == avatar_root:
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    return result
+    return avatar_root / f"{user_id}.png"
 
 
 def resolve_avatar_for_read(
