@@ -2,7 +2,10 @@
 <div class="banner banner-info">{{ info_message }}</div>
 {% endif %}
 {% if error_message %}
-<div class="banner banner-error">{{ error_message }}</div>
+<div
+    class="banner banner-error"
+    data-error-payload="{{ error_payload | tojson | forceescape }}"
+>{{ error_message }}</div>
 {% endif %}
 
 {% if plan %}

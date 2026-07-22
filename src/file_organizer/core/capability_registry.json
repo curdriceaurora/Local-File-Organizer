@@ -1902,7 +1902,7 @@
           "target_support": "full"
         },
         "web-desktop": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "GET /ui/organize",
             "POST /ui/organize/scan",
@@ -1974,7 +1974,7 @@
           "target_support": "full"
         },
         "web-desktop": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "POST /ui/organize/scan"
           ],

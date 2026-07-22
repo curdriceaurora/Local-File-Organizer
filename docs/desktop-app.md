@@ -43,6 +43,12 @@ When you start the app, it does these steps:
 3. It waits for the server.
 4. It opens a native window to the local UI.
 
+The Desktop application does not implement a second organization workflow.
+It loads the same `/ui/organize` routes, canonical option mapping, reviewed
+plans, jobs, and results as a browser. Its only additions are native directory,
+file, and save dialogs plus reveal-in-file-manager behavior; those affordances
+select or display paths and do not alter organization semantics.
+
 ## Install
 
 ```bash
@@ -60,6 +66,7 @@ pip install -e ".[desktop]"
 Templates must use the helpers from `desktop_api.js`:
 
 - `window.desktopBrowseFile(inputId, fileTypes)`
+- `window.desktopBrowseDirectory(inputId)`
 - `window.desktopSaveFile(suggestedName, fileTypes)`
 - `window.desktopOpenPath(path)`
 

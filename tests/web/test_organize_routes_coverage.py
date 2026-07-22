@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.errors import DomainError, DomainErrorCode
+from file_organizer.core.lifecycle import JobStatus
 from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
@@ -55,6 +57,13 @@ class TestOrganizeDashboardRoute:
 
         settings = MagicMock()
         request = MagicMock()
+        manager = MagicMock()
+        manager.load.return_value = MagicMock(
+            default_input_dir=None,
+            default_output_dir=None,
+            default_methodology="none",
+            models=MagicMock(text_model="text", vision_model="vision"),
+        )
         with (
             patch("file_organizer.web._helpers.base_context", return_value={"request": request}),
             patch("file_organizer.web.organize_routes.allowed_roots", return_value=[tmp_path]),
@@ -63,7 +72,7 @@ class TestOrganizeDashboardRoute:
                 return_value={"total_jobs": 0},
             ),
         ):
-            organize_dashboard(request, settings)
+            organize_dashboard(request, settings, manager)
         mock_templates.TemplateResponse.assert_called_once()
 
 
@@ -341,19 +350,34 @@ class TestOrganizeJobCancelRoute:
     def test_cancel_success(self, mock_templates) -> None:
         from file_organizer.web.organize_routes import organize_job_cancel
 
-        job_view = {"job_id": "j1", "status": "queued", "can_cancel": True}
+        job_view = {
+            "job_id": "j1",
+            "status": "scheduled",
+            "can_cancel": True,
+            "revision": 0,
+        }
         request = MagicMock()
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
             patch("file_organizer.web.organize_routes._cancel_scheduled_job", return_value=True),
+            patch(
+                "file_organizer.web.organize_routes.update_job",
+                return_value=MagicMock(),
+            ) as update,
         ):
             organize_job_cancel(request, "j1")
+        update.assert_called_once_with("j1", status="cancelled", expected_revision=0)
         mock_templates.TemplateResponse.assert_called_once()
 
     def test_cancel_not_scheduled(self, mock_templates) -> None:
         from file_organizer.web.organize_routes import organize_job_cancel
 
-        job_view = {"job_id": "j1", "status": "running", "can_cancel": False}
+        job_view = {
+            "job_id": "j1",
+            "status": "running",
+            "can_cancel": False,
+            "revision": 1,
+        }
         request = MagicMock()
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
@@ -361,6 +385,33 @@ class TestOrganizeJobCancelRoute:
         ):
             organize_job_cancel(request, "j1")
         mock_templates.TemplateResponse.assert_called_once()
+
+    def test_cancel_queued_uses_revision_guard(self, mock_templates) -> None:
+        from file_organizer.web.organize_routes import organize_job_cancel
+
+        job_view = {
+            "job_id": "j1",
+            "status": "queued",
+            "can_cancel": True,
+            "revision": 7,
+        }
+        with (
+            patch(
+                "file_organizer.web.organize_routes._build_job_view",
+                side_effect=(job_view, {**job_view, "status": "cancelled"}),
+            ),
+            patch(
+                "file_organizer.web.organize_routes.update_job",
+                return_value=MagicMock(),
+            ) as update,
+        ):
+            organize_job_cancel(MagicMock(), "j1")
+
+        update.assert_called_once_with(
+            "j1",
+            status="cancelled",
+            expected_revision=7,
+        )
 
     def test_cancel_not_found(self) -> None:
         from file_organizer.web.organize_routes import organize_job_cancel
@@ -383,6 +434,7 @@ class TestOrganizeJobRollbackRoute:
             "job_id": "j1",
             "status": "running",
             "can_rollback": False,
+            "revision": 1,
         }
         request = MagicMock()
         with patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view):
@@ -397,6 +449,7 @@ class TestOrganizeJobRollbackRoute:
             "status": "completed",
             "can_rollback": True,
             "transaction_id": "txn-1",
+            "revision": 1,
         }
         request = MagicMock()
         mock_manager = MagicMock()
@@ -404,9 +457,19 @@ class TestOrganizeJobRollbackRoute:
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
             patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
+            patch("file_organizer.web.organize_routes.update_job") as update,
         ):
+            update.side_effect = (
+                MagicMock(revision=2),
+                MagicMock(revision=3),
+            )
             organize_job_rollback(request, "j1")
         mock_manager.undo_transaction.assert_called_once_with("txn-1")
+        assert update.call_args_list[0].kwargs == {
+            "status": "rolling_back",
+            "expected_revision": 1,
+        }
+        assert update.call_args_list[1].kwargs["expected_revision"] == 2
         mock_templates.TemplateResponse.assert_called_once()
 
     def test_rollback_exception(self, mock_templates) -> None:
@@ -417,10 +480,18 @@ class TestOrganizeJobRollbackRoute:
             "status": "completed",
             "can_rollback": True,
             "transaction_id": "txn-1",
+            "revision": 1,
         }
         request = MagicMock()
+        rolling_back = MagicMock(revision=2)
+        current = MagicMock(status="rolling_back", revision=2)
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
+            patch(
+                "file_organizer.web.organize_routes.update_job",
+                side_effect=(rolling_back, MagicMock(revision=3)),
+            ),
+            patch("file_organizer.web.organize_routes.get_job", return_value=current),
             patch(
                 "file_organizer.undo.undo_manager.UndoManager",
                 side_effect=RuntimeError("undo failed"),
@@ -539,46 +610,6 @@ class TestOrganizeReportRoute:
             organize_report("missing", format="json")
 
 
-class TestRunOrganizeJob:
-    """Covers _run_organize_job."""
-
-    def test_run_success(self) -> None:
-        from file_organizer.web.organize_routes import _run_organize_job
-
-        mock_organizer = MagicMock()
-        mock_result = MagicMock()
-        mock_result.errors = []
-        mock_organizer.organize.return_value = mock_result
-
-        request = MagicMock()
-        request.dry_run = False
-        request.use_hardlinks = False
-        request.input_dir = "/in"
-        request.output_dir = "/out"
-        request.skip_existing = True
-
-        with (
-            patch("file_organizer.web.organize_routes.update_job"),
-            patch("file_organizer.web.organize_routes.FileOrganizer", return_value=mock_organizer),
-        ):
-            _run_organize_job("j1", request)
-
-    def test_run_failure(self) -> None:
-        from file_organizer.web.organize_routes import _run_organize_job
-
-        request = MagicMock()
-        request.dry_run = False
-        request.use_hardlinks = False
-
-        with (
-            patch("file_organizer.web.organize_routes.update_job"),
-            patch(
-                "file_organizer.web.organize_routes.FileOrganizer", side_effect=RuntimeError("boom")
-            ),
-        ):
-            _run_organize_job("j1", request)
-
-
 class TestRunOrganizePlanJob:
     """Covers executable-plan job execution."""
 
@@ -598,12 +629,18 @@ class TestRunOrganizePlanJob:
         from file_organizer.web.organize_routes import _run_organize_plan_job
 
         plan = _plan_for_routes(tmp_path)
+        service = MagicMock()
+        current = MagicMock(status="queued")
 
-        with patch("file_organizer.web.organize_routes.update_job") as mock_update:
-            _run_organize_plan_job("j1", plan.to_dict(), dry_run=True)
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=current),
+            patch("file_organizer.web.organize_routes.update_job") as mock_update,
+        ):
+            _run_organize_plan_job("j1", plan.to_dict(), service, dry_run=True)
 
         assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
         assert mock_update.call_args_list[-1].kwargs["result"]["processed_files"] == 1
+        service.execute.assert_not_called()
 
     def test_run_executes_stored_plan(self, tmp_path) -> None:
         from file_organizer.web.organize_routes import _run_organize_plan_job
@@ -615,56 +652,57 @@ class TestRunOrganizePlanJob:
             organized_structure={"docs": ["notes.txt"]},
             plan=plan,
         )
-        organizer = MagicMock()
-        organizer.execute_plan.return_value = result
+        service = MagicMock()
+        service.execute.return_value = result
+        current = MagicMock(status="queued")
 
         with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=current),
             patch("file_organizer.web.organize_routes.update_job") as mock_update,
-            patch("file_organizer.web.organize_routes.FileOrganizer", return_value=organizer),
         ):
-            _run_organize_plan_job("j1", plan.to_dict(), dry_run=False)
+            _run_organize_plan_job("j1", plan.to_dict(), service, dry_run=False)
 
-        organizer.execute_plan.assert_called_once()
+        request, executed_plan = service.execute.call_args.args
+        assert request.options == plan.options
+        assert executed_plan == plan
         assert mock_update.call_args_list[-1].kwargs["status"] == "completed"
 
     def test_run_reports_invalid_plan_failure(self) -> None:
         from file_organizer.web.organize_routes import _run_organize_plan_job
 
-        with patch("file_organizer.web.organize_routes.update_job") as mock_update:
-            _run_organize_plan_job("j1", {"operations": []}, dry_run=True)
+        current = MagicMock(status="queued")
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=current),
+            patch("file_organizer.web.organize_routes.update_job") as mock_update,
+        ):
+            _run_organize_plan_job("j1", {"operations": []}, MagicMock(), dry_run=True)
 
         assert mock_update.call_args_list[-1].kwargs["status"] == "failed"
         assert mock_update.call_args_list[-1].kwargs["error"]
 
+    def test_cancel_winning_start_race_does_not_reclassify_job_as_failed(self, tmp_path) -> None:
+        from file_organizer.web.organize_routes import _run_organize_plan_job
 
-class TestScheduleJob:
-    """Covers _schedule_job."""
-
-    def test_schedule_immediate(self) -> None:
-        from file_organizer.web.organize_routes import _schedule_job
-
-        request = MagicMock()
-        request.dry_run = False
-        request.use_hardlinks = False
-
-        with (
-            patch("file_organizer.web.organize_routes.update_job"),
-            patch("file_organizer.web.organize_routes.FileOrganizer", return_value=MagicMock()),
-        ):
-            _schedule_job("j1", request, delay_minutes=0)
-
-    def test_schedule_delayed(self) -> None:
-        from file_organizer.web.organize_routes import (
-            _SCHEDULED_TIMERS,
-            _schedule_job,
+        plan = _plan_for_routes(tmp_path)
+        queued = MagicMock(status=JobStatus.QUEUED, revision=0)
+        cancelled = MagicMock(status=JobStatus.CANCELLED, revision=1)
+        transition_error = DomainError(
+            DomainErrorCode.STALE_JOB_REVISION,
+            "Job state changed before execution started.",
         )
+        with (
+            patch(
+                "file_organizer.web.organize_routes.get_job",
+                side_effect=(queued, cancelled),
+            ),
+            patch(
+                "file_organizer.web.organize_routes.update_job",
+                side_effect=transition_error,
+            ) as update,
+        ):
+            _run_organize_plan_job("j1", plan.to_dict(), MagicMock(), dry_run=False)
 
-        request = MagicMock()
-        _schedule_job("j-delayed", request, delay_minutes=1)
-        assert "j-delayed" in _SCHEDULED_TIMERS
-        # Clean up
-        timer = _SCHEDULED_TIMERS.pop("j-delayed")
-        timer.cancel()
+        assert update.call_count == 1
 
 
 class TestSchedulePlanJob:
@@ -674,11 +712,12 @@ class TestSchedulePlanJob:
         from file_organizer.web.organize_routes import _schedule_plan_job
 
         plan = _plan_for_routes(tmp_path)
+        service = MagicMock()
 
         with patch("file_organizer.web.organize_routes._run_organize_plan_job") as mock_run:
-            _schedule_plan_job("j1", plan.to_dict(), delay_minutes=0, dry_run=True)
+            _schedule_plan_job("j1", plan.to_dict(), service, delay_minutes=0, dry_run=True)
 
-        mock_run.assert_called_once_with("j1", plan.to_dict(), dry_run=True)
+        mock_run.assert_called_once_with("j1", plan.to_dict(), service, dry_run=True)
 
     def test_schedule_delayed(self, tmp_path) -> None:
         from file_organizer.web.organize_routes import (
@@ -687,24 +726,9 @@ class TestSchedulePlanJob:
         )
 
         plan = _plan_for_routes(tmp_path)
+        service = MagicMock()
 
-        _schedule_plan_job("j-plan-delayed", plan.to_dict(), delay_minutes=1, dry_run=True)
+        _schedule_plan_job("j-plan-delayed", plan.to_dict(), service, delay_minutes=1, dry_run=True)
         assert "j-plan-delayed" in _SCHEDULED_TIMERS
         timer = _SCHEDULED_TIMERS.pop("j-plan-delayed")
         timer.cancel()
-
-
-class TestBuildPlanMovements:
-    """Covers _build_plan_movements."""
-
-    def test_movements(self, tmp_path) -> None:
-        from file_organizer.web.organize_routes import _build_plan_movements
-
-        files = [tmp_path / "a.txt", tmp_path / "b.pdf"]
-        preview = MagicMock()
-        preview.organized_structure = {"docs": ["a.txt"], "media": ["b.pdf"]}
-        output_dir = tmp_path / "output"
-
-        movements = _build_plan_movements(files, output_dir, preview)
-        assert len(movements) == 2
-        assert movements[0]["file_name"] in ("a.txt", "b.pdf")

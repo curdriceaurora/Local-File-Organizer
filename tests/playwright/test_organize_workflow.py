@@ -86,7 +86,7 @@ def test_organize_scan_with_nonexistent_path_surfaces_error(
     # The bogus path MUST be under playwright_allowed_root so resolve_path()
     # succeeds (it raises ValueError for paths outside allowed_paths, which the
     # scan handler catches as the generic "Failed to generate plan." rather than
-    # the specific "Input directory not found." we need).
+    # the specific canonical missing-input error we need).
     bogus = playwright_allowed_root / "does-not-exist-xyz123"
     page.locator("#organize-input-dir").fill(str(bogus))
     page.locator("#organize-output-dir").fill(str(organize_output_dir))
@@ -94,7 +94,7 @@ def test_organize_scan_with_nonexistent_path_surfaces_error(
 
     error_banner = page.locator("#organize-plan .banner-error")
     expect(error_banner).to_be_visible()
-    expect(error_banner).to_contain_text("Input directory not found.")
+    expect(error_banner).to_contain_text("Input path does not exist:")
 
     # Sanity: the page itself did not 500 — the header still renders
     expect(page.locator("h1.page-title")).to_contain_text("Organization dashboard")

@@ -39,12 +39,12 @@
                 data-default-limit="{{ page_size }}"
             >
             <label class="search-field">
-                <span class="sr-only">Search</span>
+                <span class="sr-only">Filter current folder by filename</span>
                 <input
                     id="file-search"
                     type="search"
                     name="q"
-                    placeholder="Search files or folders"
+                    placeholder="Filter this folder by filename"
                     value="{{ query }}"
                 >
             </label>
@@ -84,6 +84,8 @@
         </div>
     </div>
 </section>
+
+<p class="organize-hint">This filter matches names only in the current folder; use Search for indexed full-text or semantic results.</p>
 
 <form
     id="upload-form"
