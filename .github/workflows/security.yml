@@ -71,6 +71,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install checkov
-        run: python -m pip install checkov
+        run: python -m pip install checkov==3.3.8
       - name: Run checkov scan
         run: checkov -d . --framework github_actions dockerfile secrets --compact --skip-path .git
