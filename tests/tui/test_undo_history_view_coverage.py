@@ -12,6 +12,7 @@ import pytest
 from textual.widgets import Static
 
 from file_organizer.tui.undo_history_view import (
+    CanonicalLifecyclePanel,
     HistoryStatsPanel,
     OperationHistoryPanel,
     UndoHistoryView,
@@ -205,11 +206,12 @@ def test_undo_history_view_compose() -> None:
     """Verify widgets yielded by compose."""
     view = UndoHistoryView()
     widgets = list(view.compose())
-    assert len(widgets) == 4
+    assert len(widgets) == 5
     assert widgets[0].id == "history-header"
-    assert isinstance(widgets[1], OperationHistoryPanel)
-    assert isinstance(widgets[2], UndoRedoStackPanel)
-    assert isinstance(widgets[3], HistoryStatsPanel)
+    assert isinstance(widgets[1], CanonicalLifecyclePanel)
+    assert isinstance(widgets[2], OperationHistoryPanel)
+    assert isinstance(widgets[3], UndoRedoStackPanel)
+    assert isinstance(widgets[4], HistoryStatsPanel)
 
 
 def test_undo_history_view_on_mount() -> None:

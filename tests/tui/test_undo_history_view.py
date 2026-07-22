@@ -261,11 +261,13 @@ class TestUndoHistoryViewInit:
         assert isinstance(view, UndoHistoryView)
 
     def test_bindings(self):
-        assert len(UndoHistoryView.BINDINGS) == 3
+        assert len(UndoHistoryView.BINDINGS) == 5
         keys = [b.key for b in UndoHistoryView.BINDINGS]
         assert "r" in keys
         assert "u" in keys
         assert "y" in keys
+        assert "b" in keys
+        assert "c" in keys
 
     def test_action_undo_last_calls_run_undo(self):
         view = UndoHistoryView()

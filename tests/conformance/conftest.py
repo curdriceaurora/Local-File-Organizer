@@ -17,6 +17,7 @@ from tests.conformance.driver import (
     PythonSDKConformanceDriver,
     RemoteCLIConformanceDriver,
     RESTConformanceDriver,
+    TUIConformanceDriver,
     WebFormConformanceDriver,
 )
 
@@ -53,6 +54,7 @@ class ConformanceContext:
         RemoteCLIConformanceDriver,
         AsyncPythonSDKConformanceDriver,
         WebFormConformanceDriver,
+        TUIConformanceDriver,
     ),
     ids=(
         "direct",
@@ -62,6 +64,7 @@ class ConformanceContext:
         "fo-api",
         "python-async-sdk",
         "web-form-adapter",
+        "tui-workspace-adapter",
     ),
 )
 def conformance(tmp_path: Path, request: pytest.FixtureRequest) -> ConformanceContext:

@@ -39,6 +39,11 @@ def test_packaged_registry_is_complete_and_queryable() -> None:
         assert {status.surface for status in capability.surfaces} == set(Surface)
 
 
+def test_packaged_registry_loader_is_cached() -> None:
+    """Runtime consumers reuse the immutable parsed registry."""
+    assert get_capability_registry() is get_capability_registry()
+
+
 def test_organization_conformance_matches_exercised_corpus_scope() -> None:
     registry = get_capability_registry()
 

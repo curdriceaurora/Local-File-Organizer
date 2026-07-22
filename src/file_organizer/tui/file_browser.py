@@ -56,7 +56,7 @@ class FileBrowserTree(DirectoryTree):
 
     def __init__(
         self,
-        path: str | Path = ".",
+        path: str | Path,
         *,
         name: str | None = None,
         id: str | None = None,
@@ -233,7 +233,7 @@ class FileBrowserView(Vertical):
 
     def __init__(
         self,
-        path: str | Path = ".",
+        path: str | Path,
         *,
         name: str | None = None,
         id: str | None = None,

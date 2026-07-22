@@ -21,6 +21,7 @@ from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
     from file_organizer.services.copilot.engine import CopilotEngine
+    from file_organizer.tui.workspace import TUIWorkspace
 
 
 class CopilotMessageLog(VerticalScroll):
@@ -93,12 +94,14 @@ class CopilotView(StatusMixin, Vertical):
     def __init__(
         self,
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the copilot view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
+        self._workspace = workspace
         self._engine: CopilotEngine | None = None
 
     def compose(self) -> ComposeResult:
@@ -116,6 +119,11 @@ class CopilotView(StatusMixin, Vertical):
         log.add_system_note(
             "Welcome! Type a request like 'organise ~/Downloads' or 'find report.pdf'."
         )
+        if self._workspace is not None:
+            root = self._workspace.active_root or "unset"
+            log.add_system_note(
+                f"Workspace source: {root}; selected files: {len(self._workspace.selected_files)}."
+            )
         self.query_one(CopilotInput).focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -148,7 +156,8 @@ class CopilotView(StatusMixin, Vertical):
         """
         try:
             engine = self._get_engine()
-            response = engine.chat(text)
+            request = self._contextual_request(text)
+            response = engine.chat(request)
             self.app.call_from_thread(
                 self.query_one(CopilotMessageLog).add_message,
                 MessageRole.ASSISTANT,
@@ -162,6 +171,17 @@ class CopilotView(StatusMixin, Vertical):
 
         # Update status bar
         self.app.call_from_thread(self._set_status, "Copilot: ready")
+
+    def _contextual_request(self, text: str) -> str:
+        """Attach the active root and selection without changing displayed user text."""
+        if self._workspace is None:
+            return text
+        root = (
+            str(self._workspace.active_root) if self._workspace.active_root is not None else "unset"
+        )
+        selected = sorted(str(path) for path in self._workspace.selected_files)
+        selection = ", ".join(selected) if selected else "none"
+        return f"[TUI workspace source={root}; selected={selection}]\n{text}"
 
     def _get_engine(self) -> CopilotEngine:
         """Lazily initialise the copilot engine.
