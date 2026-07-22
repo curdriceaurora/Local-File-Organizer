@@ -21,6 +21,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.test_utils import csrf_headers, seed_csrf_token
+from file_organizer.core.lifecycle import RecoveryAction
 from file_organizer.web.files_routes import files_router
 from file_organizer.web.organize_routes import organize_router
 
@@ -40,6 +41,7 @@ def _mock_job(
     status: str = "completed",
     result: dict | None = None,
     error: str | None = None,
+    transaction_id: str | None = None,
 ) -> MagicMock:
     from datetime import UTC, datetime
 
@@ -47,6 +49,9 @@ def _mock_job(
     job.job_id = job_id
     job.status = status
     job.error = error
+    job.error_code = None
+    job.error_retryable = False
+    job.error_details = None
     job.result = result or {
         "processed_files": 2,
         "total_files": 2,
@@ -56,6 +61,10 @@ def _mock_job(
     }
     job.created_at = datetime(2026, 1, 1, tzinfo=UTC)
     job.updated_at = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
+    job.scheduled_for = None
+    job.transaction_id = transaction_id
+    job.recovery_action = RecoveryAction.NONE
+    job.revision = 1
     return job
 
 
@@ -546,15 +555,55 @@ class TestOrganizeRollback:
         assert r.status_code == 404
 
     def test_rollback_completed_job_returns_200(self, org_client: TestClient) -> None:
+        completed_job = _mock_job(status="completed", transaction_id="txn-1")
         with (
             patch("file_organizer.web.organize_routes.templates") as tpl,
             patch(
                 "file_organizer.web.organize_routes.get_job",
-                return_value=_mock_job(status="completed"),
+                return_value=completed_job,
             ),
+            patch(
+                "file_organizer.web.organize_routes.update_job",
+                side_effect=(MagicMock(revision=2), MagicMock(revision=3)),
+            ) as update_job,
+            patch("file_organizer.undo.undo_manager.UndoManager") as manager,
+        ):
+            tpl.TemplateResponse.return_value = _HTML
+            manager.return_value.undo_transaction.return_value = True
+            r = org_client.post(
+                "/ui/organize/jobs/job-1/rollback", headers=csrf_headers(org_client)
+            )
+        assert r.status_code == 200
+        manager.return_value.undo_transaction.assert_called_once_with("txn-1")
+        assert update_job.call_args_list[1].kwargs["status"] == "rolled_back"
+        template_call = tpl.TemplateResponse.call_args
+        context = (
+            template_call.kwargs["context"]
+            if "context" in template_call.kwargs
+            else template_call.args[2]
+        )
+        assert context["rollback_message"] == "Rollback completed for this job's transaction."
+
+    def test_rollback_without_transaction_is_unavailable(self, org_client: TestClient) -> None:
+        completed_job = _mock_job(status="completed", transaction_id=None)
+        with (
+            patch("file_organizer.web.organize_routes.templates") as tpl,
+            patch("file_organizer.web.organize_routes.get_job", return_value=completed_job),
+            patch("file_organizer.undo.undo_manager.UndoManager") as manager,
         ):
             tpl.TemplateResponse.return_value = _HTML
             r = org_client.post(
                 "/ui/organize/jobs/job-1/rollback", headers=csrf_headers(org_client)
             )
+
         assert r.status_code == 200
+        template_call = tpl.TemplateResponse.call_args
+        context = (
+            template_call.kwargs["context"]
+            if "context" in template_call.kwargs
+            else template_call.args[2]
+        )
+        assert context["error_message"] == (
+            "Rollback is only available for completed non-dry-run jobs."
+        )
+        manager.assert_not_called()

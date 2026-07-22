@@ -114,6 +114,8 @@ def _raise_remote_error(command: str, exc: Exception, *, as_json: bool) -> None:
         error = _client_error_payload(exc)
     exit_code = _error_code_exit_code(str(error["code"]))
     if not isinstance(exc, httpx.RequestError) and exit_code == 1:
+        # Preserve HTTP-category semantics for older servers that return a
+        # generic or otherwise non-canonical error code.
         status_code = int(getattr(exc, "status_code", 0))
         if status_code in {400, 404, 422}:
             exit_code = 2
