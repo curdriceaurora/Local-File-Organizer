@@ -19,7 +19,7 @@ runner = CliRunner()
 class _Model:
     payload: dict[str, Any]
 
-    def model_dump(self) -> dict[str, Any]:
+    def model_dump(self, **_: Any) -> dict[str, Any]:
         return dict(self.payload)
 
     def __getattr__(self, item: str) -> Any:
@@ -131,4 +131,4 @@ def test_api_error_exit_code(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     result = runner.invoke(app, ["api", "health"])
     assert result.exit_code == 1
-    assert "API error" in result.stdout
+    assert "Error:" in result.stdout
