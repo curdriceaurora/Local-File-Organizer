@@ -85,7 +85,8 @@ items because they were not sub-sliced. This is not duplicate scope.
   [#1597](https://github.com/curdriceaurora/Local-File-Organizer/issues/1597),
   [#1598](https://github.com/curdriceaurora/Local-File-Organizer/issues/1598), and
   [#1608](https://github.com/curdriceaurora/Local-File-Organizer/issues/1608)
-- Gate readiness: [#1633](https://github.com/curdriceaurora/Local-File-Organizer/issues/1633)
+- Gate readiness: [#1633](https://github.com/curdriceaurora/Local-File-Organizer/issues/1633) and
+  [#1636](https://github.com/curdriceaurora/Local-File-Organizer/issues/1636)
 - Enforcement and claims: [#1606](https://github.com/curdriceaurora/Local-File-Organizer/issues/1606),
   [#1609](https://github.com/curdriceaurora/Local-File-Organizer/issues/1609), and
   [#1610](https://github.com/curdriceaurora/Local-File-Organizer/issues/1610)
@@ -95,8 +96,8 @@ items because they were not sub-sliced. This is not duplicate scope.
 - #1595 starts after #1603 and #1605, and merges after #1602 and #1604 stabilize. Its #1608
   `fo api` slice additionally waits for #1596.
 - #1599 starts #1605 after #1603. #1606 lands incrementally with #1595 through #1598 and completes
-  after their supported adapters are integrated. #1633 must close before TUI/conformance suites
-  become required gates.
+  after their supported adapters are integrated. #1633 and #1636 must close before the affected
+  suites become required gates.
 - #1600 starts #1609 after #1601. #1610 waits for both #1606 and #1609.
 
 ## Dependency graph
@@ -120,7 +121,8 @@ flowchart TD
     H --> O
     I --> O
     J --> O
-    O --> K["#1606 Required conformance gates"]
+    O --> P["#1636 Stale contract tests"]
+    P --> K["#1606 Required conformance gates"]
     A --> L["#1609 Capability matrix"]
     C --> K
     K --> M["#1610 Claims evidence gates"]
@@ -186,6 +188,10 @@ removes the order-dependent class-level test pollution discovered after the TUI 
 must close before #1606 promotes TUI or cross-surface conformance suites to required gates; a
 known false timeout is not an acceptable blocking signal.
 
+[#1636: stale contract tests](https://github.com/curdriceaurora/Local-File-Organizer/issues/1636)
+updates assertions that still encode pre-parity CLI envelopes, HTTP exit mappings, domain errors,
+and rollback fixtures. It follows #1633 and must close before #1606 promotes the affected suites.
+
 ### Phase 3: enforcement
 
 [#1606: adapter drivers and required gates](https://github.com/curdriceaurora/Local-File-Organizer/issues/1606)
@@ -211,7 +217,7 @@ When one contributor performs the entire epic, use this order:
 
 ```text
 #1611 → #1601 → #1603 → #1605 → #1602 → #1604 → #1607 → #1596 → #1608
-→ #1597 → #1598 → #1633 → #1606 → #1609 → #1610
+→ #1597 → #1598 → #1633 → #1636 → #1606 → #1609 → #1610
 ```
 
 With multiple contributors, #1605 overlaps the tail of foundation work; #1596 and #1597 run in
