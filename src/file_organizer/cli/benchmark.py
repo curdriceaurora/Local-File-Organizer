@@ -1040,7 +1040,7 @@ def _print_table(
     console: Any, suite: str, warmup: int, stats: BenchmarkStats, file_count: int
 ) -> None:
     """Print benchmark results as a Rich table."""
-    from rich.table import Table as RichTable  # pyre-ignore[21]
+    from rich.table import Table as RichTable
 
     table = RichTable(title=f"Benchmark Results (suite={suite})")
     table.add_column("Metric", style="cyan")

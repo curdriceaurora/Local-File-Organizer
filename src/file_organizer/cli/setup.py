@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 from rich.panel import Panel
-from rich.table import Table  # pyre-ignore[21]
+from rich.table import Table
 
 from file_organizer.cli.interactive import confirm_action, console, prompt_choice
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
