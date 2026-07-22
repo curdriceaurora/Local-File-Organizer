@@ -41,8 +41,12 @@ REST and Python verification comes from golden corpus vectors, while future Type
 will cite strict compilation, AST inventory, type contracts, and fetch-stub behavior tests rather
 than claiming the Python-hosted corpus ran against TypeScript.
 
-Organization execution remains unverified because background submission, idempotency,
-cancellation, and rollback paths are not yet covered by the corpus.
+Synchronous organization execution is verified for the CLI, Python SDK, REST
+API, TUI, and Web surfaces, which the corpus drives end to end. TypeScript
+execution stays unverified pending the evidence shape described above. The
+background-job path — submission, idempotency, cancellation, and rollback — is
+not driven by the corpus on any surface, and the capability that records that
+lifecycle, `organization.jobs-recovery`, is unverified everywhere.
 
 ## Errors and operation IDs
 
