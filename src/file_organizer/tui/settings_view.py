@@ -313,6 +313,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = current + 1
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_workers_down(self) -> None:
@@ -325,6 +326,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = self._max_workers - 1 if self._max_workers > 1 else None
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_prefetch_up(self) -> None:
@@ -334,6 +336,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._prefetch_depth += 1
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_prefetch_down(self) -> None:
@@ -343,6 +346,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._prefetch_depth = max(0, self._prefetch_depth - 1)
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_auto_workers(self) -> None:
@@ -352,6 +356,7 @@ class SettingsView(StatusMixin, Vertical):
             return
         self._max_workers = 1 if self._max_workers is None else None
         self._record_non_sequential_snapshot()
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_sequential(self) -> None:
@@ -365,6 +370,7 @@ class SettingsView(StatusMixin, Vertical):
             self._max_workers = 1
             self._prefetch_depth = 0
             self._set_status("Sequential mode enabled.")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     # ------------------------------------------------------------------
@@ -377,6 +383,7 @@ class SettingsView(StatusMixin, Vertical):
         index = _METHODOLOGY_ORDER.index(current)
         self._methodology = _METHODOLOGY_ORDER[(index + 1) % len(_METHODOLOGY_ORDER)]
         self._set_status(f"Methodology: {_METHODOLOGY_LABELS[self._methodology]}")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_cycle_text_model(self) -> None:
@@ -388,6 +395,7 @@ class SettingsView(StatusMixin, Vertical):
             index = -1
         self._text_model = options[(index + 1) % len(options)]
         self._set_status(f"Text model: {self._text_model}")
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_update_check(self) -> None:
@@ -407,31 +415,37 @@ class SettingsView(StatusMixin, Vertical):
     def action_toggle_recursive(self) -> None:
         """Toggle recursive traversal for this TUI session."""
         self._recursive = not self._recursive
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_hidden(self) -> None:
         """Toggle hidden-file inclusion for this TUI session."""
         self._include_hidden = not self._include_hidden
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_transfer(self) -> None:
         """Toggle between canonical hardlink and copy transfer modes."""
         self._transfer_mode = "copy" if self._transfer_mode == "hardlink" else "hardlink"
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_skip_existing(self) -> None:
         """Toggle collision behavior between skip and counter rename."""
         self._skip_existing = not self._skip_existing
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_vision(self) -> None:
         """Toggle vision-backed analysis for this TUI session."""
         self._enable_vision = not self._enable_vision
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def action_toggle_transcription(self) -> None:
         """Toggle optional transcription-backed audio analysis."""
         self._transcribe_audio = not self._transcribe_audio
+        self._sync_workspace_options()
         self._refresh_panel()
 
     def on_input_changed(self, event: Input.Changed) -> None:
@@ -449,10 +463,12 @@ class SettingsView(StatusMixin, Vertical):
         """Reload persisted settings from configuration."""
         self._reload_parallel_settings()
         self._reload_workflow_settings()
+        self._sync_workspace()
         self._refresh_panel()
 
     def action_save_settings(self) -> None:
         """Persist current settings to configuration."""
+        self._sync_workspace()
         try:
             save_parallel_runtime_settings(
                 ParallelRuntimeSettings(
@@ -466,9 +482,13 @@ class SettingsView(StatusMixin, Vertical):
                 profile=self._profile,
             )
         except Exception as exc:
-            self._set_status(f"Failed to save settings: {exc}")
+            message = (
+                f"Session updated; failed to save settings: {exc}"
+                if self._workspace is not None
+                else f"Failed to save settings: {exc}"
+            )
+            self._set_status(message)
         else:
-            self._sync_workspace()
             self._set_status("Settings saved.")
         self._refresh_panel()
 
@@ -520,6 +540,12 @@ class SettingsView(StatusMixin, Vertical):
         if self._workspace is None:
             return
         self._workspace.set_roots(self._input_dir, self._output_dir)
+        self._sync_workspace_options()
+
+    def _sync_workspace_options(self) -> None:
+        """Apply behavior controls immediately without persisting path edits."""
+        if self._workspace is None:
+            return
         self._workspace.set_options(
             recursive=self._recursive,
             include_hidden=self._include_hidden,

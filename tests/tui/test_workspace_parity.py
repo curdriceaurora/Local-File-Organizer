@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -126,6 +126,14 @@ def test_selection_persists_across_file_views(tmp_path: Path) -> None:
     assert second.selection.selected_files == {selected}
 
 
+def test_selection_paths_expand_user_before_root_filtering() -> None:
+    workspace = TUIWorkspace()
+
+    workspace.set_selected_files({Path("~") / "selected.txt"})
+
+    assert workspace.selected_files == {Path.home() / "selected.txt"}
+
+
 def test_settings_map_losslessly_to_canonical_options(tmp_path: Path) -> None:
     workspace = TUIWorkspace()
     view = SettingsView(workspace=workspace)
@@ -157,6 +165,65 @@ def test_settings_map_losslessly_to_canonical_options(tmp_path: Path) -> None:
         "prefetch_depth": 3,
         "text_model": "custom-text",
     }
+
+
+def test_settings_actions_update_session_options_immediately(tmp_path: Path) -> None:
+    workspace = TUIWorkspace(tmp_path, tmp_path / "out")
+    view = SettingsView(workspace=workspace)
+    view._refresh_panel = MagicMock()
+    view._set_status = MagicMock()
+
+    view.action_toggle_recursive()
+    view.action_toggle_hidden()
+    view.action_toggle_transfer()
+    view.action_toggle_skip_existing()
+    view.action_toggle_vision()
+    view.action_toggle_transcription()
+    view.action_cycle_methodology()
+    view.action_cycle_text_model()
+    view.action_workers_up()
+    view.action_prefetch_up()
+
+    options = workspace.options
+    assert options.recursive is view._recursive is False
+    assert options.include_hidden is view._include_hidden is True
+    assert options.skip_existing is view._skip_existing is False
+    assert options.effective_transfer_mode.value == view._transfer_mode == "copy"
+    assert options.enable_vision is view._enable_vision is False
+    assert options.transcribe_audio is view._transcribe_audio is True
+    assert options.effective_methodology.value == view._methodology == "para"
+    assert options.text_model == view._text_model
+    assert options.parallel_workers == view._max_workers == 2
+    assert options.prefetch_depth == view._prefetch_depth == 3
+
+    recreated = SettingsView(workspace=workspace)
+    assert recreated._recursive is False
+    assert recreated._include_hidden is True
+    assert recreated._transfer_mode == "copy"
+    assert recreated._methodology == "para"
+
+
+def test_failed_persistence_does_not_block_session_apply(tmp_path: Path) -> None:
+    workspace = TUIWorkspace()
+    view = SettingsView(workspace=workspace)
+    view._input_dir = str(tmp_path / "input")
+    view._output_dir = str(tmp_path / "output")
+    view._recursive = False
+    view._refresh_panel = MagicMock()
+    view._set_status = MagicMock()
+
+    with patch(
+        "file_organizer.tui.settings_view.save_parallel_runtime_settings",
+        side_effect=OSError("read-only config"),
+    ):
+        view.action_save_settings()
+
+    assert workspace.active_root == tmp_path / "input"
+    assert workspace.output_root == tmp_path / "output"
+    assert workspace.options.recursive is False
+    view._set_status.assert_called_once_with(
+        "Session updated; failed to save settings: read-only config"
+    )
 
 
 def test_methodology_action_updates_shared_canonical_state(tmp_path: Path) -> None:

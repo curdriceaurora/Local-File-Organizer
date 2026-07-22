@@ -106,7 +106,7 @@ class TUIWorkspace:
 
     def set_selected_files(self, paths: set[Path]) -> None:
         """Persist the selected-file context across view switches."""
-        self.selected_files = {Path(path) for path in paths}
+        self.selected_files = {Path(path).expanduser() for path in paths}
         self.reviewed_plan = None
 
     def request(self) -> OrganizeRequest:
