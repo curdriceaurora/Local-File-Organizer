@@ -25,7 +25,7 @@ def avatar_path(user_id: str, avatar_dir: Path) -> Path:
         raise ValueError(f"Invalid user_id: {user_id!r}")
     avatar_root = str(avatar_dir.resolve())
     fullpath = os.path.normpath(os.path.join(avatar_root, f"{clean_id}.png"))
-    if not fullpath.startswith(f"{avatar_root}{os.sep}"):
+    if os.path.commonpath([avatar_root, fullpath]) != avatar_root or fullpath == avatar_root:
         raise ValueError(f"Invalid user_id: {user_id!r}")
     return Path(fullpath)
 
