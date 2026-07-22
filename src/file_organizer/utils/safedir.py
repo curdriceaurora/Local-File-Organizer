@@ -87,9 +87,6 @@ def _validate_name(name: str) -> None:
     """
     if not isinstance(name, str):
         raise ValueError(f"name must be str, got {type(name).__name__}")
-    clean = os.path.basename(name)
-    if not clean or clean != name:
-        raise ValueError(f"invalid path component: {name!r}")
     if name in _RESERVED_NAMES:
         raise ValueError(f"reserved component name: {name!r}")
     for ch in name:
