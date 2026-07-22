@@ -282,7 +282,7 @@ class FilePreviewView(Horizontal):
 
     def __init__(
         self,
-        path: str | Path | None = ".",
+        path: str | Path | None = None,
         *,
         workspace: TUIWorkspace | None = None,
         name: str | None = None,

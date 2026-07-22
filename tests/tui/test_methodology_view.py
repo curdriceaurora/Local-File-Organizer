@@ -250,10 +250,10 @@ class TestMethodologyView:
         assert "m" in keys  # Migrate
 
     @pytest.mark.keep_default_paths
-    def test_initialization_with_default_directory(self) -> None:
-        """Test MethodologyView initialization with default directory."""
+    def test_initialization_without_directory_is_unset(self) -> None:
+        """An unattached methodology view has no implicit directory."""
         view = MethodologyView()
-        assert view._scan_dir == Path(".")
+        assert view._scan_dir is None
         assert view._methodology == "none"
 
     def test_initialization_with_custom_directory(self) -> None:

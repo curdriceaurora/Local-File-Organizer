@@ -76,31 +76,31 @@ class TestFileBrowserTree:
     """Test FileBrowserTree filtering and actions."""
 
     def test_init_default_path(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         assert tree._extension_filter == set()
 
     def test_set_extension_filter_normalizes(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         tree.set_extension_filter({"py", ".txt", "json"})
         assert ".py" in tree._extension_filter
         assert ".txt" in tree._extension_filter
         assert ".json" in tree._extension_filter
 
     def test_set_extension_filter_empty_clears(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         tree.set_extension_filter({".py"})
         assert len(tree._extension_filter) == 1
         tree.set_extension_filter(set())
         assert tree._extension_filter == set()
 
     def test_filter_paths_no_filter_returns_all(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         paths = [Path("a.py"), Path("b.txt"), Path("c.jpg")]
         result = list(tree.filter_paths(paths))
         assert len(result) == 3
 
     def test_filter_paths_with_filter(self, tmp_path: Path) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         tree._extension_filter = {".py"}
         # Create actual files/dirs so is_dir() works
         py_file = tmp_path / "a.py"
@@ -117,12 +117,12 @@ class TestFileBrowserTree:
         assert txt_file not in result
 
     def test_action_cursor_parent_with_no_node(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         with patch.object(type(tree), "cursor_node", new_callable=PropertyMock, return_value=None):
             tree.action_cursor_parent()  # Should not crash
 
     def test_action_cursor_parent_with_no_parent(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         mock_node = MagicMock()
         mock_node.parent = None
         with patch.object(
@@ -131,7 +131,7 @@ class TestFileBrowserTree:
             tree.action_cursor_parent()  # Should not crash
 
     def test_action_cursor_toggle_expandable_node(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         mock_node = MagicMock()
         mock_node.allow_expand = True
         with patch.object(
@@ -141,7 +141,7 @@ class TestFileBrowserTree:
         mock_node.toggle.assert_called_once()
 
     def test_action_cursor_toggle_file_node(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         mock_node = MagicMock()
         mock_node.allow_expand = False
         # Patch FileSelected to avoid constructor issues
@@ -158,7 +158,7 @@ class TestFileBrowserTree:
         mock_fs.assert_called_once_with(mock_node, mock_node.data.path)
 
     def test_action_cursor_toggle_none_node(self) -> None:
-        tree = FileBrowserTree()
+        tree = FileBrowserTree(Path("."))
         with patch.object(type(tree), "cursor_node", new_callable=PropertyMock, return_value=None):
             tree.action_cursor_toggle()  # Should not crash
 
@@ -280,7 +280,7 @@ class TestFileBrowserView:
     """Test FileBrowserView init and bindings."""
 
     def test_default_init(self) -> None:
-        view = FileBrowserView()
+        view = FileBrowserView(Path("."))
         assert view._root_path == Path(".")
 
     def test_custom_path_init(self) -> None:
@@ -296,7 +296,7 @@ class TestFileBrowserView:
         assert "slash" in keys
 
     def test_action_toggle_filter_shown_keeps_input_focus(self) -> None:
-        view = FileBrowserView()
+        view = FileBrowserView(Path("."))
         mock_fi = MagicMock()
         mock_fi.has_class.return_value = True
         view.query_one = MagicMock(return_value=mock_fi)
@@ -305,7 +305,7 @@ class TestFileBrowserView:
         view.query_one.assert_called_once()  # tree not queried while visible
 
     def test_action_toggle_filter_hidden_refocuses_tree(self) -> None:
-        view = FileBrowserView()
+        view = FileBrowserView(Path("."))
         mock_fi = MagicMock()
         mock_fi.has_class.return_value = False
         mock_tree = MagicMock()
@@ -315,7 +315,7 @@ class TestFileBrowserView:
         mock_tree.focus.assert_called_once()
 
     def test_on_filter_applied_sets_filter_and_refocuses_tree(self) -> None:
-        view = FileBrowserView()
+        view = FileBrowserView(Path("."))
         mock_tree = MagicMock()
         view.query_one = MagicMock(return_value=mock_tree)
         view._on_filter_applied(FilterInput.FilterApplied(" .py, txt "))
@@ -323,7 +323,7 @@ class TestFileBrowserView:
         mock_tree.focus.assert_called_once()
 
     def test_on_filter_applied_empty_clears_filter(self) -> None:
-        view = FileBrowserView()
+        view = FileBrowserView(Path("."))
         mock_tree = MagicMock()
         view.query_one = MagicMock(return_value=mock_tree)
         view._on_filter_applied(FilterInput.FilterApplied("   "))

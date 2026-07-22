@@ -370,11 +370,7 @@ class FileOrganizerApp(App[None]):
         if name == "files":
             from file_organizer.tui.file_preview import FilePreviewView
 
-            return FilePreviewView(
-                path=None if workspace is not None else ".",
-                workspace=workspace,
-                id="view",
-            )
+            return FilePreviewView(workspace=workspace, id="view")
 
         if name == "organized":
             from file_organizer.tui.organization_preview import (
@@ -386,29 +382,17 @@ class FileOrganizerApp(App[None]):
         if name == "analytics":
             from file_organizer.tui.analytics_view import AnalyticsView
 
-            return AnalyticsView(
-                directory=None if workspace is not None else ".",
-                workspace=workspace,
-                id="view",
-            )
+            return AnalyticsView(workspace=workspace, id="view")
 
         if name == "methodology":
             from file_organizer.tui.methodology_view import MethodologyView
 
-            return MethodologyView(
-                scan_dir=None if workspace is not None else ".",
-                workspace=workspace,
-                id="view",
-            )
+            return MethodologyView(workspace=workspace, id="view")
 
         if name == "audio":
             from file_organizer.tui.audio_view import AudioView
 
-            return AudioView(
-                scan_dir=None if workspace is not None else ".",
-                workspace=workspace,
-                id="view",
-            )
+            return AudioView(workspace=workspace, id="view")
 
         if name == "history":
             from file_organizer.tui.undo_history_view import UndoHistoryView

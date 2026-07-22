@@ -147,8 +147,8 @@ class OrganizationPreviewView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        input_dir: str | Path = ".",
-        output_dir: str | Path = "organized_output",
+        input_dir: str | Path | None = None,
+        output_dir: str | Path | None = None,
         *,
         workspace: TUIWorkspace | None = None,
         name: str | None = None,
@@ -158,8 +158,10 @@ class OrganizationPreviewView(StatusMixin, Vertical):
         """Set up the preview view for the given input and output directories."""
         super().__init__(name=name, id=id, classes=classes)
         self._workspace = workspace
-        self._input_dir = workspace.active_root if workspace is not None else Path(input_dir)
-        self._output_dir = workspace.output_root if workspace is not None else Path(output_dir)
+        resolved_input = workspace.active_root if workspace is not None else input_dir
+        resolved_output = workspace.output_root if workspace is not None else output_dir
+        self._input_dir = Path(resolved_input) if resolved_input is not None else None
+        self._output_dir = Path(resolved_output) if resolved_output is not None else None
         self._is_applying = False
         self._current_plan = workspace.reviewed_plan if workspace is not None else None
         self._current_request: OrganizeRequest | None = None

@@ -259,11 +259,11 @@ class TestOrganizationPreviewView:
         assert "escape" in keys  # Cancel
 
     @pytest.mark.keep_default_paths
-    def test_initialization_with_defaults(self) -> None:
-        """Test OrganizationPreviewView with default directories."""
+    def test_initialization_requires_explicit_directories(self) -> None:
+        """An unattached preview never falls back to process-relative paths."""
         view = OrganizationPreviewView()
-        assert view._input_dir == Path(".")
-        assert view._output_dir == Path("organized_output")
+        assert view._input_dir is None
+        assert view._output_dir is None
 
     def test_initialization_with_custom_directories(self) -> None:
         """Test OrganizationPreviewView with custom directories."""

@@ -354,10 +354,10 @@ class TestAnalyticsView:
         assert "r" in keys
 
     @pytest.mark.keep_default_paths
-    def test_initialization_with_default_directory(self) -> None:
-        """Test AnalyticsView initialization with default directory."""
+    def test_initialization_without_directory_is_unset(self) -> None:
+        """An unattached analytics view has no implicit directory."""
         view = AnalyticsView()
-        assert view._directory == Path(".")
+        assert view._directory is None
 
     def test_initialization_with_custom_directory(self) -> None:
         """Test AnalyticsView initialization with custom directory."""

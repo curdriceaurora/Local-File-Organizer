@@ -201,7 +201,7 @@ class AudioView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        scan_dir: str | Path | None = ".",
+        scan_dir: str | Path | None = None,
         *,
         workspace: TUIWorkspace | None = None,
         name: str | None = None,

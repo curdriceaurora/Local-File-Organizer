@@ -83,6 +83,35 @@ def test_unset_workspace_never_falls_back_to_cwd() -> None:
     assert exc_info.value.code == DomainErrorCode.INVALID_REQUEST
 
 
+def test_root_change_clears_root_bound_lifecycle_state(tmp_path: Path) -> None:
+    workspace = TUIWorkspace(
+        tmp_path / "first",
+        tmp_path / "first-output",
+        reviewed_plan=MagicMock(),
+        active_job=MagicMock(),
+        last_result=OrganizationResult(total_files=12, processed_files=12),
+    )
+
+    workspace.set_roots(tmp_path / "second", tmp_path / "second-output")
+
+    assert workspace.reviewed_plan is None
+    assert workspace.active_job is None
+    assert workspace.last_result is None
+
+
+def test_config_load_failure_is_retained_as_workspace_error() -> None:
+    manager = MagicMock()
+    manager.load.side_effect = OSError("config unreadable")
+
+    workspace = TUIWorkspace.from_config(manager)
+
+    assert workspace.active_root is None
+    assert workspace.output_root is None
+    assert workspace.last_error is not None
+    assert workspace.last_error.code == DomainErrorCode.EXECUTION_FAILED
+    assert workspace.last_error.message == "config unreadable"
+
+
 def test_selection_persists_across_file_views(tmp_path: Path) -> None:
     selected = tmp_path / "selected.txt"
     selected.write_text("selected")

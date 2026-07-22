@@ -261,9 +261,9 @@ class TestAudioViewInit:
     """Test AudioView initialization."""
 
     @pytest.mark.keep_default_paths
-    def test_default_scan_dir(self):
+    def test_default_scan_dir_is_unset(self):
         view = AudioView()
-        assert view._scan_dir == Path(".")
+        assert view._scan_dir is None
         assert view._files == []
         assert view._current_index == 0
 

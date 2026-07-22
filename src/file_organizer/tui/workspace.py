@@ -38,8 +38,10 @@ class TUIWorkspace:
         resolved_manager = manager or ConfigManager()
         try:
             config = resolved_manager.load()
-        except Exception:
-            return cls()
+        except Exception as exc:
+            workspace = cls()
+            workspace.record_error(exc)
+            return workspace
 
         parallel = config.parallel or {}
         workers = parallel.get("max_workers")
@@ -77,9 +79,15 @@ class TUIWorkspace:
         """Set explicit workflow roots and invalidate any reviewed plan."""
         source = str(input_path).strip()
         destination = str(output_path).strip()
-        self.active_root = Path(source).expanduser() if source else None
-        self.output_root = Path(destination).expanduser() if destination else None
+        active_root = Path(source).expanduser() if source else None
+        output_root = Path(destination).expanduser() if destination else None
+        roots_changed = (active_root, output_root) != (self.active_root, self.output_root)
+        self.active_root = active_root
+        self.output_root = output_root
         self.reviewed_plan = None
+        if roots_changed:
+            self.active_job = None
+            self.last_result = None
         self.last_error = None
         if self.active_root is not None:
             self.selected_files = {

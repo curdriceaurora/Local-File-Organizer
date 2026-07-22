@@ -196,7 +196,7 @@ class AnalyticsView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        directory: str | Path | None = ".",
+        directory: str | Path | None = None,
         *,
         workspace: TUIWorkspace | None = None,
         name: str | None = None,
