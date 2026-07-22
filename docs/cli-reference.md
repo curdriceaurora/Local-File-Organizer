@@ -1243,6 +1243,30 @@ file-organizer marketplace update PLUGIN_NAME
 
 Interact with a running File Organizer API server.
 
+Organization commands accept `--token` or `--api-key`, `--base-url`,
+`--timeout`, and `--json`. Run `file-organizer api COMMAND --help` for the
+complete canonical option surface.
+
+Every `fo api ... --json` success and failure emits the same versioned
+top-level envelope as local organization commands: `schema_version`,
+`outcome`, `command`, and either normalized result fields or `error`.
+Connection, DNS, TLS, and timeout failures use `transport_error` with
+`retryable: true`. Exit code `2` covers invalid or missing requests, exit code
+`3` covers conflicts, plan mismatches, and recovery-required outcomes, and
+other failures exit `1`.
+
+#### `api capabilities`
+
+Show which remote capabilities are available through `fo api`, exposed only
+through an official SDK, or unavailable.
+
+```bash
+file-organizer api capabilities [OPTIONS]
+```
+
+**Options:**
+- `--json` — Print deterministic machine-readable output
+
 #### `api health`
 
 Check API server health.
@@ -1312,13 +1336,116 @@ file-organizer api files PATH [OPTIONS]
 - `PATH` — Directory to list
 
 **Options:**
-- `--token TEXT` — Bearer token (required)
+- `--token TEXT` — Bearer token
+- `--api-key TEXT` — API key
 - `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
 - `--recursive/--no-recursive` — Include nested files (default: `--no-recursive`)
 - `--include-hidden/--no-include-hidden` — Include hidden files (default: `--no-include-hidden`)
 - `--limit INTEGER` — Maximum rows (default: `100`)
 - `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
 - `--json` — Print JSON output
+
+#### `api scan`
+
+Scan a server-side directory with canonical recursion and hidden-file policy.
+
+```bash
+file-organizer api scan INPUT_DIR [OPTIONS]
+```
+
+**Arguments:**
+- `INPUT_DIR` — Server-side directory to scan
+
+#### `api preview`
+
+Build a canonical remote organization plan without applying it.
+
+```bash
+file-organizer api preview INPUT_DIR OUTPUT_DIR [OPTIONS]
+```
+
+**Arguments:**
+- `INPUT_DIR` — Server-side source directory
+- `OUTPUT_DIR` — Server-side destination directory
+
+Use `--save-plan PATH` to persist the reviewed plan. The command accepts the
+same recursion, hidden-file, collision, transfer, methodology, media, model,
+provider, and performance options as local organization.
+
+#### `api organize`
+
+Execute a canonical remote request or an exact reviewed plan.
+
+```bash
+file-organizer api organize INPUT_DIR OUTPUT_DIR [OPTIONS]
+```
+
+**Arguments:**
+- `INPUT_DIR` — Server-side source directory
+- `OUTPUT_DIR` — Server-side destination directory
+
+Organization queues a background job by default. Use `--foreground` to wait
+for a result, `--plan PATH` to execute a reviewed plan, and
+`--idempotency-key TEXT` to deduplicate background submissions.
+In JSON mode, `result` is `null` for a queued submission and `job` contains
+its `job_id` and `status`; foreground execution places the operation result in
+`result` and emits `job: null`.
+
+#### `api job`
+
+Inspect one remote organization job.
+
+```bash
+file-organizer api job JOB_ID [OPTIONS]
+```
+
+**Arguments:**
+- `JOB_ID` — Organization job identifier
+
+#### `api jobs`
+
+List recent remote organization jobs, optionally filtered by status.
+
+```bash
+file-organizer api jobs [OPTIONS]
+```
+
+#### `api cancel`
+
+Cancel a queued or scheduled organization job.
+
+```bash
+file-organizer api cancel JOB_ID [OPTIONS]
+```
+
+**Arguments:**
+- `JOB_ID` — Organization job identifier
+
+Use `--expected-revision INTEGER` for optimistic concurrency control.
+
+#### `api rollback`
+
+Roll back a completed remote organization job.
+
+```bash
+file-organizer api rollback JOB_ID [OPTIONS]
+```
+
+**Arguments:**
+- `JOB_ID` — Organization job identifier
+
+Use `--expected-revision INTEGER` for optimistic concurrency control.
+
+#### `api suggest`
+
+Request a non-mutating single-file organization suggestion.
+
+```bash
+file-organizer api suggest FILENAME [OPTIONS]
+```
+
+**Arguments:**
+- `FILENAME` — File name to classify remotely
 
 #### `api system-status`
 
@@ -1332,7 +1459,8 @@ file-organizer api system-status [PATH] [OPTIONS]
 - `PATH` — Path to inspect (default: `.`)
 
 **Options:**
-- `--token TEXT` — Bearer token (required)
+- `--token TEXT` — Bearer token
+- `--api-key TEXT` — API key
 - `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
 - `--timeout FLOAT` — Request timeout in seconds (default: `30.0`)
 - `--json` — Print JSON output
@@ -1349,7 +1477,8 @@ file-organizer api system-stats [PATH] [OPTIONS]
 - `PATH` — Directory to analyze (default: `.`)
 
 **Options:**
-- `--token TEXT` — Bearer token (required)
+- `--token TEXT` — Bearer token
+- `--api-key TEXT` — API key
 - `--base-url TEXT` — API base URL (default: `http://localhost:8000`)
 - `--max-depth INTEGER` — Optional max depth
 - `--use-cache/--no-use-cache` — Use server-side cache (default: `--use-cache`)

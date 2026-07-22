@@ -28,8 +28,10 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from contextlib import redirect_stdout
 from datetime import UTC, datetime
 from html import unescape
+from io import StringIO
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from unittest.mock import patch
@@ -48,6 +50,7 @@ from file_organizer.api.dependencies import (
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.organize import get_organization_service
 from file_organizer.api.routers.organize import router as api_organize_router
+from file_organizer.cli.api import api_app
 from file_organizer.cli.main import app
 from file_organizer.client.async_client import AsyncFileOrganizerClient
 from file_organizer.client.exceptions import ClientError
@@ -975,6 +978,106 @@ class PythonSDKConformanceDriver(_HTTPConformanceDriver):
         if response.result is None:
             raise AssertionError(f"Python SDK execution omitted its result: {response}")
         return response.result.model_dump(mode="json")
+
+
+class _NonClosingSDKProxy:
+    """Delegate SDK calls while leaving the shared test transport open."""
+
+    def __init__(self, sdk: FileOrganizerClient) -> None:
+        self._sdk = sdk
+
+    def __getattr__(self, name: str) -> Any:
+        attribute = getattr(self._sdk, name)
+        if not callable(attribute):
+            return attribute
+
+        def invoke(*args: Any, **kwargs: Any) -> Any:
+            with redirect_stdout(StringIO()):
+                return attribute(*args, **kwargs)
+
+        return invoke
+
+    def close(self) -> None:
+        """Keep the conformance TestClient available for the next command."""
+
+
+class RemoteCLIConformanceDriver(PythonSDKConformanceDriver):
+    """Drive ``fo api`` through the official synchronous SDK and REST routes."""
+
+    name = "fo-api"
+
+    def _invoke(self, args: list[str]) -> dict[str, Any]:
+        proxy = _NonClosingSDKProxy(self._sdk)
+        with patch(
+            "file_organizer.cli.api._build_client",
+            return_value=(proxy, ClientError),
+        ):
+            result = CliRunner().invoke(api_app, args)
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise AssertionError(
+                f"fo api did not emit valid JSON (exit {result.exit_code}): {result.stdout}"
+            ) from exc
+        if result.exit_code != 0:
+            error = payload.get("error")
+            raise _TransportFailure(error if isinstance(error, dict) else payload)
+        if payload.get("outcome") != "ok":
+            raise AssertionError(f"fo api succeeded with a non-success envelope: {payload}")
+        return payload
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        outer = self._invoke(
+            [
+                "scan",
+                str(request.input_path),
+                "--json",
+                "--recursive" if request.options.recursive else "--no-recursive",
+                ("--include-hidden" if request.options.include_hidden else "--exclude-hidden"),
+            ]
+        )
+        scan = dict(outer["scan"])
+        scan["input_dir"] = scan.pop("input_path")
+        return scan
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        outer = self._invoke(
+            [
+                "preview",
+                str(request.input_path),
+                str(request.output_path),
+                "--json",
+                *CLIConformanceDriver._option_args(request),
+            ]
+        )
+        result = dict(outer["result"])
+        result["plan"] = outer["plan"]
+        return result
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        args = [
+            "organize",
+            str(request.input_path),
+            str(request.output_path),
+            "--foreground",
+            "--json",
+        ]
+        if plan_payload is None:
+            args.extend(CLIConformanceDriver._option_args(request))
+        else:
+            plan_path = self._workspace / "fo-api-plan.json"
+            atomic_write_text(plan_path, json.dumps(plan_payload))
+            args.extend(("--plan", str(plan_path)))
+            args.extend(CLIConformanceDriver._option_args(request))
+        outer = self._invoke(args)
+        result = outer.get("result")
+        if not isinstance(result, dict):
+            raise AssertionError(f"fo api execution omitted its result: {outer}")
+        result = dict(result)
+        result["plan"] = outer["plan"]
+        return result
 
 
 class AsyncPythonSDKConformanceDriver(_HTTPConformanceDriver):
