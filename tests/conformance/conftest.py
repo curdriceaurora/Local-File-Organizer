@@ -16,6 +16,7 @@ from tests.conformance.driver import (
     OrganizationConformanceDriver,
     PythonSDKConformanceDriver,
     RESTConformanceDriver,
+    WebDesktopConformanceDriver,
 )
 
 
@@ -49,8 +50,9 @@ class ConformanceContext:
         RESTConformanceDriver,
         PythonSDKConformanceDriver,
         AsyncPythonSDKConformanceDriver,
+        WebDesktopConformanceDriver,
     ),
-    ids=("direct", "cli", "rest", "python-sdk", "python-async-sdk"),
+    ids=("direct", "cli", "rest", "python-sdk", "python-async-sdk", "web-desktop"),
 )
 def conformance(tmp_path: Path, request: pytest.FixtureRequest) -> ConformanceContext:
     """Run the golden corpus against the oracle and each migrated adapter."""

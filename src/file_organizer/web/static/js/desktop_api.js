@@ -3,11 +3,12 @@
  * browser fallbacks so the same HTML works in both the native desktop app
  * (pywebview) and a regular browser session.
  *
- * All three entry-points check for window.pywebview before calling into the
+ * All entry-points check for window.pywebview before calling into the
  * native API, so they are silent no-ops in browser mode.
  *
  * Usage (available globally after this script loads):
  *
+ *   window.desktopBrowseDirectory(inputId)
  *   window.desktopBrowseFile(inputId, fileTypes)
  *   window.desktopSaveFile(suggestedName, fileTypes)  → Promise<string>
  *   window.desktopOpenPath(path)
@@ -24,6 +25,32 @@
     typeof window.pywebview !== "undefined" &&
     window.pywebview !== null &&
     typeof window.pywebview.api !== "undefined";
+
+  /**
+   * Open a native directory picker and populate a text input. Browser mode is
+   * a no-op because browsers cannot disclose an absolute directory path.
+   *
+   * @param {string} inputId - id of the text input to populate.
+   */
+  window.desktopBrowseDirectory = function desktopBrowseDirectory(inputId) {
+    if (!isDesktopApp()) {
+      return;
+    }
+    window.pywebview.api
+      .browse_directory()
+      .then(function (path) {
+        if (path) {
+          const el = document.getElementById(inputId);
+          if (el) {
+            el.value = path;
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+      })
+      .catch(function () {
+        /* dialog cancelled or unavailable — no-op */
+      });
+  };
 
   /**
    * Open a native file-picker dialog and populate a text input with the

@@ -25,31 +25,91 @@
     >
         <label for="organize-input-dir">Input directory</label>
         <input id="organize-input-dir" name="input_dir" type="text" value="{{ default_input_dir }}" required>
+        <button data-desktop-only type="button" class="btn-ghost" onclick="window.desktopBrowseDirectory('organize-input-dir')">Browse input…</button>
 
         <label for="organize-output-dir">Output directory</label>
         <input id="organize-output-dir" name="output_dir" type="text" value="{{ default_output_dir }}" required>
+        <button data-desktop-only type="button" class="btn-ghost" onclick="window.desktopBrowseDirectory('organize-output-dir')">Browse output…</button>
 
         <label for="organize-methodology">Methodology</label>
         <select id="organize-methodology" name="methodology">
             {% for key, label in methodology_options.items() %}
-            <option value="{{ key }}">{{ label }}</option>
+            <option value="{{ key }}" {% if organization_defaults.methodology == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
         <div class="organize-toggle-grid">
             <label class="toggle-option">
-                <input name="recursive" type="checkbox" value="1" checked>
+                <input name="recursive" type="hidden" value="0">
+                <input name="recursive" type="checkbox" value="1" {% if organization_defaults.recursive %}checked{% endif %}>
                 <span>Recursive scan</span>
             </label>
             <label class="toggle-option">
-                <input name="skip_existing" type="checkbox" value="1" checked>
+                <input name="include_hidden" type="hidden" value="0">
+                <input name="include_hidden" type="checkbox" value="1" {% if organization_defaults.include_hidden %}checked{% endif %}>
+                <span>Include hidden files</span>
+            </label>
+            <label class="toggle-option">
+                <input name="skip_existing" type="hidden" value="0">
+                <input name="skip_existing" type="checkbox" value="1" {% if organization_defaults.skip_existing %}checked{% endif %}>
                 <span>Skip existing files</span>
             </label>
             <label class="toggle-option">
-                <input name="use_hardlinks" type="checkbox" value="1" checked>
-                <span>Use hardlinks when possible</span>
+                <input name="enable_vision" type="hidden" value="0">
+                <input name="enable_vision" type="checkbox" value="1" {% if organization_defaults.enable_vision %}checked{% endif %}>
+                <span>Analyze images</span>
+            </label>
+            <label class="toggle-option">
+                <input name="transcribe_audio" type="hidden" value="0">
+                <input name="transcribe_audio" type="checkbox" value="1" {% if organization_defaults.transcribe_audio %}checked{% endif %}>
+                <span>Transcribe audio</span>
             </label>
         </div>
+
+        <details class="organize-advanced-options">
+            <summary>Transfer, model, and performance options</summary>
+            <div class="organize-form">
+                <label for="organize-transfer-mode">Transfer mode</label>
+                <select id="organize-transfer-mode" name="transfer_mode">
+                    <option value="copy" {% if organization_defaults.transfer_mode == 'copy' %}selected{% endif %}>Copy</option>
+                    <option value="hardlink" {% if organization_defaults.transfer_mode == 'hardlink' %}selected{% endif %}>Hardlink</option>
+                </select>
+
+                <label for="organize-text-model">Text model</label>
+                <input id="organize-text-model" name="text_model" type="text" value="{{ organization_defaults.text_model or '' }}">
+
+                <label for="organize-text-provider">Text provider</label>
+                <select id="organize-text-provider" name="text_provider">
+                    <option value="">Configured default</option>
+                    {% for provider in ('ollama', 'openai', 'llama_cpp', 'mlx', 'claude') %}
+                    <option value="{{ provider }}" {% if organization_defaults.text_provider == provider %}selected{% endif %}>{{ provider }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="organize-vision-model">Vision model</label>
+                <input id="organize-vision-model" name="vision_model" type="text" value="{{ organization_defaults.vision_model or '' }}">
+
+                <label for="organize-vision-provider">Vision provider</label>
+                <select id="organize-vision-provider" name="vision_provider">
+                    <option value="">Configured default</option>
+                    {% for provider in ('ollama', 'openai', 'llama_cpp', 'mlx', 'claude') %}
+                    <option value="{{ provider }}" {% if organization_defaults.vision_provider == provider %}selected{% endif %}>{{ provider }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="organize-whisper-model">Whisper model</label>
+                <input id="organize-whisper-model" name="whisper_model" type="text" value="{{ organization_defaults.whisper_model }}">
+
+                <label for="organize-max-transcribe">Maximum transcription seconds</label>
+                <input id="organize-max-transcribe" name="max_transcribe_seconds" type="number" min="0" step="1" value="{{ organization_defaults.max_transcribe_seconds if organization_defaults.max_transcribe_seconds is not none else '' }}">
+
+                <label for="organize-workers">Parallel workers</label>
+                <input id="organize-workers" name="parallel_workers" type="number" min="1" value="{{ organization_defaults.parallel_workers or '' }}" placeholder="Automatic">
+
+                <label for="organize-prefetch">Prefetch depth</label>
+                <input id="organize-prefetch" name="prefetch_depth" type="number" min="0" value="{{ organization_defaults.prefetch_depth }}">
+            </div>
+        </details>
 
         <div class="organize-actions">
             <button class="btn-primary" type="submit">Generate plan</button>
@@ -60,6 +120,18 @@
     {% else %}
     <p class="organize-hint">No allowed roots configured. Set <code>FO_API_ALLOWED_PATHS</code>.</p>
     {% endif %}
+</section>
+
+<section class="panel" aria-labelledby="organize-capabilities-title">
+    <h2 id="organize-capabilities-title">Surface capability status</h2>
+    <p class="organize-hint">Support states come from the canonical capability registry. Unavailable workflows are shown explicitly.</p>
+    <div class="chip-stack">
+        {% for capability in organization_capabilities %}
+        <span class="chip" data-capability-id="{{ capability.id }}">
+            {{ capability.name }}: {{ capability.implementation_status }} / {{ capability.conformance_status }}
+        </span>
+        {% endfor %}
+    </div>
 </section>
 
 <section class="panel-grid two organize-panels">

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from file_organizer.core import file_ops
 from file_organizer.core.plan import build_plan_from_processed
 from file_organizer.core.types import OrganizationResult
 from file_organizer.services.text_processor import ProcessedFile
@@ -32,10 +33,18 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     mock_organizer = MagicMock()
     organizer_options: dict[str, Any] = {}
 
-    def organize_side_effect(**kwargs: Any) -> OrganizationResult:
-        input_path = Path(kwargs["input_path"])
-        output_path = Path(kwargs["output_path"])
-        files = [path for path in sorted(input_path.rglob("*")) if path.is_file()]
+    def organize_side_effect(
+        input_path: Path,
+        output_path: Path,
+        *,
+        skip_existing: bool,
+    ) -> OrganizationResult:
+        options = organizer_options["organize_options"]
+        files = file_ops.collect_files(
+            input_path,
+            recursive=options.recursive,
+            include_hidden=options.include_hidden,
+        )
         processed = [
             ProcessedFile(
                 file_path=path,
@@ -49,7 +58,7 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
             input_path=input_path,
             output_path=output_path,
             processed=processed,
-            skip_existing=bool(kwargs.get("skip_existing", True)),
+            skip_existing=skip_existing,
             use_hardlinks=bool(organizer_options["use_hardlinks"]),
             options=organizer_options["organize_options"],
             total_files=len(files),
@@ -106,6 +115,18 @@ class TestOrganizePage:
         client = web_client_builder(allowed_paths=[str(tmp_path)])
         response = client.get("/ui/organize")
         assert response.status_code == 200
+
+    def test_organize_page_exposes_desktop_only_directory_pickers(
+        self, tmp_path: Path, web_client_builder
+    ) -> None:
+        """Desktop affordances select paths without changing submitted fields."""
+        client = web_client_builder(allowed_paths=[str(tmp_path)])
+
+        response = client.get("/ui/organize")
+
+        assert 'data-desktop-only type="button"' in response.text
+        assert "desktopBrowseDirectory('organize-input-dir')" in response.text
+        assert "desktopBrowseDirectory('organize-output-dir')" in response.text
 
 
 @pytest.mark.unit
@@ -208,8 +229,10 @@ class TestScanOptions:
         assert response.status_code == 200
         assert "plan" in response.text.lower()
 
-    def test_scan_with_hidden_files(self, tmp_path: Path, web_client_builder) -> None:
-        """Scan should reject hidden file inclusion."""
+    def test_scan_with_hidden_files(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock
+    ) -> None:
+        """Scan should pass hidden-file inclusion through canonical options."""
         (tmp_path / ".hidden").write_text("test")
         output_dir = tmp_path / "organized"
         output_dir.mkdir()
@@ -226,7 +249,8 @@ class TestScanOptions:
             headers=csrf_headers,
         )
         assert response.status_code == 200
-        assert "not supported" in response.text.lower()
+        assert "Plan generated" in response.text
+        assert mock_file_organizer.call_args.kwargs["include_hidden"] is True
 
 
 @pytest.mark.unit

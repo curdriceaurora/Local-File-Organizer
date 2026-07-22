@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import OrganizationError, OrganizationResultResponse
-from file_organizer.api.utils import is_hidden, resolve_path
+from file_organizer.api.utils import resolve_path
 from file_organizer.config.methodology import (
     normalize as _normalize_methodology,
 )
-from file_organizer.core.organize_options import OrganizeOptions
+from file_organizer.core.organization_service import OrganizationService
+from file_organizer.core.organize_options import ModelProvider, OrganizeOptions, OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
@@ -50,51 +50,6 @@ def _parse_delay_minutes(value: str | None) -> int:
     return minutes
 
 
-def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
-    """Collect files from *path*, optionally recursing and including hidden items."""
-    files: list[Path] = []
-    if path.is_file():
-        if include_hidden or not is_hidden(path):
-            files.append(path)
-        return files
-
-    iterator = path.rglob("*") if recursive else path.glob("*")
-    for entry in iterator:
-        if not entry.is_file():
-            continue
-        if not include_hidden and is_hidden(entry):
-            continue
-        files.append(entry)
-    return files
-
-
-def _counts_by_type(files: list[Path]) -> dict[str, int]:
-    """Tally files by broad type category (text, image, video, etc.)."""
-    counts = {
-        "text": 0,
-        "image": 0,
-        "video": 0,
-        "audio": 0,
-        "cad": 0,
-        "other": 0,
-    }
-    for path in files:
-        suffix = path.suffix.lower()
-        if suffix in FileOrganizer.TEXT_EXTENSIONS:
-            counts["text"] += 1
-        elif suffix in FileOrganizer.IMAGE_EXTENSIONS:
-            counts["image"] += 1
-        elif suffix in FileOrganizer.VIDEO_EXTENSIONS:
-            counts["video"] += 1
-        elif suffix in FileOrganizer.AUDIO_EXTENSIONS:
-            counts["audio"] += 1
-        elif suffix in FileOrganizer.CAD_EXTENSIONS:
-            counts["cad"] += 1
-        else:
-            counts["other"] += 1
-    return counts
-
-
 def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
     """Convert an ``OrganizationResult`` to the API response model."""
     return OrganizationResultResponse(
@@ -110,35 +65,6 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
         ],
         transaction_id=result.transaction_id,
     )
-
-
-def _build_plan_movements(
-    files: list[Path],
-    output_dir: Path,
-    preview: OrganizationResultResponse,
-) -> list[dict[str, str]]:
-    """Build a list of planned source-to-destination movements from a dry-run preview."""
-    source_lookup: dict[str, list[str]] = {}
-    for file_path in sorted(files, key=lambda item: item.as_posix().lower()):
-        source_lookup.setdefault(file_path.name, []).append(str(file_path))
-
-    movements: list[dict[str, str]] = []
-    for bucket, names in sorted(
-        preview.organized_structure.items(), key=lambda item: item[0].lower()
-    ):
-        for name in sorted(names, key=str.lower):
-            sources = source_lookup.get(name, [])
-            source_path = sources.pop(0) if sources else name
-            destination = output_dir / bucket / name
-            movements.append(
-                {
-                    "file_name": name,
-                    "source": source_path,
-                    "destination": str(destination),
-                    "reason": f"Categorized into {bucket}",
-                }
-            )
-    return movements
 
 
 def _prune_plan_store() -> None:
@@ -180,19 +106,112 @@ def _delete_organize_plan(plan_id: str) -> None:
         _ORGANIZE_PLAN_STORE.pop(plan_id, None)
 
 
-def build_organize_plan(
+def _optional_int(value: str | None, field_name: str) -> int | None:
+    """Parse an optional integer form value into the canonical option shape."""
+    if value is None or not value.strip():
+        return None
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ApiError(
+            status_code=400,
+            error="invalid_organization_options",
+            message=f"{field_name} must be a whole number.",
+        ) from exc
+
+
+def _optional_float(value: str | None, field_name: str) -> float | None:
+    """Parse an optional numeric form value into the canonical option shape."""
+    if value is None or not value.strip():
+        return None
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise ApiError(
+            status_code=400,
+            error="invalid_organization_options",
+            message=f"{field_name} must be a number.",
+        ) from exc
+
+
+def parse_organize_options(
     *,
-    input_dir: str,
-    output_dir: str,
     methodology: str,
     recursive: str,
     include_hidden: str,
     skip_existing: str,
+    transfer_mode: str,
     use_hardlinks: str,
+    enable_vision: str,
+    transcribe_audio: str,
+    max_transcribe_seconds: str,
+    whisper_model: str,
+    parallel_workers: str,
+    prefetch_depth: str,
+    text_model: str,
+    vision_model: str,
+    text_provider: str = "",
+    vision_provider: str = "",
+) -> OrganizeOptions:
+    """Map Web form values into the complete canonical organization contract."""
+    normalized_methodology = _normalize_methodology(methodology, default="")
+    if not normalized_methodology:
+        raise ApiError(
+            status_code=400,
+            error="invalid_organization_options",
+            message="Methodology must be none, para, or jd.",
+        )
+    resolved_transfer_mode = transfer_mode.strip()
+    if not resolved_transfer_mode:
+        resolved_transfer_mode = "hardlink" if form_bool(use_hardlinks) else "copy"
+    parsed_prefetch_depth = _optional_int(prefetch_depth, "Prefetch depth")
+    try:
+        return OrganizeOptions(
+            recursive=form_bool(recursive),
+            include_hidden=form_bool(include_hidden),
+            skip_existing=form_bool(skip_existing),
+            transfer_mode=resolved_transfer_mode,
+            methodology=normalized_methodology,
+            enable_vision=form_bool(enable_vision),
+            transcribe_audio=form_bool(transcribe_audio),
+            max_transcribe_seconds=_optional_float(
+                max_transcribe_seconds, "Maximum transcription seconds"
+            ),
+            whisper_model=whisper_model.strip(),
+            parallel_workers=_optional_int(parallel_workers, "Parallel workers"),
+            prefetch_depth=2 if parsed_prefetch_depth is None else parsed_prefetch_depth,
+            text_model=text_model.strip() or None,
+            vision_model=vision_model.strip() or None,
+            text_provider=(
+                cast(ModelProvider, text_provider.strip()) if text_provider.strip() else None
+            ),
+            vision_provider=(
+                cast(ModelProvider, vision_provider.strip()) if vision_provider.strip() else None
+            ),
+        )
+    except ValueError as exc:
+        raise ApiError(
+            status_code=400,
+            error="invalid_organization_options",
+            message=str(exc),
+        ) from exc
+
+
+def build_organize_plan(
+    *,
+    input_dir: str,
+    output_dir: str,
     allowed_paths: list[str] | None,
-    organizer_factory: Callable[..., FileOrganizer] = FileOrganizer,
+    options: OrganizeOptions | None = None,
+    organization_service: OrganizationService | None = None,
+    methodology: str = "none",
+    recursive: str = "1",
+    include_hidden: str = "0",
+    skip_existing: str = "1",
+    use_hardlinks: str = "1",
+    organizer_factory: Callable[..., FileOrganizer] | None = None,
 ) -> dict[str, Any]:
-    """Validate scan input, run a dry-run preview, and persist the resulting plan."""
+    """Validate paths and persist a scan/preview produced by the canonical service."""
     if not input_dir.strip():
         raise ApiError(
             status_code=400,
@@ -211,44 +230,33 @@ def build_organize_plan(
     if not safe_input.exists():
         raise ApiError(status_code=404, error="not_found", message="Input directory not found.")
 
-    normalized_methodology = _normalize_methodology(methodology)
-    recursive_enabled = form_bool(recursive)
-    include_hidden_enabled = form_bool(include_hidden)
-    if include_hidden_enabled:
-        raise ApiError(
-            status_code=400,
-            error="include_hidden_not_supported",
-            message="Including hidden files is not supported in this dashboard flow yet.",
+    if options is None:
+        options = parse_organize_options(
+            methodology=methodology,
+            recursive=recursive,
+            include_hidden=include_hidden,
+            skip_existing=skip_existing,
+            transfer_mode="",
+            use_hardlinks=use_hardlinks,
+            enable_vision="1",
+            transcribe_audio="0",
+            max_transcribe_seconds="600",
+            whisper_model="tiny",
+            parallel_workers="",
+            prefetch_depth="2",
+            text_model="",
+            vision_model="",
+            text_provider="",
+            vision_provider="",
         )
-    skip_existing_enabled = form_bool(skip_existing)
-    use_hardlinks_enabled = form_bool(use_hardlinks)
+    if organization_service is None:
+        organization_service = OrganizationService(
+            organizer_factory=organizer_factory or FileOrganizer,
+        )
 
-    scan_files = _scan_directory(
-        safe_input,
-        recursive=recursive_enabled,
-        include_hidden=include_hidden_enabled,
-    )
-    counts = _counts_by_type(scan_files)
-
-    options = OrganizeOptions(
-        recursive=recursive_enabled,
-        include_hidden=include_hidden_enabled,
-        skip_existing=skip_existing_enabled,
-        use_hardlinks=use_hardlinks_enabled,
-        methodology=normalized_methodology,
-    )
-    organizer = organizer_factory(
-        dry_run=True,
-        use_hardlinks=use_hardlinks_enabled,
-        recursive=recursive_enabled,
-        include_hidden=include_hidden_enabled,
-        organize_options=options,
-    )
-    preview_result = organizer.organize(
-        input_path=safe_input,
-        output_path=safe_output,
-        skip_existing=skip_existing_enabled,
-    )
+    organization_request = OrganizeRequest(safe_input, safe_output, options)
+    scan = organization_service.scan(organization_request)
+    preview_result = organization_service.preview(organization_request)
     plan = preview_result.plan
     if not isinstance(plan, OrganizationPlan):
         raise ApiError(
@@ -264,14 +272,15 @@ def build_organize_plan(
         {
             "input_dir": str(safe_input),
             "output_dir": str(safe_output),
-            "methodology": normalized_methodology,
-            "recursive": recursive_enabled,
-            "include_hidden": include_hidden_enabled,
-            "skip_existing": skip_existing_enabled,
-            "use_hardlinks": use_hardlinks_enabled,
-            "transfer_mode": options.effective_transfer_mode.value,
-            "scan_counts": counts,
-            "scan_total_files": len(scan_files),
+            "methodology": plan.options.effective_methodology.value,
+            "recursive": plan.options.recursive,
+            "include_hidden": plan.options.include_hidden,
+            "skip_existing": plan.options.skip_existing,
+            "use_hardlinks": plan.options.use_hardlinks,
+            "transfer_mode": plan.options.effective_transfer_mode.value,
+            "options": plan.options.to_dict(),
+            "scan_counts": scan.counts,
+            "scan_total_files": scan.total_files,
             "preview": preview.model_dump(),
             "movements": plan.movements(),
             "executable_plan": plan.to_dict(),

@@ -150,6 +150,25 @@ class TestLaunch:
 
         mock_webview.start.assert_called_once()
 
+    def test_native_window_loads_the_shared_web_routes(self) -> None:
+        """Desktop points at the same FastAPI Web UI and only injects its native API."""
+        mock_webview = MagicMock()
+
+        from file_organizer.desktop import app as desktop_app
+
+        with (
+            patch.dict(sys.modules, {"webview": mock_webview}),
+            patch("file_organizer.desktop.app._find_free_port", return_value=43123),
+            patch("file_organizer.desktop.app._wait_for_server", return_value=True),
+            patch("file_organizer.desktop.app._run_server"),
+            patch("file_organizer.desktop.app.threading"),
+        ):
+            desktop_app.launch()
+
+        args, kwargs = mock_webview.create_window.call_args
+        assert args == ("File Organizer", "http://127.0.0.1:43123")
+        assert isinstance(kwargs["js_api"], desktop_app.DesktopAPI)
+
 
 # ---------------------------------------------------------------------------
 # _run_server — exercises lines 76-81 (uvicorn import + create_app + run)

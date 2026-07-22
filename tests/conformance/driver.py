@@ -69,6 +69,11 @@ from file_organizer.services.video.metadata_extractor import (
 )
 from file_organizer.undo import UndoManager
 from file_organizer.utils.atomic_write import atomic_write_text
+from file_organizer.web.organize_services import (
+    _delete_organize_plan,
+    build_organize_plan,
+    parse_organize_options,
+)
 from tests.conformance.normalize import (
     normalize_audit_events,
     normalize_error,
@@ -293,6 +298,120 @@ class DirectServiceDriver:
             "plan": normalize_plan(result.plan, *roots),
             "result": normalize_result(result, *roots),
             "audit_events": events,
+        }
+
+
+class WebDesktopConformanceDriver:
+    """Drive the Web form adapter against the canonical service seam.
+
+    Desktop loads these same ``/ui`` workflows; its Python bridge only adds
+    native path selection and reveal affordances, covered by Desktop tests.
+    """
+
+    name = "web-desktop"
+
+    def __init__(self, workspace: Path) -> None:
+        self._workspace = workspace
+        self._workspace.mkdir(parents=True, exist_ok=True)
+        self._oracle = DirectServiceDriver(workspace / "service")
+
+    @staticmethod
+    def _mapped_request(request: OrganizeRequest) -> OrganizeRequest:
+        options = request.options
+        mapped = parse_organize_options(
+            methodology=options.effective_methodology.value,
+            recursive="1" if options.recursive else "0",
+            include_hidden="1" if options.include_hidden else "0",
+            skip_existing="1" if options.skip_existing else "0",
+            transfer_mode=options.effective_transfer_mode.value,
+            use_hardlinks="1" if options.use_hardlinks else "0",
+            enable_vision="1" if options.enable_vision else "0",
+            transcribe_audio="1" if options.transcribe_audio else "0",
+            max_transcribe_seconds=(
+                ""
+                if options.max_transcribe_seconds is None
+                else str(options.max_transcribe_seconds)
+            ),
+            whisper_model=options.whisper_model,
+            parallel_workers=(
+                "" if options.parallel_workers is None else str(options.parallel_workers)
+            ),
+            prefetch_depth=str(options.prefetch_depth),
+            text_model=options.text_model or "",
+            vision_model=options.vision_model or "",
+            text_provider=options.text_provider or "",
+            vision_provider=options.vision_provider or "",
+        )
+        return OrganizeRequest(request.input_path, request.output_path, mapped)
+
+    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Return a normalized scan after Web form mapping."""
+        mapped = self._mapped_request(request)
+        roots = (mapped.input_path, mapped.output_path)
+        try:
+            scan = self._oracle._service.scan(mapped)
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
+
+    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Generate and round-trip the exact serialized plan rendered by Web."""
+        mapped = self._mapped_request(request)
+        roots = (mapped.input_path, mapped.output_path)
+        stored: dict[str, Any] | None = None
+        try:
+            stored = build_organize_plan(
+                input_dir=str(mapped.input_path),
+                output_dir=str(mapped.output_path),
+                allowed_paths=[str(self._workspace.parent)],
+                options=mapped.options,
+                organization_service=self._oracle._service,
+            )
+            plan = OrganizationPlan.from_dict(stored["executable_plan"])
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        finally:
+            if stored is not None:
+                _delete_organize_plan(stored["plan_id"])
+        result = OrganizationResult(
+            total_files=plan.total_files,
+            processed_files=plan.processed_files,
+            skipped_files=plan.skipped_files,
+            failed_files=plan.failed_files,
+            deduplicated_files=plan.deduplicated_files,
+            organized_structure=plan.organized_structure(),
+            errors=plan.errors,
+            plan=plan,
+        )
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(plan, *roots),
+            "result": normalize_result(result, *roots),
+            "plan_payload": plan.to_dict(),
+        }
+
+    def execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Execute the reviewed serialized plan through the shared service."""
+        mapped = self._mapped_request(request)
+        roots = (mapped.input_path, mapped.output_path)
+        try:
+            plan = OrganizationPlan.from_dict(plan_payload) if plan_payload is not None else None
+            result = self._oracle._service.execute(mapped, plan)
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        if not isinstance(result.plan, OrganizationPlan):
+            raise AssertionError("Web execution must retain its executable plan.")
+        history = self._oracle._last_history
+        assert history is not None
+        operations = history.get_operations()
+        operations.sort(key=lambda operation: operation.id if operation.id is not None else -1)
+        return {
+            "outcome": "ok",
+            "plan": normalize_plan(result.plan, *roots),
+            "result": normalize_result(result, *roots),
+            "audit_events": normalize_audit_events(operations, *roots),
         }
 
 

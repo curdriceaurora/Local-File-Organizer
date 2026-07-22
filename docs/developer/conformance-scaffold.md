@@ -13,7 +13,7 @@ never from any adapter.
 | --- | --- |
 | `tests/conformance/corpus.py` | Deterministic fixture corpus: pinned bytes and mtimes, tagged cases |
 | `tests/conformance/normalize.py` | Strips presentation-only differences while preserving executable ordering and complete source fingerprints |
-| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK adapters |
+| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK/Web-Desktop adapters |
 | `tests/conformance/test_direct_service_conformance.py` | Golden expectations for canonical semantics |
 
 ## Fixture corpus
@@ -37,6 +37,14 @@ through in-process HTTP transports. This verifies traversal, complete option
 mapping, executable-plan round trips, stable errors, execution results, and
 audit effects against the direct-service oracle without relying on route
 construction alone.
+
+The Web/Desktop driver round-trips every canonical option through the Web form
+parser, builds the serialized plan rendered for review, and executes that plan
+through the same application-service seam. Desktop uses these exact `/ui`
+routes; its separate tests constrain the Python bridge to native path dialogs
+and reveal-in-file-manager affordances. Web/Desktop scan and preview therefore
+have executable corpus evidence. Execution remains unverified until the corpus
+also covers the surface's queued job, cancellation, and rollback lifecycle.
 
 ## Writing an adapter driver
 

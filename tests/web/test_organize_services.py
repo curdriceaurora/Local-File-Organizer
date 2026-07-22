@@ -7,21 +7,21 @@ from unittest.mock import MagicMock
 import pytest
 
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core import file_ops
+from file_organizer.core.organization_service import count_files_by_type
 from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import build_plan_from_processed
 from file_organizer.methodologies import apply_organization_methodology
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_services import (
     ORGANIZE_MAX_DELAY_MIN,
-    _build_plan_movements,
-    _counts_by_type,
     _delete_organize_plan,
     _get_organize_plan,
     _job_report_payload,
     _parse_delay_minutes,
-    _scan_directory,
     _store_organize_plan,
     build_organize_plan,
+    parse_organize_options,
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -41,10 +41,21 @@ def _preview_result(structure: dict[str, list[str]]) -> MagicMock:
 
 
 def _preview_result_with_plan(
-    input_dir, output_dir, folder: str = "docs", methodology: str = "none"
+    input_dir,
+    output_dir,
+    folder: str = "docs",
+    methodology: str = "none",
+    *,
+    recursive: bool = False,
+    include_hidden: bool = False,
 ) -> MagicMock:
     source = input_dir / "notes.txt"
-    options = OrganizeOptions(transfer_mode="copy", methodology=methodology)
+    options = OrganizeOptions(
+        recursive=recursive,
+        include_hidden=include_hidden,
+        transfer_mode="copy",
+        methodology=methodology,
+    )
     processed = apply_organization_methodology(
         [
             ProcessedFile(
@@ -96,11 +107,11 @@ def test_scan_directory_handles_files_hidden_entries_and_recursive(tmp_path) -> 
     for path in (visible, hidden, nested):
         path.write_text("data")
 
-    assert _scan_directory(visible, recursive=False, include_hidden=False) == [visible]
-    assert _scan_directory(hidden, recursive=False, include_hidden=False) == []
-    assert _scan_directory(hidden, recursive=False, include_hidden=True) == [hidden]
-    assert _scan_directory(tmp_path, recursive=False, include_hidden=False) == [visible]
-    assert set(_scan_directory(tmp_path, recursive=True, include_hidden=True)) == {
+    assert file_ops.collect_files(visible, recursive=False, include_hidden=False) == [visible]
+    assert file_ops.collect_files(hidden, recursive=False, include_hidden=False) == []
+    assert file_ops.collect_files(hidden, recursive=False, include_hidden=True) == [hidden]
+    assert file_ops.collect_files(tmp_path, recursive=False, include_hidden=False) == [visible]
+    assert set(file_ops.collect_files(tmp_path, recursive=True, include_hidden=True)) == {
         visible,
         hidden,
         nested,
@@ -117,7 +128,7 @@ def test_counts_by_type_covers_all_buckets(tmp_path) -> None:
         tmp_path / "archive.bin",
     ]
 
-    assert _counts_by_type(files) == {
+    assert count_files_by_type(files) == {
         "text": 1,
         "image": 1,
         "video": 1,
@@ -127,17 +138,43 @@ def test_counts_by_type_covers_all_buckets(tmp_path) -> None:
     }
 
 
-def test_build_plan_movements_uses_name_when_source_is_unknown(tmp_path) -> None:
-    preview = _preview_result({"docs": ["missing.txt"]})
+def test_parse_organize_options_maps_complete_canonical_contract() -> None:
+    options = parse_organize_options(
+        methodology="johnny_decimal",
+        recursive="0",
+        include_hidden="1",
+        skip_existing="0",
+        transfer_mode="copy",
+        use_hardlinks="1",
+        enable_vision="0",
+        transcribe_audio="1",
+        max_transcribe_seconds="42.5",
+        whisper_model="base",
+        parallel_workers="3",
+        prefetch_depth="4",
+        text_model="text-test",
+        vision_model="vision-test",
+        text_provider="openai",
+        vision_provider="mlx",
+    )
 
-    assert _build_plan_movements([], tmp_path, preview) == [
-        {
-            "file_name": "missing.txt",
-            "source": "missing.txt",
-            "destination": str(tmp_path / "docs" / "missing.txt"),
-            "reason": "Categorized into docs",
-        }
-    ]
+    assert options.to_dict() == {
+        "recursive": False,
+        "include_hidden": True,
+        "skip_existing": False,
+        "transfer_mode": "copy",
+        "methodology": "jd",
+        "enable_vision": False,
+        "transcribe_audio": True,
+        "max_transcribe_seconds": 42.5,
+        "whisper_model": "base",
+        "parallel_workers": 3,
+        "prefetch_depth": 4,
+        "text_model": "text-test",
+        "vision_model": "vision-test",
+        "text_provider": "openai",
+        "vision_provider": "mlx",
+    }
 
 
 def test_plan_store_prunes_and_missing_lookup_returns_none(monkeypatch) -> None:
@@ -226,8 +263,8 @@ class TestBuildOrganizePlan:
             assert call["include_hidden"] is False
             assert call["organize_options"].effective_methodology.value == "none"
             organizer.organize.assert_called_once_with(
-                input_path=input_dir,
-                output_path=output_dir,
+                input_dir,
+                output_dir,
                 skip_existing=True,
             )
         finally:
@@ -396,25 +433,36 @@ class TestBuildOrganizePlan:
         assert exc_info.value.error == "not_found"
         organizer_factory.assert_not_called()
 
-    def test_rejects_hidden_inclusion_before_preview(self, tmp_path) -> None:
+    def test_supports_hidden_inclusion_through_canonical_options(self, tmp_path) -> None:
         input_dir = tmp_path / "input"
         output_dir = tmp_path / "output"
         input_dir.mkdir()
         output_dir.mkdir()
-        organizer_factory = MagicMock()
+        (input_dir / ".hidden.txt").write_text("hidden")
+        organizer = MagicMock()
+        organizer.organize.return_value = _preview_result_with_plan(
+            input_dir,
+            output_dir,
+            recursive=True,
+            include_hidden=True,
+        )
+        organizer_factory = MagicMock(return_value=organizer)
 
-        with pytest.raises(ApiError) as exc_info:
-            build_organize_plan(
-                input_dir=str(input_dir),
-                output_dir=str(output_dir),
-                methodology="none",
-                recursive="1",
-                include_hidden="1",
-                skip_existing="1",
-                use_hardlinks="1",
-                allowed_paths=[str(tmp_path)],
-                organizer_factory=organizer_factory,
-            )
+        plan = build_organize_plan(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            methodology="none",
+            recursive="1",
+            include_hidden="1",
+            skip_existing="1",
+            use_hardlinks="0",
+            allowed_paths=[str(tmp_path)],
+            organizer_factory=organizer_factory,
+        )
 
-        assert exc_info.value.error == "include_hidden_not_supported"
-        organizer_factory.assert_not_called()
+        try:
+            assert plan["include_hidden"] is True
+            assert plan["scan_total_files"] == 1
+            assert organizer_factory.call_args.kwargs["include_hidden"] is True
+        finally:
+            _delete_organize_plan(plan["plan_id"])

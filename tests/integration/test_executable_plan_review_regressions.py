@@ -14,6 +14,8 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.organize import router
+from file_organizer.core.file_ops import collect_files
+from file_organizer.core.organization_service import count_files_by_type
 from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import (
@@ -30,13 +32,10 @@ from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.undo import UndoManager
 from file_organizer.web.organize_services import (
     _ORGANIZE_PLAN_STORE,
-    _build_plan_movements,
-    _counts_by_type,
     _delete_organize_plan,
     _get_organize_plan,
     _parse_delay_minutes,
     _prune_plan_store,
-    _scan_directory,
     _store_organize_plan,
 )
 
@@ -311,10 +310,18 @@ def test_web_organize_helpers_cover_scan_and_store_paths(tmp_path: Path) -> None
     nested.mkdir()
     (nested / "clip.mp4").write_text("video")
 
-    files = _scan_directory(tmp_path, recursive=True, include_hidden=False)
-    counts = _counts_by_type(files)
-    preview = MagicMock(organized_structure={"Documents": ["visible.txt"]})
-    movements = _build_plan_movements(files, tmp_path / "out", preview)
+    files = collect_files(tmp_path, recursive=True, include_hidden=False)
+    counts = count_files_by_type(files)
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[_processed(visible, "Documents")],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
     record = _store_organize_plan({"payload": True})
     fetched = _get_organize_plan(record["plan_id"])
     _delete_organize_plan(record["plan_id"])
@@ -323,7 +330,7 @@ def test_web_organize_helpers_cover_scan_and_store_paths(tmp_path: Path) -> None
     assert counts["text"] == 1
     assert counts["cad"] == 1
     assert counts["video"] == 1
-    assert any(movement["destination"].endswith("visible.txt") for movement in movements)
+    assert plan.movements()[0]["destination"].endswith("visible.txt")
     assert fetched is not None and fetched["payload"] is True
     assert _get_organize_plan(record["plan_id"]) is None
 

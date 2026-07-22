@@ -15,6 +15,7 @@ from starlette.testclient import TestClient
 
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
+from file_organizer.core import file_ops
 from file_organizer.core.organizer import OrganizationResult
 from file_organizer.core.plan import OrganizationPlan, build_plan_from_processed
 from file_organizer.plugins.marketplace import compute_sha256
@@ -95,6 +96,7 @@ class DummyOrganizer:
     def __init__(self, *args, **kwargs) -> None:
         self.dry_run = bool(kwargs.get("dry_run", False))
         self.use_hardlinks = bool(kwargs.get("use_hardlinks", False))
+        self.organize_options = kwargs["organize_options"]
 
     def organize(
         self,
@@ -103,8 +105,10 @@ class DummyOrganizer:
         skip_existing: bool = True,
     ) -> OrganizationResult:
         source = Path(input_path)
-        files = sorted(
-            path for path in source.rglob("*") if path.is_file() and not path.name.startswith(".")
+        files = file_ops.collect_files(
+            source,
+            recursive=self.organize_options.recursive,
+            include_hidden=self.organize_options.include_hidden,
         )
         text_files = [path.name for path in files if path.suffix.lower() == ".txt"]
         image_files = [
@@ -135,6 +139,7 @@ class DummyOrganizer:
             processed=processed,
             skip_existing=skip_existing,
             use_hardlinks=self.use_hardlinks,
+            options=self.organize_options,
             total_files=len(files),
             skipped_files=0,
             deduplicated_files=0,
@@ -383,7 +388,7 @@ def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) 
     assert "outside allowed roots" in scan.text.lower()
 
 
-def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> None:
+def test_organize_scan_supports_include_hidden(monkeypatch, tmp_path: Path) -> None:
     organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
     monkeypatch.setattr(organize_mod, "FileOrganizer", DummyOrganizer)
@@ -403,7 +408,8 @@ def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> No
         headers=get_csrf_headers(client, seed_url="/ui/"),
     )
     assert scan.status_code == 200
-    assert "not supported" in scan.text.lower()
+    assert "Plan generated" in scan.text
+    assert ".secret.txt" in scan.text
 
 
 def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
