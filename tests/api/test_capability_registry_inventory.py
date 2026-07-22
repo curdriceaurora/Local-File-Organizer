@@ -7,6 +7,7 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 from file_organizer.core.capabilities import Surface, get_capability_registry
+from tests.api.route_inventory import iter_effective_routes
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -26,7 +27,7 @@ def test_public_routes_match_registered_entry_points(path_prefix: str, surface: 
         for entry_point in capability.support_for(surface).entry_points
     }
     public_routes: set[str] = set()
-    for route in app.routes:
+    for route in iter_effective_routes(app):
         path = getattr(route, "path", "")
         if not path.startswith(path_prefix):
             continue
