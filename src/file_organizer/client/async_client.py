@@ -566,9 +566,10 @@ class AsyncFileOrganizerClient:
         limit: int = 100,
     ) -> list[JobStatusResponse]:
         """List recent organization jobs."""
-        rows = await self._request_list(
-            "GET", "/organize/jobs", params={"status": status, "limit": limit}
-        )
+        params: dict[str, str | int] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        rows = await self._request_list("GET", "/organize/jobs", params=params)
         return [JobStatusResponse.model_validate(row) for row in rows]
 
     async def cancel_job(
@@ -775,20 +776,18 @@ class AsyncFileOrganizerClient:
         semantic: bool = False,
     ) -> list[dict[str, Any]]:
         """Search indexed files with keyword or semantic retrieval."""
+        params: dict[str, str | int | bool] = {"q": query, "semantic": semantic}
+        if file_type is not None:
+            params["type"] = file_type
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if path is not None:
+            params["path"] = path
         return cast(
             list[dict[str, Any]],
-            await self._request_list(
-                "GET",
-                "/search",
-                params={
-                    "q": query,
-                    "type": file_type,
-                    "limit": limit,
-                    "offset": offset,
-                    "path": path,
-                    "semantic": semantic,
-                },
-            ),
+            await self._request_list("GET", "/search", params=params),
         )
 
     async def get_application_config(self, profile: str = "default") -> ConfigResponse:
@@ -919,8 +918,9 @@ class AsyncFileOrganizerClient:
         self, name: str, *, version: str | None = None
     ) -> dict[str, Any]:
         """Install a marketplace plugin."""
+        params = {"version": version} if version is not None else {}
         return await self._request_json(
-            "POST", f"/marketplace/plugins/{name}/install", params={"version": version}
+            "POST", f"/marketplace/plugins/{name}/install", params=params
         )
 
     async def uninstall_marketplace_plugin(self, name: str) -> Any:
@@ -1006,7 +1006,8 @@ class AsyncFileOrganizerClient:
 
     async def list_plugin_hooks(self, event: str | None = None) -> dict[str, Any]:
         """List plugin hooks."""
-        return await self._request_json("GET", "/plugins/hooks", params={"event": event})
+        params = {"event": event} if event is not None else {}
+        return await self._request_json("GET", "/plugins/hooks", params=params)
 
     async def trigger_plugin_hook(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Trigger a plugin hook event."""

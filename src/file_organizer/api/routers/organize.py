@@ -411,7 +411,8 @@ def cancel_organization_job(
         status=JobStatus.CANCELLED,
         expected_revision=request.expected_revision,
     )
-    assert updated is not None
+    if updated is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
     return _job_to_response(updated)
 
 
@@ -447,7 +448,8 @@ def rollback_organization_job(
         status=JobStatus.ROLLING_BACK,
         expected_revision=request.expected_revision,
     )
-    assert rolling_back is not None
+    if rolling_back is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
 
     from file_organizer.undo.undo_manager import UndoManager
 
@@ -473,7 +475,8 @@ def rollback_organization_job(
         error_code=(None if success else DomainErrorCode.RECOVERY_REQUIRED),
         recovery_action=(RecoveryAction.NONE if success else RecoveryAction.MANUAL),
     )
-    assert updated is not None
+    if updated is None:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
     return _job_to_response(updated)
 
 

@@ -824,6 +824,65 @@ class TestJobLifecycleEndpoints:
         assert response.status_code == 409
         assert response.json()["error"] == "stale_job_revision"
 
+    def test_cancel_job_returns_404_when_job_disappears_during_update(self, tmp_path: Path) -> None:
+        with (
+            patch.object(organize_router_module, "get_job", return_value=MagicMock()),
+            patch.object(organize_router_module, "update_job", return_value=None),
+        ):
+            _, client, _ = _build_app(tmp_path)
+
+            response = client.post(
+                "/api/v1/organize/jobs/disappeared/cancel",
+                json={"expected_revision": None},
+            )
+
+        assert response.status_code == 404
+        assert response.json() == {"error": "not_found", "message": "Job not found"}
+
+    def test_rollback_job_returns_404_when_job_disappears_before_rollback(
+        self, tmp_path: Path
+    ) -> None:
+        job = MagicMock(transaction_id="txn-123")
+        with (
+            patch.object(organize_router_module, "get_job", return_value=job),
+            patch.object(organize_router_module, "update_job", return_value=None),
+            patch("file_organizer.undo.undo_manager.UndoManager") as undo_manager,
+        ):
+            _, client, _ = _build_app(tmp_path)
+
+            response = client.post(
+                "/api/v1/organize/jobs/disappeared/rollback",
+                json={"expected_revision": None},
+            )
+
+        assert response.status_code == 404
+        assert response.json() == {"error": "not_found", "message": "Job not found"}
+        undo_manager.assert_not_called()
+
+    def test_rollback_job_returns_404_when_job_disappears_after_rollback(
+        self, tmp_path: Path
+    ) -> None:
+        job = MagicMock(transaction_id="txn-123")
+        with (
+            patch.object(organize_router_module, "get_job", return_value=job),
+            patch.object(
+                organize_router_module,
+                "update_job",
+                side_effect=[MagicMock(), None],
+            ),
+            patch("file_organizer.undo.undo_manager.UndoManager") as undo_manager,
+        ):
+            undo_manager.return_value.undo_transaction.return_value = True
+            _, client, _ = _build_app(tmp_path)
+
+            response = client.post(
+                "/api/v1/organize/jobs/disappeared/rollback",
+                json={"expected_revision": None},
+            )
+
+        assert response.status_code == 404
+        assert response.json() == {"error": "not_found", "message": "Job not found"}
+
     @patch("file_organizer.undo.undo_manager.UndoManager")
     def test_rollback_job_transitions_to_rolled_back(
         self, mock_undo_manager, tmp_path: Path

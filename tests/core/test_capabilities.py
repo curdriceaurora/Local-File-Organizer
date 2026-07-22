@@ -283,7 +283,12 @@ def test_official_client_product_methods_are_inventoried() -> None:
 
 def test_typescript_client_product_methods_are_inventoried() -> None:
     inventory_path = (
-        Path("src") / "file_organizer" / "client" / "typescript" / "methods.generated.json"
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "file_organizer"
+        / "client"
+        / "typescript"
+        / "methods.generated.json"
     )
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
     methods = inventory["methods"]

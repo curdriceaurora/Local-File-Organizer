@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.plan import PlanValidationError
@@ -88,10 +89,11 @@ def setup_exception_handlers(app: FastAPI) -> None:
             payload["details"] = exc.details
         return JSONResponse(status_code=exc.status_code, content=payload)
 
+    @app.exception_handler(StarletteHTTPException)
     @app.exception_handler(HTTPException)
     async def http_exception_handler(
         request: Request,
-        exc: HTTPException,
+        exc: StarletteHTTPException,
     ) -> JSONResponse:
         """Normalize framework HTTP errors into the public typed envelope."""
         logger.warning("HTTP error on {}: {}", request.url.path, exc.status_code)

@@ -288,6 +288,70 @@ class TestAsyncClientOrganize:
         result = await client.get_job("j1")
         assert result.status == "completed"
 
+    async def test_optional_query_parameters_are_omitted_by_default(self):
+        """Optional query filters should not be serialized as empty values."""
+        client = AsyncFileOrganizerClient()
+        client._request_list = AsyncMock(return_value=[])
+        client._request_json = AsyncMock(return_value={})
+
+        await client.list_jobs()
+        client._request_list.assert_awaited_with("GET", "/organize/jobs", params={"limit": 100})
+
+        await client.search("report")
+        client._request_list.assert_awaited_with(
+            "GET", "/search", params={"q": "report", "semantic": False}
+        )
+
+        await client.install_marketplace_plugin("example")
+        client._request_json.assert_awaited_with(
+            "POST", "/marketplace/plugins/example/install", params={}
+        )
+
+        await client.list_plugin_hooks()
+        client._request_json.assert_awaited_with("GET", "/plugins/hooks", params={})
+
+    async def test_optional_query_parameters_are_preserved_when_provided(self):
+        """Non-empty optional query filters should retain their existing names and values."""
+        client = AsyncFileOrganizerClient()
+        client._request_list = AsyncMock(return_value=[])
+        client._request_json = AsyncMock(return_value={})
+
+        await client.list_jobs(status="queued", limit=5)
+        client._request_list.assert_awaited_with(
+            "GET", "/organize/jobs", params={"limit": 5, "status": "queued"}
+        )
+
+        await client.search(
+            "report",
+            file_type="pdf",
+            limit=10,
+            offset=2,
+            path="documents",
+            semantic=True,
+        )
+        client._request_list.assert_awaited_with(
+            "GET",
+            "/search",
+            params={
+                "q": "report",
+                "semantic": True,
+                "type": "pdf",
+                "limit": 10,
+                "offset": 2,
+                "path": "documents",
+            },
+        )
+
+        await client.install_marketplace_plugin("example", version="1.2.3")
+        client._request_json.assert_awaited_with(
+            "POST", "/marketplace/plugins/example/install", params={"version": "1.2.3"}
+        )
+
+        await client.list_plugin_hooks("before_organize")
+        client._request_json.assert_awaited_with(
+            "GET", "/plugins/hooks", params={"event": "before_organize"}
+        )
+
 
 @pytest.mark.asyncio
 class TestAsyncClientSystem:
