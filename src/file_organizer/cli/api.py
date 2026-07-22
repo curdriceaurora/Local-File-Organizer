@@ -19,9 +19,11 @@ from rich.console import Console
 from rich.table import Table
 
 from file_organizer.cli.organize import (
+    _PLAN_PARAMETER_FIELDS,
     _emit_json,
     _error_code_exit_code,
     _json_success_payload,
+    _merge_explicit_plan_options,
     _raise_cli_contract_error,
 )
 from file_organizer.utils.atomic_write import atomic_write_text
@@ -31,25 +33,7 @@ api_app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-_REMOTE_PLAN_OPTION_NAMES = (
-    "recursive",
-    "include_hidden",
-    "skip_existing",
-    "transfer_mode",
-    "methodology",
-    "max_workers",
-    "sequential",
-    "no_vision",
-    "prefetch_depth",
-    "no_prefetch",
-    "transcribe_audio",
-    "max_transcribe_seconds",
-    "whisper_model",
-    "text_model",
-    "vision_model",
-    "text_provider",
-    "vision_provider",
-)
+_REMOTE_PLAN_OPTION_NAMES = tuple(_PLAN_PARAMETER_FIELDS)
 
 
 def _build_client(
@@ -88,9 +72,11 @@ def _success_payload(
     request: dict[str, Any] | None = None,
     scan: dict[str, Any] | None = None,
     plan: dict[str, Any] | None = None,
+    job: dict[str, Any] | None = None,
+    include_job: bool = False,
 ) -> dict[str, Any]:
     """Build the shared CLI success envelope for a remote result."""
-    return _json_success_payload(
+    payload = _json_success_payload(
         command,
         mode="remote",
         request=request,
@@ -98,6 +84,9 @@ def _success_payload(
         result=result,
         plan=plan,
     )
+    if include_job:
+        payload["job"] = job
+    return payload
 
 
 def _client_error_payload(exc: Exception) -> dict[str, Any]:
@@ -209,12 +198,28 @@ def _organization_options(
 
 def _load_remote_plan(path: Path) -> OrganizationPlanPayload:
     """Load and validate a canonical plan for remote execution."""
-    from file_organizer.cli.path_validation import resolve_cli_path, validate_regular_file
+    from file_organizer.cli.path_validation import validate_regular_file
     from file_organizer.client.models import OrganizationPlanPayload
 
-    validated = resolve_cli_path(path, must_exist=True, must_be_dir=False)
-    validate_regular_file(validated, "plan file")
-    return OrganizationPlanPayload.model_validate_json(validated.read_text(encoding="utf-8"))
+    validate_regular_file(path, "plan file")
+    return OrganizationPlanPayload.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _merge_remote_plan_options(
+    ctx: typer.Context,
+    plan_options: OrganizationOptionsPayload,
+    cli_options: OrganizationOptionsPayload,
+) -> OrganizationOptionsPayload:
+    """Overlay only explicitly supplied remote flags onto reviewed plan options."""
+    from file_organizer.client.models import OrganizationOptionsPayload
+    from file_organizer.core.organize_options import OrganizeOptions
+
+    merged = _merge_explicit_plan_options(
+        ctx,
+        OrganizeOptions.from_dict(plan_options.model_dump(mode="json")),
+        OrganizeOptions.from_dict(cli_options.model_dump(mode="json")),
+    )
+    return OrganizationOptionsPayload.model_validate(merged.to_dict())
 
 
 def _save_remote_plan(path: Path, payload: object) -> Path:
@@ -629,7 +634,7 @@ def organization_execute(
         if plan_path is not None:
             from file_organizer.cli.path_validation import resolve_cli_path
 
-            plan_path = resolve_cli_path(plan_path, must_exist=False, must_be_dir=False)
+            plan_path = resolve_cli_path(plan_path, must_exist=True, must_be_dir=False)
         plan = _load_remote_plan(plan_path) if plan_path is not None else None
         options = None
         has_explicit_options = any(
@@ -637,7 +642,7 @@ def organization_execute(
             for name in _REMOTE_PLAN_OPTION_NAMES
         )
         if plan is None or has_explicit_options:
-            options = _organization_options(
+            cli_options = _organization_options(
                 recursive=recursive,
                 include_hidden=include_hidden,
                 skip_existing=skip_existing,
@@ -656,6 +661,12 @@ def organization_execute(
                 text_provider=text_provider,
                 vision_provider=vision_provider,
             )
+            plan_options = getattr(plan, "options", None)
+            options = (
+                _merge_remote_plan_options(ctx, plan_options, cli_options)
+                if plan_options is not None
+                else cli_options
+            )
         result = client.organize(
             input_dir,
             output_dir,
@@ -670,9 +681,14 @@ def organization_execute(
             if isinstance(operation_result, dict):
                 operation_result = dict(operation_result)
                 plan_payload = operation_result.pop("plan", None)
+                job_payload = None
             else:
-                operation_result = payload
+                operation_result = None
                 plan_payload = None
+                job_payload = {
+                    "job_id": payload.get("job_id"),
+                    "status": payload.get("status"),
+                }
             if options is not None:
                 request_options = options.model_dump(mode="json")
             elif (plan_options := getattr(plan, "options", None)) is not None:
@@ -689,6 +705,8 @@ def organization_execute(
                         "options": request_options,
                     },
                     plan=plan_payload,
+                    job=job_payload,
+                    include_job=True,
                 )
             )
             return
@@ -784,7 +802,14 @@ def _mutate_organization_job(
         base_url=base_url, token=token, api_key=api_key, timeout=timeout
     )
     try:
-        operation = client.cancel_job if action == "cancel" else client.rollback_job
+        operations = {
+            "cancel": client.cancel_job,
+            "rollback": client.rollback_job,
+        }
+        try:
+            operation = operations[action]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported organization job action: {action}") from exc
         job = operation(job_id, expected_revision=expected_revision)
         if as_json:
             _emit_json(_success_payload(f"api {action}", job.model_dump(mode="json")))

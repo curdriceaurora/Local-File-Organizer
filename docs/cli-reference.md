@@ -1387,6 +1387,9 @@ file-organizer api organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 Organization queues a background job by default. Use `--foreground` to wait
 for a result, `--plan PATH` to execute a reviewed plan, and
 `--idempotency-key TEXT` to deduplicate background submissions.
+In JSON mode, `result` is `null` for a queued submission and `job` contains
+its `job_id` and `status`; foreground execution places the operation result in
+`result` and emits `job: null`.
 
 #### `api job`
 

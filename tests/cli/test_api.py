@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from file_organizer.cli.api import api_app
 from file_organizer.client.exceptions import ClientError
+from file_organizer.client.models import OrganizationOptionsPayload
 
 runner = CliRunner()
 
@@ -301,6 +302,8 @@ def test_remote_organize_applies_reviewed_plan_without_default_overrides(mock_cl
     mock_instance.organize.return_value = response
     mock_client_cls.return_value = mock_instance
     plan = object()
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text("{}", encoding="utf-8")
 
     with patch("file_organizer.cli.api._load_remote_plan", return_value=plan):
         result = runner.invoke(
@@ -310,7 +313,7 @@ def test_remote_organize_applies_reviewed_plan_without_default_overrides(mock_cl
                 "/remote/input",
                 "/remote/output",
                 "--plan",
-                str(tmp_path / "plan.json"),
+                str(plan_path),
                 "--json",
             ],
         )
@@ -324,6 +327,77 @@ def test_remote_organize_applies_reviewed_plan_without_default_overrides(mock_cl
         run_in_background=True,
         idempotency_key=None,
     )
+    payload = json.loads(result.stdout)
+    assert payload["result"] is None
+    assert payload["job"] == {"job_id": "job-1", "status": "queued"}
+
+
+def test_remote_plan_overlays_only_explicit_behavior_flags(mock_client_cls, tmp_path):
+    """Explicit remote flags must preserve every unspecified reviewed-plan option."""
+    mock_instance = MagicMock()
+    response = MagicMock(job_id="job-1", result=None, status="queued")
+    response.model_dump.return_value = {"status": "queued", "job_id": "job-1"}
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+    reviewed_options = OrganizationOptionsPayload(
+        recursive=False,
+        include_hidden=True,
+        skip_existing=False,
+        transfer_mode="copy",
+        methodology="para",
+        enable_vision=False,
+        parallel_workers=3,
+        prefetch_depth=7,
+    )
+    plan = MagicMock(options=reviewed_options)
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text("{}", encoding="utf-8")
+
+    with patch("file_organizer.cli.api._load_remote_plan", return_value=plan):
+        result = runner.invoke(
+            api_app,
+            [
+                "organize",
+                "/remote/input",
+                "/remote/output",
+                "--plan",
+                str(plan_path),
+                "--methodology",
+                "jd",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    options = mock_instance.organize.call_args.kwargs["options"]
+    assert options.model_dump() == {
+        **reviewed_options.model_dump(),
+        "methodology": "jd",
+    }
+
+
+def test_remote_foreground_reserves_result_for_operation_result(mock_client_cls):
+    """Foreground and queued responses must keep stable result and job slots."""
+    mock_instance = MagicMock()
+    operation_result = MagicMock(processed_files=3, skipped_files=0, failed_files=0)
+    response = MagicMock(job_id=None, result=operation_result, status="completed")
+    response.model_dump.return_value = {
+        "status": "completed",
+        "job_id": None,
+        "result": {"processed_files": 3, "plan": None},
+    }
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(
+        api_app,
+        ["organize", "/remote/input", "/remote/output", "--foreground", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["result"] == {"processed_files": 3}
+    assert payload["job"] is None
 
 
 @pytest.mark.parametrize(
