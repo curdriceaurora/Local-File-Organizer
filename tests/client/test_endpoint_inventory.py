@@ -13,6 +13,7 @@ from file_organizer.client.async_client import AsyncFileOrganizerClient
 from file_organizer.client.endpoint_spec import INTENTIONAL_EXCLUSIONS, PUBLIC_ENDPOINTS
 from file_organizer.client.sync_client import FileOrganizerClient
 from file_organizer.core.capabilities import Surface, get_capability_registry
+from tests._route_inventory import iter_effective_routes
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -26,7 +27,7 @@ def _app():
 def test_endpoint_spec_exactly_matches_public_openapi_routes() -> None:
     actual = {
         f"{method} {route.path}"
-        for route in _app().routes
+        for route in iter_effective_routes(_app())
         if route.path.startswith("/api/v1")
         for method in (getattr(route, "methods", None) or set())
         if method in _HTTP_METHODS
