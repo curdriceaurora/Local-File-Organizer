@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  # checkov:skip=CKV_GHA_7:Manual build version parameter is required for workflow_dispatch trigger
   workflow_dispatch:
     inputs:
       version:

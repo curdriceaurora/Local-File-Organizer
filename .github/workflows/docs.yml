@@ -17,6 +17,9 @@ on:
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
