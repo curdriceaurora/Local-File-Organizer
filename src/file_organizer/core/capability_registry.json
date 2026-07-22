@@ -1743,7 +1743,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "verified",
+          "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.organize"
           ],
@@ -1904,7 +1904,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "verified",
+          "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.previewOrganize"
           ],
@@ -1978,7 +1978,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "verified",
+          "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.scan"
           ],
