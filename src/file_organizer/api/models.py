@@ -150,6 +150,7 @@ class ScanResponse(BaseModel):
 
     input_dir: str
     total_files: int
+    files: list[str]
     counts: dict[str, int]
 
 

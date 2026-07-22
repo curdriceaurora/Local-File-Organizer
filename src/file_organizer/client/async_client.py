@@ -100,6 +100,7 @@ class AsyncFileOrganizerClient:
             body = {}
         detail = body.get("detail") or body.get("message") or response.text
         error_code = str(body.get("code") or body.get("error") or "")
+        retryable = bool(body.get("retryable", False))
         details = body.get("details")
         message = f"HTTP {status}: {detail}"
 
@@ -109,6 +110,7 @@ class AsyncFileOrganizerClient:
                 status_code=status,
                 detail=str(detail),
                 error_code=error_code,
+                retryable=retryable,
                 details=details,
             )
         if status == 404:
@@ -117,6 +119,7 @@ class AsyncFileOrganizerClient:
                 status_code=status,
                 detail=str(detail),
                 error_code=error_code,
+                retryable=retryable,
                 details=details,
             )
         if status == 422:
@@ -125,6 +128,7 @@ class AsyncFileOrganizerClient:
                 status_code=status,
                 detail=str(detail),
                 error_code=error_code,
+                retryable=retryable,
                 details=details,
             )
         if status >= 500:
@@ -133,6 +137,7 @@ class AsyncFileOrganizerClient:
                 status_code=status,
                 detail=str(detail),
                 error_code=error_code,
+                retryable=retryable,
                 details=details,
             )
         raise ClientError(
@@ -140,6 +145,7 @@ class AsyncFileOrganizerClient:
             status_code=status,
             detail=str(detail),
             error_code=error_code,
+            retryable=retryable,
             details=details,
         )
 

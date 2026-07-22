@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 import re
-from pathlib import Path
 
 import pytest
 
@@ -55,16 +54,6 @@ def test_python_sync_and_async_clients_cover_spec_with_equal_signatures() -> Non
         sync_method = getattr(FileOrganizerClient, endpoint.python_method)
         async_method = getattr(AsyncFileOrganizerClient, endpoint.python_method)
         assert inspect.signature(sync_method) == inspect.signature(async_method), endpoint.key
-
-
-def test_typescript_client_covers_every_spec_method() -> None:
-    source = (
-        Path(__file__).parents[2] / "src" / "file_organizer" / "client" / "typescript" / "client.ts"
-    ).read_text()
-    declared = set(re.findall(r"^  async ([A-Za-z][A-Za-z0-9]*)\(", source, re.MULTILINE))
-
-    missing = {endpoint.typescript_method for endpoint in PUBLIC_ENDPOINTS} - declared
-    assert not missing, f"TypeScript client methods missing: {sorted(missing)}"
 
 
 def test_non_openapi_transports_have_explained_exclusions() -> None:

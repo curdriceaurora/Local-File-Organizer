@@ -111,6 +111,7 @@ export interface ScanRequest {
 export interface ScanResponse {
   input_dir: string;
   total_files: number;
+  files: string[];
   counts: Record<string, number>;
 }
 

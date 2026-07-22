@@ -226,12 +226,20 @@ class TestAsyncClientOrganize:
     async def test_scan(self):
         """Test scan."""
         client = AsyncFileOrganizerClient()
-        resp = _ok({"input_dir": "incoming", "total_files": 10, "counts": {"txt": 5}})
+        resp = _ok(
+            {
+                "input_dir": "incoming",
+                "total_files": 10,
+                "files": ["incoming/example.txt"],
+                "counts": {"txt": 5},
+            }
+        )
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
         result = await client.scan("incoming")
         assert result.total_files == 10
+        assert result.files == ["incoming/example.txt"]
 
     async def test_preview_organize(self):
         """Test preview organize."""
@@ -457,6 +465,7 @@ class TestAsyncClientErrorHandling:
             json={
                 "error": "validation_error",
                 "message": "invalid",
+                "retryable": True,
                 "details": [{"loc": ["body"], "msg": "required"}],
             },
             request=httpx.Request("GET", "http://test"),
@@ -466,6 +475,7 @@ class TestAsyncClientErrorHandling:
         with pytest.raises(ValidationError) as exc_info:
             await client.health()
         assert exc_info.value.error_code == "validation_error"
+        assert exc_info.value.retryable is True
         assert exc_info.value.details[0]["msg"] == "required"
 
     async def test_500_raises_server_error(self):

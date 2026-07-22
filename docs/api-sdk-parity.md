@@ -6,8 +6,10 @@ versioned REST operation to its canonical capability ID and to equivalent
 synchronous Python, asynchronous Python, and TypeScript methods.
 
 CI compares that specification with the generated OpenAPI document and the
-three client surfaces. Adding, removing, or renaming a public route therefore
-requires an intentional SDK mapping in the same change.
+three client surfaces. TypeScript inventory uses the compiler API rather than
+format-sensitive source matching, and the client is compiled under strict
+settings before its transport tests run. Adding, removing, or renaming a
+public route therefore requires an intentional SDK mapping in the same change.
 
 ## Organization behavior
 
@@ -21,6 +23,11 @@ Background submissions may include an `idempotency_key`. Repeated submissions
 return the original job and do not schedule duplicate work. Jobs support
 polling, history, revision-guarded cancellation, and rollback through all three
 SDKs.
+
+The shared conformance corpus runs through REST and both Python SDK clients in
+addition to the direct service and CLI. TypeScript transport tests assert the
+canonical organization payload, ordered scan results, and typed error
+envelopes using a mocked Fetch implementation.
 
 ## Errors and operation IDs
 

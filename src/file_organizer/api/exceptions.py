@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from file_organizer.core.errors import DomainError, DomainErrorCode
+from file_organizer.core.plan import PlanValidationError
 
 _DOMAIN_HTTP_STATUS = {
     DomainErrorCode.INVALID_REQUEST: 400,
@@ -117,6 +118,32 @@ def setup_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=_DOMAIN_HTTP_STATUS[exc.code],
             content={"error": exc.code.value, **exc.to_dict()},
+        )
+
+    @app.exception_handler(PlanValidationError)
+    async def plan_validation_error_handler(
+        request: Request,
+        exc: PlanValidationError,
+    ) -> JSONResponse:
+        """Expose reviewed-plan conflicts without collapsing them into a 500."""
+        logger.warning("Plan validation error on {}", request.url.path)
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": "plan_validation_failed",
+                "message": str(exc),
+                "retryable": False,
+                "details": {
+                    "error_type": type(exc).__name__,
+                    "conflicts": [
+                        {
+                            "conflict_type": conflict.conflict_type.value,
+                            "path": conflict.path,
+                        }
+                        for conflict in exc.validation.conflicts
+                    ],
+                },
+            },
         )
 
     @app.exception_handler(Exception)

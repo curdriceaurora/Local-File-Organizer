@@ -202,7 +202,7 @@ def _run_organize_job(
                 "counts": {"text": 1, "image": 1, "video": 0, "audio": 0, "cad": 0, "other": 1},
             },
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
@@ -214,7 +214,11 @@ def scan_directory(
     """Scan a directory and return file counts by type."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
     scan = service.scan(
         CoreRequest(
@@ -229,6 +233,7 @@ def scan_directory(
     return ScanResponse(
         input_dir=str(scan.input_path),
         total_files=scan.total_files,
+        files=[str(path) for path in scan.files],
         counts=scan.counts,
     )
 
@@ -250,7 +255,7 @@ def scan_directory(
                 "errors": [],
             },
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
@@ -263,7 +268,11 @@ def preview_organization(
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
     safe_request = request.model_copy(
         update={"input_dir": str(path), "output_dir": str(output), "dry_run": True}
@@ -279,7 +288,7 @@ def preview_organization(
             "Queued or completed an organization run.",
             {"status": "queued", "job_id": "job_123", "result": None, "error": None},
         ),
-        api_error_response(404, error="not_found", message="Input path not found"),
+        api_error_response(404, error="not_found", message="Input path does not exist"),
         validation_error_response(),
     ),
 )
@@ -293,7 +302,11 @@ def execute_organization(
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+        raise DomainError(
+            DomainErrorCode.NOT_FOUND,
+            f"Input path does not exist: {path}",
+            details={"path": str(path)},
+        )
 
     safe_request = request.model_copy(
         update={"input_dir": str(path), "output_dir": str(output)},

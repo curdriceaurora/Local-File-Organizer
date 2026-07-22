@@ -12,6 +12,7 @@ class ClientError(Exception):
         status_code: The HTTP status code from the server response.
         detail: Optional detail message extracted from the response body.
         error_code: Stable machine-readable server error code.
+        retryable: Whether the server classifies the failure as safe to retry.
         details: Optional structured server error evidence.
     """
 
@@ -22,6 +23,7 @@ class ClientError(Exception):
         detail: str = "",
         *,
         error_code: str = "",
+        retryable: bool = False,
         details: Any = None,
     ) -> None:
         """Initialize the client error with message, status code, and detail."""
@@ -29,6 +31,7 @@ class ClientError(Exception):
         self.status_code = status_code
         self.detail = detail
         self.error_code = error_code
+        self.retryable = retryable
         self.details = details
 
 

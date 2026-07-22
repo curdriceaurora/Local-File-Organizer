@@ -47,6 +47,7 @@ export class ClientError extends Error {
   public readonly statusCode: number;
   public readonly detail: string;
   public readonly errorCode: string;
+  public readonly retryable: boolean;
   public readonly details: unknown;
 
   constructor(
@@ -54,6 +55,7 @@ export class ClientError extends Error {
     statusCode: number,
     detail: string = "",
     errorCode: string = "",
+    retryable: boolean = false,
     details: unknown = undefined
   ) {
     super(message);
@@ -61,6 +63,7 @@ export class ClientError extends Error {
     this.statusCode = statusCode;
     this.detail = detail;
     this.errorCode = errorCode;
+    this.retryable = retryable;
     this.details = details;
   }
 }
@@ -71,9 +74,10 @@ export class AuthenticationError extends ClientError {
     statusCode: number,
     detail: string = "",
     errorCode: string = "",
+    retryable: boolean = false,
     details: unknown = undefined
   ) {
-    super(message, statusCode, detail, errorCode, details);
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "AuthenticationError";
   }
 }
@@ -84,9 +88,10 @@ export class NotFoundError extends ClientError {
     statusCode: number,
     detail: string = "",
     errorCode: string = "",
+    retryable: boolean = false,
     details: unknown = undefined
   ) {
-    super(message, statusCode, detail, errorCode, details);
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "NotFoundError";
   }
 }
@@ -97,9 +102,10 @@ export class ServerError extends ClientError {
     statusCode: number,
     detail: string = "",
     errorCode: string = "",
+    retryable: boolean = false,
     details: unknown = undefined
   ) {
-    super(message, statusCode, detail, errorCode, details);
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "ServerError";
   }
 }
@@ -110,9 +116,10 @@ export class ValidationError extends ClientError {
     statusCode: number,
     detail: string = "",
     errorCode: string = "",
+    retryable: boolean = false,
     details: unknown = undefined
   ) {
-    super(message, statusCode, detail, errorCode, details);
+    super(message, statusCode, detail, errorCode, retryable, details);
     this.name = "ValidationError";
   }
 }
@@ -193,11 +200,13 @@ export class FileOrganizerClient {
       if (!response.ok) {
         let detail = "";
         let errorCode = "";
+        let retryable = false;
         let details: unknown = undefined;
         try {
           const errorBody = await response.json();
           detail = errorBody.detail ?? errorBody.message ?? "";
           errorCode = errorBody.code ?? errorBody.error ?? "";
+          retryable = errorBody.retryable ?? false;
           details = errorBody.details;
         } catch {
           try {
@@ -212,18 +221,53 @@ export class FileOrganizerClient {
         const message = `HTTP ${response.status}: ${detail}`;
 
         if (response.status === 401 || response.status === 403) {
-          throw new AuthenticationError(message, response.status, detail, errorCode, details);
+          throw new AuthenticationError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
         if (response.status === 404) {
-          throw new NotFoundError(message, response.status, detail, errorCode, details);
+          throw new NotFoundError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
         if (response.status === 422) {
-          throw new ValidationError(message, response.status, detail, errorCode, details);
+          throw new ValidationError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
         if (response.status >= 500) {
-          throw new ServerError(message, response.status, detail, errorCode, details);
+          throw new ServerError(
+            message,
+            response.status,
+            detail,
+            errorCode,
+            retryable,
+            details
+          );
         }
-        throw new ClientError(message, response.status, detail, errorCode, details);
+        throw new ClientError(
+          message,
+          response.status,
+          detail,
+          errorCode,
+          retryable,
+          details
+        );
       }
 
       if (response.status === 204) {
