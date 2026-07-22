@@ -114,8 +114,11 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze",
+            "AsyncFileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -137,8 +140,10 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -183,8 +188,8 @@
             "FileOrganizerClient.system_stats",
             "AsyncFileOrganizerClient.system_stats"
           ],
-          "implementation_status": "partial",
-          "target_support": "read-only"
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -207,8 +212,8 @@
           "entry_points": [
             "FileOrganizerClient.systemStats"
           ],
-          "implementation_status": "partial",
-          "target_support": "read-only"
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -312,8 +317,11 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze",
+            "AsyncFileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -334,8 +342,10 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -376,15 +386,15 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.register",
-            "FileOrganizerClient.login",
-            "FileOrganizerClient.refresh_token",
-            "FileOrganizerClient.me",
-            "FileOrganizerClient.logout",
             "AsyncFileOrganizerClient.register",
+            "FileOrganizerClient.login",
             "AsyncFileOrganizerClient.login",
+            "FileOrganizerClient.refresh_token",
             "AsyncFileOrganizerClient.refresh_token",
-            "AsyncFileOrganizerClient.me",
-            "AsyncFileOrganizerClient.logout"
+            "FileOrganizerClient.logout",
+            "AsyncFileOrganizerClient.logout",
+            "FileOrganizerClient.me",
+            "AsyncFileOrganizerClient.me"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -413,8 +423,8 @@
             "FileOrganizerClient.register",
             "FileOrganizerClient.login",
             "FileOrganizerClient.refreshToken",
-            "FileOrganizerClient.me",
-            "FileOrganizerClient.logout"
+            "FileOrganizerClient.logout",
+            "FileOrganizerClient.me"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -646,8 +656,17 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.toggle_daemon",
+            "AsyncFileOrganizerClient.toggle_daemon",
+            "FileOrganizerClient.start_daemon",
+            "AsyncFileOrganizerClient.start_daemon",
+            "FileOrganizerClient.stop_daemon",
+            "AsyncFileOrganizerClient.stop_daemon",
+            "FileOrganizerClient.daemon_status",
+            "AsyncFileOrganizerClient.daemon_status"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -669,8 +688,13 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.toggleDaemon",
+            "FileOrganizerClient.startDaemon",
+            "FileOrganizerClient.stopDaemon",
+            "FileOrganizerClient.daemonStatus"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -714,12 +738,18 @@
         "python-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
+            "FileOrganizerClient.get_application_config",
+            "AsyncFileOrganizerClient.get_application_config",
+            "FileOrganizerClient.update_application_config",
+            "AsyncFileOrganizerClient.update_application_config",
+            "FileOrganizerClient.reset_application_config",
+            "AsyncFileOrganizerClient.reset_application_config",
             "FileOrganizerClient.get_config",
-            "FileOrganizerClient.update_config",
             "AsyncFileOrganizerClient.get_config",
+            "FileOrganizerClient.update_config",
             "AsyncFileOrganizerClient.update_config"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -745,10 +775,13 @@
         "typescript-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
+            "FileOrganizerClient.getApplicationConfig",
+            "FileOrganizerClient.updateApplicationConfig",
+            "FileOrganizerClient.resetApplicationConfig",
             "FileOrganizerClient.getConfig",
             "FileOrganizerClient.updateConfig"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -919,10 +952,10 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.dedupe_scan",
-            "FileOrganizerClient.dedupe_preview",
-            "FileOrganizerClient.dedupe_execute",
             "AsyncFileOrganizerClient.dedupe_scan",
+            "FileOrganizerClient.dedupe_preview",
             "AsyncFileOrganizerClient.dedupe_preview",
+            "FileOrganizerClient.dedupe_execute",
             "AsyncFileOrganizerClient.dedupe_execute"
           ],
           "implementation_status": "implemented",
@@ -994,7 +1027,7 @@
             "AsyncFileOrganizerClient.list_files"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -1018,7 +1051,7 @@
             "FileOrganizerClient.listFiles"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -1065,12 +1098,14 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.get_file_info",
-            "FileOrganizerClient.read_file_content",
             "AsyncFileOrganizerClient.get_file_info",
-            "AsyncFileOrganizerClient.read_file_content"
+            "FileOrganizerClient.read_file_content",
+            "AsyncFileOrganizerClient.read_file_content",
+            "FileOrganizerClient.get_file_by_id",
+            "AsyncFileOrganizerClient.get_file_by_id"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -1094,10 +1129,11 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.getFileInfo",
-            "FileOrganizerClient.readFileContent"
+            "FileOrganizerClient.readFileContent",
+            "FileOrganizerClient.getFileById"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -1138,11 +1174,15 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.move_file",
-            "FileOrganizerClient.delete_file",
             "AsyncFileOrganizerClient.move_file",
-            "AsyncFileOrganizerClient.delete_file"
+            "FileOrganizerClient.delete_file",
+            "AsyncFileOrganizerClient.delete_file",
+            "FileOrganizerClient.delete_file_by_id",
+            "AsyncFileOrganizerClient.delete_file_by_id",
+            "FileOrganizerClient.upload_files",
+            "AsyncFileOrganizerClient.upload_files"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -1166,9 +1206,11 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.moveFile",
-            "FileOrganizerClient.deleteFile"
+            "FileOrganizerClient.deleteFile",
+            "FileOrganizerClient.deleteFileById",
+            "FileOrganizerClient.uploadFiles"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -1268,8 +1310,25 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.list_integrations",
+            "AsyncFileOrganizerClient.list_integrations",
+            "FileOrganizerClient.update_integration_settings",
+            "AsyncFileOrganizerClient.update_integration_settings",
+            "FileOrganizerClient.connect_integration",
+            "AsyncFileOrganizerClient.connect_integration",
+            "FileOrganizerClient.disconnect_integration",
+            "AsyncFileOrganizerClient.disconnect_integration",
+            "FileOrganizerClient.send_to_integration",
+            "AsyncFileOrganizerClient.send_to_integration",
+            "FileOrganizerClient.get_browser_integration_config",
+            "AsyncFileOrganizerClient.get_browser_integration_config",
+            "FileOrganizerClient.issue_browser_integration_token",
+            "AsyncFileOrganizerClient.issue_browser_integration_token",
+            "FileOrganizerClient.verify_browser_integration_token",
+            "AsyncFileOrganizerClient.verify_browser_integration_token"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -1295,8 +1354,17 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.listIntegrations",
+            "FileOrganizerClient.updateIntegrationSettings",
+            "FileOrganizerClient.connectIntegration",
+            "FileOrganizerClient.disconnectIntegration",
+            "FileOrganizerClient.sendToIntegration",
+            "FileOrganizerClient.getBrowserIntegrationConfig",
+            "FileOrganizerClient.issueBrowserIntegrationToken",
+            "FileOrganizerClient.verifyBrowserIntegrationToken"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -1401,8 +1469,27 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.list_marketplace_plugins",
+            "AsyncFileOrganizerClient.list_marketplace_plugins",
+            "FileOrganizerClient.get_marketplace_plugin",
+            "AsyncFileOrganizerClient.get_marketplace_plugin",
+            "FileOrganizerClient.list_installed_plugins",
+            "AsyncFileOrganizerClient.list_installed_plugins",
+            "FileOrganizerClient.list_marketplace_updates",
+            "AsyncFileOrganizerClient.list_marketplace_updates",
+            "FileOrganizerClient.install_marketplace_plugin",
+            "AsyncFileOrganizerClient.install_marketplace_plugin",
+            "FileOrganizerClient.uninstall_marketplace_plugin",
+            "AsyncFileOrganizerClient.uninstall_marketplace_plugin",
+            "FileOrganizerClient.update_marketplace_plugin",
+            "AsyncFileOrganizerClient.update_marketplace_plugin",
+            "FileOrganizerClient.list_marketplace_reviews",
+            "AsyncFileOrganizerClient.list_marketplace_reviews",
+            "FileOrganizerClient.add_marketplace_review",
+            "AsyncFileOrganizerClient.add_marketplace_review"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -1429,8 +1516,18 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.listMarketplacePlugins",
+            "FileOrganizerClient.getMarketplacePlugin",
+            "FileOrganizerClient.listInstalledPlugins",
+            "FileOrganizerClient.listMarketplaceUpdates",
+            "FileOrganizerClient.installMarketplacePlugin",
+            "FileOrganizerClient.uninstallMarketplacePlugin",
+            "FileOrganizerClient.updateMarketplacePlugin",
+            "FileOrganizerClient.listMarketplaceReviews",
+            "FileOrganizerClient.addMarketplaceReview"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -1477,12 +1574,12 @@
         "python-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
-            "FileOrganizerClient.get_config",
-            "FileOrganizerClient.update_config",
-            "AsyncFileOrganizerClient.get_config",
-            "AsyncFileOrganizerClient.update_config"
+            "FileOrganizerClient.get_application_config",
+            "AsyncFileOrganizerClient.get_application_config",
+            "FileOrganizerClient.update_application_config",
+            "AsyncFileOrganizerClient.update_application_config"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -1505,10 +1602,10 @@
         "typescript-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
-            "FileOrganizerClient.getConfig",
-            "FileOrganizerClient.updateConfig"
+            "FileOrganizerClient.getApplicationConfig",
+            "FileOrganizerClient.updateApplicationConfig"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -1620,7 +1717,9 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.organize",
-            "AsyncFileOrganizerClient.organize"
+            "AsyncFileOrganizerClient.organize",
+            "FileOrganizerClient.suggest_organization",
+            "AsyncFileOrganizerClient.suggest_organization"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1645,7 +1744,8 @@
         "typescript-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
-            "FileOrganizerClient.organize"
+            "FileOrganizerClient.organize",
+            "FileOrganizerClient.suggestOrganization"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1691,18 +1791,27 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.get_job",
-            "AsyncFileOrganizerClient.get_job"
+            "AsyncFileOrganizerClient.get_job",
+            "FileOrganizerClient.list_jobs",
+            "AsyncFileOrganizerClient.list_jobs",
+            "FileOrganizerClient.cancel_job",
+            "AsyncFileOrganizerClient.cancel_job",
+            "FileOrganizerClient.rollback_job",
+            "AsyncFileOrganizerClient.rollback_job"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
           "entry_points": [
             "GET /api/v1/organize/status/{job_id}",
+            "GET /api/v1/organize/jobs",
+            "POST /api/v1/organize/jobs/{job_id}/cancel",
+            "POST /api/v1/organize/jobs/{job_id}/rollback",
             "WS /api/v1/ws/{client_id}"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "tui": {
@@ -1716,9 +1825,12 @@
         "typescript-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
-            "FileOrganizerClient.getJob"
+            "FileOrganizerClient.getJob",
+            "FileOrganizerClient.listJobs",
+            "FileOrganizerClient.cancelJob",
+            "FileOrganizerClient.rollbackJob"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {
@@ -1898,10 +2010,27 @@
           "target_support": "not-applicable"
         },
         "python-sdk": {
-          "conformance_status": "not-applicable",
-          "entry_points": [],
-          "implementation_status": "not-applicable",
-          "target_support": "not-applicable"
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.list_plugin_files",
+            "AsyncFileOrganizerClient.list_plugin_files",
+            "FileOrganizerClient.get_plugin_file_metadata",
+            "AsyncFileOrganizerClient.get_plugin_file_metadata",
+            "FileOrganizerClient.organize_plugin_file",
+            "AsyncFileOrganizerClient.organize_plugin_file",
+            "FileOrganizerClient.get_plugin_config",
+            "AsyncFileOrganizerClient.get_plugin_config",
+            "FileOrganizerClient.register_plugin_hook",
+            "AsyncFileOrganizerClient.register_plugin_hook",
+            "FileOrganizerClient.unregister_plugin_hook",
+            "AsyncFileOrganizerClient.unregister_plugin_hook",
+            "FileOrganizerClient.list_plugin_hooks",
+            "AsyncFileOrganizerClient.list_plugin_hooks",
+            "FileOrganizerClient.trigger_plugin_hook",
+            "AsyncFileOrganizerClient.trigger_plugin_hook"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -1925,10 +2054,19 @@
           "target_support": "not-applicable"
         },
         "typescript-sdk": {
-          "conformance_status": "not-applicable",
-          "entry_points": [],
-          "implementation_status": "not-applicable",
-          "target_support": "not-applicable"
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.listPluginFiles",
+            "FileOrganizerClient.getPluginFileMetadata",
+            "FileOrganizerClient.organizePluginFile",
+            "FileOrganizerClient.getPluginConfig",
+            "FileOrganizerClient.registerPluginHook",
+            "FileOrganizerClient.unregisterPluginHook",
+            "FileOrganizerClient.listPluginHooks",
+            "FileOrganizerClient.triggerPluginHook"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "not-applicable",
@@ -1967,9 +2105,12 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
-          "target_support": "read-only"
+          "entry_points": [
+            "FileOrganizerClient.search",
+            "AsyncFileOrganizerClient.search"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -1989,9 +2130,11 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
-          "target_support": "read-only"
+          "entry_points": [
+            "FileOrganizerClient.search"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -2029,10 +2172,19 @@
           "target_support": "full"
         },
         "python-sdk": {
-          "conformance_status": "not-applicable",
-          "entry_points": [],
-          "implementation_status": "not-applicable",
-          "target_support": "not-applicable"
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.get_setup_status",
+            "AsyncFileOrganizerClient.get_setup_status",
+            "FileOrganizerClient.detect_setup_capabilities",
+            "AsyncFileOrganizerClient.detect_setup_capabilities",
+            "FileOrganizerClient.complete_setup",
+            "AsyncFileOrganizerClient.complete_setup",
+            "FileOrganizerClient.browse_setup_folder",
+            "AsyncFileOrganizerClient.browse_setup_folder"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -2054,10 +2206,15 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "not-applicable",
-          "entry_points": [],
-          "implementation_status": "not-applicable",
-          "target_support": "not-applicable"
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.getSetupStatus",
+            "FileOrganizerClient.detectSetupCapabilities",
+            "FileOrganizerClient.completeSetup",
+            "FileOrganizerClient.browseSetupFolder"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -2103,14 +2260,14 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.health",
-            "FileOrganizerClient.system_status",
-            "FileOrganizerClient.system_stats",
             "AsyncFileOrganizerClient.health",
+            "FileOrganizerClient.system_status",
             "AsyncFileOrganizerClient.system_status",
+            "FileOrganizerClient.system_stats",
             "AsyncFileOrganizerClient.system_stats"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "rest-api": {
           "conformance_status": "unverified",
@@ -2138,7 +2295,7 @@
             "FileOrganizerClient.systemStats"
           ],
           "implementation_status": "implemented",
-          "target_support": "read-only"
+          "target_support": "full"
         },
         "web-desktop": {
           "conformance_status": "unverified",
@@ -2238,8 +2395,11 @@
         },
         "python-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze",
+            "AsyncFileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "rest-api": {
@@ -2258,8 +2418,10 @@
         },
         "typescript-sdk": {
           "conformance_status": "unverified",
-          "entry_points": [],
-          "implementation_status": "not-implemented",
+          "entry_points": [
+            "FileOrganizerClient.analyze"
+          ],
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "web-desktop": {

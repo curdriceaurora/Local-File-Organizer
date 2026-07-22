@@ -111,6 +111,26 @@ class OrganizationOperationPayload(BaseModel):
     error: str | None = None
 
 
+class OrganizationOptionsPayload(BaseModel):
+    """Canonical behavior-affecting organization options."""
+
+    recursive: bool = True
+    include_hidden: bool = False
+    skip_existing: bool = True
+    transfer_mode: Literal["copy", "hardlink"] = "hardlink"
+    methodology: Literal["none", "para", "jd"] = "none"
+    enable_vision: bool = True
+    transcribe_audio: bool = False
+    max_transcribe_seconds: float | None = 600.0
+    whisper_model: str = "tiny"
+    parallel_workers: int | None = Field(default=None, ge=1)
+    prefetch_depth: int = Field(default=2, ge=0)
+    text_model: str | None = None
+    vision_model: str | None = None
+    text_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
+    vision_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
+
+
 class OrganizationPlanPayload(BaseModel):
     """Executable organization plan."""
 
@@ -126,6 +146,7 @@ class OrganizationPlanPayload(BaseModel):
     skipped_files: int
     failed_files: int
     deduplicated_files: int
+    options: OrganizationOptionsPayload | None = None
     operations: list[OrganizationOperationPayload] = Field(default_factory=list)
     errors: list[tuple[str, str]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)

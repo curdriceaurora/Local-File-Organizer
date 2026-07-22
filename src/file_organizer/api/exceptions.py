@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
@@ -23,6 +23,18 @@ _DOMAIN_HTTP_STATUS = {
     DomainErrorCode.EXECUTION_FAILED: 500,
     DomainErrorCode.RECOVERY_REQUIRED: 409,
     DomainErrorCode.CANCELLED: 409,
+}
+
+_HTTP_ERROR_CODES = {
+    400: "invalid_request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not_found",
+    409: "conflict",
+    422: "validation_error",
+    429: "rate_limited",
+    500: "internal_server_error",
+    503: "service_unavailable",
 }
 
 
@@ -74,6 +86,26 @@ def setup_exception_handlers(app: FastAPI) -> None:
         if exc.details is not None:
             payload["details"] = exc.details
         return JSONResponse(status_code=exc.status_code, content=payload)
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request,
+        exc: HTTPException,
+    ) -> JSONResponse:
+        """Normalize framework HTTP errors into the public typed envelope."""
+        logger.warning("HTTP error on {}: {}", request.url.path, exc.status_code)
+        message = exc.detail if isinstance(exc.detail, str) else "Request failed."
+        payload: dict[str, Any] = {
+            "error": _HTTP_ERROR_CODES.get(exc.status_code, "http_error"),
+            "message": message,
+        }
+        if not isinstance(exc.detail, str):
+            payload["details"] = exc.detail
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=payload,
+            headers=exc.headers,
+        )
 
     @app.exception_handler(DomainError)
     async def domain_error_handler(

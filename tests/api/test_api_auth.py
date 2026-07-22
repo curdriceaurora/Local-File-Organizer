@@ -89,7 +89,8 @@ def test_register_rejects_weak_password(tmp_path: Path) -> None:
         },
     )
     assert response.status_code == 400
-    assert "Password must be at least" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_request"
+    assert "Password must be at least" in response.json()["message"]
 
 
 def test_register_duplicate_user(tmp_path: Path) -> None:

@@ -130,12 +130,27 @@ def create_job(
     scheduled_for: datetime | None = None,
 ) -> JobState:
     """Create a new background job and return its initial state."""
+    job, _ = create_job_with_disposition(
+        job_type,
+        idempotency_key=idempotency_key,
+        scheduled_for=scheduled_for,
+    )
+    return job
+
+
+def create_job_with_disposition(
+    job_type: str,
+    *,
+    idempotency_key: str | None = None,
+    scheduled_for: datetime | None = None,
+) -> tuple[JobState, bool]:
+    """Create a job or return its idempotent predecessor and creation flag."""
     ts = _now()
     with _JOB_STORE_LOCK:
         if idempotency_key is not None:
             existing_id = _IDEMPOTENCY_INDEX.get((job_type, idempotency_key))
             if existing_id is not None and existing_id in _JOB_STORE:
-                return deepcopy(_JOB_STORE[existing_id])
+                return deepcopy(_JOB_STORE[existing_id]), False
         snapshot = create_job_snapshot(
             job_id=uuid4().hex,
             job_type=job_type,
@@ -151,7 +166,7 @@ def create_job(
         _prune_jobs(ts)
         payload = _build_job_payload(job, event_type="job.created")
     _notify_job_event(payload)
-    return deepcopy(job)
+    return deepcopy(job), True
 
 
 def get_job(job_id: str) -> JobState | None:

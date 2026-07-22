@@ -52,9 +52,18 @@ class TestRaiseForStatus:
             FileOrganizerClient._raise_for_status(resp)
 
     def test_422_raises_validation_error(self):
-        resp = _mock_response(422, {"detail": "bad input"})
-        with pytest.raises(ValidationError, match="422"):
+        resp = _mock_response(
+            422,
+            {
+                "error": "validation_error",
+                "message": "bad input",
+                "details": [{"loc": ["body", "path"], "msg": "required"}],
+            },
+        )
+        with pytest.raises(ValidationError, match="422") as exc_info:
             FileOrganizerClient._raise_for_status(resp)
+        assert exc_info.value.error_code == "validation_error"
+        assert exc_info.value.details[0]["msg"] == "required"
 
     def test_500_raises_server_error(self):
         resp = _mock_response(500, {"detail": "internal"})

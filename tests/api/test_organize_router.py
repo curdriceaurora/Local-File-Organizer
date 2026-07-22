@@ -12,9 +12,13 @@ from starlette.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.organize import router
+from file_organizer.api.routers import organize as organize_router_module
+from file_organizer.api.routers.organize import get_organization_service, router
+from file_organizer.core.organization_service import OrganizationService
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.organizer import OrganizationResult
 from file_organizer.core.plan import build_plan_from_processed
+from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.text_processor import ProcessedFile
 
 # Route-level TestClient tests: counted for the integration coverage gate as
@@ -38,8 +42,13 @@ def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
     app.dependency_overrides[get_current_active_user] = lambda: MagicMock(
         is_active=True, is_admin=True
     )
+    app.dependency_overrides[get_organization_service] = lambda: OrganizationService(
+        text_model_config=ModelConfig("test-model:latest", ModelType.TEXT),
+        vision_model_config=ModelConfig("vis:3b", ModelType.VISION),
+        organizer_factory=organize_router_module.FileOrganizer,
+    )
     app.include_router(router, prefix="/api/v1")
-    client = TestClient(app)
+    client = TestClient(app, raise_server_exceptions=False)
     return app, client, settings
 
 
@@ -58,7 +67,7 @@ def _make_result(**overrides) -> OrganizationResult:
     return OrganizationResult(**defaults)
 
 
-def _make_plan(tmp_path: Path):
+def _make_plan(tmp_path: Path, *, use_hardlinks: bool = False):
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
     input_dir.mkdir(exist_ok=True)
@@ -77,10 +86,17 @@ def _make_plan(tmp_path: Path):
             )
         ],
         skip_existing=True,
-        use_hardlinks=False,
+        use_hardlinks=use_hardlinks,
         total_files=1,
         skipped_files=0,
         deduplicated_files=0,
+        options=OrganizeOptions(
+            use_hardlinks=use_hardlinks,
+            text_model="test-model:latest",
+            vision_model="vis:3b",
+            text_provider="ollama",
+            vision_provider="ollama",
+        ),
     )
 
 
@@ -227,8 +243,68 @@ class TestPreviewOrganization:
         body = resp.json()
         assert body["total_files"] == 3
         assert body["processed_files"] == 2
-        # Preview always uses dry_run=True
-        mock_organizer_cls.assert_called_once_with(dry_run=True, use_hardlinks=True)
+        # Preview goes through the canonical service with resolved options.
+        call = mock_organizer_cls.call_args
+        assert call.kwargs["dry_run"] is True
+        assert call.kwargs["organize_options"].use_hardlinks is True
+
+    @patch("file_organizer.api.routers.organize.FileOrganizer")
+    def test_preview_preserves_every_canonical_option(
+        self, mock_organizer_cls, tmp_path: Path
+    ) -> None:
+        (tmp_path / "input").mkdir()
+        (tmp_path / "output").mkdir()
+        mock_instance = MagicMock()
+        mock_instance.organize.return_value = _make_result()
+        mock_organizer_cls.return_value = mock_instance
+        _, client, _ = _build_app(tmp_path)
+        options = {
+            "recursive": False,
+            "include_hidden": True,
+            "skip_existing": False,
+            "transfer_mode": "copy",
+            "methodology": "para",
+            "enable_vision": False,
+            "transcribe_audio": True,
+            "max_transcribe_seconds": 42.5,
+            "whisper_model": "base",
+            "parallel_workers": 3,
+            "prefetch_depth": 4,
+            "text_model": "text-custom",
+            "vision_model": "vision-custom",
+            "text_provider": "openai",
+            "vision_provider": "openai",
+        }
+
+        response = client.post(
+            "/api/v1/organize/preview",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "options": options,
+            },
+        )
+
+        assert response.status_code == 200
+        assert mock_organizer_cls.call_args.kwargs["organize_options"].to_dict() == options
+
+    def test_canonical_options_reject_conflicting_legacy_alias(self, tmp_path: Path) -> None:
+        (tmp_path / "input").mkdir()
+        (tmp_path / "output").mkdir()
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            "/api/v1/organize/preview",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "options": {"transfer_mode": "copy"},
+                "use_hardlinks": True,
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error"] == "validation_error"
 
     def test_preview_input_not_found(self, tmp_path: Path) -> None:
         (tmp_path / "output").mkdir()
@@ -311,10 +387,10 @@ class TestExecuteOrganization:
 
     @patch("file_organizer.api.routers.organize.FileOrganizer")
     def test_execute_sync_success(self, mock_organizer_cls, tmp_path: Path) -> None:
-        (tmp_path / "input").mkdir()
-        (tmp_path / "output").mkdir()
+        plan = _make_plan(tmp_path, use_hardlinks=True)
         mock_instance = MagicMock()
-        mock_instance.organize.return_value = _make_result()
+        mock_instance.organize.return_value = _make_result(plan=plan)
+        mock_instance.execute_plan.return_value = _make_result(plan=plan)
         mock_organizer_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -348,18 +424,20 @@ class TestExecuteOrganization:
                 "run_in_background": False,
             },
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 500
         body = resp.json()
-        assert body["status"] == "failed"
-        assert "disk full" in body["error"]
+        assert body == {
+            "error": "internal_server_error",
+            "message": "Unexpected server error.",
+        }
 
-    @patch("file_organizer.api.routers.organize.create_job")
+    @patch("file_organizer.api.routers.organize.create_job_with_disposition")
     def test_execute_background(self, mock_create_job, tmp_path: Path) -> None:
         (tmp_path / "input").mkdir()
         (tmp_path / "output").mkdir()
         mock_job = MagicMock()
         mock_job.job_id = "test-job-123"
-        mock_create_job.return_value = mock_job
+        mock_create_job.return_value = (mock_job, True)
         _, client, _ = _build_app(tmp_path)
 
         resp = client.post(
@@ -374,6 +452,43 @@ class TestExecuteOrganization:
         body = resp.json()
         assert body["status"] == "queued"
         assert body["job_id"] == "test-job-123"
+
+    @patch("file_organizer.api.routers.organize._run_organize_job")
+    def test_execute_background_idempotency_runs_once(self, mock_run_job, tmp_path: Path) -> None:
+        (tmp_path / "input").mkdir()
+        (tmp_path / "output").mkdir()
+        _, client, _ = _build_app(tmp_path)
+        payload = {
+            "input_dir": str(tmp_path / "input"),
+            "output_dir": str(tmp_path / "output"),
+            "run_in_background": True,
+            "idempotency_key": "same-request",
+        }
+
+        first = client.post("/api/v1/organize/execute", json=payload)
+        second = client.post("/api/v1/organize/execute", json=payload)
+
+        assert first.status_code == second.status_code == 200
+        assert first.json()["job_id"] == second.json()["job_id"]
+        mock_run_job.assert_called_once()
+
+    def test_sync_execute_rejects_idempotency_key(self, tmp_path: Path) -> None:
+        (tmp_path / "input").mkdir()
+        (tmp_path / "output").mkdir()
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            "/api/v1/organize/execute",
+            json={
+                "input_dir": str(tmp_path / "input"),
+                "output_dir": str(tmp_path / "output"),
+                "run_in_background": False,
+                "idempotency_key": "sync-request",
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_request"
 
     def test_execute_input_not_found(self, tmp_path: Path) -> None:
         (tmp_path / "output").mkdir()
@@ -410,14 +525,16 @@ class TestExecuteOrganization:
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "completed"
-        mock_organizer_cls.assert_called_once_with(dry_run=True, use_hardlinks=True)
+        call = mock_organizer_cls.call_args
+        assert call.kwargs["dry_run"] is True
+        assert call.kwargs["organize_options"].use_hardlinks is True
 
     @patch("file_organizer.api.routers.organize.FileOrganizer")
     def test_execute_sync_with_hardlinks_disabled(self, mock_organizer_cls, tmp_path: Path) -> None:
-        (tmp_path / "input").mkdir()
-        (tmp_path / "output").mkdir()
+        plan = _make_plan(tmp_path, use_hardlinks=False)
         mock_instance = MagicMock()
-        mock_instance.organize.return_value = _make_result()
+        mock_instance.organize.return_value = _make_result(plan=plan)
+        mock_instance.execute_plan.return_value = _make_result(plan=plan)
         mock_organizer_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -431,7 +548,9 @@ class TestExecuteOrganization:
             },
         )
         assert resp.status_code == 200
-        mock_organizer_cls.assert_called_once_with(dry_run=False, use_hardlinks=False)
+        call = mock_organizer_cls.call_args
+        assert call.kwargs["dry_run"] is False
+        assert call.kwargs["organize_options"].use_hardlinks is False
 
     @patch("file_organizer.api.routers.organize.FileOrganizer")
     def test_execute_sync_uses_submitted_plan(self, mock_organizer_cls, tmp_path: Path) -> None:
@@ -532,10 +651,10 @@ class TestExecuteOrganization:
             },
         )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 409
         body = resp.json()
-        assert body["status"] == "failed"
-        assert "roots do not match" in body["error"]
+        assert body["error"] == "plan_mismatch"
+        assert "roots do not match" in body["message"]
         mock_organizer_cls.assert_not_called()
 
 
@@ -661,6 +780,76 @@ class TestGetJobStatus:
         assert body["error"] == "Something went wrong"
 
 
+@pytest.mark.unit
+class TestJobLifecycleEndpoints:
+    """Tests for job history, cancellation, and rollback endpoints."""
+
+    def test_job_history_lists_organization_jobs(self, tmp_path: Path) -> None:
+        from file_organizer.api.jobs import create_job
+
+        job = create_job("organize")
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.get("/api/v1/organize/jobs?limit=10")
+
+        assert response.status_code == 200
+        assert job.job_id in {row["job_id"] for row in response.json()}
+
+    def test_cancel_job_uses_revision_guard(self, tmp_path: Path) -> None:
+        from file_organizer.api.jobs import create_job
+
+        job = create_job("organize")
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            f"/api/v1/organize/jobs/{job.job_id}/cancel",
+            json={"expected_revision": job.revision},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "cancelled"
+        assert response.json()["revision"] == job.revision + 1
+
+    def test_cancel_job_rejects_stale_revision(self, tmp_path: Path) -> None:
+        from file_organizer.api.jobs import create_job
+
+        job = create_job("organize")
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            f"/api/v1/organize/jobs/{job.job_id}/cancel",
+            json={"expected_revision": job.revision + 1},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error"] == "stale_job_revision"
+
+    @patch("file_organizer.undo.undo_manager.UndoManager")
+    def test_rollback_job_transitions_to_rolled_back(
+        self, mock_undo_manager, tmp_path: Path
+    ) -> None:
+        from file_organizer.api.jobs import create_job, update_job
+
+        job = create_job("organize")
+        completed = update_job(
+            job.job_id,
+            status="completed",
+            transaction_id="txn-123",
+        )
+        assert completed is not None
+        mock_undo_manager.return_value.undo_transaction.return_value = True
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            f"/api/v1/organize/jobs/{job.job_id}/rollback",
+            json={"expected_revision": completed.revision},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "rolled_back"
+        mock_undo_manager.return_value.undo_transaction.assert_called_once_with("txn-123")
+
+
 # ---------------------------------------------------------------------------
 # simple organize endpoint (POST /api/v1/organize)
 # ---------------------------------------------------------------------------
@@ -669,6 +858,17 @@ class TestGetJobStatus:
 @pytest.mark.unit
 class TestSimpleOrganize:
     """Tests for POST /api/v1/organize."""
+
+    def test_organize_with_json_request(self, tmp_path: Path) -> None:
+        _, client, _ = _build_app(tmp_path)
+
+        response = client.post(
+            "/api/v1/organize",
+            json={"filename": "notes.txt", "folder_suggestion": "Writing"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["folder_name"] == "Writing"
 
     def test_organize_with_file_upload(self, tmp_path: Path) -> None:
         _, client, _ = _build_app(tmp_path)
@@ -796,9 +996,14 @@ class TestRunOrganizeJob:
         request = OrganizeRequest(
             input_dir="/fake/input",
             output_dir="/fake/output",
-            dry_run=False,
+            dry_run=True,
         )
-        _run_organize_job("job-abc", request)
+        _run_organize_job(
+            "job-abc",
+            request,
+            Path("fake") / "input",
+            Path("fake") / "output",
+        )
 
         # First call sets status to running
         mock_update_job.assert_any_call("job-abc", status="running")
@@ -822,71 +1027,17 @@ class TestRunOrganizeJob:
             output_dir="/fake/output",
             dry_run=False,
         )
-        _run_organize_job("job-xyz", request)
+        _run_organize_job(
+            "job-xyz",
+            request,
+            Path("fake") / "input",
+            Path("fake") / "output",
+        )
 
         mock_update_job.assert_any_call("job-xyz", status="running")
         last_call = mock_update_job.call_args_list[-1]
         assert last_call[1]["status"] == "failed"
         assert "boom" in last_call[1]["error"]
-
-
-# ---------------------------------------------------------------------------
-# _scan_directory and _counts_by_type helpers
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestScanDirectoryHelper:
-    """Tests for _scan_directory helper function."""
-
-    def test_scan_file_path(self, tmp_path: Path) -> None:
-        from file_organizer.api.routers.organize import _scan_directory
-
-        f = tmp_path / "file.txt"
-        f.write_text("hello")
-        result = _scan_directory(f, recursive=True, include_hidden=False)
-        assert len(result) == 1
-
-    def test_scan_hidden_file_excluded(self, tmp_path: Path) -> None:
-        from file_organizer.api.routers.organize import _scan_directory
-
-        f = tmp_path / ".hidden"
-        f.write_text("hidden")
-        result = _scan_directory(f, recursive=False, include_hidden=False)
-        assert len(result) == 0
-
-    def test_scan_hidden_file_included(self, tmp_path: Path) -> None:
-        from file_organizer.api.routers.organize import _scan_directory
-
-        f = tmp_path / ".hidden"
-        f.write_text("hidden")
-        result = _scan_directory(f, recursive=False, include_hidden=True)
-        assert len(result) == 1
-
-
-@pytest.mark.unit
-class TestCountsByType:
-    """Tests for _counts_by_type helper function."""
-
-    def test_empty_list(self) -> None:
-        from file_organizer.api.routers.organize import _counts_by_type
-
-        counts = _counts_by_type([])
-        assert counts["text"] == 0
-        assert counts["other"] == 0
-
-    def test_mixed_types(self, tmp_path: Path) -> None:
-        from file_organizer.api.routers.organize import _counts_by_type
-
-        files = [
-            tmp_path / "a.txt",
-            tmp_path / "b.jpg",
-            tmp_path / "c.unknown",
-        ]
-        counts = _counts_by_type(files)
-        assert counts["text"] == 1
-        assert counts["image"] == 1
-        assert counts["other"] == 1
 
 
 @pytest.mark.unit

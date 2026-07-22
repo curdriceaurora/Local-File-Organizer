@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class ClientError(Exception):
     """Base client error raised for non-success HTTP responses.
@@ -9,6 +11,8 @@ class ClientError(Exception):
     Attributes:
         status_code: The HTTP status code from the server response.
         detail: Optional detail message extracted from the response body.
+        error_code: Stable machine-readable server error code.
+        details: Optional structured server error evidence.
     """
 
     def __init__(
@@ -16,11 +20,16 @@ class ClientError(Exception):
         message: str,
         status_code: int = 0,
         detail: str = "",
+        *,
+        error_code: str = "",
+        details: Any = None,
     ) -> None:
         """Initialize the client error with message, status code, and detail."""
         super().__init__(message)
         self.status_code = status_code
         self.detail = detail
+        self.error_code = error_code
+        self.details = details
 
 
 class AuthenticationError(ClientError):

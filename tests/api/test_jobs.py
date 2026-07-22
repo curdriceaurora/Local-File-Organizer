@@ -7,7 +7,13 @@ from uuid import uuid4
 
 import pytest
 
-from file_organizer.api.jobs import create_job, get_job, list_jobs, update_job
+from file_organizer.api.jobs import (
+    create_job,
+    create_job_with_disposition,
+    get_job,
+    list_jobs,
+    update_job,
+)
 
 
 @pytest.mark.unit
@@ -36,6 +42,18 @@ class TestAPIJobs:
             assert job.job_id == job_id
             assert job.job_type == job_type
             assert job.status == "queued"
+
+    def test_idempotent_create_reports_replay(self) -> None:
+        first, first_created = create_job_with_disposition(
+            "organize", idempotency_key="request-123"
+        )
+        replay, replay_created = create_job_with_disposition(
+            "organize", idempotency_key="request-123"
+        )
+
+        assert first_created is True
+        assert replay_created is False
+        assert replay.job_id == first.job_id
 
     @pytest.mark.asyncio
     async def test_get_job(self):

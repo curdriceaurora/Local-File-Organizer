@@ -13,10 +13,11 @@ Example::
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
+from file_organizer.client._organization import organization_request_payload
 from file_organizer.client.exceptions import (
     AuthenticationError,
     ClientError,
@@ -36,6 +37,8 @@ from file_organizer.client.models import (
     HealthResponse,
     JobStatusResponse,
     MoveFileResponse,
+    OrganizationOptionsPayload,
+    OrganizationPlanPayload,
     OrganizationResultResponse,
     OrganizeExecuteResponse,
     ScanResponse,
@@ -96,17 +99,83 @@ class FileOrganizerClient:
         except Exception:
             body = {}
         detail = body.get("detail") or body.get("message") or response.text
+        error_code = str(body.get("code") or body.get("error") or "")
+        details = body.get("details")
         message = f"HTTP {status}: {detail}"
 
         if status in (401, 403):
-            raise AuthenticationError(message, status_code=status, detail=str(detail))
+            raise AuthenticationError(
+                message,
+                status_code=status,
+                detail=str(detail),
+                error_code=error_code,
+                details=details,
+            )
         if status == 404:
-            raise NotFoundError(message, status_code=status, detail=str(detail))
+            raise NotFoundError(
+                message,
+                status_code=status,
+                detail=str(detail),
+                error_code=error_code,
+                details=details,
+            )
         if status == 422:
-            raise ValidationError(message, status_code=status, detail=str(detail))
+            raise ValidationError(
+                message,
+                status_code=status,
+                detail=str(detail),
+                error_code=error_code,
+                details=details,
+            )
         if status >= 500:
-            raise ServerError(message, status_code=status, detail=str(detail))
-        raise ClientError(message, status_code=status, detail=str(detail))
+            raise ServerError(
+                message,
+                status_code=status,
+                detail=str(detail),
+                error_code=error_code,
+                details=details,
+            )
+        raise ClientError(
+            message,
+            status_code=status,
+            detail=str(detail),
+            error_code=error_code,
+            details=details,
+        )
+
+    def _request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: Any = None,
+        files: Any = None,
+    ) -> dict[str, Any]:
+        """Send a request for endpoints whose schema is intentionally open-ended."""
+        response = self._client.request(
+            method,
+            self._url(path),
+            params=params,
+            json=json,
+            files=files,
+        )
+        self._raise_for_status(response)
+        if response.status_code == 204 or not response.content:
+            return {}
+        return cast(dict[str, Any], response.json())
+
+    def _request_list(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+    ) -> list[Any]:
+        """Send a request whose successful response is a JSON array."""
+        response = self._client.request(method, self._url(path), params=params)
+        self._raise_for_status(response)
+        return cast(list[Any], response.json())
 
     def set_token(self, token: str) -> None:
         """Update the Bearer token used for subsequent requests."""
@@ -389,30 +458,37 @@ class FileOrganizerClient:
         input_dir: str,
         output_dir: str,
         *,
-        skip_existing: bool = True,
-        use_hardlinks: bool = True,
+        options: OrganizationOptionsPayload | None = None,
+        plan: OrganizationPlanPayload | None = None,
+        skip_existing: bool | None = None,
+        use_hardlinks: bool | None = None,
     ) -> OrganizationResultResponse:
         """Preview an organization without moving files.
 
         Args:
             input_dir: Source directory.
             output_dir: Destination directory.
+            options: Complete canonical behavior options.
+            plan: Optional reviewed executable plan.
             skip_existing: Skip files that already exist at the destination.
             use_hardlinks: Use hard links instead of copies.
 
         Returns:
             OrganizationResultResponse with the preview result.
         """
+        payload = organization_request_payload(
+            input_dir,
+            output_dir,
+            options=options,
+            plan=plan,
+            dry_run=True,
+            run_in_background=False,
+            skip_existing=skip_existing,
+            use_hardlinks=use_hardlinks,
+        )
         response = self._client.post(
             self._url("/organize/preview"),
-            json={
-                "input_dir": input_dir,
-                "output_dir": output_dir,
-                "skip_existing": skip_existing,
-                "dry_run": True,
-                "use_hardlinks": use_hardlinks,
-                "run_in_background": False,
-            },
+            json=payload,
         )
         self._raise_for_status(response)
         return OrganizationResultResponse.model_validate(response.json())
@@ -423,9 +499,12 @@ class FileOrganizerClient:
         output_dir: str,
         *,
         dry_run: bool = False,
-        skip_existing: bool = True,
-        use_hardlinks: bool = True,
+        options: OrganizationOptionsPayload | None = None,
+        plan: OrganizationPlanPayload | None = None,
+        skip_existing: bool | None = None,
+        use_hardlinks: bool | None = None,
         run_in_background: bool = True,
+        idempotency_key: str | None = None,
     ) -> OrganizeExecuteResponse:
         """Execute file organization.
 
@@ -436,23 +515,30 @@ class FileOrganizerClient:
             input_dir: Source directory.
             output_dir: Destination directory.
             dry_run: Preview only, do not move files.
+            options: Complete canonical behavior options.
+            plan: Optional reviewed executable plan.
             skip_existing: Skip already-organized files.
             use_hardlinks: Use hard links instead of copies.
             run_in_background: Queue as a background job.
+            idempotency_key: Optional key that deduplicates background submissions.
 
         Returns:
             OrganizeExecuteResponse with status and optional job_id.
         """
+        payload = organization_request_payload(
+            input_dir,
+            output_dir,
+            options=options,
+            plan=plan,
+            dry_run=dry_run,
+            run_in_background=run_in_background,
+            skip_existing=skip_existing,
+            use_hardlinks=use_hardlinks,
+            idempotency_key=idempotency_key,
+        )
         response = self._client.post(
             self._url("/organize/execute"),
-            json={
-                "input_dir": input_dir,
-                "output_dir": output_dir,
-                "dry_run": dry_run,
-                "skip_existing": skip_existing,
-                "use_hardlinks": use_hardlinks,
-                "run_in_background": run_in_background,
-            },
+            json=payload,
         )
         self._raise_for_status(response)
         return OrganizeExecuteResponse.model_validate(response.json())
@@ -469,6 +555,46 @@ class FileOrganizerClient:
         response = self._client.get(self._url(f"/organize/status/{job_id}"))
         self._raise_for_status(response)
         return JobStatusResponse.model_validate(response.json())
+
+    def list_jobs(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> list[JobStatusResponse]:
+        """List recent organization jobs."""
+        rows = self._request_list(
+            "GET", "/organize/jobs", params={"status": status, "limit": limit}
+        )
+        return [JobStatusResponse.model_validate(row) for row in rows]
+
+    def cancel_job(
+        self,
+        job_id: str,
+        *,
+        expected_revision: int | None = None,
+    ) -> JobStatusResponse:
+        """Cancel a queued or scheduled organization job."""
+        data = self._request_json(
+            "POST",
+            f"/organize/jobs/{job_id}/cancel",
+            json={"expected_revision": expected_revision},
+        )
+        return JobStatusResponse.model_validate(data)
+
+    def rollback_job(
+        self,
+        job_id: str,
+        *,
+        expected_revision: int | None = None,
+    ) -> JobStatusResponse:
+        """Rollback a completed organization job."""
+        data = self._request_json(
+            "POST",
+            f"/organize/jobs/{job_id}/rollback",
+            json={"expected_revision": expected_revision},
+        )
+        return JobStatusResponse.model_validate(data)
 
     # -- system --------------------------------------------------------------
 
@@ -628,6 +754,244 @@ class FileOrganizerClient:
         )
         self._raise_for_status(response)
         return DedupeExecuteResponse.model_validate(response.json())
+
+    # -- extended public API ------------------------------------------------
+
+    def analyze(self, content: str) -> dict[str, Any]:
+        """Analyze text content with the configured model."""
+        return self._request_json("POST", "/analyze", params={"content": content})
+
+    def search(
+        self,
+        query: str,
+        *,
+        file_type: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        path: str | None = None,
+        semantic: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Search indexed files with keyword or semantic retrieval."""
+        return cast(
+            list[dict[str, Any]],
+            self._request_list(
+                "GET",
+                "/search",
+                params={
+                    "q": query,
+                    "type": file_type,
+                    "limit": limit,
+                    "offset": offset,
+                    "path": path,
+                    "semantic": semantic,
+                },
+            ),
+        )
+
+    def get_application_config(self, profile: str = "default") -> ConfigResponse:
+        """Get a persisted application configuration profile."""
+        data = self._request_json("GET", "/config", params={"profile": profile})
+        return ConfigResponse.model_validate(data)
+
+    def update_application_config(self, payload: dict[str, Any]) -> ConfigResponse:
+        """Replace fields in a persisted application configuration profile."""
+        return ConfigResponse.model_validate(self._request_json("PUT", "/config", json=payload))
+
+    def reset_application_config(self, profile: str = "default") -> ConfigResponse:
+        """Reset a persisted application configuration profile."""
+        data = self._request_json("POST", "/config/reset", params={"profile": profile})
+        return ConfigResponse.model_validate(data)
+
+    def get_file_by_id(self, file_id: str) -> FileInfo:
+        """Get file metadata by server identifier."""
+        return FileInfo.model_validate(self._request_json("GET", f"/files/{file_id}"))
+
+    def delete_file_by_id(self, file_id: str, *, permanent: bool = False) -> DeleteFileResponse:
+        """Delete or trash a file by server identifier."""
+        data = self._request_json("DELETE", f"/files/{file_id}", params={"permanent": permanent})
+        return DeleteFileResponse.model_validate(data)
+
+    def upload_files(self, files: list[tuple[str, bytes]]) -> Any:
+        """Upload one or more in-memory files."""
+        multipart = [("files", (name, content)) for name, content in files]
+        return self._request_json("POST", "/files/upload", files=multipart)
+
+    def suggest_organization(
+        self, filename: str, *, folder_suggestion: str | None = None
+    ) -> dict[str, Any]:
+        """Request the lightweight single-file organization suggestion."""
+        return self._request_json(
+            "POST",
+            "/organize",
+            json={"filename": filename, "folder_suggestion": folder_suggestion},
+        )
+
+    def toggle_daemon(self) -> dict[str, Any]:
+        """Toggle the background daemon."""
+        return self._request_json("POST", "/daemon/toggle")
+
+    def start_daemon(self) -> dict[str, Any]:
+        """Start the background daemon."""
+        return self._request_json("POST", "/daemon/start")
+
+    def stop_daemon(self) -> dict[str, Any]:
+        """Stop the background daemon."""
+        return self._request_json("POST", "/daemon/stop")
+
+    def daemon_status(self) -> dict[str, Any]:
+        """Get background daemon status."""
+        return self._request_json("GET", "/daemon/status")
+
+    def list_integrations(self) -> dict[str, Any]:
+        """List configured integrations."""
+        return self._request_json("GET", "/integrations")
+
+    def update_integration_settings(
+        self, integration_name: str, settings: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Update one integration's settings."""
+        return self._request_json(
+            "POST",
+            f"/integrations/{integration_name}/settings",
+            json={"settings": settings},
+        )
+
+    def connect_integration(self, integration_name: str) -> dict[str, Any]:
+        """Connect an integration."""
+        return self._request_json("POST", f"/integrations/{integration_name}/connect")
+
+    def disconnect_integration(self, integration_name: str) -> dict[str, Any]:
+        """Disconnect an integration."""
+        return self._request_json("POST", f"/integrations/{integration_name}/disconnect")
+
+    def send_to_integration(self, integration_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Send a file through an integration."""
+        return self._request_json("POST", f"/integrations/{integration_name}/send", json=payload)
+
+    def get_browser_integration_config(self) -> dict[str, Any]:
+        """Get browser-extension integration configuration."""
+        return self._request_json("GET", "/integrations/browser/config")
+
+    def issue_browser_integration_token(self, extension_id: str) -> dict[str, Any]:
+        """Issue a browser-extension integration token."""
+        return self._request_json(
+            "POST", "/integrations/browser/token", json={"extension_id": extension_id}
+        )
+
+    def verify_browser_integration_token(self, token: str) -> dict[str, Any]:
+        """Verify a browser-extension integration token."""
+        return self._request_json("POST", "/integrations/browser/verify", json={"token": token})
+
+    def list_marketplace_plugins(self, **params: Any) -> dict[str, Any]:
+        """List marketplace plugins."""
+        return self._request_json("GET", "/marketplace/plugins", params=params)
+
+    def get_marketplace_plugin(self, name: str) -> dict[str, Any]:
+        """Get one marketplace plugin."""
+        return self._request_json("GET", f"/marketplace/plugins/{name}")
+
+    def list_installed_plugins(self) -> list[dict[str, Any]]:
+        """List installed marketplace plugins."""
+        return cast(list[dict[str, Any]], self._request_list("GET", "/marketplace/installed"))
+
+    def list_marketplace_updates(self) -> list[str]:
+        """List plugins with available updates."""
+        return cast(list[str], self._request_list("GET", "/marketplace/updates"))
+
+    def install_marketplace_plugin(
+        self, name: str, *, version: str | None = None
+    ) -> dict[str, Any]:
+        """Install a marketplace plugin."""
+        return self._request_json(
+            "POST", f"/marketplace/plugins/{name}/install", params={"version": version}
+        )
+
+    def uninstall_marketplace_plugin(self, name: str) -> Any:
+        """Uninstall a marketplace plugin."""
+        return self._request_json("DELETE", f"/marketplace/plugins/{name}")
+
+    def update_marketplace_plugin(self, name: str) -> dict[str, Any]:
+        """Update a marketplace plugin."""
+        return self._request_json("POST", f"/marketplace/plugins/{name}/update")
+
+    def list_marketplace_reviews(self, name: str, *, limit: int = 10) -> list[dict[str, Any]]:
+        """List reviews for a marketplace plugin."""
+        return cast(
+            list[dict[str, Any]],
+            self._request_list(
+                "GET", f"/marketplace/plugins/{name}/reviews", params={"limit": limit}
+            ),
+        )
+
+    def add_marketplace_review(self, name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Add a marketplace plugin review."""
+        return self._request_json("POST", f"/marketplace/plugins/{name}/reviews", json=payload)
+
+    def get_setup_status(self) -> dict[str, Any]:
+        """Get initial setup status."""
+        return self._request_json("GET", "/setup/status")
+
+    def detect_setup_capabilities(self) -> dict[str, Any]:
+        """Detect local setup capabilities."""
+        return self._request_json("GET", "/setup/capabilities")
+
+    def complete_setup(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Persist setup selections."""
+        return self._request_json("POST", "/setup/complete", json=payload)
+
+    def browse_setup_folder(self) -> dict[str, Any]:
+        """Browse a local folder during setup."""
+        return self._request_json("GET", "/setup/browse-folder")
+
+    def list_plugin_files(
+        self,
+        path: str,
+        *,
+        recursive: bool = False,
+        include_hidden: bool = False,
+        max_items: int = 200,
+    ) -> dict[str, Any]:
+        """List files through the plugin runtime API."""
+        return self._request_json(
+            "GET",
+            "/plugins/files/list",
+            params={
+                "path": path,
+                "recursive": recursive,
+                "include_hidden": include_hidden,
+                "max_items": max_items,
+            },
+        )
+
+    def get_plugin_file_metadata(self, path: str) -> dict[str, Any]:
+        """Get file metadata through the plugin runtime API."""
+        return self._request_json("GET", "/plugins/files/metadata", params={"path": path})
+
+    def organize_plugin_file(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Organize one file through the plugin runtime API."""
+        return self._request_json("POST", "/plugins/files/organize", json=payload)
+
+    def get_plugin_config(self, key: str, *, profile: str = "default") -> dict[str, Any]:
+        """Read a plugin configuration value."""
+        return self._request_json(
+            "GET", "/plugins/config/get", params={"key": key, "profile": profile}
+        )
+
+    def register_plugin_hook(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Register a plugin hook."""
+        return self._request_json("POST", "/plugins/hooks/register", json=payload)
+
+    def unregister_plugin_hook(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Unregister a plugin hook."""
+        return self._request_json("POST", "/plugins/hooks/unregister", json=payload)
+
+    def list_plugin_hooks(self, event: str | None = None) -> dict[str, Any]:
+        """List plugin hooks."""
+        return self._request_json("GET", "/plugins/hooks", params={"event": event})
+
+    def trigger_plugin_hook(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Trigger a plugin hook event."""
+        return self._request_json("POST", "/plugins/hooks/trigger", json=payload)
 
     # -- context manager -----------------------------------------------------
 

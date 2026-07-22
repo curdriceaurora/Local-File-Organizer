@@ -452,10 +452,21 @@ class TestAsyncClientErrorHandling:
         """Test 422 raises validation error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
-        client._client.get = AsyncMock(return_value=_err(422, "invalid"))
+        response = httpx.Response(
+            422,
+            json={
+                "error": "validation_error",
+                "message": "invalid",
+                "details": [{"loc": ["body"], "msg": "required"}],
+            },
+            request=httpx.Request("GET", "http://test"),
+        )
+        client._client.get = AsyncMock(return_value=response)
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError) as exc_info:
             await client.health()
+        assert exc_info.value.error_code == "validation_error"
+        assert exc_info.value.details[0]["msg"] == "required"
 
     async def test_500_raises_server_error(self):
         """Test 500 raises server error."""

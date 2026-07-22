@@ -106,7 +106,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             retry_after = max(result.reset_at - int(time.time()), 0)
             response: Response = JSONResponse(
                 status_code=429,
-                content={"detail": "Rate limit exceeded. Try again later."},
+                content={
+                    "error": "rate_limited",
+                    "message": "Rate limit exceeded. Try again later.",
+                },
             )
             response.headers["Retry-After"] = str(retry_after)
             self._apply_headers(response, result, limit)
