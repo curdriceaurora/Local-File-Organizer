@@ -13,8 +13,8 @@ compares that artifact with both the endpoint specification and capability regis
 Node test checks the artifact against `client.ts`. After adding or renaming a TypeScript client
 method, run `npm run generate:methods` in the TypeScript client directory and commit the result.
 
-The TypeScript client is compiled under strict settings before its transport tests run. That Node
-job remains advisory until #1606 promotes the conformance suites, while the committed inventory
+The TypeScript client is compiled under strict settings before its transport tests run.
+That Node job is promoted to a required gate in #1606, while the committed inventory
 artifact keeps registry/spec drift in the blocking Python suite. Adding, removing, or renaming a
 public route therefore requires an intentional SDK mapping in the same change.
 

@@ -47,7 +47,7 @@ def test_packaged_registry_loader_is_cached() -> None:
 def test_organization_conformance_matches_exercised_corpus_scope() -> None:
     registry = get_capability_registry()
 
-    for capability_id in ("organization.scan", "organization.preview"):
+    for capability_id in ("organization.scan", "organization.preview", "organization.execute"):
         capability = registry.get(capability_id)
         assert (
             capability.support_for(Surface.REST_API).conformance_status
@@ -55,19 +55,27 @@ def test_organization_conformance_matches_exercised_corpus_scope() -> None:
         )
         assert (
             capability.support_for(Surface.PYTHON_SDK).conformance_status
+            is ConformanceStatus.VERIFIED
+        )
+        assert (
+            capability.support_for(Surface.TYPESCRIPT_SDK).conformance_status
+            is ConformanceStatus.VERIFIED
+        )
+        assert (
+            capability.support_for(Surface.WEB_DESKTOP).conformance_status
             is ConformanceStatus.VERIFIED
         )
 
-    for capability_id in ("organization.execute", "organization.suggest"):
+    for capability_id in ("organization.execute", "organization.preview"):
         capability = registry.get(capability_id)
-        assert (
-            capability.support_for(Surface.REST_API).conformance_status
-            is ConformanceStatus.UNVERIFIED
-        )
-        assert (
-            capability.support_for(Surface.PYTHON_SDK).conformance_status
-            is ConformanceStatus.UNVERIFIED
-        )
+        assert capability.support_for(Surface.CLI).conformance_status is ConformanceStatus.VERIFIED
+        assert capability.support_for(Surface.TUI).conformance_status is ConformanceStatus.VERIFIED
+
+    suggest = registry.get("organization.suggest")
+    assert suggest.support_for(Surface.REST_API).conformance_status is ConformanceStatus.UNVERIFIED
+    assert (
+        suggest.support_for(Surface.PYTHON_SDK).conformance_status is ConformanceStatus.UNVERIFIED
+    )
 
 
 def test_target_implementation_and_conformance_are_independent() -> None:

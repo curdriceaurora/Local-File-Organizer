@@ -29,7 +29,7 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.security      # Security hardening / regression tests (tests/security)
 @pytest.mark.extras        # Optional-dependency matrix tests (tests/extras)
 @pytest.mark.uses_setup_gate # Opts out of the autouse setup-gate bypass to exercise the real gate
-@pytest.mark.conformance  # Cross-surface conformance scaffold (tests/conformance; advisory until #1606)
+@pytest.mark.conformance  # Cross-surface conformance scaffold (tests/conformance; required gate in #1606)
 @pytest.mark.keep_default_paths # Opts out of the autouse tmp_path re-routing in TUI conftest (use on tests that verify default '.' path behaviour)
 
 def test_example():

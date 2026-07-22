@@ -1717,7 +1717,7 @@
           "target_support": "full"
         },
         "python-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.organize",
             "AsyncFileOrganizerClient.organize"
@@ -1726,7 +1726,7 @@
           "target_support": "full"
         },
         "rest-api": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "POST /api/v1/organize/execute"
           ],
@@ -1734,7 +1734,7 @@
           "target_support": "full"
         },
         "tui": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "OrganizationPreviewView",
             "TUIOrganizationAdapter.execute"
@@ -1743,7 +1743,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.organize"
           ],
@@ -1751,7 +1751,7 @@
           "target_support": "full"
         },
         "web-desktop": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "POST /ui/organize/execute"
           ],
@@ -1895,7 +1895,7 @@
           "target_support": "full"
         },
         "tui": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "OrganizationPreviewView",
             "TUIOrganizationAdapter.preview"
@@ -1904,7 +1904,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.previewOrganize"
           ],
@@ -1978,7 +1978,7 @@
           "target_support": "full"
         },
         "typescript-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.scan"
           ],
