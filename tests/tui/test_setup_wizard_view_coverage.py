@@ -13,14 +13,6 @@ from textual.widgets import Static
 from file_organizer.tui.setup_wizard_view import SetupWizardView, WizardScreen
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
-_ORIGINAL_SETUP_WIZARD_APP = SetupWizardView.app
-
-
-@pytest.fixture(autouse=True)
-def restore_setup_wizard_app_property() -> None:
-    """Restore the Textual app descriptor after tests replace it with a mock."""
-    yield
-    SetupWizardView.app = _ORIGINAL_SETUP_WIZARD_APP
 
 
 def _create_view_with_mocks() -> tuple[SetupWizardView, MagicMock, MagicMock]:

@@ -22,24 +22,6 @@ from file_organizer.tui.audio_view import (
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def clean_audio_view_class():
-    """Ensure class-level modifications to AudioView.app are reverted after each test.
-
-    Uses ``AudioView.__dict__`` (not ``getattr``) to capture the *raw* class-level
-    state.  ``getattr`` resolves inherited descriptors from ``Widget``/``DOMNode``,
-    which would cause teardown to inject a brand-new ``AudioView.app`` entry even
-    when the class never defined one originally, permanently altering the MRO.
-    """
-    had_local_app = "app" in AudioView.__dict__
-    orig_app = AudioView.__dict__.get("app")
-    yield
-    if had_local_app:
-        AudioView.app = orig_app
-    elif "app" in AudioView.__dict__:
-        delattr(AudioView, "app")
-
-
 def _create_view_with_mocks() -> tuple[AudioView, dict[type[Static], MagicMock], MagicMock]:
     """Helper to create an AudioView with panels and app mocked."""
     view = AudioView(scan_dir="/mock/dir")

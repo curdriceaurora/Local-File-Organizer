@@ -2,10 +2,50 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from textual.widget import Widget
+
+_MISSING_CLASS_ATTRIBUTE = object()
+
+
+def _widget_subclasses() -> set[type[Widget]]:
+    """Return every Textual widget subclass imported during test collection."""
+    discovered: set[type[Widget]] = set()
+    pending = list(Widget.__subclasses__())
+    while pending:
+        widget_type = pending.pop()
+        if widget_type in discovered:
+            continue
+        discovered.add(widget_type)
+        pending.extend(widget_type.__subclasses__())
+    return discovered
+
+
+@pytest.fixture(autouse=True)
+def restore_textual_app_descriptors() -> Iterator[None]:
+    """Restore raw class-level ``app`` state after every TUI test.
+
+    Coverage helpers replace Textual's inherited ``app`` descriptor with a
+    ``PropertyMock``. Reading it with ``getattr`` would resolve the inherited
+    descriptor and then restore it as a new subclass attribute, altering the
+    MRO. Snapshotting each class ``__dict__`` preserves the actual class state
+    and protects newly collected view classes without per-module fixtures.
+    """
+    original_values = {
+        widget_type: widget_type.__dict__.get("app", _MISSING_CLASS_ATTRIBUTE)
+        for widget_type in _widget_subclasses()
+    }
+    yield
+    for widget_type, original_value in original_values.items():
+        if original_value is _MISSING_CLASS_ATTRIBUTE:
+            if "app" in widget_type.__dict__:
+                delattr(widget_type, "app")
+        else:
+            widget_type.app = original_value
 
 
 @pytest.fixture(autouse=True)
