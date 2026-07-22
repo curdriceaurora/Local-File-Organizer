@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   conformance:
-    name: "Conformance suite (required)"
+    name: "Conformance suite"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

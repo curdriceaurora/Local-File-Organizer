@@ -14,9 +14,11 @@ Node test checks the artifact against `client.ts`. After adding or renaming a Ty
 method, run `npm run generate:methods` in the TypeScript client directory and commit the result.
 
 The TypeScript client is compiled under strict settings before its transport tests run.
-That Node step is promoted to a blocking gate within the workflow in #1606 (with repository-level branch protection rules tracked separately), while the committed inventory
-artifact keeps registry/spec drift in the blocking Python suite. Adding, removing, or renaming a
-public route therefore requires an intentional SDK mapping in the same change.
+That Node step is promoted to a blocking gate within the workflow in #1606 (with
+repository-level branch protection rules tracked separately), while the committed
+inventory artifact keeps registry/spec drift in the blocking Python suite. Adding,
+removing, or renaming a public route therefore requires an intentional SDK mapping
+in the same change.
 
 ## Organization behavior
 

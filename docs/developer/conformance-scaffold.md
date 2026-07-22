@@ -104,4 +104,8 @@ Rules for adapter drivers (#1595–#1598):
 pytest tests/conformance -m conformance --override-ini="addopts="
 ```
 
-CI runs the suite as the `conformance` job in the dedicated `Conformance` workflow — which, unlike the main CI workflow, also triggers for pushes and pull requests on `feature/cross-surface-parity` — and inside the full-suite shards. Promoted to a blocking gate within the workflow in #1606 (repository-level branch protection rules tracked separately).
+CI runs the suite as the `conformance` job in the dedicated `Conformance`
+workflow — which, unlike the main CI workflow, also triggers for pushes and pull
+requests on `feature/cross-surface-parity` — and inside the full-suite shards.
+Promoted to a blocking gate within the workflow in #1606 (repository-level branch
+protection rules tracked separately).
