@@ -5,6 +5,7 @@ Targets 100% statement and branch coverage for UndoHistoryView and its panels.
 
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -24,7 +25,9 @@ from file_organizer.tui.undo_history_view import (
 pytestmark = pytest.mark.unit
 
 
-def _create_view_with_mocks() -> tuple[UndoHistoryView, dict[type[Static], MagicMock], MagicMock]:
+def _create_view_with_mocks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[UndoHistoryView, dict[type[Static], MagicMock], MagicMock]:
     """Helper to create an UndoHistoryView with panels and app mocked."""
     view = UndoHistoryView()
 
@@ -47,7 +50,7 @@ def _create_view_with_mocks() -> tuple[UndoHistoryView, dict[type[Static], Magic
     # Mock app property
     mock_app = MagicMock()
     app_prop = PropertyMock(return_value=mock_app)
-    type(view).app = app_prop
+    monkeypatch.setattr(type(view), "app", app_prop)
 
     # Force call_from_thread to execute synchronously in tests
     mock_app.call_from_thread = lambda func, *args, **kwargs: func(*args, **kwargs)
@@ -214,17 +217,28 @@ def test_undo_history_view_compose() -> None:
     assert isinstance(widgets[4], HistoryStatsPanel)
 
 
-def test_undo_history_view_on_mount() -> None:
+def test_view_mock_restores_textual_app_descriptor() -> None:
+    """The unit-test app mock must not leak into later mounted views."""
+    original_app_descriptor = inspect.getattr_static(UndoHistoryView, "app")
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        _create_view_with_mocks(monkeypatch)
+        assert inspect.getattr_static(UndoHistoryView, "app") is not original_app_descriptor
+
+    assert inspect.getattr_static(UndoHistoryView, "app") is original_app_descriptor
+
+
+def test_undo_history_view_on_mount(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify on_mount triggers history load."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
     with patch.object(view, "_load_history") as mock_load:
         view.on_mount()
         mock_load.assert_called_once()
 
 
-def test_undo_history_view_action_refresh_history() -> None:
+def test_undo_history_view_action_refresh_history(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify refresh action updates panels and triggers load."""
-    view, panels, _ = _create_view_with_mocks()
+    view, panels, _ = _create_view_with_mocks(monkeypatch)
     with patch.object(view, "_load_history") as mock_load:
         view.action_refresh_history()
         for panel in panels.values():
@@ -232,9 +246,9 @@ def test_undo_history_view_action_refresh_history() -> None:
         mock_load.assert_called_once()
 
 
-def test_undo_history_view_action_undo_redo() -> None:
+def test_undo_history_view_action_undo_redo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify action bindings trigger appropriate background tasks."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
     with (
         patch.object(view, "_run_undo") as mock_undo,
         patch.object(view, "_run_redo") as mock_redo,
@@ -246,9 +260,9 @@ def test_undo_history_view_action_undo_redo() -> None:
         mock_redo.assert_called_once()
 
 
-def test_undo_history_view_load_history_success() -> None:
+def test_undo_history_view_load_history_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify successful history loading parses stacks and stats."""
-    view, panels, _ = _create_view_with_mocks()
+    view, panels, _ = _create_view_with_mocks(monkeypatch)
 
     mock_history = MagicMock()
     mock_history.get_recent_operations.return_value = ["op1"]
@@ -275,9 +289,9 @@ def test_undo_history_view_load_history_success() -> None:
         mock_status.assert_called_once_with("History loaded")
 
 
-def test_undo_history_view_load_history_failure() -> None:
+def test_undo_history_view_load_history_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify load history exceptions update all panels with the error."""
-    view, panels, _ = _create_view_with_mocks()
+    view, panels, _ = _create_view_with_mocks(monkeypatch)
 
     with patch(
         "file_organizer.history.tracker.OperationHistory", side_effect=ValueError("DB locked")
@@ -289,9 +303,9 @@ def test_undo_history_view_load_history_failure() -> None:
             assert "DB locked" in panel.update.call_args[0][0]
 
 
-def test_undo_history_view_run_undo_success_with_op() -> None:
+def test_undo_history_view_run_undo_success_with_op(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_undo when an operation is successfully undone."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     mock_history = MagicMock()
     mock_manager = MagicMock()
@@ -310,9 +324,9 @@ def test_undo_history_view_run_undo_success_with_op() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_run_undo_success_no_op() -> None:
+def test_undo_history_view_run_undo_success_no_op(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_undo when there is nothing to undo."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     mock_history = MagicMock()
     mock_manager = MagicMock()
@@ -330,9 +344,9 @@ def test_undo_history_view_run_undo_success_no_op() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_run_undo_failure() -> None:
+def test_undo_history_view_run_undo_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_undo handles database/execution errors."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     with (
         patch(
@@ -347,9 +361,9 @@ def test_undo_history_view_run_undo_failure() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_run_redo_success_with_op() -> None:
+def test_undo_history_view_run_redo_success_with_op(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_redo when an operation is successfully redone."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     mock_history = MagicMock()
     mock_manager = MagicMock()
@@ -368,9 +382,9 @@ def test_undo_history_view_run_redo_success_with_op() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_run_redo_success_no_op() -> None:
+def test_undo_history_view_run_redo_success_no_op(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_redo when there is nothing to redo."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     mock_history = MagicMock()
     mock_manager = MagicMock()
@@ -388,9 +402,9 @@ def test_undo_history_view_run_redo_success_no_op() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_run_redo_failure() -> None:
+def test_undo_history_view_run_redo_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify run_redo handles database/execution errors."""
-    view, _, _ = _create_view_with_mocks()
+    view, _, _ = _create_view_with_mocks(monkeypatch)
 
     with (
         patch(
@@ -406,9 +420,9 @@ def test_undo_history_view_run_redo_failure() -> None:
         mock_refresh.assert_called_once()
 
 
-def test_undo_history_view_status_bar_updates() -> None:
+def test_undo_history_view_status_bar_updates(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify status updates resolve cleanly or log on failure."""
-    view, _, mock_app = _create_view_with_mocks()
+    view, _, mock_app = _create_view_with_mocks(monkeypatch)
 
     # 1. Success
     mock_status_bar = MagicMock()
