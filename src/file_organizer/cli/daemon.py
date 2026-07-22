@@ -14,7 +14,7 @@ from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
-from rich.table import Table  # pyre-ignore[21]
+from rich.table import Table
 
 from file_organizer.cli.path_validation import resolve_cli_path, validate_pair
 from file_organizer.config.path_manager import get_state_dir

@@ -268,12 +268,10 @@ class PluginInstaller:
         normalized = self._normalize_plugin_name(name)
         plugin_root = self.plugin_dir.resolve()
         destination = (plugin_root / normalized).resolve()
-        try:
-            destination.relative_to(plugin_root)
-        except ValueError as exc:
+        if not destination.is_relative_to(plugin_root) or destination == plugin_root:
             raise MarketplaceInstallError(
                 f"Resolved plugin path escapes plugin directory for '{normalized}'."
-            ) from exc
+            )
         return destination
 
     def _normalize_plugin_name(self, name: str) -> str:

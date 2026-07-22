@@ -58,12 +58,13 @@ class WizardResult:
         errors: List of errors encountered (empty if success=True).
     """
 
-    success: bool
-    config: AppConfig | None = None
-    profile_name: str = "default"
-    messages: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
-    errors: list[str] = field(default_factory=list)
+    # Pyre 0.9.25 misclassifies standard dataclass field annotations.
+    success: bool  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    config: AppConfig | None = None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    profile_name: str = "default"  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    messages: list[str] = field(default_factory=list)  # pyre-ignore[35]
+    warnings: list[str] = field(default_factory=list)  # pyre-ignore[35]
+    errors: list[str] = field(default_factory=list)  # pyre-ignore[35]
 
 
 @dataclass
@@ -76,9 +77,10 @@ class SystemCapabilities:
         installed_models: List of available Ollama models.
     """
 
-    hardware: HardwareProfile
-    ollama_status: OllamaStatus
-    installed_models: list[InstalledModel] = field(default_factory=list)
+    # Pyre 0.9.25 misclassifies standard dataclass field annotations.
+    hardware: HardwareProfile  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    ollama_status: OllamaStatus  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    installed_models: list[InstalledModel] = field(default_factory=list)  # pyre-ignore[35]
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize capabilities to a plain dictionary."""

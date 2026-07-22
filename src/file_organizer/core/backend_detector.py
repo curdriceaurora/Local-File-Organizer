@@ -42,10 +42,10 @@ class OllamaStatus:
         models_count: Number of models installed locally.
     """
 
-    installed: bool
-    running: bool
-    version: str | None = None
-    models_count: int = 0
+    installed: bool  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    running: bool  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    version: str | None = None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    models_count: int = 0  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
 
 
 @dataclass
@@ -58,9 +58,9 @@ class InstalledModel:
         modified: Last modified timestamp, if available.
     """
 
-    name: str
-    size: int | None = None
-    modified: str | None = None
+    name: str  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    size: int | None = None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    modified: str | None = None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
 
 
 def detect_ollama() -> OllamaStatus:

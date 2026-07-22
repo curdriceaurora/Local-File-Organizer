@@ -66,12 +66,13 @@ class FileOrganizer:
     """
 
     # ClassVars re-exported from file_organizer.core.types for backward compatibility
-    TEXT_EXTENSIONS: ClassVar[set[str]] = set(TEXT_EXTENSIONS)
-    IMAGE_EXTENSIONS: ClassVar[set[str]] = set(IMAGE_EXTENSIONS)
-    VIDEO_EXTENSIONS: ClassVar[set[str]] = set(VIDEO_EXTENSIONS)
-    AUDIO_EXTENSIONS: ClassVar[set[str]] = set(AUDIO_EXTENSIONS)
-    CAD_EXTENSIONS: ClassVar[set[str]] = set(CAD_EXTENSIONS)
-    _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = TEXT_FALLBACK_MAP
+    # Pyre 0.9.25 misclassifies valid class-level ClassVar annotations.
+    TEXT_EXTENSIONS: ClassVar[set[str]] = set(TEXT_EXTENSIONS)  # pyre-ignore[35]
+    IMAGE_EXTENSIONS: ClassVar[set[str]] = set(IMAGE_EXTENSIONS)  # pyre-ignore[35]
+    VIDEO_EXTENSIONS: ClassVar[set[str]] = set(VIDEO_EXTENSIONS)  # pyre-ignore[35]
+    AUDIO_EXTENSIONS: ClassVar[set[str]] = set(AUDIO_EXTENSIONS)  # pyre-ignore[35]
+    CAD_EXTENSIONS: ClassVar[set[str]] = set(CAD_EXTENSIONS)  # pyre-ignore[35]
+    _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = TEXT_FALLBACK_MAP  # pyre-ignore[35]
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         """Verify fallback map covers all text and CAD extensions.
