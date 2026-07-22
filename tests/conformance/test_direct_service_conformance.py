@@ -63,7 +63,7 @@ def test_driver_satisfies_protocol(conformance: ConformanceContext) -> None:
         "rest",
         "python-sdk",
         "python-async-sdk",
-        "web-desktop",
+        "web-form-adapter",
     }
 
 

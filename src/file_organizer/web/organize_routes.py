@@ -511,6 +511,7 @@ def organize_scan(
         HTMX partial showing the generated plan or an error message.
     """
     error_message: str | None = None
+    error_payload: dict[str, Any] | None = None
     info_message: str | None = None
     plan: dict[str, Any] | None = None
 
@@ -543,11 +544,24 @@ def organize_scan(
         info_message = "Plan generated. Review movements and execute when ready."
     except ApiError as exc:
         error_message = exc.message
+        error_payload = {
+            "code": exc.error,
+            "message": exc.message,
+            "retryable": False,
+            "details": exc.details or {},
+        }
     except DomainError as exc:
         error_message = exc.message
+        error_payload = {**exc.to_dict(), "details": exc.details}
     except Exception:
         logger.exception("Failed to generate organize plan")
         error_message = "Failed to generate plan."
+        error_payload = {
+            "code": "execution_failed",
+            "message": error_message,
+            "retryable": False,
+            "details": {},
+        }
 
     return templates.TemplateResponse(
         request,
@@ -555,6 +569,7 @@ def organize_scan(
         {
             "plan": plan,
             "error_message": error_message,
+            "error_payload": error_payload,
             "info_message": info_message,
             "methodology_options": ORGANIZE_METHODOLOGIES,
         },
@@ -580,6 +595,7 @@ def organize_clear_plan(
             "plan": None,
             "info_message": "Plan dismissed.",
             "error_message": None,
+            "error_payload": None,
             "methodology_options": ORGANIZE_METHODOLOGIES,
         },
     )

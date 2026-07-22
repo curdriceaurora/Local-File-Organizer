@@ -227,9 +227,6 @@ def build_organize_plan(
 
     safe_input = resolve_path(input_dir, allowed_paths)
     safe_output = resolve_path(output_dir, allowed_paths)
-    if not safe_input.exists():
-        raise ApiError(status_code=404, error="not_found", message="Input directory not found.")
-
     if options is None:
         options = parse_organize_options(
             methodology=methodology,
@@ -279,6 +276,7 @@ def build_organize_plan(
             "use_hardlinks": plan.options.use_hardlinks,
             "transfer_mode": plan.options.effective_transfer_mode.value,
             "options": plan.options.to_dict(),
+            "scan_files": [str(path) for path in scan.files],
             "scan_counts": scan.counts,
             "scan_total_files": scan.total_files,
             "preview": preview.model_dump(),

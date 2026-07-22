@@ -13,7 +13,7 @@ never from any adapter.
 | --- | --- |
 | `tests/conformance/corpus.py` | Deterministic fixture corpus: pinned bytes and mtimes, tagged cases |
 | `tests/conformance/normalize.py` | Strips presentation-only differences while preserving executable ordering and complete source fingerprints |
-| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK/Web-Desktop adapters |
+| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK/Web-form adapters |
 | `tests/conformance/test_direct_service_conformance.py` | Golden expectations for canonical semantics |
 
 ## Fixture corpus
@@ -38,13 +38,17 @@ mapping, executable-plan round trips, stable errors, execution results, and
 audit effects against the direct-service oracle without relying on route
 construction alone.
 
-The Web/Desktop driver round-trips every canonical option through the Web form
-parser, builds the serialized plan rendered for review, and executes that plan
-through the same application-service seam. Desktop uses these exact `/ui`
-routes; its separate tests constrain the Python bridge to native path dialogs
-and reveal-in-file-manager affordances. Web/Desktop scan and preview therefore
+The Web form driver sends the corpus through the real `/ui/organize`,
+`/ui/organize/scan`, and `/ui/organize/plan/clear` routes. It round-trips every
+canonical option, reads the serialized plan rendered for review, and verifies
+that rejecting the plan evicts it. Those declared Web entry points therefore
 have executable corpus evidence. Execution remains unverified until the corpus
 also covers the surface's queued job, cancellation, and rollback lifecycle.
+
+Desktop loads these same `/ui` routes, so its organization behavior is
+equivalent by construction rather than independently corpus-driven. Focused
+Desktop tests constrain the additional Python bridge to native path dialogs
+and reveal-in-file-manager affordances.
 
 ## Writing an adapter driver
 

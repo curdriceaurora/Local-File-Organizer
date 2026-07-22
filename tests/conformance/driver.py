@@ -27,7 +27,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import UTC, datetime
+from html import unescape
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from unittest.mock import patch
@@ -38,10 +40,14 @@ from starlette.testclient import TestClient
 from typer.testing import CliRunner
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.dependencies import (
+    get_config_manager,
+    get_current_active_user,
+    get_settings,
+)
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.organize import get_organization_service
-from file_organizer.api.routers.organize import router as organize_router
+from file_organizer.api.routers.organize import router as api_organize_router
 from file_organizer.cli.main import app
 from file_organizer.client.async_client import AsyncFileOrganizerClient
 from file_organizer.client.exceptions import ClientError
@@ -50,6 +56,7 @@ from file_organizer.client.models import (
 )
 from file_organizer.client.models import OrganizationPlanPayload as ClientOrganizationPlan
 from file_organizer.client.sync_client import FileOrganizerClient
+from file_organizer.config.schema import AppConfig
 from file_organizer.core import dispatcher
 from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organization_service import OrganizationScan, OrganizationService
@@ -69,9 +76,15 @@ from file_organizer.services.video.metadata_extractor import (
 )
 from file_organizer.undo import UndoManager
 from file_organizer.utils.atomic_write import atomic_write_text
+from file_organizer.web.organize_routes import (
+    get_web_organization_service,
+)
+from file_organizer.web.organize_routes import (
+    organize_router as web_organize_router,
+)
 from file_organizer.web.organize_services import (
     _delete_organize_plan,
-    build_organize_plan,
+    _get_organize_plan,
     parse_organize_options,
 )
 from tests.conformance.normalize import (
@@ -301,19 +314,40 @@ class DirectServiceDriver:
         }
 
 
-class WebDesktopConformanceDriver:
-    """Drive the Web form adapter against the canonical service seam.
+class WebFormConformanceDriver:
+    """Drive the real Web form routes against the canonical service seam.
 
-    Desktop loads these same ``/ui`` workflows; its Python bridge only adds
-    native path selection and reveal affordances, covered by Desktop tests.
+    Desktop loads these same ``/ui`` workflows, so its route behavior is
+    equivalent by construction rather than independently corpus-driven. Its
+    Python bridge adds native path selection and reveal affordances covered by
+    focused Desktop tests.
     """
 
-    name = "web-desktop"
+    name = "web-form-adapter"
+    _PLAN_ID_PATTERN = re.compile(r'data-plan-id="([^"]+)"')
+    _ERROR_PATTERN = re.compile(r'data-error-payload="([^"]+)"')
 
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace
         self._workspace.mkdir(parents=True, exist_ok=True)
         self._oracle = DirectServiceDriver(workspace / "service")
+        settings = ApiSettings(
+            allowed_paths=[str(workspace.parent)],
+            auth_enabled=False,
+            auth_db_path=str(workspace / "auth.db"),
+        )
+        manager = type(
+            "ConformanceConfigManager",
+            (),
+            {"load": staticmethod(AppConfig)},
+        )()
+        self._app = FastAPI()
+        self._app.dependency_overrides[get_settings] = lambda: settings
+        self._app.dependency_overrides[get_config_manager] = lambda: manager
+        self._app.dependency_overrides[get_web_organization_service] = lambda: self._oracle._service
+        setup_exception_handlers(self._app)
+        self._app.include_router(web_organize_router, prefix="/ui")
+        self._client = TestClient(self._app, raise_server_exceptions=False)
 
     @staticmethod
     def _mapped_request(request: OrganizeRequest) -> OrganizeRequest:
@@ -344,35 +378,114 @@ class WebDesktopConformanceDriver:
         )
         return OrganizeRequest(request.input_path, request.output_path, mapped)
 
-    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
-        """Return a normalized scan after Web form mapping."""
-        mapped = self._mapped_request(request)
-        roots = (mapped.input_path, mapped.output_path)
-        try:
-            scan = self._oracle._service.scan(mapped)
-        except (DomainError, ValueError, RuntimeError, OSError) as exc:
-            return {"outcome": "error", "error": normalize_error(exc, *roots)}
-        return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
+    @staticmethod
+    def _form_data(request: OrganizeRequest) -> dict[str, str]:
+        """Serialize every canonical option through the Web form contract."""
+        options = request.options
+        return {
+            "input_dir": str(request.input_path),
+            "output_dir": str(request.output_path),
+            "methodology": options.effective_methodology.value,
+            "recursive": "1" if options.recursive else "0",
+            "include_hidden": "1" if options.include_hidden else "0",
+            "skip_existing": "1" if options.skip_existing else "0",
+            "transfer_mode": options.effective_transfer_mode.value,
+            "use_hardlinks": "1" if options.use_hardlinks else "0",
+            "enable_vision": "1" if options.enable_vision else "0",
+            "transcribe_audio": "1" if options.transcribe_audio else "0",
+            "max_transcribe_seconds": (
+                ""
+                if options.max_transcribe_seconds is None
+                else str(options.max_transcribe_seconds)
+            ),
+            "whisper_model": options.whisper_model,
+            "parallel_workers": (
+                "" if options.parallel_workers is None else str(options.parallel_workers)
+            ),
+            "prefetch_depth": str(options.prefetch_depth),
+            "text_model": options.text_model or "",
+            "vision_model": options.vision_model or "",
+            "text_provider": options.text_provider or "",
+            "vision_provider": options.vision_provider or "",
+        }
 
-    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
-        """Generate and round-trip the exact serialized plan rendered by Web."""
-        mapped = self._mapped_request(request)
-        roots = (mapped.input_path, mapped.output_path)
+    def _post_scan(
+        self, request: OrganizeRequest
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        response = self._client.post("/ui/organize/scan", data=self._form_data(request))
+        if response.status_code != 200:
+            raise AssertionError(f"Web scan returned HTTP {response.status_code}.")
+        error_match = self._ERROR_PATTERN.search(response.text)
+        if error_match is not None:
+            payload = json.loads(unescape(error_match.group(1)))
+            payload.setdefault("details", {})
+            return None, payload
+        plan_match = self._PLAN_ID_PATTERN.search(response.text)
+        if plan_match is None:
+            raise AssertionError("Web scan response did not expose a plan or typed error.")
+        stored = _get_organize_plan(plan_match.group(1))
+        if stored is None:
+            raise AssertionError("Web scan response referenced an unavailable plan.")
+        return stored, None
+
+    @staticmethod
+    def _normalize_web_error(payload: dict[str, Any], roots: tuple[Path, Path]) -> dict[str, Any]:
+        try:
+            error = DomainError.from_dict(payload)
+        except (KeyError, ValueError):
+            return {
+                "code": str(payload.get("code", "execution_failed")),
+                "message": redact_roots(str(payload.get("message", "Request failed.")), *roots),
+                "retryable": bool(payload.get("retryable", False)),
+                "details": dict(payload.get("details", {})),
+            }
+        return normalize_error(error, *roots)
+
+    def scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Return the scan persisted by the real Web form route."""
+        roots = (request.input_path, request.output_path)
         stored: dict[str, Any] | None = None
         try:
-            stored = build_organize_plan(
-                input_dir=str(mapped.input_path),
-                output_dir=str(mapped.output_path),
-                allowed_paths=[str(self._workspace.parent)],
-                options=mapped.options,
-                organization_service=self._oracle._service,
+            stored, error = self._post_scan(request)
+        except (DomainError, ValueError, RuntimeError, OSError) as exc:
+            return {"outcome": "error", "error": normalize_error(exc, *roots)}
+        if error is not None:
+            return {"outcome": "error", "error": self._normalize_web_error(error, roots)}
+        if stored is None:
+            raise AssertionError("Successful Web scan must persist a reviewed plan.")
+        try:
+            scan = OrganizationScan(
+                Path(stored["input_dir"]),
+                tuple(Path(path) for path in stored["scan_files"]),
+                dict(stored["scan_counts"]),
             )
+            return {"outcome": "ok", "scan": normalize_scan(scan, *roots)}
+        finally:
+            _delete_organize_plan(stored["plan_id"])
+
+    def preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        """Round-trip the plan through dashboard, scan, and clear routes."""
+        roots = (request.input_path, request.output_path)
+        stored: dict[str, Any] | None = None
+        try:
+            dashboard = self._client.get("/ui/organize")
+            if dashboard.status_code != 200:
+                raise AssertionError(f"Web dashboard returned HTTP {dashboard.status_code}.")
+            stored, error = self._post_scan(request)
+            if error is not None:
+                return {"outcome": "error", "error": self._normalize_web_error(error, roots)}
+            if stored is None:
+                raise AssertionError("Successful Web preview must persist a reviewed plan.")
             plan = OrganizationPlan.from_dict(stored["executable_plan"])
         except (DomainError, ValueError, RuntimeError, OSError) as exc:
             return {"outcome": "error", "error": normalize_error(exc, *roots)}
         finally:
             if stored is not None:
-                _delete_organize_plan(stored["plan_id"])
+                clear = self._client.post(
+                    "/ui/organize/plan/clear", data={"plan_id": stored["plan_id"]}
+                )
+                if clear.status_code != 200 or _get_organize_plan(stored["plan_id"]) is not None:
+                    raise AssertionError("Web clear-plan route did not remove the reviewed plan.")
         result = OrganizationResult(
             total_files=plan.total_files,
             processed_files=plan.processed_files,
@@ -620,7 +733,7 @@ class _HTTPConformanceDriver:
         self._app.dependency_overrides[get_settings] = lambda: settings
         self._app.dependency_overrides[get_current_active_user] = lambda: object()
         self._app.dependency_overrides[get_organization_service] = lambda: self._oracle._service
-        self._app.include_router(organize_router, prefix="/api/v1")
+        self._app.include_router(api_organize_router, prefix="/api/v1")
         self._test_client = TestClient(self._app, raise_server_exceptions=False)
 
     @staticmethod
