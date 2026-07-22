@@ -1247,6 +1247,14 @@ Organization commands accept `--token` or `--api-key`, `--base-url`,
 `--timeout`, and `--json`. Run `file-organizer api COMMAND --help` for the
 complete canonical option surface.
 
+Every `fo api ... --json` success and failure emits the same versioned
+top-level envelope as local organization commands: `schema_version`,
+`outcome`, `command`, and either normalized result fields or `error`.
+Connection, DNS, TLS, and timeout failures use `transport_error` with
+`retryable: true`. Exit code `2` covers invalid or missing requests, exit code
+`3` covers conflicts, plan mismatches, and recovery-required outcomes, and
+other failures exit `1`.
+
 #### `api capabilities`
 
 Show which remote capabilities are available through `fo api`, exposed only

@@ -234,19 +234,39 @@ def _success_payload(
     scan: OrganizationScan | None = None,
 ) -> dict[str, Any]:
     """Build the versioned success envelope shared by both CLI commands."""
+    return _json_success_payload(
+        command,
+        mode=mode,
+        request={
+            "input_path": str(request.input_path),
+            "output_path": str(request.output_path),
+            "options": request.options.to_dict(),
+        },
+        scan=_scan_payload(scan) if scan is not None else None,
+        result=_result_payload(result),
+        plan=result.plan.to_dict() if isinstance(result.plan, OrganizationPlan) else None,
+    )
+
+
+def _json_success_payload(
+    command: str,
+    *,
+    mode: str,
+    result: Any,
+    request: dict[str, Any] | None = None,
+    scan: dict[str, Any] | None = None,
+    plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the shared versioned success envelope for CLI adapters."""
     return {
         "schema_version": _JSON_SCHEMA_VERSION,
         "outcome": "ok",
         "command": command,
         "mode": mode,
-        "request": {
-            "input_path": str(request.input_path),
-            "output_path": str(request.output_path),
-            "options": request.options.to_dict(),
-        },
-        "scan": _scan_payload(scan) if scan is not None else None,
-        "result": _result_payload(result),
-        "plan": result.plan.to_dict() if isinstance(result.plan, OrganizationPlan) else None,
+        "request": request,
+        "scan": scan,
+        "result": result,
+        "plan": plan,
     }
 
 
@@ -280,18 +300,47 @@ def _load_plan(path: Path) -> OrganizationPlan:
 
 def _error_exit_code(exc: Exception) -> int:
     """Map stable domain failure categories onto documented CLI exit codes."""
-    if isinstance(exc, DomainError) and exc.code in {
-        DomainErrorCode.INVALID_REQUEST,
-        DomainErrorCode.NOT_FOUND,
-    }:
+    if isinstance(exc, DomainError):
+        return _error_code_exit_code(exc.code.value)
+    return 1
+
+
+def _error_code_exit_code(code: str) -> int:
+    """Map one stable error identifier onto the shared CLI exit categories."""
+    if code in {DomainErrorCode.INVALID_REQUEST.value, DomainErrorCode.NOT_FOUND.value}:
         return 2
-    if isinstance(exc, DomainError) and exc.code in {
-        DomainErrorCode.CONFLICT,
-        DomainErrorCode.PLAN_MISMATCH,
-        DomainErrorCode.RECOVERY_REQUIRED,
+    if code in {
+        DomainErrorCode.CONFLICT.value,
+        DomainErrorCode.PLAN_MISMATCH.value,
+        DomainErrorCode.RECOVERY_REQUIRED.value,
     }:
         return 3
     return 1
+
+
+def _raise_cli_contract_error(
+    command: str,
+    error: dict[str, Any],
+    *,
+    json_output: bool,
+    exit_code: int,
+    cause: Exception,
+) -> None:
+    """Render a normalized CLI error envelope shared by local and remote adapters."""
+    if json_output:
+        _emit_json(
+            {
+                "schema_version": _JSON_SCHEMA_VERSION,
+                "outcome": "error",
+                "command": command,
+                "error": error,
+            }
+        )
+    else:
+        console.print(f"[red]Error: {error['message']}[/red]")
+        if _get_state().debug:
+            console.print_exception(show_locals=False)
+    raise typer.Exit(code=exit_code) from cause
 
 
 def _raise_cli_error(command: str, exc: Exception, *, json_output: bool) -> None:
@@ -313,20 +362,13 @@ def _raise_cli_error(command: str, exc: Exception, *, json_output: bool) -> None
             "error_type": type(exc).__name__,
             "message": str(exc),
         }
-    if json_output:
-        _emit_json(
-            {
-                "schema_version": _JSON_SCHEMA_VERSION,
-                "outcome": "error",
-                "command": command,
-                "error": error,
-            }
-        )
-    else:
-        console.print(f"[red]Error: {error['message']}[/red]")
-        if _get_state().debug:
-            console.print_exception(show_locals=False)
-    raise typer.Exit(code=code) from exc
+    _raise_cli_contract_error(
+        command,
+        error,
+        json_output=json_output,
+        exit_code=code,
+        cause=exc,
+    )
 
 
 def _raise_usage_error(command: str, exc: typer.BadParameter, *, json_output: bool) -> None:

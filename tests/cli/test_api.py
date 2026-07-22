@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from typer.testing import CliRunner
 
@@ -51,7 +52,10 @@ def test_health_command_json(mock_client_cls):
 
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert data["status"] == "ok"
+    assert data["schema_version"] == 1
+    assert data["outcome"] == "ok"
+    assert data["command"] == "api health"
+    assert data["result"]["status"] == "ok"
 
 
 def test_health_command_error(mock_client_cls):
@@ -63,7 +67,7 @@ def test_health_command_error(mock_client_cls):
     result = runner.invoke(api_app, ["health"])
 
     assert result.exit_code == 1
-    assert "API error:" in result.stdout
+    assert "Error:" in result.stdout
     assert "Connection failed" in result.stdout
 
 
@@ -72,7 +76,9 @@ def test_remote_capabilities_distinguish_commands_from_sdk_only_access():
     result = runner.invoke(api_app, ["capabilities", "--json"])
 
     assert result.exit_code == 0
-    rows = {row["capability_id"]: row for row in json.loads(result.stdout)}
+    payload = json.loads(result.stdout)
+    assert payload["outcome"] == "ok"
+    rows = {row["capability_id"]: row for row in payload["result"]}
     assert rows["organization.preview"]["availability"] == "available"
     assert "fo api preview" in rows["organization.preview"]["commands"]
     assert rows["deduplication.manage"]["availability"] == "sdk-only"
@@ -111,7 +117,7 @@ def test_login_command_error(mock_client_cls):
     result = runner.invoke(api_app, ["login"], input="user\npass\n")
 
     assert result.exit_code == 1
-    assert "Login failed" in result.stdout
+    assert "Error:" in result.stdout
 
 
 def test_me_command(mock_client_cls):
@@ -213,7 +219,13 @@ def test_remote_scan_maps_traversal_and_emits_machine_json(mock_client_cls):
     )
 
     assert result.exit_code == 0
-    assert json.loads(result.stdout)["total_files"] == 2
+    payload = json.loads(result.stdout)
+    assert payload["outcome"] == "ok"
+    assert payload["scan"]["total_files"] == 2
+    assert payload["request"]["options"] == {
+        "include_hidden": True,
+        "recursive": False,
+    }
     mock_instance.scan.assert_called_once_with(
         "/remote/input", recursive=False, include_hidden=True
     )
@@ -335,6 +347,23 @@ def test_remote_job_mutations_preserve_revision_guard(mock_client_cls, command, 
     getattr(mock_instance, method).assert_called_once_with("job-1", expected_revision=3)
 
 
+def test_remote_jobs_wraps_list_in_shared_success_envelope(mock_client_cls):
+    """List-valued results must not replace the versioned top-level JSON object."""
+    mock_instance = MagicMock()
+    job = MagicMock()
+    job.model_dump.return_value = {"job_id": "job-1", "status": "queued"}
+    mock_instance.list_jobs.return_value = [job]
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(api_app, ["jobs", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["outcome"] == "ok"
+    assert payload["command"] == "api jobs"
+    assert payload["result"] == [{"job_id": "job-1", "status": "queued"}]
+
+
 def test_remote_json_error_preserves_sdk_auth_evidence(mock_client_cls):
     """Machine output must distinguish authentication failures from local-only gaps."""
     mock_instance = MagicMock()
@@ -350,11 +379,15 @@ def test_remote_json_error_preserves_sdk_auth_evidence(mock_client_cls):
 
     assert result.exit_code == 1
     assert json.loads(result.stdout) == {
-        "details": {},
-        "error": "unauthorized",
-        "message": "Authentication required.",
-        "retryable": False,
-        "status_code": 401,
+        "command": "api scan",
+        "error": {
+            "code": "unauthorized",
+            "details": {},
+            "message": "Authentication required.",
+            "retryable": False,
+        },
+        "outcome": "error",
+        "schema_version": 1,
     }
 
 
@@ -376,5 +409,53 @@ def test_remote_preview_invalid_options_preserve_json_contract(mock_client_cls):
 
     assert result.exit_code == 2
     payload = json.loads(result.stdout)
-    assert payload["error"] == "invalid_request"
-    assert payload["retryable"] is False
+    assert payload["outcome"] == "error"
+    assert payload["command"] == "api preview"
+    assert payload["error"]["code"] == "invalid_request"
+    assert payload["error"]["retryable"] is False
+
+
+def test_health_transport_failure_preserves_json_contract(mock_client_cls):
+    """Connection failures must emit one retryable machine-readable error."""
+    mock_instance = MagicMock()
+    request = httpx.Request("GET", "http://127.0.0.1:9/api/v1/health")
+    mock_instance.health.side_effect = httpx.ConnectError("Connection refused", request=request)
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(api_app, ["health", "--json"])
+
+    assert result.exit_code == 1
+    assert json.loads(result.stdout) == {
+        "command": "api health",
+        "error": {
+            "code": "transport_error",
+            "details": {"error_type": "ConnectError"},
+            "message": "Connection refused",
+            "retryable": True,
+        },
+        "outcome": "error",
+        "schema_version": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error_code", "expected_exit"),
+    [(404, "not_found", 2), (422, "validation_error", 2), (409, "plan_mismatch", 3)],
+)
+def test_remote_errors_share_local_exit_categories(
+    mock_client_cls, status_code, error_code, expected_exit
+):
+    """Remote domain failures must use the local CLI's documented exit categories."""
+    mock_instance = MagicMock()
+    mock_instance.scan.side_effect = ClientError(
+        "Request failed",
+        status_code=status_code,
+        detail="Request failed",
+        error_code=error_code,
+    )
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(api_app, ["scan", "/remote/input", "--json"])
+
+    assert result.exit_code == expected_exit
+    assert json.loads(result.stdout)["error"]["code"] == error_code

@@ -1020,11 +1020,14 @@ class RemoteCLIConformanceDriver(PythonSDKConformanceDriver):
                 f"fo api did not emit valid JSON (exit {result.exit_code}): {result.stdout}"
             ) from exc
         if result.exit_code != 0:
-            raise _TransportFailure(payload)
+            error = payload.get("error")
+            raise _TransportFailure(error if isinstance(error, dict) else payload)
+        if payload.get("outcome") != "ok":
+            raise AssertionError(f"fo api succeeded with a non-success envelope: {payload}")
         return payload
 
     def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
-        return self._invoke(
+        outer = self._invoke(
             [
                 "scan",
                 str(request.input_path),
@@ -1033,9 +1036,12 @@ class RemoteCLIConformanceDriver(PythonSDKConformanceDriver):
                 ("--include-hidden" if request.options.include_hidden else "--exclude-hidden"),
             ]
         )
+        scan = dict(outer["scan"])
+        scan["input_dir"] = scan.pop("input_path")
+        return scan
 
     def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
-        return self._invoke(
+        outer = self._invoke(
             [
                 "preview",
                 str(request.input_path),
@@ -1044,6 +1050,9 @@ class RemoteCLIConformanceDriver(PythonSDKConformanceDriver):
                 *CLIConformanceDriver._option_args(request),
             ]
         )
+        result = dict(outer["result"])
+        result["plan"] = outer["plan"]
+        return result
 
     def _execute(
         self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
@@ -1066,6 +1075,8 @@ class RemoteCLIConformanceDriver(PythonSDKConformanceDriver):
         result = outer.get("result")
         if not isinstance(result, dict):
             raise AssertionError(f"fo api execution omitted its result: {outer}")
+        result = dict(result)
+        result["plan"] = outer["plan"]
         return result
 
 

@@ -12,11 +12,18 @@ if TYPE_CHECKING:
     from file_organizer.client.models import OrganizationOptionsPayload, OrganizationPlanPayload
     from file_organizer.client.sync_client import FileOrganizerClient
 
+import httpx
 import typer
 from click.core import ParameterSource
 from rich.console import Console
 from rich.table import Table
 
+from file_organizer.cli.organize import (
+    _emit_json,
+    _error_code_exit_code,
+    _json_success_payload,
+    _raise_cli_contract_error,
+)
 from file_organizer.utils.atomic_write import atomic_write_text
 
 api_app = typer.Typer(
@@ -74,51 +81,84 @@ def _build_client(
     ), ClientError
 
 
-def _print_json(payload: object) -> None:
-    """Print one deterministic JSON document without terminal wrapping.
+def _success_payload(
+    command: str,
+    result: Any,
+    *,
+    request: dict[str, Any] | None = None,
+    scan: dict[str, Any] | None = None,
+    plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the shared CLI success envelope for a remote result."""
+    return _json_success_payload(
+        command,
+        mode="remote",
+        request=request,
+        scan=scan,
+        result=result,
+        plan=plan,
+    )
 
-    Args:
-        payload: Any Python object to serialize and print as JSON.
-    """
-    typer.echo(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str))
 
-
-def _client_error_payload(exc: ClientError) -> dict[str, Any]:
-    """Return the official SDK error without changing its domain meaning."""
+def _client_error_payload(exc: Exception) -> dict[str, Any]:
+    """Return the official SDK error in the shared CLI error shape."""
+    status_code = int(getattr(exc, "status_code", 0))
+    fallback_codes = {404: "not_found", 409: "conflict", 422: "invalid_request"}
     return {
-        "error": getattr(exc, "error_code", "") or "client_error",
+        "code": getattr(exc, "error_code", "") or fallback_codes.get(status_code, "client_error"),
         "message": getattr(exc, "detail", "") or str(exc),
         "retryable": bool(getattr(exc, "retryable", False)),
         "details": getattr(exc, "details", None) or {},
-        "status_code": int(getattr(exc, "status_code", 0)),
     }
 
 
-def _raise_client_error(label: str, exc: ClientError, *, as_json: bool) -> None:
-    """Render one remote failure consistently and terminate the command."""
-    if as_json:
-        _print_json(_client_error_payload(exc))
+def _raise_remote_error(command: str, exc: Exception, *, as_json: bool) -> None:
+    """Normalize SDK and transport failures through the shared CLI contract."""
+    if isinstance(exc, httpx.RequestError):
+        error = {
+            "code": "transport_error",
+            "message": str(exc) or "Unable to reach the File Organizer API.",
+            "retryable": True,
+            "details": {"error_type": type(exc).__name__},
+        }
     else:
-        console.print(f"[red]{label}:[/red] {getattr(exc, 'detail', '') or exc}")
-    raise typer.Exit(code=1) from exc
+        error = _client_error_payload(exc)
+    exit_code = _error_code_exit_code(str(error["code"]))
+    if not isinstance(exc, httpx.RequestError) and exit_code == 1:
+        status_code = int(getattr(exc, "status_code", 0))
+        if status_code in {400, 404, 422}:
+            exit_code = 2
+        elif status_code == 409:
+            exit_code = 3
+    _raise_cli_contract_error(
+        command,
+        error,
+        json_output=as_json,
+        exit_code=exit_code,
+        cause=exc,
+    )
 
 
-def _raise_request_error(exc: Exception, *, as_json: bool) -> None:
+def _raise_request_error(command: str, exc: Exception, *, as_json: bool) -> None:
     """Render local option/plan validation failures before any remote request."""
-    if as_json:
-        _print_json(
-            {
-                "error": "invalid_request",
-                "message": str(exc),
-                "retryable": False,
-                "details": {},
-                "status_code": 0,
-            }
-        )
-        raise typer.Exit(code=2) from exc
     if isinstance(exc, typer.BadParameter):
-        raise exc
-    raise typer.BadParameter(str(exc)) from exc
+        request_error = exc
+    else:
+        request_error = typer.BadParameter(str(exc))
+    if not as_json:
+        raise request_error from exc
+    _raise_cli_contract_error(
+        command,
+        {
+            "code": "invalid_request",
+            "message": str(exc),
+            "retryable": False,
+            "details": {},
+        },
+        json_output=True,
+        exit_code=2,
+        cause=exc,
+    )
 
 
 def _organization_options(
@@ -202,13 +242,13 @@ def health(
     try:
         result = client.health()
         if as_json:
-            _print_json(result.model_dump())
+            _emit_json(_success_payload("api health", result.model_dump(mode="json")))
             return
         console.print(f"[green]Status:[/green] {result.status}")
         console.print(f"[green]Version:[/green] {result.version}")
         console.print(f"[green]Readiness:[/green] {result.readiness}")
-    except ClientError as exc:
-        _raise_client_error("API error", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api health", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -247,7 +287,7 @@ def remote_capabilities(
             }
         )
     if as_json:
-        _print_json(rows)
+        _emit_json(_success_payload("api capabilities", rows))
         return
     table = Table(title="Remote capability availability")
     table.add_column("Capability")
@@ -280,7 +320,7 @@ def login(
     )
     try:
         tokens = client.login(username, password)
-        payload = tokens.model_dump()
+        payload = tokens.model_dump(mode="json")
         if save_to is not None:
             from file_organizer.cli.path_validation import resolve_cli_path
 
@@ -292,12 +332,12 @@ def login(
             if not as_json:
                 console.print(f"[green]Saved tokens to[/green] {save_to}")
         if as_json:
-            _print_json(payload)
+            _emit_json(_success_payload("api login", payload))
         else:
             console.print("[green]Login successful[/green]")
             console.print("Use --json to print token payload.")
-    except ClientError as exc:
-        _raise_client_error("Login failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api login", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -316,13 +356,13 @@ def me(
     try:
         user = client.me()
         if as_json:
-            _print_json(user.model_dump())
+            _emit_json(_success_payload("api me", user.model_dump(mode="json")))
             return
         console.print(f"[green]User:[/green] {user.username}")
         console.print(f"[green]Email:[/green] {user.email}")
         console.print(f"[green]Admin:[/green] {user.is_admin}")
-    except ClientError as exc:
-        _raise_client_error("Request failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api me", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -341,9 +381,8 @@ def logout(
     try:
         client.logout(refresh_token)
         console.print("[green]Logout successful[/green]")
-    except ClientError as exc:
-        console.print(f"[red]Logout failed:[/red] {exc}")
-        raise typer.Exit(code=1) from exc
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api logout", exc, as_json=False)
     finally:
         client.close()
 
@@ -372,7 +411,7 @@ def files_list(
             limit=limit,
         )
         if as_json:
-            _print_json(result.model_dump())
+            _emit_json(_success_payload("api files", result.model_dump(mode="json")))
             return
         table = Table(title=f"Files ({result.total})")
         table.add_column("Name")
@@ -381,8 +420,8 @@ def files_list(
         for item in result.items:
             table.add_row(item.name, item.file_type, str(item.size))
         console.print(table)
-    except ClientError as exc:
-        _raise_client_error("Request failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api files", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -414,13 +453,33 @@ def organization_scan(
         )
         payload = result.model_dump(mode="json")
         if as_json:
-            _print_json(payload)
+            scan = {
+                "input_path": payload.get("input_dir", input_dir),
+                "files": payload.get("files", []),
+                "counts": payload.get("counts", {}),
+                "total_files": payload.get("total_files", 0),
+            }
+            _emit_json(
+                _success_payload(
+                    "api scan",
+                    None,
+                    request={
+                        "input_path": input_dir,
+                        "output_path": None,
+                        "options": {
+                            "recursive": recursive,
+                            "include_hidden": include_hidden,
+                        },
+                    },
+                    scan=scan,
+                )
+            )
             return
         console.print(f"[green]Scanned:[/green] {result.total_files} files")
         for category, count in sorted(result.counts.items()):
             console.print(f"  {category}: {count}")
-    except ClientError as exc:
-        _raise_client_error("Remote scan failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api scan", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -494,15 +553,27 @@ def organization_preview(
         else:
             destination = None
         if as_json:
-            _print_json(payload)
+            plan_payload = payload.pop("plan", None)
+            _emit_json(
+                _success_payload(
+                    "api preview",
+                    payload,
+                    request={
+                        "input_path": input_dir,
+                        "output_path": output_dir,
+                        "options": options.model_dump(mode="json"),
+                    },
+                    plan=plan_payload,
+                )
+            )
             return
         console.print(f"[green]Preview:[/green] {result.total_files} files")
         if destination is not None:
             console.print(f"[green]Plan saved:[/green] {destination}")
-    except ClientError as exc:
-        _raise_client_error("Remote preview failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api preview", exc, as_json=as_json)
     except (OSError, ValueError, typer.BadParameter) as exc:
-        _raise_request_error(exc, as_json=as_json)
+        _raise_request_error("api preview", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -595,7 +666,31 @@ def organization_execute(
         )
         payload = result.model_dump(mode="json")
         if as_json:
-            _print_json(payload)
+            operation_result = payload.get("result")
+            if isinstance(operation_result, dict):
+                operation_result = dict(operation_result)
+                plan_payload = operation_result.pop("plan", None)
+            else:
+                operation_result = payload
+                plan_payload = None
+            if options is not None:
+                request_options = options.model_dump(mode="json")
+            elif (plan_options := getattr(plan, "options", None)) is not None:
+                request_options = plan_options.model_dump(mode="json")
+            else:
+                request_options = None
+            _emit_json(
+                _success_payload(
+                    "api organize",
+                    operation_result,
+                    request={
+                        "input_path": input_dir,
+                        "output_path": output_dir,
+                        "options": request_options,
+                    },
+                    plan=plan_payload,
+                )
+            )
             return
         if result.job_id is not None:
             console.print(f"[green]Queued job:[/green] {result.job_id}")
@@ -606,10 +701,10 @@ def organization_execute(
             )
         else:
             console.print(f"[yellow]Remote status:[/yellow] {result.status}")
-    except ClientError as exc:
-        _raise_client_error("Remote organization failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api organize", exc, as_json=as_json)
     except (OSError, ValueError, typer.BadParameter) as exc:
-        _raise_request_error(exc, as_json=as_json)
+        _raise_request_error("api organize", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -630,13 +725,13 @@ def organization_job(
     try:
         job = client.get_job(job_id)
         if as_json:
-            _print_json(job.model_dump(mode="json"))
+            _emit_json(_success_payload("api job", job.model_dump(mode="json")))
             return
         console.print(f"[green]Job:[/green] {job.job_id}")
         console.print(f"[green]Status:[/green] {job.status}")
         console.print(f"[green]Revision:[/green] {job.revision}")
-    except ClientError as exc:
-        _raise_client_error("Remote job lookup failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api job", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -658,7 +753,7 @@ def organization_jobs(
     try:
         jobs = client.list_jobs(status=status, limit=limit)
         if as_json:
-            _print_json([job.model_dump(mode="json") for job in jobs])
+            _emit_json(_success_payload("api jobs", [job.model_dump(mode="json") for job in jobs]))
             return
         table = Table(title=f"Organization jobs ({len(jobs)})")
         table.add_column("Job")
@@ -667,8 +762,8 @@ def organization_jobs(
         for job in jobs:
             table.add_row(job.job_id, job.status, str(job.revision))
         console.print(table)
-    except ClientError as exc:
-        _raise_client_error("Remote job listing failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api jobs", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -692,11 +787,11 @@ def _mutate_organization_job(
         operation = client.cancel_job if action == "cancel" else client.rollback_job
         job = operation(job_id, expected_revision=expected_revision)
         if as_json:
-            _print_json(job.model_dump(mode="json"))
+            _emit_json(_success_payload(f"api {action}", job.model_dump(mode="json")))
             return
         console.print(f"[green]Job {action} accepted:[/green] {job.job_id} ({job.status})")
-    except ClientError as exc:
-        _raise_client_error(f"Remote job {action} failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error(f"api {action}", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -773,12 +868,12 @@ def organization_suggest(
             folder_suggestion=folder_suggestion,
         )
         if as_json:
-            _print_json(payload)
+            _emit_json(_success_payload("api suggest", payload))
             return
         console.print(f"[green]File:[/green] {payload.get('filename', filename)}")
         console.print(f"[green]Folder:[/green] {payload.get('folder_suggestion', '')}")
-    except ClientError as exc:
-        _raise_client_error("Remote suggestion failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api suggest", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -799,13 +894,13 @@ def system_status(
     try:
         result = client.system_status(path)
         if as_json:
-            _print_json(result.model_dump())
+            _emit_json(_success_payload("api system-status", result.model_dump(mode="json")))
             return
         console.print(f"[green]Disk free:[/green] {result.disk_free}")
         console.print(f"[green]Disk used:[/green] {result.disk_used}")
         console.print(f"[green]Active jobs:[/green] {result.active_jobs}")
-    except ClientError as exc:
-        _raise_client_error("Request failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api system-status", exc, as_json=as_json)
     finally:
         client.close()
 
@@ -828,12 +923,12 @@ def system_stats(
     try:
         stats = client.system_stats(path=path, max_depth=max_depth, use_cache=use_cache)
         if as_json:
-            _print_json(stats.model_dump())
+            _emit_json(_success_payload("api system-stats", stats.model_dump(mode="json")))
             return
         console.print(f"[green]File count:[/green] {stats.file_count}")
         console.print(f"[green]Directory count:[/green] {stats.directory_count}")
         console.print(f"[green]Total size:[/green] {stats.total_size}")
-    except ClientError as exc:
-        _raise_client_error("Request failed", exc, as_json=as_json)
+    except (ClientError, httpx.RequestError) as exc:
+        _raise_remote_error("api system-stats", exc, as_json=as_json)
     finally:
         client.close()
