@@ -20,14 +20,12 @@ def avatar_path(user_id: str, avatar_dir: Path) -> Path:
     Raises:
         ValueError: If user_id contains path-traversal characters or is empty.
     """
-    clean_id = os.path.basename(user_id)
-    if not clean_id or clean_id != user_id or ".." in clean_id or not SAFE_USER_ID.match(clean_id):
+    if not user_id or not SAFE_USER_ID.match(user_id):
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    avatar_root = str(avatar_dir.resolve())
-    fullpath = os.path.normpath(os.path.join(avatar_root, f"{clean_id}.png"))
-    if os.path.commonpath([avatar_root, fullpath]) != avatar_root or fullpath == avatar_root:
+    result = avatar_dir / f"{user_id}.png"
+    if not result.resolve().is_relative_to(avatar_dir.resolve()):
         raise ValueError(f"Invalid user_id: {user_id!r}")
-    return Path(fullpath)
+    return result
 
 
 def resolve_avatar_for_read(

@@ -507,11 +507,8 @@ def reset_password_submit(
 @profile_router.get("/profile/avatar/{user_id}")
 def profile_avatar(user_id: str) -> Response:
     """Serve the avatar image for *user_id*, or a placeholder PNG."""
-    clean_id = os.path.basename(user_id)
-    if not clean_id or clean_id != user_id:
-        return HTMLResponse(status_code=400, content="Invalid user ID")
     try:
-        path = _resolve_avatar_for_read(clean_id)
+        path = _resolve_avatar_for_read(user_id)
     except ValueError:
         return HTMLResponse(status_code=400, content="Invalid user ID")
     except FileNotFoundError:
