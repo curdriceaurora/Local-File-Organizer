@@ -29,6 +29,7 @@ def _endpoint(
     typescript_method: str,
     *additional_capabilities: str,
 ) -> ClientEndpoint:
+    """Build one normalized public endpoint inventory entry."""
     return ClientEndpoint(
         method,
         path,
@@ -261,7 +262,7 @@ PUBLIC_ENDPOINTS: tuple[ClientEndpoint, ...] = (
     _endpoint(
         "POST",
         "/api/v1/organize",
-        "organization.execute",
+        "organization.suggest",
         "suggest_organization",
         "suggestOrganization",
     ),

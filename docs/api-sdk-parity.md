@@ -7,8 +7,15 @@ synchronous Python, asynchronous Python, and TypeScript methods.
 
 CI compares that specification with the generated OpenAPI document and the
 three client surfaces. TypeScript inventory uses the compiler API rather than
-format-sensitive source matching, and the client is compiled under strict
-settings before its transport tests run. Adding, removing, or renaming a
+format-sensitive source matching. The AST-derived public method list is committed as
+`file_organizer/client/typescript/methods.generated.json`; the blocking Python inventory test
+compares that artifact with both the endpoint specification and capability registry, while the
+Node test checks the artifact against `client.ts`. After adding or renaming a TypeScript client
+method, run `npm run generate:methods` in the TypeScript client directory and commit the result.
+
+The TypeScript client is compiled under strict settings before its transport tests run. That Node
+job remains advisory until #1606 promotes the conformance suites, while the committed inventory
+artifact keeps registry/spec drift in the blocking Python suite. Adding, removing, or renaming a
 public route therefore requires an intentional SDK mapping in the same change.
 
 ## Organization behavior
@@ -27,7 +34,10 @@ SDKs.
 The shared conformance corpus runs through REST and both Python SDK clients in
 addition to the direct service and CLI. TypeScript transport tests assert the
 canonical organization payload, ordered scan results, and typed error
-envelopes using a mocked Fetch implementation.
+envelopes using a mocked Fetch implementation. These are intentionally different evidence shapes:
+REST and Python verification comes from golden corpus vectors, while future TypeScript verification
+will cite strict compilation, AST inventory, type contracts, and fetch-stub behavior tests rather
+than claiming the Python-hosted corpus ran against TypeScript.
 
 ## Errors and operation IDs
 

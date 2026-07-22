@@ -83,3 +83,11 @@ def test_endpoint_spec_matches_capability_ownership() -> None:
                 f"FileOrganizerClient.{endpoint.typescript_method}"
                 in capability.support_for(Surface.TYPESCRIPT_SDK).entry_points
             )
+
+
+def test_single_file_suggestion_is_not_owned_by_plan_execution() -> None:
+    suggestion = next(
+        endpoint for endpoint in PUBLIC_ENDPOINTS if endpoint.key == "POST /api/v1/organize"
+    )
+
+    assert suggestion.capability_ids == ("organization.suggest",)

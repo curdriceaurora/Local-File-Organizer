@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate:methods": "node scripts/method-inventory.mjs",
+    "check:methods": "node scripts/method-inventory.mjs --check",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck && node --experimental-strip-types --test test/*.test.mjs"
+    "test": "npm run typecheck && npm run check:methods && node --experimental-strip-types --test test/*.test.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

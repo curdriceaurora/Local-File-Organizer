@@ -5,13 +5,15 @@ import { dirname, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript";
-
 import {
   ClientError,
   FileOrganizerClient,
   ValidationError,
 } from "../client.ts";
+import {
+  inventoryPath,
+  readPublicClientMethods,
+} from "../scripts/method-inventory.mjs";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const packageDirectory = resolve(testDirectory, "..");
@@ -38,22 +40,9 @@ function captureFetch(responsePayload, status = 200) {
   return calls;
 }
 
-test("public endpoint inventory is parsed structurally", () => {
-  const sourcePath = resolve(packageDirectory, "client.ts");
-  const source = readFileSync(sourcePath, "utf8");
-  const tree = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true);
-  const client = tree.statements.find(
-    (statement) => ts.isClassDeclaration(statement) && statement.name?.text === "FileOrganizerClient"
-  );
-  assert.ok(client && ts.isClassDeclaration(client));
-  const declared = new Set(
-    client.members
-      .filter(ts.isMethodDeclaration)
-      .map((member) => member.name)
-      .filter(ts.isIdentifier)
-      .map((name) => name.text)
-  );
-
+test("public endpoint inventory matches source, endpoint spec, and generated artifact", () => {
+  const declared = readPublicClientMethods();
+  const inventory = JSON.parse(readFileSync(inventoryPath, "utf8"));
   const python = process.env.PYTHON ?? "python3";
   const expected = JSON.parse(
     execFileSync(
@@ -74,7 +63,9 @@ test("public endpoint inventory is parsed structurally", () => {
     )
   );
 
-  assert.deepEqual(expected.filter((name) => !declared.has(name)), []);
+  assert.equal(inventory.schema_version, 1);
+  assert.deepEqual(inventory.methods, declared);
+  assert.deepEqual(inventory.methods, expected);
 });
 
 test("scan sends canonical traversal options and returns ordered files", async () => {

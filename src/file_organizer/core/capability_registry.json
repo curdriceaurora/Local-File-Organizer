@@ -1717,9 +1717,7 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileOrganizerClient.organize",
-            "AsyncFileOrganizerClient.organize",
-            "FileOrganizerClient.suggest_organization",
-            "AsyncFileOrganizerClient.suggest_organization"
+            "AsyncFileOrganizerClient.organize"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1727,7 +1725,6 @@
         "rest-api": {
           "conformance_status": "unverified",
           "entry_points": [
-            "POST /api/v1/organize",
             "POST /api/v1/organize/execute"
           ],
           "implementation_status": "implemented",
@@ -1744,8 +1741,7 @@
         "typescript-sdk": {
           "conformance_status": "unverified",
           "entry_points": [
-            "FileOrganizerClient.organize",
-            "FileOrganizerClient.suggestOrganization"
+            "FileOrganizerClient.organize"
           ],
           "implementation_status": "implemented",
           "target_support": "full"
@@ -1873,7 +1869,7 @@
           "target_support": "full"
         },
         "python-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.preview_organize",
             "AsyncFileOrganizerClient.preview_organize"
@@ -1882,7 +1878,7 @@
           "target_support": "full"
         },
         "rest-api": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "POST /api/v1/organize/preview"
           ],
@@ -1944,7 +1940,7 @@
           "target_support": "full"
         },
         "python-sdk": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "FileOrganizerClient.scan",
             "AsyncFileOrganizerClient.scan"
@@ -1953,7 +1949,7 @@
           "target_support": "full"
         },
         "rest-api": {
-          "conformance_status": "unverified",
+          "conformance_status": "verified",
           "entry_points": [
             "POST /api/v1/organize/scan"
           ],
@@ -1983,6 +1979,68 @@
             "POST /ui/organize/scan"
           ],
           "implementation_status": "implemented",
+          "target_support": "full"
+        }
+      }
+    },
+    {
+      "description": "Return naming and folder suggestions for one file without applying an organization plan.",
+      "execution_scopes": [
+        "local-only",
+        "remote",
+        "auth-gated"
+      ],
+      "id": "organization.suggest",
+      "maturity": "stable",
+      "name": "Single-file organization suggestion",
+      "optional_dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "surfaces": {
+        "cli": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "python-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.suggest_organization",
+            "AsyncFileOrganizerClient.suggest_organization"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "rest-api": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "POST /api/v1/organize"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "tui": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
+          "target_support": "full"
+        },
+        "typescript-sdk": {
+          "conformance_status": "unverified",
+          "entry_points": [
+            "FileOrganizerClient.suggestOrganization"
+          ],
+          "implementation_status": "implemented",
+          "target_support": "full"
+        },
+        "web-desktop": {
+          "conformance_status": "unverified",
+          "entry_points": [],
+          "implementation_status": "not-implemented",
           "target_support": "full"
         }
       }
