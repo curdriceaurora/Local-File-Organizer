@@ -44,13 +44,13 @@ class HardwareProfile:
         arch: CPU architecture (``arm64``, ``x86_64``, etc.).
     """
 
-    gpu_type: GpuType
-    gpu_name: str | None
-    vram_bytes: int
-    ram_bytes: int
-    cpu_cores: int
-    os_name: str
-    arch: str
+    gpu_type: GpuType  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    gpu_name: str | None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    vram_bytes: int  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    ram_bytes: int  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    cpu_cores: int  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    os_name: str  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    arch: str  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
 
     @property
     def vram_gb(self) -> float:
