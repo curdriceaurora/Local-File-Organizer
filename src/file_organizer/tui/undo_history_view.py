@@ -20,6 +20,37 @@ from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
     from file_organizer.history.models import Operation
+    from file_organizer.tui.workspace import TUIWorkspace
+
+
+class CanonicalLifecyclePanel(Static):
+    """Show the shared job/result/error state and intentional support limits."""
+
+    def set_workspace(self, workspace: TUIWorkspace | None) -> None:
+        """Render canonical lifecycle state for the current TUI session."""
+        if workspace is None:
+            self.update("[b]Canonical Lifecycle[/b]\n\n  [dim]No shared session attached.[/dim]")
+            return
+        job = workspace.active_job
+        job_text = f"{job.job_id} ({job.status.value})" if job is not None else "none"
+        result = workspace.last_result
+        result_text = (
+            f"{result.processed_files} processed / {result.failed_files} failed"
+            if result is not None
+            else "none"
+        )
+        error_text = workspace.last_error.message if workspace.last_error is not None else "none"
+        support = workspace.capability_status("organization.jobs-recovery")
+        self.update(
+            "[b]Canonical Lifecycle[/b]\n\n"
+            f"  active job: {job_text}\n"
+            f"  last result: {result_text}\n"
+            f"  last error: {error_text}\n"
+            f"  registry: {support}\n\n"
+            "[dim]Local TUI execution is synchronous: in-flight cancellation is unsupported. "
+            "Undo/redo provide operation-history recovery; press b to roll back the latest "
+            "undoable operation.[/dim]"
+        )
 
 
 class OperationHistoryPanel(Static):
@@ -195,21 +226,28 @@ class UndoHistoryView(StatusMixin, Vertical):
         Binding("r", "refresh_history", "Refresh", show=True),
         Binding("u", "undo_last", "Undo", show=True),
         Binding("y", "redo_last", "Redo", show=True),
+        Binding("b", "rollback_last", "Rollback", show=True),
+        Binding("c", "cancel_active", "Cancel Job", show=True),
     ]
 
     def __init__(
         self,
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the undo history view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
+        self._workspace = workspace
 
     def compose(self) -> ComposeResult:
         """Build the undo/history layout."""
         yield Static("[b]Undo / Redo & Operation History[/b]\n", id="history-header")
+        lifecycle = CanonicalLifecyclePanel()
+        lifecycle.set_workspace(self._workspace)
+        yield lifecycle
         yield OperationHistoryPanel("[dim]Loading...[/dim]")
         yield UndoRedoStackPanel("[dim]Loading...[/dim]")
         yield HistoryStatsPanel("[dim]Loading...[/dim]")
@@ -231,6 +269,15 @@ class UndoHistoryView(StatusMixin, Vertical):
     def action_redo_last(self) -> None:
         """Redo the most recently undone operation."""
         self._run_redo()
+
+    def action_rollback_last(self) -> None:
+        """Roll back the latest undoable operation through the history manager."""
+        self._set_status("Rolling back latest undoable operation...")
+        self._run_undo()
+
+    def action_cancel_active(self) -> None:
+        """Explain the intentional cancellation limit for synchronous TUI runs."""
+        self._set_status("No asynchronous TUI job to cancel; local execution is synchronous.")
 
     @work(thread=True)
     def _load_history(self) -> None:

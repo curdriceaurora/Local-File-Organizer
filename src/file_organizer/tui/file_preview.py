@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual import on, work
 from textual.app import ComposeResult
@@ -18,6 +19,9 @@ from textual.message import Message
 from textual.widgets import Static
 
 from file_organizer.tui.file_browser import FileBrowserView
+
+if TYPE_CHECKING:
+    from file_organizer.tui.workspace import TUIWorkspace
 
 logger = logging.getLogger(__name__)
 
@@ -278,20 +282,32 @@ class FilePreviewView(Horizontal):
 
     def __init__(
         self,
-        path: str | Path = ".",
+        path: str | Path | None = ".",
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the file preview view rooted at the given path."""
         super().__init__(name=name, id=id, classes=classes)
-        self._root_path = Path(path)
+        self._workspace = workspace
+        resolved_path = workspace.active_root if workspace is not None else path
+        self._root_path = Path(resolved_path) if resolved_path is not None else None
         self.selection = FileSelectionManager()
+        if workspace is not None:
+            self.selection.select_all(workspace.selected_files)
         self._current_path: Path | None = None
 
     def compose(self) -> ComposeResult:
         """Build the split-pane layout."""
+        if self._root_path is None:
+            yield Static(
+                "[yellow]Source directory is unset.[/yellow]\n\n"
+                "Open Settings (7), enter explicit source and output directories, then save.",
+                id="files-source-required",
+            )
+            return
         yield FileBrowserView(self._root_path)
         yield FilePreviewPanel("[dim]Select a file to preview[/dim]")
 
@@ -313,6 +329,8 @@ class FilePreviewView(Horizontal):
 
     def action_select_all(self) -> None:
         """Select all files in the current directory."""
+        if self._root_path is None:
+            return
         try:
             all_files = {p for p in self._root_path.rglob("*") if p.is_file()}
             self.selection.select_all(all_files)
@@ -327,6 +345,8 @@ class FilePreviewView(Horizontal):
 
     def _notify_selection(self) -> None:
         """Post a ``SelectionChanged`` message and update the status bar."""
+        if self._workspace is not None:
+            self._workspace.set_selected_files(self.selection.selected_files)
         self.post_message(self.SelectionChanged(self.selection.count))
         # Try to update the app's status bar if available
         try:

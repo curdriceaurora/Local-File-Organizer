@@ -1736,9 +1736,10 @@
         "tui": {
           "conformance_status": "unverified",
           "entry_points": [
-            "OrganizationPreviewView"
+            "OrganizationPreviewView",
+            "TUIOrganizationAdapter.execute"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "typescript-sdk": {
@@ -1896,9 +1897,10 @@
         "tui": {
           "conformance_status": "unverified",
           "entry_points": [
-            "OrganizationPreviewView"
+            "OrganizationPreviewView",
+            "TUIOrganizationAdapter.preview"
           ],
-          "implementation_status": "partial",
+          "implementation_status": "implemented",
           "target_support": "full"
         },
         "typescript-sdk": {
@@ -1969,7 +1971,8 @@
           "conformance_status": "unverified",
           "entry_points": [
             "FileBrowserView",
-            "OrganizationPreviewView"
+            "OrganizationPreviewView",
+            "TUIOrganizationAdapter.scan"
           ],
           "implementation_status": "partial",
           "target_support": "full"

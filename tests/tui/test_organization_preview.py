@@ -336,7 +336,7 @@ class TestOrganizationPreviewView:
     def test_compose_yields_widgets(self) -> None:
         view = OrganizationPreviewView()
         widgets = list(view.compose())
-        assert len(widgets) == 3
+        assert len(widgets) == 4
 
     def test_on_mount_calls_load_preview(self) -> None:
         view = OrganizationPreviewView()
@@ -442,7 +442,6 @@ class TestOrganizationPreviewView:
             pass
 
         with (
-            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
             ) as mock_settings,
@@ -450,9 +449,9 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
-            mock_instance = mock_org.return_value
+            mock_service = MagicMock()
             plan = _make_plan(tmp_path)
-            mock_instance.organize.return_value = SimpleNamespace(
+            mock_service.preview.return_value = SimpleNamespace(
                 organized_structure={"A": ["b.txt"]},
                 total_files=1,
                 processed_files=1,
@@ -465,15 +464,15 @@ class TestOrganizationPreviewView:
             app = MockApp()
             async with app.run_test():
                 view = OrganizationPreviewView()
+                view._create_service = MagicMock(return_value=mock_service)
                 await app.mount(view)
 
                 for worker in view.workers:
                     await worker.wait()
 
-                mock_instance.organize.assert_called_once_with(
-                    input_path=view._input_dir,
-                    output_path=view._output_dir,
-                )
+                request = mock_service.preview.call_args.args[0]
+                assert request.input_path == view._input_dir
+                assert request.output_path == view._output_dir
 
                 panel = view.query_one(BeforeAfterPanel)
                 assert "A/" in str(panel.render())
@@ -486,7 +485,6 @@ class TestOrganizationPreviewView:
             pass
 
         with (
-            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
             ) as mock_settings,
@@ -494,12 +492,13 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
-            mock_instance = mock_org.return_value
-            mock_instance.organize.side_effect = Exception("test error")
+            mock_service = MagicMock()
+            mock_service.preview.side_effect = Exception("test error")
 
             app = MockApp()
             async with app.run_test():
                 view = OrganizationPreviewView()
+                view._create_service = MagicMock(return_value=mock_service)
                 await app.mount(view)
 
                 for worker in view.workers:
@@ -507,7 +506,7 @@ class TestOrganizationPreviewView:
 
                 panel = view.query_one(BeforeAfterPanel)
                 rendered = str(panel.render())
-                assert "Models unavailable" in rendered
+                assert "Preview unavailable" in rendered
                 assert "test error" in rendered
 
     @pytest.mark.asyncio
@@ -518,7 +517,6 @@ class TestOrganizationPreviewView:
             pass
 
         with (
-            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
             ) as mock_settings,
@@ -529,11 +527,13 @@ class TestOrganizationPreviewView:
             mock_result = MagicMock()
             mock_result.total_files = 1
             mock_result.plan = None
-            mock_org.return_value.organize.return_value = mock_result
+            mock_service = MagicMock()
+            mock_service.preview.return_value = mock_result
 
             app = MockApp()
             async with app.run_test():
                 view = OrganizationPreviewView()
+                view._create_service = MagicMock(return_value=mock_service)
                 await app.mount(view)
 
                 for worker in view.workers:
@@ -588,16 +588,13 @@ class TestOrganizationPreviewView:
         class MockApp(App):
             action_switch_view = MagicMock()
 
-        with (
-            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
-            patch(
-                "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
-            ) as mock_settings,
-        ):
+        with patch(
+            "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
+        ) as mock_settings:
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
-            mock_instance = mock_org.return_value
+            mock_service = MagicMock()
             plan = _make_plan(tmp_path)
             result = SimpleNamespace(
                 organized_structure={"A": ["b.txt"]},
@@ -608,27 +605,29 @@ class TestOrganizationPreviewView:
                 errors=[],
                 plan=plan,
             )
-            mock_instance.organize.return_value = result
-            mock_instance.execute_plan.return_value = result
+            mock_service.preview.return_value = result
+            mock_service.execute.return_value = result
 
             app = MockApp()
             async with app.run_test():
                 view = OrganizationPreviewView()
+                view._create_service = MagicMock(return_value=mock_service)
                 await app.mount(view)
 
                 for worker in view.workers:
                     await worker.wait()
 
-                mock_instance.organize.reset_mock()
-                mock_instance.execute_plan.reset_mock()
+                mock_service.preview.reset_mock()
+                mock_service.execute.reset_mock()
 
                 view.action_confirm()
 
                 for worker in view.workers:
                     await worker.wait()
 
-                mock_instance.organize.assert_not_called()
-                mock_instance.execute_plan.assert_called_once_with(plan)
+                mock_service.preview.assert_not_called()
+                mock_service.execute.assert_called_once()
+                assert mock_service.execute.call_args.args[1] is plan
 
                 app.action_switch_view.assert_called_once_with("history")
 
@@ -640,7 +639,6 @@ class TestOrganizationPreviewView:
             action_switch_view = MagicMock()
 
         with (
-            patch("file_organizer.core.organizer.FileOrganizer") as mock_org,
             patch(
                 "file_organizer.tui.organization_preview.load_parallel_runtime_settings"
             ) as mock_settings,
@@ -648,7 +646,7 @@ class TestOrganizationPreviewView:
             mock_settings.return_value.max_workers = 2
             mock_settings.return_value.prefetch_depth = 4
 
-            mock_instance = mock_org.return_value
+            mock_service = MagicMock()
             plan = _make_plan(tmp_path)
             result = SimpleNamespace(
                 organized_structure={"A": ["b.txt"]},
@@ -659,18 +657,17 @@ class TestOrganizationPreviewView:
                 errors=[],
                 plan=plan,
             )
-            mock_instance.organize.return_value = result
-            mock_instance.execute_plan.return_value = result
+            mock_service.preview.return_value = result
+            mock_service.execute.side_effect = Exception("apply error")
 
             app = MockApp()
             async with app.run_test():
                 view = OrganizationPreviewView()
+                view._create_service = MagicMock(return_value=mock_service)
                 await app.mount(view)
 
                 for worker in view.workers:
                     await worker.wait()
-
-                mock_instance.execute_plan.side_effect = Exception("apply error")
 
                 view.action_confirm()
 

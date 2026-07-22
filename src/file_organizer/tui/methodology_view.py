@@ -8,6 +8,7 @@ or none) and preview how files would be categorized under the selected scheme.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual import work
 from textual.app import ComposeResult
@@ -16,6 +17,9 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from file_organizer.tui.status import StatusMixin
+
+if TYPE_CHECKING:
+    from file_organizer.tui.workspace import TUIWorkspace
 
 
 class MethodologySelectorPanel(Static):
@@ -172,16 +176,21 @@ class MethodologyView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        scan_dir: str | Path = ".",
+        scan_dir: str | Path | None = ".",
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the methodology view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
-        self._scan_dir = Path(scan_dir)
-        self._methodology = "none"
+        self._workspace = workspace
+        resolved_dir = workspace.active_root if workspace is not None else scan_dir
+        self._scan_dir = Path(resolved_dir) if resolved_dir is not None else None
+        self._methodology = (
+            workspace.options.effective_methodology.value if workspace is not None else "none"
+        )
 
     def compose(self) -> ComposeResult:
         """Build the methodology view layout."""
@@ -190,24 +199,27 @@ class MethodologyView(StatusMixin, Vertical):
 
     def on_mount(self) -> None:
         """Show initial preview."""
+        self.query_one(MethodologySelectorPanel).set_methodology(self._methodology)
         self._update_preview()
 
     def action_set_para(self) -> None:
         """Switch to PARA methodology."""
-        self._methodology = "para"
-        self.query_one(MethodologySelectorPanel).set_methodology("para")
-        self._update_preview()
+        self._set_methodology("para")
 
     def action_set_jd(self) -> None:
         """Switch to Johnny Decimal methodology."""
-        self._methodology = "jd"
-        self.query_one(MethodologySelectorPanel).set_methodology("jd")
-        self._update_preview()
+        self._set_methodology("jd")
 
     def action_set_none(self) -> None:
         """Switch to no methodology."""
-        self._methodology = "none"
-        self.query_one(MethodologySelectorPanel).set_methodology("none")
+        self._set_methodology("none")
+
+    def _set_methodology(self, methodology: str) -> None:
+        """Update the shared canonical methodology and its preview."""
+        self._methodology = methodology
+        if self._workspace is not None:
+            self._workspace.set_options(methodology=methodology)
+        self.query_one(MethodologySelectorPanel).set_methodology(methodology)
         self._update_preview()
 
     def action_migrate(self) -> None:
@@ -236,7 +248,14 @@ class MethodologyView(StatusMixin, Vertical):
 
             mapper = CategoryFolderMapper()
             scan = self._scan_dir
-            files = [p for p in scan.rglob("*") if p.is_file()][: self._MAX_SAMPLE_FILES]
+            if scan is None:
+                raise ValueError("Set a source directory in Settings before methodology preview.")
+            if self._workspace is not None and self._workspace.selected_files:
+                files = sorted(path for path in self._workspace.selected_files if path.is_file())[
+                    : self._MAX_SAMPLE_FILES
+                ]
+            else:
+                files = [p for p in scan.rglob("*") if p.is_file()][: self._MAX_SAMPLE_FILES]
 
             if not files:
                 self.app.call_from_thread(

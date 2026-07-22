@@ -20,6 +20,13 @@ def tui_completed_setup(
 
     mock_config = MagicMock()
     mock_config.setup_completed = True
+    mock_config.default_input_dir = str(tmp_path)
+    mock_config.default_output_dir = str(tmp_path / "organized")
+    mock_config.default_methodology = "none"
+    mock_config.parallel = {}
+    mock_config.models.framework = "ollama"
+    mock_config.models.text_model = None
+    mock_config.models.vision_model = None
     mock_config_manager = MagicMock()
     mock_config_manager.load.return_value = mock_config
 

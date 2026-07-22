@@ -18,6 +18,7 @@ from textual.widgets import Footer, Header, Static
 
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.schema import AppConfig
+from file_organizer.tui.workspace import TUIWorkspace
 
 
 class WizardCompleteMessage(Message):
@@ -205,6 +206,7 @@ class FileOrganizerApp(App[None]):
         super().__init__()
         self._current_view = "files"
         self._config_manager = ConfigManager()
+        self.workspace = TUIWorkspace.from_config(self._config_manager)
         self._setup_needed = self._check_setup_needed()
         self._in_wizard = self._setup_needed
 
@@ -238,7 +240,7 @@ class FileOrganizerApp(App[None]):
                 with Horizontal():
                     yield Sidebar()
                     with Vertical(id="main-content"):
-                        yield self._create_view("files")
+                        yield self._create_view("files", self.workspace)
         yield StatusBar()
         yield Footer()
 
@@ -265,6 +267,7 @@ class FileOrganizerApp(App[None]):
             # unsupported-version profile rather than crash on the save guard (#1276).
             ConfigManager.mark_setup_completed(config)  # pragma: no cover
             self._config_manager.save(config, force=True)
+            self.workspace = TUIWorkspace.from_config(self._config_manager)
 
             # Update internal state
             self._in_wizard = False
@@ -280,7 +283,7 @@ class FileOrganizerApp(App[None]):
                     Horizontal(
                         Sidebar(),
                         Vertical(
-                            self._create_view("files"),
+                            self._create_view("files", self.workspace),
                             id="main-content",
                         ),
                     )
@@ -324,7 +327,7 @@ class FileOrganizerApp(App[None]):
         self._current_view = name
         old = self.query_one("#view")
         await old.remove()
-        new_view = self._create_view(name)
+        new_view = self._create_view(name, self.workspace)
         container = self.query_one("#main-content")
         await container.mount(new_view)
         status = self.query_one(StatusBar)
@@ -349,16 +352,17 @@ class FileOrganizerApp(App[None]):
     def action_toggle_help(self) -> None:
         """Toggle the help overlay."""
         self.query_one(StatusBar).set_status(
-            "Press q to quit, 1-7 to switch views, Tab to navigate"
+            "Press q to quit, 1-8 to switch views, Tab to navigate"
         )
 
     @staticmethod
-    def _create_view(name: str) -> Widget:
+    def _create_view(name: str, workspace: TUIWorkspace | None = None) -> Widget:
         """Create and return the widget for a named view.
 
         Args:
             name: View identifier (files, organized, analytics,
                 methodology, settings).
+            workspace: Optional shared state supplied by the mounted app.
 
         Returns:
             Widget to mount as ``#view`` in the main content area.
@@ -366,44 +370,60 @@ class FileOrganizerApp(App[None]):
         if name == "files":
             from file_organizer.tui.file_preview import FilePreviewView
 
-            return FilePreviewView(id="view")
+            return FilePreviewView(
+                path=None if workspace is not None else ".",
+                workspace=workspace,
+                id="view",
+            )
 
         if name == "organized":
             from file_organizer.tui.organization_preview import (
                 OrganizationPreviewView,
             )
 
-            return OrganizationPreviewView(id="view")
+            return OrganizationPreviewView(workspace=workspace, id="view")
 
         if name == "analytics":
             from file_organizer.tui.analytics_view import AnalyticsView
 
-            return AnalyticsView(id="view")
+            return AnalyticsView(
+                directory=None if workspace is not None else ".",
+                workspace=workspace,
+                id="view",
+            )
 
         if name == "methodology":
             from file_organizer.tui.methodology_view import MethodologyView
 
-            return MethodologyView(id="view")
+            return MethodologyView(
+                scan_dir=None if workspace is not None else ".",
+                workspace=workspace,
+                id="view",
+            )
 
         if name == "audio":
             from file_organizer.tui.audio_view import AudioView
 
-            return AudioView(id="view")
+            return AudioView(
+                scan_dir=None if workspace is not None else ".",
+                workspace=workspace,
+                id="view",
+            )
 
         if name == "history":
             from file_organizer.tui.undo_history_view import UndoHistoryView
 
-            return UndoHistoryView(id="view")
+            return UndoHistoryView(workspace=workspace, id="view")
 
         if name == "copilot":
             from file_organizer.tui.copilot_view import CopilotView
 
-            return CopilotView(id="view")
+            return CopilotView(workspace=workspace, id="view")
 
         if name == "settings":
             from file_organizer.tui.settings_view import SettingsView
 
-            return SettingsView(id="view")
+            return SettingsView(workspace=workspace, id="view")
 
         return PlaceholderView(f"[b]{name.capitalize()}[/b]", id="view")
 

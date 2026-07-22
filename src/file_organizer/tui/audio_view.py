@@ -21,6 +21,7 @@ from file_organizer.tui.status import StatusMixin
 if TYPE_CHECKING:
     from file_organizer.services.audio.classifier import ClassificationResult
     from file_organizer.services.audio.metadata_extractor import AudioMetadata
+    from file_organizer.tui.workspace import TUIWorkspace
 
 # Audio file extensions to scan for
 _AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".flac", ".m4a", ".ogg"})
@@ -200,15 +201,18 @@ class AudioView(StatusMixin, Vertical):
 
     def __init__(
         self,
-        scan_dir: str | Path = ".",
+        scan_dir: str | Path | None = ".",
         *,
+        workspace: TUIWorkspace | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
         """Set up the audio view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
-        self._scan_dir = Path(scan_dir)
+        self._workspace = workspace
+        resolved_dir = workspace.active_root if workspace is not None else scan_dir
+        self._scan_dir = Path(resolved_dir) if resolved_dir is not None else None
         self._files: list[
             tuple[Path, AudioMetadata | None, ClassificationResult | None]
         ] = []  # (path, metadata, classification)
@@ -216,7 +220,17 @@ class AudioView(StatusMixin, Vertical):
 
     def compose(self) -> ComposeResult:
         """Build the audio view layout."""
-        yield Static("[b]Audio Files[/b]\n", id="audio-header")
+        transcription = (
+            "enabled for organization"
+            if self._workspace is not None and self._workspace.options.transcribe_audio
+            else "disabled by default"
+        )
+        yield Static(
+            "[b]Audio Files[/b]\n"
+            "[dim]This view classifies metadata. Transcription-backed organization is "
+            f"{transcription} and requires the optional Whisper dependency.[/dim]\n",
+            id="audio-header",
+        )
         yield AudioFileListPanel("[dim]Scanning...[/dim]")
         yield AudioMetadataPanel("[dim]Loading...[/dim]")
         yield AudioClassificationPanel("[dim]Loading...[/dim]")
@@ -263,7 +277,21 @@ class AudioView(StatusMixin, Vertical):
             # Collect audio files
             audio_paths: list[Path] = []
             scan_dir = self._scan_dir
-            if scan_dir.is_dir():
+            if scan_dir is None:
+                raise ValueError("Set a source directory in Settings before scanning audio.")
+            has_selection = self._workspace is not None and bool(self._workspace.selected_files)
+            selected_audio = (
+                sorted(
+                    path
+                    for path in self._workspace.selected_files
+                    if path.suffix.lower() in _AUDIO_EXTENSIONS and path.is_file()
+                )
+                if has_selection and self._workspace is not None
+                else []
+            )
+            if has_selection:
+                audio_paths.extend(selected_audio[:_MAX_SCAN_FILES])
+            elif scan_dir.is_dir():
                 for p in sorted(scan_dir.rglob("*")):
                     if p.suffix.lower() in _AUDIO_EXTENSIONS and p.is_file():
                         audio_paths.append(p)
