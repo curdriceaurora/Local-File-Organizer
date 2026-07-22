@@ -20,10 +20,11 @@ def avatar_path(user_id: str, avatar_dir: Path) -> Path:
     Raises:
         ValueError: If user_id contains path-traversal characters or is empty.
     """
-    if not user_id or not SAFE_USER_ID.match(user_id):
+    clean_id = os.path.basename(user_id)
+    if not clean_id or clean_id != user_id or ".." in clean_id or not SAFE_USER_ID.match(clean_id):
         raise ValueError(f"Invalid user_id: {user_id!r}")
     avatar_root = avatar_dir.resolve()
-    target = (avatar_root / f"{user_id}.png").resolve()
+    target = (avatar_root / f"{clean_id}.png").resolve()
     if not target.is_relative_to(avatar_root) or target == avatar_root:
         raise ValueError(f"Invalid user_id: {user_id!r}")
     return target
