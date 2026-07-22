@@ -204,7 +204,8 @@ class TestRegisterUser:
         }
         resp2 = client.post("/api/v1/auth/register", json=payload2)
         assert resp2.status_code == 400
-        assert "already taken" in resp2.json()["detail"]
+        assert resp2.json()["error"] == "invalid_request"
+        assert "already taken" in resp2.json()["message"]
 
     def test_register_duplicate_email(self, db_session: Session) -> None:
         """Test that duplicate email is rejected."""
@@ -229,7 +230,8 @@ class TestRegisterUser:
         }
         resp2 = client.post("/api/v1/auth/register", json=payload2)
         assert resp2.status_code == 400
-        assert "already registered" in resp2.json()["detail"]
+        assert resp2.json()["error"] == "invalid_request"
+        assert "already registered" in resp2.json()["message"]
 
     def test_register_weak_password(self, db_session: Session) -> None:
         """Test that weak passwords are rejected."""
@@ -243,7 +245,8 @@ class TestRegisterUser:
         }
         resp = client.post("/api/v1/auth/register", json=payload)
         assert resp.status_code == 400
-        assert "detail" in resp.json()
+        assert resp.json()["error"] == "invalid_request"
+        assert "Password must be at least" in resp.json()["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -294,7 +297,8 @@ class TestLogin:
         }
         resp = client.post("/api/v1/auth/login", data=login_payload)
         assert resp.status_code == 401
-        assert "Incorrect username or password" in resp.json()["detail"]
+        assert resp.json()["error"] == "unauthorized"
+        assert "Incorrect username or password" in resp.json()["message"]
 
     def test_login_invalid_password(self, db_session: Session) -> None:
         """Test login with invalid password."""
@@ -316,7 +320,8 @@ class TestLogin:
         }
         resp = client.post("/api/v1/auth/login", data=login_payload)
         assert resp.status_code == 401
-        assert "Incorrect username or password" in resp.json()["detail"]
+        assert resp.json()["error"] == "unauthorized"
+        assert "Incorrect username or password" in resp.json()["message"]
 
     def test_login_inactive_user(self, db_session: Session) -> None:
         """Test login with inactive user."""
@@ -343,7 +348,8 @@ class TestLogin:
         }
         resp = client.post("/api/v1/auth/login", data=login_payload)
         assert resp.status_code == 400
-        assert "Inactive user" in resp.json()["detail"]
+        assert resp.json()["error"] == "invalid_request"
+        assert "Inactive user" in resp.json()["message"]
 
 
 # ---------------------------------------------------------------------------

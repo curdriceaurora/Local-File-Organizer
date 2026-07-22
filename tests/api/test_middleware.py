@@ -239,7 +239,8 @@ class TestRateLimitMiddleware:
         assert response.status_code == 429
         assert "Retry-After" in response.headers
         body = response.json()
-        assert "Rate limit exceeded" in body["detail"]
+        assert body["error"] == "rate_limited"
+        assert "Rate limit exceeded" in body["message"]
 
     def test_rate_limit_disabled_skips_check(self) -> None:
         limiter = _FakeLimiter()

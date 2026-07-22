@@ -203,9 +203,11 @@ class TestAppRoutes:
                 ]
                 == "not_found"
             )
-            assert auth_login["401"]["content"]["application/json"]["example"]["detail"] == (
-                "Incorrect username or password"
-            )
+            auth_error = auth_login["401"]["content"]["application/json"]["examples"]
+            assert auth_error["unauthorized"]["value"] == {
+                "error": "unauthorized",
+                "message": "Incorrect username or password",
+            }
             assert organize_execute["200"]["content"]["application/json"]["example"]["status"] in {
                 "queued",
                 "completed",

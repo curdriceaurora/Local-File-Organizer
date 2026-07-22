@@ -675,7 +675,13 @@ class TestOrganizeBackgroundJobFailure:
         out = tmp_path / "out"
         out.mkdir()
 
-        def _failing_job(job_id: str, request: object) -> None:
+        def _failing_job(
+            job_id: str,
+            _request: object,
+            _input_path: object,
+            _output_path: object,
+            _service: object,
+        ) -> None:
             update_job(job_id, status="failed", error="intentional test failure")
 
         with patch(

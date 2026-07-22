@@ -45,7 +45,9 @@ def test_models_instantiation():
     dfr = DeleteFileResponse(path="test", deleted=True, dry_run=False)
     assert dfr.deleted is True
 
-    sr = ScanResponse(input_dir="dir", total_files=10, counts={"txt": 10})
+    sr = ScanResponse(
+        input_dir="dir", total_files=10, files=["dir/example.txt"], counts={"txt": 10}
+    )
     assert sr.total_files == 10
 
     oe = OrganizationError(file="f", error="err")

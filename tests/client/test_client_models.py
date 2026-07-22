@@ -276,6 +276,7 @@ class TestScanResponse:
         resp = ScanResponse(
             input_dir="/home/user/docs",  # noqa: test-hardcoded-paths
             total_files=42,
+            files=["/home/user/docs/example.txt"],  # noqa: test-hardcoded-paths
             counts={"pdf": 10, "txt": 32},
         )
         assert resp.input_dir == "/home/user/docs"  # noqa: test-hardcoded-paths
@@ -283,7 +284,7 @@ class TestScanResponse:
         assert resp.counts == {"pdf": 10, "txt": 32}
 
     def test_empty_counts(self):
-        resp = ScanResponse(input_dir="/d", total_files=0, counts={})
+        resp = ScanResponse(input_dir="/d", total_files=0, files=[], counts={})
         assert resp.counts == {}
 
 

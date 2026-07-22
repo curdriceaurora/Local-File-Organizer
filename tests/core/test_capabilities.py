@@ -5,13 +5,13 @@ from __future__ import annotations
 import copy
 import inspect
 import json
-import re
 from pathlib import Path
 from typing import cast
 
 import pytest
 
 from file_organizer.client.async_client import AsyncFileOrganizerClient
+from file_organizer.client.endpoint_spec import PUBLIC_ENDPOINTS
 from file_organizer.client.sync_client import FileOrganizerClient
 from file_organizer.core.capabilities import (
     CapabilityRegistry,
@@ -37,6 +37,32 @@ def test_packaged_registry_is_complete_and_queryable() -> None:
     assert registry.get("organization.execute").name == "Organization execution"
     for capability in registry.capabilities:
         assert {status.surface for status in capability.surfaces} == set(Surface)
+
+
+def test_organization_conformance_matches_exercised_corpus_scope() -> None:
+    registry = get_capability_registry()
+
+    for capability_id in ("organization.scan", "organization.preview"):
+        capability = registry.get(capability_id)
+        assert (
+            capability.support_for(Surface.REST_API).conformance_status
+            is ConformanceStatus.VERIFIED
+        )
+        assert (
+            capability.support_for(Surface.PYTHON_SDK).conformance_status
+            is ConformanceStatus.VERIFIED
+        )
+
+    for capability_id in ("organization.execute", "organization.suggest"):
+        capability = registry.get(capability_id)
+        assert (
+            capability.support_for(Surface.REST_API).conformance_status
+            is ConformanceStatus.UNVERIFIED
+        )
+        assert (
+            capability.support_for(Surface.PYTHON_SDK).conformance_status
+            is ConformanceStatus.UNVERIFIED
+        )
 
 
 def test_target_implementation_and_conformance_are_independent() -> None:
@@ -256,18 +282,28 @@ def test_official_client_product_methods_are_inventoried() -> None:
 
 
 def test_typescript_client_product_methods_are_inventoried() -> None:
-    source_path = Path("src") / "file_organizer" / "client" / "typescript" / "client.ts"
-    source = source_path.read_text(encoding="utf-8")
-    methods = set(re.findall(r"^  (?:async )?([A-Za-z][A-Za-z0-9]*)\(", source, re.MULTILINE))
-    methods -= {"constructor", "setToken"}
-    live = {f"FileOrganizerClient.{name}" for name in methods}
+    inventory_path = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "file_organizer"
+        / "client"
+        / "typescript"
+        / "methods.generated.json"
+    )
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    methods = inventory["methods"]
+    assert inventory["schema_version"] == 1
+    assert methods == sorted(set(methods))
+
+    generated = {f"FileOrganizerClient.{name}" for name in methods}
+    specified = {
+        f"FileOrganizerClient.{endpoint.typescript_method}" for endpoint in PUBLIC_ENDPOINTS
+    }
     registered = {
         entry_point
         for capability in get_capability_registry().capabilities
         for entry_point in capability.support_for(Surface.TYPESCRIPT_SDK).entry_points
     }
-    missing = live - registered
-    stale = registered - live
 
-    assert not missing, f"unregistered TypeScript client methods: {sorted(missing)}"
-    assert not stale, f"stale TypeScript SDK registry entry points: {sorted(stale)}"
+    assert generated == specified
+    assert generated == registered

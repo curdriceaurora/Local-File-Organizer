@@ -520,7 +520,10 @@ async def upload_files(
     else:
         return JSONResponse(
             status_code=400,
-            content={"detail": "At least one file must be provided"},
+            content={
+                "error": "invalid_request",
+                "message": "At least one file must be provided",
+            },
         )
 
     responses = []

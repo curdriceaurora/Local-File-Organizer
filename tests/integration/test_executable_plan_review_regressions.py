@@ -14,6 +14,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.organize import router
+from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import (
     CollisionAction,
@@ -65,6 +66,13 @@ def _single_plan(tmp_path: Path, *, use_hardlinks: bool = False):
         skipped_files=0,
         deduplicated_files=0,
         file_hashes={source: hashlib.sha256(b"reviewed").hexdigest()},
+        options=OrganizeOptions(
+            use_hardlinks=use_hardlinks,
+            text_model="test-model:latest",
+            vision_model="vis:3b",
+            text_provider="ollama",
+            vision_provider="ollama",
+        ),
     )
 
 

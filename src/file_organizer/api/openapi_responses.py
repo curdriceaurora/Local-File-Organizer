@@ -8,7 +8,6 @@ from typing import Any
 
 from file_organizer.api.models import (
     ApiErrorResponse,
-    HttpDetailErrorResponse,
     ValidationErrorResponse,
 )
 
@@ -88,13 +87,24 @@ def detail_error_response(
     detail: str,
     description: str | None = None,
 ) -> OpenAPIResponses:
-    """Build a FastAPI HTTPException-style response entry."""
-    return {
-        status_code: {
-            "description": description or detail,
-            "content": _json_content(HttpDetailErrorResponse, {"detail": detail}),
-        }
+    """Build a normalized error response for an HTTPException-producing route."""
+    error_codes = {
+        400: "invalid_request",
+        401: "unauthorized",
+        403: "forbidden",
+        404: "not_found",
+        409: "conflict",
+        422: "validation_error",
+        429: "rate_limited",
+        500: "internal_server_error",
+        503: "service_unavailable",
     }
+    return api_error_response(
+        status_code,
+        error=error_codes.get(status_code, "http_error"),
+        message=detail,
+        description=description,
+    )
 
 
 def validation_error_response() -> OpenAPIResponses:

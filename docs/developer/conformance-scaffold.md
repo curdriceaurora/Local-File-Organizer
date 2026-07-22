@@ -13,7 +13,7 @@ never from any adapter.
 | --- | --- |
 | `tests/conformance/corpus.py` | Deterministic fixture corpus: pinned bytes and mtimes, tagged cases |
 | `tests/conformance/normalize.py` | Strips presentation-only differences while preserving executable ordering and complete source fingerprints |
-| `tests/conformance/driver.py` | `OrganizationConformanceDriver` protocol and the `DirectServiceDriver` reference oracle |
+| `tests/conformance/driver.py` | Driver protocol, direct-service oracle, and CLI/REST/Python SDK adapters |
 | `tests/conformance/test_direct_service_conformance.py` | Golden expectations for canonical semantics |
 
 ## Fixture corpus
@@ -31,6 +31,12 @@ corpus contract pins per-filename metadata in
 canonical classifier and path-generation policy still run unmodified; only
 the byte-level extraction seam is stubbed. Adapter drivers must install the
 same stubs.
+
+REST plus the synchronous and asynchronous Python SDKs run this same corpus
+through in-process HTTP transports. This verifies traversal, complete option
+mapping, executable-plan round trips, stable errors, execution results, and
+audit effects against the direct-service oracle without relying on route
+construction alone.
 
 ## Writing an adapter driver
 
