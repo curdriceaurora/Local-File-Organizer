@@ -21,18 +21,6 @@ from file_organizer.tui.copilot_view import (
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def clean_copilot_view_class():
-    """Restore the inherited Textual app descriptor after every test."""
-    had_local_app = "app" in CopilotView.__dict__
-    original_app = CopilotView.__dict__.get("app")
-    yield
-    if had_local_app:
-        CopilotView.app = original_app
-    elif "app" in CopilotView.__dict__:
-        delattr(CopilotView, "app")
-
-
 def _create_view_with_mocks() -> tuple[CopilotView, MagicMock, MagicMock, MagicMock]:
     """Helper to create a CopilotView with its children and app mocked."""
     view = CopilotView()
