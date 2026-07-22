@@ -60,7 +60,7 @@ from file_organizer.config.schema import AppConfig
 from file_organizer.core import dispatcher
 from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organization_service import OrganizationScan, OrganizationService
-from file_organizer.core.organize_options import OrganizeRequest
+from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
@@ -351,40 +351,16 @@ class WebFormConformanceDriver:
 
     @staticmethod
     def _mapped_request(request: OrganizeRequest) -> OrganizeRequest:
-        options = request.options
+        """Map Web-form strings back onto the canonical request contract."""
         mapped = parse_organize_options(
-            methodology=options.effective_methodology.value,
-            recursive="1" if options.recursive else "0",
-            include_hidden="1" if options.include_hidden else "0",
-            skip_existing="1" if options.skip_existing else "0",
-            transfer_mode=options.effective_transfer_mode.value,
-            use_hardlinks="1" if options.use_hardlinks else "0",
-            enable_vision="1" if options.enable_vision else "0",
-            transcribe_audio="1" if options.transcribe_audio else "0",
-            max_transcribe_seconds=(
-                ""
-                if options.max_transcribe_seconds is None
-                else str(options.max_transcribe_seconds)
-            ),
-            whisper_model=options.whisper_model,
-            parallel_workers=(
-                "" if options.parallel_workers is None else str(options.parallel_workers)
-            ),
-            prefetch_depth=str(options.prefetch_depth),
-            text_model=options.text_model or "",
-            vision_model=options.vision_model or "",
-            text_provider=options.text_provider or "",
-            vision_provider=options.vision_provider or "",
+            **WebFormConformanceDriver._option_form_fields(request.options)
         )
         return OrganizeRequest(request.input_path, request.output_path, mapped)
 
     @staticmethod
-    def _form_data(request: OrganizeRequest) -> dict[str, str]:
+    def _option_form_fields(options: OrganizeOptions) -> dict[str, str]:
         """Serialize every canonical option through the Web form contract."""
-        options = request.options
         return {
-            "input_dir": str(request.input_path),
-            "output_dir": str(request.output_path),
             "methodology": options.effective_methodology.value,
             "recursive": "1" if options.recursive else "0",
             "include_hidden": "1" if options.include_hidden else "0",
@@ -407,6 +383,15 @@ class WebFormConformanceDriver:
             "vision_model": options.vision_model or "",
             "text_provider": options.text_provider or "",
             "vision_provider": options.vision_provider or "",
+        }
+
+    @staticmethod
+    def _form_data(request: OrganizeRequest) -> dict[str, str]:
+        """Add request paths to the shared canonical option serialization."""
+        return {
+            "input_dir": str(request.input_path),
+            "output_dir": str(request.output_path),
+            **WebFormConformanceDriver._option_form_fields(request.options),
         }
 
     def _post_scan(

@@ -33,7 +33,10 @@
    * @param {string} inputId - id of the text input to populate.
    */
   window.desktopBrowseDirectory = function desktopBrowseDirectory(inputId) {
-    if (!isDesktopApp()) {
+    if (
+      !isDesktopApp() ||
+      typeof window.pywebview.api.browse_directory !== "function"
+    ) {
       return;
     }
     window.pywebview.api
