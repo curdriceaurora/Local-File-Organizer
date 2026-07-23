@@ -568,7 +568,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | Python SDK | Full | Implemented | Verified | `FileOrganizerClient.organize`, `AsyncFileOrganizerClient.organize` |
 | TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.organize` |
 | Web / Desktop | Full | Implemented | Verified | `POST /ui/organize/execute` |
-| TUI | Full | Implemented | Verified | `OrganizationPreviewView`, `TUIOrganizationAdapter.execute` |
+| TUI | Full | Implemented | Verified | `TUIOrganizationAdapter.execute` |
 
 <a id="organizationjobs-recovery"></a>
 ### `organization.jobs-recovery` — Organization jobs and recovery
@@ -610,7 +610,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | Python SDK | Full | Implemented | Verified | `FileOrganizerClient.preview_organize`, `AsyncFileOrganizerClient.preview_organize` |
 | TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.previewOrganize` |
 | Web / Desktop | Full | Implemented | Verified | `GET /ui/organize`, `POST /ui/organize/scan`, `POST /ui/organize/plan/clear` |
-| TUI | Full | Implemented | Verified | `OrganizationPreviewView`, `TUIOrganizationAdapter.preview` |
+| TUI | Full | Implemented | Verified | `TUIOrganizationAdapter.preview` |
 
 <a id="organizationscan"></a>
 ### `organization.scan` — Organization scan

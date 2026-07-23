@@ -195,6 +195,34 @@ class TestJobRepositoryUpdateStatus:
         assert exc_info.value.code == DomainErrorCode.STALE_JOB_REVISION
         Base.metadata.drop_all(engine)
 
+    def test_rollback_states_preserve_prior_error_fields(self, db_session: Session) -> None:
+        job = JobRepository.create(db_session, "/in", "/out")
+        db_session.flush()
+        JobRepository.update_status(db_session, job.id, "running")
+        db_session.flush()
+        JobRepository.update_status(
+            db_session,
+            job.id,
+            "failed",
+            error="disk full",
+            error_code="execution_failed",
+            error_retryable=True,
+            error_details={"device": "output"},
+        )
+        db_session.flush()
+        rolling_back = JobRepository.update_status(db_session, job.id, "rolling_back")
+        db_session.flush()
+        assert rolling_back is not None
+        assert rolling_back.error == "disk full"
+        assert rolling_back.error_code == "execution_failed"
+        assert rolling_back.error_retryable is True
+        assert rolling_back.error_details_json == '{"device": "output"}'
+        rolled_back = JobRepository.update_status(db_session, rolling_back.id, "rolled_back")
+        db_session.flush()
+        assert rolled_back is not None
+        assert rolled_back.error == "disk full"
+        assert rolled_back.error_code == "execution_failed"
+
 
 class TestJobRepositoryUpdateResult:
     def test_updates_counters(self, db_session: Session) -> None:

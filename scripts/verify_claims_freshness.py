@@ -42,6 +42,11 @@ _CAPABILITY_ID_PATTERN = re.compile(r"`?([a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)`?")
 # Extract HTML anchors and Markdown headings from capability-matrix.md
 _HTML_ANCHOR_PATTERN = re.compile(r'<a\s+(?:id|name)="([^"]+)"')
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+# Match the generated anchor-then-heading pattern for each capability section
+_CAPABILITY_SECTION_ANCHOR_PATTERN = re.compile(
+    r'<a\s+id="([^"]+)"></a>\s*\n#{1,6}\s+`([a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)`',
+    re.MULTILINE,
+)
 
 # Retired hand-maintained inventory claims. These counted source artefacts rather than product
 # capabilities and were never reproducible; the canonical counts below replace them. Uptime is
@@ -98,6 +103,16 @@ def extract_matrix_anchors(matrix_path: Path) -> set[str]:
             seen[slug] = occurrence + 1
 
     return anchors
+
+
+def build_capability_anchor_map(matrix_path: Path) -> dict[str, str]:
+    """Return a map from capability ID to its HTML anchor as it appears in capability-matrix.md."""
+    if not matrix_path.exists():
+        return {}
+    content = matrix_path.read_text(encoding="utf-8")
+    return {
+        cap_id: anchor for anchor, cap_id in _CAPABILITY_SECTION_ANCHOR_PATTERN.findall(content)
+    }
 
 
 def _verified_capability_ids() -> set[str]:
@@ -207,6 +222,7 @@ def _verify_matrix_links(
     valid_anchors: set[str],
     valid_capability_ids: set[str],
     matrix_filename: str,
+    capability_anchor_map: dict[str, str],
 ) -> list[str]:
     """Audit links targeting capability-matrix.md for anchor resolution, ID validity, and ID-anchor mapping."""
     errors: list[str] = []
@@ -236,8 +252,12 @@ def _verify_matrix_links(
             if cap_id not in valid_capability_ids and "." in cap_id:
                 errors.append(f"README.md links to unknown capability ID: '{cap_id}'")
             elif cap_id in valid_capability_ids:
-                expected_anchor = cap_id.replace(".", "")
-                if anchor != expected_anchor:
+                expected_anchor = capability_anchor_map.get(cap_id)
+                if expected_anchor is None:
+                    errors.append(
+                        f"README.md links to capability '{cap_id}' but no anchor for it was found in '{matrix_filename}'."
+                    )
+                elif anchor != expected_anchor:
                     errors.append(
                         f"README.md link for capability '{cap_id}' has mismatched anchor '#{anchor}' (expected '#{expected_anchor}')."
                     )
@@ -293,12 +313,19 @@ def verify_public_claims(
     if not valid_anchors:
         return [f"Capability matrix '{matrix_path}' contains no parseable anchors."]
 
+    capability_anchor_map = build_capability_anchor_map(matrix_path)
     readme_content = readme_path.read_text(encoding="utf-8")
 
     errors: list[str] = []
     errors.extend(_verify_marketing_stats(readme_content))
     errors.extend(
-        _verify_matrix_links(readme_content, valid_anchors, valid_capability_ids, matrix_path.name)
+        _verify_matrix_links(
+            readme_content,
+            valid_anchors,
+            valid_capability_ids,
+            matrix_path.name,
+            capability_anchor_map,
+        )
     )
     errors.extend(_verify_feature_bullets(readme_content))
     errors.extend(_verify_conformance_claims(readme_content))
