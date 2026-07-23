@@ -7,8 +7,10 @@ or none) and preview how files would be categorized under the selected scheme.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from types import MappingProxyType
+from typing import TYPE_CHECKING, ClassVar
 
 from textual import work
 from textual.app import ComposeResult
@@ -37,19 +39,23 @@ class MethodologySelectorPanel(Static):
     # Keys derive from the canonical enum so this panel cannot offer a methodology the domain
     # rejects. The label text is longer than config.methodology.LABELS on purpose: this view has
     # room to expand each scheme, while the settings dropdowns do not.
-    _METHODS = {
-        OrganizationMethodology.NONE.value: "None (flat organization)",
-        OrganizationMethodology.PARA.value: "PARA (Projects / Areas / Resources / Archive)",
-        OrganizationMethodology.JOHNNY_DECIMAL.value: (
-            "Johnny Decimal (Areas / Categories / Items)"
-        ),
-    }
+    _METHODS: ClassVar[Mapping[str, str]] = MappingProxyType(
+        {
+            OrganizationMethodology.NONE.value: "None (flat organization)",
+            OrganizationMethodology.PARA.value: "PARA (Projects / Areas / Resources / Archive)",
+            OrganizationMethodology.JOHNNY_DECIMAL.value: (
+                "Johnny Decimal (Areas / Categories / Items)"
+            ),
+        }
+    )
 
-    _SHORTCUTS = {
-        OrganizationMethodology.NONE.value: "n",
-        OrganizationMethodology.PARA.value: "p",
-        OrganizationMethodology.JOHNNY_DECIMAL.value: "j",
-    }
+    _SHORTCUTS: ClassVar[Mapping[str, str]] = MappingProxyType(
+        {
+            OrganizationMethodology.NONE.value: "n",
+            OrganizationMethodology.PARA.value: "p",
+            OrganizationMethodology.JOHNNY_DECIMAL.value: "j",
+        }
+    )
 
     _current: str = _DEFAULT_METHODOLOGY
 

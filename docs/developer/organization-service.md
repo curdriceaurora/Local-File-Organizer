@@ -71,12 +71,27 @@ form fields where a stale value must not crash the surface. `OrganizeOptions` is
 anything non-canonical, including aliases: an alias reaching the domain means an adapter skipped
 normalization, which should fail loudly rather than be quietly understood.
 
-Adapters that cannot derive their vocabulary — the Pydantic `Literal` annotations in the REST and
-Python SDK models, and the TypeScript union in `types.ts` — are pinned by
-`tests/core/test_methodology_vocabulary.py` instead. Deriving them would change the emitted OpenAPI
-schema and the generated client surface for no behavioral gain, so the guard proves they cannot
-drift rather than removing the duplication. Adding a methodology therefore means updating the enum
-and those three declarations; the guard fails until they agree.
+Five adapters cannot derive their vocabulary and are pinned by
+`tests/core/test_methodology_vocabulary.py` instead. The REST and Python SDK models and the
+TypeScript union stay literal because deriving them would change the emitted OpenAPI schema and the
+generated client surface for no behavioral gain. The TUI view's `BINDINGS` and `action_set_*`
+handlers stay literal because Textual resolves both at class-definition time and dispatches actions
+by name. In each case the guard proves the duplication cannot drift rather than removing it.
+
+Adding a methodology therefore means updating `OrganizationMethodology` and then, by hand:
+
+| Site | Change |
+| --- | --- |
+| `api/models.py` | add the value to the `methodology` `Literal` |
+| `client/models.py` | add the value to the `methodology` `Literal` |
+| `client/typescript/types.ts` | add the value to the `methodology` union |
+| `tui/methodology_view.py` | add a `Binding` and a matching `action_set_<value>` handler |
+| `tui/methodology_view.py` | add the value to `MethodologySelectorPanel._METHODS` and `_SHORTCUTS` |
+| `config/methodology.py` | add a display label to `LABELS` |
+
+Everything else — `ORDER`, `DEFAULT`, the CLI validator, the CLI setup prompt, the CLI help text,
+and the domain error message — derives automatically. The vocabulary guard fails until every manual
+site above agrees with the enum, so an incomplete addition cannot ship.
 
 ## Plan compatibility
 
