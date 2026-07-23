@@ -425,3 +425,11 @@ def test_capability_matrix_prose_important_note_matches_cell_format() -> None:
     content = generate_capability_matrix_markdown()
 
     assert f"> A surface cell formatted as `{formatted_sample}` represents" in content
+
+
+def test_public_claims_freshness() -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    readme_path = Path(__file__).resolve().parents[2] / "README.md"
+    errors = verify_public_claims(readme_path)
+    assert not errors, f"Public claims verification failed: {errors}"
