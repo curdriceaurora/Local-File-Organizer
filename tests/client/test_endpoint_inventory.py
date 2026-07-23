@@ -138,9 +138,19 @@ def test_sdk_payload_fields_are_subset_of_canonical_options() -> None:
     )
 
 
-def test_canonical_options_to_dict_validates_against_rest_payload() -> None:
+@pytest.mark.parametrize(
+    "options",
+    [
+        OrganizeOptions(),
+        OrganizeOptions(transfer_mode="copy", methodology="para", recursive=False),
+        OrganizeOptions(transfer_mode="hardlink", methodology="jd", prefetch_depth=5),
+    ],
+)
+def test_canonical_options_to_dict_validates_against_rest_payload(
+    options: OrganizeOptions,
+) -> None:
     """OrganizeOptions().to_dict() must validate back to the REST transport model."""
-    canonical = OrganizeOptions().to_dict()
+    canonical = options.to_dict()
     payload = RestOptionsPayload.model_validate(canonical)
     # Assert every canonical field survives the round-trip, not just spot-checks.
     for field in RestOptionsPayload.model_fields:
@@ -150,9 +160,19 @@ def test_canonical_options_to_dict_validates_against_rest_payload() -> None:
         )
 
 
-def test_canonical_options_to_dict_validates_against_sdk_payload() -> None:
+@pytest.mark.parametrize(
+    "options",
+    [
+        OrganizeOptions(),
+        OrganizeOptions(transfer_mode="copy", methodology="para", recursive=False),
+        OrganizeOptions(transfer_mode="hardlink", methodology="jd", prefetch_depth=5),
+    ],
+)
+def test_canonical_options_to_dict_validates_against_sdk_payload(
+    options: OrganizeOptions,
+) -> None:
     """OrganizeOptions().to_dict() must validate back to the SDK transport model."""
-    canonical = OrganizeOptions().to_dict()
+    canonical = options.to_dict()
     payload = SdkOptionsPayload.model_validate(canonical)
     for field in SdkOptionsPayload.model_fields:
         assert getattr(payload, field) == canonical[field], (
