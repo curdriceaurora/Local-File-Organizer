@@ -192,6 +192,15 @@ def test_plan_store_prunes_and_missing_lookup_returns_none(monkeypatch) -> None:
         _delete_organize_plan(second["plan_id"])
 
 
+def test_plan_store_ttl_expiry_returns_none(monkeypatch) -> None:
+    monkeypatch.setattr("file_organizer.web.organize_services.ORGANIZE_PLAN_TTL_SECONDS", -1)
+    record = _store_organize_plan({"input_dir": "x"})
+    try:
+        assert _get_organize_plan(record["plan_id"]) is None
+    finally:
+        _delete_organize_plan(record["plan_id"])
+
+
 def test_job_report_payload_extracts_report_fields() -> None:
     job = {
         "job_id": "job-1",
