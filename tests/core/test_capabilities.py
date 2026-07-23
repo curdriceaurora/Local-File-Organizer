@@ -329,3 +329,18 @@ def test_typescript_client_product_methods_are_inventoried() -> None:
 
     assert generated == specified
     assert generated == registered
+
+
+def test_capability_matrix_up_to_date() -> None:
+    from scripts.generate_capability_matrix import generate_capability_matrix_markdown
+
+    matrix_path = (
+        Path(__file__).resolve().parents[2] / "docs" / "developer" / "capability-matrix.md"
+    )
+    assert matrix_path.exists(), f"Capability matrix file {matrix_path} missing"
+    on_disk = matrix_path.read_text(encoding="utf-8")
+    generated = generate_capability_matrix_markdown()
+
+    assert on_disk == generated, (
+        f"Capability matrix in {matrix_path} is out of date. Run 'python scripts/generate_capability_matrix.py' to update it."
+    )
