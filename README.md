@@ -46,7 +46,7 @@ This software uses AI to organize your local files. It operates locally with Oll
 - **Deduplication**: Finds duplicate files with hash and semantic checks (requires optional `[dedup]` extra; see [`deduplication.manage`](docs/developer/capability-matrix.md#deduplicationmanage)).
 - **Undo/Redo**: Keeps operation history so you can undo changes safely (see [`history.manage`](docs/developer/capability-matrix.md#historymanage)).
 - **Auto-Update**: Manages application updates safely across platforms (see [`updates.manage`](docs/developer/capability-matrix.md#updatesmanage)).
-- **Cross-Platform**: Operates on macOS, Windows, and Linux.
+- **Cross-Platform**: Operates on macOS, Windows, and Linux (see [`cli` surface status](docs/developer/capability-matrix.md#summary-statistics)).
 
 ## How It Works
 

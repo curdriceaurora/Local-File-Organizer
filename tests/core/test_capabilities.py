@@ -433,3 +433,32 @@ def test_public_claims_freshness() -> None:
     readme_path = Path(__file__).resolve().parents[2] / "README.md"
     errors = verify_public_claims(readme_path)
     assert not errors, f"Public claims verification failed: {errors}"
+
+
+def test_public_claims_freshness_stale_counts(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    # Test stale capability count failure
+    stale_readme = tmp_path / "README_stale.md"
+    stale_readme.write_text(
+        "## Features\n\n- **Capabilities**: Built on [35 product capabilities](docs/developer/capability-matrix.md#summary-statistics).\n",
+        encoding="utf-8",
+    )
+    errors = verify_public_claims(stale_readme)
+    assert any("stale product capability count '35'" in err for err in errors)
+
+
+def test_public_claims_freshness_anchor_mismatch(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    # Test ID and anchor mismatch failure (both individually valid, but mismatched)
+    mismatched_readme = tmp_path / "README_mismatch.md"
+    mismatched_readme.write_text(
+        "## Features\n\n- **Analysis**: See [`analysis.inspect`](docs/developer/capability-matrix.md#audiotranscribe).\n",
+        encoding="utf-8",
+    )
+    errors = verify_public_claims(mismatched_readme)
+    assert any(
+        "has mismatched anchor '#audiotranscribe' (expected '#analysisinspect')" in err
+        for err in errors
+    )

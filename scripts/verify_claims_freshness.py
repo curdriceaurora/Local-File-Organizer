@@ -4,9 +4,10 @@
 This script parses README.md and docs/developer/capability-matrix.md to ensure:
 1. Every feature claim under ## Features links to a valid anchor present in capability-matrix.md.
 2. Capability IDs linked in README.md exist in src/file_organizer/core/capability_registry.json.
-3. No unverified marketing metrics or un-inventoried feature claims exist in README.md.
-4. Optional feature pack requirements ([audio], [video], [dedup]) are properly qualified.
-5. All anchor references in README.md resolve directly against the generated capability-matrix.md document.
+3. README capability link anchors match the expected anchor for their capability ID.
+4. Product metrics (capability count, surface count, TUI views) match canonical registry state.
+5. No unverified marketing metrics or un-inventoried feature claims exist in README.md.
+6. Optional feature pack requirements ([audio], [video], [dedup]) are properly qualified.
 """
 
 from __future__ import annotations
@@ -22,7 +23,8 @@ _SRC = _ROOT / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from file_organizer.core.capabilities import (  # noqa: E402
+from file_organizer.core.capabilities import (  # noqa: E402  # copilot: wontfix - sys.path modification required for direct script execution
+    Surface,
     get_capability_registry,
 )
 
@@ -43,6 +45,13 @@ _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 _UNVERIFIED_MARKETING_PATTERN = re.compile(
     r"\b(?:\d+\s+(?:tests|modules|file types|devices)|99\.\d+%\s+uptime)\b", re.IGNORECASE
 )
+
+# Canonical counts verification patterns
+_CAPABILITY_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)\s+product capabilities\b", re.IGNORECASE)
+_SURFACE_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)\s+official surfaces\b", re.IGNORECASE)
+_TUI_VIEW_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)-view Textual TUI\b", re.IGNORECASE)
+
+CANONICAL_TUI_VIEW_COUNT = 8
 
 
 def _slugify_heading(heading_text: str) -> str:
@@ -70,13 +79,43 @@ def extract_matrix_anchors(matrix_path: Path) -> set[str]:
 
 
 def _verify_marketing_stats(content: str) -> list[str]:
-    """Audit content for unverified/un-inventoried marketing statistics."""
+    """Audit content for unverified/un-inventoried marketing statistics and canonical metrics."""
     errors: list[str] = []
+    registry = get_capability_registry()
+    canonical_cap_count = len(registry.capabilities)
+    canonical_surface_count = len(Surface)
+
+    # 1. Un-inventoried marketing claims check
     for match in _UNVERIFIED_MARKETING_PATTERN.finditer(content):
         errors.append(
             f"README.md contains unverified/un-inventoried marketing claim: '{match.group(0)}'. "
             "All product statistics must be backed by capability matrix evidence."
         )
+
+    # 2. Canonical capability count check
+    for match in _CAPABILITY_COUNT_CLAIM_PATTERN.finditer(content):
+        claimed_count = int(match.group(1))
+        if claimed_count != canonical_cap_count:
+            errors.append(
+                f"README.md contains stale product capability count '{claimed_count}' (expected '{canonical_cap_count}')."
+            )
+
+    # 3. Canonical surface count check
+    for match in _SURFACE_COUNT_CLAIM_PATTERN.finditer(content):
+        claimed_count = int(match.group(1))
+        if claimed_count != canonical_surface_count:
+            errors.append(
+                f"README.md contains stale surface count '{claimed_count}' (expected '{canonical_surface_count}')."
+            )
+
+    # 4. Canonical TUI views count check
+    for match in _TUI_VIEW_COUNT_CLAIM_PATTERN.finditer(content):
+        claimed_count = int(match.group(1))
+        if claimed_count != CANONICAL_TUI_VIEW_COUNT:
+            errors.append(
+                f"README.md contains stale TUI view count '{claimed_count}' (expected '{CANONICAL_TUI_VIEW_COUNT}')."
+            )
+
     return errors
 
 
@@ -86,7 +125,7 @@ def _verify_matrix_links(
     valid_capability_ids: set[str],
     matrix_filename: str,
 ) -> list[str]:
-    """Audit links targeting capability-matrix.md for anchor resolution & ID validity."""
+    """Audit links targeting capability-matrix.md for anchor resolution, ID validity, and ID-anchor mapping."""
     errors: list[str] = []
     matrix_links = list(_MATRIX_LINK_PATTERN.finditer(content))
     if not matrix_links:
@@ -113,6 +152,12 @@ def _verify_matrix_links(
             cap_id = cap_match.group(1)
             if cap_id not in valid_capability_ids and "." in cap_id:
                 errors.append(f"README.md links to unknown capability ID: '{cap_id}'")
+            elif cap_id in valid_capability_ids:
+                expected_anchor = cap_id.replace(".", "")
+                if anchor != expected_anchor:
+                    errors.append(
+                        f"README.md link for capability '{cap_id}' has mismatched anchor '#{anchor}' (expected '#{expected_anchor}')."
+                    )
 
     return errors
 
@@ -129,11 +174,7 @@ def _verify_feature_bullets(readme_content: str) -> list[str]:
         line.strip() for line in features_section.splitlines() if line.strip().startswith("- **")
     ]
     for bullet in bullet_lines:
-        if (
-            "capability-matrix.md" not in bullet
-            and "pywebview" not in bullet
-            and "macOS, Windows" not in bullet
-        ):
+        if "capability-matrix.md" not in bullet:
             errors.append(f"Feature bullet lacks capability matrix evidence link: '{bullet}'")
 
         if "Audio Transcription" in bullet and "[audio]" not in bullet:
