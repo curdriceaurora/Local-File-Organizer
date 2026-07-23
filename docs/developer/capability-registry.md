@@ -90,3 +90,15 @@ python scripts/generate_capability_matrix.py --check # Verify document matches r
 ```
 
 Changes to `capability_registry.json` require re-running the generator script. Primary CI enforcement is provided by `test_capability_matrix_up_to_date` in `tests/core/test_capabilities.py`, while `python scripts/generate_capability_matrix.py --check` provides a fast standalone CLI check for developers and scripts.
+
+## Public claims freshness verification
+
+Public claims in `README.md` link directly to capability evidence in `capability-matrix.md`.
+
+Verify claim links, matrix anchors, and canonical capability/surface counts using:
+
+```bash
+python scripts/verify_claims_freshness.py --check
+```
+
+CI enforces claim freshness, anchor accuracy, and count stability via `test_public_claims_freshness` in `tests/core/test_capabilities.py`.
