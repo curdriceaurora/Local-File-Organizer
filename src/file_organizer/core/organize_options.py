@@ -49,6 +49,12 @@ def _resolve_transfer_mode(
     return resolved
 
 
+def _methodology_choices() -> str:
+    """Render the canonical methodology vocabulary for error messages."""
+    quoted = [f"'{member.value}'" for member in OrganizationMethodology]
+    return f"{', '.join(quoted[:-1])}, or {quoted[-1]}"
+
+
 def _resolve_methodology(
     methodology: OrganizationMethodology | str,
 ) -> OrganizationMethodology:
@@ -56,7 +62,7 @@ def _resolve_methodology(
     try:
         return OrganizationMethodology(methodology)
     except (TypeError, ValueError) as exc:
-        raise ValueError("methodology must be 'none', 'para', or 'jd'") from exc
+        raise ValueError(f"methodology must be {_methodology_choices()}") from exc
 
 
 @dataclass(frozen=True, slots=True)

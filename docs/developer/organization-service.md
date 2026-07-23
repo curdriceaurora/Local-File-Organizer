@@ -55,6 +55,29 @@ before collision handling and plan construction. PARA routing uses the existing 
 primitives; Johnny Decimal routing uses the repository's default area scheme and numbering
 primitives. Presentation adapters must not rewrite destinations after a plan is built.
 
+### Methodology vocabulary
+
+`OrganizationMethodology` in `file_organizer.core.organize_options` is the single authoritative
+value model. No adapter defines its own. `file_organizer.config.methodology` derives every constant
+from that enum and adds the two things the domain deliberately does not carry:
+
+- **display labels**, a presentation concern that may legitimately differ per surface;
+- **legacy aliases** (`content_based` → `none`, `johnny_decimal` → `jd`), accepted only at
+  configuration and transport boundaries.
+
+The two layers differ in strictness on purpose. `config.methodology.normalize()` is lenient and
+falls back to a caller-supplied default, because it reads persisted configuration and user-supplied
+form fields where a stale value must not crash the surface. `OrganizeOptions` is strict and rejects
+anything non-canonical, including aliases: an alias reaching the domain means an adapter skipped
+normalization, which should fail loudly rather than be quietly understood.
+
+Adapters that cannot derive their vocabulary — the Pydantic `Literal` annotations in the REST and
+Python SDK models, and the TypeScript union in `types.ts` — are pinned by
+`tests/core/test_methodology_vocabulary.py` instead. Deriving them would change the emitted OpenAPI
+schema and the generated client surface for no behavioral gain, so the guard proves they cannot
+drift rather than removing the duplication. Adding a methodology therefore means updating the enum
+and those three declarations; the guard fails until they agree.
+
 ## Plan compatibility
 
 Organization plan schema 3 records canonical `transfer_mode` and `methodology` options. Schema-1

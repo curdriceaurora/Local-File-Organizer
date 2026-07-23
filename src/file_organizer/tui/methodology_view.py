@@ -16,6 +16,8 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.core.organize_options import OrganizationMethodology
 from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
@@ -32,13 +34,24 @@ class MethodologySelectorPanel(Static):
     }
     """
 
+    # Keys derive from the canonical enum so this panel cannot offer a methodology the domain
+    # rejects. The label text is longer than config.methodology.LABELS on purpose: this view has
+    # room to expand each scheme, while the settings dropdowns do not.
     _METHODS = {
-        "none": "None (flat organization)",
-        "para": "PARA (Projects / Areas / Resources / Archive)",
-        "jd": "Johnny Decimal (Areas / Categories / Items)",
+        OrganizationMethodology.NONE.value: "None (flat organization)",
+        OrganizationMethodology.PARA.value: "PARA (Projects / Areas / Resources / Archive)",
+        OrganizationMethodology.JOHNNY_DECIMAL.value: (
+            "Johnny Decimal (Areas / Categories / Items)"
+        ),
     }
 
-    _current: str = "none"
+    _SHORTCUTS = {
+        OrganizationMethodology.NONE.value: "n",
+        OrganizationMethodology.PARA.value: "p",
+        OrganizationMethodology.JOHNNY_DECIMAL.value: "j",
+    }
+
+    _current: str = _DEFAULT_METHODOLOGY
 
     def on_mount(self) -> None:
         """Render the initial state."""
@@ -48,7 +61,7 @@ class MethodologySelectorPanel(Static):
         """Change the highlighted methodology.
 
         Args:
-            methodology: One of 'none', 'para', 'jd'.
+            methodology: A canonical ``OrganizationMethodology`` value.
         """
         self._current = methodology
         self._render_selector()
@@ -58,7 +71,7 @@ class MethodologySelectorPanel(Static):
         lines = ["[b]Methodology Selector[/b]\n"]
         for key, label in self._METHODS.items():
             marker = "[bold green]>[/bold green] " if key == self._current else "  "
-            shortcut = {"none": "n", "para": "p", "jd": "j"}[key]
+            shortcut = self._SHORTCUTS[key]
             lines.append(f"{marker}[{shortcut}] {label}")
         lines.append("\n[dim]Press p/j/n to switch, m to migrate (coming soon)[/dim]")
         self.update("\n".join(lines))
