@@ -25,27 +25,27 @@ This software uses AI to organize your local files. It operates locally with Oll
 
 ### AI and Analysis
 
-- **AI-Powered Organization**: Uses Qwen 2.5 3B (text) and Qwen 2.5-VL 7B (vision) with Ollama. It also supports OpenAI-compatible endpoints and Anthropic Claude.
-- **Audio Transcription**: Uses faster-whisper to convert local speech to text. This uses the GPU.
-- **Video Analysis**: Finds scenes and gets keyframes from video files.
-- **Intelligence**: Learns patterns, tracks your preferences, suggests actions, and adds tags automatically.
+- **AI-Powered Analysis**: Uses Qwen 2.5 3B (text) and Qwen 2.5-VL 7B (vision) with Ollama, OpenAI-compatible endpoints, or Anthropic Claude (see [`analysis.inspect`](docs/developer/capability-matrix.md#analysisinspect)).
+- **Audio Transcription**: Uses faster-whisper to convert local speech to text (see [`audio.transcribe`](docs/developer/capability-matrix.md#audiotranscribe)).
+- **Video Analysis**: Finds scenes and gets keyframes from video files (see [`video.analyze`](docs/developer/capability-matrix.md#videoanalyze)).
+- **Intelligence**: Learns patterns, tracks preferences, suggests actions, and adds tags automatically (see [`automation.suggestions`](docs/developer/capability-matrix.md#automationsuggestions) and [`automation.tags`](docs/developer/capability-matrix.md#automationtags)).
 
 ### Interfaces
 
-- **Terminal UI**: Gives you an 8-view Textual TUI (Files, Analytics, Audio, History, Copilot).
-- **Web UI**: Shows a browser interface with FastAPI and HTMX.
-- **Desktop App**: Shows a native OS window with pywebview. It uses a single Python process. It does not use Electron or Rust.
-- **Full CLI**: Includes commands to organize, set rules, suggest, find duplicates, run as a daemon, show analytics, update, and manage API keys.
-- **Copilot Chat**: Lets you use natural language to give commands. For example, type "organize ./Downloads" or "undo".
+- **Terminal UI**: Gives an 8-view Textual TUI (see [`interfaces.launch`](docs/developer/capability-matrix.md#interfaceslaunch)).
+- **Web UI**: Browser interface powered by FastAPI and HTMX (see [`web-desktop` surface status](docs/developer/capability-matrix.md#summary-statistics)).
+- **Desktop App**: Native OS window using pywebview in a single Python process without Electron or Rust.
+- **Full CLI**: Includes commands to organize, set rules, suggest, find duplicates, run as a daemon, show analytics, update, and manage API keys (see [`cli` surface status](docs/developer/capability-matrix.md#summary-statistics)).
+- **Copilot Chat**: Accepts natural language commands such as "organize ./Downloads" or "undo" (see [`copilot.chat`](docs/developer/capability-matrix.md#copilotchat)).
 
 ### Organization
 
-- **Extensive Support**: Operates on 840 tests, 408 modules, and 39 file types.
-- **Organization Rules**: Sorts files automatically with conditions and previews. It saves rules in YAML.
-- **PARA + Johnny Decimal**: Includes these organizational methodologies.
-- **Deduplication**: Finds duplicate files with hash and semantic checks.
-- **Undo/Redo**: Keeps a full history of operations so you can undo them.
-- **Auto-Update**: Updates Linux AppImage from GitHub Releases. Updates macOS and Windows with `pip` or `pipx`.
+- **Evidence-Backed Capabilities**: Operates on [34 product capabilities](docs/developer/capability-matrix.md) with canonical cross-surface parity evidence (see [`organization.execute`](docs/developer/capability-matrix.md#organizationexecute), [`organization.preview`](docs/developer/capability-matrix.md#organizationpreview), and [`organization.scan`](docs/developer/capability-matrix.md#organizationscan)).
+- **Organization Rules**: Sorts files automatically with conditions and previews (see [`automation.rules`](docs/developer/capability-matrix.md#automationrules)).
+- **PARA + Johnny Decimal**: Supports canonical organization methodologies (see [`methodology.configure`](docs/developer/capability-matrix.md#methodologyconfigure)).
+- **Deduplication**: Finds duplicate files with hash and semantic checks (see [`deduplication.manage`](docs/developer/capability-matrix.md#deduplicationmanage)).
+- **Undo/Redo**: Keeps operation history so you can undo changes safely (see [`history.manage`](docs/developer/capability-matrix.md#historymanage)).
+- **Auto-Update**: Manages application updates safely across platforms (see [`updates.manage`](docs/developer/capability-matrix.md#updatesmanage)).
 - **Cross-Platform**: Operates on macOS, Windows, and Linux.
 
 ## How It Works
