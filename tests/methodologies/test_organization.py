@@ -121,6 +121,33 @@ def test_johnny_decimal_numbering_is_independent_of_traversal_order(tmp_path: Pa
     assert _route_jd(tmp_path, batch) == _route_jd(tmp_path, list(reversed(batch)))
 
 
+def test_johnny_decimal_numbering_follows_sorted_classifier_order(tmp_path: Path) -> None:
+    """Categories are assigned in sorted classifier order, not set iteration order.
+
+    Classifiers are collected in a set, and set iteration order for strings depends on
+    ``PYTHONHASHSEED``. Numbering that relied on it would be stable within one process and differ
+    between runs, so comparing two in-process orderings cannot detect the bug. Pinning the expected
+    numbers can.
+    """
+    names = ("Zeta", "Omega", "Kappa", "Delta", "Alpha", "Mu")
+    destinations = _route_jd(
+        tmp_path, [_processed(tmp_path / f"{name}.txt", name) for name in names]
+    )
+
+    numbered = {
+        name: destinations[name].rsplit("/", maxsplit=1)[-1].split(" ", maxsplit=1)[0]
+        for name in names
+    }
+    assert [numbered[name] for name in sorted(names)] == [
+        "30.01",
+        "30.02",
+        "30.03",
+        "30.04",
+        "30.05",
+        "30.06",
+    ]
+
+
 def test_johnny_decimal_repeated_classifier_reuses_one_category(tmp_path: Path) -> None:
     """Files sharing a classifier land in the same category rather than consuming two."""
     destinations = _route_jd(

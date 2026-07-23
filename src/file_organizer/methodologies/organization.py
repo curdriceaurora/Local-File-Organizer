@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
+from typing import NamedTuple
 
 from file_organizer.core.organize_options import OrganizationMethodology
 from file_organizer.methodologies.johnny_decimal.categories import (
@@ -43,6 +44,20 @@ _JD_LAST_CATEGORY = 99
 _JD_CATCH_ALL_NAME = "Other"
 
 
+class _JohnnyDecimalRoute(NamedTuple):
+    """Where one result lands before its category number is known."""
+
+    area: AreaDefinition
+    classifier: str
+
+
+class _CategoryAssignment(NamedTuple):
+    """One allocated category, and whether it is the shared catch-all."""
+
+    category: int
+    is_catch_all: bool
+
+
 def apply_organization_methodology(
     processed: Iterable[ProcessedResult],
     *,
@@ -54,26 +69,25 @@ def apply_organization_methodology(
     if methodology == OrganizationMethodology.NONE:
         return results
 
-    allocation = (
-        _allocate_johnny_decimal_categories(results, input_root)
-        if methodology == OrganizationMethodology.JOHNNY_DECIMAL
-        else {}
-    )
+    if methodology == OrganizationMethodology.PARA:
+        return [
+            replace(result, folder_name=_para_destination(result, input_root)) for result in results
+        ]
 
-    remapped: list[ProcessedResult] = []
-    for result in results:
-        if methodology == OrganizationMethodology.PARA:
-            folder = _para_destination(result, input_root)
-        else:
-            folder = _johnny_decimal_destination(result, input_root, allocation)
-        remapped.append(replace(result, folder_name=folder))
-    return remapped
+    # Route once and reuse. Area selection rebuilds the default scheme on every call, so resolving
+    # it separately for allocation and for rendering would double the cost of Johnny Decimal
+    # routing across the batch.
+    routes = [_johnny_decimal_classifier(result, input_root) for result in results]
+    allocation = _allocate_johnny_decimal_categories(routes)
+    return [
+        replace(result, folder_name=_johnny_decimal_destination(result, route, allocation))
+        for result, route in zip(results, routes, strict=True)
+    ]
 
 
 def _allocate_johnny_decimal_categories(
-    results: list[ProcessedResult],
-    input_root: Path,
-) -> dict[tuple[int, str], tuple[int, bool]]:
+    routes: list[_JohnnyDecimalRoute | None],
+) -> dict[tuple[int, str], _CategoryAssignment]:
     """Assign a distinct category number to each classifier folder within an area.
 
     Johnny Decimal requires distinct categories inside an area, so ``10.01 Taxes`` and
@@ -92,33 +106,35 @@ def _allocate_johnny_decimal_categories(
         shared catch-all.
     """
     classifiers_by_area: dict[int, set[str]] = {}
-    for result in results:
-        routed = _johnny_decimal_classifier(result, input_root)
-        if routed is None:
+    for route in routes:
+        if route is None:
             continue
-        area, classifier = routed
-        classifiers_by_area.setdefault(area.area_range_start, set()).add(classifier)
+        classifiers_by_area.setdefault(route.area.area_range_start, set()).add(route.classifier)
 
     capacity = _JD_LAST_CATEGORY - _JD_FIRST_CATEGORY + 1
-    allocation: dict[tuple[int, str], tuple[int, bool]] = {}
+    allocation: dict[tuple[int, str], _CategoryAssignment] = {}
     for area_start, classifiers in classifiers_by_area.items():
         ordered = sorted(classifiers, key=lambda name: (name.casefold(), name))
         if len(ordered) <= capacity:
             for offset, classifier in enumerate(ordered):
-                allocation[(area_start, classifier)] = (_JD_FIRST_CATEGORY + offset, False)
+                allocation[(area_start, classifier)] = _CategoryAssignment(
+                    _JD_FIRST_CATEGORY + offset, False
+                )
             continue
         # Reserve the final category as the catch-all and number everything before it uniquely.
         for offset, classifier in enumerate(ordered[: capacity - 1]):
-            allocation[(area_start, classifier)] = (_JD_FIRST_CATEGORY + offset, False)
+            allocation[(area_start, classifier)] = _CategoryAssignment(
+                _JD_FIRST_CATEGORY + offset, False
+            )
         for classifier in ordered[capacity - 1 :]:
-            allocation[(area_start, classifier)] = (_JD_LAST_CATEGORY, True)
+            allocation[(area_start, classifier)] = _CategoryAssignment(_JD_LAST_CATEGORY, True)
     return allocation
 
 
 def _johnny_decimal_classifier(
     result: ProcessedResult,
     input_root: Path,
-) -> tuple[AreaDefinition, str] | None:
+) -> _JohnnyDecimalRoute | None:
     """Return the area and classifier folder for a result, or ``None`` if already numbered."""
     existing = _safe_folder(result.folder_name)
     existing_parts = Path(existing).parts
@@ -131,7 +147,7 @@ def _johnny_decimal_classifier(
     except ValueError:
         relative_source = result.file_path.name
     searchable = f"{relative_source} {existing} {result.filename}".casefold()
-    return _select_johnny_decimal_area(searchable), existing
+    return _JohnnyDecimalRoute(_select_johnny_decimal_area(searchable), existing)
 
 
 def _para_destination(result: ProcessedResult, input_root: Path) -> str:
@@ -170,18 +186,17 @@ def _para_root(category: PARACategory) -> str:
 
 def _johnny_decimal_destination(
     result: ProcessedResult,
-    input_root: Path,
-    allocation: dict[tuple[int, str], tuple[int, bool]],
+    route: _JohnnyDecimalRoute | None,
+    allocation: dict[tuple[int, str], _CategoryAssignment],
 ) -> str:
     """Map one result into the existing default Johnny Decimal scheme."""
-    routed = _johnny_decimal_classifier(result, input_root)
-    if routed is None:
+    if route is None:
         return _safe_folder(result.folder_name)
 
-    area, classifier = routed
-    category, is_catch_all = allocation.get(
-        (area.area_range_start, classifier), (_JD_FIRST_CATEGORY, False)
-    )
+    area, classifier = route.area, route.classifier
+    # Every routed classifier was allocated above, so a missing key would be a logic error rather
+    # than a case to paper over with a default.
+    category, is_catch_all = allocation[(area.area_range_start, classifier)]
     number = JohnnyDecimalNumber(area=area.area_range_start, category=category)
     area_folder = f"{area.area_range_start:02d} {area.name}"
     if is_catch_all:
