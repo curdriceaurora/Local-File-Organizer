@@ -26,24 +26,24 @@ This software uses AI to organize your local files. It operates locally with Oll
 ### AI and Analysis
 
 - **AI-Powered Analysis**: Uses Qwen 2.5 3B (text) and Qwen 2.5-VL 7B (vision) with Ollama, OpenAI-compatible endpoints, or Anthropic Claude (see [`analysis.inspect`](docs/developer/capability-matrix.md#analysisinspect)).
-- **Audio Transcription**: Uses faster-whisper to convert local speech to text (see [`audio.transcribe`](docs/developer/capability-matrix.md#audiotranscribe)).
-- **Video Analysis**: Finds scenes and gets keyframes from video files (see [`video.analyze`](docs/developer/capability-matrix.md#videoanalyze)).
+- **Audio Transcription**: Uses faster-whisper to convert local speech to text (requires optional `[audio]` extra; see [`audio.transcribe`](docs/developer/capability-matrix.md#audiotranscribe)).
+- **Video Analysis**: Finds scenes and gets keyframes from video files (requires optional `[video]` extra; see [`video.analyze`](docs/developer/capability-matrix.md#videoanalyze)).
 - **Intelligence**: Learns patterns, tracks preferences, suggests actions, and adds tags automatically (see [`automation.suggestions`](docs/developer/capability-matrix.md#automationsuggestions) and [`automation.tags`](docs/developer/capability-matrix.md#automationtags)).
 
 ### Interfaces
 
 - **Terminal UI**: Gives an 8-view Textual TUI (see [`interfaces.launch`](docs/developer/capability-matrix.md#interfaceslaunch)).
 - **Web UI**: Browser interface powered by FastAPI and HTMX (see [`web-desktop` surface status](docs/developer/capability-matrix.md#summary-statistics)).
-- **Desktop App**: Native OS window using pywebview in a single Python process without Electron or Rust.
+- **Desktop App**: Native OS window using pywebview (shares the [`web-desktop` surface adapter](docs/developer/capability-matrix.md#summary-statistics) in a single Python process).
 - **Full CLI**: Includes commands to organize, set rules, suggest, find duplicates, run as a daemon, show analytics, update, and manage API keys (see [`cli` surface status](docs/developer/capability-matrix.md#summary-statistics)).
 - **Copilot Chat**: Accepts natural language commands such as "organize ./Downloads" or "undo" (see [`copilot.chat`](docs/developer/capability-matrix.md#copilotchat)).
 
 ### Organization
 
-- **Evidence-Backed Capabilities**: Operates on [34 product capabilities](docs/developer/capability-matrix.md) with canonical cross-surface parity evidence (see [`organization.execute`](docs/developer/capability-matrix.md#organizationexecute), [`organization.preview`](docs/developer/capability-matrix.md#organizationpreview), and [`organization.scan`](docs/developer/capability-matrix.md#organizationscan)).
+- **Product Capability Matrix**: Built on [34 product capabilities](docs/developer/capability-matrix.md#summary-statistics) across [6 official surfaces](docs/developer/capability-matrix.md#summary-statistics), with automated cross-surface parity enforcement (conformance-verified for [`organization.execute`](docs/developer/capability-matrix.md#organizationexecute), [`organization.preview`](docs/developer/capability-matrix.md#organizationpreview), [`organization.scan`](docs/developer/capability-matrix.md#organizationscan), and [`methodology.configure`](docs/developer/capability-matrix.md#methodologyconfigure)).
 - **Organization Rules**: Sorts files automatically with conditions and previews (see [`automation.rules`](docs/developer/capability-matrix.md#automationrules)).
 - **PARA + Johnny Decimal**: Supports canonical organization methodologies (see [`methodology.configure`](docs/developer/capability-matrix.md#methodologyconfigure)).
-- **Deduplication**: Finds duplicate files with hash and semantic checks (see [`deduplication.manage`](docs/developer/capability-matrix.md#deduplicationmanage)).
+- **Deduplication**: Finds duplicate files with hash and semantic checks (requires optional `[dedup]` extra; see [`deduplication.manage`](docs/developer/capability-matrix.md#deduplicationmanage)).
 - **Undo/Redo**: Keeps operation history so you can undo changes safely (see [`history.manage`](docs/developer/capability-matrix.md#historymanage)).
 - **Auto-Update**: Manages application updates safely across platforms (see [`updates.manage`](docs/developer/capability-matrix.md#updatesmanage)).
 - **Cross-Platform**: Operates on macOS, Windows, and Linux.
