@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 import json
+from collections.abc import Iterable
 from pathlib import Path
 from typing import cast
 
@@ -462,3 +463,78 @@ def test_public_claims_freshness_anchor_mismatch(tmp_path: Path) -> None:
         "has mismatched anchor '#audiotranscribe' (expected '#analysisinspect')" in err
         for err in errors
     )
+
+
+def _conformance_claim_readme(capability_ids: Iterable[str]) -> str:
+    """Render a minimal README advertising the given capabilities as conformance-verified."""
+    links = ", ".join(
+        f"[`{capability_id}`](docs/developer/capability-matrix.md#{capability_id.replace('.', '')})"
+        for capability_id in capability_ids
+    )
+    return f"## Features\n\n- **Matrix**: conformance-verified for {links}.\n"
+
+
+def test_public_claims_rejects_capability_advertised_without_evidence(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import _verified_capability_ids, verify_public_claims
+
+    verified = _verified_capability_ids()
+    unverified = sorted(
+        capability.capability_id
+        for capability in get_capability_registry().capabilities
+        if capability.capability_id not in verified
+    )
+    assert unverified, "registry must retain at least one capability without conformance evidence"
+
+    readme = tmp_path / "README_overclaim.md"
+    readme.write_text(_conformance_claim_readme([unverified[0]]), encoding="utf-8")
+
+    errors = verify_public_claims(readme)
+    assert any(
+        f"advertises '{unverified[0]}' as conformance-verified, but it holds no verified surface"
+        in err
+        for err in errors
+    )
+
+
+def test_public_claims_rejects_omitting_a_verified_capability(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import _verified_capability_ids, verify_public_claims
+
+    verified = sorted(_verified_capability_ids())
+    assert len(verified) > 1, "registry must hold more than one verified capability"
+
+    # Advertise every verified capability except one; the omission must be reported.
+    readme = tmp_path / "README_omission.md"
+    readme.write_text(_conformance_claim_readme(verified[1:]), encoding="utf-8")
+
+    errors = verify_public_claims(readme)
+    assert any(
+        f"omits '{verified[0]}' from its conformance-verified claim" in err for err in errors
+    )
+
+
+def test_public_claims_rejects_retired_inventory_metrics(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    readme = tmp_path / "README_metrics.md"
+    readme.write_text(
+        "## Features\n\n- **Support**: Operates on 840 tests, 408 modules, and 39 file types "
+        "with 99.99% uptime (see [`analysis.inspect`]"
+        "(docs/developer/capability-matrix.md#analysisinspect)).\n",
+        encoding="utf-8",
+    )
+
+    errors = verify_public_claims(readme)
+    for retired in ("840 tests", "408 modules", "39 file types", "99.99% uptime"):
+        assert any(retired in err for err in errors), f"{retired} must be rejected"
+
+
+def test_matrix_heading_slugs_accept_both_whitespace_conventions() -> None:
+    from scripts.verify_claims_freshness import _slugify_heading
+
+    # GitHub emits one hyphen per whitespace character; other renderers collapse runs.
+    assert _slugify_heading("`organization.execute` — Organization execution") == {
+        "organizationexecute-organization-execution",
+        "organizationexecute--organization-execution",
+    }
+    assert _slugify_heading("Summary Statistics") == {"summary-statistics"}
+    assert _slugify_heading("!!!") == set()

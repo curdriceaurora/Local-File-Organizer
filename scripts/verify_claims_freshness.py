@@ -8,6 +8,8 @@ This script parses README.md and docs/developer/capability-matrix.md to ensure:
 4. Product metrics (capability count, surface count, TUI views) match canonical registry state.
 5. No unverified marketing metrics or un-inventoried feature claims exist in README.md.
 6. Optional feature pack requirements ([audio], [video], [dedup]) are properly qualified.
+7. Capabilities advertised as conformance-verified actually hold conformance evidence, and no
+   conformance-verified capability is omitted from that claim.
 """
 
 from __future__ import annotations
@@ -41,9 +43,11 @@ _CAPABILITY_ID_PATTERN = re.compile(r"`?([a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)`?")
 _HTML_ANCHOR_PATTERN = re.compile(r'<a\s+(?:id|name)="([^"]+)"')
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 
-# Pattern for unverified quantitative marketing claims (e.g. "840 tests", "408 modules", "1200 devices", "99.99% uptime")
+# Retired hand-maintained inventory claims. These counted source artefacts rather than product
+# capabilities and were never reproducible; the canonical counts below replace them. Uptime is
+# listed because a locally executed tool cannot substantiate an availability figure at all.
 _UNVERIFIED_MARKETING_PATTERN = re.compile(
-    r"\b(?:\d+\s+(?:tests|modules|file types|devices)|99\.\d+%\s+uptime)\b", re.IGNORECASE
+    r"\b(?:\d+\s+(?:tests|modules|file types)|\d+(?:\.\d+)?%\s+uptime)\b", re.IGNORECASE
 )
 
 # Canonical counts verification patterns
@@ -51,13 +55,27 @@ _CAPABILITY_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)\s+product capabilities\b"
 _SURFACE_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)\s+official surfaces\b", re.IGNORECASE)
 _TUI_VIEW_COUNT_CLAIM_PATTERN = re.compile(r"\b(\d+)-view Textual TUI\b", re.IGNORECASE)
 
+# Clause advertising which capabilities hold conformance evidence, e.g.
+# "conformance-verified for [`organization.execute`](...), and [`methodology.configure`](...))".
+_CONFORMANCE_CLAIM_PATTERN = re.compile(r"conformance-verified for\b(?P<claim>[^\n]*)")
+
 CANONICAL_TUI_VIEW_COUNT = 8
 
 
-def _slugify_heading(heading_text: str) -> str:
-    """Convert Markdown heading text to GitHub Markdown anchor slug format."""
-    clean = re.sub(r"[^\w\s-]", "", heading_text.lower())
-    return re.sub(r"[\s_]+", "-", clean.strip())
+def _slugify_heading(heading_text: str) -> set[str]:
+    """Return candidate GitHub anchor slugs for one Markdown heading.
+
+    GitHub emits one hyphen per whitespace character, while many Markdown tools collapse runs of
+    whitespace into a single hyphen. Headings here contain em dashes surrounded by spaces, so the
+    two conventions disagree. Accept both rather than guess which renderer the reader uses.
+    """
+    clean = re.sub(r"[^\w\s-]", "", heading_text.lower()).strip()
+    if not clean:
+        return set()
+    return {
+        re.sub(r"[\s_]+", "-", clean),  # collapsed runs
+        re.sub(r"[\s_]", "-", clean),  # one hyphen per whitespace character
+    }
 
 
 def extract_matrix_anchors(matrix_path: Path) -> set[str]:
@@ -71,11 +89,61 @@ def extract_matrix_anchors(matrix_path: Path) -> set[str]:
     for match in _HTML_ANCHOR_PATTERN.finditer(content):
         anchors.add(match.group(1))
 
+    # GitHub disambiguates repeated heading slugs with -1, -2, ... in document order.
+    seen: dict[str, int] = {}
     for match in _HEADING_PATTERN.finditer(content):
-        heading_text = match.group(2).strip()
-        anchors.add(_slugify_heading(heading_text))
+        for slug in _slugify_heading(match.group(2).strip()):
+            occurrence = seen.get(slug, 0)
+            anchors.add(slug if occurrence == 0 else f"{slug}-{occurrence}")
+            seen[slug] = occurrence + 1
 
     return anchors
+
+
+def _verified_capability_ids() -> set[str]:
+    """Return capability IDs holding conformance evidence on at least one surface."""
+    from file_organizer.core.capabilities import ConformanceStatus
+
+    return {
+        capability.capability_id
+        for capability in get_capability_registry().capabilities
+        for surface in Surface
+        if capability.support_for(surface).conformance_status is ConformanceStatus.VERIFIED
+    }
+
+
+def _verify_conformance_claims(content: str) -> list[str]:
+    """Audit the conformance-verified claim against actual registry evidence.
+
+    A link resolving to a real capability proves nothing about that capability holding evidence.
+    This closes the loop in both directions: nothing may be advertised as conformance-verified
+    without evidence, and nothing holding evidence may be quietly omitted.
+    """
+    claim_match = _CONFORMANCE_CLAIM_PATTERN.search(content)
+    if not claim_match:
+        return []
+
+    claimed: set[str] = set()
+    for link in _MATRIX_LINK_PATTERN.finditer(claim_match.group("claim")):
+        cap_match = _CAPABILITY_ID_PATTERN.search(link.group(1))
+        if cap_match:
+            claimed.add(cap_match.group(1))
+    if not claimed:
+        return ["README.md advertises conformance-verified capabilities but links none of them."]
+
+    verified = _verified_capability_ids()
+    errors: list[str] = []
+    for capability_id in sorted(claimed - verified):
+        errors.append(
+            f"README.md advertises '{capability_id}' as conformance-verified, but it holds no "
+            "verified surface in the capability registry."
+        )
+    for capability_id in sorted(verified - claimed):
+        errors.append(
+            f"README.md omits '{capability_id}' from its conformance-verified claim even though "
+            "it holds verified conformance evidence."
+        )
+    return errors
 
 
 def _verify_marketing_stats(content: str) -> list[str]:
@@ -218,6 +286,7 @@ def verify_public_claims(
         _verify_matrix_links(readme_content, valid_anchors, valid_capability_ids, matrix_path.name)
     )
     errors.extend(_verify_feature_bullets(readme_content))
+    errors.extend(_verify_conformance_claims(readme_content))
 
     return errors
 
@@ -241,8 +310,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        default=True,
-        help="Verify claims freshness and link resolution (default: True)",
+        help=(
+            "Accepted for symmetry with generate_capability_matrix.py --check. This script has no "
+            "write mode, so verification always runs whether or not the flag is passed."
+        ),
     )
     args = parser.parse_args(argv)
 
