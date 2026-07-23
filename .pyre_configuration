@@ -2,11 +2,12 @@
   "source_directories": [
     "src"
   ],
+  "only_check_paths": [
+    "src/file_organizer/api/middleware.py",
+    "src/file_organizer/web/_helpers.py",
+    "src/file_organizer/web/csrf.py"
+  ],
   "search_path": [
     "stubs/pyre"
-  ],
-  "ignore_all_errors": [
-    "tests/.*",
-    "src/file_organizer/(?!api/middleware\\.py$|web/_helpers\\.py$|web/csrf\\.py$).*"
   ]
 }
