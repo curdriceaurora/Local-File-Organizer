@@ -178,6 +178,11 @@ class MethodologyView(StatusMixin, Vertical):
     }
     """
 
+    # Textual resolves BINDINGS at class-definition time and dispatches each action name to an
+    # ``action_<name>`` method, so neither can be generated from the enum. Adding a methodology
+    # therefore needs a Binding and a matching ``action_set_<value>`` here. The vocabulary guard in
+    # tests/core/test_methodology_vocabulary.py fails until both exist, so the omission cannot ship
+    # silently.
     BINDINGS = [
         Binding("p", "set_para", "PARA", show=True),
         Binding("j", "set_jd", "JD", show=True),
@@ -202,7 +207,9 @@ class MethodologyView(StatusMixin, Vertical):
         resolved_dir = workspace.active_root if workspace is not None else scan_dir
         self._scan_dir = Path(resolved_dir) if resolved_dir is not None else None
         self._methodology = (
-            workspace.options.effective_methodology.value if workspace is not None else "none"
+            workspace.options.effective_methodology.value
+            if workspace is not None
+            else _DEFAULT_METHODOLOGY
         )
 
     def compose(self) -> ComposeResult:
@@ -242,12 +249,12 @@ class MethodologyView(StatusMixin, Vertical):
     def _update_preview(self) -> None:
         """Dispatch preview update based on current methodology."""
         preview = self.query_one(MethodologyPreviewPanel)
-        if self._methodology == "none":
+        if self._methodology == OrganizationMethodology.NONE.value:
             preview.show_none_preview()
-        elif self._methodology == "para":
+        elif self._methodology == OrganizationMethodology.PARA.value:
             preview.show_loading()
             self._load_para_preview()
-        elif self._methodology == "jd":
+        elif self._methodology == OrganizationMethodology.JOHNNY_DECIMAL.value:
             preview.show_loading()
             self._load_jd_preview()
 

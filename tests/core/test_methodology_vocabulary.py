@@ -3,10 +3,18 @@
 ``OrganizationMethodology`` is the canonical value model. Adapters may present methodologies
 differently, but none may define, accept, or advertise a value the domain does not recognize.
 
-Most adapters derive their vocabulary from the enum, so drift is impossible by construction. Three
-cannot: the Pydantic ``Literal`` annotations in the REST and Python SDK models, and the TypeScript
-union. Those are pinned here instead, because deriving them would change the emitted OpenAPI schema
-and the generated client surface for no behavioral gain.
+Most adapters derive their vocabulary from the enum, so drift is impossible by construction. Five
+cannot, and are pinned here instead:
+
+* the Pydantic ``Literal`` annotations in the REST and Python SDK models, and the TypeScript union —
+  deriving these would change the emitted OpenAPI schema and the generated client surface for no
+  behavioral gain;
+* the TUI view's ``BINDINGS`` and ``action_set_*`` handlers — Textual resolves both at
+  class-definition time and dispatches actions by name, so neither can be generated.
+
+The capability registry is deliberately not cross-checked here. ``methodology.configure`` declares
+entry-point strings such as ``fo organize --methodology``; it does not encode methodology values, so
+there is no registry-side vocabulary that could drift against the enum.
 """
 
 from __future__ import annotations
@@ -20,11 +28,7 @@ import pytest
 from file_organizer.api.models import OrganizationOptionsPayload as RestOptionsPayload
 from file_organizer.client.models import OrganizationOptionsPayload as SdkOptionsPayload
 from file_organizer.config import methodology as config_methodology
-from file_organizer.core.organize_options import (
-    OrganizationMethodology,
-    OrganizeOptions,
-    _methodology_choices,
-)
+from file_organizer.core.organize_options import OrganizationMethodology, OrganizeOptions
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -82,8 +86,12 @@ def test_unrecognized_values_are_lenient_at_the_boundary_and_strict_in_the_domai
 
 
 def test_domain_error_lists_exactly_the_canonical_vocabulary() -> None:
-    rendered = _methodology_choices()
-    assert re.findall(r"'([^']+)'", rendered) == list(CANONICAL)
+    # Asserted through the public failure path rather than the private renderer, so the guard
+    # pins the message a caller actually sees.
+    with pytest.raises(ValueError) as exc_info:
+        OrganizeOptions(methodology="date_based")
+
+    assert re.findall(r"'([^']+)'", str(exc_info.value)) == list(CANONICAL)
 
 
 def test_aliases_are_rejected_by_the_domain() -> None:
@@ -134,11 +142,23 @@ def test_tui_methodology_panel_vocabulary_matches_the_canonical_enum() -> None:
     assert MethodologySelectorPanel._current in CANONICAL
 
 
-def test_registry_methodology_capability_entry_points_are_present() -> None:
-    from file_organizer.core.capabilities import get_capability_registry
+def test_tui_methodology_view_binds_every_canonical_methodology() -> None:
+    """Textual cannot generate BINDINGS or action methods from the enum, so pin them here.
 
-    capability = get_capability_registry().get("methodology.configure")
-    declared = {
-        entry_point for status in capability.surfaces for entry_point in status.entry_points
-    }
-    assert declared, "methodology.configure must declare entry points"
+    Both are resolved at class-definition time and dispatched by name, which is why the view
+    restates the vocabulary. Adding a methodology without a Binding and a matching action would
+    otherwise ship a selector the user cannot reach.
+    """
+    from file_organizer.tui.methodology_view import MethodologySelectorPanel, MethodologyView
+
+    bound_actions = {binding.action for binding in MethodologyView.BINDINGS}
+    for value in CANONICAL:
+        assert f"set_{value}" in bound_actions, f"no key binding selects methodology {value!r}"
+        assert callable(getattr(MethodologyView, f"action_set_{value}", None)), (
+            f"no action_set_{value} handler for methodology {value!r}"
+        )
+
+    # Every bound shortcut key must match the key the selector panel advertises for that value.
+    bindings_by_action = {binding.action: binding.key for binding in MethodologyView.BINDINGS}
+    for value, shortcut in MethodologySelectorPanel._SHORTCUTS.items():
+        assert bindings_by_action[f"set_{value}"] == shortcut

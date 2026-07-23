@@ -19,6 +19,9 @@ map it to.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from types import MappingProxyType
+
 from file_organizer.core.organize_options import OrganizationMethodology
 
 NONE = OrganizationMethodology.NONE.value
@@ -35,10 +38,15 @@ LABELS: dict[str, str] = {
     JOHNNY_DECIMAL: "Johnny Decimal",
 }
 
-ALIASES: dict[str, str] = {
-    "content_based": NONE,
-    "johnny_decimal": JOHNNY_DECIMAL,
-}
+# Public so callers and guards can enumerate what the boundary accepts, and immutable because a
+# mutable module-level dict would let any importer widen the accepted vocabulary at runtime —
+# exactly the drift this module exists to prevent.
+ALIASES: Mapping[str, str] = MappingProxyType(
+    {
+        "content_based": NONE,
+        "johnny_decimal": JOHNNY_DECIMAL,
+    }
+)
 
 
 def resolve(value: object) -> OrganizationMethodology | None:
