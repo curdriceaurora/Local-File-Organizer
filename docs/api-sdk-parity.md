@@ -13,10 +13,12 @@ compares that artifact with both the endpoint specification and capability regis
 Node test checks the artifact against `client.ts`. After adding or renaming a TypeScript client
 method, run `npm run generate:methods` in the TypeScript client directory and commit the result.
 
-The TypeScript client is compiled under strict settings before its transport tests run. That Node
-job remains advisory until #1606 promotes the conformance suites, while the committed inventory
-artifact keeps registry/spec drift in the blocking Python suite. Adding, removing, or renaming a
-public route therefore requires an intentional SDK mapping in the same change.
+The TypeScript client is compiled under strict settings before its transport tests run.
+That Node step is promoted to a blocking gate within the workflow in #1606 (with
+repository-level branch protection rules tracked separately), while the committed
+inventory artifact keeps registry/spec drift in the blocking Python suite. Adding,
+removing, or renaming a public route therefore requires an intentional SDK mapping
+in the same change.
 
 ## Organization behavior
 
@@ -39,8 +41,12 @@ REST and Python verification comes from golden corpus vectors, while future Type
 will cite strict compilation, AST inventory, type contracts, and fetch-stub behavior tests rather
 than claiming the Python-hosted corpus ran against TypeScript.
 
-Organization execution remains unverified because background submission, idempotency,
-cancellation, and rollback paths are not yet covered by the corpus.
+Synchronous organization execution is verified for the CLI, Python SDK, REST
+API, TUI, and Web surfaces, which the corpus drives end to end. TypeScript
+execution stays unverified pending the evidence shape described above. The
+background-job path — submission, idempotency, cancellation, and rollback — is
+not driven by the corpus on any surface, and the capability that records that
+lifecycle, `organization.jobs-recovery`, is unverified everywhere.
 
 ## Errors and operation IDs
 
