@@ -42,15 +42,16 @@ The `fo api` driver runs the same corpus through Typer, the synchronous
 official SDK, and the REST routes. It proves remote option mapping, exact
 reviewed-plan execution, stable machine output, and local-versus-remote
 behavioral equivalence. Background submission and lifecycle commands have
-focused adapter tests and remain unverified until #1606 extends the shared job
-corpus.
+focused adapter tests and stay unverified until the shared corpus covers the job
+lifecycle; that evidence is tracked by `organization.jobs-recovery`.
 
 The Web form driver sends the corpus through the real `/ui/organize`,
 `/ui/organize/scan`, and `/ui/organize/plan/clear` routes. It round-trips every
 canonical option, reads the serialized plan rendered for review, and verifies
 that rejecting the plan evicts it. Those declared Web entry points therefore
-have executable corpus evidence. Execution remains unverified until the corpus
-also covers the surface's queued job, cancellation, and rollback lifecycle.
+have executable corpus evidence, so synchronous execution is verified for this
+surface. Its queued-job, cancellation, and rollback lifecycle stays unverified
+until the corpus covers it.
 
 Desktop loads these same `/ui` routes, so its organization behavior is
 equivalent by construction rather than independently corpus-driven. Focused
@@ -104,8 +105,8 @@ Rules for adapter drivers (#1595–#1598):
 pytest tests/conformance -m conformance --override-ini="addopts="
 ```
 
-CI runs the suite as the advisory `conformance-advisory` job in the
-dedicated `Conformance` workflow — which, unlike the main CI workflow, also
-triggers for pushes and pull requests on `feature/cross-surface-parity` — and
-inside the full-suite shards. It stays advisory until #1606 promotes required
-gates.
+CI runs the suite as the `conformance` job in the dedicated `Conformance`
+workflow — which, unlike the main CI workflow, also triggers for pushes and pull
+requests on `feature/cross-surface-parity` — and inside the full-suite shards.
+Promoted to a blocking gate within the workflow in #1606 (repository-level branch
+protection rules tracked separately).
