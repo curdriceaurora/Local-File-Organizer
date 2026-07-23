@@ -195,11 +195,28 @@ class JobRepository:
                 details={"expected": expected_revision, "actual": job.revision},
             )
         job.status = target.value
-        job.error = error
-        job.error_code = error_code
-        job.error_retryable = error_retryable
+        effective_error = error
+        effective_error_code = error_code
+        effective_error_retryable = error_retryable
+        effective_error_details = error_details
+        if error is None and target in {
+            JobStatus.ROLLING_BACK,
+            JobStatus.ROLLED_BACK,
+            JobStatus.RECOVERY_REQUIRED,
+        }:
+            effective_error = job.error
+            effective_error_code = job.error_code
+            effective_error_retryable = bool(job.error_retryable)
+            effective_error_details = (
+                json.loads(job.error_details_json) if job.error_details_json else None
+            )
+        job.error = effective_error
+        job.error_code = effective_error_code
+        job.error_retryable = effective_error_retryable
         job.error_details_json = (
-            json.dumps(error_details, sort_keys=True) if error_details is not None else None
+            json.dumps(effective_error_details, sort_keys=True)
+            if effective_error_details is not None
+            else None
         )
         job.transaction_id = transaction_id or job.transaction_id
         if recovery_action is not None:

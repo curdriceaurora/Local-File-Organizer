@@ -1736,7 +1736,6 @@
         "tui": {
           "conformance_status": "verified",
           "entry_points": [
-            "OrganizationPreviewView",
             "TUIOrganizationAdapter.execute"
           ],
           "implementation_status": "implemented",
@@ -1897,7 +1896,6 @@
         "tui": {
           "conformance_status": "verified",
           "entry_points": [
-            "OrganizationPreviewView",
             "TUIOrganizationAdapter.preview"
           ],
           "implementation_status": "implemented",

@@ -90,6 +90,40 @@ def test_organization_conformance_matches_exercised_corpus_scope() -> None:
             )
 
 
+_CORPUS_COVERED: frozenset[tuple[str, Surface]] = frozenset(
+    {
+        ("methodology.configure", Surface.CLI),
+        ("organization.execute", Surface.CLI),
+        ("organization.execute", Surface.PYTHON_SDK),
+        ("organization.execute", Surface.REST_API),
+        ("organization.execute", Surface.TUI),
+        ("organization.execute", Surface.WEB_DESKTOP),
+        ("organization.preview", Surface.CLI),
+        ("organization.preview", Surface.PYTHON_SDK),
+        ("organization.preview", Surface.REST_API),
+        ("organization.preview", Surface.TUI),
+        ("organization.preview", Surface.WEB_DESKTOP),
+        ("organization.scan", Surface.PYTHON_SDK),
+        ("organization.scan", Surface.REST_API),
+        ("organization.scan", Surface.WEB_DESKTOP),
+    }
+)
+
+
+def test_verified_flags_are_backed_by_corpus_evidence() -> None:
+    registry = get_capability_registry()
+    actual = {
+        (cap.capability_id, status.surface)
+        for cap in registry.capabilities
+        for status in cap.surfaces
+        if status.conformance_status is ConformanceStatus.VERIFIED
+    }
+    unguarded = actual - _CORPUS_COVERED
+    assert not unguarded, (
+        f"Unguarded verified flags: {unguarded!r}. Add corpus coverage or update _CORPUS_COVERED."
+    )
+
+
 def test_target_implementation_and_conformance_are_independent() -> None:
     registry = get_capability_registry()
     planned = registry.get("deduplication.manage").support_for(Surface.WEB_DESKTOP)
