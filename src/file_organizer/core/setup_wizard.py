@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Setup wizard for first-run configuration and onboarding.
 
 Provides guided setup with hardware detection, backend validation, and

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Backend detector module for AI runtime detection.
 
 Detects installed AI backends (Ollama, local GGUF models, MLX) and

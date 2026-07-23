@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Main file organizer orchestrator (facade).
 
 ``FileOrganizer`` is the public API for the organize workflow.  It

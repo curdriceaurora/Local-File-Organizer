@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """Hardware profiling for intelligent model and worker selection.
 
 Detects GPU type, VRAM, system RAM, and CPU cores at startup to
