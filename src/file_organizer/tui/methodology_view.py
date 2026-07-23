@@ -7,8 +7,10 @@ or none) and preview how files would be categorized under the selected scheme.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from types import MappingProxyType
+from typing import TYPE_CHECKING, ClassVar
 
 from textual import work
 from textual.app import ComposeResult
@@ -16,6 +18,8 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.core.organize_options import OrganizationMethodology
 from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
@@ -32,13 +36,28 @@ class MethodologySelectorPanel(Static):
     }
     """
 
-    _METHODS = {
-        "none": "None (flat organization)",
-        "para": "PARA (Projects / Areas / Resources / Archive)",
-        "jd": "Johnny Decimal (Areas / Categories / Items)",
-    }
+    # Keys derive from the canonical enum so this panel cannot offer a methodology the domain
+    # rejects. The label text is longer than config.methodology.LABELS on purpose: this view has
+    # room to expand each scheme, while the settings dropdowns do not.
+    _METHODS: ClassVar[Mapping[str, str]] = MappingProxyType(
+        {
+            OrganizationMethodology.NONE.value: "None (flat organization)",
+            OrganizationMethodology.PARA.value: "PARA (Projects / Areas / Resources / Archive)",
+            OrganizationMethodology.JOHNNY_DECIMAL.value: (
+                "Johnny Decimal (Areas / Categories / Items)"
+            ),
+        }
+    )
 
-    _current: str = "none"
+    _SHORTCUTS: ClassVar[Mapping[str, str]] = MappingProxyType(
+        {
+            OrganizationMethodology.NONE.value: "n",
+            OrganizationMethodology.PARA.value: "p",
+            OrganizationMethodology.JOHNNY_DECIMAL.value: "j",
+        }
+    )
+
+    _current: str = _DEFAULT_METHODOLOGY
 
     def on_mount(self) -> None:
         """Render the initial state."""
@@ -48,7 +67,7 @@ class MethodologySelectorPanel(Static):
         """Change the highlighted methodology.
 
         Args:
-            methodology: One of 'none', 'para', 'jd'.
+            methodology: A canonical ``OrganizationMethodology`` value.
         """
         self._current = methodology
         self._render_selector()
@@ -58,7 +77,7 @@ class MethodologySelectorPanel(Static):
         lines = ["[b]Methodology Selector[/b]\n"]
         for key, label in self._METHODS.items():
             marker = "[bold green]>[/bold green] " if key == self._current else "  "
-            shortcut = {"none": "n", "para": "p", "jd": "j"}[key]
+            shortcut = self._SHORTCUTS[key]
             lines.append(f"{marker}[{shortcut}] {label}")
         lines.append("\n[dim]Press p/j/n to switch, m to migrate (coming soon)[/dim]")
         self.update("\n".join(lines))
@@ -165,6 +184,11 @@ class MethodologyView(StatusMixin, Vertical):
     }
     """
 
+    # Textual resolves BINDINGS at class-definition time and dispatches each action name to an
+    # ``action_<name>`` method, so neither can be generated from the enum. Adding a methodology
+    # therefore needs a Binding and a matching ``action_set_<value>`` here. The vocabulary guard in
+    # tests/core/test_methodology_vocabulary.py fails until both exist, so the omission cannot ship
+    # silently.
     BINDINGS = [
         Binding("p", "set_para", "PARA", show=True),
         Binding("j", "set_jd", "JD", show=True),
@@ -189,7 +213,9 @@ class MethodologyView(StatusMixin, Vertical):
         resolved_dir = workspace.active_root if workspace is not None else scan_dir
         self._scan_dir = Path(resolved_dir) if resolved_dir is not None else None
         self._methodology = (
-            workspace.options.effective_methodology.value if workspace is not None else "none"
+            workspace.options.effective_methodology.value
+            if workspace is not None
+            else _DEFAULT_METHODOLOGY
         )
 
     def compose(self) -> ComposeResult:
@@ -229,12 +255,12 @@ class MethodologyView(StatusMixin, Vertical):
     def _update_preview(self) -> None:
         """Dispatch preview update based on current methodology."""
         preview = self.query_one(MethodologyPreviewPanel)
-        if self._methodology == "none":
+        if self._methodology == OrganizationMethodology.NONE.value:
             preview.show_none_preview()
-        elif self._methodology == "para":
+        elif self._methodology == OrganizationMethodology.PARA.value:
             preview.show_loading()
             self._load_para_preview()
-        elif self._methodology == "jd":
+        elif self._methodology == OrganizationMethodology.JOHNNY_DECIMAL.value:
             preview.show_loading()
             self._load_jd_preview()
 
