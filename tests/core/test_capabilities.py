@@ -18,7 +18,9 @@ from file_organizer.core.capabilities import (
     CapabilityRegistryError,
     ConformanceStatus,
     ImplementationStatus,
+    SupportLevel,
     Surface,
+    SurfaceCapabilityStatus,
     get_capability_registry,
 )
 
@@ -329,3 +331,97 @@ def test_typescript_client_product_methods_are_inventoried() -> None:
 
     assert generated == specified
     assert generated == registered
+
+
+def test_capability_matrix_up_to_date() -> None:
+    from scripts.generate_capability_matrix import generate_capability_matrix_markdown
+
+    matrix_path = (
+        Path(__file__).resolve().parents[2] / "docs" / "developer" / "capability-matrix.md"
+    )
+    assert matrix_path.exists(), f"Capability matrix file {matrix_path} missing"
+    on_disk = matrix_path.read_text(encoding="utf-8")
+    generated = generate_capability_matrix_markdown()
+
+    assert on_disk == generated, (
+        f"Capability matrix in {matrix_path} is out of date. Run 'python scripts/generate_capability_matrix.py' to update it."
+    )
+
+
+def test_capability_matrix_cell_formatting_semantic_axes() -> None:
+    from scripts.generate_capability_matrix import _format_surface_cell
+
+    unverified_status = SurfaceCapabilityStatus(
+        surface=Surface.TYPESCRIPT_SDK,
+        target_support=SupportLevel.FULL,
+        implementation_status=ImplementationStatus.IMPLEMENTED,
+        conformance_status=ConformanceStatus.UNVERIFIED,
+        entry_points=("FileOrganizerClient.organize",),
+    )
+    verified_status = SurfaceCapabilityStatus(
+        surface=Surface.REST_API,
+        target_support=SupportLevel.FULL,
+        implementation_status=ImplementationStatus.IMPLEMENTED,
+        conformance_status=ConformanceStatus.VERIFIED,
+        entry_points=("POST /api/v1/organize/execute",),
+    )
+    unimplemented_status = SurfaceCapabilityStatus(
+        surface=Surface.CLI,
+        target_support=SupportLevel.FULL,
+        implementation_status=ImplementationStatus.NOT_IMPLEMENTED,
+        conformance_status=ConformanceStatus.UNVERIFIED,
+        entry_points=(),
+    )
+    na_status = SurfaceCapabilityStatus(
+        surface=Surface.CLI,
+        target_support=SupportLevel.NOT_APPLICABLE,
+        implementation_status=ImplementationStatus.NOT_APPLICABLE,
+        conformance_status=ConformanceStatus.NOT_APPLICABLE,
+        entry_points=(),
+    )
+
+    # Acceptance Criterion 1: Matrix never equates target support with verified support
+    assert _format_surface_cell(unverified_status) == "Full (Implemented / Unverified)"
+    assert _format_surface_cell(verified_status) == "Full (Implemented / Verified)"
+    assert _format_surface_cell(unimplemented_status) == "Full (Not-implemented / Unverified)"
+    assert _format_surface_cell(na_status) == "N/A"
+    assert _format_surface_cell(unverified_status) != _format_surface_cell(verified_status)
+    assert (
+        _format_surface_cell(unverified_status)
+        != unverified_status.target_support.value.capitalize()
+    )
+
+
+def test_capability_matrix_renders_three_status_axes_for_known_capabilities() -> None:
+    from scripts.generate_capability_matrix import generate_capability_matrix_markdown
+
+    content = generate_capability_matrix_markdown()
+
+    # Verify key rows contain explicit three-status cells for unverified vs verified surfaces
+    assert (
+        "| [`organization.execute`](#organizationexecute) | Organization execution | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) |"
+        in content
+    )
+    assert (
+        "| [`accounts.manage`](#accountsmanage) | Account and workspace management | Beta | N/A | Full (Not-implemented / Unverified) | Full (Not-implemented / Unverified) | Full (Not-implemented / Unverified) | Full (Implemented / Unverified) | N/A |"
+        in content
+    )
+
+
+def test_capability_matrix_prose_important_note_matches_cell_format() -> None:
+    from scripts.generate_capability_matrix import (
+        _format_surface_cell,
+        generate_capability_matrix_markdown,
+    )
+
+    sample_status = SurfaceCapabilityStatus(
+        surface=Surface.TYPESCRIPT_SDK,
+        target_support=SupportLevel.FULL,
+        implementation_status=ImplementationStatus.IMPLEMENTED,
+        conformance_status=ConformanceStatus.UNVERIFIED,
+        entry_points=("FileOrganizerClient.organize",),
+    )
+    formatted_sample = _format_surface_cell(sample_status)
+    content = generate_capability_matrix_markdown()
+
+    assert f"> A surface cell formatted as `{formatted_sample}` represents" in content
