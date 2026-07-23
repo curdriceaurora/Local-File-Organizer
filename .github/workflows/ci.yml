@@ -494,7 +494,11 @@ jobs:
         # 2026-06-25: 75.7% combined (ratchet after ebook, document, audio, video and model coverage updates; actual 75.77%)
         # 2026-07-19: 76.0% combined (ratchet after genuine integration tests for the JD migrator, dedupe CLI, and deploy scaling/monitoring/compose modules; issue #1582)
         # 2026-07-19: 76.5% combined (ratchet after genuine integration tests for the updater check→install→rollback cycle, desktop launcher daemon boot, and TUI Pilot view transitions; issue #1582)
-        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=76.5 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
+        # 2026-07-23: count the conformance suite (#1599 parity slice). It drives the canonical
+        #   service and every adapter end to end, so it is integration-level evidence for the new
+        #   core/tui/methodology modules; it stays separately gated by the Conformance workflow. The
+        #   floor is regenerated from this pool and ratchets in the same PR (#1628 coverage follow-up).
+        run: pytest tests/ -m "integration or conformance" --strict-markers --cov=file_organizer --cov-branch --cov-fail-under=76.5 --cov-report=term-missing --cov-report=xml --cov-report=json:.coverage-integration.json --timeout=60 --override-ini="addopts="
 
       - name: Check per-file integration coverage floors
         run: python scripts/coverage/check-integration-floors.py
