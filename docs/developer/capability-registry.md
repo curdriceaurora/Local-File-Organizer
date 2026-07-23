@@ -77,3 +77,16 @@ as well as the explicit defaults emitted by the serializer.
 The serialization schema is versioned independently through
 `CAPABILITY_REGISTRY_SCHEMA_VERSION`. Change that version only when consumers cannot safely read
 the prior shape.
+
+## Capability matrix generation
+
+The product-wide matrix artifact is rendered at [capability-matrix.md](capability-matrix.md).
+
+Generate or check the matrix document using:
+
+```bash
+python scripts/generate_capability_matrix.py         # Update docs/developer/capability-matrix.md
+python scripts/generate_capability_matrix.py --check # Verify document matches registry state
+```
+
+Changes to `capability_registry.json` require re-running the generator script. Primary CI enforcement is provided by `test_capability_matrix_up_to_date` in `tests/core/test_capabilities.py`, while `python scripts/generate_capability_matrix.py --check` provides a fast standalone CLI check for developers and scripts.
