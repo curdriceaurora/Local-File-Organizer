@@ -779,4 +779,3 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.analyze` |
 | Web / Desktop | Read-only | Partial | Unverified | `GET /ui/files/preview` |
 | TUI | Not-applicable | Not-applicable | Not-applicable | None |
-

@@ -89,5 +89,4 @@ python scripts/generate_capability_matrix.py         # Update docs/developer/cap
 python scripts/generate_capability_matrix.py --check # Verify document matches registry state
 ```
 
-Changes to `capability_registry.json` require re-running the generator script. CI enforces document freshness via `test_capability_matrix_up_to_date` in `tests/core/test_capabilities.py`.
-
+Changes to `capability_registry.json` require re-running the generator script. Primary CI enforcement is provided by `test_capability_matrix_up_to_date` in `tests/core/test_capabilities.py`, while `python scripts/generate_capability_matrix.py --check` provides a fast standalone CLI check for developers and scripts.

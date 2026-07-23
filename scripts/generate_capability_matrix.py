@@ -18,10 +18,8 @@ _SRC = _ROOT / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from file_organizer.core.capabilities import (
-    Capability,
+from file_organizer.core.capabilities import (  # noqa: E402
     ConformanceStatus,
-    ExecutionScope,
     ImplementationStatus,
     SupportLevel,
     Surface,
@@ -38,6 +36,11 @@ _SURFACE_DISPLAY_NAMES: dict[Surface, str] = {
     Surface.WEB_DESKTOP: "Web / Desktop",
     Surface.TUI: "TUI",
 }
+
+
+def _escape_cell(text: str) -> str:
+    """Escape pipes and strip line breaks for Markdown table cells."""
+    return text.replace("|", "\\|").replace("\n", " ").replace("\r", "")
 
 
 def _format_surface_cell(status) -> str:
@@ -76,9 +79,10 @@ def generate_capability_matrix_markdown() -> str:
         "- **Conformance Status**: Executable parity evidence state (`Verified`, `Unverified`, `N/A`)."
     )
     lines.append("")
+    example_unverified = f"{SupportLevel.FULL.value.capitalize()} ({ImplementationStatus.IMPLEMENTED.value.capitalize()} / {ConformanceStatus.UNVERIFIED.value.capitalize()})"
     lines.append(
         "> [!IMPORTANT]\n"
-        "> A surface cell formatted as `Full (Implemented / Unverified)` represents an implemented feature that lacks full executable conformance evidence. "
+        f"> A surface cell formatted as `{example_unverified}` represents an implemented feature that lacks full executable conformance evidence. "
         "Target support is never equated with verified shipped status."
     )
     lines.append("")
@@ -109,7 +113,7 @@ def generate_capability_matrix_markdown() -> str:
             for cap in registry.capabilities
             if cap.support_for(surface).conformance_status is ConformanceStatus.VERIFIED
         )
-        display_name = _SURFACE_DISPLAY_NAMES[surface]
+        display_name = _escape_cell(_SURFACE_DISPLAY_NAMES[surface])
         lines.append(f"| {display_name} | {target_count} | {impl_count} | {conf_count} |")
 
     lines.append("")
@@ -123,15 +127,16 @@ def generate_capability_matrix_markdown() -> str:
     lines.append("|---|---|---|---|---|---|---|---|---|")
 
     for cap in registry.capabilities:
-        cli_cell = _format_surface_cell(cap.support_for(Surface.CLI))
-        rest_cell = _format_surface_cell(cap.support_for(Surface.REST_API))
-        py_cell = _format_surface_cell(cap.support_for(Surface.PYTHON_SDK))
-        ts_cell = _format_surface_cell(cap.support_for(Surface.TYPESCRIPT_SDK))
-        web_cell = _format_surface_cell(cap.support_for(Surface.WEB_DESKTOP))
-        tui_cell = _format_surface_cell(cap.support_for(Surface.TUI))
+        cli_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.CLI)))
+        rest_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.REST_API)))
+        py_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.PYTHON_SDK)))
+        ts_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.TYPESCRIPT_SDK)))
+        web_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.WEB_DESKTOP)))
+        tui_cell = _escape_cell(_format_surface_cell(cap.support_for(Surface.TUI)))
+        cap_name = _escape_cell(cap.name)
 
         lines.append(
-            f"| [`{cap.capability_id}`](#{cap.capability_id.replace('.', '')}) | {cap.name} | {cap.maturity.value.capitalize()} | "
+            f"| [`{cap.capability_id}`](#{cap.capability_id.replace('.', '')}) | {cap_name} | {cap.maturity.value.capitalize()} | "
             f"{cli_cell} | {rest_cell} | {py_cell} | {ts_cell} | {web_cell} | {tui_cell} |"
         )
 
@@ -165,18 +170,19 @@ def generate_capability_matrix_markdown() -> str:
 
         for surface in Surface:
             status = cap.support_for(surface)
-            disp = _SURFACE_DISPLAY_NAMES[surface]
-            target = status.target_support.value.capitalize()
-            impl = status.implementation_status.value.capitalize()
-            conf = status.conformance_status.value.capitalize()
-            entries = (
+            disp = _escape_cell(_SURFACE_DISPLAY_NAMES[surface])
+            target = _escape_cell(status.target_support.value.capitalize())
+            impl = _escape_cell(status.implementation_status.value.capitalize())
+            conf = _escape_cell(status.conformance_status.value.capitalize())
+            entries_str = (
                 ", ".join(f"`{e}`" for e in status.entry_points) if status.entry_points else "None"
             )
+            entries = _escape_cell(entries_str)
             lines.append(f"| {disp} | {target} | {impl} | {conf} | {entries} |")
 
         lines.append("")
 
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
