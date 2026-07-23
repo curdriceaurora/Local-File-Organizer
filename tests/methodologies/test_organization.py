@@ -70,3 +70,102 @@ def test_johnny_decimal_uses_default_scheme(
     )
 
     assert routed[0].folder_name == expected
+
+
+def _route_jd(tmp_path: Path, batch: list[ProcessedFile]) -> dict[str, str]:
+    """Route a batch through Johnny Decimal and index destinations by filename."""
+    routed = apply_organization_methodology(
+        batch, input_root=tmp_path, methodology=OrganizationMethodology.JOHNNY_DECIMAL
+    )
+    return {result.filename: result.folder_name for result in routed}
+
+
+def test_johnny_decimal_gives_distinct_classifiers_distinct_categories(tmp_path: Path) -> None:
+    """Two classifiers in one area cannot share a category number (#1617)."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_numbers_each_area_independently(tmp_path: Path) -> None:
+    """Category numbering restarts per area rather than running across the whole batch."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "Finance/budget.xlsx", "Spreadsheets"),
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["budget"] == "10 Finance & Administration/10.01 Spreadsheets"
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_numbering_is_independent_of_traversal_order(tmp_path: Path) -> None:
+    """The same corpus produces the same numbering however it was traversed."""
+    batch = [
+        _processed(tmp_path / "paper.pdf", "PDFs"),
+        _processed(tmp_path / "notes.txt", "Documents"),
+        _processed(tmp_path / "sheet.csv", "Tables"),
+    ]
+
+    assert _route_jd(tmp_path, batch) == _route_jd(tmp_path, list(reversed(batch)))
+
+
+def test_johnny_decimal_repeated_classifier_reuses_one_category(tmp_path: Path) -> None:
+    """Files sharing a classifier land in the same category rather than consuming two."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "plan.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["notes"] == destinations["plan"]
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_collapses_the_tail_when_an_area_overflows(tmp_path: Path) -> None:
+    """An area with more classifiers than categories collapses the tail into a catch-all.
+
+    Organizing files should not fail because a pathological input produced a hundred classifier
+    folders in one area, so the excess shares the final category and keeps its classifier as a
+    plain folder beneath it.
+    """
+    batch = [_processed(tmp_path / f"f{index}.pdf", f"Invoice{index:03d}") for index in range(120)]
+
+    destinations = _route_jd(tmp_path, batch)
+    categories = {value.split("/")[1].split(" ")[0] for value in destinations.values()}
+
+    assert len(categories) == 99
+    assert min(categories) == "10.01"
+    assert max(categories) == "10.99"
+
+    overflowed = [value for value in destinations.values() if "/10.99 Other/" in value]
+    assert len(overflowed) == 120 - 98
+    assert "10 Finance & Administration/10.99 Other/Invoice119" in overflowed
+
+
+def test_johnny_decimal_preserves_already_numbered_destinations(tmp_path: Path) -> None:
+    """Valid Johnny Decimal prefixes survive untouched and consume no category number."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "kept.txt", "11.04 Existing"),
+            _processed(tmp_path / "notes.txt", "Documents"),
+        ],
+    )
+
+    assert destinations["kept"] == "11.04 Existing"
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
