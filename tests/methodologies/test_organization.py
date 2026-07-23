@@ -70,3 +70,161 @@ def test_johnny_decimal_uses_default_scheme(
     )
 
     assert routed[0].folder_name == expected
+
+
+def _route_jd(tmp_path: Path, batch: list[ProcessedFile]) -> dict[str, str]:
+    """Route a batch through Johnny Decimal and index destinations by filename."""
+    routed = apply_organization_methodology(
+        batch, input_root=tmp_path, methodology=OrganizationMethodology.JOHNNY_DECIMAL
+    )
+    return {result.filename: result.folder_name for result in routed}
+
+
+def test_johnny_decimal_gives_distinct_classifiers_distinct_categories(tmp_path: Path) -> None:
+    """Two classifiers in one area cannot share a category number (#1617)."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_numbers_each_area_independently(tmp_path: Path) -> None:
+    """Category numbering restarts per area rather than running across the whole batch."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "Finance/budget.xlsx", "Spreadsheets"),
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["budget"] == "10 Finance & Administration/10.01 Spreadsheets"
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_numbering_is_independent_of_traversal_order(tmp_path: Path) -> None:
+    """The same corpus produces the same numbering however it was traversed."""
+    batch = [
+        _processed(tmp_path / "paper.pdf", "PDFs"),
+        _processed(tmp_path / "notes.txt", "Documents"),
+        _processed(tmp_path / "sheet.csv", "Tables"),
+    ]
+
+    assert _route_jd(tmp_path, batch) == _route_jd(tmp_path, list(reversed(batch)))
+
+
+def test_johnny_decimal_numbering_follows_sorted_classifier_order(tmp_path: Path) -> None:
+    """Categories are assigned in sorted classifier order, not set iteration order.
+
+    Classifiers are collected in a set, and set iteration order for strings depends on
+    ``PYTHONHASHSEED``. Numbering that relied on it would be stable within one process and differ
+    between runs, so comparing two in-process orderings cannot detect the bug. Pinning the expected
+    numbers can.
+    """
+    names = ("Zeta", "Omega", "Kappa", "Delta", "Alpha", "Mu")
+    destinations = _route_jd(
+        tmp_path, [_processed(tmp_path / f"{name}.txt", name) for name in names]
+    )
+
+    numbered = {
+        name: destinations[name].rsplit("/", maxsplit=1)[-1].split(" ", maxsplit=1)[0]
+        for name in names
+    }
+    assert [numbered[name] for name in sorted(names)] == [
+        "30.01",
+        "30.02",
+        "30.03",
+        "30.04",
+        "30.05",
+        "30.06",
+    ]
+
+
+def test_johnny_decimal_repeated_classifier_reuses_one_category(tmp_path: Path) -> None:
+    """Files sharing a classifier land in the same category rather than consuming two."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "notes.txt", "Documents"),
+            _processed(tmp_path / "plan.txt", "Documents"),
+            _processed(tmp_path / "paper.pdf", "PDFs"),
+        ],
+    )
+
+    assert destinations["notes"] == destinations["plan"]
+    assert destinations["paper"] == "30 Operations & Projects/30.02 PDFs"
+
+
+def test_johnny_decimal_collapses_the_tail_when_an_area_overflows(tmp_path: Path) -> None:
+    """An area with more classifiers than categories collapses the tail into a catch-all.
+
+    Organizing files should not fail because a pathological input produced a hundred classifier
+    folders in one area, so the excess shares the final category and keeps its classifier as a
+    plain folder beneath it.
+    """
+    batch = [_processed(tmp_path / f"f{index}.pdf", f"Invoice{index:03d}") for index in range(120)]
+
+    destinations = _route_jd(tmp_path, batch)
+    categories = {value.split("/")[1].split(" ")[0] for value in destinations.values()}
+
+    assert len(categories) == 99
+    assert min(categories) == "10.01"
+    assert max(categories) == "10.99"
+
+    overflowed = [value for value in destinations.values() if "/10.99 Other/" in value]
+    assert len(overflowed) == 120 - 98
+    assert "10 Finance & Administration/10.99 Other/Invoice119" in overflowed
+
+
+def test_johnny_decimal_numbers_the_top_level_classifier_only(tmp_path: Path) -> None:
+    """A nested classifier earns one category for its top-level segment.
+
+    Numbering the whole path would give ``Invoices/2024`` and ``Invoices/2025`` different numbers
+    and split one logical classifier across sibling ``NN Invoices`` directories — the defect this
+    allocation exists to remove, in a different form.
+    """
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "a.pdf", "Invoices/2024"),
+            _processed(tmp_path / "b.pdf", "Invoices/2025"),
+            _processed(tmp_path / "c.pdf", "Invoices"),
+            _processed(tmp_path / "d.pdf", "Receipts/2024"),
+        ],
+    )
+
+    area = "10 Finance & Administration"
+    assert destinations["a"] == f"{area}/10.01 Invoices/2024"
+    assert destinations["b"] == f"{area}/10.01 Invoices/2025"
+    assert destinations["c"] == f"{area}/10.01 Invoices"
+    # A different top-level classifier still consumes its own number.
+    assert destinations["d"] == f"{area}/10.02 Receipts/2024"
+
+
+def test_johnny_decimal_preserves_nesting_below_the_category(tmp_path: Path) -> None:
+    """Segments below the top-level classifier keep their shape beneath the numbered folder."""
+    destinations = _route_jd(tmp_path, [_processed(tmp_path / "x.pdf", "Invoices/2024/Q1/Jan")])
+
+    assert destinations["x"] == "10 Finance & Administration/10.01 Invoices/2024/Q1/Jan"
+
+
+def test_johnny_decimal_preserves_already_numbered_destinations(tmp_path: Path) -> None:
+    """Valid Johnny Decimal prefixes survive untouched and consume no category number."""
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "kept.txt", "11.04 Existing"),
+            _processed(tmp_path / "notes.txt", "Documents"),
+        ],
+    )
+
+    assert destinations["kept"] == "11.04 Existing"
+    assert destinations["notes"] == "30 Operations & Projects/30.01 Documents"
