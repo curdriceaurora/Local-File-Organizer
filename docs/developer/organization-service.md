@@ -55,6 +55,32 @@ before collision handling and plan construction. PARA routing uses the existing 
 primitives; Johnny Decimal routing uses the repository's default area scheme and numbering
 primitives. Presentation adapters must not rewrite destinations after a plan is built.
 
+### Johnny Decimal category allocation
+
+Johnny Decimal requires distinct categories within an area, so `10.01 Taxes` and `10.01 Receipts`
+are not a valid pair even though the two paths do not collide.
+
+`apply_organization_methodology` therefore allocates category numbers across the whole batch rather
+than per file. It collects the distinct classifier folders routed to each area, sorts them, and
+numbers them from `01`. Sorting is what makes the result depend only on the set of classifiers an
+area receives and not on the order files were traversed, so the same corpus and options always
+produce the same numbering.
+
+Two cases are held constant by design:
+
+- a folder that already carries a valid Johnny Decimal prefix is passed through untouched and
+  consumes no category number;
+- an area receiving a single classifier still numbers it `01`, so the common case is unchanged.
+
+When an area receives more distinct classifiers than it has category numbers, the tail collapses
+into a shared catch-all category (`99 Other`) and each classifier survives as a plain folder beneath
+it. Numbering stays valid and the grouping is preserved. Refusing the plan was the alternative and
+was rejected deliberately: this organizes files, and an area with a hundred classifier folders is a
+pathological input rather than a reason to fail the run.
+
+Allocation runs before collision handling, which is unchanged and still applies to the destinations
+this produces.
+
 ### Methodology vocabulary
 
 `OrganizationMethodology` in `file_organizer.core.organize_options` is the single authoritative

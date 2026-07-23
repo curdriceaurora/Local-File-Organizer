@@ -612,10 +612,12 @@ def test_missing_input_is_rejected(conformance: ConformanceContext) -> None:
         (
             "jd",
             [
+                # Documents and PDFs share area 30 and therefore must not share a category
+                # number; PDFs sorts after Documents, so it takes 30.02 (#1617).
                 "<output>/30 Operations & Projects/30.01 Documents/notes.md",
                 "<output>/10 Finance & Administration/10.01 Spreadsheets/budget.csv",
                 "<output>/30 Operations & Projects/30.01 Documents/plan.txt",
-                "<output>/30 Operations & Projects/30.01 PDFs/paper.pdf",
+                "<output>/30 Operations & Projects/30.02 PDFs/paper.pdf",
             ],
         ),
     ],
