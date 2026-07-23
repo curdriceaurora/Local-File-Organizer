@@ -528,6 +528,48 @@ def test_public_claims_rejects_retired_inventory_metrics(tmp_path: Path) -> None
         assert any(retired in err for err in errors), f"{retired} must be rejected"
 
 
+def test_public_claims_rejects_capability_count_without_conformance_scope(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    # Deleting the conformance clause must not be a way to pass while still quoting a headline total.
+    readme = tmp_path / "README_unscoped.md"
+    readme.write_text(
+        "## Features\n\n- **Matrix**: Built on [34 product capabilities]"
+        "(docs/developer/capability-matrix.md#summary-statistics).\n",
+        encoding="utf-8",
+    )
+
+    errors = verify_public_claims(readme)
+    assert any("no conformance-verified claim scoping" in err for err in errors)
+
+
+def test_public_claims_allows_readme_making_no_capability_count_claim(tmp_path: Path) -> None:
+    from scripts.verify_claims_freshness import verify_public_claims
+
+    # Nothing to scope, so the conformance clause is not required.
+    readme = tmp_path / "README_noclaim.md"
+    readme.write_text(
+        "## Features\n\n- **Analysis**: See [`analysis.inspect`]"
+        "(docs/developer/capability-matrix.md#analysisinspect).\n",
+        encoding="utf-8",
+    )
+
+    errors = verify_public_claims(readme)
+    assert not any("conformance-verified" in err for err in errors), errors
+
+
+def test_matrix_anchors_disambiguate_repeated_headings() -> None:
+    from scripts.verify_claims_freshness import DEFAULT_MATRIX_PATH, extract_matrix_anchors
+
+    # "#### Surface Status & Entry Points" repeats once per capability, so GitHub's -1/-2
+    # disambiguation is load-bearing here rather than theoretical.
+    anchors = extract_matrix_anchors(DEFAULT_MATRIX_PATH)
+    base = "surface-status--entry-points"
+    assert base in anchors
+    assert f"{base}-1" in anchors
+    assert f"{base}-33" in anchors
+
+
 def test_matrix_heading_slugs_accept_both_whitespace_conventions() -> None:
     from scripts.verify_claims_freshness import _slugify_heading
 

@@ -101,14 +101,19 @@ def extract_matrix_anchors(matrix_path: Path) -> set[str]:
 
 
 def _verified_capability_ids() -> set[str]:
-    """Return capability IDs holding conformance evidence on at least one surface."""
+    """Return capability IDs holding conformance evidence on at least one surface.
+
+    Iterate declared surfaces rather than the Surface enum: ``support_for`` raises for a surface a
+    capability does not declare, so enum iteration would depend on the registry loader's
+    completeness invariant holding forever.
+    """
     from file_organizer.core.capabilities import ConformanceStatus
 
     return {
         capability.capability_id
         for capability in get_capability_registry().capabilities
-        for surface in Surface
-        if capability.support_for(surface).conformance_status is ConformanceStatus.VERIFIED
+        for status in capability.surfaces
+        if status.conformance_status is ConformanceStatus.VERIFIED
     }
 
 
@@ -118,9 +123,19 @@ def _verify_conformance_claims(content: str) -> list[str]:
     A link resolving to a real capability proves nothing about that capability holding evidence.
     This closes the loop in both directions: nothing may be advertised as conformance-verified
     without evidence, and nothing holding evidence may be quietly omitted.
+
+    The clause is required only when the README advertises a capability count. Quoting a headline
+    capability total without scoping which of those capabilities are actually proven is the claim
+    this whole script exists to prevent, so deleting the clause must not be a way to pass. A README
+    that makes no capability-count claim has nothing to scope and is left alone.
     """
     claim_match = _CONFORMANCE_CLAIM_PATTERN.search(content)
     if not claim_match:
+        if _CAPABILITY_COUNT_CLAIM_PATTERN.search(content):
+            return [
+                "README.md advertises a product capability count but no conformance-verified "
+                "claim scoping which of those capabilities hold evidence."
+            ]
         return []
 
     claimed: set[str] = set()
