@@ -569,9 +569,10 @@ class FileOrganizerClient:
         limit: int = 100,
     ) -> list[JobStatusResponse]:
         """List recent organization jobs."""
-        rows = self._request_list(
-            "GET", "/organize/jobs", params={"status": status, "limit": limit}
-        )
+        params: dict[str, str | int] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        rows = self._request_list("GET", "/organize/jobs", params=params)
         return [JobStatusResponse.model_validate(row) for row in rows]
 
     def cancel_job(

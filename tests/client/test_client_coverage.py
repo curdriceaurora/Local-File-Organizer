@@ -261,6 +261,33 @@ class TestSyncClientOrganize:
         assert result.files == ["/input/example.txt"]
         client.close()
 
+    def test_list_jobs_omits_status_by_default(self):
+        """No-filter list_jobs must not serialize status as an empty value.
+
+        httpx renders ``status=None`` as ``status=`` which the route's
+        ``JobStatus | None`` query fails to coerce (422). Mirror the async
+        client and drop the key entirely when unset.
+        """
+        client = FileOrganizerClient()
+        client._request_list = MagicMock(return_value=[])
+
+        client.list_jobs()
+        client._request_list.assert_called_with(
+            "GET", "/organize/jobs", params={"limit": 100}
+        )
+        client.close()
+
+    def test_list_jobs_preserves_status_when_provided(self):
+        """A provided status filter keeps its name and value."""
+        client = FileOrganizerClient()
+        client._request_list = MagicMock(return_value=[])
+
+        client.list_jobs(status="queued", limit=5)
+        client._request_list.assert_called_with(
+            "GET", "/organize/jobs", params={"limit": 5, "status": "queued"}
+        )
+        client.close()
+
 
 class TestSyncClientSystem:
     def test_system_stats_with_max_depth(self):
