@@ -95,10 +95,20 @@ Changes to `capability_registry.json` require re-running the generator script. P
 
 Public claims in `README.md` link directly to capability evidence in `capability-matrix.md`.
 
-Verify claim links, matrix anchors, and canonical capability/surface counts using:
+Verify claim links, matrix anchors, canonical capability/surface counts, and the
+conformance-verified claim using:
 
 ```bash
-python scripts/verify_claims_freshness.py --check
+python scripts/verify_claims_freshness.py
 ```
 
-CI enforces claim freshness, anchor accuracy, and count stability via `test_public_claims_freshness` in `tests/core/test_capabilities.py`.
+The script has no write mode, so verification always runs; `--check` is accepted only for symmetry
+with `generate_capability_matrix.py --check`.
+
+The conformance check closes the loop in both directions. A capability may not be advertised as
+conformance-verified unless it holds a `verified` surface in the registry, and a capability holding
+verified evidence may not be omitted from that claim. Promoting or revoking conformance evidence
+therefore fails the check until `README.md` is updated to match.
+
+CI enforces claim freshness, anchor accuracy, count stability, and conformance-claim accuracy via
+`test_public_claims_freshness` in `tests/core/test_capabilities.py`.
