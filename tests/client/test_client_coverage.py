@@ -272,9 +272,7 @@ class TestSyncClientOrganize:
         client._request_list = MagicMock(return_value=[])
 
         client.list_jobs()
-        client._request_list.assert_called_with(
-            "GET", "/organize/jobs", params={"limit": 100}
-        )
+        client._request_list.assert_called_with("GET", "/organize/jobs", params={"limit": 100})
         client.close()
 
     def test_list_jobs_preserves_status_when_provided(self):
