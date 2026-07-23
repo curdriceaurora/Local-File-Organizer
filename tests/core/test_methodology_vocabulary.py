@@ -88,7 +88,7 @@ def test_unrecognized_values_are_lenient_at_the_boundary_and_strict_in_the_domai
 def test_domain_error_lists_exactly_the_canonical_vocabulary() -> None:
     # Asserted through the public failure path rather than the private renderer, so the guard
     # pins the message a caller actually sees.
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="methodology must be") as exc_info:
         OrganizeOptions(methodology="date_based")
 
     assert re.findall(r"'([^']+)'", str(exc_info.value)) == list(CANONICAL)
