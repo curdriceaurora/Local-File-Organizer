@@ -45,10 +45,16 @@ _JD_CATCH_ALL_NAME = "Other"
 
 
 class _JohnnyDecimalRoute(NamedTuple):
-    """Where one result lands before its category number is known."""
+    """Where one result lands before its category number is known.
+
+    A classifier folder may be nested, e.g. ``Invoices/2024``. Only the top-level segment earns a
+    category number: numbering the whole path would give ``Invoices/2024`` and ``Invoices/2025``
+    different numbers and split one logical classifier across sibling ``NN Invoices`` directories.
+    """
 
     area: AreaDefinition
     classifier: str
+    nested: tuple[str, ...] = ()
 
 
 class _CategoryAssignment(NamedTuple):
@@ -147,7 +153,9 @@ def _johnny_decimal_classifier(
     except ValueError:
         relative_source = result.file_path.name
     searchable = f"{relative_source} {existing} {result.filename}".casefold()
-    return _JohnnyDecimalRoute(_select_johnny_decimal_area(searchable), existing)
+    return _JohnnyDecimalRoute(
+        _select_johnny_decimal_area(searchable), first_part, tuple(existing_parts[1:])
+    )
 
 
 def _para_destination(result: ProcessedResult, input_root: Path) -> str:
@@ -203,9 +211,11 @@ def _johnny_decimal_destination(
         # The catch-all is one category shared by many classifiers, so the classifier survives as a
         # plain folder beneath it. Numbering stays valid and the grouping is not thrown away.
         catch_all_folder = f"{number.formatted_number} {_JD_CATCH_ALL_NAME}"
-        return (Path(area_folder) / catch_all_folder / classifier).as_posix()
-    category_folder = f"{number.formatted_number} {classifier}"
-    return (Path(area_folder) / category_folder).as_posix()
+        destination = Path(area_folder) / catch_all_folder / classifier
+    else:
+        destination = Path(area_folder) / f"{number.formatted_number} {classifier}"
+    # Segments below the top-level classifier keep their shape beneath the numbered folder.
+    return destination.joinpath(*route.nested).as_posix()
 
 
 def _select_johnny_decimal_area(searchable: str) -> AreaDefinition:

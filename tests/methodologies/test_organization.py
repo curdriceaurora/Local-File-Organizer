@@ -184,6 +184,38 @@ def test_johnny_decimal_collapses_the_tail_when_an_area_overflows(tmp_path: Path
     assert "10 Finance & Administration/10.99 Other/Invoice119" in overflowed
 
 
+def test_johnny_decimal_numbers_the_top_level_classifier_only(tmp_path: Path) -> None:
+    """A nested classifier earns one category for its top-level segment.
+
+    Numbering the whole path would give ``Invoices/2024`` and ``Invoices/2025`` different numbers
+    and split one logical classifier across sibling ``NN Invoices`` directories — the defect this
+    allocation exists to remove, in a different form.
+    """
+    destinations = _route_jd(
+        tmp_path,
+        [
+            _processed(tmp_path / "a.pdf", "Invoices/2024"),
+            _processed(tmp_path / "b.pdf", "Invoices/2025"),
+            _processed(tmp_path / "c.pdf", "Invoices"),
+            _processed(tmp_path / "d.pdf", "Receipts/2024"),
+        ],
+    )
+
+    area = "10 Finance & Administration"
+    assert destinations["a"] == f"{area}/10.01 Invoices/2024"
+    assert destinations["b"] == f"{area}/10.01 Invoices/2025"
+    assert destinations["c"] == f"{area}/10.01 Invoices"
+    # A different top-level classifier still consumes its own number.
+    assert destinations["d"] == f"{area}/10.02 Receipts/2024"
+
+
+def test_johnny_decimal_preserves_nesting_below_the_category(tmp_path: Path) -> None:
+    """Segments below the top-level classifier keep their shape beneath the numbered folder."""
+    destinations = _route_jd(tmp_path, [_processed(tmp_path / "x.pdf", "Invoices/2024/Q1/Jan")])
+
+    assert destinations["x"] == "10 Finance & Administration/10.01 Invoices/2024/Q1/Jan"
+
+
 def test_johnny_decimal_preserves_already_numbered_destinations(tmp_path: Path) -> None:
     """Valid Johnny Decimal prefixes survive untouched and consume no category number."""
     destinations = _route_jd(
