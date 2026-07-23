@@ -55,6 +55,44 @@ before collision handling and plan construction. PARA routing uses the existing 
 primitives; Johnny Decimal routing uses the repository's default area scheme and numbering
 primitives. Presentation adapters must not rewrite destinations after a plan is built.
 
+### Methodology vocabulary
+
+`OrganizationMethodology` in `file_organizer.core.organize_options` is the single authoritative
+value model. No adapter defines its own. `file_organizer.config.methodology` derives every constant
+from that enum and adds the two things the domain deliberately does not carry:
+
+- **display labels**, a presentation concern that may legitimately differ per surface;
+- **legacy aliases** (`content_based` → `none`, `johnny_decimal` → `jd`), accepted only at
+  configuration and transport boundaries.
+
+The two layers differ in strictness on purpose. `config.methodology.normalize()` is lenient and
+falls back to a caller-supplied default, because it reads persisted configuration and user-supplied
+form fields where a stale value must not crash the surface. `OrganizeOptions` is strict and rejects
+anything non-canonical, including aliases: an alias reaching the domain means an adapter skipped
+normalization, which should fail loudly rather than be quietly understood.
+
+Five adapters cannot derive their vocabulary and are pinned by
+`tests/core/test_methodology_vocabulary.py` instead. The REST and Python SDK models and the
+TypeScript union stay literal because deriving them would change the emitted OpenAPI schema and the
+generated client surface for no behavioral gain. The TUI view's `BINDINGS` and `action_set_*`
+handlers stay literal because Textual resolves both at class-definition time and dispatches actions
+by name. In each case the guard proves the duplication cannot drift rather than removing it.
+
+Adding a methodology therefore means updating `OrganizationMethodology` and then, by hand:
+
+| Site | Change |
+| --- | --- |
+| `api/models.py` | add the value to the `methodology` `Literal` |
+| `client/models.py` | add the value to the `methodology` `Literal` |
+| `client/typescript/types.ts` | add the value to the `methodology` union |
+| `tui/methodology_view.py` | add a `Binding` and a matching `action_set_<value>` handler |
+| `tui/methodology_view.py` | add the value to `MethodologySelectorPanel._METHODS` and `_SHORTCUTS` |
+| `config/methodology.py` | add a display label to `LABELS` |
+
+Everything else — `ORDER`, `DEFAULT`, the CLI validator, the CLI setup prompt, the CLI help text,
+and the domain error message — derives automatically. The vocabulary guard fails until every manual
+site above agrees with the enum, so an incomplete addition cannot ship.
+
 ## Plan compatibility
 
 Organization plan schema 3 records canonical `transfer_mode` and `methodology` options. Schema-1

@@ -9,6 +9,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from file_organizer.cli.interactive import confirm_action, console, prompt_choice
+from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
+from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
 from file_organizer.core.setup_wizard import SetupWizard, WizardMode, ollama_next_steps
 
 setup_app = typer.Typer(help="Interactive setup wizard for first-run configuration.")
@@ -193,8 +195,8 @@ def setup_run(  # noqa: C901
         # Methodology selection
         methodology = prompt_choice(
             "Select default organization methodology",
-            ["none", "para", "jd"],
-            default="none",
+            list(_METHODOLOGY_ORDER),
+            default=_DEFAULT_METHODOLOGY,
         )
         custom_settings["methodology"] = methodology
 

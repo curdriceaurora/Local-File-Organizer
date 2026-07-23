@@ -7,6 +7,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from file_organizer.config.methodology import ORDER as _METHODOLOGY_ORDER
+
 console = Console()
 
 config_app = typer.Typer(help="Configuration management.")
@@ -59,7 +61,8 @@ def config_edit(
         str | None, typer.Option(help="Set device (auto, cpu, cuda, mps, metal).")
     ] = None,
     methodology: Annotated[
-        str | None, typer.Option(help="Set default methodology (none, para, jd).")
+        str | None,
+        typer.Option(help=f"Set default methodology ({', '.join(_METHODOLOGY_ORDER)})."),
     ] = None,
 ) -> None:
     """Edit a configuration profile."""
@@ -67,7 +70,7 @@ def config_edit(
     from file_organizer.utils.cli_errors import format_validation_error
 
     _VALID_DEVICES = {"auto", "cpu", "cuda", "mps", "metal"}
-    _VALID_METHODOLOGIES = {"none", "para", "jd"}
+    _VALID_METHODOLOGIES = set(_METHODOLOGY_ORDER)
 
     # Validate constrained inputs before touching the config file. Use
     # `format_validation_error` so each site emits a "valid values: ..."
