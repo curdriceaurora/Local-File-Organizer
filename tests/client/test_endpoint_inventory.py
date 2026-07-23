@@ -109,11 +109,15 @@ def test_single_file_suggestion_is_not_owned_by_plan_execution() -> None:
 #                               ->  OrganizationOptionsPayload.model_validate(merged.to_dict())
 #
 # This only works because:
-#   1. every payload field is consumable by OrganizeOptions.from_dict (subset);
+#   1. every payload field is consumable by OrganizeOptions.from_dict (payload ⊆ dataclass);
 #   2. OrganizeOptions.to_dict() output validates against the payload model.
 #
-# ``use_hardlinks`` is the sole intentional asymmetry: it lives on OrganizeOptions
-# as a legacy input-only alias and is stripped by to_dict().
+# Note on Pydantic extra="ignore" behavior:
+#   Payload models default to ``extra="ignore"``, so extra fields in ``to_dict()`` are silently
+#   dropped rather than rejected. ``use_hardlinks`` is stripped by ``to_dict()`` as a redundant
+#   legacy alias, while ``transfer_mode`` carries the authoritative mode.
+#   Coverage boundary: If ``OrganizeOptions`` ever gains a new domain-only field omitted from
+#   ``OrganizationOptionsPayload``, ``model_validate`` will silently drop it on remote plan merges.
 
 
 def test_rest_payload_fields_are_subset_of_canonical_options() -> None:
@@ -152,7 +156,7 @@ def test_canonical_options_to_dict_validates_against_rest_payload(
     """OrganizeOptions().to_dict() must validate back to the REST transport model."""
     canonical = options.to_dict()
     payload = RestOptionsPayload.model_validate(canonical)
-    # Assert every canonical field survives the round-trip, not just spot-checks.
+    # Assert every payload field survives the round-trip, not just spot-checks.
     for field in RestOptionsPayload.model_fields:
         assert getattr(payload, field) == canonical[field], (
             f"REST payload field {field!r} diverges: model={getattr(payload, field)!r} "
@@ -184,8 +188,9 @@ def test_canonical_options_to_dict_validates_against_sdk_payload(
 def test_to_dict_drops_use_hardlinks_legacy_alias() -> None:
     """The legacy ``use_hardlinks`` field must not leak into the canonical serialization.
 
-    ``OrganizationOptionsPayload`` defines ``transfer_mode`` instead, so emitting
-    ``use_hardlinks`` would cause ``model_validate`` to reject the dict as an extra field.
+    ``OrganizationOptionsPayload`` defines ``transfer_mode`` instead. While Pydantic payload
+    models default to ``extra="ignore"`` (silently dropping unrecognized fields), keeping
+    ``to_dict()`` clean ensures redundant input-only aliases are omitted from serialized state.
     """
     canonical = OrganizeOptions().to_dict()
     assert "use_hardlinks" not in canonical
