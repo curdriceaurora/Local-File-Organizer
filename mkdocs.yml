@@ -125,7 +125,7 @@ nav:
   - Architecture:
       - Overview: architecture/architecture-overview.md
       - Module Diagrams: architecture/module-diagrams.md
-      - Cross-Surface Parity Execution: architecture/cross-surface-parity-execution.md
+      - Cross-Surface Parity: architecture/cross-surface-parity-execution.md
   - Admin Guide:
       - Overview: admin/index.md
       - Installation: admin/installation.md
