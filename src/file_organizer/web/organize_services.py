@@ -24,6 +24,7 @@ from file_organizer.web._forms import form_bool
 ORGANIZE_DEFAULT_DELAY_MIN = 0
 ORGANIZE_MAX_DELAY_MIN = 7 * 24 * 60
 ORGANIZE_PLAN_LIMIT = 200
+ORGANIZE_PLAN_TTL_SECONDS = 3600
 
 _ORGANIZE_PLAN_STORE: dict[str, dict[str, Any]] = {}
 _ORGANIZE_PLAN_LOCK = Lock()
@@ -68,7 +69,15 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
 
 
 def _prune_plan_store() -> None:
-    """Evict the oldest plans when the in-memory store exceeds its limit."""
+    """Evict expired plans, then oldest entries when the store still exceeds its limit."""
+    now = datetime.now(UTC)
+    expired = [
+        plan_id
+        for plan_id, record in _ORGANIZE_PLAN_STORE.items()
+        if (now - record["created_at"]).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS
+    ]
+    for plan_id in expired:
+        _ORGANIZE_PLAN_STORE.pop(plan_id, None)
     while len(_ORGANIZE_PLAN_STORE) > ORGANIZE_PLAN_LIMIT:
         oldest_plan_id = next(iter(_ORGANIZE_PLAN_STORE))
         _ORGANIZE_PLAN_STORE.pop(oldest_plan_id, None)
@@ -96,7 +105,11 @@ def _get_organize_plan(plan_id: str) -> dict[str, Any] | None:
         plan = _ORGANIZE_PLAN_STORE.get(plan_id)
         if plan is None:
             return None
-        plan["updated_at"] = datetime.now(UTC)
+        now = datetime.now(UTC)
+        if (now - plan["created_at"]).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS:
+            _ORGANIZE_PLAN_STORE.pop(plan_id, None)
+            return None
+        plan["updated_at"] = now
         return dict(plan)
 
 
