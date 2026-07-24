@@ -149,6 +149,7 @@ def test_settings_map_losslessly_to_canonical_options(tmp_path: Path) -> None:
     view._max_workers = 5
     view._prefetch_depth = 3
     view._text_model = "custom-text"
+    view._provider = "openai"
 
     view._sync_workspace()
 
@@ -164,6 +165,8 @@ def test_settings_map_losslessly_to_canonical_options(tmp_path: Path) -> None:
         "parallel_workers": 5,
         "prefetch_depth": 3,
         "text_model": "custom-text",
+        "text_provider": "openai",
+        "vision_provider": "openai",
     }
 
 

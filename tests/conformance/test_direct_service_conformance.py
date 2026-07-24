@@ -259,6 +259,19 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
     assert envelope["plan"]["schema_version"] == 3
 
 
+def test_explicit_provider_override_round_trips_golden(
+    conformance: ConformanceContext,
+) -> None:
+    """An explicit non-default provider reaches resolved options on every surface (#1660)."""
+    golden = load_golden("provider_override")
+    conformance.stage(golden["case_id"])
+
+    envelope = _ok(conformance.driver.preview(conformance.request(**golden["options"])))
+
+    assert envelope["plan"]["options"]["text_provider"] == golden["expected_text_provider"]
+    assert envelope["plan"]["options"]["vision_provider"] == golden["expected_vision_provider"]
+
+
 def test_collision_skip_existing_golden(conformance: ConformanceContext) -> None:
     golden = load_golden("collision_skip_existing")
     conformance.stage(golden["case_id"])
