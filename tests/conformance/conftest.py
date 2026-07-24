@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from tests.conformance.driver import (
     RemoteCLIConformanceDriver,
     RESTConformanceDriver,
     TUIConformanceDriver,
+    TypeScriptSDKConformanceDriver,
     WebFormConformanceDriver,
 )
 
@@ -55,6 +57,7 @@ class ConformanceContext:
         AsyncPythonSDKConformanceDriver,
         WebFormConformanceDriver,
         TUIConformanceDriver,
+        TypeScriptSDKConformanceDriver,
     ),
     ids=(
         "direct",
@@ -65,13 +68,19 @@ class ConformanceContext:
         "python-async-sdk",
         "web-form-adapter",
         "tui-workspace-adapter",
+        "typescript-sdk",
     ),
 )
-def conformance(tmp_path: Path, request: pytest.FixtureRequest) -> ConformanceContext:
+def conformance(
+    tmp_path: Path, request: pytest.FixtureRequest
+) -> Generator[ConformanceContext, None, None]:
     """Run the golden corpus against the oracle and each migrated adapter."""
     driver_type = request.param
-    return ConformanceContext(
+    driver = driver_type(tmp_path / "workspace")
+    yield ConformanceContext(
         input_root=tmp_path / "input",
         output_root=tmp_path / "output",
-        driver=driver_type(tmp_path / "workspace"),
+        driver=driver,
     )
+    if hasattr(driver, "close"):
+        driver.close()
