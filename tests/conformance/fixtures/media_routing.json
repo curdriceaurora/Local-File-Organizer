@@ -1,0 +1,51 @@
+{
+  "case_id": "media-optional",
+  "options": {
+    "transfer_mode": "copy"
+  },
+  "expected_routes": [
+    [
+      "<input>/clip.mp4",
+      "<output>/Short_Clips/clip.mp4",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/movie.mkv",
+      "<output>/Videos/2026/movie.mkv",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/photo_older.png",
+      "<output>/Images/2020/photo_older.png",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/photo_recent.jpg",
+      "<output>/Images/2026/photo_recent.jpg",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/song.mp3",
+      "<output>/Rock/Fixture Artist/Fixture Album/00 - Fixture Song.mp3",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/widget.step",
+      "<output>/CAD/widget.step",
+      "ready",
+      "create"
+    ]
+  ],
+  "expected_counts": {
+    "total_files": 7,
+    "processed_files": 6,
+    "skipped_files": 1,
+    "failed_files": 0,
+    "deduplicated_files": 0
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "case_id": "flat-documents",
+  "options": {
+    "use_hardlinks": false
+  },
+  "expected_result": {
+    "counts": {
+      "total_files": 3,
+      "processed_files": 3,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "deduplicated_files": 0
+    },
+    "organized_structure": {
+      "Documents": [
+        "alpha.txt",
+        "bravo.md"
+      ],
+      "Spreadsheets": [
+        "ledger.csv"
+      ]
+    },
+    "errors": []
+  },
+  "expected_audit_events": [
+    {
+      "operation_type": "copy",
+      "status": "completed",
+      "source": "<input>/alpha.txt",
+      "destination": "<output>/Documents/alpha.txt",
+      "collision_action": "create",
+      "folder": "Documents"
+    },
+    {
+      "operation_type": "copy",
+      "status": "completed",
+      "source": "<input>/bravo.md",
+      "destination": "<output>/Documents/bravo.md",
+      "collision_action": "create",
+      "folder": "Documents"
+    },
+    {
+      "operation_type": "copy",
+      "status": "completed",
+      "source": "<input>/ledger.csv",
+      "destination": "<output>/Spreadsheets/ledger.csv",
+      "collision_action": "create",
+      "folder": "Spreadsheets"
+    }
+  ],
+  "expected_organized_paths": [
+    "Documents/alpha.txt",
+    "Documents/bravo.md",
+    "Spreadsheets/ledger.csv"
+  ]
+}
