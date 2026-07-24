@@ -63,7 +63,7 @@ dependencies = [
     # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
     "typer[all]>=0.12,<0.26",
     "rich~=15.0",
-    "textual~=0.50",
+    "textual~=8.2",
 
     # API and async
     "fastapi~=0.109",
