@@ -1,4 +1,5 @@
 {
+  "_comment": "Optional media routes through canonical policy on pinned metadata. skipped_files is 1 because data.zzz has no supported handler.",
   "case_id": "media-optional",
   "options": {
     "transfer_mode": "copy"

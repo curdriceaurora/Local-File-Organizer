@@ -1,4 +1,5 @@
 {
+  "_comment": "PARA and Johnny Decimal expected destinations (#1602). Documents and PDFs share area 30 and therefore must not share a category number; PDFs sorts after Documents, so it takes 30.02 (#1617).",
   "case_id": "methodology-seed",
   "cases": [
     {
