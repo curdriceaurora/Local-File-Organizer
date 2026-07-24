@@ -27,5 +27,11 @@ def load_golden(name: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Conformance golden fixture missing at '{path}'")
     content = path.read_text(encoding="utf-8")
-    result: dict[str, Any] = json.loads(content)
+    result = json.loads(content)
+    if not isinstance(result, dict):
+        raise json.JSONDecodeError(
+            f"Conformance golden fixture '{name}' must root a JSON object, got {type(result).__name__}",
+            content,
+            0,
+        )
     return result
