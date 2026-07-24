@@ -142,7 +142,7 @@ dev = [
     "pytest-timeout>=2.2.0,<2.5.0",  # 2.4.0 regression: timer thread not cancelled on Windows; crashes during teardown (AssertionError in read_global_capture)
     "pytest-xdist~=3.5",
     "pytest-randomly~=4.1",
-    "mypy>=1.19,<1.20",  # 1.20.x compiled build flakily INTERNAL-ERRORs (crashes on exit after clean analysis) in the lint hook, ~75% of CI runs (#1509 raised it into 1.20.x); pin below until upstream fix
+    "mypy>=2.3,<2.4",  # 1.20.x compiled build flakily INTERNAL-ERRORs (crashes on exit after clean analysis) in the lint hook, ~75% of CI runs (#1509 raised it into 1.20.x); pin below until upstream fix
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
     "black>=23.12,<27.0",
