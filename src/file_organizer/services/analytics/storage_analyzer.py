@@ -97,8 +97,8 @@ class StorageAnalyzer:
             size_by_type=size_by_type,
         )
 
-        # Cache results
-        self._cache[cache_key] = (datetime.now(UTC), stats)
+        # Cache results along with pre-computed files_list
+        self._cache[cache_key] = (datetime.now(UTC), stats, files_list)
 
         logger.info(
             f"Analysis complete: {file_count} files, "
@@ -108,7 +108,9 @@ class StorageAnalyzer:
 
         return stats
 
-    def calculate_size_distribution(self, path: Path, files_list: list[FileInfo] | None = None) -> FileDistribution:
+    def calculate_size_distribution(
+        self, path: Path, files_list: list[FileInfo] | None = None
+    ) -> FileDistribution:
         """Calculate file distribution by type and size ranges.
 
         Args:
@@ -127,6 +129,13 @@ class StorageAnalyzer:
             "large": (100 * 1024 * 1024, 1024 * 1024 * 1024),  # 100MB - 1GB
             "huge": (1024 * 1024 * 1024, float("inf")),  # > 1GB
         }
+
+        # Check if files_list is provided or cached in _cache
+        if files_list is None:
+            cache_key = f"{path}_None"
+            if cache_key in self._cache:
+                _, _, cached_files = self._cache[cache_key]
+                files_list = cached_files
 
         if files_list is not None:
             for file_info in files_list:
@@ -148,11 +157,11 @@ class StorageAnalyzer:
             for file_path in path.rglob("*"):
                 if file_path.is_file():
                     distribution.total_files += 1
-    
+
                     # By type
                     file_type = file_path.suffix.lower() or "no_extension"
                     distribution.by_type[file_type] = distribution.by_type.get(file_type, 0) + 1
-    
+
                     # By size range
                     size = file_path.stat().st_size
                     for range_name, (min_size, max_size) in size_ranges.items():

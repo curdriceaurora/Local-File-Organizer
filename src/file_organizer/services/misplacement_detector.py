@@ -128,27 +128,15 @@ class MisplacementDetector:
         files = (f for f in directory.rglob("*") if f.is_file() and not f.name.startswith("."))
 
         misplaced_files = []
-        directory_cache = {}
+        directory_cache: dict[Path, list[Path]] = {}
 
         for file_path in files:
             dir_path = file_path.parent
             if dir_path not in directory_cache:
-                if len(directory_cache) > 10:
-                    directory_cache.clear()
-                
                 try:
-                    sibling_files = [f for f in dir_path.iterdir() if f.is_file()]
+                    directory_cache[dir_path] = [f for f in dir_path.iterdir() if f.is_file()]
                 except OSError:
-                    sibling_files = []
-                
-                sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
-                naming_patterns = self._detect_local_patterns(sibling_files)
-                
-                directory_cache[dir_path] = {
-                    "sibling_files": sibling_files,
-                    "sibling_types": sibling_types,
-                    "naming_patterns": naming_patterns,
-                }
+                    directory_cache[dir_path] = []
 
             # Analyze context
             context = self.analyze_context(file_path, directory_cache)
@@ -192,7 +180,9 @@ class MisplacementDetector:
         logger.info(f"Detected {len(misplaced_files)} misplaced files")
         return misplaced_files
 
-    def analyze_context(self, file_path: Path, directory_cache: dict[Path, dict] | None = None) -> ContextAnalysis:
+    def analyze_context(
+        self, file_path: Path, directory_cache: dict[Path, dict] | None = None
+    ) -> ContextAnalysis:
         """Analyze the context of a file.
 
         Args:
@@ -216,17 +206,16 @@ class MisplacementDetector:
 
         # Get sibling files
         if directory_cache and directory in directory_cache:
-            cache = directory_cache[directory]
-            sibling_files = [f for f in cache["sibling_files"] if f != file_path]
-            sibling_types = cache["sibling_types"]
-            naming_patterns = cache["naming_patterns"]
+            all_files = directory_cache[directory]
+            sibling_files = [f for f in all_files if f != file_path]
         else:
             try:
                 sibling_files = [f for f in directory.iterdir() if f.is_file() and f != file_path]
             except OSError:
                 sibling_files = []
-            sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
-            naming_patterns = self._detect_local_patterns(sibling_files)
+
+        sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
+        naming_patterns = self._detect_local_patterns(sibling_files)
 
         # Infer parent category
         parent_category = self._infer_category_from_type(file_type)

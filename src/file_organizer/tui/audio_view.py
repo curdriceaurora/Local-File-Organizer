@@ -292,10 +292,7 @@ class AudioView(StatusMixin, Vertical):
             if has_selection:
                 audio_paths.extend(selected_audio[:_MAX_SCAN_FILES])
             elif scan_dir.is_dir():
-                import itertools
-                # Limit the scan to 10000 items before sorting to prevent OOM
-                bounded_scan = itertools.islice(scan_dir.rglob("*"), 10000)
-                for p in sorted(bounded_scan):
+                for p in scan_dir.rglob("*"):
                     if p.suffix.lower() in _AUDIO_EXTENSIONS and p.is_file():
                         audio_paths.append(p)
                         if len(audio_paths) >= _MAX_SCAN_FILES:

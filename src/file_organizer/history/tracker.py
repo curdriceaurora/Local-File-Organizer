@@ -71,8 +71,13 @@ class OperationHistory:
         file_hash = None
         if source_path.exists() and source_path.is_file():
             try:
-                if self.max_hash_size is not None and source_path.stat().st_size > self.max_hash_size:
-                    logger.info(f"Skipping hash for {source_path}: size exceeds max_hash_size ({self.max_hash_size} bytes)")
+                if (
+                    self.max_hash_size is not None
+                    and source_path.stat().st_size > self.max_hash_size
+                ):
+                    logger.info(
+                        f"Skipping hash for {source_path}: size exceeds max_hash_size ({self.max_hash_size} bytes)"
+                    )
                 else:
                     file_hash = self._calculate_file_hash(source_path)
             except Exception as e:

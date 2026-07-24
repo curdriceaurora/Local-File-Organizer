@@ -110,6 +110,8 @@ class FileHasher:
         Args:
             file_paths: List of file paths to hash
             algorithm: Hash algorithm to use ("md5" or "sha256")
+            max_workers: Maximum worker threads to use for parallel hashing.
+                        Defaults to 1 (sequential processing).
 
         Returns:
             Dictionary mapping file paths to their hash values.
@@ -128,20 +130,18 @@ class FileHasher:
                     continue
         else:
             import concurrent.futures
-            
+
+            def _hash_worker(p: Path) -> tuple[Path, str | None]:
+                try:
+                    return p, self.compute_hash(p, algorithm)
+                except (FileNotFoundError, PermissionError, ValueError) as e:
+                    logger.warning("Could not hash %s: %s", p, e, exc_info=True)
+                    return p, None
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_path = {
-                    executor.submit(self.compute_hash, file_path, algorithm): file_path
-                    for file_path in file_paths
-                }
-                for future in concurrent.futures.as_completed(future_to_path):
-                    file_path = future_to_path[future]
-                    try:
-                        hash_value = future.result()
-                        results[file_path] = hash_value
-                    except (FileNotFoundError, PermissionError, ValueError) as e:
-                        logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
-                        continue
+                for path, hash_val in executor.map(_hash_worker, file_paths):
+                    if hash_val is not None:
+                        results[path] = hash_val
 
         return results
 
