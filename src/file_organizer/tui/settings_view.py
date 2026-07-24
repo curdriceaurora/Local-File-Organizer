@@ -8,6 +8,7 @@ is a one-stop configuration surface:
 - default input/output directories (pre-filled for organize runs)
 - organization methodology (none, PARA, Johnny Decimal)
 - text model choice (cycles through curated Ollama presets)
+- model provider (ollama, openai, llama_cpp, mlx, claude) for both text and vision
 - update / privacy toggles (check-on-startup, include pre-releases)
 
 Every value is persisted through :class:`ConfigManager` onto the canonical
@@ -52,6 +53,12 @@ _TEXT_MODEL_PRESETS = (
     "gemma2:2b-instruct-q4_K_M",
 )
 
+# Supported model providers cycled through with the "f" binding. One provider
+# drives both text_provider and vision_provider (#1660) — the config schema's
+# models.framework field is likewise a single value for both.
+_PROVIDER_ORDER = ("ollama", "openai", "llama_cpp", "mlx", "claude")
+_DEFAULT_PROVIDER = "ollama"
+
 
 @dataclass(frozen=True)
 class ParallelRuntimeSettings:
@@ -74,6 +81,7 @@ class WorkflowSettings:
     default_output_dir: str
     methodology: str
     text_model: str
+    provider: str
     check_updates_on_startup: bool
     include_prereleases: bool
 
@@ -169,11 +177,15 @@ def load_workflow_settings(
     config = resolved_manager.load(profile=profile)
 
     text_model = config.models.text_model.strip() or DEFAULT_TEXT_MODEL
+    provider = (
+        config.models.framework if config.models.framework in _PROVIDER_ORDER else _DEFAULT_PROVIDER
+    )
     return WorkflowSettings(
         default_input_dir=config.default_input_dir or "",
         default_output_dir=config.default_output_dir or "",
         methodology=_normalize_methodology(config.default_methodology),
         text_model=text_model,
+        provider=provider,
         check_updates_on_startup=bool(config.updates.check_on_startup),
         include_prereleases=bool(config.updates.include_prereleases),
     )
@@ -193,6 +205,9 @@ def save_workflow_settings(
     config.default_output_dir = settings.default_output_dir.strip()
     config.default_methodology = _normalize_methodology(settings.methodology)
     config.models.text_model = settings.text_model.strip() or DEFAULT_TEXT_MODEL
+    config.models.framework = (
+        settings.provider if settings.provider in _PROVIDER_ORDER else _DEFAULT_PROVIDER
+    )
     config.updates.check_on_startup = bool(settings.check_updates_on_startup)
     config.updates.include_prereleases = bool(settings.include_prereleases)
 
@@ -229,6 +244,7 @@ class SettingsView(StatusMixin, Vertical):
         Binding("a", "toggle_auto_workers", "Auto Workers", show=True),
         Binding("m", "cycle_methodology", "Methodology", show=True),
         Binding("t", "cycle_text_model", "Model", show=True),
+        Binding("f", "cycle_provider", "Provider", show=True),
         Binding("u", "toggle_update_check", "Updates", show=True),
         Binding("p", "toggle_prereleases", "Pre-releases", show=True),
         Binding("c", "toggle_recursive", "Recursive", show=False),
@@ -264,6 +280,7 @@ class SettingsView(StatusMixin, Vertical):
         self._output_dir: str = ""
         self._methodology: str = "none"
         self._text_model: str = DEFAULT_TEXT_MODEL
+        self._provider: str = _DEFAULT_PROVIDER
         self._check_updates: bool = True
         self._include_prereleases: bool = False
         options = workspace.options if workspace is not None else None
@@ -280,6 +297,11 @@ class SettingsView(StatusMixin, Vertical):
             self._output_dir = str(workspace.output_root or "")
             self._methodology = workspace.options.effective_methodology.value
             self._text_model = workspace.options.text_model or DEFAULT_TEXT_MODEL
+            self._provider = (
+                workspace.options.text_provider
+                if workspace.options.text_provider in _PROVIDER_ORDER
+                else _DEFAULT_PROVIDER
+            )
             self._max_workers = workspace.options.parallel_workers
             self._prefetch_depth = workspace.options.prefetch_depth
 
@@ -395,6 +417,17 @@ class SettingsView(StatusMixin, Vertical):
             index = -1
         self._text_model = options[(index + 1) % len(options)]
         self._set_status(f"Text model: {self._text_model}")
+        self._sync_workspace_options()
+        self._refresh_panel()
+
+    def action_cycle_provider(self) -> None:
+        """Cycle the model provider used for both text and vision inference."""
+        try:
+            index = _PROVIDER_ORDER.index(self._provider)
+        except ValueError:
+            index = -1
+        self._provider = _PROVIDER_ORDER[(index + 1) % len(_PROVIDER_ORDER)]
+        self._set_status(f"Provider: {self._provider}")
         self._sync_workspace_options()
         self._refresh_panel()
 
@@ -516,6 +549,7 @@ class SettingsView(StatusMixin, Vertical):
         self._output_dir = loaded.default_output_dir
         self._methodology = loaded.methodology
         self._text_model = loaded.text_model
+        self._provider = loaded.provider
         self._check_updates = loaded.check_updates_on_startup
         self._include_prereleases = loaded.include_prereleases
         self._sync_dir_inputs()
@@ -531,6 +565,7 @@ class SettingsView(StatusMixin, Vertical):
             default_output_dir=self._output_dir,
             methodology=self._methodology,
             text_model=self._text_model,
+            provider=self._provider,
             check_updates_on_startup=self._check_updates,
             include_prereleases=self._include_prereleases,
         )
@@ -557,6 +592,8 @@ class SettingsView(StatusMixin, Vertical):
             parallel_workers=self._max_workers,
             prefetch_depth=self._prefetch_depth,
             text_model=self._text_model,
+            text_provider=self._provider,
+            vision_provider=self._provider,
         )
 
     def _text_model_options(self) -> list[str]:
@@ -609,6 +646,7 @@ class SettingsView(StatusMixin, Vertical):
             f"  output dir    : {output_text}\n"
             f"  methodology   : {_METHODOLOGY_LABELS[self._methodology]}\n"
             f"  text model    : {self._text_model}\n"
+            f"  provider      : {self._provider}\n"
             f"  recursive     : {recursive_text}\n"
             f"  hidden files  : {hidden_text}\n"
             f"  transfer mode : {self._transfer_mode}\n"
@@ -622,7 +660,8 @@ class SettingsView(StatusMixin, Vertical):
             f"  prefetch_depth: {self._prefetch_depth}\n"
             f"  sequential    : {sequential_text}\n\n"
             "[dim]Arrows: workers/prefetch · s: sequential · a: auto workers[/dim]\n"
-            "[dim]m: methodology · t: model · u: update check · p: pre-releases[/dim]\n"
+            "[dim]m: methodology · t: model · f: provider · u: update check · "
+            "p: pre-releases[/dim]\n"
             "[dim]c: recursive · h: hidden · x: transfer · k: collisions · "
             "v: vision · d: transcription[/dim]\n"
             "[dim]Type in the fields below to set directories · Enter: save · r: reload[/dim]"
