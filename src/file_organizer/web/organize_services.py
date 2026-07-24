@@ -106,7 +106,7 @@ def _get_organize_plan(plan_id: str) -> dict[str, Any] | None:
         if plan is None:
             return None
         now = datetime.now(UTC)
-        if (now - plan["created_at"]).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS:
+        if (now - plan.get("created_at", now)).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS:
             _ORGANIZE_PLAN_STORE.pop(plan_id, None)
             return None
         plan["updated_at"] = now

@@ -351,21 +351,25 @@ def test_web_organize_helper_validation_branches(tmp_path: Path) -> None:
     assert len(_ORGANIZE_PLAN_STORE) == 200
 
 
-def test_plan_store_ttl_evicts_expired_records(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import file_organizer.web.organize_services as svc
+def test_plan_store_ttl_evicts_expired_records() -> None:
+    from datetime import UTC, datetime
 
-    monkeypatch.setattr(svc, "ORGANIZE_PLAN_TTL_SECONDS", -1)
+    past = datetime(2000, 1, 1, tzinfo=UTC)
+
     record = _store_organize_plan({"ttl_test": True})
     plan_id = record["plan_id"]
     try:
+        _ORGANIZE_PLAN_STORE[plan_id]["created_at"] = past
         _prune_plan_store()
         assert _ORGANIZE_PLAN_STORE.get(plan_id) is None
-
-        record2 = _store_organize_plan({"ttl_test": True})
-        result = _get_organize_plan(record2["plan_id"])
-        assert result is None
     finally:
         _delete_organize_plan(plan_id)
-        _delete_organize_plan(record.get("plan_id", ""))
+
+    record2 = _store_organize_plan({"ttl_test": True})
+    plan_id2 = record2["plan_id"]
+    try:
+        _ORGANIZE_PLAN_STORE[plan_id2]["created_at"] = past
+        result = _get_organize_plan(plan_id2)
+        assert result is None
+    finally:
+        _delete_organize_plan(plan_id2)
