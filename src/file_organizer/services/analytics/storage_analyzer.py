@@ -108,11 +108,12 @@ class StorageAnalyzer:
 
         return stats
 
-    def calculate_size_distribution(self, path: Path) -> FileDistribution:
+    def calculate_size_distribution(self, path: Path, files_list: list[FileInfo] | None = None) -> FileDistribution:
         """Calculate file distribution by type and size ranges.
 
         Args:
             path: Directory path
+            files_list: Optional pre-computed list of FileInfo to avoid traversing the disk again
 
         Returns:
             FileDistribution object
@@ -127,22 +128,39 @@ class StorageAnalyzer:
             "huge": (1024 * 1024 * 1024, float("inf")),  # > 1GB
         }
 
-        for file_path in path.rglob("*"):
-            if file_path.is_file():
+        if files_list is not None:
+            for file_info in files_list:
                 distribution.total_files += 1
 
                 # By type
-                file_type = file_path.suffix.lower() or "no_extension"
+                file_type = file_info.type
                 distribution.by_type[file_type] = distribution.by_type.get(file_type, 0) + 1
 
                 # By size range
-                size = file_path.stat().st_size
+                size = file_info.size
                 for range_name, (min_size, max_size) in size_ranges.items():
                     if min_size <= size < max_size:
                         distribution.by_size_range[range_name] = (
                             distribution.by_size_range.get(range_name, 0) + 1
                         )
                         break
+        else:
+            for file_path in path.rglob("*"):
+                if file_path.is_file():
+                    distribution.total_files += 1
+    
+                    # By type
+                    file_type = file_path.suffix.lower() or "no_extension"
+                    distribution.by_type[file_type] = distribution.by_type.get(file_type, 0) + 1
+    
+                    # By size range
+                    size = file_path.stat().st_size
+                    for range_name, (min_size, max_size) in size_ranges.items():
+                        if min_size <= size < max_size:
+                            distribution.by_size_range[range_name] = (
+                                distribution.by_size_range.get(range_name, 0) + 1
+                            )
+                            break
 
         logger.info(
             f"Distribution: {distribution.total_files} files across "
@@ -156,6 +174,7 @@ class StorageAnalyzer:
         path: Path,
         threshold: int = 100 * 1024 * 1024,  # 100MB
         top_n: int = 50,
+        files_list: list[FileInfo] | None = None,
     ) -> list[FileInfo]:
         """Identify large files above threshold.
 
@@ -163,24 +182,30 @@ class StorageAnalyzer:
             path: Directory path
             threshold: Size threshold in bytes
             top_n: Maximum number of files to return
+            files_list: Optional pre-computed list of FileInfo to avoid traversing the disk again
 
         Returns:
             List of FileInfo objects for large files
         """
         large_files = []
 
-        for file_path in path.rglob("*"):
-            if file_path.is_file():
-                size = file_path.stat().st_size
-                if size >= threshold:
-                    large_files.append(
-                        FileInfo(
-                            path=file_path,
-                            size=size,
-                            type=file_path.suffix.lower(),
-                            modified=datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC),
+        if files_list is not None:
+            for file_info in files_list:
+                if file_info.size >= threshold:
+                    large_files.append(file_info)
+        else:
+            for file_path in path.rglob("*"):
+                if file_path.is_file():
+                    size = file_path.stat().st_size
+                    if size >= threshold:
+                        large_files.append(
+                            FileInfo(
+                                path=file_path,
+                                size=size,
+                                type=file_path.suffix.lower(),
+                                modified=datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC),
+                            )
                         )
-                    )
 
         # Sort by size descending
         large_files.sort(key=lambda f: f.size, reverse=True)

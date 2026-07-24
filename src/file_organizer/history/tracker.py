@@ -26,15 +26,19 @@ class OperationHistory:
     and query operation history.
     """
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None, max_hash_size: int | None = None):
         """Initialize operation history tracker.
 
         Args:
             db_path: Path to SQLite database file.
                     Defaults to ~/.file_organizer/history.db
+            max_hash_size: Maximum file size (in bytes) to hash. Files larger than
+                          this will be logged with a NULL hash to prevent blocking
+                          on large files. Defaults to None (hash all files).
         """
         self.db = DatabaseManager(db_path)
         self.db.initialize()
+        self.max_hash_size = max_hash_size
         logger.info("Operation history tracker initialized")
 
     def log_operation(
@@ -67,7 +71,10 @@ class OperationHistory:
         file_hash = None
         if source_path.exists() and source_path.is_file():
             try:
-                file_hash = self._calculate_file_hash(source_path)
+                if self.max_hash_size is not None and source_path.stat().st_size > self.max_hash_size:
+                    logger.info(f"Skipping hash for {source_path}: size exceeds max_hash_size ({self.max_hash_size} bytes)")
+                else:
+                    file_hash = self._calculate_file_hash(source_path)
             except Exception as e:
                 logger.warning(f"Failed to calculate file hash for {source_path}: {e}")
 

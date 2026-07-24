@@ -99,13 +99,13 @@ class FileHasher:
         return hasher.hexdigest()
 
     def compute_batch(
-        self, file_paths: list[Path], algorithm: HashAlgorithm = "sha256"
+        self, file_paths: list[Path], algorithm: HashAlgorithm = "sha256", max_workers: int = 1
     ) -> dict[Path, str]:
         """Compute hashes for multiple files.
 
-        This method processes files sequentially but returns all results
-        together. Errors for individual files are logged but don't stop
-        the batch process.
+        This method processes files sequentially by default to avoid HDD thrashing,
+        but can be parallelized by setting max_workers > 1 for SSD-backed storage.
+        Errors for individual files are logged but don't stop the batch process.
 
         Args:
             file_paths: List of file paths to hash
@@ -117,14 +117,31 @@ class FileHasher:
         """
         results = {}
 
-        for file_path in file_paths:
-            try:
-                hash_value = self.compute_hash(file_path, algorithm)
-                results[file_path] = hash_value
-            except (FileNotFoundError, PermissionError, ValueError) as e:
-                # Log error but continue processing
-                logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
-                continue
+        if max_workers <= 1:
+            for file_path in file_paths:
+                try:
+                    hash_value = self.compute_hash(file_path, algorithm)
+                    results[file_path] = hash_value
+                except (FileNotFoundError, PermissionError, ValueError) as e:
+                    # Log error but continue processing
+                    logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
+                    continue
+        else:
+            import concurrent.futures
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_path = {
+                    executor.submit(self.compute_hash, file_path, algorithm): file_path
+                    for file_path in file_paths
+                }
+                for future in concurrent.futures.as_completed(future_to_path):
+                    file_path = future_to_path[future]
+                    try:
+                        hash_value = future.result()
+                        results[file_path] = hash_value
+                    except (FileNotFoundError, PermissionError, ValueError) as e:
+                        logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
+                        continue
 
         return results
 

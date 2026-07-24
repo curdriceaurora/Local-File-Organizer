@@ -124,15 +124,34 @@ class MisplacementDetector:
         if pattern_analysis is None:
             pattern_analysis = self.pattern_analyzer.analyze_directory(directory)
 
-        # Get all files
-        files = list(directory.rglob("*"))
-        files = [f for f in files if f.is_file() and not f.name.startswith(".")]
+        # Get all files using iterator instead of loading all into memory
+        files = (f for f in directory.rglob("*") if f.is_file() and not f.name.startswith("."))
 
         misplaced_files = []
+        directory_cache = {}
 
         for file_path in files:
+            dir_path = file_path.parent
+            if dir_path not in directory_cache:
+                if len(directory_cache) > 10:
+                    directory_cache.clear()
+                
+                try:
+                    sibling_files = [f for f in dir_path.iterdir() if f.is_file()]
+                except OSError:
+                    sibling_files = []
+                
+                sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
+                naming_patterns = self._detect_local_patterns(sibling_files)
+                
+                directory_cache[dir_path] = {
+                    "sibling_files": sibling_files,
+                    "sibling_types": sibling_types,
+                    "naming_patterns": naming_patterns,
+                }
+
             # Analyze context
-            context = self.analyze_context(file_path)
+            context = self.analyze_context(file_path, directory_cache)
 
             # Calculate mismatch score
             mismatch_score = self.calculate_mismatch_score(file_path, context, pattern_analysis)
@@ -173,11 +192,12 @@ class MisplacementDetector:
         logger.info(f"Detected {len(misplaced_files)} misplaced files")
         return misplaced_files
 
-    def analyze_context(self, file_path: Path) -> ContextAnalysis:
+    def analyze_context(self, file_path: Path, directory_cache: dict[Path, dict] | None = None) -> ContextAnalysis:
         """Analyze the context of a file.
 
         Args:
             file_path: File to analyze
+            directory_cache: Optional cache of directory information
 
         Returns:
             ContextAnalysis with context information
@@ -195,17 +215,21 @@ class MisplacementDetector:
             size = 0
 
         # Get sibling files
-        try:
-            sibling_files = [f for f in directory.iterdir() if f.is_file() and f != file_path]
-        except OSError:
-            sibling_files = []
-        sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
+        if directory_cache and directory in directory_cache:
+            cache = directory_cache[directory]
+            sibling_files = [f for f in cache["sibling_files"] if f != file_path]
+            sibling_types = cache["sibling_types"]
+            naming_patterns = cache["naming_patterns"]
+        else:
+            try:
+                sibling_files = [f for f in directory.iterdir() if f.is_file() and f != file_path]
+            except OSError:
+                sibling_files = []
+            sibling_types = {f.suffix.lower() for f in sibling_files if f.suffix}
+            naming_patterns = self._detect_local_patterns(sibling_files)
 
         # Infer parent category
         parent_category = self._infer_category_from_type(file_type)
-
-        # Detect naming patterns in directory
-        naming_patterns = self._detect_local_patterns(sibling_files)
 
         return ContextAnalysis(
             file_path=file_path,

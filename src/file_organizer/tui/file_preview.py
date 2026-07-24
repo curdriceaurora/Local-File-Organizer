@@ -328,11 +328,14 @@ class FilePreviewView(Horizontal):
             self._notify_selection()
 
     def action_select_all(self) -> None:
-        """Select all files in the current directory."""
+        """Select all files in the current directory (capped to 10000)."""
         if self._root_path is None:
             return
         try:
-            all_files = {p for p in self._root_path.rglob("*") if p.is_file()}
+            import itertools
+            # Use a generator and islice to avoid OOM on massive directories
+            file_iter = (p for p in self._root_path.rglob("*") if p.is_file())
+            all_files = set(itertools.islice(file_iter, 10000))
             self.selection.select_all(all_files)
             self._notify_selection()
         except OSError:
