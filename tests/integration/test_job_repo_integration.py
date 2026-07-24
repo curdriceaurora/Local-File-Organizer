@@ -222,6 +222,34 @@ class TestJobRepositoryUpdateStatus:
         assert rolled_back is not None
         assert rolled_back.error == "disk full"
         assert rolled_back.error_code == "execution_failed"
+        assert rolled_back.error_retryable is True
+        assert rolled_back.error_details_json == '{"device": "output"}'
+
+        job2 = JobRepository.create(db_session, "/in2", "/out2")
+        db_session.flush()
+        JobRepository.update_status(db_session, job2.id, "running")
+        db_session.flush()
+        JobRepository.update_status(
+            db_session,
+            job2.id,
+            "failed",
+            error="disk full",
+            error_code="execution_failed",
+            error_retryable=True,
+            error_details={"device": "output"},
+        )
+        db_session.flush()
+        rolling_back2 = JobRepository.update_status(db_session, job2.id, "rolling_back")
+        db_session.flush()
+        recovery = JobRepository.update_status(
+            db_session, rolling_back2.id, "recovery_required"
+        )
+        db_session.flush()
+        assert recovery is not None
+        assert recovery.error == "disk full"
+        assert recovery.error_code == "execution_failed"
+        assert recovery.error_retryable is True
+        assert recovery.error_details_json == '{"device": "output"}'
 
 
 class TestJobRepositoryUpdateResult:

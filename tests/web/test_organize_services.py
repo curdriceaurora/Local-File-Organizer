@@ -15,6 +15,7 @@ from file_organizer.core.plan import build_plan_from_processed
 from file_organizer.methodologies import apply_organization_methodology
 from file_organizer.services.text_processor import ProcessedFile
 from file_organizer.web.organize_services import (
+    _ORGANIZE_PLAN_STORE,
     ORGANIZE_MAX_DELAY_MIN,
     _delete_organize_plan,
     _get_organize_plan,
@@ -192,13 +193,16 @@ def test_plan_store_prunes_and_missing_lookup_returns_none(monkeypatch) -> None:
         _delete_organize_plan(second["plan_id"])
 
 
-def test_plan_store_ttl_expiry_returns_none(monkeypatch) -> None:
-    monkeypatch.setattr("file_organizer.web.organize_services.ORGANIZE_PLAN_TTL_SECONDS", -1)
+def test_plan_store_ttl_expiry_returns_none() -> None:
+    from datetime import UTC, datetime
+
     record = _store_organize_plan({"input_dir": "x"})
+    plan_id = record["plan_id"]
     try:
-        assert _get_organize_plan(record["plan_id"]) is None
+        _ORGANIZE_PLAN_STORE[plan_id]["created_at"] = datetime(2000, 1, 1, tzinfo=UTC)
+        assert _get_organize_plan(plan_id) is None
     finally:
-        _delete_organize_plan(record["plan_id"])
+        _delete_organize_plan(plan_id)
 
 
 def test_job_report_payload_extracts_report_fields() -> None:
