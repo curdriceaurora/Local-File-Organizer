@@ -281,6 +281,10 @@ class SettingsView(StatusMixin, Vertical):
         self._methodology: str = "none"
         self._text_model: str = DEFAULT_TEXT_MODEL
         self._provider: str = _DEFAULT_PROVIDER
+        # True once the user explicitly cycles the provider control this session;
+        # until then the persisted value is display-only and is never written into
+        # session options, so it can never silently outrank FO_PROVIDER (#1660).
+        self._provider_overridden: bool = False
         self._check_updates: bool = True
         self._include_prereleases: bool = False
         options = workspace.options if workspace is not None else None
@@ -297,11 +301,7 @@ class SettingsView(StatusMixin, Vertical):
             self._output_dir = str(workspace.output_root or "")
             self._methodology = workspace.options.effective_methodology.value
             self._text_model = workspace.options.text_model or DEFAULT_TEXT_MODEL
-            self._provider = (
-                workspace.options.text_provider
-                if workspace.options.text_provider in _PROVIDER_ORDER
-                else _DEFAULT_PROVIDER
-            )
+            self._provider = self._load_persisted_provider()
             self._max_workers = workspace.options.parallel_workers
             self._prefetch_depth = workspace.options.prefetch_depth
 
@@ -427,6 +427,7 @@ class SettingsView(StatusMixin, Vertical):
         except ValueError:
             index = -1
         self._provider = _PROVIDER_ORDER[(index + 1) % len(_PROVIDER_ORDER)]
+        self._provider_overridden = True
         self._set_status(f"Provider: {self._provider}")
         self._sync_workspace_options()
         self._refresh_panel()
@@ -550,6 +551,7 @@ class SettingsView(StatusMixin, Vertical):
         self._methodology = loaded.methodology
         self._text_model = loaded.text_model
         self._provider = loaded.provider
+        self._provider_overridden = False
         self._check_updates = loaded.check_updates_on_startup
         self._include_prereleases = loaded.include_prereleases
         self._sync_dir_inputs()
@@ -581,20 +583,33 @@ class SettingsView(StatusMixin, Vertical):
         """Apply behavior controls immediately without persisting path edits."""
         if self._workspace is None:
             return
-        self._workspace.set_options(
-            recursive=self._recursive,
-            include_hidden=self._include_hidden,
-            skip_existing=self._skip_existing,
-            transfer_mode=self._transfer_mode,
-            methodology=self._methodology,
-            enable_vision=self._enable_vision,
-            transcribe_audio=self._transcribe_audio,
-            parallel_workers=self._max_workers,
-            prefetch_depth=self._prefetch_depth,
-            text_model=self._text_model,
-            text_provider=self._provider,
-            vision_provider=self._provider,
-        )
+        changes: dict[str, Any] = {
+            "recursive": self._recursive,
+            "include_hidden": self._include_hidden,
+            "skip_existing": self._skip_existing,
+            "transfer_mode": self._transfer_mode,
+            "methodology": self._methodology,
+            "enable_vision": self._enable_vision,
+            "transcribe_audio": self._transcribe_audio,
+            "parallel_workers": self._max_workers,
+            "prefetch_depth": self._prefetch_depth,
+            "text_model": self._text_model,
+        }
+        if self._provider_overridden:
+            # Only write the provider into session options once the user has
+            # explicitly chosen it here; otherwise leave it unset so FO_PROVIDER
+            # and the persisted config profile resolve it in documented order
+            # instead of being silently outranked by a display-only default (#1660).
+            changes["text_provider"] = self._provider
+            changes["vision_provider"] = self._provider
+        self._workspace.set_options(**changes)
+
+    def _load_persisted_provider(self) -> str:
+        """Read the persisted provider for display only, without touching options."""
+        try:
+            return load_workflow_settings(profile=self._profile).provider
+        except Exception:
+            return _DEFAULT_PROVIDER
 
     def _text_model_options(self) -> list[str]:
         """Return cycle options, prepending any persisted custom model."""

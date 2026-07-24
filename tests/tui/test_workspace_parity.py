@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from file_organizer.config.schema import AppConfig
 from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.organize_options import OrganizeOptions
 from file_organizer.core.plan import build_plan_from_processed
@@ -112,6 +113,25 @@ def test_config_load_failure_is_retained_as_workspace_error() -> None:
     assert workspace.last_error.message == "config unreadable"
 
 
+def test_from_config_never_lets_persisted_provider_outrank_environment() -> None:
+    """A persisted provider must not become a request-level override on startup.
+
+    ``OrganizationService._resolve_options`` treats an ``OrganizeOptions.text_provider``
+    value as the highest-priority source, above ``FO_PROVIDER``. If ``from_config``
+    copied ``config.models.framework`` in here, a saved "openai" would silently beat
+    ``FO_PROVIDER=ollama`` on every session before the user ever chose anything (#1660).
+    """
+    config = AppConfig()
+    config.models.framework = "openai"
+    manager = MagicMock()
+    manager.load.return_value = config
+
+    workspace = TUIWorkspace.from_config(manager)
+
+    assert workspace.options.text_provider is None
+    assert workspace.options.vision_provider is None
+
+
 def test_selection_persists_across_file_views(tmp_path: Path) -> None:
     selected = tmp_path / "selected.txt"
     selected.write_text("selected")
@@ -150,6 +170,7 @@ def test_settings_map_losslessly_to_canonical_options(tmp_path: Path) -> None:
     view._prefetch_depth = 3
     view._text_model = "custom-text"
     view._provider = "openai"
+    view._provider_overridden = True
 
     view._sync_workspace()
 
