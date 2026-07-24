@@ -241,9 +241,7 @@ class TestJobRepositoryUpdateStatus:
         db_session.flush()
         rolling_back2 = JobRepository.update_status(db_session, job2.id, "rolling_back")
         db_session.flush()
-        recovery = JobRepository.update_status(
-            db_session, rolling_back2.id, "recovery_required"
-        )
+        recovery = JobRepository.update_status(db_session, rolling_back2.id, "recovery_required")
         db_session.flush()
         assert recovery is not None
         assert recovery.error == "disk full"
