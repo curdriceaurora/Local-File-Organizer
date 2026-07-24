@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
@@ -20,6 +21,24 @@ _FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 _CORPUS_DIR = _FIXTURES_DIR / "benchmark_suite_corpus"
 _EXPECTATIONS_PATH = _FIXTURES_DIR / "benchmark_suite_expectations.json"
 _EXPECTATIONS = json.loads(_EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+
+
+def _suite_params() -> list[object]:
+    """Suite ids, with the e2e suite skipped on Windows.
+
+    The e2e runner actually organizes the fixture corpus, so it goes through
+    SafeDir (POSIX dir_fd / O_NOFOLLOW; Windows port deferred, #264). Only that
+    one suite touches the filesystem that way, so it is skipped per-parameter
+    rather than disabling the whole smoke matrix on Windows.
+    """
+    skip_on_windows = pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="e2e benchmark suite organizes files via SafeDir, which is POSIX-only (#264)",
+    )
+    return [
+        pytest.param(name, marks=[skip_on_windows] if name == "e2e" else [])
+        for name in sorted(_EXPECTATIONS["suites"].keys())
+    ]
 
 
 @pytest.mark.ci
@@ -67,7 +86,7 @@ def test_benchmark_model_stub_exposes_safe_cleanup() -> None:
 @pytest.mark.ci
 @pytest.mark.unit
 @pytest.mark.smoke
-@pytest.mark.parametrize("suite_name", sorted(_EXPECTATIONS["suites"].keys()))
+@pytest.mark.parametrize("suite_name", _suite_params())
 def test_benchmark_suite_smoke_outputs_expected_schema(suite_name: str) -> None:
     """Each suite should run against fixture corpus and emit stable JSON schema."""
     result = runner.invoke(

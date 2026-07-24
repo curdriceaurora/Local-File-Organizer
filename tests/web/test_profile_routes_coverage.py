@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -746,6 +747,13 @@ class TestApiKeys:
 class TestAvatarUpload:
     """Covers profile_avatar_upload route."""
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        # resolve_avatar_for_read deliberately fails closed when SafeDir is
+        # unavailable (see test_profile_avatars.py), and SafeDir is POSIX-only
+        # (#264) — so the success path is unreachable on Windows by design.
+        reason="avatar reads fail closed without SafeDir, which is POSIX-only (#264)",
+    )
     def test_resolve_avatar_for_read_returns_contained_resolved_path(self, tmp_path) -> None:
         from file_organizer.web.profile_routes import _resolve_avatar_for_read
 

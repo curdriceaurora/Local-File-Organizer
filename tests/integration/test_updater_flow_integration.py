@@ -13,6 +13,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import platform
+import socket
+import socketserver
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -39,12 +42,41 @@ pytestmark = [pytest.mark.integration, pytest.mark.ci]
 _REPO = "curdriceaurora/Local-File-Organizer"
 
 
+def _installed_binary_name() -> str:
+    """Filename ``UpdateInstaller`` installs to on the running platform.
+
+    Stated independently of ``_resolve_target`` rather than calling it, so the
+    assertions pin the contract instead of comparing the installer to itself.
+    """
+    return "file-organizer.exe" if platform.system() == "Windows" else "file-organizer"
+
+
 def _platform_binary_name() -> str:
     """Asset name that ``select_asset`` will match on the running platform."""
     plat = _get_platform_hints()[0]
     arch_hints = _get_arch_hints()
     arch = arch_hints[0] if arch_hints else "x86_64"
     return f"file-organizer-{plat}-{arch}"
+
+
+class _LoopbackHTTPServer(ThreadingHTTPServer):
+    """Threaded HTTP server that binds without a reverse-DNS lookup.
+
+    ``HTTPServer.server_bind`` resolves the bound host via ``socket.getfqdn``.
+    That reverse lookup for ``127.0.0.1`` is instant on Linux (answered from
+    ``/etc/hosts``) but on macOS CI runners it can stall for tens of seconds
+    waiting on mDNSResponder, blowing past the suite's ``--timeout=30`` and
+    erroring whichever test happens to bind the server first.  The resolved
+    name is only stored on ``server_name``, which these tests never read, so
+    bind through ``TCPServer`` and record the literal host instead.
+    """
+
+    def server_bind(self) -> None:
+        # Deliberately skips HTTPServer.server_bind (the getfqdn caller).
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
 
 
 @dataclass
@@ -97,7 +129,7 @@ def release_server() -> Iterator[_ReleaseServer]:
                 return
             self._send(404, b"not found", "text/plain")
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = _LoopbackHTTPServer(("127.0.0.1", 0), Handler)
     state.base_url = f"http://127.0.0.1:{server.server_address[1]}"
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -217,7 +249,7 @@ def test_full_update_cycle_installs_and_rolls_back(
 
     install_dir = tmp_path / "bin"
     install_dir.mkdir()
-    target = install_dir / "file-organizer"
+    target = install_dir / _installed_binary_name()
     target.write_bytes(b"the-old-binary")
 
     manager = UpdateManager(repo=_REPO, current_version="1.0.0", install_dir=install_dir)
@@ -233,7 +265,7 @@ def test_full_update_cycle_installs_and_rolls_back(
     # The binary on disk is now the freshly downloaded payload, verified by
     # its manifest SHA-256, and a backup of the old binary was kept.
     assert target.read_bytes() == new_bytes
-    backup = install_dir / "file-organizer.bak"
+    backup = target.with_name(f"{target.name}.bak")
     assert backup.exists()
     assert backup.read_bytes() == b"the-old-binary"
 
@@ -252,7 +284,7 @@ def test_dry_run_downloads_but_does_not_install(
 
     install_dir = tmp_path / "bin"
     install_dir.mkdir()
-    target = install_dir / "file-organizer"
+    target = install_dir / _installed_binary_name()
     target.write_bytes(b"unchanged")
 
     manager = UpdateManager(repo=_REPO, current_version="1.0.0", install_dir=install_dir)
@@ -262,7 +294,7 @@ def test_dry_run_downloads_but_does_not_install(
     assert result.install_result.success
     assert "Dry run" in result.install_result.message
     assert target.read_bytes() == b"unchanged"
-    assert not (install_dir / "file-organizer.bak").exists()
+    assert not target.with_name(f"{target.name}.bak").exists()
 
 
 def test_update_aborts_on_corrupt_binary(
@@ -281,7 +313,7 @@ def test_update_aborts_on_corrupt_binary(
 
     install_dir = tmp_path / "bin"
     install_dir.mkdir()
-    target = install_dir / "file-organizer"
+    target = install_dir / _installed_binary_name()
     target.write_bytes(b"still-here")
 
     manager = UpdateManager(repo=_REPO, current_version="1.0.0", install_dir=install_dir)
@@ -317,6 +349,30 @@ def test_update_aborts_when_signature_untrusted(
     assert result.install_result is not None
     assert result.install_result.success is False
     assert "trust" in result.install_result.message.lower()
+
+
+def test_release_server_binds_without_reverse_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Binding the release server must not trigger a reverse-DNS lookup.
+
+    ``socket.getfqdn`` on the loopback address stalls for tens of seconds on
+    macOS CI runners.  Because every test in this module binds this server,
+    a regression here doesn't fail one test — it times out whichever test
+    happens to bind first under the suite's ``--timeout=30``.
+    """
+    calls: list[str] = []
+
+    def _tracking_getfqdn(name: str = "") -> str:
+        calls.append(name)
+        return "should-not-be-called"
+
+    monkeypatch.setattr(socket, "getfqdn", _tracking_getfqdn)
+
+    server = _LoopbackHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+    try:
+        assert calls == [], f"server_bind performed a reverse-DNS lookup: {calls}"
+        assert server.server_address[1] != 0
+    finally:
+        server.server_close()
 
 
 def test_installer_select_asset_matches_platform(
