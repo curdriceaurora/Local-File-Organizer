@@ -28,6 +28,7 @@ from file_organizer.history.models import Operation, OperationType
 from tests.conformance.conftest import ConformanceContext
 from tests.conformance.corpus import FIXED_MTIME_NS, get_case, materialize_case
 from tests.conformance.driver import DirectServiceDriver, OrganizationConformanceDriver
+from tests.conformance.goldens import load_golden
 from tests.conformance.normalize import (
     normalize_audit_events,
     normalize_job_events,
@@ -82,59 +83,14 @@ def test_corpus_materialization_is_deterministic(tmp_path: Path) -> None:
         assert left.stat().st_mtime_ns == right.stat().st_mtime_ns == spec.mtime_ns
 
 
+_TRAVERSAL_GOLDEN = load_golden("traversal_policy")
+
+
 @pytest.mark.parametrize(
     ("case_id", "options", "expected_files"),
     [
-        (
-            "flat-documents",
-            {},
-            ["<input>/alpha.txt", "<input>/bravo.md", "<input>/ledger.csv"],
-        ),
-        (
-            "nested-mixed",
-            {"recursive": False},
-            ["<input>/top.txt"],
-        ),
-        (
-            "nested-mixed",
-            {"recursive": True},
-            [
-                "<input>/cad/part.dxf",
-                "<input>/docs/deep/inner.md",
-                "<input>/docs/report.pdf",
-                "<input>/media/clip.mp4",
-                "<input>/media/photo.jpg",
-                "<input>/media/song.mp3",
-                "<input>/misc/data.zzz",
-                "<input>/top.txt",
-            ],
-        ),
-        (
-            "hidden-entries",
-            {"recursive": True, "include_hidden": False},
-            ["<input>/nested/plain.md", "<input>/visible.txt"],
-        ),
-        (
-            "hidden-entries",
-            {"recursive": True, "include_hidden": True},
-            [
-                "<input>/.hidden.txt",
-                "<input>/.hiddendir/inside.txt",
-                "<input>/nested/.dotfile.md",
-                "<input>/nested/plain.md",
-                "<input>/visible.txt",
-            ],
-        ),
-        (
-            "hidden-entries",
-            {"recursive": False, "include_hidden": True},
-            ["<input>/.hidden.txt", "<input>/visible.txt"],
-        ),
-        (
-            "hidden-entries",
-            {"recursive": False, "include_hidden": False},
-            ["<input>/visible.txt"],
-        ),
+        (c["case_id"], c["options"], c["expected_files"])
+        for c in _TRAVERSAL_GOLDEN["cases"]
     ],
 )
 def test_traversal_policy_goldens(
@@ -152,18 +108,12 @@ def test_traversal_policy_goldens(
 
 
 def test_scan_counts_golden(conformance: ConformanceContext) -> None:
-    conformance.stage("nested-mixed")
+    golden = load_golden("scan_counts")
+    conformance.stage(golden["case_id"])
 
     envelope = _ok(conformance.driver.scan(conformance.request()))
 
-    assert envelope["scan"]["counts"] == {
-        "audio": 1,
-        "cad": 1,
-        "image": 1,
-        "other": 1,
-        "text": 3,
-        "video": 1,
-    }
+    assert envelope["scan"]["counts"] == golden["expected_counts"]
 
 
 def test_preview_sources_match_scan(conformance: ConformanceContext) -> None:
@@ -200,40 +150,17 @@ def test_non_recursive_execution_applies_only_reviewed_top_level_files(
 
 def test_media_routing_golden(conformance: ConformanceContext) -> None:
     """Optional media routes through canonical policy on pinned metadata."""
-    conformance.stage("media-optional")
+    golden = load_golden("media_routing")
+    conformance.stage(golden["case_id"])
 
-    envelope = _ok(conformance.driver.preview(conformance.request(transfer_mode="copy")))
+    envelope = _ok(
+        conformance.driver.preview(conformance.request(**golden["options"]))
+    )
 
     assert _operation_routes(envelope) == [
-        ("<input>/clip.mp4", "<output>/Short_Clips/clip.mp4", "ready", "create"),
-        ("<input>/movie.mkv", "<output>/Videos/2026/movie.mkv", "ready", "create"),
-        (
-            "<input>/photo_older.png",
-            "<output>/Images/2020/photo_older.png",
-            "ready",
-            "create",
-        ),
-        (
-            "<input>/photo_recent.jpg",
-            "<output>/Images/2026/photo_recent.jpg",
-            "ready",
-            "create",
-        ),
-        (
-            "<input>/song.mp3",
-            "<output>/Rock/Fixture Artist/Fixture Album/00 - Fixture Song.mp3",
-            "ready",
-            "create",
-        ),
-        ("<input>/widget.step", "<output>/CAD/widget.step", "ready", "create"),
+        tuple(route) for route in golden["expected_routes"]
     ]
-    assert envelope["plan"]["counts"] == {
-        "total_files": 7,
-        "processed_files": 6,
-        "skipped_files": 1,  # data.zzz has no supported handler
-        "failed_files": 0,
-        "deduplicated_files": 0,
-    }
+    assert envelope["plan"]["counts"] == golden["expected_counts"]
 
 
 def test_plan_is_deterministic_and_round_trips(conformance: ConformanceContext) -> None:
@@ -340,85 +267,47 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
 
 
 def test_collision_skip_existing_golden(conformance: ConformanceContext) -> None:
-    conformance.stage("collision-stems")
+    golden = load_golden("collision_skip_existing")
+    conformance.stage(golden["case_id"])
 
     envelope = _ok(
-        conformance.driver.preview(conformance.request(use_hardlinks=False, skip_existing=True))
+        conformance.driver.preview(conformance.request(**golden["options"]))
     )
 
     assert _operation_routes(envelope) == [
-        (
-            "<input>/archive/summary.txt",
-            "<output>/Documents/summary.txt",
-            "skipped",
-            "skip_existing",
-        ),
-        ("<input>/notes/draft.txt", "<output>/Documents/draft.txt", "ready", "create"),
-        (
-            "<input>/old/draft.txt",
-            "<output>/Documents/draft_1.txt",
-            "ready",
-            "rename_with_counter",
-        ),
-        (
-            "<input>/reports/summary.txt",
-            "<output>/Documents/summary.txt",
-            "skipped",
-            "skip_existing",
-        ),
+        tuple(route) for route in golden["expected_routes"]
     ]
-    assert envelope["plan"]["counts"]["processed_files"] == 2
-    assert envelope["plan"]["counts"]["skipped_files"] == 2
+    assert envelope["plan"]["counts"]["processed_files"] == golden["expected_processed_files"]
+    assert envelope["plan"]["counts"]["skipped_files"] == golden["expected_skipped_files"]
 
 
 def test_collision_rename_with_counter_golden(conformance: ConformanceContext) -> None:
-    conformance.stage("collision-stems")
+    golden = load_golden("collision_rename_counter")
+    conformance.stage(golden["case_id"])
 
     envelope = _ok(
-        conformance.driver.preview(conformance.request(use_hardlinks=False, skip_existing=False))
+        conformance.driver.preview(conformance.request(**golden["options"]))
     )
 
     assert _operation_routes(envelope) == [
-        (
-            "<input>/archive/summary.txt",
-            "<output>/Documents/summary_1.txt",
-            "ready",
-            "rename_with_counter",
-        ),
-        ("<input>/notes/draft.txt", "<output>/Documents/draft.txt", "ready", "create"),
-        (
-            "<input>/old/draft.txt",
-            "<output>/Documents/draft_1.txt",
-            "ready",
-            "rename_with_counter",
-        ),
-        (
-            "<input>/reports/summary.txt",
-            "<output>/Documents/summary_2.txt",
-            "ready",
-            "rename_with_counter",
-        ),
+        tuple(route) for route in golden["expected_routes"]
     ]
-    assert envelope["plan"]["counts"]["processed_files"] == 4
+    assert envelope["plan"]["counts"]["processed_files"] == golden["expected_processed_files"]
 
 
 def test_duplicate_content_golden(conformance: ConformanceContext) -> None:
     """Content dedup keeps the lexicographically first source of each hash."""
-    conformance.stage("duplicate-content")
+    golden = load_golden("duplicate_content")
+    conformance.stage(golden["case_id"])
 
-    envelope = _ok(conformance.driver.preview(conformance.request(use_hardlinks=False)))
+    envelope = _ok(
+        conformance.driver.preview(conformance.request(**golden["options"]))
+    )
 
     assert _operation_routes(envelope) == [
-        ("<input>/copy/two.txt", "<output>/Documents/two.txt", "ready", "create"),
-        ("<input>/unique.txt", "<output>/Documents/unique.txt", "ready", "create"),
+        tuple(route) for route in golden["expected_routes"]
     ]
-    assert envelope["plan"]["counts"] == {
-        "total_files": 3,
-        "processed_files": 2,
-        "skipped_files": 0,
-        "failed_files": 0,
-        "deduplicated_files": 1,
-    }
+    assert envelope["plan"]["counts"] == golden["expected_counts"]
     fingerprints = [op["fingerprint"] for op in envelope["plan"]["operations"]]
     assert all(fp is not None and fp["sha256"] for fp in fingerprints)
 
@@ -437,62 +326,21 @@ def test_symlinks_are_excluded(conformance: ConformanceContext) -> None:
 
 
 def test_execute_applies_previewed_plan_golden(conformance: ConformanceContext) -> None:
-    conformance.stage("flat-documents")
-    request = conformance.request(use_hardlinks=False)
+    golden = load_golden("execute_applies_previewed")
+    conformance.stage(golden["case_id"])
+    request = conformance.request(**golden["options"])
     preview = _ok(conformance.driver.preview(request))
 
     envelope = _ok(conformance.driver.execute(request, preview["plan_payload"]))
 
-    assert envelope["result"] == {
-        "counts": {
-            "total_files": 3,
-            "processed_files": 3,
-            "skipped_files": 0,
-            "failed_files": 0,
-            "deduplicated_files": 0,
-        },
-        "organized_structure": {
-            "Documents": ["alpha.txt", "bravo.md"],
-            "Spreadsheets": ["ledger.csv"],
-        },
-        "errors": [],
-    }
-    assert envelope["audit_events"] == [
-        {
-            "operation_type": "copy",
-            "status": "completed",
-            "source": "<input>/alpha.txt",
-            "destination": "<output>/Documents/alpha.txt",
-            "collision_action": "create",
-            "folder": "Documents",
-        },
-        {
-            "operation_type": "copy",
-            "status": "completed",
-            "source": "<input>/bravo.md",
-            "destination": "<output>/Documents/bravo.md",
-            "collision_action": "create",
-            "folder": "Documents",
-        },
-        {
-            "operation_type": "copy",
-            "status": "completed",
-            "source": "<input>/ledger.csv",
-            "destination": "<output>/Spreadsheets/ledger.csv",
-            "collision_action": "create",
-            "folder": "Spreadsheets",
-        },
-    ]
+    assert envelope["result"] == golden["expected_result"]
+    assert envelope["audit_events"] == golden["expected_audit_events"]
     organized = sorted(
         path.relative_to(conformance.output_root).as_posix()
         for path in conformance.output_root.rglob("*")
         if path.is_file()
     )
-    assert organized == [
-        "Documents/alpha.txt",
-        "Documents/bravo.md",
-        "Spreadsheets/ledger.csv",
-    ]
+    assert organized == golden["expected_organized_paths"]
     assert (conformance.output_root / "Documents" / "alpha.txt").read_bytes() == b"alpha body\n"
 
 
@@ -598,29 +446,14 @@ def test_missing_input_is_rejected(conformance: ConformanceContext) -> None:
     assert envelope["error"]["message"] == "Input path does not exist: <input>"
 
 
+_METHODOLOGY_GOLDEN = load_golden("methodology_seed")
+
+
 @pytest.mark.parametrize(
     ("methodology", "expected_destinations"),
     [
-        (
-            "para",
-            [
-                "<output>/Archive/Documents/notes.md",
-                "<output>/Areas/Spreadsheets/budget.csv",
-                "<output>/Projects/Documents/plan.txt",
-                "<output>/Resources/PDFs/paper.pdf",
-            ],
-        ),
-        (
-            "jd",
-            [
-                # Documents and PDFs share area 30 and therefore must not share a category
-                # number; PDFs sorts after Documents, so it takes 30.02 (#1617).
-                "<output>/30 Operations & Projects/30.01 Documents/notes.md",
-                "<output>/10 Finance & Administration/10.01 Spreadsheets/budget.csv",
-                "<output>/30 Operations & Projects/30.01 Documents/plan.txt",
-                "<output>/30 Operations & Projects/30.02 PDFs/paper.pdf",
-            ],
-        ),
+        (c["methodology"], c["expected_destinations"])
+        for c in _METHODOLOGY_GOLDEN["cases"]
     ],
 )
 def test_methodology_seed_golden(
@@ -629,7 +462,7 @@ def test_methodology_seed_golden(
     expected_destinations: list[str],
 ) -> None:
     """PARA and Johnny Decimal destinations come from the canonical service."""
-    conformance.stage("methodology-seed")
+    conformance.stage(_METHODOLOGY_GOLDEN["case_id"])
 
     envelope = _ok(
         conformance.driver.preview(

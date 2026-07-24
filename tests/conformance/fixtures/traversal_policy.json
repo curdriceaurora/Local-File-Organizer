@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "case_id": "flat-documents",
+      "options": {},
+      "expected_files": [
+        "<input>/alpha.txt",
+        "<input>/bravo.md",
+        "<input>/ledger.csv"
+      ]
+    },
+    {
+      "case_id": "nested-mixed",
+      "options": {
+        "recursive": false
+      },
+      "expected_files": [
+        "<input>/top.txt"
+      ]
+    },
+    {
+      "case_id": "nested-mixed",
+      "options": {
+        "recursive": true
+      },
+      "expected_files": [
+        "<input>/cad/part.dxf",
+        "<input>/docs/deep/inner.md",
+        "<input>/docs/report.pdf",
+        "<input>/media/clip.mp4",
+        "<input>/media/photo.jpg",
+        "<input>/media/song.mp3",
+        "<input>/misc/data.zzz",
+        "<input>/top.txt"
+      ]
+    },
+    {
+      "case_id": "hidden-entries",
+      "options": {
+        "recursive": true,
+        "include_hidden": false
+      },
+      "expected_files": [
+        "<input>/nested/plain.md",
+        "<input>/visible.txt"
+      ]
+    },
+    {
+      "case_id": "hidden-entries",
+      "options": {
+        "recursive": true,
+        "include_hidden": true
+      },
+      "expected_files": [
+        "<input>/.hidden.txt",
+        "<input>/.hiddendir/inside.txt",
+        "<input>/nested/.dotfile.md",
+        "<input>/nested/plain.md",
+        "<input>/visible.txt"
+      ]
+    },
+    {
+      "case_id": "hidden-entries",
+      "options": {
+        "recursive": false,
+        "include_hidden": true
+      },
+      "expected_files": [
+        "<input>/.hidden.txt",
+        "<input>/visible.txt"
+      ]
+    },
+    {
+      "case_id": "hidden-entries",
+      "options": {
+        "recursive": false,
+        "include_hidden": false
+      },
+      "expected_files": [
+        "<input>/visible.txt"
+      ]
+    }
+  ]
+}

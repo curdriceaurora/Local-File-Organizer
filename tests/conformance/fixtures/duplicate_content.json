@@ -1,0 +1,27 @@
+{
+  "case_id": "duplicate-content",
+  "options": {
+    "use_hardlinks": false
+  },
+  "expected_routes": [
+    [
+      "<input>/copy/two.txt",
+      "<output>/Documents/two.txt",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/unique.txt",
+      "<output>/Documents/unique.txt",
+      "ready",
+      "create"
+    ]
+  ],
+  "expected_counts": {
+    "total_files": 3,
+    "processed_files": 2,
+    "skipped_files": 0,
+    "failed_files": 0,
+    "deduplicated_files": 1
+  }
+}

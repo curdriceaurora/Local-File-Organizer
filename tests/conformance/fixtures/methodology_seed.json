@@ -1,0 +1,23 @@
+{
+  "case_id": "methodology-seed",
+  "cases": [
+    {
+      "methodology": "para",
+      "expected_destinations": [
+        "<output>/Archive/Documents/notes.md",
+        "<output>/Areas/Spreadsheets/budget.csv",
+        "<output>/Projects/Documents/plan.txt",
+        "<output>/Resources/PDFs/paper.pdf"
+      ]
+    },
+    {
+      "methodology": "jd",
+      "expected_destinations": [
+        "<output>/30 Operations & Projects/30.01 Documents/notes.md",
+        "<output>/10 Finance & Administration/10.01 Spreadsheets/budget.csv",
+        "<output>/30 Operations & Projects/30.01 Documents/plan.txt",
+        "<output>/30 Operations & Projects/30.02 PDFs/paper.pdf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "case_id": "collision-stems",
+  "options": {
+    "use_hardlinks": false,
+    "skip_existing": true
+  },
+  "expected_routes": [
+    [
+      "<input>/archive/summary.txt",
+      "<output>/Documents/summary.txt",
+      "skipped",
+      "skip_existing"
+    ],
+    [
+      "<input>/notes/draft.txt",
+      "<output>/Documents/draft.txt",
+      "ready",
+      "create"
+    ],
+    [
+      "<input>/old/draft.txt",
+      "<output>/Documents/draft_1.txt",
+      "ready",
+      "rename_with_counter"
+    ],
+    [
+      "<input>/reports/summary.txt",
+      "<output>/Documents/summary.txt",
+      "skipped",
+      "skip_existing"
+    ]
+  ],
+  "expected_processed_files": 2,
+  "expected_skipped_files": 2
+}
