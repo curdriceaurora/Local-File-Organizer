@@ -637,8 +637,11 @@ async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
         # Mount reflects the shared session rather than replacing it with stale config.
         input_field = view.query_one("#settings-input-dir", Input)
         output_field = view.query_one("#settings-output-dir", Input)
-        assert input_field.value == "/seed/in"
-        assert output_field.value == "/seed/out"
+        # set_roots stores a Path, so the field renders native separators — compare
+        # against the same normalization rather than the POSIX spelling (on Windows
+        # "/seed/in" round-trips as "\\seed\\in").
+        assert input_field.value == str(Path("/") / "seed" / "in")
+        assert output_field.value == str(Path("/") / "seed" / "out")
 
         # Editing an input updates in-memory state (real Input.Changed event).
         input_field.value = "/edited/in"

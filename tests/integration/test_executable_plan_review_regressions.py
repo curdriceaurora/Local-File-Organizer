@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -41,6 +42,15 @@ from file_organizer.web.organize_services import (
 
 pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
+# ``execute_plan`` transfers files through SafeDir, which needs POSIX dir_fd /
+# O_NOFOLLOW; the Windows port is deferred (#264). CI Full Matrix runs this
+# ci-marked file on Windows, where SafeDir raises NotImplementedError — and
+# because that subclasses RuntimeError it surfaces as a confusing
+# "regex did not match" inside pytest.raises rather than a clear skip.
+requires_safedir = pytest.mark.skipif(
+    sys.platform == "win32", reason="execute_plan uses SafeDir, which is POSIX-only (#264)"
+)
+
 
 def _processed(path: Path, folder: str = "Docs") -> ProcessedFile:
     return ProcessedFile(
@@ -75,6 +85,7 @@ def _single_plan(tmp_path: Path, *, use_hardlinks: bool = False):
     )
 
 
+@requires_safedir
 def test_execute_plan_cleans_up_when_commit_returns_false(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -89,6 +100,7 @@ def test_execute_plan_cleans_up_when_commit_returns_false(
     assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
 
 
+@requires_safedir
 def test_execute_plan_verifies_open_source_before_copy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -111,6 +123,7 @@ def test_execute_plan_verifies_open_source_before_copy(
     assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
 
 
+@requires_safedir
 def test_execute_plan_hardlinks_verified_source(tmp_path: Path) -> None:
     plan = _single_plan(tmp_path, use_hardlinks=True)
 
@@ -266,6 +279,7 @@ def test_validate_plan_reports_source_and_destination_conflicts(tmp_path: Path) 
     assert "source_missing" in validation.error_message
 
 
+@requires_safedir
 def test_execute_plan_cleans_destination_when_history_logging_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -284,6 +298,7 @@ def test_execute_plan_cleans_destination_when_history_logging_fails(
     assert not (tmp_path / "output" / "Docs" / "notes.txt").exists()
 
 
+@requires_safedir
 def test_file_organizer_plan_helpers_execute_and_restore_state(tmp_path: Path) -> None:
     input_dir = tmp_path / "input"
     input_dir.mkdir()

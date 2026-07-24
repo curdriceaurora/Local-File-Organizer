@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import NamedTuple
 
 from file_organizer.core.organize_options import OrganizationMethodology
@@ -248,8 +248,24 @@ def _has_johnny_decimal_prefix(folder: str) -> bool:
 
 
 def _safe_folder(folder: str) -> str:
-    """Return a safe relative classifier folder or the Unsorted fallback."""
-    candidate = Path(folder)
-    if candidate.is_absolute() or not candidate.parts or ".." in candidate.parts:
+    """Return a safe relative classifier folder or the Unsorted fallback.
+
+    ``folder`` is classifier-proposed, so this is the guard that keeps a
+    destination inside the output root. It is evaluated under *both* path
+    flavours rather than the host's ``Path``, which is platform-dependent
+    and leaves a gap in either direction: ``WindowsPath("/escape")`` is not
+    absolute (it has no drive), while ``PosixPath("C:/escape")`` is not
+    absolute either. A plan may also be built on one platform and executed
+    on another, so neither flavour alone is sufficient.
+    """
+    # ``anchor`` (drive + root) rather than ``is_absolute()``: it catches a
+    # rooted-but-driveless Windows path such as "/escape", which is exactly
+    # the case ``WindowsPath.is_absolute()`` reports as False.
+    for flavour in (PurePosixPath, PureWindowsPath):
+        candidate = flavour(folder)
+        if candidate.anchor or ".." in candidate.parts:
+            return "Unsorted"
+    relative = PurePosixPath(folder)
+    if not relative.parts:
         return "Unsorted"
-    return candidate.as_posix()
+    return relative.as_posix()
