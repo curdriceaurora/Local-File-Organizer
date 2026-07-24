@@ -29,6 +29,7 @@ class StorageAnalyzer:
         """Initialize the storage analyzer."""
         self.cache_ttl = 3600  # 1 hour cache TTL
         self._cache: dict[str, Any] = {}
+        self._files_cache: dict[str, list[FileInfo]] = {}
 
     def analyze_directory(
         self, path: Path, max_depth: int | None = None, use_cache: bool = True
@@ -98,7 +99,8 @@ class StorageAnalyzer:
         )
 
         # Cache results along with pre-computed files_list
-        self._cache[cache_key] = (datetime.now(UTC), stats, files_list)
+        self._cache[cache_key] = (datetime.now(UTC), stats)
+        self._files_cache[cache_key] = files_list
 
         logger.info(
             f"Analysis complete: {file_count} files, "
@@ -130,12 +132,11 @@ class StorageAnalyzer:
             "huge": (1024 * 1024 * 1024, float("inf")),  # > 1GB
         }
 
-        # Check if files_list is provided or cached in _cache
+        # Check if files_list is provided or cached in _files_cache
         if files_list is None:
             cache_key = f"{path}_None"
-            if cache_key in self._cache:
-                _, _, cached_files = self._cache[cache_key]
-                files_list = cached_files
+            if cache_key in self._files_cache:
+                files_list = self._files_cache[cache_key]
 
         if files_list is not None:
             for file_info in files_list:
@@ -296,4 +297,5 @@ class StorageAnalyzer:
     def clear_cache(self) -> None:
         """Clear the analysis cache."""
         self._cache.clear()
+        self._files_cache.clear()
         logger.info("Storage analysis cache cleared")

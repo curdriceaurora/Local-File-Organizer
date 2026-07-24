@@ -181,7 +181,7 @@ class MisplacementDetector:
         return misplaced_files
 
     def analyze_context(
-        self, file_path: Path, directory_cache: dict[Path, dict] | None = None
+        self, file_path: Path, directory_cache: dict[Path, list[Path]] | None = None
     ) -> ContextAnalysis:
         """Analyze the context of a file.
 
