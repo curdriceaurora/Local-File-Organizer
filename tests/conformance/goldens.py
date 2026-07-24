@@ -7,14 +7,15 @@ This module loads and parses fixture data with session-level LRU caching.
 from __future__ import annotations
 
 import json
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
+from typing import Any
 
 _FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 
-@lru_cache(maxsize=None)
-def load_golden(name: str) -> dict:
+@cache
+def load_golden(name: str) -> dict[str, Any]:
     """Load and parse a JSON golden fixture by name.
 
     :param name: Fixture basename without extension (e.g. ``"traversal_policy"``).
@@ -26,4 +27,5 @@ def load_golden(name: str) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"Conformance golden fixture missing at '{path}'")
     content = path.read_text(encoding="utf-8")
-    return json.loads(content)
+    result: dict[str, Any] = json.loads(content)
+    return result

@@ -88,10 +88,7 @@ _TRAVERSAL_GOLDEN = load_golden("traversal_policy")
 
 @pytest.mark.parametrize(
     ("case_id", "options", "expected_files"),
-    [
-        (c["case_id"], c["options"], c["expected_files"])
-        for c in _TRAVERSAL_GOLDEN["cases"]
-    ],
+    [(c["case_id"], c["options"], c["expected_files"]) for c in _TRAVERSAL_GOLDEN["cases"]],
 )
 def test_traversal_policy_goldens(
     conformance: ConformanceContext,
@@ -153,13 +150,9 @@ def test_media_routing_golden(conformance: ConformanceContext) -> None:
     golden = load_golden("media_routing")
     conformance.stage(golden["case_id"])
 
-    envelope = _ok(
-        conformance.driver.preview(conformance.request(**golden["options"]))
-    )
+    envelope = _ok(conformance.driver.preview(conformance.request(**golden["options"])))
 
-    assert _operation_routes(envelope) == [
-        tuple(route) for route in golden["expected_routes"]
-    ]
+    assert _operation_routes(envelope) == [tuple(route) for route in golden["expected_routes"]]
     assert envelope["plan"]["counts"] == golden["expected_counts"]
 
 
@@ -270,13 +263,9 @@ def test_collision_skip_existing_golden(conformance: ConformanceContext) -> None
     golden = load_golden("collision_skip_existing")
     conformance.stage(golden["case_id"])
 
-    envelope = _ok(
-        conformance.driver.preview(conformance.request(**golden["options"]))
-    )
+    envelope = _ok(conformance.driver.preview(conformance.request(**golden["options"])))
 
-    assert _operation_routes(envelope) == [
-        tuple(route) for route in golden["expected_routes"]
-    ]
+    assert _operation_routes(envelope) == [tuple(route) for route in golden["expected_routes"]]
     assert envelope["plan"]["counts"]["processed_files"] == golden["expected_processed_files"]
     assert envelope["plan"]["counts"]["skipped_files"] == golden["expected_skipped_files"]
 
@@ -285,13 +274,9 @@ def test_collision_rename_with_counter_golden(conformance: ConformanceContext) -
     golden = load_golden("collision_rename_counter")
     conformance.stage(golden["case_id"])
 
-    envelope = _ok(
-        conformance.driver.preview(conformance.request(**golden["options"]))
-    )
+    envelope = _ok(conformance.driver.preview(conformance.request(**golden["options"])))
 
-    assert _operation_routes(envelope) == [
-        tuple(route) for route in golden["expected_routes"]
-    ]
+    assert _operation_routes(envelope) == [tuple(route) for route in golden["expected_routes"]]
     assert envelope["plan"]["counts"]["processed_files"] == golden["expected_processed_files"]
 
 
@@ -300,13 +285,9 @@ def test_duplicate_content_golden(conformance: ConformanceContext) -> None:
     golden = load_golden("duplicate_content")
     conformance.stage(golden["case_id"])
 
-    envelope = _ok(
-        conformance.driver.preview(conformance.request(**golden["options"]))
-    )
+    envelope = _ok(conformance.driver.preview(conformance.request(**golden["options"])))
 
-    assert _operation_routes(envelope) == [
-        tuple(route) for route in golden["expected_routes"]
-    ]
+    assert _operation_routes(envelope) == [tuple(route) for route in golden["expected_routes"]]
     assert envelope["plan"]["counts"] == golden["expected_counts"]
     fingerprints = [op["fingerprint"] for op in envelope["plan"]["operations"]]
     assert all(fp is not None and fp["sha256"] for fp in fingerprints)
@@ -451,10 +432,7 @@ _METHODOLOGY_GOLDEN = load_golden("methodology_seed")
 
 @pytest.mark.parametrize(
     ("methodology", "expected_destinations"),
-    [
-        (c["methodology"], c["expected_destinations"])
-        for c in _METHODOLOGY_GOLDEN["cases"]
-    ],
+    [(c["methodology"], c["expected_destinations"]) for c in _METHODOLOGY_GOLDEN["cases"]],
 )
 def test_methodology_seed_golden(
     conformance: ConformanceContext,
