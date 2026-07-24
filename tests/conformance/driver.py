@@ -28,6 +28,10 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import socket
+import subprocess
+import threading
+import time
 from contextlib import redirect_stdout
 from datetime import UTC, datetime
 from html import unescape
@@ -1229,3 +1233,103 @@ class AsyncPythonSDKConformanceDriver(_HTTPConformanceDriver):
         if response.result is None:
             raise AssertionError(f"Async Python SDK execution omitted its result: {response}")
         return response.result.model_dump(mode="json")
+
+
+class TypeScriptSDKConformanceDriver(_HTTPConformanceDriver):
+    """Drive the shared corpus through the official TypeScript SDK via Node.js."""
+
+    name = "typescript-sdk"
+
+    def __init__(self, workspace: Path) -> None:
+        import uvicorn
+
+        super().__init__(workspace)
+        self._port = self._find_free_port()
+        config = uvicorn.Config(self._app, host="127.0.0.1", port=self._port, log_level="error")
+        self._server = uvicorn.Server(config)
+        self._thread = threading.Thread(target=self._server.run, daemon=True)
+        self._thread.start()
+
+        _poll = threading.Event()
+        start_time = time.monotonic()
+        while not self._server.started:
+            if time.monotonic() - start_time > 5.0:
+                raise RuntimeError("Timed out waiting for uvicorn server for TS SDK driver")
+            _poll.wait(timeout=0.005)
+
+        self._base_url = f"http://127.0.0.1:{self._port}"
+        self._runner_script = Path(__file__).resolve().parent / "ts_driver" / "runner.mjs"
+
+    def close(self) -> None:
+        """Signal the uvicorn server to exit and wait for the thread to finish."""
+        self._server.should_exit = True
+        self._thread.join(timeout=5.0)
+
+    @staticmethod
+    def _find_free_port() -> int:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
+
+    def _invoke_ts_driver(
+        self,
+        action: str,
+        input_dir: Path,
+        output_dir: Path | None = None,
+        options: OrganizeOptions | None = None,
+        plan_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        cmd = [
+            "node",
+            "--experimental-strip-types",
+            str(self._runner_script),
+            action,
+            self._base_url,
+            str(input_dir),
+            str(output_dir) if output_dir is not None else "",
+            json.dumps(options.to_dict()) if options is not None else "",
+            json.dumps(plan_payload) if plan_payload is not None else "",
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if not proc.stdout.strip():
+            raise AssertionError(
+                f"TS runner emitted no stdout output (exit {proc.returncode}): {proc.stderr}"
+            )
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise AssertionError(
+                f"TS runner emitted invalid JSON (exit {proc.returncode}): {proc.stdout}\nStderr: {proc.stderr}"
+            ) from exc
+
+        if data.get("outcome") == "ok":
+            return data["payload"]
+        if data.get("outcome") == "error":
+            raise _TransportFailure(data["error"])
+        raise AssertionError(f"TS runner failed with exception: {data.get('message', proc.stdout)}")
+
+    def _scan(self, request: OrganizeRequest) -> dict[str, Any]:
+        return self._invoke_ts_driver(
+            "scan",
+            request.input_path,
+            options=request.options,
+        )
+
+    def _preview(self, request: OrganizeRequest) -> dict[str, Any]:
+        return self._invoke_ts_driver(
+            "preview",
+            request.input_path,
+            output_dir=request.output_path,
+            options=request.options,
+        )
+
+    def _execute(
+        self, request: OrganizeRequest, plan_payload: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        return self._invoke_ts_driver(
+            "execute",
+            request.input_path,
+            output_dir=request.output_path,
+            options=request.options,
+            plan_payload=plan_payload,
+        )

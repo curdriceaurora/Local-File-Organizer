@@ -66,6 +66,7 @@ def test_driver_satisfies_protocol(conformance: ConformanceContext) -> None:
         "python-async-sdk",
         "web-form-adapter",
         "tui-workspace-adapter",
+        "typescript-sdk",
     }
 
 

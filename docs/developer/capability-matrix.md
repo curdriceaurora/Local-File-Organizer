@@ -21,7 +21,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | CLI | 30 | 30 | 3 |
 | REST API | 29 | 23 | 3 |
 | Python SDK | 29 | 23 | 3 |
-| TypeScript SDK | 29 | 23 | 0 |
+| TypeScript SDK | 29 | 23 | 3 |
 | Web / Desktop | 28 | 22 | 3 |
 | TUI | 23 | 18 | 2 |
 
@@ -52,10 +52,10 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | [`marketplace.manage`](#marketplacemanage) | Plugin marketplace | Beta | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | N/A |
 | [`methodology.configure`](#methodologyconfigure) | Organization methodology | Beta | Full (Implemented / Verified) | Full (Partial / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Partial / Unverified) | Full (Implemented / Unverified) |
 | [`models.manage`](#modelsmanage) | AI model management | Beta | Full (Implemented / Unverified) | N/A | N/A | N/A | Full (Implemented / Unverified) | Full (Partial / Unverified) |
-| [`organization.execute`](#organizationexecute) | Organization execution | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) |
+| [`organization.execute`](#organizationexecute) | Organization execution | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) |
 | [`organization.jobs-recovery`](#organizationjobs-recovery) | Organization jobs and recovery | Beta | Full (Partial / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Partial / Unverified) |
-| [`organization.preview`](#organizationpreview) | Organization preview | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) |
-| [`organization.scan`](#organizationscan) | Organization scan | Stable | Full (Partial / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Unverified) | Full (Implemented / Verified) | Full (Partial / Unverified) |
+| [`organization.preview`](#organizationpreview) | Organization preview | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) |
+| [`organization.scan`](#organizationscan) | Organization scan | Stable | Full (Partial / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Partial / Unverified) |
 | [`organization.suggest`](#organizationsuggest) | Single-file organization suggestion | Stable | Full (Partial / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Not-implemented / Unverified) | Full (Not-implemented / Unverified) |
 | [`plugins.runtime`](#pluginsruntime) | Plugin runtime API | Experimental | N/A | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | N/A | N/A |
 | [`search.query`](#searchquery) | File search | Stable | Read-only (Implemented / Unverified) | Read-only (Implemented / Unverified) | Full (Implemented / Unverified) | Full (Implemented / Unverified) | Read-only (Partial / Unverified) | Read-only (Partial / Unverified) |
@@ -566,7 +566,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | CLI | Full | Implemented | Verified | `fo organize`, `fo api organize` |
 | REST API | Full | Implemented | Verified | `POST /api/v1/organize/execute` |
 | Python SDK | Full | Implemented | Verified | `FileOrganizerClient.organize`, `AsyncFileOrganizerClient.organize` |
-| TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.organize` |
+| TypeScript SDK | Full | Implemented | Verified | `FileOrganizerClient.organize` |
 | Web / Desktop | Full | Implemented | Verified | `POST /ui/organize/execute` |
 | TUI | Full | Implemented | Verified | `TUIOrganizationAdapter.execute` |
 
@@ -608,7 +608,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | CLI | Full | Implemented | Verified | `fo preview`, `fo organize --dry-run`, `fo api preview` |
 | REST API | Full | Implemented | Verified | `POST /api/v1/organize/preview` |
 | Python SDK | Full | Implemented | Verified | `FileOrganizerClient.preview_organize`, `AsyncFileOrganizerClient.preview_organize` |
-| TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.previewOrganize` |
+| TypeScript SDK | Full | Implemented | Verified | `FileOrganizerClient.previewOrganize` |
 | Web / Desktop | Full | Implemented | Verified | `GET /ui/organize`, `POST /ui/organize/scan`, `POST /ui/organize/plan/clear` |
 | TUI | Full | Implemented | Verified | `TUIOrganizationAdapter.preview` |
 
@@ -629,7 +629,7 @@ This document is automatically generated from `src/file_organizer/core/capabilit
 | CLI | Full | Partial | Unverified | `fo preview`, `fo organize`, `fo api scan` |
 | REST API | Full | Implemented | Verified | `POST /api/v1/organize/scan` |
 | Python SDK | Full | Implemented | Verified | `FileOrganizerClient.scan`, `AsyncFileOrganizerClient.scan` |
-| TypeScript SDK | Full | Implemented | Unverified | `FileOrganizerClient.scan` |
+| TypeScript SDK | Full | Implemented | Verified | `FileOrganizerClient.scan` |
 | Web / Desktop | Full | Implemented | Verified | `POST /ui/organize/scan` |
 | TUI | Full | Partial | Unverified | `FileBrowserView`, `OrganizationPreviewView`, `TUIOrganizationAdapter.scan` |
 

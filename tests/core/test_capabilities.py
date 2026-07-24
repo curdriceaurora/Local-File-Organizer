@@ -64,10 +64,9 @@ def test_organization_conformance_matches_exercised_corpus_scope() -> None:
             capability.support_for(Surface.WEB_DESKTOP).conformance_status
             is ConformanceStatus.VERIFIED
         )
-        # TypeScript SDK has request-only mock tests in node; response drift is unverified
         assert (
             capability.support_for(Surface.TYPESCRIPT_SDK).conformance_status
-            is ConformanceStatus.UNVERIFIED
+            is ConformanceStatus.VERIFIED
         )
 
     for capability_id in ("organization.execute", "organization.preview"):
@@ -97,14 +96,17 @@ _CORPUS_COVERED: frozenset[tuple[str, Surface]] = frozenset(
         ("organization.execute", Surface.PYTHON_SDK),
         ("organization.execute", Surface.REST_API),
         ("organization.execute", Surface.TUI),
+        ("organization.execute", Surface.TYPESCRIPT_SDK),
         ("organization.execute", Surface.WEB_DESKTOP),
         ("organization.preview", Surface.CLI),
         ("organization.preview", Surface.PYTHON_SDK),
         ("organization.preview", Surface.REST_API),
         ("organization.preview", Surface.TUI),
+        ("organization.preview", Surface.TYPESCRIPT_SDK),
         ("organization.preview", Surface.WEB_DESKTOP),
         ("organization.scan", Surface.PYTHON_SDK),
         ("organization.scan", Surface.REST_API),
+        ("organization.scan", Surface.TYPESCRIPT_SDK),
         ("organization.scan", Surface.WEB_DESKTOP),
     }
 )
@@ -434,7 +436,7 @@ def test_capability_matrix_renders_three_status_axes_for_known_capabilities() ->
 
     # Verify key rows contain explicit three-status cells for unverified vs verified surfaces
     assert (
-        "| [`organization.execute`](#organizationexecute) | Organization execution | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Unverified) | Full (Implemented / Verified) | Full (Implemented / Verified) |"
+        "| [`organization.execute`](#organizationexecute) | Organization execution | Stable | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) | Full (Implemented / Verified) |"
         in content
     )
     assert (
