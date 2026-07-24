@@ -5,7 +5,7 @@
 # checkov:skip=CKV_DOCKER_2:Development container does not require a healthcheck
 # checkov:skip=CKV_DOCKER_3:Development container runs as root for volume mounts and dev tooling
 
-FROM python:3.11
+FROM python:3.14
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="File Organizer v2 (Development)" \

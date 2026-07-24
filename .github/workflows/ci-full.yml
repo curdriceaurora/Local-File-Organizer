@@ -71,7 +71,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           cache: pip
       - run: pip install -e ".[dev]"
       - name: Download coverage data (py3.11 shards)
@@ -102,7 +102,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - name: Install dependencies
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
@@ -128,7 +128,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - name: Install dependencies
         # search extra (rank-bm25, scikit-learn) is required by @pytest.mark.ci tests
