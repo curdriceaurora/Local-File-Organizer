@@ -82,6 +82,16 @@ def test_johnny_decimal_uses_default_scheme(
         "A: Notes",  # drive-relative on Windows: resolves against A:'s cwd, not our root
         "../escape",
         "a/../../b",
+        "..\\escape",  # Windows separator form of the same traversal
+        # Win32 strips trailing spaces/dots from components, so each of these
+        # resolves to ".." once the filesystem sees it, despite never equalling
+        # ".." literally.
+        ".. /escape",
+        "..  /escape",
+        "a/.. /b",
+        "a\\.. \\b",
+        "...",
+        ".. ",
         "",
     ],
 )

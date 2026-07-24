@@ -247,6 +247,19 @@ def _has_johnny_decimal_prefix(folder: str) -> bool:
     return len(folder) == 2 or folder[2] in {" ", "."}
 
 
+def _reaches_parent(part: str) -> bool:
+    """Return whether a single path component walks up to the parent directory.
+
+    A literal ``".."`` is the obvious case, but Win32 strips trailing spaces
+    and dots from every path component, so ``".. "`` and ``"..."`` also resolve
+    to ``".."`` once the filesystem sees them — while comparing against the
+    literal ``".."`` misses both. Any component built purely from dots and
+    spaces is therefore treated as a traversal; none is a legitimate
+    classifier-proposed folder name, so rejecting them fails closed.
+    """
+    return bool(part) and set(part) <= {".", " "}
+
+
 def _safe_folder(folder: str) -> str:
     """Return a safe relative classifier folder or the Unsorted fallback.
 
@@ -263,7 +276,7 @@ def _safe_folder(folder: str) -> str:
     # the case ``WindowsPath.is_absolute()`` reports as False.
     for flavour in (PurePosixPath, PureWindowsPath):
         candidate = flavour(folder)
-        if candidate.anchor or ".." in candidate.parts:
+        if candidate.anchor or any(_reaches_parent(part) for part in candidate.parts):
             return "Unsorted"
     relative = PurePosixPath(folder)
     if not relative.parts:
