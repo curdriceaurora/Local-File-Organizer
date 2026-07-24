@@ -74,7 +74,7 @@ def _prune_plan_store() -> None:
     expired = [
         plan_id
         for plan_id, record in _ORGANIZE_PLAN_STORE.items()
-        if (now - record["created_at"]).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS
+        if (now - record.get("created_at", now)).total_seconds() > ORGANIZE_PLAN_TTL_SECONDS
     ]
     for plan_id in expired:
         _ORGANIZE_PLAN_STORE.pop(plan_id, None)
