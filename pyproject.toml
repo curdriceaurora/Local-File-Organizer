@@ -61,7 +61,7 @@ dependencies = [
     # typer's own context stack, so state set in a callback silently reads
     # back as defaults (issue: CLIState.debug/verbose always False, lazy
     # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
-    "typer[all]>=0.12,<0.26",
+    "typer[all]>=0.27,<0.28",
     "rich~=15.0",
     "textual~=0.50",
 
