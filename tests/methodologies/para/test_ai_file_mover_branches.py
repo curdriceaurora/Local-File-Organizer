@@ -394,8 +394,18 @@ class TestSuggestArchive:
 
         assert suggestions == []
 
-    def test_suggest_archive_file_stat_error(self, tmp_path: Path) -> None:
-        """OSError during file.stat() is caught and file skipped."""
+    def test_suggest_archive_file_stat_error(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """OSError during file.stat() is caught, logged, and the file skipped.
+
+        The walk is stubbed at the module's ``safe_walk`` symbol rather than left
+        to run for real. Patching ``Path.stat`` globally would otherwise also
+        break ``safe_walk``'s own ``is_dir()``/``is_file()`` probes, so the
+        unstattable file would be dropped *by the walk* and never reach the
+        handler under test — while ``len(suggestions) == 1`` stayed true either
+        way, making the old assertion unable to tell the two apart.
+        """
         config = PARAConfig()
         engine = MagicMock()
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
@@ -414,15 +424,25 @@ class TestSuggestArchive:
                 raise OSError("Cannot stat file")
             return original_stat(self, **kwargs)
 
-        with patch.object(Path, "is_file", return_value=True):
-            with patch.object(Path, "stat", mock_stat):
-                with patch("file_organizer.methodologies.para.ai.file_mover.time") as mock_time:
-                    mock_time.time.return_value = time.time() + (200 * 86400)
-                    suggestions = mover.suggest_archive(src_dir, inactive_days=180)
+        with (
+            patch(
+                "file_organizer.methodologies.para.ai.file_mover.safe_walk",
+                return_value=[file1, file2],
+            ),
+            patch.object(Path, "stat", mock_stat),
+            patch("file_organizer.methodologies.para.ai.file_mover.time") as mock_time,
+            caplog.at_level("WARNING", logger="file_organizer.methodologies.para.ai.file_mover"),
+        ):
+            mock_time.time.return_value = time.time() + (200 * 86400)
+            suggestions = mover.suggest_archive(src_dir, inactive_days=180)
 
-        # Should have suggestion for file2 only, file1 was skipped
+        # file2 is suggested; file1 was skipped *by the handler*, not by the walk.
         assert len(suggestions) == 1
         assert suggestions[0].file_path.name == "file2.txt"
+        assert any("Cannot stat file" in r.message for r in caplog.records), (
+            "the OSError handler must have logged — otherwise this test is not "
+            "exercising the branch it names"
+        )
 
     def test_suggest_archive_recent_files_not_suggested(self, tmp_path: Path) -> None:
         """Recent files are not suggested for archive (branch 333->328)."""

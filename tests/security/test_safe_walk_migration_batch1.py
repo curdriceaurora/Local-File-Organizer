@@ -29,7 +29,12 @@ from file_organizer.methodologies.para.ai.file_mover import PARAFileMover
 from file_organizer.methodologies.para.categories import PARACategory
 from file_organizer.methodologies.para.config import PARAConfig
 
-pytestmark = [pytest.mark.security, pytest.mark.unit, pytest.mark.ci]
+pytestmark = [
+    pytest.mark.security,
+    pytest.mark.unit,
+    pytest.mark.integration,
+    pytest.mark.ci,
+]
 
 posix_only = pytest.mark.skipif(
     sys.platform == "win32", reason="symlink hardening is POSIX-focused"
