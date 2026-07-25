@@ -514,3 +514,24 @@ class TestPARAFileMover:
         assert suggestions[0].target_category == PARACategory.ARCHIVE
         # Age carries no signal at a non-positive threshold: confidence saturates.
         assert suggestions[0].confidence == pytest.approx(0.95)
+
+    def test_suggest_archive_zero_threshold_includes_future_dated_file(
+        self, tmp_path: Path
+    ) -> None:
+        """A future mtime does not escape the zero threshold."""
+        import os
+        import time
+
+        mover = _make_mover(tmp_path)
+
+        scan_dir = tmp_path / "scan"
+        scan_dir.mkdir()
+        skewed = scan_dir / "clock_skew.txt"
+        skewed.write_text("stamped ahead of now")
+        future_mtime = time.time() + (30 * 86400)
+        os.utime(skewed, (future_mtime, future_mtime))
+
+        suggestions = mover.suggest_archive(scan_dir, inactive_days=0)
+
+        assert [s.file_path for s in suggestions] == [skewed]
+        assert "in 0 days" in suggestions[0].reasoning[0]

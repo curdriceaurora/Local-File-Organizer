@@ -337,7 +337,11 @@ class PARAFileMover:
                 stat = file_path.stat()
                 days_inactive = (now - stat.st_mtime) / 86400.0
 
-                if days_inactive >= inactive_days:
+                # A non-positive threshold selects every file, including one
+                # whose mtime is in the future (clock skew, an archive extracted
+                # with a bogus timestamp): its negative days_inactive would fail
+                # the age comparison.
+                if inactive_days <= 0 or days_inactive >= inactive_days:
                     target_path = self._compute_target_path_for_category(
                         file_path,
                         PARACategory.ARCHIVE,
@@ -357,7 +361,9 @@ class PARAFileMover:
                             target_path=target_path,
                             confidence=confidence,
                             reasoning=[
-                                f"File has not been modified in {int(days_inactive)} days "
+                                # Clamped: a future mtime yields negative days,
+                                # which reads as nonsense in the reasoning.
+                                f"File has not been modified in {max(0, int(days_inactive))} days "
                                 f"(threshold: {inactive_days} days)",
                             ],
                         )
