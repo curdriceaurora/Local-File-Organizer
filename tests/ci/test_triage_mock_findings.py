@@ -86,6 +86,43 @@ def test_untracked_rows_are_deferred() -> None:
     assert rows[0]["status"] == "deferred"
 
 
+def test_parametrized_cases_do_not_fake_fixture_spread() -> None:
+    """FIXTURE_SPREAD parametrizations of ONE test are one site, not fixture noise."""
+    dead = [_dead("t.py", f"test_a[case{i}]", "mod.helper") for i in range(FIXTURE_SPREAD)]
+    rows = build_worklist(dead, [], [])
+    assert len(rows) == 1
+    assert rows[0]["action"] == "retarget-or-overreach"
+
+
+def test_duplicate_untracked_findings_collapse_to_one_row() -> None:
+    """Identical untracked findings (e.g. from parametrized runs) dedupe."""
+    u = _dead("t.py", "test_a[one]", "mod.CONST", line=9)
+    u2 = _dead("t.py", "test_a[two]", "mod.CONST", line=9)
+    rows = build_worklist([], [], [u, u, u2])
+    assert len(rows) == 1
+    assert rows[0]["status"] == "deferred"
+
+
+def test_prior_allowlisted_status_carries_forward() -> None:
+    """Regeneration keeps `allowlisted` rows (intentional suppressors keep
+    appearing dead) but lets `fixed` rows revert to open if they reappear —
+    a repaired test that still shows up dead is a regression, not fixed."""
+    dead = [_dead("t.py", "test_a", "mod.helper"), _dead("t.py", "test_b", "mod.other")]
+    prior = [
+        {
+            "file": "t.py",
+            "test": "test_a",
+            "action": "retarget-or-overreach",
+            "status": "allowlisted",
+        },
+        {"file": "t.py", "test": "test_b", "action": "retarget-or-overreach", "status": "fixed"},
+    ]
+    rows = build_worklist(dead, [], [], prior=prior)
+    by_test = {r["test"]: r["status"] for r in rows}
+    assert by_test["test_a"] == "allowlisted"
+    assert by_test["test_b"] == "open"
+
+
 def test_open_rows_carry_line_and_evidence() -> None:
     rows = build_worklist(
         [_dead("t.py", "test_a", "mod.helper", line=42)],
