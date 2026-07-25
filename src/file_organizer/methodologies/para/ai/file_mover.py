@@ -13,6 +13,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from file_organizer.core.path_guard import safe_walk
+
 from ..categories import PARACategory
 from ..config import PARAConfig
 from .suggestion_engine import PARASuggestion, PARASuggestionEngine
@@ -253,11 +255,13 @@ class PARAFileMover:
             logger.error("Directory does not exist: %s", directory)
             return report
 
-        # Collect files
-        if recursive:
-            files = [f for f in directory.rglob("*") if f.is_file()]
-        else:
-            files = [f for f in directory.iterdir() if f.is_file()]
+        # Collect files. Both the recursive and top-level branches collapse into
+        # safe_walk's recursive= parameter.
+        # include_hidden defaults to False: this method *relocates* files, and
+        # dotfiles (.gitignore, .env) are infrastructure the user did not ask to
+        # have reorganized. Symlinks are skipped so a link in the scanned tree
+        # cannot cause a write against a target outside it.
+        files = list(safe_walk(directory, recursive=recursive, only_files=True))
 
         report.total_files = len(files)
 
@@ -319,11 +323,12 @@ class PARAFileMover:
 
         now = time.time()
 
-        try:
-            files = [f for f in directory.rglob("*") if f.is_file()]
-        except OSError as e:
-            logger.error("Cannot scan directory %s: %s", directory, e, exc_info=True)
-            return suggestions
+        # Same exclusions as bulk_organize: this proposes moves, so dotfiles and
+        # symlinks stay out. safe_walk absorbs per-entry and per-directory
+        # OSErrors internally (skipping the unreadable subtree), so the previous
+        # try/except around the scan is unreachable and has been removed — an
+        # unreadable directory now yields no suggestions rather than logging.
+        files = list(safe_walk(directory, only_files=True))
 
         for file_path in files:
             try:
