@@ -311,7 +311,9 @@ class PARAFileMover:
         Args:
             directory: Directory to scan for inactive files.
             inactive_days: Number of days without modification to consider
-                a file inactive. Defaults to 180.
+                a file inactive. Defaults to 180. A value of 0 or less means
+                "archive everything regardless of age": every file matches
+                and is suggested at the maximum confidence of 0.95.
 
         Returns:
             List of MoveSuggestion objects for files that should be archived.
@@ -340,7 +342,13 @@ class PARAFileMover:
                         file_path,
                         PARACategory.ARCHIVE,
                     )
-                    confidence = min(0.95, 0.5 + (days_inactive / (inactive_days * 3)))
+                    # A non-positive threshold selects every file, so the age
+                    # ratio carries no signal: saturate instead of dividing by
+                    # zero (or by a negative, which would invert confidence).
+                    if inactive_days > 0:
+                        confidence = min(0.95, 0.5 + (days_inactive / (inactive_days * 3)))
+                    else:
+                        confidence = 0.95
 
                     suggestions.append(
                         MoveSuggestion(
