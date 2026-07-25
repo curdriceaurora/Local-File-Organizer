@@ -28,7 +28,12 @@ from file_organizer.services.copilot.intent_parser import Intent, IntentType
 from file_organizer.services.misplacement_detector import MisplacementDetector
 from file_organizer.services.pattern_analyzer import PatternAnalyzer
 
-pytestmark = [pytest.mark.security, pytest.mark.unit, pytest.mark.ci]
+pytestmark = [
+    pytest.mark.security,
+    pytest.mark.unit,
+    pytest.mark.integration,
+    pytest.mark.ci,
+]
 
 posix_only = pytest.mark.skipif(
     sys.platform == "win32", reason="symlink hardening is POSIX-focused"

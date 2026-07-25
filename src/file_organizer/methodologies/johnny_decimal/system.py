@@ -79,16 +79,19 @@ class JohnnyDecimalSystem:
         # ".20 Backup" is not part of the user's numbering scheme and must not
         # claim a number. Symlinks are skipped too — a link named "20 Escape"
         # would otherwise register a number pointing outside the scanned root.
+        # The former `if item.is_file() or item.is_dir()` guard is gone: safe_walk
+        # has already rejected symlinks and hidden entries, and number extraction
+        # reads only the entry's name, so the file/dir distinction is irrelevant
+        # here. It was also unreachable — every surviving entry satisfied it.
         for item in safe_walk(directory, only_files=False):
-            if item.is_file() or item.is_dir():
-                number = self._extract_number_from_path(item)
-                if number:
-                    try:
-                        self.generator.register_existing_number(number, item)
-                        detected_numbers += 1
-                        logger.debug(f"Detected number {number.formatted_number} in {item.name}")
-                    except NumberConflictError as e:
-                        logger.warning(f"Conflict detected: {e}")
+            number = self._extract_number_from_path(item)
+            if number:
+                try:
+                    self.generator.register_existing_number(number, item)
+                    detected_numbers += 1
+                    logger.debug(f"Detected number {number.formatted_number} in {item.name}")
+                except NumberConflictError as e:
+                    logger.warning(f"Conflict detected: {e}")
 
         logger.info(f"Initialized with {detected_numbers} existing numbers")
         self._initialized = True
