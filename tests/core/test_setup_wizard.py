@@ -108,6 +108,7 @@ class TestDetectCapabilities:
         assert capabilities.ollama_status.installed is False
         assert capabilities.ollama_status.running is False
         assert len(capabilities.installed_models) == 0
+        mock_list_models.assert_not_called()  # Should not list models if not installed
 
 
 class TestGenerateConfig:

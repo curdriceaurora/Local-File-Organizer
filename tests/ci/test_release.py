@@ -277,6 +277,11 @@ class TestBumpVersionIntegration:
         mock_read.return_value = "2.0.5"
         result = bump_version("minor")
         assert result == "2.1.0"
+        mock_update_file.assert_called_once_with(
+            release_mod._PYPROJECT_TOML, "2.0.5", "2.1.0", pattern="version"
+        )
+        mock_update_ver.assert_called_once_with(release_mod._VERSION_FILE, "2.1.0")
+        mock_update_init.assert_called_once_with(release_mod._INIT_FILE, "2.1.0")
 
     @patch("release._update_init_py")
     @patch("release._update_version_py")
@@ -294,6 +299,11 @@ class TestBumpVersionIntegration:
         result = bump_version("patch")
         assert result == "2.0.1"
         assert "alpha" not in result
+        mock_update_file.assert_called_once_with(
+            release_mod._PYPROJECT_TOML, "2.0.0-alpha.1", "2.0.1", pattern="version"
+        )
+        mock_update_ver.assert_called_once_with(release_mod._VERSION_FILE, "2.0.1")
+        mock_update_init.assert_called_once_with(release_mod._INIT_FILE, "2.0.1")
 
 
 @pytest.mark.unit
