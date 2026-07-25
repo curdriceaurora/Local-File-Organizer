@@ -497,3 +497,20 @@ class TestPARAFileMover:
         s = suggestions[0]
         assert len(s.reasoning) >= 1
         assert "days" in s.reasoning[0]
+
+    def test_suggest_archive_zero_threshold_archives_every_file(self, tmp_path: Path) -> None:
+        """inactive_days=0 means "archive everything" rather than dividing by zero."""
+        from file_organizer.methodologies.para.categories import PARACategory
+
+        mover = _make_mover(tmp_path)
+
+        scan_dir = tmp_path / "scan"
+        scan_dir.mkdir()
+        (scan_dir / "fresh.md").write_text("written just now")
+
+        suggestions = mover.suggest_archive(scan_dir, inactive_days=0)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].target_category == PARACategory.ARCHIVE
+        # Age carries no signal at a non-positive threshold: confidence saturates.
+        assert suggestions[0].confidence == pytest.approx(0.95)
