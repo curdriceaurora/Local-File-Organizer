@@ -61,6 +61,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | `subprocess-returncode` | `subprocess.run()` call without `check=True` or `.returncode` inspection (issue #1408) | advisory |
 | `test-environment-leakage` | Tests mutating class/global state or `sys.modules` without scoped restoration (issue #1414) | enforced |
 | `xdist-loadgroup` | A test using the xdist-wide `tmp_path_factory.getbasetemp()` without an `xdist_group` marker | enforced |
+| `unused-patch-argument` | `@patch`-injected test parameters never referenced in the test body (#1682, epic #1678) | advisory |
 
 Per-file coverage floors (`check-integration-floors.py` for the
 integration suite, `check_module_coverage_floor.py` for the unit suite)
@@ -98,10 +99,12 @@ Supply-chain scanning (run in `.github/workflows/security.yml`):
   ratchet baseline (see `pyproject.toml`, "WP-6.4 ratchet baseline").
   New files get full enforcement; the 41 existing ones are fixed
   incrementally — remove an entry as its file is cleaned up.
-- **Two lint rails above remain advisory (`cli-file-kind-validation`
-  and `subprocess-returncode`).** They are
+- **Three lint rails above remain advisory (`cli-file-kind-validation`,
+  `subprocess-returncode`, and `unused-patch-argument`).** They are
   intentionally non-blocking while remediation and detector tuning continue
-  prior to promotion to enforced.
+  prior to promotion to enforced. `unused-patch-argument` additionally
+  enforces at commit time on staged-diff lines only, blocking new
+  violations while its 231-finding backlog is triaged (#1685).
 
 ## Reporting a Vulnerability
 
