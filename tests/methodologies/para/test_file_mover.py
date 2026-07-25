@@ -492,6 +492,10 @@ class TestSuggestArchive:
         assert len(suggestions) >= 1
         assert any("days" in r for r in suggestions[0].reasoning)
 
+    # Marked ``ci`` so the PR suite (-m "ci and not benchmark") exercises the
+    # non-positive-threshold branch — that run generates the coverage.xml the
+    # diff-coverage gate reads.
+    @pytest.mark.ci
     def test_zero_inactive_days_archives_everything(
         self,
         mover: PARAFileMover,
@@ -512,6 +516,7 @@ class TestSuggestArchive:
         assert suggestions[0].target_category == PARACategory.ARCHIVE
         assert suggestions[0].confidence == pytest.approx(0.95)
 
+    @pytest.mark.ci
     def test_negative_inactive_days_archives_everything(
         self,
         mover: PARAFileMover,
