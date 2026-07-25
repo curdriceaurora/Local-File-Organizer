@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 logger = logging.getLogger(__name__)
 
 
@@ -232,9 +234,14 @@ class PatternAnalyzer:
 
         location_patterns = []
 
-        # Analyze each subdirectory
-        for subdir in directory.rglob("*"):
-            if not subdir.is_dir() or subdir.name.startswith("."):
+        # Analyze each subdirectory.
+        # only_files=False because this walk wants directories, not files.
+        # include_hidden defaults to False, replacing the old
+        # `subdir.name.startswith(".")` check — note safe_walk is stricter: it
+        # excludes any path with a dot component relative to the root, so a
+        # visible directory buried under ".cache/" is no longer analysed.
+        for subdir in safe_walk(directory, only_files=False):
+            if not subdir.is_dir():
                 continue
 
             # Get files in this directory (non-recursive)

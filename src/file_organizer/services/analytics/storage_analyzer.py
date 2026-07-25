@@ -10,6 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from ...models.analytics import FileDistribution, FileInfo, StorageStats
 
 logger = logging.getLogger(__name__)
@@ -127,22 +129,26 @@ class StorageAnalyzer:
             "huge": (1024 * 1024 * 1024, float("inf")),  # > 1GB
         }
 
-        for file_path in path.rglob("*"):
-            if file_path.is_file():
-                distribution.total_files += 1
+        # include_hidden=True: this measures disk usage, and a size distribution
+        # that silently omits dotfiles is wrong. It also keeps these totals
+        # consistent with analyze_directory's _walk_directory, which has always
+        # counted hidden entries. Symlinks stay excluded — following them would
+        # double-count, or count bytes living outside the analysed tree.
+        for file_path in safe_walk(path, only_files=True, include_hidden=True):
+            distribution.total_files += 1
 
-                # By type
-                file_type = file_path.suffix.lower() or "no_extension"
-                distribution.by_type[file_type] = distribution.by_type.get(file_type, 0) + 1
+            # By type
+            file_type = file_path.suffix.lower() or "no_extension"
+            distribution.by_type[file_type] = distribution.by_type.get(file_type, 0) + 1
 
-                # By size range
-                size = file_path.stat().st_size
-                for range_name, (min_size, max_size) in size_ranges.items():
-                    if min_size <= size < max_size:
-                        distribution.by_size_range[range_name] = (
-                            distribution.by_size_range.get(range_name, 0) + 1
-                        )
-                        break
+            # By size range
+            size = file_path.stat().st_size
+            for range_name, (min_size, max_size) in size_ranges.items():
+                if min_size <= size < max_size:
+                    distribution.by_size_range[range_name] = (
+                        distribution.by_size_range.get(range_name, 0) + 1
+                    )
+                    break
 
         logger.info(
             f"Distribution: {distribution.total_files} files across "
@@ -169,18 +175,19 @@ class StorageAnalyzer:
         """
         large_files = []
 
-        for file_path in path.rglob("*"):
-            if file_path.is_file():
-                size = file_path.stat().st_size
-                if size >= threshold:
-                    large_files.append(
-                        FileInfo(
-                            path=file_path,
-                            size=size,
-                            type=file_path.suffix.lower(),
-                            modified=datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC),
-                        )
+        # include_hidden=True for the same reason as calculate_size_distribution:
+        # a large dotfile still occupies the disk the user is asking about.
+        for file_path in safe_walk(path, only_files=True, include_hidden=True):
+            size = file_path.stat().st_size
+            if size >= threshold:
+                large_files.append(
+                    FileInfo(
+                        path=file_path,
+                        size=size,
+                        type=file_path.suffix.lower(),
+                        modified=datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC),
                     )
+                )
 
         # Sort by size descending
         large_files.sort(key=lambda f: f.size, reverse=True)

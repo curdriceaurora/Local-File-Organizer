@@ -28,6 +28,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.config.manager import ConfigManager
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 from file_organizer.plugins.api.models import (
     PluginConfigValueResponse,
@@ -86,13 +87,14 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
             files.append(path)
         return files
 
-    iterator = path.rglob("*") if recursive else path.glob("*")
-    for entry in iterator:
-        if not entry.is_file():
-            continue
-        if not include_hidden and is_hidden(entry):
-            continue
-        files.append(entry)
+    # include_hidden is threaded from the caller, preserving the endpoint's
+    # documented behaviour. The rglob/glob branch maps onto recursive=. Unlike
+    # the previous loop this also skips symlinks, which this endpoint never
+    # filtered — a link under the requested path could previously return a file
+    # whose real location is outside it.
+    files.extend(
+        safe_walk(path, recursive=recursive, only_files=True, include_hidden=include_hidden)
+    )
     files.sort(key=lambda entry: entry.name.lower())
     return files
 

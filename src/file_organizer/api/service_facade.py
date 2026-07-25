@@ -18,6 +18,7 @@ from loguru import logger
 from file_organizer.api.config import ApiSettings
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.provider_env import get_current_provider
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.version import __version__
 
 
@@ -383,7 +384,9 @@ class ServiceFacade:
                 engine = SuggestionEngine()
                 # Path must be pre-validated at API boundary
                 target = Path(path)
-                files = [p for p in target.rglob("*") if p.is_file()]
+                # include_hidden defaults to False: suggestions are surfaced to
+                # the user and should not propose acting on dotfiles.
+                files = list(safe_walk(target, only_files=True))
                 suggestions = engine.generate_suggestions(files)
                 return [
                     {
