@@ -11,7 +11,6 @@ Sites deliberately *not* covered here, and why:
 - ``api/routers/search.py`` — both walks meter a ``max_files`` traversal budget on
   *raw* entries. ``safe_walk`` pre-filters, so the same number would bound a larger
   walk, loosening a DoS guard on a remote-reachable endpoint.
-- ``services/misplacement_detector.py`` — being changed in #1670 / PR #1673.
 """
 
 from __future__ import annotations
@@ -26,6 +25,7 @@ from file_organizer.plugins.api.endpoints import _collect_files as plugin_collec
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 from file_organizer.services.copilot.executor import CommandExecutor
 from file_organizer.services.copilot.intent_parser import Intent, IntentType
+from file_organizer.services.misplacement_detector import MisplacementDetector
 from file_organizer.services.pattern_analyzer import PatternAnalyzer
 
 pytestmark = [pytest.mark.security, pytest.mark.unit, pytest.mark.ci]
@@ -214,3 +214,56 @@ class TestCopilotFindTraversal:
         )
         result = CommandExecutor().execute(intent)
         assert any("report.txt" in f for f in result.affected_files)
+
+
+class TestMisplacementDetectorTraversal:
+    """detect_misplaced walks a user-supplied root — unblocked once #1673 merged."""
+
+    @posix_only
+    def test_symlinked_file_is_not_analyzed(self, tmp_path: Path) -> None:
+        """A symlink pointing outside the scanned tree is never a misplacement candidate."""
+        outside = tmp_path / "outside.jpg"
+        outside.write_bytes(b"\xff\xd8\xff")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        for i in range(5):
+            (root / f"report_{i}.txt").write_text("content")
+        (root / "linked.jpg").symlink_to(outside)
+
+        detector = MisplacementDetector(min_mismatch_score=50.0)
+        misplaced = detector.detect_misplaced(root)
+
+        assert all(m.file_path.name != "linked.jpg" for m in misplaced)
+
+    def test_file_under_hidden_directory_is_not_analyzed(self, tmp_path: Path) -> None:
+        """safe_walk excludes any dot component relative to the root.
+
+        Stricter than the previous leaf-only ``name.startswith(".")`` filter: a
+        visible file inside ``.cache/`` was analysed before and is not now.
+        """
+        root = tmp_path / "root"
+        buried = root / ".cache"
+        buried.mkdir(parents=True)
+        for i in range(5):
+            (buried / f"report_{i}.txt").write_text("content")
+        (buried / "photo.jpg").write_bytes(b"\xff\xd8\xff")
+
+        detector = MisplacementDetector(min_mismatch_score=50.0)
+        misplaced = detector.detect_misplaced(root)
+
+        assert misplaced == []
+
+    def test_ordinary_outlier_is_still_detected(self, tmp_path: Path) -> None:
+        """Characterization guard carried over from #1670."""
+        root = tmp_path / "root"
+        root.mkdir()
+        for i in range(5):
+            (root / f"report_{i}.txt").write_text("content")
+        outlier = root / "photo.jpg"
+        outlier.write_bytes(b"\xff\xd8\xff")
+
+        detector = MisplacementDetector(min_mismatch_score=50.0)
+        misplaced = detector.detect_misplaced(root)
+
+        assert outlier in [m.file_path for m in misplaced]
