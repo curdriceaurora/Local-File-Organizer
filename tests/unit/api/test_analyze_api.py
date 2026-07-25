@@ -64,7 +64,8 @@ class TestAnalyzeEndpoint:
 
         assert response.status_code == 200
         _assert_analysis_response(response.json())
-        assert mock_text_model.generate.called
+        # One generation for the category, one for the description
+        assert mock_text_model.generate.call_count == 2
 
     def test_analyze_json_body_is_not_a_supported_transport(self, client):
         """A JSON body does not bind to the content param — rejected as missing input."""
@@ -79,7 +80,8 @@ class TestAnalyzeEndpoint:
 
         assert response.status_code == 200
         _assert_analysis_response(response.json())
-        assert mock_text_model.generate.called
+        # One generation for the category, one for the description
+        assert mock_text_model.generate.call_count == 2
 
     def test_analyze_returns_description(self, client, mock_text_model):
         """The description field carries the model's generated text."""
