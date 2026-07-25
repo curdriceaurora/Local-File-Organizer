@@ -16,6 +16,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
@@ -292,8 +293,12 @@ class AudioView(StatusMixin, Vertical):
             if has_selection:
                 audio_paths.extend(selected_audio[:_MAX_SCAN_FILES])
             elif scan_dir.is_dir():
-                for p in sorted(scan_dir.rglob("*")):
-                    if p.suffix.lower() in _AUDIO_EXTENSIONS and p.is_file():
+                # only_files=True makes the trailing p.is_file() redundant;
+                # include_hidden defaults to False, so dot-prefixed media is no
+                # longer scanned. Sorting still happens over the full result so
+                # the listing order is unchanged.
+                for p in sorted(safe_walk(scan_dir, only_files=True)):
+                    if p.suffix.lower() in _AUDIO_EXTENSIONS:
                         audio_paths.append(p)
                         if len(audio_paths) >= _MAX_SCAN_FILES:
                             break

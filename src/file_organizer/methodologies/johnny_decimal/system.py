@@ -11,6 +11,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from .categories import (
     AreaDefinition,
     CategoryDefinition,
@@ -70,17 +72,26 @@ class JohnnyDecimalSystem:
         logger.info(f"Initializing from directory: {directory}")
         detected_numbers = 0
 
-        # Scan all items in directory
-        for item in directory.rglob("*"):
-            if item.is_file() or item.is_dir():
-                number = self._extract_number_from_path(item)
-                if number:
-                    try:
-                        self.generator.register_existing_number(number, item)
-                        detected_numbers += 1
-                        logger.debug(f"Detected number {number.formatted_number} in {item.name}")
-                    except NumberConflictError as e:
-                        logger.warning(f"Conflict detected: {e}")
+        # Scan all items in directory.
+        # only_files=False: Johnny Decimal numbers live on directory names as
+        # much as file names ("10 Finance/"), so directories must be yielded.
+        # include_hidden defaults to False: a dot-prefixed entry like
+        # ".20 Backup" is not part of the user's numbering scheme and must not
+        # claim a number. Symlinks are skipped too — a link named "20 Escape"
+        # would otherwise register a number pointing outside the scanned root.
+        # The former `if item.is_file() or item.is_dir()` guard is gone: safe_walk
+        # has already rejected symlinks and hidden entries, and number extraction
+        # reads only the entry's name, so the file/dir distinction is irrelevant
+        # here. It was also unreachable — every surviving entry satisfied it.
+        for item in safe_walk(directory, only_files=False):
+            number = self._extract_number_from_path(item)
+            if number:
+                try:
+                    self.generator.register_existing_number(number, item)
+                    detected_numbers += 1
+                    logger.debug(f"Detected number {number.formatted_number} in {item.name}")
+                except NumberConflictError as e:
+                    logger.warning(f"Conflict detected: {e}")
 
         logger.info(f"Initialized with {detected_numbers} existing numbers")
         self._initialized = True

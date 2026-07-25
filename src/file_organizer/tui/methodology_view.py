@@ -20,6 +20,7 @@ from textual.widgets import Static
 
 from file_organizer.config.methodology import DEFAULT as _DEFAULT_METHODOLOGY
 from file_organizer.core.organize_options import OrganizationMethodology
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.tui.status import StatusMixin
 
 if TYPE_CHECKING:
@@ -281,7 +282,10 @@ class MethodologyView(StatusMixin, Vertical):
                     : self._MAX_SAMPLE_FILES
                 ]
             else:
-                files = [p for p in scan.rglob("*") if p.is_file()][: self._MAX_SAMPLE_FILES]
+                # include_hidden defaults to False: the preview samples files to
+                # show the user what organizing would do, and dotfiles are not
+                # candidates for it.
+                files = list(safe_walk(scan, only_files=True))[: self._MAX_SAMPLE_FILES]
 
             if not files:
                 self.app.call_from_thread(

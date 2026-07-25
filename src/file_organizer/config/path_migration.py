@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.utils.atomic_write import atomic_write_text
 
 
@@ -56,7 +57,11 @@ class PathMigrator:
         # Use microseconds to ensure uniqueness for rapid successive migrations
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         backup = self.legacy_path.parent / f"{self.legacy_path.name}.backup.{timestamp}"
-        shutil.copytree(self.legacy_path, backup)  # noqa: safedir-required  # config migration — legacy/backup paths pre-validated at migration start
+        # symlinks=True recreates links as links. Without it copytree *follows*
+        # them, so a link escaping legacy_path would have its target's contents
+        # materialised inside the backup — performing exactly the escape that
+        # safe_walk() prevents in migrate() below, one directory over.
+        shutil.copytree(self.legacy_path, backup, symlinks=True)  # noqa: safedir-required  # config migration — legacy/backup paths pre-validated at migration start
         self.backup_path = backup
         return backup
 
@@ -71,13 +76,18 @@ class PathMigrator:
         # Ensure canonical path exists
         self.canonical_path.mkdir(parents=True, exist_ok=True)
 
-        # Copy all files from legacy to canonical
-        for item in self.legacy_path.rglob("*"):
-            if item.is_file():
-                relative = item.relative_to(self.legacy_path)
-                target = self.canonical_path / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(item, target)  # noqa: safedir-required  # config migration — item/target are pre-validated legacy config paths
+        # Copy all files from legacy to canonical.
+        # include_hidden=True: dotfiles are real config here (.env, .prefs) and
+        # dropping them would silently lose user settings. safe_walk still
+        # refuses symlinks, which is the exposure that matters — copy2 follows
+        # them, so a link in the legacy dir would copy its target's contents
+        # into the canonical tree. backup_legacy_path() above preserves the
+        # originals, so a skipped link is recoverable.
+        for item in safe_walk(self.legacy_path, only_files=True, include_hidden=True):
+            relative = item.relative_to(self.legacy_path)
+            target = self.canonical_path / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, target)  # noqa: safedir-required  # config migration — item/target are pre-validated legacy config paths
 
     def create_migration_log(self) -> dict[str, Any]:
         """Create migration log entry for audit trail.
