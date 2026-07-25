@@ -46,12 +46,30 @@ def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-def build_worklist(dead: list[dict], unused: list[dict], untracked: list[dict]) -> list[dict]:
-    """Join detector outputs and classify each (file, test) finding."""
+def build_worklist(
+    dead: list[dict],
+    unused: list[dict],
+    untracked: list[dict],
+    prior: list[dict] | None = None,
+) -> list[dict]:
+    """Join detector outputs and classify each (file, test) finding.
+
+    ``prior`` (a previous worklist) carries ``allowlisted`` statuses forward
+    across regenerations — intentional suppressors keep appearing dead in
+    fresh detector runs. ``fixed`` rows are NOT carried: a repaired test
+    stops being flagged, so if its key reappears, that is a regression and
+    the row reopens.
+    """
+    # Spread is counted over distinct tests, not raw findings — otherwise
+    # FIXTURE_SPREAD parametrizations of one test would fake fixture noise.
+    distinct_sites = {(d["file"], d["target"], _test_name(d["nodeid"])) for d in dead}
     fixture_sites = {
         site
-        for site, n in Counter((d["file"], d["target"]) for d in dead).items()
+        for site, n in Counter((f, t) for f, t, _ in distinct_sites).items()
         if n >= FIXTURE_SPREAD
+    }
+    allowlisted_keys = {
+        (p["file"], p["test"], p["action"]) for p in prior or [] if p.get("status") == "allowlisted"
     }
 
     dead_by_key: dict[tuple[str, str], list[dict]] = {}
@@ -89,11 +107,16 @@ def build_worklist(dead: list[dict], unused: list[dict], untracked: list[dict]) 
                 ),
                 "dead_targets": targets,
                 "unused_params": params,
-                "status": "open",
+                "status": ("allowlisted" if (file, test, action) in allowlisted_keys else "open"),
             }
         )
 
+    seen_untracked: set[tuple[str, str, str]] = set()
     for u in untracked:
+        identity = (u["file"], _test_name(u["nodeid"]), u["target"])
+        if identity in seen_untracked:
+            continue
+        seen_untracked.add(identity)
         rows.append(
             {
                 "file": u["file"],
@@ -111,11 +134,12 @@ def build_worklist(dead: list[dict], unused: list[dict], untracked: list[dict]) 
 
 def main() -> int:
     """CLI entry point."""
-    if len(sys.argv) != 5:
+    if len(sys.argv) not in (5, 6):
         print(__doc__, file=sys.stderr)
         return 2
     dead, unused, untracked, out = (Path(a) for a in sys.argv[1:5])
-    rows = build_worklist(load_jsonl(dead), load_jsonl(unused), load_jsonl(untracked))
+    prior = load_jsonl(Path(sys.argv[5])) if len(sys.argv) == 6 else None
+    rows = build_worklist(load_jsonl(dead), load_jsonl(unused), load_jsonl(untracked), prior=prior)
     with out.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, sort_keys=True) + "\n")
