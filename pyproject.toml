@@ -308,6 +308,7 @@ select = [
     "PT012", # pytest.raises() block must contain a single simple statement (WP-6.4, #1243)
     "PT017", # assertion on exception in except block — use pytest.raises() (WP-6.4, #1243)
     "PT022", # useless yield fixture without teardown — use return (WP-6.4, #1243)
+    "PGH005", # uncalled mock assertion property, e.g. `m.assert_called_once` without () (#1682)
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)

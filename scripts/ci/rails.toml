@@ -95,3 +95,9 @@ name = "test-environment-leakage"
 command = ["python", "scripts/ci/guardrails/check_test_environment_leakage.py"]
 mode = "enforce"
 description = "Flags tests that mutate class/global state or sys.modules without scoped restoration (issue #1414)."
+
+[[rail]]
+name = "unused-patch-argument"
+command = ["python", "scripts/ci/guardrails/check_unused_patch_argument.py"]
+mode = "advisory"
+description = "Flags @patch-injected test parameters never referenced in the test body (issue #1682, epic #1678). Advisory until the triage worklist (#1685) is drained; commit-time hook enforces on changed lines meanwhile."
