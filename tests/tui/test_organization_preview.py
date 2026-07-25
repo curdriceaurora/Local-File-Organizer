@@ -420,6 +420,10 @@ class TestOrganizationPreviewView:
         assert not view._is_applying
         assert view.query_one.call_count == 2
         view._set_status.assert_called_with("Organization applied. Opening history.")
+        # The success handler must actually open history: it reads self.app
+        # (the patched property) and requests the view switch.
+        mock_app.assert_called()
+        mock_app.return_value.action_switch_view.assert_called_once_with("history")
 
     def test_handle_apply_error(self) -> None:
         view = OrganizationPreviewView()
