@@ -57,7 +57,11 @@ class PathMigrator:
         # Use microseconds to ensure uniqueness for rapid successive migrations
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         backup = self.legacy_path.parent / f"{self.legacy_path.name}.backup.{timestamp}"
-        shutil.copytree(self.legacy_path, backup)  # noqa: safedir-required  # config migration — legacy/backup paths pre-validated at migration start
+        # symlinks=True recreates links as links. Without it copytree *follows*
+        # them, so a link escaping legacy_path would have its target's contents
+        # materialised inside the backup — performing exactly the escape that
+        # safe_walk() prevents in migrate() below, one directory over.
+        shutil.copytree(self.legacy_path, backup, symlinks=True)  # noqa: safedir-required  # config migration — legacy/backup paths pre-validated at migration start
         self.backup_path = backup
         return backup
 

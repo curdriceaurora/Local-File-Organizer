@@ -311,10 +311,16 @@ def test_audio_view_scan_no_audio_files() -> None:
     # Mock Path methods
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
-    mock_dir.rglob.return_value = [Path("file.txt"), Path("image.png")]
     view._scan_dir = mock_dir
 
     with (
+        # See the note in test_audio_view_scan_success: the scan uses safe_walk,
+        # so stubbing mock_dir.rglob would no longer control enumeration and the
+        # "no audio files" result would hold for the wrong reason.
+        patch(
+            "file_organizer.tui.audio_view.safe_walk",
+            return_value=[Path("file.txt"), Path("image.png")],
+        ),
         patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"),
         patch("file_organizer.services.audio.classifier.AudioClassifier"),
         patch.object(view, "_set_status") as mock_status,

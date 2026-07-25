@@ -79,6 +79,46 @@ class TestPathMigratorTraversal:
             "symlink escaping the legacy root must not be migrated"
         )
 
+    @posix_only
+    def test_backup_preserves_symlink_instead_of_dereferencing_it(self, tmp_path: Path) -> None:
+        """The pre-migration backup must not materialise the link's target.
+
+        ``backup_legacy_path()`` runs before the hardened ``migrate()`` loop and
+        uses ``shutil.copytree``, which follows symlinks unless told otherwise.
+        Without ``symlinks=True`` the escaping link's *contents* land inside the
+        backup — the same data escape ``safe_walk`` prevents in ``migrate()``,
+        one directory over.
+        """
+        secret = tmp_path / "secret.txt"
+        secret.write_text("sensitive data outside the config tree")
+
+        legacy = tmp_path / "legacy"
+        legacy.mkdir()
+        (legacy / "settings.json").write_text("{}")
+        (legacy / "escape.txt").symlink_to(secret)
+
+        migrator = PathMigrator(legacy, tmp_path / "canonical")
+        migrator.migrate()
+
+        assert migrator.backup_path is not None
+        backed_up_link = migrator.backup_path / "escape.txt"
+
+        assert backed_up_link.is_symlink(), "the backup must keep the link as a link"
+        assert backed_up_link.readlink() == secret, "the link must still point at the original"
+
+        # Decisive: no *regular file* anywhere in the backup carries the external
+        # content. A dereferencing copytree would have written it as one.
+        materialised = [
+            p
+            for p in migrator.backup_path.rglob("*")
+            if p.is_file()
+            and not p.is_symlink()
+            and "sensitive data" in p.read_text(errors="ignore")
+        ]
+        assert materialised == [], (
+            f"backup dereferenced the escaping link into real files: {materialised}"
+        )
+
     def test_migrate_copies_hidden_config_files(self, tmp_path: Path) -> None:
         """Dotfiles are real config and must survive migration.
 
