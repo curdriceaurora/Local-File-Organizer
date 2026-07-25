@@ -72,6 +72,48 @@ def test_johnny_decimal_uses_default_scheme(
     assert routed[0].folder_name == expected
 
 
+@pytest.mark.parametrize(
+    "folder",
+    [
+        "/escape",  # POSIX-absolute: WindowsPath reports is_absolute() False
+        "C:/escape",  # Windows drive: PosixPath reports is_absolute() False
+        "C:\\escape",  # noqa: test-hardcoded-paths  # the literal IS the escape vector under test
+        "//srv/share",
+        "A: Notes",  # drive-relative on Windows: resolves against A:'s cwd, not our root
+        "../escape",
+        "a/../../b",
+        "..\\escape",  # Windows separator form of the same traversal
+        # Win32 strips trailing spaces/dots from components, so each of these
+        # resolves to ".." once the filesystem sees it, despite never equalling
+        # ".." literally.
+        ".. /escape",
+        "..  /escape",
+        "a/.. /b",
+        "a\\.. \\b",
+        "...",
+        ".. ",
+        "",
+    ],
+)
+def test_classifier_folder_escapes_are_rejected_on_every_platform(
+    tmp_path: Path, folder: str
+) -> None:
+    """Path-escape vectors must fall back to Unsorted regardless of host OS.
+
+    The guard previously used platform-dependent ``Path``, so a POSIX-style
+    absolute folder slipped through on Windows and a drive-qualified one
+    slipped through on POSIX. Each vector is asserted on whatever platform
+    the suite runs on, so neither gap can reopen in a single-OS run.
+    """
+    routed = apply_organization_methodology(
+        [_processed(tmp_path / "notes.txt", folder)],
+        input_root=tmp_path,
+        methodology=OrganizationMethodology.JOHNNY_DECIMAL,
+    )
+
+    assert routed[0].folder_name == "30 Operations & Projects/30.01 Unsorted"
+
+
 def _route_jd(tmp_path: Path, batch: list[ProcessedFile]) -> dict[str, str]:
     """Route a batch through Johnny Decimal and index destinations by filename."""
     routed = apply_organization_methodology(

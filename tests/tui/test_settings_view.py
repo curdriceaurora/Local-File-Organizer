@@ -210,6 +210,7 @@ def test_settings_view_reload_action_handles_load_failure() -> None:
                 default_output_dir="",
                 methodology="none",
                 text_model="qwen2.5:3b-instruct-q4_K_M",
+                provider="ollama",
                 check_updates_on_startup=True,
                 include_prereleases=False,
             ),
@@ -306,6 +307,7 @@ def test_save_workflow_settings_persists_values() -> None:
             default_output_dir="/data/out",
             methodology="jd",
             text_model="  gemma2:2b-instruct-q4_K_M  ",
+            provider="openai",
             check_updates_on_startup=False,
             include_prereleases=True,
         ),
@@ -316,6 +318,7 @@ def test_save_workflow_settings_persists_values() -> None:
     assert config.default_output_dir == "/data/out"
     assert config.default_methodology == "jd"
     assert config.models.text_model == "gemma2:2b-instruct-q4_K_M"  # trimmed
+    assert config.models.framework == "openai"
     assert config.updates.check_on_startup is False
     assert config.updates.include_prereleases is True
     mock_manager.save.assert_called_once_with(config, profile="default")
@@ -333,6 +336,7 @@ def test_save_workflow_settings_empty_model_falls_back_to_default() -> None:
             default_output_dir="",
             methodology="none",
             text_model="   ",
+            provider="ollama",
             check_updates_on_startup=True,
             include_prereleases=False,
         ),
@@ -340,6 +344,28 @@ def test_save_workflow_settings_empty_model_falls_back_to_default() -> None:
     )
 
     assert config.models.text_model == "qwen2.5:3b-instruct-q4_K_M"
+
+
+def test_save_workflow_settings_unknown_provider_falls_back_to_default() -> None:
+    """An out-of-range provider value should be replaced with the ollama default."""
+    mock_manager = MagicMock()
+    config = AppConfig()
+    mock_manager.load.return_value = config
+
+    save_workflow_settings(
+        WorkflowSettings(
+            default_input_dir="",
+            default_output_dir="",
+            methodology="none",
+            text_model="qwen2.5:3b-instruct-q4_K_M",
+            provider="not-a-real-provider",
+            check_updates_on_startup=True,
+            include_prereleases=False,
+        ),
+        manager=mock_manager,
+    )
+
+    assert config.models.framework == "ollama"
 
 
 def test_settings_view_cycle_methodology_round_trips() -> None:
@@ -376,6 +402,39 @@ def test_settings_view_cycle_text_model_preserves_custom_value() -> None:
         # Custom value is prepended; first cycle moves to the first preset.
         view.action_cycle_text_model()
         assert view._text_model == "qwen2.5:3b-instruct-q4_K_M"
+
+
+def test_settings_view_cycle_provider_round_trips() -> None:
+    """Cycling provider should advance through all five supported providers and wrap (#1660)."""
+    view = SettingsView()
+    view._provider = "ollama"
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_cycle_provider()
+        assert view._provider == "openai"
+        view.action_cycle_provider()
+        assert view._provider == "llama_cpp"
+        view.action_cycle_provider()
+        assert view._provider == "mlx"
+        view.action_cycle_provider()
+        assert view._provider == "claude"
+        view.action_cycle_provider()
+        assert view._provider == "ollama"
+
+
+def test_settings_view_cycle_provider_syncs_to_workspace() -> None:
+    """Cycling provider should immediately update both workspace model providers (#1660)."""
+    from file_organizer.tui.workspace import TUIWorkspace
+
+    workspace = TUIWorkspace()
+    view = SettingsView(workspace=workspace)
+    view._provider = "ollama"
+
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        view.action_cycle_provider()
+
+    assert workspace.options.text_provider == "openai"
+    assert workspace.options.vision_provider == "openai"
 
 
 def test_settings_view_toggle_update_check() -> None:
@@ -556,6 +615,7 @@ async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
             default_output_dir="/seed/out",
             methodology="para",
             text_model="qwen2.5:7b-instruct-q4_K_M",
+            provider="ollama",
             check_updates_on_startup=False,
             include_prereleases=True,
         ),
@@ -577,8 +637,11 @@ async def test_settings_view_mounted_end_to_end(monkeypatch) -> None:
         # Mount reflects the shared session rather than replacing it with stale config.
         input_field = view.query_one("#settings-input-dir", Input)
         output_field = view.query_one("#settings-output-dir", Input)
-        assert input_field.value == "/seed/in"
-        assert output_field.value == "/seed/out"
+        # set_roots stores a Path, so the field renders native separators — compare
+        # against the same normalization rather than the POSIX spelling (on Windows
+        # "/seed/in" round-trips as "\\seed\\in").
+        assert input_field.value == str(Path("/") / "seed" / "in")
+        assert output_field.value == str(Path("/") / "seed" / "out")
 
         # Editing an input updates in-memory state (real Input.Changed event).
         input_field.value = "/edited/in"

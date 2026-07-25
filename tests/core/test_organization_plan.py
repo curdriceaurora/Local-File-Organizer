@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,14 @@ from file_organizer.undo import UndoManager
 # coverage floor: these lifecycle tests are the primary coverage of the
 # plan module in the integration gate.
 pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
+
+# ``execute_plan`` transfers files through SafeDir, which needs POSIX dir_fd /
+# O_NOFOLLOW; the Windows port is deferred (#264). These tests are in the
+# ci/smoke subset that CI Full Matrix runs on Windows, so they must opt out
+# explicitly rather than fail the nightly matrix on NotImplementedError.
+requires_safedir = pytest.mark.skipif(
+    sys.platform == "win32", reason="execute_plan uses SafeDir, which is POSIX-only (#264)"
+)
 
 
 def _processed(path: Path, folder: str = "Docs", name: str | None = None) -> ProcessedFile:
@@ -383,6 +392,7 @@ def test_validate_plan_rejects_source_outside_input(tmp_path: Path) -> None:
     assert "source_outside_input" in validation.error_message
 
 
+@requires_safedir
 def test_execute_plan_applies_exact_destination_and_logs_history(tmp_path: Path) -> None:
     source = tmp_path / "input.txt"
     source.write_text("hello")
@@ -411,6 +421,7 @@ def test_execute_plan_applies_exact_destination_and_logs_history(tmp_path: Path)
     assert operations[0].metadata["plan_id"] == plan.plan_id
 
 
+@requires_safedir
 def test_execute_plan_cleans_up_destination_when_history_logging_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -663,6 +674,7 @@ def test_build_plan_preserves_processing_error(tmp_path: Path) -> None:
     assert operation.error == "model failed"
 
 
+@requires_safedir
 def test_execute_plan_uses_hardlinks_when_requested(tmp_path: Path) -> None:
     plan = _single_op_plan(tmp_path, use_hardlinks=True)
     manager = UndoManager(history=OperationHistory(tmp_path / "history.db"))
@@ -675,6 +687,7 @@ def test_execute_plan_uses_hardlinks_when_requested(tmp_path: Path) -> None:
     assert destination.stat().st_ino == (tmp_path / "input.txt").stat().st_ino
 
 
+@requires_safedir
 def test_execute_plan_copy_preserves_source_and_creates_independent_file(
     tmp_path: Path,
 ) -> None:
@@ -691,6 +704,7 @@ def test_execute_plan_copy_preserves_source_and_creates_independent_file(
     assert source.stat().st_ino != destination.stat().st_ino
 
 
+@requires_safedir
 @pytest.mark.parametrize("use_hardlinks", [False, True])
 def test_undo_transfer_removes_destination_but_preserves_source(
     tmp_path: Path, use_hardlinks: bool
@@ -738,6 +752,7 @@ def test_plan_serialization_derives_legacy_transfer_flag_from_options(
     assert plan.to_dict()["use_hardlinks"] is False
 
 
+@requires_safedir
 def test_execute_plan_records_error_when_operation_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -755,6 +770,7 @@ def test_execute_plan_records_error_when_operation_fails(
     assert errors == [(str(tmp_path / "input.txt"), "disk full")]
 
 
+@requires_safedir
 def test_execute_plan_cleans_up_when_history_logging_raises_oserror(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -773,6 +789,7 @@ def test_execute_plan_cleans_up_when_history_logging_raises_oserror(
     assert not (tmp_path / "out" / "Docs" / "input.txt").exists()
 
 
+@requires_safedir
 def test_execute_plan_cleans_up_when_commit_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

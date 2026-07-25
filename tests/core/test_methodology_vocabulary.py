@@ -127,8 +127,12 @@ def test_cli_config_validator_offers_exactly_the_canonical_vocabulary() -> None:
     result = CliRunner().invoke(config_app, ["edit", "--methodology", "date_based"])
 
     assert result.exit_code == 1
+    # The validator emits one line; the console hard-wraps it at the terminal width, which
+    # differs per platform (the Windows CI runner wraps mid-list and split the vocabulary
+    # across lines). Unwrap before parsing so this pins the vocabulary, not the console width.
+    unwrapped = " ".join(result.output.split())
     # The rejection lists the accepted vocabulary; it must be the canonical set and nothing else.
-    offered = re.search(r"[Vv]alid values:\s*([^\n.]+)", result.output)
+    offered = re.search(r"[Vv]alid values:\s*([^\n.]+)", unwrapped)
     assert offered, f"validator did not list valid values: {result.output!r}"
     listed = tuple(token.strip().strip("'\"") for token in offered.group(1).split(","))
     assert sorted(listed) == sorted(CANONICAL)

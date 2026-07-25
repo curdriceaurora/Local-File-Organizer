@@ -10,7 +10,7 @@ from file_organizer.config.manager import ConfigManager
 from file_organizer.core.capabilities import Surface, get_capability_registry
 from file_organizer.core.errors import DomainError, DomainErrorCode
 from file_organizer.core.lifecycle import JobSnapshot
-from file_organizer.core.organize_options import ModelProvider, OrganizeOptions, OrganizeRequest
+from file_organizer.core.organize_options import OrganizeOptions, OrganizeRequest
 from file_organizer.core.plan import OrganizationPlan
 from file_organizer.core.types import OrganizationResult
 
@@ -46,18 +46,21 @@ class TUIWorkspace:
         parallel = config.parallel or {}
         workers = parallel.get("max_workers")
         prefetch_depth = parallel.get("prefetch_depth", 2)
-        provider = config.models.framework
-        supported_providers = {"ollama", "openai", "llama_cpp", "mlx", "claude"}
-        model_provider = cast(ModelProvider, provider) if provider in supported_providers else None
         try:
+            # text_provider/vision_provider are deliberately left unset here (#1660):
+            # a request-level OrganizeOptions field outranks FO_PROVIDER in
+            # OrganizationService._resolve_options, so eagerly copying the persisted
+            # config.models.framework value in would make it silently beat the
+            # environment variable on every session, before the user ever makes an
+            # explicit choice. Settings still displays the persisted value (seeded
+            # from config, not from these options) and only writes it into session
+            # options once the user explicitly cycles the provider control.
             options = OrganizeOptions(
                 methodology=config.default_methodology,
                 parallel_workers=workers,
                 prefetch_depth=prefetch_depth,
                 text_model=config.models.text_model,
                 vision_model=config.models.vision_model,
-                text_provider=model_provider,
-                vision_provider=model_provider,
             )
         except (TypeError, ValueError):
             options = OrganizeOptions()

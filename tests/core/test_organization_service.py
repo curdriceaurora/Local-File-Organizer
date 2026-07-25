@@ -1,5 +1,6 @@
 """Tests for the transport-neutral organization application service."""
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,12 @@ from file_organizer.core.types import OrganizationResult
 from file_organizer.models.base import ModelConfig, ModelType
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
+
+# Executing a plan goes through SafeDir (POSIX dir_fd / O_NOFOLLOW); the Windows
+# port is deferred (#264) and CI Full Matrix runs this ci-marked file on Windows.
+requires_safedir = pytest.mark.skipif(
+    sys.platform == "win32", reason="execute_plan uses SafeDir, which is POSIX-only (#264)"
+)
 
 
 def _service(**kwargs: object) -> OrganizationService:
@@ -149,6 +156,7 @@ def test_preview_persists_resolved_options(tmp_path: Path, monkeypatch: pytest.M
     assert result.plan.options.prefetch_depth == 0
 
 
+@requires_safedir
 def test_scan_preview_and_execute_share_traversal_policy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
