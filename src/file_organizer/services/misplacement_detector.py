@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from .pattern_analyzer import PatternAnalysis, PatternAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -124,8 +126,14 @@ class MisplacementDetector:
         if pattern_analysis is None:
             pattern_analysis = self.pattern_analyzer.analyze_directory(directory)
 
-        # Get all files (lazily — the tree is not materialized)
-        files = (f for f in directory.rglob("*") if f.is_file() and not f.name.startswith("."))
+        # Get all files (lazily — the tree is not materialized).
+        # include_hidden defaults to False, replacing the old
+        # `not f.name.startswith(".")` filter — note safe_walk is stricter: it
+        # excludes any path with a dot component relative to the root, so files
+        # buried under ".cache/" are no longer analysed. Symlinks are skipped
+        # too, so a link cannot make a file outside the tree look misplaced
+        # within it.
+        files = safe_walk(directory, only_files=True)
 
         misplaced_files = []
 
