@@ -29,6 +29,26 @@ dead rows) and are intentional global suppressors, the canonical
 
 Raw (unfiltered) output is reproducible with the command above.
 
+## Lifecycle — WIP artifact, removed at delivery
+
+These files are **frozen scaffolding for the epic, not permanent repo
+fixtures**. They are never regenerated or updated in place:
+
+1. **Now**: frozen snapshot, pinned to the commit above. Do not refresh
+   it against newer commits — ad-hoc re-runs go to scratch/CI artifacts.
+2. **Triage (#1685)**: consumes this snapshot and produces the classified
+   worklist. The triage PR **deletes this directory** — the snapshot is
+   superseded and git history preserves it.
+3. **Repair waves**: the classified worklist is the only living file; it
+   only shrinks as batches land.
+4. **Enforcement flip (Wave 4)**: worklist empty → deleted as well. The
+   invariant then lives in the CI gate (enforce mode fails new dead
+   patches) and in per-test `allow_unaccessed_patches` markers — no data
+   file to maintain.
+
+Net effect on the epic→main integration PR: none — added and deleted on
+the epic branch, so these files never appear in the final merged diff.
+
 ## Caveats
 
 - A "dead" row is a *candidate*, not a verdict: patches that exist to
