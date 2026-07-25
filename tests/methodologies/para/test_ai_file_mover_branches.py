@@ -7,6 +7,7 @@ non-dir, suggest_archive stat error, _resolve_collision overflow.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -366,17 +367,30 @@ class TestSuggestArchive:
         assert suggestions[0].target_category == PARACategory.ARCHIVE
 
     def test_suggest_archive_os_error_during_scan(self, tmp_path: Path) -> None:
-        """OSError during directory scan returns empty list (lines 324-326)."""
+        """An unreadable directory yields no suggestions rather than raising.
+
+        The scan goes through ``safe_walk``, which absorbs OSError per directory
+        via ``os.scandir`` — patching ``Path.rglob`` would no longer intercept
+        anything and the assertion would hold vacuously. The fixture holds a
+        genuinely stale file so an unpatched run *would* produce a suggestion,
+        which is what makes the empty result meaningful.
+        """
         config = PARAConfig()
         engine = MagicMock()
         mover = PARAFileMover(config, suggestion_engine=engine, root_dir=tmp_path)
 
         src_dir = tmp_path / "src"
         src_dir.mkdir()
+        stale = src_dir / "old.txt"
+        stale.write_text("stale")
+        old = time.time() - 400 * 86400
+        os.utime(stale, (old, old))
 
-        # Mock rglob to raise OSError
-        with patch.object(Path, "rglob", side_effect=OSError("Permission denied")):
-            suggestions = mover.suggest_archive(src_dir)
+        # Control: the file is stale enough to be suggested when readable.
+        assert mover.suggest_archive(src_dir, inactive_days=180) != []
+
+        with patch("os.scandir", side_effect=OSError("Permission denied")):
+            suggestions = mover.suggest_archive(src_dir, inactive_days=180)
 
         assert suggestions == []
 
