@@ -747,6 +747,7 @@ class TestShardCoverage:
         {
             "auth",  # no test_*.py files yet; add to a shard when populated
             "fixtures",  # test fixture data, not a collectible test directory
+            "_plugins",  # pytest plugin source (#1681), not a collectible test directory
             "__pycache__",
             "playwright",  # browser E2E tests; require `playwright install chromium`, excluded from CI shards
         }
