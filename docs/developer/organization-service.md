@@ -39,6 +39,28 @@ controls. Defaults are validated once before work begins. The direct service res
 text and vision model names/providers before placing the options in a plan, so a plan records the
 behavioral inputs used to produce it rather than an unstable “current default.”
 
+### Model config resolution order
+
+`text_provider`, `vision_provider`, `text_model`, and `vision_model` resolve through a four-step
+cascade, highest priority first:
+
+1. **Per-request explicit option** — `OrganizeOptions.text_provider`/`vision_provider` set by the
+   calling surface (CLI `--text-provider`/`--vision-provider` flags, REST/Web JSON body or form
+   field, TUI session settings).
+2. **Environment variable** — `FO_PROVIDER` and its per-provider siblings (`FO_OPENAI_*`,
+   `FO_LLAMA_CPP_*`, `FO_MLX_*`, `FO_CLAUDE_*`), read by
+   `file_organizer.config.provider_env.get_model_configs_from_env`.
+3. **Persisted config profile** — `AppConfig.models` (`config.models.framework`), loaded via
+   `ConfigManager` when no `FO_PROVIDER` override is set.
+4. **Hardcoded default** — `ollama`, applied when nothing above resolves a value.
+
+Steps 2–4 are resolved once, at `OrganizationService` construction, by
+`config/provider_env.py::get_model_configs()` (see that module's docstring for the full
+env-var/profile/default cascade); `OrganizationService._resolve_options` then applies step 1 on
+top of that resolved baseline for every request. A plan always records the resolved values, never
+an unstable "current default" — the same rule the rest of this section describes for other
+options.
+
 `transfer_mode` is the canonical transfer selector and supports `copy` and `hardlink`.
 `use_hardlinks` remains an input-only compatibility alias and is not emitted in canonical options.
 

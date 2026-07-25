@@ -1,0 +1,10 @@
+{
+  "case_id": "flat-documents",
+  "options": {
+    "use_hardlinks": false,
+    "text_provider": "openai",
+    "vision_provider": "openai"
+  },
+  "expected_text_provider": "openai",
+  "expected_vision_provider": "openai"
+}
