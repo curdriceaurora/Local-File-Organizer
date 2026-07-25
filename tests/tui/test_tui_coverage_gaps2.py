@@ -11,7 +11,6 @@ Covers:
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -224,12 +223,27 @@ class TestFilePreviewViewActions:
         assert view.selection.count == 2
         view._notify_selection.assert_called_once()
 
-    def test_action_select_all_oserror(self, tmp_path):
+    def test_action_select_all_unreadable_directory_selects_nothing(self, tmp_path):
+        """An unreadable root must not add anything to the selection.
+
+        The scan goes through ``safe_walk``, which reads via ``os.scandir`` and
+        absorbs the OSError itself — patching ``Path.rglob`` would no longer
+        intercept anything. The invariant worth pinning is that nothing gets
+        selected; ``_notify_selection`` now fires with an empty result, which is
+        harmless because ``select_all`` is additive (``set.update``).
+        """
         view = self._make_view(tmp_path)
+        (tmp_path / "a.txt").write_text("a")
         view._notify_selection = MagicMock()
-        with patch.object(Path, "rglob", side_effect=OSError("no access")):
+
+        # Control: the file is selectable when the directory is readable.
+        view.action_select_all()
+        assert view.selection.count == 1
+
+        view.selection.clear()
+        with patch("os.scandir", side_effect=OSError("no access")):
             view.action_select_all()
-        view._notify_selection.assert_not_called()
+        assert view.selection.count == 0
 
     def test_action_deselect_all(self, tmp_path):
         view = self._make_view(tmp_path)

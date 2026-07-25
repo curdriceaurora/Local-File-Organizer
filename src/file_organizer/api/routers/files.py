@@ -34,6 +34,7 @@ from file_organizer.api.openapi_responses import (
 )
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.utils.file_times import creation_timestamp
 
 logger = logging.getLogger(__name__)
@@ -78,23 +79,14 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
             files.append(path)
         return files
 
-    if recursive:
-        iterator = path.rglob("*")
-    else:
-        iterator = path.glob("*")
-
-    for entry in iterator:
-        try:
-            if entry.is_symlink():
-                continue
-            if not entry.is_file():
-                continue
-            if not include_hidden and is_hidden(entry):
-                continue
-        except (OSError, PermissionError):
-            logger.debug("Skipping entry %s: filesystem error", entry, exc_info=True)
-            continue
-        files.append(entry)
+    # safe_walk applies exactly the three rules the loop below used to apply by
+    # hand — skip symlinks, keep only files, honour the caller's include_hidden —
+    # and absorbs the per-entry OSError the old `except` clause swallowed.
+    # include_hidden is threaded from the request rather than hardcoded, so the
+    # endpoint's documented behaviour is unchanged.
+    files.extend(
+        safe_walk(path, recursive=recursive, only_files=True, include_hidden=include_hidden)
+    )
     return files
 
 

@@ -18,6 +18,7 @@ from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import Static
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.tui.file_browser import FileBrowserView
 
 if TYPE_CHECKING:
@@ -332,7 +333,9 @@ class FilePreviewView(Horizontal):
         if self._root_path is None:
             return
         try:
-            all_files = {p for p in self._root_path.rglob("*") if p.is_file()}
+            # include_hidden defaults to False: "select all" feeds destructive
+            # operations, and dotfiles are not what the user is selecting.
+            all_files = set(safe_walk(self._root_path, only_files=True))
             self.selection.select_all(all_files)
             self._notify_selection()
         except OSError:

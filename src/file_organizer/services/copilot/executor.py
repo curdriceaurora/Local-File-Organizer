@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.services.copilot.models import (
     ExecutionResult,
     Intent,
     IntentType,
 )
-from file_organizer.utils import is_hidden
 
 if TYPE_CHECKING:
     from file_organizer.interfaces.search import RetrieverProtocol
@@ -232,10 +232,12 @@ class CommandExecutor:
         docs: list[str] = []
         paths: list[Path] = []
         try:
-            for entry in search_root.rglob("*"):
+            # only_files=True + include_hidden default False replaces the
+            # hand-rolled is_symlink()/is_file()/is_hidden(rel) post-filter that
+            # stood here — safe_walk applies exactly those three rules, and its
+            # hidden check is likewise relative to the walked root.
+            for entry in safe_walk(search_root, only_files=True):
                 rel = entry.relative_to(search_root)
-                if entry.is_symlink() or not entry.is_file() or is_hidden(rel):
-                    continue
                 # search_root is the trusted walked root: anchor the read so a
                 # symlink swapped into any intermediate directory is refused (#286).
                 text = read_text_safe(entry, scan_root=search_root)
@@ -312,14 +314,18 @@ class CommandExecutor:
         # ------------------------------------------------------------------
         query_lower = query.lower()
         matches = []
-        try:
-            for entry in search_root.rglob("*"):
-                if entry.is_file() and query_lower in entry.name.lower():
-                    matches.append(str(entry))
-                    if len(matches) >= 20:
-                        break
-        except PermissionError:
-            pass
+        # include_hidden defaults to False: search results are shown to the user,
+        # and dotfiles (.env, .ssh/*) are not what "find X" is asking for. The
+        # previous rglob applied no symlink or hidden filtering at all, so this
+        # narrows what the filename scan can surface.
+        # The former `except PermissionError` is gone: safe_walk absorbs OSError
+        # at the root, per-directory and per-entry levels, and nothing else in
+        # this loop raises — see #1674 for restoring that visibility.
+        for entry in safe_walk(search_root, only_files=True):
+            if query_lower in entry.name.lower():
+                matches.append(str(entry))
+                if len(matches) >= 20:
+                    break
 
         if matches:
             file_list = "\n".join(f"  - {m}" for m in matches[:10])

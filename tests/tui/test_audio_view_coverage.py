@@ -336,7 +336,6 @@ def test_audio_view_scan_success() -> None:
 
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
-    mock_dir.rglob.return_value = [p1, p2]
     view._scan_dir = mock_dir
 
     # Mock extractors/classifiers
@@ -352,6 +351,9 @@ def test_audio_view_scan_success() -> None:
 
     with (
         patch.object(Path, "is_file", return_value=True),
+        # The scan walks via safe_walk now; stubbing mock_dir.rglob would no
+        # longer be reached. Patch the name as imported by the view module.
+        patch("file_organizer.tui.audio_view.safe_walk", return_value=[p1, p2]),
         patch(
             "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"
         ) as mock_extractor_class,
@@ -393,7 +395,6 @@ def test_audio_view_scan_extraction_exception() -> None:
     p1 = Path("track1.mp3")
     mock_dir = MagicMock()
     mock_dir.is_dir.return_value = True
-    mock_dir.rglob.return_value = [p1]
     view._scan_dir = mock_dir
 
     mock_extractor = MagicMock()
@@ -401,6 +402,8 @@ def test_audio_view_scan_extraction_exception() -> None:
 
     with (
         patch.object(Path, "is_file", return_value=True),
+        # See the note in test_audio_view_scan_success: the scan uses safe_walk.
+        patch("file_organizer.tui.audio_view.safe_walk", return_value=[p1]),
         patch(
             "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
             return_value=mock_extractor,
