@@ -539,6 +539,35 @@ class TestSuggestArchive:
         assert len(suggestions) == 1
         assert suggestions[0].confidence == pytest.approx(0.95)
 
+    @pytest.mark.ci
+    @pytest.mark.parametrize("threshold", [0, -1])
+    def test_future_mtime_still_archived_at_non_positive_threshold(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        threshold: int,
+    ) -> None:
+        """A future mtime does not escape a non-positive threshold.
+
+        Clock skew or an archive extracted with a bogus timestamp makes
+        days_inactive negative, which failed the ``>= inactive_days`` age
+        comparison and silently excluded the file despite "archive everything".
+        """
+        src = tmp_path / "future"
+        src.mkdir()
+        f = src / "tomorrow.txt"
+        f.write_text("dated ahead")
+        future_time = time.time() + (30 * 86400)
+        os.utime(f, (future_time, future_time))
+
+        suggestions = mover.suggest_archive(src, inactive_days=threshold)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].file_path == f
+        assert suggestions[0].confidence == pytest.approx(0.95)
+        # Negative day counts are clamped rather than surfaced as "-30 days".
+        assert "in 0 days" in suggestions[0].reasoning[0]
+
 
 # =========================================================================
 # Additional coverage tests
