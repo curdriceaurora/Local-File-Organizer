@@ -323,3 +323,127 @@ class TestEdgeCases:
 
             with pytest.raises(ValueError, match="Invalid directory"):
                 detector.detect_misplaced(file_path)
+
+
+class TestDirectorySiblingCache:
+    """Sibling listings are cached per directory without changing analysis results.
+
+    ``analyze_context`` derives ``sibling_files``, ``sibling_types`` and
+    ``naming_patterns`` from the file's directory *excluding the file itself*.
+    Caching must preserve that exclusion: a cache holding directory-wide derived
+    values would leak the analysed file's own suffix into ``sibling_types``,
+    which silently collapses the type-mismatch score and hides every outlier.
+    """
+
+    @staticmethod
+    def _make_outlier_tree(root: Path) -> Path:
+        """Create a directory of five .txt files plus one .jpg outlier."""
+        docs = root / "docs"
+        docs.mkdir()
+        for i in range(5):
+            (docs / f"report_{i}.txt").write_text("content")
+        outlier = docs / "photo.jpg"
+        outlier.write_bytes(b"\xff\xd8\xff")
+        return outlier
+
+    def test_detect_misplaced_lists_each_directory_once(self, monkeypatch):
+        """detect_misplaced issues one iterdir per directory, not one per file."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            outlier = self._make_outlier_tree(tmppath)
+            docs = outlier.parent
+
+            calls: list[Path] = []
+            original_iterdir = Path.iterdir
+
+            def counting_iterdir(self: Path):
+                calls.append(self)
+                return original_iterdir(self)
+
+            monkeypatch.setattr(Path, "iterdir", counting_iterdir)
+
+            analyzer = PatternAnalyzer()
+            pattern_analysis = analyzer.analyze_directory(tmppath)
+            calls.clear()  # only count the detector's own sibling scanning
+
+            detector = MisplacementDetector()
+            detector.detect_misplaced(tmppath, pattern_analysis)
+
+            assert calls.count(docs) == 1, (
+                f"expected docs/ to be listed once for its 6 files, got {calls.count(docs)}"
+            )
+
+    def test_cached_analyze_context_matches_uncached(self):
+        """A cache-backed analyze_context returns exactly what the plain call returns."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            outlier = self._make_outlier_tree(tmppath)
+
+            detector = MisplacementDetector()
+            uncached = detector.analyze_context(outlier)
+
+            cache: dict[Path, list[Path]] = {}
+            cached = detector.analyze_context(outlier, cache)
+
+            assert sorted(cached.sibling_files) == sorted(uncached.sibling_files)
+            assert cached.sibling_types == uncached.sibling_types
+            assert cached.naming_patterns == uncached.naming_patterns
+            assert cached.parent_category == uncached.parent_category
+
+    def test_cache_is_populated_and_reused_across_files(self):
+        """The second file in a directory reuses the first file's cached listing."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            outlier = self._make_outlier_tree(tmppath)
+            docs = outlier.parent
+
+            detector = MisplacementDetector()
+            cache: dict[Path, list[Path]] = {}
+
+            detector.analyze_context(outlier, cache)
+            assert docs in cache, "analyze_context should populate the cache it is given"
+
+            sibling = docs / "report_0.txt"
+            context = detector.analyze_context(sibling, cache)
+
+            # Derived per file from the shared listing, still excluding self.
+            assert sibling not in context.sibling_files
+            assert outlier in context.sibling_files
+
+    def test_cached_path_excludes_own_suffix_from_sibling_types(self):
+        """The analysed file's own extension never appears in its sibling types.
+
+        Guards the failure mode where caching directory-wide derived values makes
+        ``file_type in sibling_types`` unconditionally true, dropping
+        ``_calculate_type_mismatch`` from 80.0 to 10.0 and zeroing out detection.
+        """
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            outlier = self._make_outlier_tree(tmppath)
+
+            detector = MisplacementDetector()
+            cache: dict[Path, list[Path]] = {}
+            context = detector.analyze_context(outlier, cache)
+
+            assert context.sibling_types == {".txt"}
+            assert detector._calculate_type_mismatch(context) == 80.0
+
+    def test_outlier_still_detected_end_to_end(self):
+        """The .jpg among .txt files is still reported as misplaced.
+
+        The outlier scores 56.5 on this fixture, so the threshold is lowered to
+        50.0 to bring it into range. Leaking the file's own suffix into
+        ``sibling_types`` costs 24.5 points (type mismatch 80.0 -> 10.0 at 35%
+        weight), dropping it to 32.0 — below the threshold, and undetected.
+        """
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            outlier = self._make_outlier_tree(tmppath)
+
+            analyzer = PatternAnalyzer()
+            pattern_analysis = analyzer.analyze_directory(tmppath)
+
+            detector = MisplacementDetector(min_mismatch_score=50.0)
+            misplaced = detector.detect_misplaced(tmppath, pattern_analysis)
+
+            assert outlier in [m.file_path for m in misplaced]
