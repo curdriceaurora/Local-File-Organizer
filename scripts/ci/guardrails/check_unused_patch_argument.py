@@ -15,9 +15,11 @@ Injection semantics (verified empirically, pinned by the rail's tests):
 - Class-level ``@patch`` decorates every ``test_*`` method and injects
   its mock into each of them.
 
-Decorators apply bottom-up, so the injected mocks occupy the LAST k
-parameters of the test signature (after ``self``/``cls``); for
-unused-detection only the count k matters, not the per-decorator mapping.
+Decorators apply bottom-up and ``_patch`` appends mocks to the call's
+positional args — pytest passes fixtures by keyword, so the mocks fill
+the FIRST free positional slots. The injected mocks are therefore the
+FIRST k parameters after ``self``/``cls`` (verified empirically);
+fixtures follow them.
 
 Suppress a finding with ``# noqa: unused-patch-argument`` on the ``def``
 line when the patch is intentionally a side-effect suppressor.
@@ -102,7 +104,7 @@ def _check_function(
     params = [a.arg for a in func.args.posonlyargs + func.args.args]
     if params and params[0] in ("self", "cls"):
         params = params[1:]
-    mock_params = params[-injected:] if injected <= len(params) else params
+    mock_params = params[:injected]
 
     def_line = lines[func.lineno - 1] if func.lineno <= len(lines) else ""
     if has_targeted_noqa(def_line, RAIL_NAME):
