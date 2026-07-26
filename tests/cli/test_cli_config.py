@@ -133,6 +133,7 @@ class TestConfigEdit:
         result = runner.invoke(app, ["config", "edit", "--temperature", "2.5"])
         assert result.exit_code == 1
         assert "temperature must be between" in result.output
+        mock_cls.assert_not_called()  # invalid input must never touch config
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_device(self, mock_cls: MagicMock) -> None:
@@ -146,6 +147,7 @@ class TestConfigEdit:
         assert "invalid value" in normalized
         assert "device" in normalized
         assert "'tpu'" in normalized
+        mock_cls.assert_not_called()  # invalid input must never touch config
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_invalid_methodology(self, mock_cls: MagicMock) -> None:
@@ -155,6 +157,7 @@ class TestConfigEdit:
         assert "invalid value" in normalized
         assert "methodology" in normalized
         assert "'custom'" in normalized
+        mock_cls.assert_not_called()  # invalid input must never touch config
 
     @patch("file_organizer.config.ConfigManager")
     def test_edit_valid_device(self, mock_cls: MagicMock) -> None:

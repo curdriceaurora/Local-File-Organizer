@@ -95,6 +95,7 @@ class TestTextWorkflowsIntegration:
 
         # Verify original files still exist (copy mode)
         assert (source_dir / "report.txt").exists()
+        mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model
 
     @pytest.mark.skipif(
         sys.platform == "win32", reason="Hardlinks require admin privileges on Windows"
@@ -130,6 +131,7 @@ class TestTextWorkflowsIntegration:
         src_stat = os.stat(source_dir / "report.txt")
         dst_stat = os.stat(auto_sorted_dir / "linked_report.txt")
         assert src_stat.st_ino == dst_stat.st_ino
+        mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model
 
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
@@ -177,3 +179,4 @@ class TestTextWorkflowsIntegration:
 
         assert "duplicate_name.txt" in names
         assert "duplicate_name_1.txt" in names
+        mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model

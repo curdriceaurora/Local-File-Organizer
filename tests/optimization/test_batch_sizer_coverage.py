@@ -231,6 +231,7 @@ class TestAdjustFromFeedbackCoverage:
         sizer = AdaptiveBatchSizer()
         result = sizer.adjust_from_feedback(actual_memory=1024, batch_size=-5)
         assert result == sizer.min_batch_size
+        mock_mem.assert_not_called()  # min-clamp short-circuits before the memory probe
 
     @patch.object(
         AdaptiveBatchSizer,

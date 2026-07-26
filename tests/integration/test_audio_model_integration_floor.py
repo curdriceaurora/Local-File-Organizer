@@ -66,10 +66,11 @@ class TestAudioModelIntegrationFloor:
 
     @patch(_AVAILABLE_FLAG, True)
     @patch(_TRANSCRIBER_CLS)
-    def test_transcribe_requires_initialize(self, _mock_cls: MagicMock) -> None:
+    def test_transcribe_requires_initialize(self, mock_cls: MagicMock) -> None:
         model = AudioModel(_audio_config())
         with pytest.raises(RuntimeError, match="Model not initialized"):
             model.transcribe("clip.wav")
+        mock_cls.assert_not_called()  # uninitialized transcribe must not construct the backend
 
     @patch(_AVAILABLE_FLAG, True)
     @patch(_TRANSCRIBER_CLS)
@@ -92,9 +93,10 @@ class TestAudioModelIntegrationFloor:
 
     @patch(_AVAILABLE_FLAG, True)
     @patch(_TRANSCRIBER_CLS)
-    def test_get_default_config_shape(self, _mock_cls: MagicMock) -> None:
+    def test_get_default_config_shape(self, mock_cls: MagicMock) -> None:
         cfg = AudioModel.get_default_config("whisper:small")
         assert cfg.name == "whisper:small"
         assert cfg.model_type == ModelType.AUDIO
         assert cfg.framework == "faster-whisper"
         assert cfg.temperature == 0.0
+        mock_cls.assert_not_called()  # config shape is static; no backend construction
