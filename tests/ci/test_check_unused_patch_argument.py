@@ -279,6 +279,26 @@ def test_bare_noqa_does_not_suppress(tmp_path: Path) -> None:
     assert len(violations) == 1
 
 
+def test_mocks_map_to_first_params_before_fixtures(tmp_path: Path) -> None:
+    """@patch injects into the FIRST free positional slots (after self);
+    pytest fixtures are passed by keyword and come after. A test taking
+    (mock_x, some_fixture) must flag mock_x, never the fixture."""
+    violations = _check(
+        tmp_path,
+        """
+        from unittest.mock import patch
+
+        class TestThing:
+            @patch("mod.helper")
+            def test_uses_fixture_only(self, mock_helper, tmp_path):
+                assert tmp_path.exists()
+        """,
+    )
+    assert len(violations) == 1
+    assert "mock_helper" in violations[0][1]
+    assert "tmp_path" not in violations[0][1]
+
+
 def _decorator_of(source: str):
     import ast
 
