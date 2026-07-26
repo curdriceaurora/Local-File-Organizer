@@ -14,12 +14,18 @@ from __future__ import annotations
 from functools import lru_cache
 from re import compile as re_compile
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
 _URL_SCHEME_RE = re_compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
+
+#: How long a blocked SQLite statement waits for a lock before giving up.
+#: pysqlite defaults to 5 s, which a contended CI runner blows through: a
+#: schema read then dies with "database is locked" mid-request instead of
+#: waiting out the writer.
+SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 
 def resolve_database_url(database: str) -> str:
@@ -65,6 +71,28 @@ def _is_sqlite_url(url: str) -> bool:
     return url.startswith("sqlite")
 
 
+def _apply_file_sqlite_pragmas(engine: Engine) -> None:
+    """Give a file-backed SQLite engine a usable lock timeout.
+
+    In SQLite's default rollback-journal mode a committing writer holds an
+    EXCLUSIVE lock that blocks readers too, and pysqlite gives up after 5 s.
+    That is short enough for a contended machine to blow through, so a
+    routine schema reflection (``PRAGMA main.table_info(...)``) failed
+    mid-request with "database is locked". Waiting longer is the fix: the
+    lock is held for milliseconds in the normal case.
+
+    Set per pooled connection, since ``busy_timeout`` is connection state.
+    """
+
+    @event.listens_for(engine, "connect")
+    def _set_pragmas(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
+        finally:
+            cursor.close()
+
+
 @lru_cache(maxsize=64)
 def get_engine(
     database: str,
@@ -94,7 +122,7 @@ def get_engine(
         )
 
     if _is_sqlite_url(url):
-        return create_engine(
+        engine = create_engine(
             url,
             connect_args={"check_same_thread": False},
             poolclass=QueuePool,
@@ -104,6 +132,10 @@ def get_engine(
             pool_recycle=max(1, pool_recycle_seconds),
             **base_kwargs,
         )
+        # File-backed only: ``:memory:`` is handled above and cannot contend
+        # with another process for a file lock.
+        _apply_file_sqlite_pragmas(engine)
+        return engine
 
     return create_engine(
         url,
