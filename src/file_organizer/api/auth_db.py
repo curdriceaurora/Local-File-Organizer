@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from functools import cache
 
 from sqlalchemy.engine import Engine
@@ -35,6 +36,10 @@ def _ensure_default_auth_db_dir() -> None:
     get_config_dir().mkdir(parents=True, exist_ok=True)
 
 
+#: Serializes schema creation. See ``get_engine``.
+_SCHEMA_LOCK = threading.Lock()
+
+
 @cache
 def get_engine(db_path: str) -> Engine:
     """Return a cached SQLAlchemy engine for the auth database."""
@@ -49,7 +54,13 @@ def get_engine(db_path: str) -> Engine:
         pool_pre_ping=True,
         pool_recycle_seconds=1800,
     )
-    Base.metadata.create_all(engine)
+    # ``functools.cache`` memoizes the *result*, it does not serialize the
+    # call: every thread that arrives before the first one returns runs this
+    # body too. ``create_all(checkfirst=True)`` is a non-atomic
+    # check-then-CREATE, so unserialized first callers raced to CREATE TABLE
+    # against the same file and the losers got "table users already exists".
+    with _SCHEMA_LOCK:
+        Base.metadata.create_all(engine)
     return engine
 
 
