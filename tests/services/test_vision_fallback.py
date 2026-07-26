@@ -71,7 +71,7 @@ class TestComputeFallbackExif:
 
     @patch("file_organizer.services.vision_fallback._from_exif")
     @patch("file_organizer.services.vision_fallback._from_filename", return_value=None)
-    def test_exif_datetime_wins(self, _mock_fname, mock_exif, tmp_path: Path) -> None:
+    def test_exif_datetime_wins(self, mock_fname, mock_exif, tmp_path: Path) -> None:
         mock_exif.return_value = FallbackResult(
             folder="Images/Photos/2025/11",
             filename="DSC_0042",
@@ -84,6 +84,7 @@ class TestComputeFallbackExif:
         result = compute_fallback(img)
         assert result.source == "fallback_exif"
         assert result.folder == "Images/Photos/2025/11"
+        mock_fname.assert_not_called()  # EXIF hit short-circuits the filename heuristic
 
     @patch("file_organizer.services.vision_fallback._from_exif")
     def test_exif_overrides_filename_screenshot(self, mock_exif, tmp_path: Path) -> None:

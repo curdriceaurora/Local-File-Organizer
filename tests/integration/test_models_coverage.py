@@ -676,6 +676,9 @@ class TestAudioTranscriber:
                 transcriber_no_torch = AudioTranscriber(device="auto")
                 assert transcriber_no_torch.device == "cpu"
 
+        # Device detection is construction-time only; the model loads lazily.
+        mock_whisper_cls.assert_not_called()
+
     @patch("file_organizer.models.audio_transcriber.WhisperModel")
     def test_audio_transcriber_transcribe_and_language_detection(
         self, mock_whisper_cls: MagicMock, tmp_path: Path

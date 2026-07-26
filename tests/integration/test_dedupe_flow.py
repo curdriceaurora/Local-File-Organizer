@@ -81,6 +81,7 @@ def test_dedupe_flow_copy(mock_vision_cls, mock_text_cls, source_dir, output_dir
     assert (source_dir / "doc1.txt").exists()
     assert (source_dir / "doc2.txt").exists()
     assert (source_dir / "unique.txt").exists()
+    mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model
 
 
 @pytest.mark.integration
@@ -118,3 +119,4 @@ def test_dedupe_flow_hardlink(mock_vision_cls, mock_text_cls, source_dir, output
     src_stat = os.stat(source_dir / retained_name)
     dst_stat = os.stat(deduped_dir / retained_name)
     assert src_stat.st_ino == dst_stat.st_ino
+    mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model

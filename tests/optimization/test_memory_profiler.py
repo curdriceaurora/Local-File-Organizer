@@ -150,6 +150,7 @@ class TestMemoryProfilerProfile:
             pass
 
         assert my_named_function.__name__ == "my_named_function"
+        mock_rss.assert_not_called()  # decorating alone must not sample memory
 
     def test_profile_records_duration(self) -> None:
         """Test that duration is recorded correctly."""
@@ -424,6 +425,9 @@ class TestMemoryProfilerTracking:
         # Should still return a valid timeline (empty)
         assert isinstance(timeline, MemoryTimeline)
         assert len(timeline.snapshots) == 0
+        # Never-started tracking must not take any snapshots
+        mock_rss_vms.assert_not_called()
+        mock_objects.assert_not_called()
 
 
 @pytest.mark.unit

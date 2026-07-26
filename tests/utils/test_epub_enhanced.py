@@ -175,6 +175,7 @@ class TestEnhancedEPUBReader:
 
         with pytest.raises(FileNotFoundError, match="File not found"):
             reader.read_epub(Path("/") / "nonexistent" / "file.epub")
+        mock_read.assert_not_called()  # validation must reject before any parse attempt
 
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_metadata(self, mock_read, mock_epub_book, tmp_path):
@@ -247,8 +248,7 @@ class TestEnhancedEPUBReader:
         assert reader._word_to_number("tenth") == 10
         assert reader._word_to_number("eleventh") is None  # Not in map
 
-    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
-    def test_extract_chapter_title(self, mock_bs):
+    def test_extract_chapter_title(self):
         """Test extracting chapter title from HTML."""
         reader = EnhancedEPUBReader()
 
@@ -264,8 +264,7 @@ class TestEnhancedEPUBReader:
         title = reader._extract_chapter_title(mock_soup, mock_item)
         assert title == "Chapter Title"
 
-    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
-    def test_extract_chapter_title_from_filename(self, mock_bs):
+    def test_extract_chapter_title_from_filename(self):
         """Test extracting chapter title from filename."""
         reader = EnhancedEPUBReader()
 
@@ -279,8 +278,7 @@ class TestEnhancedEPUBReader:
         title = reader._extract_chapter_title(mock_soup, mock_item)
         assert title == "Chapter One"
 
-    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
-    def test_extract_text_from_html(self, mock_bs):
+    def test_extract_text_from_html(self):
         """Test extracting clean text from HTML."""
         reader = EnhancedEPUBReader()
 
@@ -306,8 +304,7 @@ class TestEnhancedEPUBReader:
         assert "Paragraph two" in text
         assert "var x = 1" not in text  # Script removed
 
-    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
-    def test_extract_chapters(self, mock_read, mock_epub_chapter, tmp_path):
+    def test_extract_chapters(self, mock_epub_chapter):
         """Test extracting chapters from EPUB."""
         mock_book = Mock()
         mock_book.get_items = Mock(return_value=[mock_epub_chapter])
@@ -320,8 +317,7 @@ class TestEnhancedEPUBReader:
         assert "first paragraph" in chapters[0].content
         assert chapters[0].word_count > 0
 
-    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
-    def test_extract_chapters_with_max_limit(self, mock_read, mock_epub_chapter):
+    def test_extract_chapters_with_max_limit(self, mock_epub_chapter):
         """Test extracting limited number of chapters."""
         # Create multiple chapter mocks
         chapters = [mock_epub_chapter for _ in range(5)]
@@ -348,8 +344,7 @@ class TestEnhancedEPUBReader:
         assert reader._has_cover(mock_book) is False
 
     @pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
-    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
-    def test_extract_cover(self, mock_read, tmp_path):
+    def test_extract_cover(self, tmp_path):
         """Test extracting cover image."""
         reader = EnhancedEPUBReader()
 

@@ -1048,6 +1048,7 @@ class TestEpubEnhancedGaps:
             content = reader.read_epub("dummy.epub", extract_cover=True)
             assert content.metadata.cover_path is None
             mock_warn.assert_called_with("Pillow not available, cannot extract cover image")
+        mock_exists.assert_called()  # the existence check is what lets "dummy.epub" through
 
     @patch("file_organizer.utils.epub_enhanced.sys.platform", "win32")
     @patch("file_organizer.utils.epub_enhanced.Path.is_symlink", return_value=True)

@@ -138,6 +138,13 @@ class TestDetectHardware:
         assert profile.vram_gb == 24.0
         assert profile.ram_gb == 32.0
         assert profile.cpu_cores == 10
+        # Detection short-circuits on the first hit: nvidia found, so the
+        # mps/amd probes must never run.
+        _nv.assert_called_once()
+        _mps.assert_not_called()
+        _amd.assert_not_called()
+        _ram.assert_called_once()
+        _cpu.assert_called_once()
 
     @patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=8)
     @patch(
@@ -164,6 +171,12 @@ class TestDetectHardware:
         profile = detect_hardware()
         assert profile.gpu_type == GpuType.APPLE_MPS
         assert profile.gpu_name == "Apple M2 Pro"
+        # nvidia probed first (missed), mps hit, so the amd probe never runs.
+        _nv.assert_called_once()
+        _mps.assert_called_once()
+        _amd.assert_not_called()
+        _ram.assert_called_once()
+        _cpu.assert_called_once()
 
     @patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=4)
     @patch(
