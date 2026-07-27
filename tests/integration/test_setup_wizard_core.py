@@ -316,12 +316,13 @@ class TestDetectCapabilities:
         with (
             patch(_HW_TARGET, return_value=hw),
             patch(_OLLAMA_TARGET, return_value=ollama),
-            patch(_MODELS_TARGET, return_value=[]),
+            patch(_MODELS_TARGET, return_value=[]) as mock_models,
             patch(_CFG_MGR_TARGET),
         ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             caps = wizard.detect_capabilities()
 
+        mock_models.assert_not_called()  # not running -> never enumerate models
         assert wizard.capabilities is caps
 
 
@@ -448,12 +449,13 @@ class TestGenerateConfig:
         with (
             patch(_HW_TARGET, hw_mock),
             patch(_OLLAMA_TARGET, ollama_mock),
-            patch(_MODELS_TARGET, return_value=[]),
+            patch(_MODELS_TARGET, return_value=[]) as mock_models,
             patch(_CFG_MGR_TARGET),
         ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             config = wizard.generate_config()  # no caps passed, no caps stored
 
+        mock_models.assert_not_called()  # not running -> never enumerate models
         assert config is not None
         assert wizard.capabilities is not None
         # Verify detect_capabilities() ran the hardware and Ollama discovery paths
@@ -852,10 +854,16 @@ class TestWizardRun:
         )
         mock_mgr = MagicMock()
 
-        with hw_p, ollama_p, models_p, patch(_CFG_MGR_TARGET, return_value=mock_mgr):
+        with (
+            hw_p,
+            ollama_p,
+            models_p as mock_models,
+            patch(_CFG_MGR_TARGET, return_value=mock_mgr),
+        ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
+        mock_models.assert_not_called()  # not running -> never enumerate models
         assert result.success is False
         assert len(result.errors) >= 1
         # Specifically: Ollama-not-running error must be present
@@ -870,12 +878,13 @@ class TestWizardRun:
         with (
             patch(_HW_TARGET, side_effect=RuntimeError("GPU detection failed")),
             patch(_OLLAMA_TARGET),
-            patch(_MODELS_TARGET, return_value=[]),
+            patch(_MODELS_TARGET, return_value=[]) as mock_models,
             patch(_CFG_MGR_TARGET, return_value=mock_mgr),
         ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
+        mock_models.assert_not_called()  # hardware probe raised first
         assert result.success is False
         assert any("GPU detection failed" in e for e in result.errors)
         assert wizard.status == SetupStatus.FAILED
@@ -890,10 +899,16 @@ class TestWizardRun:
         )
         mock_mgr = MagicMock()
 
-        with hw_p, ollama_p, models_p, patch(_CFG_MGR_TARGET, return_value=mock_mgr):
+        with (
+            hw_p,
+            ollama_p,
+            models_p as mock_models,
+            patch(_CFG_MGR_TARGET, return_value=mock_mgr),
+        ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
 
+        mock_models.assert_not_called()  # installed but stopped -> never enumerate
         assert any("Start Ollama" in w for w in result.warnings)
 
     def test_ollama_not_installed_adds_warning(self) -> None:
@@ -906,9 +921,16 @@ class TestWizardRun:
         )
         mock_mgr = MagicMock()
 
-        with hw_p, ollama_p, models_p, patch(_CFG_MGR_TARGET, return_value=mock_mgr):
+        with (
+            hw_p,
+            ollama_p,
+            models_p as mock_models,
+            patch(_CFG_MGR_TARGET, return_value=mock_mgr),
+        ):
             wizard = SetupWizard(mode=WizardMode.QUICK_START)
             result = wizard.run()
+
+        mock_models.assert_not_called()  # not installed -> never enumerate models
 
         # Source emits: "Install Ollama from https://ollama.com/download"
         assert any("Install Ollama" in w for w in result.warnings)
