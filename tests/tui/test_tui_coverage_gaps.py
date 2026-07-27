@@ -151,9 +151,11 @@ class TestSettingsViewActions:
         with (
             patch("file_organizer.tui.settings_view._MAX_WORKERS_CAP", 10),
             patch.object(view, "_refresh_panel"),
-            patch.object(view, "_set_status"),
+            patch.object(view, "_set_status") as mock_status,
         ):
             view.action_workers_up()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers == 3
 
     def test_workers_up_from_none_starts_at_2(self):
@@ -162,9 +164,11 @@ class TestSettingsViewActions:
         with (
             patch("file_organizer.tui.settings_view._MAX_WORKERS_CAP", 10),
             patch.object(view, "_refresh_panel"),
-            patch.object(view, "_set_status"),
+            patch.object(view, "_set_status") as mock_status,
         ):
             view.action_workers_up()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers == 2
 
     def test_workers_up_blocked_in_sequential(self):
@@ -181,24 +185,30 @@ class TestSettingsViewActions:
 
     def test_workers_down_decrements(self):
         view = self._make_view(max_workers=4, prefetch=2)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_workers_down()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers == 3
 
     def test_workers_down_to_none_at_minimum(self):
         view = self._make_view(max_workers=1, prefetch=2)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_workers_down()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers is None
 
     def test_workers_down_when_already_none(self):
         view = self._make_view(max_workers=None, prefetch=2)
         with (
             patch.object(view, "_refresh_panel") as mock_refresh,
-            patch.object(view, "_set_status"),
+            patch.object(view, "_set_status") as mock_status,
         ):
             view.action_workers_down()
         mock_refresh.assert_called_once()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
 
     def test_workers_down_blocked_in_sequential(self):
         view = self._make_view(sequential=True)
@@ -214,8 +224,10 @@ class TestSettingsViewActions:
 
     def test_prefetch_up_increments(self):
         view = self._make_view(max_workers=4, prefetch=2)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_prefetch_up()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._prefetch_depth == 3
 
     def test_prefetch_up_blocked_in_sequential(self):
@@ -232,14 +244,18 @@ class TestSettingsViewActions:
 
     def test_prefetch_down_decrements(self):
         view = self._make_view(max_workers=4, prefetch=3)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_prefetch_down()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._prefetch_depth == 2
 
     def test_prefetch_down_clamped_at_zero(self):
         view = self._make_view(max_workers=4, prefetch=0)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_prefetch_down()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._prefetch_depth == 0
 
     def test_prefetch_down_blocked_in_sequential(self):
@@ -256,14 +272,18 @@ class TestSettingsViewActions:
 
     def test_toggle_auto_workers_sets_to_one_when_none(self):
         view = self._make_view(max_workers=None, prefetch=2)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_toggle_auto_workers()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers == 1
 
     def test_toggle_auto_workers_sets_to_none_when_explicit(self):
         view = self._make_view(max_workers=4, prefetch=2)
-        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+        with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
             view.action_toggle_auto_workers()
+        # The success path updates the panel; it must not also post a status.
+        mock_status.assert_not_called()
         assert view._max_workers is None
 
     def test_toggle_auto_workers_blocked_in_sequential(self):
