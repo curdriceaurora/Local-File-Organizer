@@ -1085,11 +1085,8 @@ class TestEbookReaderGaps:
             read_ebook_file("dummy.epub")
         assert "ebooklib is not installed" in str(exc_info.value)
 
-    @patch("file_organizer.utils.readers.ebook.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.ebook._check_file_size")
-    def test_read_ebook_file_unsupported_format(
-        self, mock_size: MagicMock, mock_exists: MagicMock
-    ) -> None:
+    def test_read_ebook_file_unsupported_format(self, mock_size: MagicMock) -> None:
         from file_organizer.utils.readers.ebook import read_ebook_file
 
         with (
@@ -1097,11 +1094,12 @@ class TestEbookReaderGaps:
             pytest.raises(FileReadError) as exc_info,
         ):
             read_ebook_file("dummy.pdf")
+        # The size guard runs before any parsing is attempted.
+        mock_size.assert_called_once()
         assert "Unsupported ebook format" in str(exc_info.value)
 
-    @patch("file_organizer.utils.readers.ebook.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.ebook._check_file_size")
-    def test_read_ebook_file_parse(self, mock_size: MagicMock, mock_exists: MagicMock) -> None:
+    def test_read_ebook_file_parse(self, mock_size: MagicMock) -> None:
         from file_organizer.utils.readers.ebook import read_ebook_file
 
         mock_book = MagicMock()
@@ -1129,6 +1127,9 @@ class TestEbookReaderGaps:
             text_fileobj = read_ebook_file("dummy.epub", fileobj=mock_fileobj)
             assert text_fileobj == "Ebook Paragraph"
 
+        # The size guard runs before any parsing is attempted.
+        mock_size.assert_called()
+
 
 # ===========================================================================
 # 11. file_organizer/utils/readers/documents.py Tests
@@ -1142,12 +1143,9 @@ class TestDocumentReadersGaps:
         with pytest.raises(ValueError, match="requires file_path or fileobj"):
             read_text_file(None)
 
-    @patch("file_organizer.utils.readers.documents.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.documents._check_file_size")
     @patch("file_organizer.utils.readers.documents.Path.open")
-    def test_read_docx_file_workflow(
-        self, mock_open: MagicMock, mock_size: MagicMock, mock_exists: MagicMock
-    ) -> None:
+    def test_read_docx_file_workflow(self, mock_open: MagicMock, mock_size: MagicMock) -> None:
         import io
 
         from file_organizer.utils.readers.documents import read_docx_file
@@ -1177,9 +1175,11 @@ class TestDocumentReadersGaps:
             text = read_docx_file("dummy.docx")
             assert text == "Docx text line"
 
-    @patch("file_organizer.utils.readers.documents.Path.exists", return_value=True)
+        # The size guard runs before any parsing is attempted.
+        mock_size.assert_called()
+
     @patch("file_organizer.utils.readers.documents._check_file_size")
-    def test_read_pdf_file_workflow(self, mock_size: MagicMock, mock_exists: MagicMock) -> None:
+    def test_read_pdf_file_workflow(self, mock_size: MagicMock) -> None:
         from file_organizer.utils.readers.documents import read_pdf_file
 
         # Test PDF import error
@@ -1207,11 +1207,13 @@ class TestDocumentReadersGaps:
             text = read_pdf_file("dummy.pdf")
             assert text == "PDF text content"
 
-    @patch("file_organizer.utils.readers.documents.Path.exists", return_value=True)
+        # The size guard runs before any parsing is attempted.
+        mock_size.assert_called()
+
     @patch("file_organizer.utils.readers.documents._check_file_size")
     @patch("file_organizer.utils.readers.documents.Path.open")
     def test_read_spreadsheet_file_workflow(
-        self, mock_open: MagicMock, mock_size: MagicMock, mock_exists: MagicMock
+        self, mock_open: MagicMock, mock_size: MagicMock
     ) -> None:
         import io
 
@@ -1256,11 +1258,10 @@ class TestDocumentReadersGaps:
             assert "col1,col2" in text
             assert "val1,val2" in text
 
-    @patch("file_organizer.utils.readers.documents.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.documents._check_file_size")
     @patch("file_organizer.utils.readers.documents.Path.open")
     def test_read_presentation_file_workflow(
-        self, mock_open: MagicMock, mock_size: MagicMock, mock_exists: MagicMock
+        self, mock_open: MagicMock, mock_size: MagicMock
     ) -> None:
         import io
 
@@ -1407,6 +1408,9 @@ class TestCADReaderGaps:
             "HEADER;FILE_DESCRIPTION('STEP file');ENDSEC;DATA;\n#1\n#2"
         )
         res = read_cad_file("dummy.step")
+        # These paths return before the ezdxf failure branch, which is
+        # the only place the reader consults the filesystem.
+        mock_exists.assert_not_called()
         assert "STEP File Information" in res
         assert "Approximate entity count: 2" in res
 
@@ -1463,6 +1467,11 @@ class TestCADReaderGaps:
         ):
             read_dxf_file("dummy.dxf")
 
+        # Every branch above returns before the ezdxf-failure fallback, which is
+        # the only place the reader touches the filesystem.
+        mock_exists.assert_not_called()
+        mock_open.assert_not_called()
+
     @patch("file_organizer.utils.readers.cad.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.cad._check_file_size")
     @patch("file_organizer.utils.readers.cad.Path.stat")
@@ -1505,6 +1514,9 @@ class TestCADReaderGaps:
             "HEADER;FILE_NAME('my_step');ENDSEC;DATA;\n#1"
         )
         res = read_step_file("dummy.step")
+        # These paths return before the ezdxf failure branch, which is
+        # the only place the reader consults the filesystem.
+        mock_exists.assert_not_called()
         assert "FILE_NAME('my_step')" in res
 
         # 2. Test exception handling
@@ -1538,6 +1550,9 @@ class TestCADReaderGaps:
         )
         mock_open.return_value.__enter__.return_value = io.StringIO(iges_content)
         res = read_iges_file("dummy.iges")
+        # These paths return before the ezdxf failure branch, which is
+        # the only place the reader consults the filesystem.
+        mock_exists.assert_not_called()
         assert "=== Start Section ===" in res
         assert "=== Global Parameters ===" in res
 
