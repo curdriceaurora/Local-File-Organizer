@@ -45,6 +45,8 @@ class TestDocumentDeduplicator(unittest.TestCase):
         DocumentDeduplicator(similarity_threshold=0.9, max_features=3000)
         mock_emb_cls.assert_called_once_with(max_features=3000)
         mock_sem_cls.assert_called_once_with(threshold=0.9)
+        # Pin that the patched dependency is what the code consulted.
+        mock_ext_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -66,6 +68,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         self.assertEqual(result["total_documents"], 1)
         self.assertEqual(result["analyzed_documents"], 0)
         self.assertEqual(result["space_wasted"], 0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -115,6 +121,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         self.assertEqual(result["total_documents"], 3)
         self.assertEqual(result["space_wasted"], 200)
         self.assertEqual(len(result["duplicate_groups"]), 1)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -134,6 +144,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         args = dedup.extractor.extract_batch.call_args[0][0]
         self.assertEqual(len(args), 1)
         self.assertEqual(args[0].suffix, ".txt")
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -156,6 +170,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
 
         result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertAlmostEqual(result, 0.87)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -171,6 +189,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
 
         result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertIsNone(result)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -186,6 +208,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
 
         result = dedup.compare_documents(Path("/") / "a.txt", Path("/") / "b.txt")
         self.assertIsNone(result)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -219,6 +245,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         # Clean up
         Path(f1_path).unlink(missing_ok=True)
         Path(f2_path).unlink(missing_ok=True)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -237,6 +267,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         ]
         wasted = dedup._calculate_space_wasted(groups)
         self.assertEqual(wasted, 0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
     @patch("file_organizer.services.deduplication.document_dedup.SemanticAnalyzer")
     @patch("file_organizer.services.deduplication.document_dedup.DocumentEmbedder")
@@ -253,6 +287,10 @@ class TestDocumentDeduplicator(unittest.TestCase):
         groups = [{"files": ["/only_one.txt"]}]
         wasted = dedup._calculate_space_wasted(groups)
         self.assertEqual(wasted, 0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_emb_cls.assert_called()
+        mock_ext_cls.assert_called()
+        mock_sem_cls.assert_called()
 
 
 if __name__ == "__main__":
