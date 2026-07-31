@@ -525,12 +525,14 @@ class TestDoctorGlobalFlags:
         mock_result.returncode = 0
 
         with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
-            with patch("subprocess.run", return_value=mock_result):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
                 result = runner.invoke(
                     app, ["--no-interactive", "doctor", str(audio_files_dir), "--install"]
                 )
                 # Should handle non-interactive mode gracefully
                 assert result.exit_code == 0
+                # Non-interactive mode must not install without confirmation.
+                mock_run.assert_not_called()
 
 
 # ============================================================================
