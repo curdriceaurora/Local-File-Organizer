@@ -87,6 +87,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [10_000_000] * 100
         batch_size = sizer.calculate_batch_size(file_sizes, overhead_per_file=0)
         assert batch_size == 70
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -100,6 +102,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [10_000_000] * 100
         batch_size = sizer.calculate_batch_size(file_sizes, overhead_per_file=10_000_000)
         assert batch_size == 35
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -113,6 +117,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [1024] * 5  # 5 tiny files
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size == 5
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -126,6 +132,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [1024] * 1000  # 1000 tiny files
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size <= 10
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -139,6 +147,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [10_000_000] * 100  # Large files
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size >= 5
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     def test_empty_file_list(self) -> None:
         """Test with empty file list returns min batch size."""
@@ -157,6 +167,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [1024] * 10
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size == sizer.min_batch_size
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -170,6 +182,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [10_000_000] * 200
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size == 50
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -184,6 +198,8 @@ class TestAdaptiveBatchSizerCalculate:
         file_sizes = [5_000_000, 15_000_000] * 50  # 100 files, avg 10M
         batch_size = sizer.calculate_batch_size(file_sizes)
         assert batch_size == 100
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
 
 @pytest.mark.unit
@@ -202,6 +218,8 @@ class TestAdaptiveBatchSizerFeedback:
         # = 10M per file, so new batch = 700M / 10M = 70
         new_size = sizer.adjust_from_feedback(actual_memory=100_000_000, batch_size=10)
         assert new_size == 70
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -215,6 +233,8 @@ class TestAdaptiveBatchSizerFeedback:
         # = 70M per file, so new batch = 700M / 70M = 10
         new_size = sizer.adjust_from_feedback(actual_memory=700_000_000, batch_size=10)
         assert new_size == 10
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     def test_adjust_with_zero_batch_size(self) -> None:
         """Test adjust_from_feedback with zero batch size."""
@@ -237,6 +257,8 @@ class TestAdaptiveBatchSizerFeedback:
         assert len(history) == 2
         assert history[0] == (1024, 5)
         assert history[1] == (2048, 10)
+        # Pin that the patched probe is what the code consulted.
+        assert mock_mem.call_count == 2
 
     def test_clear_history(self) -> None:
         """Test clearing feedback history."""
@@ -260,6 +282,8 @@ class TestAdaptiveBatchSizerFeedback:
         sizer = AdaptiveBatchSizer()
         result = sizer.adjust_from_feedback(actual_memory=1024, batch_size=10)
         assert result == sizer.min_batch_size
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -274,3 +298,5 @@ class TestAdaptiveBatchSizerFeedback:
         # But capped at max=20
         new_size = sizer.adjust_from_feedback(actual_memory=1_000_000, batch_size=1)
         assert new_size == 20
+        # Pin that the patched probe is what the code consulted.
+        mock_mem.assert_called_once()

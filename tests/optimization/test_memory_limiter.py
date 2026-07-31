@@ -78,18 +78,24 @@ class TestMemoryLimiterCheck:
         """Test check returns True when under limit."""
         limiter = MemoryLimiter(max_memory_mb=512)
         assert limiter.check() is True
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_check_over_limit(self, mock_rss: MagicMock) -> None:
         """Test check returns False when over limit."""
         limiter = MemoryLimiter(max_memory_mb=512)
         assert limiter.check() is False
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=512 * 1024 * 1024)
     def test_check_at_exact_limit(self, mock_rss: MagicMock) -> None:
         """Test check returns False when exactly at limit."""
         limiter = MemoryLimiter(max_memory_mb=512)
         assert limiter.check() is False
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
 
 @pytest.mark.unit
@@ -102,6 +108,8 @@ class TestMemoryLimiterEnforce:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 0
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_warn_action(self, mock_rss: MagicMock) -> None:
@@ -109,6 +117,8 @@ class TestMemoryLimiterEnforce:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.WARN)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 1
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_block_action(self, mock_rss: MagicMock) -> None:
@@ -116,6 +126,8 @@ class TestMemoryLimiterEnforce:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.BLOCK)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 1
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_raise_action(self, mock_rss: MagicMock) -> None:
@@ -124,6 +136,8 @@ class TestMemoryLimiterEnforce:
         with pytest.raises(MemoryLimitError, match="Memory limit exceeded"):
             limiter.enforce()
         assert limiter.violation_count == 1
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_evict_cache_calls_callback(self, mock_rss: MagicMock) -> None:
@@ -135,6 +149,8 @@ class TestMemoryLimiterEnforce:
 
         callback.assert_called_once()
         assert limiter.violation_count == 1
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_evict_cache_no_callback(self, mock_rss: MagicMock) -> None:
@@ -142,6 +158,8 @@ class TestMemoryLimiterEnforce:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.EVICT_CACHE)
         limiter.enforce()  # Should not raise even without callback
         assert limiter.violation_count == 1
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_increments_violation_count(self, mock_rss: MagicMock) -> None:
@@ -151,6 +169,8 @@ class TestMemoryLimiterEnforce:
         limiter.enforce()
         limiter.enforce()
         assert limiter.violation_count == 3
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 3
 
 
 @pytest.mark.unit
@@ -163,6 +183,8 @@ class TestMemoryLimiterGuarded:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         with limiter.guarded():
             pass  # Should not raise
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_guarded_over_limit_raises_on_entry(self, mock_rss: MagicMock) -> None:
@@ -171,6 +193,8 @@ class TestMemoryLimiterGuarded:
         with pytest.raises(MemoryLimitError):
             with limiter.guarded():
                 pass
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     def test_guarded_enforces_on_exit(self) -> None:
         """Test that guarded context enforces on exit."""
@@ -200,9 +224,13 @@ class TestMemoryLimiterGetCurrentMemory:
         """Test get_current_memory_mb returns correct value."""
         limiter = MemoryLimiter(max_memory_mb=512)
         assert limiter.get_current_memory_mb() == 256.0
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=0)
     def test_get_current_memory_mb_zero(self, mock_rss: MagicMock) -> None:
         """Test get_current_memory_mb when RSS is zero."""
         limiter = MemoryLimiter(max_memory_mb=512)
         assert limiter.get_current_memory_mb() == 0.0
+        # Pin that the patched probe is what the code consulted.
+        mock_rss.assert_called_once()
