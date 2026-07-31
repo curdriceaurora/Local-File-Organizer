@@ -253,7 +253,7 @@ class TestDaemonStatus:
 class TestDaemonProcess:
     def test_process_dry_run(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:

@@ -429,7 +429,7 @@ class TestOrganizePreview:
     def test_preview_dry_run(
         self,
         organize_client: TestClient,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:
@@ -492,7 +492,7 @@ class TestOrganizeExecute:
     def test_execute_sync_returns_result(
         self,
         organize_client: TestClient,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:
