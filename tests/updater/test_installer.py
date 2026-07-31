@@ -73,16 +73,18 @@ class TestInstallerInit:
         assert inst.install_dir == expected
 
     @patch("platform.system", return_value="Darwin")
-    def test_pip_upgrade_command_macos(self, _system, monkeypatch):
+    def test_pip_upgrade_command_macos(self, mock_system, monkeypatch):
         monkeypatch.delenv("PIPX_HOME", raising=False)
         monkeypatch.delenv("PIPX_BIN_DIR", raising=False)
         inst = UpdateInstaller()
         command = inst.pip_upgrade_command()
         assert command is not None
         assert command[-4:] == ["-m", "pip", "install", "-U", "local-file-organizer"][-4:]
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Windows")
-    def test_pip_upgrade_command_pipx(self, _system, monkeypatch, tmp_path):
+    def test_pip_upgrade_command_pipx(self, mock_system, monkeypatch, tmp_path):
         monkeypatch.setattr(
             sys,
             "executable",
@@ -90,9 +92,11 @@ class TestInstallerInit:
         )
         inst = UpdateInstaller()
         assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Darwin")
-    def test_pip_upgrade_command_ignores_global_pipx_env(self, _system, monkeypatch, tmp_path):
+    def test_pip_upgrade_command_ignores_global_pipx_env(self, mock_system, monkeypatch, tmp_path):
         monkeypatch.setenv("PIPX_HOME", str(tmp_path / "pipx"))
         monkeypatch.setenv("PIPX_BIN_DIR", str(tmp_path / "bin"))
         inst = UpdateInstaller()
@@ -100,20 +104,26 @@ class TestInstallerInit:
         assert command is not None
         assert command[0] == sys.executable
         assert command[1:] == ["-m", "pip", "install", "-U", "local-file-organizer"]
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Windows")
-    def test_pip_upgrade_command_detects_pipx_virtualenv(self, _system, monkeypatch, tmp_path):
+    def test_pip_upgrade_command_detects_pipx_virtualenv(self, mock_system, monkeypatch, tmp_path):
         monkeypatch.setenv(
             "VIRTUAL_ENV",
             str(tmp_path / "pipx" / "venvs" / "local-file-organizer"),
         )
         inst = UpdateInstaller()
         assert inst.pip_upgrade_command() == ["pipx", "upgrade", "local-file-organizer"]
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
-    def test_pip_upgrade_command_linux_none(self, _system):
+    def test_pip_upgrade_command_linux_none(self, mock_system):
         inst = UpdateInstaller()
         assert inst.pip_upgrade_command() is None
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +300,7 @@ class TestSelectAsset:
 
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
-    def test_select_linux_x64(self, _m, _s):
+    def test_select_linux_x64(self, mock_machine, mock_system):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
@@ -302,10 +312,13 @@ class TestSelectAsset:
         asset = inst.select_asset(release)
         assert asset is not None
         assert "linux" in asset.name.lower()
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Darwin")
     @patch("platform.machine", return_value="arm64")
-    def test_select_macos_arm(self, _m, _s):
+    def test_select_macos_arm(self, mock_machine, mock_system):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
@@ -316,10 +329,13 @@ class TestSelectAsset:
         asset = inst.select_asset(release)
         assert asset is not None
         assert "macos" in asset.name.lower()
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Windows")
     @patch("platform.machine", return_value="AMD64")
-    def test_select_windows(self, _m, _s):
+    def test_select_windows(self, mock_machine, mock_system):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
@@ -330,18 +346,24 @@ class TestSelectAsset:
         asset = inst.select_asset(release)
         assert asset is not None
         assert "windows" in asset.name.lower()
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
-    def test_no_matching_asset(self, _m, _s):
+    def test_no_matching_asset(self, mock_machine, mock_system):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(["app-macos-arm64.zip"])
         asset = inst.select_asset(release)
         assert asset is None
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
     @patch("platform.machine", return_value="x86_64")
-    def test_skips_checksum_files(self, _m, _s):
+    def test_skips_checksum_files(self, mock_machine, mock_system):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
         release = self._make_release(
             [
@@ -352,6 +374,9 @@ class TestSelectAsset:
         asset = inst.select_asset(release)
         assert asset is not None
         assert asset.name.endswith(".AppImage")
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +401,8 @@ class TestFindChecksum:
         )
         result = inst.find_checksum(release, "app.bin")
         assert result == "abc123"
+        # The platform probe is what drives this decision.
+        mock_dl.assert_called()
 
     @patch.object(
         UpdateInstaller,
@@ -394,6 +421,8 @@ class TestFindChecksum:
         )
         result = inst.find_checksum(release, "app.bin")
         assert result == "def456"
+        # The platform probe is what drives this decision.
+        mock_dl.assert_called()
 
     def test_no_checksum_file(self):
         inst = UpdateInstaller(install_dir=Path("/") / "tmp")  # noqa: test-hardcoded-paths
@@ -484,48 +513,61 @@ class TestPlatformHints:
     """Test platform/arch hint helpers for branch coverage."""
 
     @patch("platform.system", return_value="Windows")
-    def test_windows_platform_hints(self, _s):
+    def test_windows_platform_hints(self, mock_system):
         from file_organizer.updater.installer import _get_platform_hints
 
         hints = _get_platform_hints()
         assert "windows" in hints
         assert "win" in hints
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
-    def test_linux_platform_hints(self, _s):
+    def test_linux_platform_hints(self, mock_system):
         from file_organizer.updater.installer import _get_platform_hints
 
         hints = _get_platform_hints()
         assert "linux" in hints
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.machine", return_value="x86_64")
     @patch("platform.system", return_value="Linux")
-    def test_x86_64_arch_hints(self, _s, _m):
+    def test_x86_64_arch_hints(self, mock_system, mock_machine):
         from file_organizer.updater.installer import _get_arch_hints
 
         hints = _get_arch_hints()
         assert "x86_64" in hints
         assert "amd64" in hints
         assert "universal" not in hints
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.machine", return_value="arm64")
     @patch("platform.system", return_value="Darwin")
-    def test_arm64_darwin_arch_hints(self, _s, _m):
+    def test_arm64_darwin_arch_hints(self, mock_system, mock_machine):
         from file_organizer.updater.installer import _get_arch_hints
 
         hints = _get_arch_hints()
         assert "arm64" in hints
         assert "aarch64" in hints
         assert "universal" in hints
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
     @patch("platform.machine", return_value="riscv64")
     @patch("platform.system", return_value="Linux")
-    def test_unknown_arch_hints(self, _s, _m):
+    def test_unknown_arch_hints(self, mock_system, mock_machine):
         from file_organizer.updater.installer import _get_arch_hints
 
         hints = _get_arch_hints()
         # No recognized arch, but no universal either (Linux)
         assert hints == []
+        # The platform probe is what drives this decision.
+        mock_machine.assert_called()
+        mock_system.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -538,53 +580,67 @@ class TestScoreAsset:
     """Test _score_asset for branch coverage on each platform."""
 
     @patch("platform.system", return_value="Darwin")
-    def test_darwin_dmg_penalty(self, _s):
+    def test_darwin_dmg_penalty(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-macos-arm64.dmg")
         assert score == -5  # dmg penalty
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Darwin")
-    def test_darwin_zip_penalty(self, _s):
+    def test_darwin_zip_penalty(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-macos-arm64.tar.gz")
         assert score == -3  # .tar.gz penalty
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Darwin")
-    def test_darwin_universal_bonus(self, _s):
+    def test_darwin_universal_bonus(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-macos-universal")
         assert score == 3  # universal bonus
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Windows")
-    def test_windows_exe_bonus(self, _s):
+    def test_windows_exe_bonus(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-windows-amd64.exe")
         assert score == 3
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Windows")
-    def test_windows_installer_penalty(self, _s):
+    def test_windows_installer_penalty(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-windows-setup.exe")
         assert score == 3 - 4  # exe bonus + setup penalty
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
-    def test_linux_appimage_bonus(self, _s):
+    def test_linux_appimage_bonus(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-linux-x86_64.appimage")
         assert score == 5
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
     @patch("platform.system", return_value="Linux")
-    def test_linux_tarball_bonus(self, _s):
+    def test_linux_tarball_bonus(self, mock_system):
         from file_organizer.updater.installer import _score_asset
 
         score = _score_asset("app-linux-x86_64.tar.gz")
         assert score == 2
+        # The platform probe is what drives this decision.
+        mock_system.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +724,8 @@ class TestFindChecksumEdgeCases:
         )
         result = inst.find_checksum(release, "app.bin")
         assert result == ""
+        # The platform probe is what drives this decision.
+        mock_dl.assert_called()
 
     @patch.object(
         UpdateInstaller,
@@ -687,6 +745,8 @@ class TestFindChecksumEdgeCases:
         )
         result = inst.find_checksum(release, "app.bin")
         assert result == ""
+        # The platform probe is what drives this decision.
+        mock_dl.assert_called()
 
 
 # ---------------------------------------------------------------------------
