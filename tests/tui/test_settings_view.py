@@ -515,9 +515,11 @@ def test_settings_view_workers_up_increments_from_auto() -> None:
     view = SettingsView()
     view._max_workers = None
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_workers_up()
 
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
     assert view._max_workers == 2
 
 
@@ -526,9 +528,11 @@ def test_settings_view_workers_down_returns_to_auto_at_one() -> None:
     view = SettingsView()
     view._max_workers = 1
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_workers_down()
 
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
     assert view._max_workers is None
 
 
@@ -538,12 +542,15 @@ def test_settings_view_prefetch_up_and_down() -> None:
     view._max_workers = 2
     view._prefetch_depth = 0
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_prefetch_up()
         assert view._prefetch_depth == 1
         view.action_prefetch_down()
         view.action_prefetch_down()  # clamps, does not go negative
         assert view._prefetch_depth == 0
+
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
 
 
 def test_settings_view_toggle_auto_workers() -> None:
@@ -551,11 +558,14 @@ def test_settings_view_toggle_auto_workers() -> None:
     view = SettingsView()
     view._max_workers = None
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_toggle_auto_workers()
         assert view._max_workers == 1
         view.action_toggle_auto_workers()
         assert view._max_workers is None
+
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
 
 
 def test_settings_view_actions_blocked_in_sequential_mode() -> None:
