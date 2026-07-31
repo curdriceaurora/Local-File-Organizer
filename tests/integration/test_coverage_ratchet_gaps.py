@@ -665,6 +665,8 @@ class TestAudioMetadataExtractorGaps:
             assert meta.encoder == "Lame"
             assert meta.has_artwork is True
             assert meta.artwork_count == 1
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     @patch("file_organizer.services.audio.metadata_extractor.Path.exists", return_value=True)
     @patch("file_organizer.services.audio.metadata_extractor.Path.stat")
@@ -715,6 +717,8 @@ class TestAudioMetadataExtractorGaps:
             assert meta_mp4.title == "MP4 Title"
             assert meta_mp4.track_number == 4
             assert meta_mp4.disc_number == 1
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     @patch("file_organizer.services.audio.metadata_extractor.Path.exists", return_value=True)
     @patch("file_organizer.services.audio.metadata_extractor.Path.stat")
@@ -769,6 +773,8 @@ class TestAudioMetadataExtractorGaps:
             ) as exc_info:
                 extractor_no_fallback.extract("dummy.mp3")
             assert "mutagen is required" in str(exc_info.value)
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     def test_audio_metadata_extractor_file_not_found(self) -> None:
         from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
@@ -839,6 +845,8 @@ class TestVideoMetadataExtractorGaps:
         assert meta.duration == 12.34
         assert meta.bitrate == 5000000
         assert meta.creation_date is not None
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     @patch("file_organizer.services.video.metadata_extractor.Path.exists", return_value=True)
     @patch("file_organizer.services.video.metadata_extractor.Path.stat")
@@ -876,6 +884,8 @@ class TestVideoMetadataExtractorGaps:
         meta3 = extractor.extract(Path("dummy.mp4"))
         assert meta3.creation_date.year == 2024
         assert meta3.creation_date.hour == 18
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     @patch("file_organizer.services.video.metadata_extractor.Path.exists", return_value=True)
     @patch("file_organizer.services.video.metadata_extractor.Path.stat")
@@ -916,6 +926,8 @@ class TestVideoMetadataExtractorGaps:
             mock_cv2.VideoCapture.return_value = mock_cap_fail
             meta_fail = extractor.extract(Path("dummy.mp4"))
             assert meta_fail.width is None
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     def test_video_metadata_extractor_file_not_found(self) -> None:
         from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
@@ -1019,6 +1031,8 @@ class TestEpubEnhancedGaps:
             assert content.metadata.isbn == "9781234567890"
             assert content.total_chapters == 1
             assert "This is the first chapter paragraph." in content.raw_text
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
 
     @patch("file_organizer.utils.epub_enhanced.Path.exists", return_value=True)
     def test_epub_enhanced_cover_extraction_pillow_unavailable(
@@ -1058,6 +1072,8 @@ class TestEpubEnhancedGaps:
 
         with pytest.raises(SymlinkRejected):
             _read_epub_legacy_checked(Path("dummy.epub"))
+        # Pin the guard the code actually consulted.
+        mock_is_symlink.assert_called()
 
 
 # ===========================================================================
@@ -1257,6 +1273,8 @@ class TestDocumentReadersGaps:
             text = read_spreadsheet_file("dummy.xlsx")
             assert "col1,col2" in text
             assert "val1,val2" in text
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
 
     @patch("file_organizer.utils.readers.documents._check_file_size")
     @patch("file_organizer.utils.readers.documents.Path.open")
@@ -1294,6 +1312,8 @@ class TestDocumentReadersGaps:
         ):
             text = read_presentation_file("dummy.pptx")
             assert "Slide 1: Slide text content" in text
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
 
 
 # ===========================================================================
@@ -1413,6 +1433,8 @@ class TestCADReaderGaps:
         mock_exists.assert_not_called()
         assert "STEP File Information" in res
         assert "Approximate entity count: 2" in res
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
 
     @patch("file_organizer.utils.readers.cad.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.cad._check_file_size")
@@ -1471,6 +1493,8 @@ class TestCADReaderGaps:
         # the only place the reader touches the filesystem.
         mock_exists.assert_not_called()
         mock_open.assert_not_called()
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
 
     @patch("file_organizer.utils.readers.cad.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.cad._check_file_size")
@@ -1492,6 +1516,9 @@ class TestCADReaderGaps:
             res = read_dwg_file("dummy.dwg")
             assert "=== DWG File Information ===" in res
             assert "Size: 2.00 KB" in res
+        # Pin the guard the code actually consulted.
+        mock_exists.assert_called()
+        mock_size.assert_called()
 
     @patch("file_organizer.utils.readers.cad.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.cad._check_file_size")
@@ -1523,6 +1550,8 @@ class TestCADReaderGaps:
         mock_open.side_effect = OSError("Read failed")
         with pytest.raises(FileReadError, match="Failed to read STEP file"):
             read_step_file("dummy.step")
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
 
     @patch("file_organizer.utils.readers.cad.Path.exists", return_value=True)
     @patch("file_organizer.utils.readers.cad._check_file_size")
@@ -1560,3 +1589,5 @@ class TestCADReaderGaps:
         mock_open.side_effect = OSError("Read failed")
         with pytest.raises(FileReadError, match="Failed to read IGES file"):
             read_iges_file("dummy.iges")
+        # Pin the guard the code actually consulted.
+        mock_size.assert_called()
