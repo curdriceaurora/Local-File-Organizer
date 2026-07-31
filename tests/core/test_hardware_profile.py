@@ -204,6 +204,12 @@ class TestDetectHardware:
         assert profile.gpu_type == GpuType.NONE
         assert profile.gpu_name is None
         assert profile.vram_bytes == 0
+        # Pin that the patched dependency is what the code consulted.
+        _amd.assert_called()
+        _cpu.assert_called()
+        _mps.assert_called()
+        _nv.assert_called()
+        _ram.assert_called()
 
     @patch("file_organizer.core.hardware_profile._get_cpu_cores", return_value=16)
     @patch(
@@ -233,6 +239,12 @@ class TestDetectHardware:
         profile = detect_hardware()
         assert profile.gpu_type == GpuType.AMD
         assert profile.gpu_name == "Radeon RX 7900 XTX"
+        # Pin that the patched dependency is what the code consulted.
+        _amd.assert_called()
+        _cpu.assert_called()
+        _mps.assert_called()
+        _nv.assert_called()
+        _ram.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +276,8 @@ class TestDetectionHelpers:
         name, vram = _detect_nvidia()
         assert name is None
         assert vram == 0
+        # Pin that the patched dependency is what the code consulted.
+        _.assert_called()
 
     @patch("platform.system", return_value="Linux")
     def test_apple_mps_not_on_linux(self, _: MagicMock) -> None:
@@ -271,6 +285,8 @@ class TestDetectionHelpers:
 
         name, vram = _detect_apple_mps()
         assert name is None
+        # Pin that the patched dependency is what the code consulted.
+        _.assert_called()
 
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_amd_detect_no_rocm_smi(self, _: MagicMock) -> None:
@@ -279,6 +295,8 @@ class TestDetectionHelpers:
         name, vram = _detect_amd()
         assert name is None
         assert vram == 0
+        # Pin that the patched dependency is what the code consulted.
+        _.assert_called()
 
     @patch("subprocess.run")
     def test_nvidia_detect_too_few_csv_fields(self, mock_run: MagicMock) -> None:
@@ -301,6 +319,9 @@ class TestDetectionHelpers:
         name, vram = _detect_apple_mps()
         assert name is None
         assert vram == 0
+        # Pin that the patched dependency is what the code consulted.
+        _run.assert_called()
+        _sys.assert_called()
 
     @patch("subprocess.run")
     def test_amd_detect_nonzero_returncode(self, mock_run: MagicMock) -> None:
@@ -337,6 +358,8 @@ class TestDetectionHelpers:
         name, mem = _detect_apple_mps()
         assert name == "Apple M3 Max"
         assert mem == 64 * 1024**3
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
 
     @patch("platform.system", return_value="Darwin")
     @patch("subprocess.run")
@@ -350,6 +373,8 @@ class TestDetectionHelpers:
         name, mem = _detect_apple_mps()
         assert name is None
         assert mem == 0
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
 
     @patch("subprocess.run")
     def test_amd_detect_meminfo_nonzero_returncode_keeps_zero_vram(
@@ -401,6 +426,9 @@ class TestSystemResourceFallbacks:
 
         mock_run.return_value = MagicMock(returncode=0, stdout=f"{32 * 1024**3}\n")
         assert _get_system_ram() == 32 * 1024**3
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
+        _vm.assert_called()
 
     @patch("platform.system", return_value="Darwin")
     @patch("subprocess.run")
@@ -414,6 +442,9 @@ class TestSystemResourceFallbacks:
         mock_run.return_value = MagicMock(returncode=1, stdout="")
         with patch("builtins.open", side_effect=OSError("no /proc on macOS")):
             assert _get_system_ram() == 0
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
+        _vm.assert_called()
 
     @patch("platform.system", return_value="Darwin")
     @patch("subprocess.run", side_effect=FileNotFoundError("sysctl missing"))
@@ -426,6 +457,10 @@ class TestSystemResourceFallbacks:
 
         with patch("builtins.open", side_effect=OSError("no /proc on macOS")):
             assert _get_system_ram() == 0
+        # Pin that the patched dependency is what the code consulted.
+        _run.assert_called()
+        _sys.assert_called()
+        _vm.assert_called()
 
     @patch("platform.system", return_value="Linux")
     @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
@@ -436,6 +471,9 @@ class TestSystemResourceFallbacks:
         meminfo = "MemTotal:       16384000 kB\nMemFree: 100 kB\n"
         with patch("builtins.open", mock_open(read_data=meminfo)):
             assert _get_system_ram() == 16384000 * 1024
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
+        _vm.assert_called()
 
     @patch("platform.system", return_value="Linux")
     @patch("psutil.virtual_memory", side_effect=OSError("no psutil mem"))
@@ -447,6 +485,9 @@ class TestSystemResourceFallbacks:
 
         with patch("builtins.open", side_effect=OSError("unreadable")):
             assert _get_system_ram() == 0
+        # Pin that the patched dependency is what the code consulted.
+        _sys.assert_called()
+        _vm.assert_called()
 
     def test_cpu_cores_without_psutil_uses_os_cpu_count(self) -> None:
         """When psutil is unavailable, fall back to os.cpu_count()."""

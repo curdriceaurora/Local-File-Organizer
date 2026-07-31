@@ -50,6 +50,8 @@ class TestDaemonStart:
         assert result.exit_code == 0
         assert "foreground" in result.output.lower()
         mock_svc.start.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_config_cls.assert_called()
 
     @patch("file_organizer.daemon.service.DaemonService")
     @patch("file_organizer.daemon.config.DaemonConfig")
@@ -66,6 +68,8 @@ class TestDaemonStart:
         assert result.exit_code == 0
         assert "background" in result.output.lower()
         mock_svc.start_background.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_config_cls.assert_called()
 
     @patch("file_organizer.daemon.service.DaemonService")
     @patch("file_organizer.daemon.config.DaemonConfig")
@@ -81,6 +85,8 @@ class TestDaemonStart:
         )
         assert result.exit_code == 0
         assert "dry-run" in result.output.lower() or "Dry-run" in result.output
+        # Pin that the patched dependency is what the code consulted.
+        mock_config_cls.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +105,8 @@ class TestDaemonStop:
         result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 1
         assert "No PID file" in result.output or "not be running" in result.output
+        # Pin that the patched dependency is what the code consulted.
+        mock_pid_cls.assert_called()
 
     @patch("file_organizer.cli.daemon.os.kill")
     @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
@@ -117,6 +125,8 @@ class TestDaemonStop:
         result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
         assert "stopped" in result.output.lower()
+        # Pin that the patched dependency is what the code consulted.
+        mock_kill.assert_called()
 
     @patch("file_organizer.cli.daemon.os.kill", side_effect=ProcessLookupError)
     @patch("file_organizer.cli.daemon._DEFAULT_PID_FILE")
@@ -135,6 +145,8 @@ class TestDaemonStop:
         result = runner.invoke(app, ["daemon", "stop"])
         assert result.exit_code == 0
         assert "not found" in result.output.lower()
+        # Pin that the patched dependency is what the code consulted.
+        mock_kill.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +250,8 @@ class TestDaemonProcess:
         result = runner.invoke(app, ["daemon", "process", str(input_dir), str(output_dir)])
         assert result.exit_code == 1
         assert "Model unavailable" in result.output
+        # Pin that the patched dependency is what the code consulted.
+        mock_org_cls.assert_called()
 
 
 class TestDaemonWatch:
@@ -274,6 +288,8 @@ class TestDaemonWatch:
         assert "Stopped watching" in result.output
         mock_monitor.start.assert_called_once()
         mock_monitor.stop.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_config_cls.assert_called()
 
     @patch("file_organizer.watcher.monitor.FileMonitor")
     @patch("file_organizer.watcher.config.WatcherConfig")
@@ -303,3 +319,5 @@ class TestDaemonWatch:
         # about *content*, not Rich's layout.
         normalized_output = result.output.replace("\n", "")
         assert "fallback.txt" in normalized_output
+        # Pin that the patched dependency is what the code consulted.
+        mock_config_cls.assert_called()
