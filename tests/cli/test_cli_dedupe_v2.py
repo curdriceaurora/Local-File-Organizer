@@ -214,6 +214,8 @@ class TestDedupeReport:
         assert result.exit_code == 0
         assert "Duplicate Report" in result.output
         assert "100" in result.output
+        # Pin that the patched dependency is what the code consulted.
+        mock_scan_opts.assert_called()
 
     @patch("file_organizer.services.deduplication.detector.ScanOptions")
     @patch("file_organizer.cli.dedupe_v2._get_detector")
@@ -241,6 +243,8 @@ class TestDedupeReport:
         assert envelope["command"] == "report"
         assert envelope["summary"]["total_files"] == 50
         assert envelope["summary"]["duplicate_files"] == 5
+        # Pin that the patched dependency is what the code consulted.
+        mock_scan_opts.assert_called()
 
 
 # ---------------------------------------------------------------------------

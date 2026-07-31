@@ -128,6 +128,8 @@ def test_organize_command_live(mock_create_service, _mock_setup, tmp_path):
     assert plan is None
     assert request.input_path == in_dir.resolve()
     assert request.output_path == out_dir.resolve()
+    # Pin that the patched dependency is what the code consulted.
+    _mock_setup.assert_called()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -149,6 +151,8 @@ def test_organize_command_dry_run(mock_create_service, _mock_setup, tmp_path):
     request = service.preview.call_args.args[0]
     assert request.input_path == in_dir.resolve()
     assert request.output_path == out_dir.resolve()
+    # Pin that the patched dependency is what the code consulted.
+    _mock_setup.assert_called()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -166,6 +170,8 @@ def test_organize_command_error(mock_create_service, _mock_setup, tmp_path):
 
     assert result.exit_code == 1
     assert "Error: Something broke" in result.stdout
+    # Pin that the patched dependency is what the code consulted.
+    _mock_setup.assert_called()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -185,6 +191,8 @@ def test_preview_command(mock_create_service, _mock_setup, tmp_path):
     request = service.preview.call_args.args[0]
     assert request.input_path == request.output_path == resolved
     service.scan.assert_called_once_with(request)
+    # Pin that the patched dependency is what the code consulted.
+    _mock_setup.assert_called()
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)
@@ -199,6 +207,8 @@ def test_preview_command_error(mock_create_service, _mock_setup, tmp_path):
 
     assert result.exit_code == 1
     assert "Error: Bad input" in result.stdout
+    # Pin that the patched dependency is what the code consulted.
+    _mock_setup.assert_called()
 
 
 @pytest.mark.ci

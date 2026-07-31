@@ -52,6 +52,8 @@ class TestComposeScalerScaleService:
         scaler = ComposeScaler()
         result = scaler.scale_service("file-organizer", 3)
         assert result is False
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     def test_scale_service_negative_replicas(self) -> None:
         """Test that negative replicas raises ValueError."""
@@ -65,6 +67,8 @@ class TestComposeScalerScaleService:
         scaler = ComposeScaler()
         result = scaler.scale_service("file-organizer", 0)
         assert result is True
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch.object(ComposeScaler, "_run_command", return_value=True)
     def test_scale_service_with_project_name(self, mock_run: MagicMock) -> None:
@@ -100,6 +104,8 @@ class TestComposeScalerGetServiceCount:
         scaler = ComposeScaler()
         count = scaler.get_service_count("web")
         assert count == 0
+        # Pin that the patched dependency is what the code consulted.
+        mock_output.assert_called()
 
     @patch.object(ComposeScaler, "_run_command_output", return_value="")
     def test_get_service_count_empty(self, mock_output: MagicMock) -> None:
@@ -107,6 +113,8 @@ class TestComposeScalerGetServiceCount:
         scaler = ComposeScaler()
         count = scaler.get_service_count("web")
         assert count == 0
+        # Pin that the patched dependency is what the code consulted.
+        mock_output.assert_called()
 
 
 @pytest.mark.unit
@@ -138,6 +146,8 @@ class TestComposeScalerSubprocess:
         scaler = ComposeScaler()
         result = scaler._run_command(["docker-compose", "up"])
         assert result is False
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch(
         "subprocess.run",
@@ -148,6 +158,8 @@ class TestComposeScalerSubprocess:
         scaler = ComposeScaler()
         result = scaler._run_command(["docker-compose", "up"])
         assert result is False
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch("subprocess.run")
     def test_run_command_output_success(self, mock_run: MagicMock) -> None:

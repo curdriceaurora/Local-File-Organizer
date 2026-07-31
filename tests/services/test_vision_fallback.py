@@ -32,6 +32,8 @@ class TestComputeFallbackFilenamePatterns:
         assert result.folder == "Images/Screenshots/2026"
         assert result.filename == img.stem
         assert result.source == "fallback_filename"
+        # Pin that the patched dependency is what the code consulted.
+        _mock_exif.assert_called()
 
     @patch("file_organizer.services.vision_fallback._from_exif", return_value=None)
     def test_img_datestamp_pattern(self, _mock_exif, tmp_path: Path) -> None:
@@ -42,6 +44,8 @@ class TestComputeFallbackFilenamePatterns:
 
         assert result.folder == "Images/Photos/2026/05"
         assert result.source == "fallback_filename"
+        # Pin that the patched dependency is what the code consulted.
+        _mock_exif.assert_called()
 
     @patch("file_organizer.services.vision_fallback._from_exif", return_value=None)
     def test_pxl_datestamp_pattern(self, _mock_exif, tmp_path: Path) -> None:
@@ -53,6 +57,8 @@ class TestComputeFallbackFilenamePatterns:
 
         assert result.folder == "Images/Photos/2026/06"
         assert result.source == "fallback_filename"
+        # Pin that the patched dependency is what the code consulted.
+        _mock_exif.assert_called()
 
     @patch("file_organizer.services.vision_fallback._from_exif", return_value=None)
     def test_unknown_filename_falls_to_untagged(self, _mock_exif, tmp_path: Path) -> None:
@@ -64,6 +70,8 @@ class TestComputeFallbackFilenamePatterns:
         assert result.folder == "Images/Untagged"
         assert result.filename == "random_photo_thing"
         assert result.source == "fallback_filename"
+        # Pin that the patched dependency is what the code consulted.
+        _mock_exif.assert_called()
 
 
 class TestComputeFallbackExif:

@@ -604,6 +604,8 @@ class TestWizardRun:
 
         assert result.success is True
         mock_generate.assert_called_once_with(mock_capabilities, custom_settings)
+        # Pin that the patched dependency is what the code consulted.
+        mock_save.assert_called()
 
     @patch.object(SetupWizard, "validate_config")
     @patch.object(SetupWizard, "generate_config")

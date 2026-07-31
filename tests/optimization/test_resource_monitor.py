@@ -96,6 +96,8 @@ class TestResourceMonitorMemory:
 
         assert result == expected
         mock_fallback.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_psutil.assert_called()
 
     def test_get_memory_psutil_with_mock(self) -> None:
         """Test _get_memory_psutil with fully mocked psutil module."""
@@ -149,6 +151,8 @@ class TestResourceMonitorGPU:
         monitor = ResourceMonitor()
         result = monitor.get_gpu_memory()
         assert result is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch("subprocess.run")
     def test_get_gpu_memory_nonzero_exit(self, mock_run: MagicMock) -> None:
@@ -183,6 +187,8 @@ class TestResourceMonitorGPU:
         monitor = ResourceMonitor()
         result = monitor.get_gpu_memory()
         assert result is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
 
 @pytest.mark.unit
