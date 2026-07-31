@@ -88,6 +88,8 @@ class TestPluginExecutorStart:
         mock_proc.stdout.close.assert_called_once()
         mock_proc.stderr.close.assert_called_once()
         assert executor._proc is None
+        # Pin that the patched dependency is what the code consulted.
+        _mock_ready.assert_called()
 
     @pytest.mark.parametrize(
         ("ready_line", "message"),
@@ -207,6 +209,8 @@ class TestPluginExecutorContextManager:
             assert executor._proc is not None
 
         assert executor._proc is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_ready.assert_called()
 
 
 class TestPluginExecutorCall:

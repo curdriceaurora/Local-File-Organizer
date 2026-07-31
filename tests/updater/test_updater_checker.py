@@ -365,6 +365,8 @@ class TestDetectVersion:
     def test_fallback(self, mock_detect):
         checker = UpdateChecker()
         assert checker.current_version == "0.0.0"
+        # Pin that the patched dependency is what the code consulted.
+        mock_detect.assert_called()
 
     def test_detect_import_error(self):
         with patch.dict("sys.modules", {"file_organizer.version": None}):

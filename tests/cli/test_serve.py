@@ -105,6 +105,8 @@ def test_serve_handles_port_in_use(mock_uvicorn_run: MagicMock):
     assert result.exit_code == 1
     output_lower = result.stdout.lower()
     assert "port" in output_lower or "address" in output_lower
+    # Pin that the patched dependency is what the code consulted.
+    mock_uvicorn_run.assert_called()
 
 
 @patch.dict("sys.modules", {"uvicorn": None})
