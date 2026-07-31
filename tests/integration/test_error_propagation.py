@@ -123,7 +123,7 @@ class TestOrganizerErrorHandling:
     @pytest.mark.skipif(sys.platform == "win32", reason="chmod does not restrict reads on Windows")
     def test_mixed_good_and_bad_files_in_batch(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:
