@@ -106,14 +106,18 @@ class TestClassifyMock:
 class TestReportFlow:
     """End-to-end: hooks record dead patches and write the JSONL report."""
 
-    def _install_plugin(self, pytester: pytest.Pytester) -> None:
+    def _install_plugin(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch | None = None
+    ) -> None:
+        if monkeypatch is not None:
+            monkeypatch.delenv("PYTEST_XDIST_WORKER", raising=False)
         pytester.makeconftest(_PLUGIN_SOURCE.read_text())
 
     def test_dead_patch_is_reported_and_suite_stays_green(
         self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A dead patch appears in the report; report mode never fails tests."""
-        self._install_plugin(pytester)
+        self._install_plugin(pytester, monkeypatch)
         pytester.makepyfile(
             target_mod="""
             def helper():
@@ -170,7 +174,7 @@ class TestReportFlow:
         self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Without the env var, the plugin is inert: no report, no failures."""
-        self._install_plugin(pytester)
+        self._install_plugin(pytester, monkeypatch)
         pytester.makepyfile(
             test_sample="""
             from unittest.mock import patch
@@ -190,7 +194,7 @@ class TestReportFlow:
         self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """`with patch(...)` blocks are tracked, not just decorators."""
-        self._install_plugin(pytester)
+        self._install_plugin(pytester, monkeypatch)
         pytester.makepyfile(
             test_sample="""
             from unittest.mock import patch
@@ -208,3 +212,27 @@ class TestReportFlow:
 
         entries = [json.loads(line) for line in report.read_text().splitlines()]
         assert any(e["status"] == "dead" and "test_dead_with_block" in e["nodeid"] for e in entries)
+
+    def test_inherited_xdist_worker_env_var_ignored_in_subprocess(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Inherited PYTEST_XDIST_WORKER env var in non-xdist pytester session does not suffix report file."""
+        self._install_plugin(pytester)
+        pytester.makepyfile(
+            test_sample="""
+            from unittest.mock import patch
+
+            def test_dead():
+                with patch("json.dumps"):
+                    assert True
+            """
+        )
+        report = pytester.path / "liveness.jsonl"
+        monkeypatch.setenv(ENV_VAR, str(report))
+        monkeypatch.setenv("PYTEST_XDIST_WORKER", "gw0")
+
+        result = pytester.runpytest_subprocess("-p", "no:randomly")
+        result.assert_outcomes(passed=1)
+
+        assert report.exists(), "report file without worker suffix should be written"
+        assert not (pytester.path / "liveness.jsonl.gw0").exists()

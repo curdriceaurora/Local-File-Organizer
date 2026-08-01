@@ -51,6 +51,7 @@ _state: dict[str, Any] = {
     "current": None,  # (nodeid, file, line) of the running test
     "records": [],
     "findings": [],
+    "is_xdist_worker": False,
 }
 
 
@@ -97,6 +98,7 @@ def pytest_configure(config: pytest.Config) -> None:
     if _state["enabled"]:  # already installed (defensive: nested sessions)
         return
     _state["enabled"] = True
+    _state["is_xdist_worker"] = hasattr(config, "workerinput")
     _state["orig_enter"] = _MockPatch.__enter__
     _MockPatch.__enter__ = _tracking_enter
 
@@ -107,6 +109,7 @@ def pytest_unconfigure(config: pytest.Config) -> None:
         _MockPatch.__enter__ = _state["orig_enter"]
         _state["enabled"] = False
         _state["orig_enter"] = None
+        _state["is_xdist_worker"] = False
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
@@ -146,9 +149,10 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if not _state["enabled"] or not _state["findings"]:
         return
     path = os.environ[ENV_VAR]
-    worker = os.environ.get("PYTEST_XDIST_WORKER")
-    if worker:
-        path = f"{path}.{worker}"
+    if _state.get("is_xdist_worker"):
+        worker = os.environ.get("PYTEST_XDIST_WORKER")
+        if worker:
+            path = f"{path}.{worker}"
     with open(path, "a", encoding="utf-8") as fh:
         for finding in _state["findings"]:
             fh.write(json.dumps(finding, sort_keys=True) + "\n")
