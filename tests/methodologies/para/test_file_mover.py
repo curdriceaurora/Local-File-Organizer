@@ -6,6 +6,7 @@ bulk organization, archive suggestions, and collision handling.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -490,6 +491,82 @@ class TestSuggestArchive:
         suggestions = mover.suggest_archive(src, inactive_days=180)
         assert len(suggestions) >= 1
         assert any("days" in r for r in suggestions[0].reasoning)
+
+    # Marked ``ci`` so the PR suite (-m "ci and not benchmark") exercises the
+    # non-positive-threshold branch — that run generates the coverage.xml the
+    # diff-coverage gate reads.
+    @pytest.mark.ci
+    def test_zero_inactive_days_archives_everything(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+    ) -> None:
+        """inactive_days=0 archives every file at saturated confidence.
+
+        Regression: the confidence formula divided by ``inactive_days * 3``
+        and raised ZeroDivisionError for the "archive everything" threshold.
+        """
+        src = tmp_path / "everything"
+        src.mkdir()
+        (src / "brand_new.txt").write_text("fresh")
+
+        suggestions = mover.suggest_archive(src, inactive_days=0)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].target_category == PARACategory.ARCHIVE
+        assert suggestions[0].confidence == pytest.approx(0.95)
+
+    @pytest.mark.ci
+    def test_negative_inactive_days_archives_everything(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+    ) -> None:
+        """A negative threshold behaves like 0 rather than inverting confidence.
+
+        Regression: a negative divisor drove confidence below 0.0, which
+        MoveSuggestion rejects with ValueError.
+        """
+        src = tmp_path / "negative"
+        src.mkdir()
+        f = src / "ancient.txt"
+        f.write_text("old")
+        old_time = time.time() - (300 * 86400)
+        os.utime(f, (old_time, old_time))
+
+        suggestions = mover.suggest_archive(src, inactive_days=-1)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].confidence == pytest.approx(0.95)
+
+    @pytest.mark.ci
+    @pytest.mark.parametrize("threshold", [0, -1])
+    def test_future_mtime_still_archived_at_non_positive_threshold(
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
+        threshold: int,
+    ) -> None:
+        """A future mtime does not escape a non-positive threshold.
+
+        Clock skew or an archive extracted with a bogus timestamp makes
+        days_inactive negative, which failed the ``>= inactive_days`` age
+        comparison and silently excluded the file despite "archive everything".
+        """
+        src = tmp_path / "future"
+        src.mkdir()
+        f = src / "tomorrow.txt"
+        f.write_text("dated ahead")
+        future_time = time.time() + (30 * 86400)
+        os.utime(f, (future_time, future_time))
+
+        suggestions = mover.suggest_archive(src, inactive_days=threshold)
+
+        assert len(suggestions) == 1
+        assert suggestions[0].file_path == f
+        assert suggestions[0].confidence == pytest.approx(0.95)
+        # Negative day counts are clamped rather than surfaced as "-30 days".
+        assert "in 0 days" in suggestions[0].reasoning[0]
 
 
 # =========================================================================
