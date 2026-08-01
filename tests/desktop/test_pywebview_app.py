@@ -113,11 +113,12 @@ class TestLaunch:
         with (
             patch.dict(sys.modules, {"webview": mock_webview}),
             patch("file_organizer.desktop.app._wait_for_server", return_value=True),
-            patch("file_organizer.desktop.app._run_server"),
-            patch("file_organizer.desktop.app.threading"),
+            patch("file_organizer.desktop.app.threading") as mock_threading,
         ):
             desktop_app.launch(title="My App", width=1024, height=768)
 
+        # launch() must start the server in a background thread.
+        assert mock_threading.Thread.call_args.kwargs["target"].__name__ == "_run_server"
         mock_webview.create_window.assert_called_once_with(
             "My App",
             ANY,
@@ -141,13 +142,14 @@ class TestLaunch:
         with (
             patch.dict(sys.modules, {"webview": mock_webview}),
             patch("file_organizer.desktop.app._wait_for_server", return_value=True),
-            patch("file_organizer.desktop.app._run_server"),
             patch("file_organizer.desktop.app.threading") as mock_threading,
         ):
             mock_threading.Thread.return_value = MagicMock()
 
             desktop_app.launch()
 
+        # launch() must start the server in a background thread.
+        assert mock_threading.Thread.call_args.kwargs["target"].__name__ == "_run_server"
         mock_webview.start.assert_called_once()
 
     def test_native_window_loads_the_shared_web_routes(self) -> None:
@@ -160,11 +162,12 @@ class TestLaunch:
             patch.dict(sys.modules, {"webview": mock_webview}),
             patch("file_organizer.desktop.app._find_free_port", return_value=43123),
             patch("file_organizer.desktop.app._wait_for_server", return_value=True),
-            patch("file_organizer.desktop.app._run_server"),
-            patch("file_organizer.desktop.app.threading"),
+            patch("file_organizer.desktop.app.threading") as mock_threading,
         ):
             desktop_app.launch()
 
+        # launch() must start the server in a background thread.
+        assert mock_threading.Thread.call_args.kwargs["target"].__name__ == "_run_server"
         args, kwargs = mock_webview.create_window.call_args
         assert args == ("File Organizer", "http://127.0.0.1:43123")
         assert isinstance(kwargs["js_api"], desktop_app.DesktopAPI)
