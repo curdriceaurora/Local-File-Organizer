@@ -51,6 +51,7 @@ _state: dict[str, Any] = {
     "current": None,  # (nodeid, file, line) of the running test
     "records": [],
     "findings": [],
+    "worker": None,  # xdist worker id, from pytest config (never the env)
 }
 
 
@@ -97,6 +98,11 @@ def pytest_configure(config: pytest.Config) -> None:
     if _state["enabled"]:  # already installed (defensive: nested sessions)
         return
     _state["enabled"] = True
+    # Ask pytest, not the environment, whether this session is an xdist
+    # worker. ``PYTEST_XDIST_WORKER`` is inherited by any subprocess a test
+    # spawns, so a nested session would otherwise believe it is a worker and
+    # write its report to a suffixed path nobody reads.
+    _state["worker"] = getattr(config, "workerinput", {}).get("workerid")
     _state["orig_enter"] = _MockPatch.__enter__
     _MockPatch.__enter__ = _tracking_enter
 
@@ -107,6 +113,7 @@ def pytest_unconfigure(config: pytest.Config) -> None:
         _MockPatch.__enter__ = _state["orig_enter"]
         _state["enabled"] = False
         _state["orig_enter"] = None
+        _state["worker"] = None
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
@@ -146,7 +153,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if not _state["enabled"] or not _state["findings"]:
         return
     path = os.environ[ENV_VAR]
-    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    worker = _state["worker"]
     if worker:
         path = f"{path}.{worker}"
     with open(path, "a", encoding="utf-8") as fh:
