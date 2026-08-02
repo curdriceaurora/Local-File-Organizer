@@ -103,6 +103,41 @@ class TestClassifyMock:
 
 
 @pytest.mark.unit
+class TestClassifyMockKnownLimitations:
+    """Documented blind spots in access counting.
+
+    These are not aspirations — they are the current, verified behaviour.
+    They exist because ``classify_mock`` infers access from ``mock_calls``
+    and ``_mock_children``, both of which are populated by ``__getattr__``
+    and ``__call__``. An attribute the *test* assigns lands in the mock's
+    ``__dict__``, so a later read by the code under test goes straight there
+    and is never observed.
+    """
+
+    def test_preset_attribute_read_is_misreported_as_dead(self) -> None:
+        """FALSE NEGATIVE: ``mock.attr = v`` then a read reports dead.
+
+        This is the ``mock_sys.platform = "darwin"`` shape, which is common,
+        so a share of "dead" findings are patches that are genuinely load
+        bearing. Triage must probe before treating such a row as decay.
+        """
+        mock = MagicMock()
+        mock.ITEM_DOCUMENT = 9  # the test pre-sets it
+        assert mock.ITEM_DOCUMENT == 9  # the code under test reads it
+
+        assert classify_mock(mock) == ("dead", 0)
+
+    def test_attribute_read_without_preset_is_live(self) -> None:
+        """The same read IS observed when the test does not pre-set it."""
+        mock = MagicMock()
+        _ = mock.SOME_CONSTANT
+
+        status, count = classify_mock(mock)
+        assert status == "live"
+        assert count == 1
+
+
+@pytest.mark.unit
 class TestReportFlow:
     """End-to-end: hooks record dead patches and write the JSONL report."""
 
@@ -165,6 +200,47 @@ class TestReportFlow:
 
         # The live patch must not be reported at all
         assert not any("test_live_patch" in e["nodeid"] for e in entries)
+
+    def test_inherited_worker_env_does_not_suffix_the_report(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A nested session must not be mistaken for an xdist worker.
+
+        ``PYTEST_XDIST_WORKER`` is inherited by every subprocess a test
+        spawns. The plugin used to read it at sessionfinish, so whenever the
+        outer suite ran under xdist this nested session wrote its report to
+        ``<path>.gwN`` and the caller — which only knows ``<path>`` — saw
+        nothing. The worker id must come from pytest's own config instead.
+        """
+        self._install_plugin(pytester)
+        pytester.makepyfile(
+            target_mod="""
+            def helper():
+                return "real"
+
+            def entry():
+                return "no helper call"
+            """,
+            test_sample="""
+            from unittest.mock import patch
+            import target_mod
+
+            @patch("target_mod.helper")
+            def test_dead_patch(mock_helper):
+                assert target_mod.entry() == "no helper call"
+            """,
+        )
+        report = pytester.path / "liveness.jsonl"
+        monkeypatch.setenv(ENV_VAR, str(report))
+        # Pretend an xdist worker spawned us, which is exactly what happens
+        # when the outer suite runs with -n auto.
+        monkeypatch.setenv("PYTEST_XDIST_WORKER", "gw7")
+
+        result = pytester.runpytest_subprocess("-p", "no:randomly")
+        result.assert_outcomes(passed=1)
+
+        assert report.exists(), "report went to a worker-suffixed path"
+        assert not (pytester.path / "liveness.jsonl.gw7").exists()
 
     def test_disabled_without_env_var(
         self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
