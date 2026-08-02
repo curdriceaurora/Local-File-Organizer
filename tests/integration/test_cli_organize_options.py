@@ -243,7 +243,6 @@ class TestOrganizeCLIOptions:
 
     def test_organize_exception_exits_1(
         self,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:

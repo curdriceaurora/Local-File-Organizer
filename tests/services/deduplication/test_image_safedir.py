@@ -244,13 +244,16 @@ class TestGetImageHashErrorBranches:
 
         from file_organizer.services.deduplication import image_dedup as _id
 
+        # Only PHash needs patching: ``ImageDeduplicator.__init__`` selects
+        # exactly one hasher class from hash_method, which defaults to
+        # "phash". Patching DHash/AHash as well left two dead patches on
+        # every construction.
         with (
             _patch.object(_id, "_IMAGEDEDUP_AVAILABLE", True),
-            _patch.object(_id, "PHash", MagicMock(return_value=MagicMock())),
-            _patch.object(_id, "DHash", MagicMock(return_value=MagicMock())),
-            _patch.object(_id, "AHash", MagicMock(return_value=MagicMock())),
+            _patch.object(_id, "PHash", MagicMock(return_value=MagicMock())) as mock_phash,
         ):
             d = _id.ImageDeduplicator()
+        mock_phash.assert_called_once_with()
         d.hasher = MagicMock()
         return d
 
