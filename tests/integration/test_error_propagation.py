@@ -49,6 +49,8 @@ class TestFileReadErrors:
             result = processor.process_file(bad_file)
             assert result.error is not None
             assert result.folder_name == "errors"
+            # An unreadable file fails before the model is asked to generate.
+            stub_text_model_generate.assert_not_called()
         finally:
             bad_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
 
@@ -67,6 +69,8 @@ class TestFileReadErrors:
         result = processor.process_file(tmp_path / "ghost.txt")
 
         assert result.error is not None
+        # A missing file is rejected before the model is asked to generate.
+        stub_text_model_generate.assert_not_called()
 
 
 class TestModelErrors:

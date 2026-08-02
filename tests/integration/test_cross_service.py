@@ -93,7 +93,6 @@ class TestVisionProcessorEndToEnd:
         self,
         stub_vision_model_init: None,
         stub_vision_model_generate: MagicMock,
-        stub_nltk: None,
         tmp_path: Path,
     ) -> None:
         """VisionProcessor processes a real image file and returns metadata."""
