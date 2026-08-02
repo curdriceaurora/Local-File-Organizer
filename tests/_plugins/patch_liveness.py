@@ -55,20 +55,47 @@ _state: dict[str, Any] = {
 }
 
 
+#: Attributes a bare Mock carries that were not assigned by a test.
+_MOCK_OWN_ATTRS = frozenset({"method_calls"})
+
+
+def _test_assigned_attrs(mock: NonCallableMock) -> list[str]:
+    """Return attribute names a test assigned directly onto *mock*.
+
+    ``mock.attr = value`` stores the value in the instance ``__dict__``.
+    A later read by the code under test therefore resolves straight from
+    there, without going through ``__getattr__``, so no child mock is
+    created and nothing is recorded. Mock's own bookkeeping is either
+    underscore-prefixed or in ``_MOCK_OWN_ATTRS``.
+    """
+    return [name for name in vars(mock) if not name.startswith("_") and name not in _MOCK_OWN_ATTRS]
+
+
 def classify_mock(new_obj: object) -> tuple[str, int | None]:
     """Classify a patch replacement object by observed accesses.
 
     Returns:
         ("untracked", None) for non-mock replacements,
-        ("dead", 0) for mocks with zero recorded accesses,
-        ("live", n) for mocks with n > 0 recorded accesses.
+        ("live", n) for mocks with n > 0 recorded accesses,
+        ("undecidable", 0) when nothing was recorded but the test assigned
+            attributes onto the mock, whose reads are invisible to us,
+        ("dead", 0) for mocks with zero recorded accesses and no such
+            attributes.
+
+    The ``undecidable`` case exists because reporting those as dead is
+    simply wrong: ``mock_sys.platform = "darwin"`` followed by the code
+    reading ``sys.platform`` records nothing, yet the patch is load
+    bearing. Callers that gate on decay must treat undecidable as "not a
+    finding", never as dead.
     """
     if not isinstance(new_obj, NonCallableMock):
         return ("untracked", None)
     count = len(new_obj.mock_calls) + len(new_obj._mock_children)
-    if count == 0:
-        return ("dead", 0)
-    return ("live", count)
+    if count:
+        return ("live", count)
+    if _test_assigned_attrs(new_obj):
+        return ("undecidable", 0)
+    return ("dead", 0)
 
 
 def _describe_target(patcher: _MockPatch) -> str:

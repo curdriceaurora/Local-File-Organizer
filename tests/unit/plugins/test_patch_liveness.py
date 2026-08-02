@@ -114,18 +114,23 @@ class TestClassifyMockKnownLimitations:
     and is never observed.
     """
 
-    def test_preset_attribute_read_is_misreported_as_dead(self) -> None:
-        """FALSE NEGATIVE: ``mock.attr = v`` then a read reports dead.
+    def test_preset_attribute_makes_liveness_undecidable(self) -> None:
+        """``mock.attr = v`` then a read must NOT be reported as dead.
 
-        This is the ``mock_sys.platform = "darwin"`` shape, which is common,
-        so a share of "dead" findings are patches that are genuinely load
-        bearing. Triage must probe before treating such a row as decay.
+        This is the ``mock_sys.platform = "darwin"`` shape. The read
+        resolves from the instance ``__dict__`` and is invisible to us, so
+        the honest answer is "undecidable" — reporting dead here produced
+        real false positives during wave-B triage.
         """
         mock = MagicMock()
         mock.ITEM_DOCUMENT = 9  # the test pre-sets it
         assert mock.ITEM_DOCUMENT == 9  # the code under test reads it
 
-        assert classify_mock(mock) == ("dead", 0)
+        assert classify_mock(mock) == ("undecidable", 0)
+
+    def test_untouched_mock_with_no_assigned_attrs_is_dead(self) -> None:
+        """A mock nothing touched at all is still unambiguously dead."""
+        assert classify_mock(MagicMock()) == ("dead", 0)
 
     def test_attribute_read_without_preset_is_live(self) -> None:
         """The same read IS observed when the test does not pre-set it."""
