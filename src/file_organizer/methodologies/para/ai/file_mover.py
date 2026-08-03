@@ -311,7 +311,9 @@ class PARAFileMover:
         Args:
             directory: Directory to scan for inactive files.
             inactive_days: Number of days without modification to consider
-                a file inactive. Defaults to 180.
+                a file inactive. Defaults to 180. A value of 0 or less means
+                "archive everything regardless of age": every file matches
+                and is suggested at the maximum confidence of 0.95.
 
         Returns:
             List of MoveSuggestion objects for files that should be archived.
@@ -335,12 +337,22 @@ class PARAFileMover:
                 stat = file_path.stat()
                 days_inactive = (now - stat.st_mtime) / 86400.0
 
-                if days_inactive >= inactive_days:
+                # A non-positive threshold selects every file, including one
+                # whose mtime is in the future (clock skew, an archive extracted
+                # with a bogus timestamp): its negative days_inactive would fail
+                # the age comparison.
+                if inactive_days <= 0 or days_inactive >= inactive_days:
                     target_path = self._compute_target_path_for_category(
                         file_path,
                         PARACategory.ARCHIVE,
                     )
-                    confidence = min(0.95, 0.5 + (days_inactive / (inactive_days * 3)))
+                    # A non-positive threshold selects every file, so the age
+                    # ratio carries no signal: saturate instead of dividing by
+                    # zero (or by a negative, which would invert confidence).
+                    if inactive_days > 0:
+                        confidence = min(0.95, 0.5 + (days_inactive / (inactive_days * 3)))
+                    else:
+                        confidence = 0.95
 
                     suggestions.append(
                         MoveSuggestion(
@@ -349,7 +361,9 @@ class PARAFileMover:
                             target_path=target_path,
                             confidence=confidence,
                             reasoning=[
-                                f"File has not been modified in {int(days_inactive)} days "
+                                # Clamped: a future mtime yields negative days,
+                                # which reads as nonsense in the reasoning.
+                                f"File has not been modified in {max(0, int(days_inactive))} days "
                                 f"(threshold: {inactive_days} days)",
                             ],
                         )
