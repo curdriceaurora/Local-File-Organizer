@@ -232,10 +232,11 @@ repos:
 
       # ----------------------------------------------------------------
       # unused-patch-argument (#1682, epic #1678) — commit-time, diff-scoped.
-      # Fails only on violations in staged-diff lines, so new mock decay is
-      # blocked immediately while the pre-existing backlog (triaged in #1685)
-      # stays non-blocking. The rails.toml entry covers the full tree in
-      # advisory mode until that worklist is drained.
+      # Fails only on violations in staged-diff lines, so a new violation is
+      # caught here before it can reach CI. The rails.toml entry covers the
+      # full tree and is now mode = "enforce" (promoted in #1715 once the
+      # static backlog reached zero), so this hook is the fast path rather
+      # than the only gate.
       # ----------------------------------------------------------------
       - id: unused-patch-argument
         name: unused @patch argument (changed lines)

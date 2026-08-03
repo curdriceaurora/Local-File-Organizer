@@ -247,6 +247,41 @@ class TestReportFlow:
         assert report.exists(), "report went to a worker-suffixed path"
         assert not (pytester.path / "liveness.jsonl.gw7").exists()
 
+    def test_missing_report_directory_is_created_not_fatal(
+        self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A report path under a non-existent directory must not fail the run.
+
+        The plugin is report-only. Pointing it at ``<tmp>/nested/dir/x.jsonl``
+        used to raise out of ``pytest_sessionfinish`` and take the whole
+        session down — turning reporting into an availability hazard.
+        """
+        self._install_plugin(pytester)
+        pytester.makepyfile(
+            target_mod="""
+            def helper():
+                return "real"
+
+            def entry():
+                return "no helper call"
+            """,
+            test_sample="""
+            from unittest.mock import patch
+            import target_mod
+
+            @patch("target_mod.helper")
+            def test_dead_patch(mock_helper):
+                assert target_mod.entry() == "no helper call"
+            """,
+        )
+        report = pytester.path / "does" / "not" / "exist" / "liveness.jsonl"
+        monkeypatch.setenv(ENV_VAR, str(report))
+
+        result = pytester.runpytest_subprocess("-p", "no:randomly")
+
+        result.assert_outcomes(passed=1)
+        assert report.exists()
+
     def test_disabled_without_env_var(
         self, pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
     ) -> None:

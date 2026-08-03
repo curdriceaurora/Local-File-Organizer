@@ -183,6 +183,14 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     worker = _state["worker"]
     if worker:
         path = f"{path}.{worker}"
+    # This plugin is report-only and must never be the reason a suite fails.
+    # A report path under a directory that does not exist yet is an ordinary
+    # caller mistake, not a test failure, so create it rather than raising
+    # out of sessionfinish. Any other write error still propagates — silently
+    # dropping findings would be worse than a loud failure.
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(path, "a", encoding="utf-8") as fh:
         for finding in _state["findings"]:
             fh.write(json.dumps(finding, sort_keys=True) + "\n")
