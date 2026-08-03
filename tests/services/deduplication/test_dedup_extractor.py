@@ -213,9 +213,17 @@ class TestExtractPdf:
         # _extract_pdf reads through self._open_binary (SafeDir-anchored), not
         # builtins.open — patching the latter was inert, so this test used to
         # pass without the failure it names ever occurring.
-        with patch.object(
-            type(extractor), "_open_binary", side_effect=OSError("corrupt")
-        ) as mock_open_binary:
+        #
+        # pypdf must be importable for the read to be reached at all: without
+        # it the method returns "" from its ImportError branch, which satisfies
+        # the assertion below for entirely the wrong reason. pypdf is absent
+        # from the unit CI environment, so stub it rather than depend on it.
+        with (
+            patch.dict("sys.modules", {"pypdf": MagicMock()}),
+            patch.object(
+                type(extractor), "_open_binary", side_effect=OSError("corrupt")
+            ) as mock_open_binary,
+        ):
             result = extractor._extract_pdf(p)
 
         assert result == ""
