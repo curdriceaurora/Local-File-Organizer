@@ -617,11 +617,13 @@ class TestScanAudioFiles:
             patch(
                 "file_organizer.services.audio.classifier.AudioClassifier",
                 MagicMock(),
-            ),
+            ) as mock_classifier_cls,
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 
+        # The extractor raises first, so classification is never reached.
+        mock_classifier_cls.assert_not_called()
         assert mock_panel.update.call_count == 3
         assert all(
             call.args[0].startswith("[red]Audio scan failed:[/red]")
