@@ -126,7 +126,15 @@ def build_worklist(
                 "sources": ["liveness"],
                 "dead_targets": [u["target"]],
                 "unused_params": [],
-                "status": "deferred",
+                # Allowlisted on sight, not deferred. These are explicit-new
+                # patches — ``patch(target, True)``, ``patch(target, tmp_path)``,
+                # ``patch(target, real_function)`` — where the replacement is
+                # not a Mock, so ``classify_mock`` returns "untracked" and
+                # liveness is undecidable by construction, not decayed. No
+                # amount of triage can resolve them; a bool being read leaves
+                # no trace. Deferring them just regrows a 1,153-row backlog on
+                # every regeneration.
+                "status": "allowlisted",
             }
         )
     return rows
