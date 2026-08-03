@@ -51,8 +51,6 @@ class TestFileReadErrors:
             assert result.folder_name == "errors"
             # An unreadable file fails before the model is asked to generate.
             stub_text_model_generate.assert_not_called()
-            # An unreadable file fails before the model is asked to generate.
-            stub_text_model_generate.assert_not_called()
         finally:
             bad_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
 

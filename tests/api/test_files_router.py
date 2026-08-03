@@ -863,23 +863,28 @@ class TestCollectFiles:
         assert len(result) == 1
         assert result[0].name == "deep.txt"
 
-    def test_collect_skips_entries_raising_oserror(self, tmp_path: Path) -> None:
-        """Entries that raise OSError on filesystem checks are silently skipped."""
-        from unittest.mock import MagicMock, patch
+    def test_collect_delegates_traversal_to_safe_walk(self, tmp_path: Path) -> None:
+        """_collect_files walks via safe_walk, which absorbs per-entry OSError.
+
+        This test used to patch ``Path.glob`` and hand it an entry whose
+        ``is_symlink()`` raised, asserting one file came back. _collect_files
+        does not call ``Path.glob`` — it delegates to ``safe_walk`` — so the
+        patched iterator was never consumed and the result came from the real
+        directory. The OSError skip it claimed to cover was never exercised.
+        """
+        from unittest.mock import patch
 
         from file_organizer.api.routers.files import _collect_files
 
         good = tmp_path / "good.txt"
         good.write_text("ok")
 
-        # Create a mock Path that raises OSError on is_symlink()
-        bad_entry = MagicMock(spec=Path)
-        bad_entry.is_symlink.side_effect = OSError("device error")
-
-        with patch.object(Path, "glob", return_value=iter([good, bad_entry])) as mock_glob:
+        with patch(
+            "file_organizer.api.routers.files.safe_walk", return_value=iter([good])
+        ) as mock_safe_walk:
             result = _collect_files(tmp_path, recursive=False, include_hidden=False)
-        assert len(result) == 1
-        assert result[0].name == "good.txt"
-        # Recorded as never reached on this path; pin it so a change that
-        # starts calling it fails here instead of going unnoticed.
-        mock_glob.assert_not_called()
+
+        assert [p.name for p in result] == ["good.txt"]
+        mock_safe_walk.assert_called_once_with(
+            tmp_path, recursive=False, only_files=True, include_hidden=False
+        )

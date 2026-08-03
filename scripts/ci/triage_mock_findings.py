@@ -60,6 +60,16 @@ def build_worklist(
     stops being flagged, so if its key reappears, that is a regression and
     the row reopens.
     """
+    # An ``undecidable`` finding is not decay: the plugin could not observe
+    # access because the test assigned attributes onto the mock. Route it to
+    # the untracked bucket no matter which input file it arrived in — the
+    # caller splits the plugin report by hand, and one mis-split would put
+    # load-bearing patches into an enforced backlog.
+    misrouted = [d for d in dead if d.get("status") == "undecidable"]
+    if misrouted:
+        dead = [d for d in dead if d.get("status") != "undecidable"]
+        untracked = [*untracked, *misrouted]
+
     # Spread is counted over distinct tests, not raw findings — otherwise
     # FIXTURE_SPREAD parametrizations of one test would fake fixture noise.
     distinct_sites = {(d["file"], d["target"], _test_name(d["nodeid"])) for d in dead}

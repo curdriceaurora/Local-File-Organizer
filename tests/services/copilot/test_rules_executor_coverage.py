@@ -45,19 +45,24 @@ def _rule(action: ActionType, destination: str) -> RuleSet:
 
 
 def test_copy_file_exclusive_creation_exists(tmp_path: Path) -> None:
+    """A destination created between the conflict check and O_EXCL open is skipped.
+
+    The destination must NOT exist up front: with an existing dest,
+    resolve_conflict() returns None under SKIP and copy_file returns before
+    os.open, so the patch never fires and this test would pass without
+    exercising exclusive creation at all.
+    """
     source = tmp_path / "source.txt"
     source.write_text("hello", encoding="utf-8")
-    dest = tmp_path / "dest.txt"
-    dest.write_text("already exists", encoding="utf-8")
+    dest = tmp_path / "dest.txt"  # deliberately absent — the race is the point
 
-    # If os.open throws FileExistsError, copy_file should return a skipped LinkResult
     with patch("os.open", side_effect=FileExistsError("exists")) as mock_open:
         res = copy_file(source, dest, ConflictStrategy.SKIP)
-        assert res.skipped is True
-        assert res.reason == "exists"
-    # Recorded as never reached on this path; pin it so a change that
-    # starts calling it fails here instead of going unnoticed.
-    mock_open.assert_not_called()
+
+    assert res.skipped is True
+    assert res.reason == "exists"
+    # The O_EXCL open is the path under test, so it must have been reached.
+    mock_open.assert_called_once()
 
 
 @pytest.mark.skipif(
