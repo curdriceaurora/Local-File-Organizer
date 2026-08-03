@@ -54,6 +54,7 @@ class TestCopilotChat:
         result = runner.invoke(app, ["copilot", "chat", "--help"])
         assert result.exit_code == 0
         assert "message" in result.output.lower() or "MESSAGE" in result.output
+        mock_cls.assert_not_called()  # --help must never construct the engine
 
 
 # ---------------------------------------------------------------------------

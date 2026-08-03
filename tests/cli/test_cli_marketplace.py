@@ -425,9 +425,14 @@ class TestAddReview:
     def test_review_missing_required_args(self, runner):
         """Missing --user, --rating, --title, --content should fail."""
         mock_svc = MagicMock()
-        with patch("file_organizer.cli.marketplace._service", return_value=mock_svc):
+        with patch(
+            "file_organizer.cli.marketplace._service", return_value=mock_svc
+        ) as mock_service:
             result = runner.invoke(marketplace_app, ["review", "file-sorter"])
         assert result.exit_code != 0
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_service.assert_not_called()
 
 
 # ============================================================================

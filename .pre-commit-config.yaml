@@ -231,6 +231,21 @@ repos:
         files: ^(src/|pyproject\.toml)
 
       # ----------------------------------------------------------------
+      # unused-patch-argument (#1682, epic #1678) — commit-time, diff-scoped.
+      # Fails only on violations in staged-diff lines, so a new violation is
+      # caught here before it can reach CI. The rails.toml entry covers the
+      # full tree and is now mode = "enforce" (promoted in #1715 once the
+      # static backlog reached zero), so this hook is the fast path rather
+      # than the only gate.
+      # ----------------------------------------------------------------
+      - id: unused-patch-argument
+        name: unused @patch argument (changed lines)
+        entry: python scripts/ci/guardrails/check_unused_patch_argument.py --changed-only
+        language: system
+        files: ^tests/.*test_.*\.py$
+        pass_filenames: true
+
+      # ----------------------------------------------------------------
       # CI-rail framework (WP-0.1, #1222) — advisory/enforced runner.
       # Runs the rails declared in scripts/ci/rails.toml. Advisory rails warn
       # but never block; enforce rails block.

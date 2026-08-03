@@ -273,10 +273,13 @@ class TestReadTextSafeAnchoredTraversal:
         with patch(
             "file_organizer.services.search.hybrid_retriever.SafeDir.open_root",
             side_effect=NotImplementedError,
-        ):
+        ) as mock_open_root:
             result = read_text_safe(escape, scan_root=scan_root)
 
         assert result == ""
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_open_root.assert_not_called()
 
     def test_scan_root_none_uses_parent_rooted_safedir(self, tmp_path: Path) -> None:
         """Default (scan_root=None) still uses the parent-rooted SafeDir path —

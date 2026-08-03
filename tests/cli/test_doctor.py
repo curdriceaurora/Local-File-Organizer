@@ -197,9 +197,14 @@ class TestGetMissingGroups:
 
     def test_empty_detected(self):
         detected = set()
-        with patch("file_organizer.cli.doctor.is_group_installed", return_value=False):
+        with patch(
+            "file_organizer.cli.doctor.is_group_installed", return_value=False
+        ) as mock_is_group_installed:
             result = get_missing_groups(detected)
             assert result == set()
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_is_group_installed.assert_not_called()
 
 
 # ============================================================================

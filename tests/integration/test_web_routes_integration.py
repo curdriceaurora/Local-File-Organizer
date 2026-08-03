@@ -330,11 +330,14 @@ class TestJobStatus:
                 "file_organizer.web.organize_routes.get_job",
                 return_value=_mock_job(status="running"),
             ),
-            patch("file_organizer.web.organize_routes.update_job"),
+            patch("file_organizer.web.organize_routes.update_job") as mock_update_job,
         ):
             tpl.TemplateResponse.return_value = _HTML
             r = org_client.post("/ui/organize/jobs/job-1/cancel", headers=csrf_headers(org_client))
         assert r.status_code == 200
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_update_job.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

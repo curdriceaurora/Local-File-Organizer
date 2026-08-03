@@ -93,7 +93,6 @@ class TestVisionProcessorEndToEnd:
         self,
         stub_vision_model_init: None,
         stub_vision_model_generate: MagicMock,
-        stub_nltk: None,
         tmp_path: Path,
     ) -> None:
         """VisionProcessor processes a real image file and returns metadata."""
@@ -126,6 +125,8 @@ class TestVisionProcessorEndToEnd:
         result = processor.process_file(tmp_path / "nonexistent.png")
 
         assert result.error is not None
+        # The missing file must be rejected before the model is invoked.
+        stub_vision_model_generate.assert_not_called()
 
 
 class TestOrganizerChainsProcessors:
@@ -133,7 +134,7 @@ class TestOrganizerChainsProcessors:
 
     def test_organizer_chains_text_to_output(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,

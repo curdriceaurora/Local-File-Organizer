@@ -77,6 +77,25 @@ def _make_parallel_config(
 # ---------------------------------------------------------------------------
 
 
+def _ready_processor(organizer, attr: str):
+    """Make ``_init_*_processor`` install a processor that reports ready.
+
+    ``organize()`` only calls ``_process_text_files`` / ``_process_image_files``
+    when the corresponding processor exists AND its model is initialised.
+    Patching the init to a bare no-op left that false, so organize silently
+    took the ``_fallback_by_extension`` branch and the mocked
+    ``_process_*`` return values were never used.
+    """
+
+    def _install() -> None:
+        proc = MagicMock()
+        proc.text_model.is_initialized = True
+        proc.vision_model.is_initialized = True
+        setattr(organizer, attr, proc)
+
+    return _install
+
+
 class TestFileOps:
     """Tests for file_organizer.core.file_ops module."""
 
@@ -1635,7 +1654,9 @@ class TestFileOrganizer:
         out = tmp_path / "output"
 
         with (
-            patch.object(fo, "_init_text_processor"),
+            patch.object(
+                fo, "_init_text_processor", side_effect=_ready_processor(fo, "text_processor")
+            ),
             patch.object(fo, "_process_text_files") as mock_process,
         ):
             mock_pf = _make_processed_file(src / "file.pdf", "PDFs", "file")
@@ -1646,6 +1667,8 @@ class TestFileOrganizer:
         assert not (out / "PDFs" / "file.pdf").exists()
         assert result.processed_files == 1
         assert result.organized_structure == {"PDFs": ["file.pdf"]}
+        # The AI path must actually run — it used to be skipped silently.
+        mock_process.assert_called()
 
     def test_organize_returns_organization_result(self, tmp_path: Path) -> None:
         from file_organizer.core.types import OrganizationResult
@@ -1656,7 +1679,9 @@ class TestFileOrganizer:
         (src / "sample.txt").write_text("text content")
 
         with (
-            patch.object(fo, "_init_text_processor"),
+            patch.object(
+                fo, "_init_text_processor", side_effect=_ready_processor(fo, "text_processor")
+            ),
             patch.object(fo, "_process_text_files") as mock_process,
         ):
             mock_pf = _make_processed_file(src / "sample.txt", "Documents", "sample")
@@ -1664,6 +1689,8 @@ class TestFileOrganizer:
             result = fo.organize(src, tmp_path / "out")
 
         assert isinstance(result, OrganizationResult)
+        # The AI path must actually run — it used to be skipped silently.
+        mock_process.assert_called()
 
     def test_organize_skips_unsupported_files(self, tmp_path: Path) -> None:
         fo = self._make_organizer()
@@ -1683,9 +1710,13 @@ class TestFileOrganizer:
         (src / "img.jpg").write_bytes(b"\xff\xd8\xff")
 
         with (
-            patch.object(fo, "_init_text_processor"),
+            patch.object(
+                fo, "_init_text_processor", side_effect=_ready_processor(fo, "text_processor")
+            ),
             patch.object(fo, "_process_text_files") as mock_text,
-            patch.object(fo, "_init_vision_processor"),
+            patch.object(
+                fo, "_init_vision_processor", side_effect=_ready_processor(fo, "vision_processor")
+            ),
             patch.object(fo, "_process_image_files") as mock_img,
         ):
             pf_txt = _make_processed_file(src / "doc.txt", "Documents", "doc")
@@ -1696,6 +1727,9 @@ class TestFileOrganizer:
             result = fo.organize(src, tmp_path / "out")
 
         assert result.total_files == 2
+        # Both AI paths must actually run — they used to be skipped silently.
+        mock_text.assert_called()
+        mock_img.assert_called()
 
     def test_undo_no_session_returns_false(self) -> None:
         fo = self._make_organizer()
@@ -1813,7 +1847,9 @@ class TestFileOrganizer:
         (src / "copy.txt").write_bytes(content)
 
         with (
-            patch.object(fo, "_init_text_processor"),
+            patch.object(
+                fo, "_init_text_processor", side_effect=_ready_processor(fo, "text_processor")
+            ),
             patch.object(fo, "_process_text_files") as mock_process,
         ):
             pf1 = _make_processed_file(src / "orig.txt", "Documents", "orig")
@@ -1823,6 +1859,8 @@ class TestFileOrganizer:
             result = fo.organize(src, tmp_path / "out")
 
         assert result.deduplicated_files == 1
+        # The AI path must actually run — it used to be skipped silently.
+        mock_process.assert_called()
 
     def test_organize_enable_vision_false(self, tmp_path: Path) -> None:
         from file_organizer.core.organizer import FileOrganizer

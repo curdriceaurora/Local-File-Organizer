@@ -201,6 +201,31 @@ class TestOrganizeExecute:
         assert response.status_code == 200
 
     def test_successful_execute(self, client, tree):
+        # The stored plan MUST carry an executable_plan: without it the route
+        # rejects with "Stored plan does not contain executable operations."
+        # and returns the same 200 + HX-Trigger as success, so this test
+        # previously passed while never reaching job creation at all.
+        from file_organizer.core.plan import build_plan_from_processed
+        from file_organizer.services.text_processor import ProcessedFile
+
+        source = tree / "input" / "doc.txt"
+        executable = build_plan_from_processed(
+            input_path=tree / "input",
+            output_path=tree / "output",
+            processed=[
+                ProcessedFile(
+                    file_path=source,
+                    description="Categorized into docs",
+                    folder_name="docs",
+                    filename=source.stem,
+                )
+            ],
+            skip_existing=True,
+            use_hardlinks=True,
+            total_files=1,
+            skipped_files=0,
+            deduplicated_files=0,
+        )
         plan = {
             "plan_id": "test-plan",
             "input_dir": str(tree / "input"),
@@ -208,6 +233,7 @@ class TestOrganizeExecute:
             "methodology": "content_based",
             "skip_existing": True,
             "use_hardlinks": True,
+            "executable_plan": executable.to_dict(),
         }
         mock_job = _mock_job(status="queued")
 
@@ -220,7 +246,7 @@ class TestOrganizeExecute:
             patch(
                 "file_organizer.web.organize_routes.create_job",
                 return_value=mock_job,
-            ),
+            ) as mock_create,
             patch("file_organizer.web.organize_routes._set_job_metadata"),
             patch("file_organizer.web.organize_routes._run_organize_plan_job"),
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
@@ -242,6 +268,9 @@ class TestOrganizeExecute:
         assert response.status_code == 200
         trigger = json.loads(response.headers["HX-Trigger"])
         assert trigger == {"refreshHistory": True, "refreshStats": True}
+        # The success path must actually queue a job — the error partial
+        # returns the same status and trigger.
+        mock_create.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -322,12 +351,15 @@ class TestOrganizeJobCancel:
             patch(
                 "file_organizer.web.organize_routes._cancel_scheduled_job",
                 return_value=True,
-            ),
+            ) as mock_cancel_scheduled,
             patch("file_organizer.web.organize_routes.update_job", return_value=mock_job),
         ):
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<div>cancelled</div>")
             response = client.post("/ui/organize/jobs/test-job-1/cancel")
         assert response.status_code == 200
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_cancel_scheduled.assert_not_called()
 
     def test_cancel_not_found(self, client):
         with patch(

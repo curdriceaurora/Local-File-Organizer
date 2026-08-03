@@ -181,6 +181,8 @@ class TestRulesAdd:
             )
         assert result.exit_code == 1
         assert "Unknown action" in result.output
+        # An unknown action is rejected before the rule store is touched.
+        mock_mgr.add_rule.assert_not_called()
 
     def test_add_rule_with_priority(self, runner):
         mock_mgr = MagicMock()

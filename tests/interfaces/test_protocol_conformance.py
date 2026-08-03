@@ -113,23 +113,25 @@ class TestModelProtocolConformance:
 
     @patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True)
     @patch("file_organizer.models.openai_text_model.create_openai_client")
-    def test_openai_text_model_satisfies_text_protocol(self, _mock_create: MagicMock) -> None:
+    def test_openai_text_model_satisfies_text_protocol(self, mock_create: MagicMock) -> None:
         from file_organizer.models.openai_text_model import OpenAITextModel
 
         cfg = _make_model_config(model_type="text", provider="openai")
         cfg.api_key = "test-key"
         model = OpenAITextModel(cfg)
         assert isinstance(model, TextModelProtocol)
+        mock_create.assert_not_called()  # construction is lazy; no client until first call
 
     @patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True)
     @patch("file_organizer.models.openai_vision_model.create_openai_client")
-    def test_openai_vision_model_satisfies_vision_protocol(self, _mock_create: MagicMock) -> None:
+    def test_openai_vision_model_satisfies_vision_protocol(self, mock_create: MagicMock) -> None:
         from file_organizer.models.openai_vision_model import OpenAIVisionModel
 
         cfg = _make_model_config(model_type="vision", provider="openai")
         cfg.api_key = "test-key"
         model = OpenAIVisionModel(cfg)
         assert isinstance(model, VisionModelProtocol)
+        mock_create.assert_not_called()  # construction is lazy; no client until first call
 
 
 # ---------------------------------------------------------------------------

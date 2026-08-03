@@ -49,8 +49,14 @@ def output_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def organizer(stub_nltk: None) -> FileOrganizer:
-    """FileOrganizer in dry-run mode."""
+def organizer() -> FileOrganizer:
+    """FileOrganizer in dry-run mode.
+
+    Deliberately does not stub NLTK: construction never loads it, and most
+    tests here only exercise ``_fallback_by_extension``, which is pure
+    extension mapping. The three tests that drive the full organize flow
+    request ``stub_nltk`` explicitly.
+    """
     return FileOrganizer(dry_run=True)
 
 
@@ -68,7 +74,11 @@ class TestFallbackDoesNotCrash:
     """FileOrganizer must complete successfully when Ollama is unreachable."""
 
     def test_non_oserror_falls_back_gracefully(
-        self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
+        self,
+        organizer: FileOrganizer,
+        source_dir: Path,
+        output_dir: Path,
+        stub_nltk: None,
     ) -> None:
         """Non-OSError init failures (ValueError, ImportError) also fall back, not crash."""
         expected = len(list(source_dir.iterdir()))
@@ -91,7 +101,11 @@ class TestFallbackDoesNotCrash:
         assert organizer.vision_processor is None
 
     def test_all_files_accounted_for(
-        self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
+        self,
+        organizer: FileOrganizer,
+        source_dir: Path,
+        output_dir: Path,
+        stub_nltk: None,
     ) -> None:
         """total_files in result matches files on disk — none silently dropped."""
         expected = len(list(source_dir.iterdir()))
@@ -124,7 +138,11 @@ class TestFallbackDoesNotCrash:
         assert fallback_files == set(source_dir.iterdir())
 
     def test_ollama_recovery_between_calls(
-        self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
+        self,
+        organizer: FileOrganizer,
+        source_dir: Path,
+        output_dir: Path,
+        stub_nltk: None,
     ) -> None:
         """After Ollama recovers, a second organize() call uses AI, not fallback.
 

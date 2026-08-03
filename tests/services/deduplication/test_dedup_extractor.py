@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -184,12 +184,13 @@ class TestExtractPdf:
         mock_reader = MagicMock()
         mock_reader.pages = [mock_page]
 
+        # No builtins.open patch: the extractor reads via _open_binary, so
+        # patching builtins.open here was inert.
         with patch.dict("sys.modules", {"pypdf": MagicMock()}):
-            with patch("builtins.open", mock_open(read_data=b"fake")):
-                import sys
+            import sys
 
-                sys.modules["pypdf"].PdfReader.return_value = mock_reader
-                result = extractor._extract_pdf(p)
+            sys.modules["pypdf"].PdfReader.return_value = mock_reader
+            result = extractor._extract_pdf(p)
 
         assert "Page one text" in result
 
@@ -209,10 +210,24 @@ class TestExtractPdf:
         p = tmp_path / "doc.pdf"
         p.write_bytes(b"fake pdf")
 
-        with patch("builtins.open", side_effect=OSError("corrupt")):
+        # _extract_pdf reads through self._open_binary (SafeDir-anchored), not
+        # builtins.open — patching the latter was inert, so this test used to
+        # pass without the failure it names ever occurring.
+        #
+        # pypdf must be importable for the read to be reached at all: without
+        # it the method returns "" from its ImportError branch, which satisfies
+        # the assertion below for entirely the wrong reason. pypdf is absent
+        # from the unit CI environment, so stub it rather than depend on it.
+        with (
+            patch.dict("sys.modules", {"pypdf": MagicMock()}),
+            patch.object(
+                type(extractor), "_open_binary", side_effect=OSError("corrupt")
+            ) as mock_open_binary,
+        ):
             result = extractor._extract_pdf(p)
 
         assert result == ""
+        mock_open_binary.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

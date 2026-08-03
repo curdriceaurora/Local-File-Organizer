@@ -214,7 +214,7 @@ async def test_audio_view_bindings_exist() -> None:
 @pytest.mark.integration
 def test_audio_view_navigation() -> None:
     """j/k navigation should change current index."""
-    with patch.object(AudioView, "_scan_audio_files"):
+    with patch.object(AudioView, "_scan_audio_files") as mock_scan_audio_files:
         view = AudioView(scan_dir=".")
         # Simulate having files loaded (no panels to query, just test index logic)
         view._files = [
@@ -237,3 +237,6 @@ def test_audio_view_navigation() -> None:
             assert view._current_index == 0
             view.action_prev_file()
             assert view._current_index == 0  # Capped at start
+    # Recorded as never reached on this path; pin it so a change that
+    # starts calling it fails here instead of going unnoticed.
+    mock_scan_audio_files.assert_not_called()

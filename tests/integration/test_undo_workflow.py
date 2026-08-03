@@ -71,6 +71,7 @@ class TestUndoTextWorkflow:
 
         assert restored_source == initial_source
         assert restored_output == initial_output
+        mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model
 
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
@@ -123,3 +124,4 @@ class TestUndoTextWorkflow:
         redone_output = sorted(output_dir.iterdir())
 
         assert redone_output == organized_output
+        mock_vision_cls.assert_not_called()  # text-only flow must not build the vision model

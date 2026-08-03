@@ -114,6 +114,8 @@ class TestHandleOrganize:
         result = executor._handle_organize(_intent(IntentType.ORGANIZE, source=str(sub)))
         assert not result.success
         assert "not available" in result.message.lower() or "no" in result.message.lower()
+        # Pin that the patched dependency is what the code consulted.
+        _mock.assert_called()
 
     def test_organizer_success(self, executor, tmp_path):
         sub = tmp_path / "src"

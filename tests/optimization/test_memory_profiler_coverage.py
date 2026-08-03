@@ -161,6 +161,8 @@ class TestProfileDecoratorExceptions:
         # The exception prevents execution from reaching the code after
         # the try/finally block, so last_result is never assigned.
         assert profiler.last_result is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_rss.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +193,9 @@ class TestTrackingEdgeCases:
         # Should only have start + stop = 2 snapshots
         assert len(timeline.snapshots) == 2
         assert timeline.interval_seconds == 0.5
+        # Pin that the patched dependency is what the code consulted.
+        mock_objects.assert_called()
+        mock_rss_vms.assert_called()
 
     @patch.object(
         MemoryProfiler,
@@ -208,6 +213,9 @@ class TestTrackingEdgeCases:
         assert isinstance(snap, MemorySnapshot)
         assert snap.rss == 100_000_000
         profiler.stop_tracking()
+        # Pin that the patched dependency is what the code consulted.
+        mock_objects.assert_called()
+        mock_rss_vms.assert_called()
 
 
 # ---------------------------------------------------------------------------

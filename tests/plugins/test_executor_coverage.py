@@ -88,6 +88,8 @@ class TestPluginExecutorStart:
         mock_proc.stdout.close.assert_called_once()
         mock_proc.stderr.close.assert_called_once()
         assert executor._proc is None
+        # Pin that the patched dependency is what the code consulted.
+        _mock_ready.assert_called()
 
     @pytest.mark.parametrize(
         ("ready_line", "message"),
@@ -207,6 +209,8 @@ class TestPluginExecutorContextManager:
             assert executor._proc is not None
 
         assert executor._proc is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_ready.assert_called()
 
 
 class TestPluginExecutorCall:
@@ -309,9 +313,8 @@ class TestReadlineWithTimeout:
         with pytest.raises(PluginError, match="not running"):
             executor._readline_with_timeout()
 
-    @patch("file_organizer.plugins.executor.sys")
-    def test_windows_timeout_raises(self, mock_sys):
-        mock_sys.platform = "win32"
+    @patch("file_organizer.plugins.executor.sys.platform", "win32")
+    def test_windows_timeout_raises(self):
         executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         mock_proc = MagicMock()
         mock_stdout = MagicMock()
@@ -332,10 +335,9 @@ class TestReadlineWithTimeout:
                 with pytest.raises(PluginError, match="did not respond"):
                     executor._readline_with_timeout(timeout=0.01)
 
-    @patch("file_organizer.plugins.executor.sys")
+    @patch("file_organizer.plugins.executor.sys.platform", "linux")
     @patch("file_organizer.plugins.executor.select.select")
-    def test_unix_timeout_raises(self, mock_select, mock_sys):
-        mock_sys.platform = "linux"
+    def test_unix_timeout_raises(self, mock_select):
         mock_select.return_value = ([], [], [])
 
         executor = PluginExecutor(plugin_path=Path("/") / "x.py")
@@ -345,10 +347,9 @@ class TestReadlineWithTimeout:
         with pytest.raises(PluginError, match="did not respond"):
             executor._readline_with_timeout(timeout=0.01)
 
-    @patch("file_organizer.plugins.executor.sys")
+    @patch("file_organizer.plugins.executor.sys.platform", "linux")
     @patch("file_organizer.plugins.executor.select.select")
-    def test_unix_success(self, mock_select, mock_sys):
-        mock_sys.platform = "linux"
+    def test_unix_success(self, mock_select):
         executor = PluginExecutor(plugin_path=Path("/") / "x.py")
         mock_proc = MagicMock()
         mock_proc.stdout.readline.return_value = b"data\n"

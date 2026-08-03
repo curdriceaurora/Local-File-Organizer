@@ -65,8 +65,10 @@ class TestExecuteMigration:
         )
         plan = TransformationPlan(root_path=tmp_path, rules=[rule], estimated_changes=1)
 
-        with patch.object(migrator, "_save_rollback_info"):
+        with patch.object(migrator, "_save_rollback_info") as mock_rollback:
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
+        # create_backup=False produces no rollback info, so nothing is persisted.
+        mock_rollback.assert_not_called()
         assert result.success is True
         assert result.transformed_count == 1
         assert (tmp_path / "10 Finance").exists()
@@ -90,8 +92,10 @@ class TestExecuteMigration:
         )
         plan = TransformationPlan(root_path=tmp_path, rules=[rule], estimated_changes=1)
 
-        with patch.object(migrator, "_save_rollback_info"):
+        with patch.object(migrator, "_save_rollback_info") as mock_rollback:
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
+        # create_backup=False produces no rollback info, so nothing is persisted.
+        mock_rollback.assert_not_called()
         assert result.skipped_count == 1
 
     def test_execute_transform_failure(
@@ -109,8 +113,10 @@ class TestExecuteMigration:
         )
         plan = TransformationPlan(root_path=tmp_path, rules=[rule], estimated_changes=1)
 
-        with patch.object(migrator, "_save_rollback_info"):
+        with patch.object(migrator, "_save_rollback_info") as mock_rollback:
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
+        # create_backup=False produces no rollback info, so nothing is persisted.
+        mock_rollback.assert_not_called()
         assert result.failed_count == 1
 
 

@@ -110,18 +110,23 @@ class TestUpdateJob:
     def test_update_nonexistent_job_returns_none(self) -> None:
         from file_organizer.api.jobs import update_job
 
-        with patch("file_organizer.api.jobs._notify_job_event"):
+        with patch("file_organizer.api.jobs._notify_job_event") as mock_notify:
             result = update_job("ghost-job-id", status="running")
         assert result is None
+        # No such job, so nothing to announce.
+        mock_notify.assert_not_called()
 
     def test_update_invalid_field_raises_value_error(self) -> None:
         from file_organizer.api.jobs import create_job, update_job
 
         with patch("file_organizer.api.jobs._notify_job_event"):
             job = create_job("organize")
-        with patch("file_organizer.api.jobs._notify_job_event"):
+        with patch("file_organizer.api.jobs._notify_job_event") as mock_notify:
             with pytest.raises(ValueError, match="Unknown job fields"):
                 update_job(job.job_id, nonexistent_field="value")
+        # A rejected update must not emit an event. (The create above does
+        # legitimately notify, hence the separate patch scope.)
+        mock_notify.assert_not_called()
 
     def test_update_error_field(self) -> None:
         from file_organizer.api.jobs import create_job, update_job

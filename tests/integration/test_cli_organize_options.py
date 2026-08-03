@@ -78,7 +78,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_sequential_flag(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -101,7 +101,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_max_workers(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -125,7 +125,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_no_vision_flag(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -148,7 +148,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_text_only_alias(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -172,7 +172,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_no_prefetch_flag(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -195,7 +195,7 @@ class TestOrganizeCLIOptions:
 
     def test_organize_prefetch_depth_zero(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -219,7 +219,6 @@ class TestOrganizeCLIOptions:
 
     def test_organize_sequential_max_workers_conflict_exits_2(
         self,
-        stub_all_models: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -244,7 +243,6 @@ class TestOrganizeCLIOptions:
 
     def test_organize_exception_exits_1(
         self,
-        stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
@@ -274,7 +272,7 @@ class TestOrganizeCLIOptions:
 class TestPreviewCLIOptions:
     def test_preview_sequential_flag(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
     ) -> None:
@@ -294,7 +292,7 @@ class TestPreviewCLIOptions:
 
     def test_preview_max_workers(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
     ) -> None:
@@ -315,7 +313,7 @@ class TestPreviewCLIOptions:
 
     def test_preview_no_vision(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
     ) -> None:
@@ -335,7 +333,6 @@ class TestPreviewCLIOptions:
 
     def test_preview_sequential_max_workers_conflict(
         self,
-        stub_all_models: None,
         stub_nltk: None,
         integration_source_dir: Path,
     ) -> None:

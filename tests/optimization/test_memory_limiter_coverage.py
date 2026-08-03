@@ -34,6 +34,8 @@ class TestEnforceEvictNonCallable:
         limiter.set_evict_callback("not_a_function")
         limiter.enforce()  # Should not crash
         assert limiter.violation_count == 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_rss.assert_called()
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_none_callback_does_not_crash(self, mock_rss: MagicMock) -> None:
@@ -42,6 +44,8 @@ class TestEnforceEvictNonCallable:
         # Don't set callback (default is None)
         limiter.enforce()
         assert limiter.violation_count == 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_rss.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +119,8 @@ class TestGuardedCoverage:
         limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.WARN)
         with limiter.guarded():
             pass  # Should not raise
+        # Pin that the patched dependency is what the code consulted.
+        mock_rss.assert_called()
 
     def test_guarded_warn_over_limit(self) -> None:
         """Test guarded with WARN action over limit — logs but no exception."""

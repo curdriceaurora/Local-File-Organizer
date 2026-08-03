@@ -145,5 +145,6 @@ def test_repo_registry_loads_registered_rails() -> None:
         "xdist-loadgroup": "enforce",
         "subprocess-returncode": "advisory",
         "test-environment-leakage": "enforce",
+        "unused-patch-argument": "enforce",
     }
     assert {rail.name: rail.mode for rail in rails} == expected_modes

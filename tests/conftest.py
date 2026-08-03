@@ -22,6 +22,17 @@ if TYPE_CHECKING:
 from file_organizer.api.realtime import realtime_manager
 from file_organizer.tui.app import FileOrganizerApp
 
+# Patch-liveness report plugin (#1681): hooks are re-exported so pytest
+# discovers them on this conftest. Inert unless FO_PATCH_LIVENESS_REPORT
+# is set to a report path; never fails a test either way.
+from tests._plugins.patch_liveness import (  # noqa: F401
+    pytest_configure,
+    pytest_runtest_setup,
+    pytest_runtest_teardown,
+    pytest_sessionfinish,
+    pytest_unconfigure,
+)
+
 # Review-regression fixtures include intentionally failing `test_*.py` files used as detector input.
 # Ignore them in normal pytest discovery so they don't execute as real tests in full-suite CI runs.
 collect_ignore_glob = [

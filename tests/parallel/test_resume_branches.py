@@ -336,6 +336,14 @@ class TestProcessAndCheckpointBranches:
         job = JobState(id="j5", status=JobStatus.RUNNING, total_files=2)
         cp = _make_checkpoint(job_id="j5")
 
+        saved_statuses: list[JobStatus] = []
+
+        def capture_status(j: JobState) -> None:
+            """Record job statuses as they are saved."""
+            saved_statuses.append(j.status)
+
+        mock_persistence.save_job.side_effect = capture_status
+
         with patch.object(
             processor._processor,
             "process_batch_iter",
@@ -352,6 +360,9 @@ class TestProcessAndCheckpointBranches:
         assert job.status == JobStatus.COMPLETED
         assert result.succeeded == 1
         assert result.failed == 1
+        # The final status must actually be persisted, not just set in memory
+        assert saved_statuses, "save_job was never called"
+        assert saved_statuses[-1] == JobStatus.COMPLETED
 
     def test_all_failed_marks_job_failed(
         self, processor: ResumableProcessor, mock_persistence: MagicMock, tmp_path: Path
@@ -364,6 +375,14 @@ class TestProcessAndCheckpointBranches:
 
         job = JobState(id="j6", status=JobStatus.RUNNING, total_files=2)
         cp = _make_checkpoint(job_id="j6")
+
+        saved_statuses: list[JobStatus] = []
+
+        def capture_status(j: JobState) -> None:
+            """Record job statuses as they are saved."""
+            saved_statuses.append(j.status)
+
+        mock_persistence.save_job.side_effect = capture_status
 
         with patch.object(
             processor._processor,
@@ -380,6 +399,9 @@ class TestProcessAndCheckpointBranches:
         assert job.status == JobStatus.FAILED
         assert result.failed == 2
         assert result.succeeded == 0
+        # The final status must actually be persisted, not just set in memory
+        assert saved_statuses, "save_job was never called"
+        assert saved_statuses[-1] == JobStatus.FAILED
 
     def test_checkpoint_none_load_fallback_returns_none(
         self, processor: ResumableProcessor, mock_persistence: MagicMock, tmp_path: Path

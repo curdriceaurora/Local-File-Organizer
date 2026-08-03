@@ -214,6 +214,8 @@ class TestDedupeReport:
         assert result.exit_code == 0
         assert "Duplicate Report" in result.output
         assert "100" in result.output
+        # Pin that the patched dependency is what the code consulted.
+        mock_scan_opts.assert_called()
 
     @patch("file_organizer.services.deduplication.detector.ScanOptions")
     @patch("file_organizer.cli.dedupe_v2._get_detector")
@@ -241,6 +243,8 @@ class TestDedupeReport:
         assert envelope["command"] == "report"
         assert envelope["summary"]["total_files"] == 50
         assert envelope["summary"]["duplicate_files"] == 5
+        # Pin that the patched dependency is what the code consulted.
+        mock_scan_opts.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +338,10 @@ class TestDedupeIncludeHidden:
         assert "hidden" in message.lower()
         assert "credential" in message.lower() or "sensitive" in message.lower()
         # Declined → command exits before scanning; detector.scan_directory
-        # must NOT be called.
+        # must NOT be called. Assert the factory too: without this, the
+        # scan_directory check passes trivially because the code never
+        # received this detector in the first place.
+        mock_get_det.assert_not_called()
         mock_det.scan_directory.assert_not_called()
         # Non-zero exit so shell scripts (`&&` chains, CI gates) can
         # distinguish user-cancellation from "no duplicates found".
@@ -383,5 +390,7 @@ class TestDedupeIncludeHidden:
         result = runner.invoke(app, ["dedupe", "resolve", str(hidden_root), "--strategy", "oldest"])
 
         mock_confirm.assert_called_once()
+        # The detector is never even constructed once the user declines.
+        mock_get_det.assert_not_called()
         mock_det.scan_directory.assert_not_called()
         assert result.exit_code == 1
