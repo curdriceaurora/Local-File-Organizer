@@ -299,6 +299,45 @@ def test_mocks_map_to_first_params_before_fixtures(tmp_path: Path) -> None:
     assert "tmp_path" not in violations[0][1]
 
 
+def test_write_only_reassignment_does_not_mask_an_unused_mock(tmp_path: Path) -> None:
+    """Rebinding the injected param is not a reference to it.
+
+    ``mock_helper = MagicMock()`` shadows the injection without ever reading
+    it, so the patch is still unasserted. Counting Store contexts as
+    references let this slip through — a real hole once the rail enforces.
+    """
+    violations = _check(
+        tmp_path,
+        """
+        from unittest.mock import MagicMock, patch
+
+        class TestThing:
+            @patch("mod.helper")
+            def test_shadows_the_mock(self, mock_helper):
+                mock_helper = MagicMock()
+                assert True
+        """,
+    )
+    assert len(violations) == 1
+    assert "mock_helper" in violations[0][1]
+
+
+def test_reading_the_mock_still_counts_as_referenced(tmp_path: Path) -> None:
+    """Ordinary use is a Load on the Name, so it must stay clean."""
+    violations = _check(
+        tmp_path,
+        """
+        from unittest.mock import patch
+
+        class TestThing:
+            @patch("mod.helper")
+            def test_asserts_the_mock(self, mock_helper):
+                mock_helper.assert_not_called()
+        """,
+    )
+    assert violations == []
+
+
 def _decorator_of(source: str):
     import ast
 

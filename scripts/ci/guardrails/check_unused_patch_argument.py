@@ -23,6 +23,13 @@ fixtures follow them.
 
 Suppress a finding with ``# noqa: unused-patch-argument`` on the ``def``
 line when the patch is intentionally a side-effect suppressor.
+
+Known limitation: decorators are matched on the literal names ``patch`` and
+``patch.object``, so an aliased import used as a decorator
+(``from unittest.mock import patch as p`` then ``@p(...)``) is invisible to
+this rail. No such usage exists in the suite today — the one aliased import
+is a context manager, which injects no parameter and is out of scope
+either way — so alias resolution is not worth the machinery yet.
 """
 
 from __future__ import annotations
@@ -81,11 +88,18 @@ def _injecting_decorator_count(decorator_list: list[ast.expr]) -> int:
 
 
 def _referenced_names(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    """Every Name referenced anywhere in the function body (any context)."""
+    """Names *read* in the function body — Load and Del contexts only.
+
+    Store is excluded deliberately. ``mock_foo = MagicMock()`` rebinds the
+    injected parameter without ever reading it, so counting that as a
+    reference would let a write-only shadow hide an unasserted mock. Reading
+    an attribute (``mock_foo.assert_called()``) or passing it anywhere is a
+    Load on the Name itself, so ordinary use is unaffected.
+    """
     names: set[str] = set()
     for stmt in func.body:
         for node in ast.walk(stmt):
-            if isinstance(node, ast.Name):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load | ast.Del):
                 names.add(node.id)
     return names
 
