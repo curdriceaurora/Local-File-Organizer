@@ -257,7 +257,10 @@ class TestMaybeCheckForUpdates:
             mock_cfg = MagicMock()
             mock_cfg.updates.check_on_startup = False
             mock_cfg_mgr.return_value.load.return_value = mock_cfg
-            with patch("file_organizer.updater.background.UpdateStateStore"):
+            with patch("file_organizer.updater.background.UpdateStateStore") as mock_configmanager:
                 maybe_check_for_updates()
-                # Should have tried to create a store instance
-                # (though disabled checks mean it returns None before calling)
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_configmanager.assert_not_called()
+        # Should have tried to create a store instance
+        # (though disabled checks mean it returns None before calling)

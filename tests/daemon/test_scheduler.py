@@ -410,11 +410,14 @@ class TestRun:
 
         _make_run_terminate_after(scheduler, 1)
 
-        with patch.object(scheduler, "_tick"):
+        with patch.object(scheduler, "_tick") as mock_tick:
             scheduler.run()
 
         # It ran successfully despite the pre-set event
         assert scheduler.is_running is False
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_tick.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

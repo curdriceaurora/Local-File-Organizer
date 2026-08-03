@@ -173,7 +173,7 @@ class TestAnalyzeCommand:
             patch(
                 "file_organizer.models.text_model.TextModel.generate",
                 return_value="Software Documentation",
-            ),
+            ) as mock_generate,
             patch(
                 "file_organizer.services.analyzer.generate_category",
                 return_value="Finance",
@@ -190,6 +190,9 @@ class TestAnalyzeCommand:
             result = runner.invoke(app, ["analyze", str(text_file)])
         assert result.exit_code == 0
         assert "finance" in result.output.lower() or "financial" in result.output.lower()
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_generate.assert_not_called()
 
     def test_analyze_json_output(self, tmp_path: Path) -> None:
         text_file = tmp_path / "doc.txt"

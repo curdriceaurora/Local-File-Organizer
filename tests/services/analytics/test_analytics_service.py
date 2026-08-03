@@ -478,12 +478,15 @@ class TestGenerateDashboard:
         directory = Path("/") / "fake" / "dir"
 
         # Need to mock rglob for quality metrics
-        with patch.object(Path, "rglob", return_value=iter([])):
+        with patch.object(Path, "rglob", return_value=iter([])) as mock_rglob:
             dashboard = mock_service.generate_dashboard(directory)
 
         assert isinstance(dashboard, AnalyticsDashboard)
         assert dashboard.storage_stats.file_count == 10
         assert dashboard.duplicate_stats.total_duplicates == 0
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_rglob.assert_not_called()
 
     def test_dashboard_with_duplicate_groups(self, temp_directory):
         """Test dashboard generation with explicit duplicate groups."""

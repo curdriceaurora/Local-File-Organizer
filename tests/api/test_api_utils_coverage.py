@@ -41,11 +41,16 @@ class TestResolvePath:
     def test_value_error_in_commonpath(self) -> None:
         """On Windows, commonpath raises ValueError for paths on different drives."""
         with (
-            patch("os.path.commonpath", side_effect=ValueError("different drives")),
+            patch(
+                "os.path.commonpath", side_effect=ValueError("different drives")
+            ) as mock_commonpath,
             pytest.raises(ApiError) as exc_info,
         ):
             resolve_path("/tmp/test", allowed_paths=["/other/path"])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_commonpath.assert_not_called()
 
 
 class TestIsHidden:

@@ -876,7 +876,10 @@ class TestCollectFiles:
         bad_entry = MagicMock(spec=Path)
         bad_entry.is_symlink.side_effect = OSError("device error")
 
-        with patch.object(Path, "glob", return_value=iter([good, bad_entry])):
+        with patch.object(Path, "glob", return_value=iter([good, bad_entry])) as mock_glob:
             result = _collect_files(tmp_path, recursive=False, include_hidden=False)
         assert len(result) == 1
         assert result[0].name == "good.txt"
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_glob.assert_not_called()

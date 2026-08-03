@@ -51,10 +51,13 @@ def test_copy_file_exclusive_creation_exists(tmp_path: Path) -> None:
     dest.write_text("already exists", encoding="utf-8")
 
     # If os.open throws FileExistsError, copy_file should return a skipped LinkResult
-    with patch("os.open", side_effect=FileExistsError("exists")):
+    with patch("os.open", side_effect=FileExistsError("exists")) as mock_open:
         res = copy_file(source, dest, ConflictStrategy.SKIP)
         assert res.skipped is True
         assert res.reason == "exists"
+    # Recorded as never reached on this path; pin it so a change that
+    # starts calling it fails here instead of going unnoticed.
+    mock_open.assert_not_called()
 
 
 @pytest.mark.skipif(
