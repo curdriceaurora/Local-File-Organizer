@@ -111,6 +111,9 @@ def mock_deps():
         "settings": mock_settings,
         "service": mock_service,
         "template_response": mock_template_response,
+        # Exposed so error-path tests can assert the page context helper is
+        # never invoked — those responses are plain partials.
+        "base_context": started["base_context"],
     }
 
     for p in patches.values():
@@ -311,6 +314,8 @@ class TestPluginDetailsError:
 
         assert result.status_code == 404
         assert "Plugin not found" in result.body.decode()
+        # 404 renders a plain partial; the page context helper is not used.
+        mock_deps["base_context"].assert_not_called()
 
     def test_marketplace_error_returns_generic_500(self, mock_deps: dict) -> None:
         from file_organizer.plugins.marketplace import MarketplaceError
@@ -321,4 +326,6 @@ class TestPluginDetailsError:
         assert resp.status_code == 500
         body = resp.body.decode()
         assert secret_msg not in body  # no information leakage
-        assert "try again later" in body  # generic message present
+        assert "try again later" in body
+        # Error responses are plain partials; the page context helper is not used.
+        mock_deps["base_context"].assert_not_called()  # generic message present

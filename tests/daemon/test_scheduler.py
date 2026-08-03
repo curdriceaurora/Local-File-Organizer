@@ -404,17 +404,31 @@ class TestRun:
 
         assert scheduler.is_running is False
 
-    def test_run_clears_stop_event_at_start(self, scheduler: DaemonScheduler) -> None:
-        """run() clears the stop event so a previous stop() doesn't prevent starting."""
+    def test_run_does_not_clear_a_preset_stop_event(self, scheduler: DaemonScheduler) -> None:
+        """A pre-set stop event makes run() return without ticking.
+
+        run() deliberately does NOT clear ``_stop_event`` — its docstring
+        explains that clearing inside the method races with a ``stop()``
+        arriving between ``thread.start()`` and the first instruction, and
+        would silently drop the stop signal. Callers clear it;
+        ``run_in_background`` does so.
+
+        This test was named ``test_run_clears_stop_event_at_start`` and
+        claimed the opposite contract. It passed only because its single
+        assertion (``is_running is False``) holds trivially once the loop has
+        exited, whether or not it ever ran.
+        """
         scheduler._stop_event.set()
 
         _make_run_terminate_after(scheduler, 1)
 
-        with patch.object(scheduler, "_tick"):
+        with patch.object(scheduler, "_tick") as mock_tick:
             scheduler.run()
 
-        # It ran successfully despite the pre-set event
         assert scheduler.is_running is False
+        # The loop guard is `while not _stop_event.is_set()`, so a pre-set
+        # event means the body never executes.
+        mock_tick.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

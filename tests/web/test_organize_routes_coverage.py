@@ -381,10 +381,15 @@ class TestOrganizeJobCancelRoute:
         request = MagicMock()
         with (
             patch("file_organizer.web.organize_routes._build_job_view", return_value=job_view),
-            patch("file_organizer.web.organize_routes._cancel_scheduled_job", return_value=False),
+            patch(
+                "file_organizer.web.organize_routes._cancel_scheduled_job", return_value=False
+            ) as mock_cancel_scheduled_job,
         ):
             organize_job_cancel(request, "j1")
         mock_templates.TemplateResponse.assert_called_once()
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_cancel_scheduled_job.assert_not_called()
 
     def test_cancel_queued_uses_revision_guard(self, mock_templates) -> None:
         from file_organizer.web.organize_routes import organize_job_cancel

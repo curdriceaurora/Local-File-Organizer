@@ -409,7 +409,7 @@ class TestAudioMetadataExtractor:
             "file_organizer.services.audio.metadata_extractor.MutagenFile",
             return_value=mock_audio,
             create=True,
-        ):
+        ) as mock_mutagenfile:
             with patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"
                 "._extract_with_mutagen",
@@ -430,6 +430,9 @@ class TestAudioMetadataExtractor:
         assert result.bitrate == 128000
         assert result.sample_rate == 44100
         assert result.channels == 2
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_mutagenfile.assert_not_called()
 
     def test_extract_file_path_is_preserved(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
@@ -1544,9 +1547,14 @@ class TestTextProcessor:
         mock_model = MagicMock()
         mock_model.config.model_type = ModelType.VISION
 
-        with patch("file_organizer.services.text_processor.ensure_nltk_data"):
+        with patch(
+            "file_organizer.services.text_processor.ensure_nltk_data"
+        ) as mock_ensure_nltk_data:
             with pytest.raises(ValueError, match="TEXT model"):
                 TextProcessor(text_model=mock_model)
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_ensure_nltk_data.assert_not_called()
 
     def test_process_file_returns_processed_file(self, tmp_path: Path) -> None:
         from file_organizer.services.text_processor import ProcessedFile, TextProcessor

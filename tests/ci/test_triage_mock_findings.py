@@ -79,11 +79,34 @@ def test_parametrized_nodeids_collapse_to_one_test() -> None:
     assert rows[0]["test"] == "test_a"
 
 
-def test_untracked_rows_are_deferred() -> None:
+def test_undecidable_findings_never_enter_the_decay_backlog() -> None:
+    """An ``undecidable`` row routed into the dead bucket is still allowlisted.
+
+    The plugin marks a patch undecidable when the test assigned attributes
+    onto the mock, so access cannot be observed. Those are load bearing far
+    more often than not. The caller splits the plugin report by hand, so
+    build_worklist must not depend on that split being correct.
+    """
+    row = _dead("t.py", "test_a", "mod.CONST")
+    row["status"] = "undecidable"
+    rows = build_worklist([row], [], [])
+    assert len(rows) == 1
+    assert rows[0]["action"] == "untracked-review"
+    assert rows[0]["status"] == "allowlisted"
+
+
+def test_untracked_rows_are_allowlisted_not_deferred() -> None:
+    """Untracked findings are undecidable by construction, so never triage-able.
+
+    ``patch(target, True)`` / ``patch(target, tmp_path)`` replace the target
+    with a non-Mock, so the plugin cannot observe access at all. Deferring
+    them regrew a 1,153-row backlog on every regeneration for findings no
+    amount of triage could resolve.
+    """
     rows = build_worklist([], [], [_dead("t.py", "test_a", "mod.CONST")])
     assert len(rows) == 1
     assert rows[0]["action"] == "untracked-review"
-    assert rows[0]["status"] == "deferred"
+    assert rows[0]["status"] == "allowlisted"
 
 
 def test_parametrized_cases_do_not_fake_fixture_spread() -> None:
@@ -100,7 +123,7 @@ def test_duplicate_untracked_findings_collapse_to_one_row() -> None:
     u2 = _dead("t.py", "test_a[two]", "mod.CONST", line=9)
     rows = build_worklist([], [], [u, u, u2])
     assert len(rows) == 1
-    assert rows[0]["status"] == "deferred"
+    assert rows[0]["status"] == "allowlisted"
 
 
 def test_prior_allowlisted_status_carries_forward() -> None:

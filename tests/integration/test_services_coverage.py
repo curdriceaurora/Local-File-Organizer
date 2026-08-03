@@ -344,7 +344,7 @@ class TestSceneDetector:
         # Test content/threshold/adaptive branches
         with patch(
             "file_organizer.services.video.scene_detector.SceneDetector._check_dependencies"
-        ):
+        ) as mock_check_dependencies:
             with patch.dict(
                 "sys.modules",
                 {
@@ -358,6 +358,9 @@ class TestSceneDetector:
                 assert len(res.scenes) == 1
                 assert res.scenes[0].duration == 5.0
                 mock_video_mgr.release.assert_called_once()
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_check_dependencies.assert_not_called()
 
     def test_detect_with_opencv_fallback(self, tmp_path: Path) -> None:
         dummy_video = tmp_path / "video.mp4"

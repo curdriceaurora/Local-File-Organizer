@@ -367,10 +367,13 @@ class TestWatchLoopExecutor:
         with patch(
             "file_organizer.pipeline.orchestrator.futures_wait",
             return_value=({object()}, set()),
-        ):
+        ) as mock_futures_wait:
             orch._watch_futures.clear()
             orch.stop()
 
+        # With no outstanding futures there is nothing to drain, so the retry
+        # goes straight to the deferred cleanup.
+        mock_futures_wait.assert_not_called()
         orch.processor_pool.cleanup.assert_called_once()
         assert orch._pending_pool_cleanup is False
 

@@ -356,7 +356,7 @@ def test_audio_view_scan_success() -> None:
     mock_classifier.classify.side_effect = [mock_class1, mock_class2]
 
     with (
-        patch.object(Path, "is_file", return_value=True),
+        patch.object(Path, "is_file", return_value=True) as mock_is_file,
         # The scan walks via safe_walk now; stubbing mock_dir.rglob would no
         # longer be reached. Patch the name as imported by the view module.
         patch("file_organizer.tui.audio_view.safe_walk", return_value=[p1, p2]),
@@ -392,6 +392,9 @@ def test_audio_view_scan_success() -> None:
         panels[AudioMetadataPanel].set_metadata.assert_called_once_with(mock_meta1)
         panels[AudioClassificationPanel].set_classification.assert_called_once_with(mock_class1)
         mock_status.assert_called_once_with("Audio: 2 files loaded")
+    # Recorded as never reached on this path; pin it so a change that
+    # starts calling it fails here instead of going unnoticed.
+    mock_is_file.assert_not_called()
 
 
 def test_audio_view_scan_extraction_exception() -> None:
@@ -407,7 +410,7 @@ def test_audio_view_scan_extraction_exception() -> None:
     mock_extractor.extract.side_effect = Exception("Read error")
 
     with (
-        patch.object(Path, "is_file", return_value=True),
+        patch.object(Path, "is_file", return_value=True) as mock_is_file,
         # See the note in test_audio_view_scan_success: the scan uses safe_walk.
         patch("file_organizer.tui.audio_view.safe_walk", return_value=[p1]),
         patch(
@@ -428,6 +431,9 @@ def test_audio_view_scan_extraction_exception() -> None:
                 ("track1.mp3", "mp3", "?"),
             ]
         )
+    # Recorded as never reached on this path; pin it so a change that
+    # starts calling it fails here instead of going unnoticed.
+    mock_is_file.assert_not_called()
 
 
 def test_audio_view_scan_import_error() -> None:

@@ -251,13 +251,29 @@ class TestMaybeCheckForUpdates:
                         # Should have checked since 2 days > 24 hours
                         assert result is not None
 
-    def test_uses_default_store_path_when_none_provided(self):
-        """Creates default store when state_store not provided."""
+    def test_uses_default_store_path_when_none_provided(self, monkeypatch):
+        """Creates a default UpdateStateStore when state_store is not provided.
+
+        Two guards had to be cleared for this to test anything at all:
+
+        - ``maybe_check_for_updates`` returns immediately when
+          ``PYTEST_CURRENT_TEST`` is set, which pytest always sets. Without
+          clearing it the function never reached ConfigManager, so both
+          patches below were inert and the test verified nothing.
+        - ``check_on_startup`` was False, which returns before the store is
+          constructed — the opposite of what the name claims.
+        """
+        monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+        monkeypatch.delenv("FO_DISABLE_UPDATE_CHECK", raising=False)
+
         with patch("file_organizer.updater.background.ConfigManager") as mock_cfg_mgr:
             mock_cfg = MagicMock()
-            mock_cfg.updates.check_on_startup = False
+            mock_cfg.updates.check_on_startup = True
             mock_cfg_mgr.return_value.load.return_value = mock_cfg
-            with patch("file_organizer.updater.background.UpdateStateStore"):
+            with patch("file_organizer.updater.background.UpdateStateStore") as mock_store_cls:
+                # Not due, so the check stops after the store is built.
+                mock_store_cls.return_value.load.return_value.due.return_value = False
                 maybe_check_for_updates()
-                # Should have tried to create a store instance
-                # (though disabled checks mean it returns None before calling)
+
+        # The point of the test: with no state_store passed, one is created.
+        mock_store_cls.assert_called_once_with()

@@ -83,7 +83,7 @@ class TestBenchmarkEvenIterations:
             patch(
                 "file_organizer.optimization.memory_profiler.MemoryProfiler",
                 return_value=mock_profiler,
-            ),
+            ) as mock_memoryprofiler,
             patch(
                 "file_organizer.optimization.resource_monitor.ResourceMonitor",
                 return_value=mock_monitor,
@@ -100,3 +100,6 @@ class TestBenchmarkEvenIterations:
         assert payload["degraded"] is False
         assert payload["degradation_reasons"] == []
         assert payload["files_count"] == 1
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_memoryprofiler.assert_not_called()

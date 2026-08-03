@@ -60,6 +60,16 @@ def build_worklist(
     stops being flagged, so if its key reappears, that is a regression and
     the row reopens.
     """
+    # An ``undecidable`` finding is not decay: the plugin could not observe
+    # access because the test assigned attributes onto the mock. Route it to
+    # the untracked bucket no matter which input file it arrived in — the
+    # caller splits the plugin report by hand, and one mis-split would put
+    # load-bearing patches into an enforced backlog.
+    misrouted = [d for d in dead if d.get("status") == "undecidable"]
+    if misrouted:
+        dead = [d for d in dead if d.get("status") != "undecidable"]
+        untracked = [*untracked, *misrouted]
+
     # Spread is counted over distinct tests, not raw findings — otherwise
     # FIXTURE_SPREAD parametrizations of one test would fake fixture noise.
     distinct_sites = {(d["file"], d["target"], _test_name(d["nodeid"])) for d in dead}
@@ -126,7 +136,15 @@ def build_worklist(
                 "sources": ["liveness"],
                 "dead_targets": [u["target"]],
                 "unused_params": [],
-                "status": "deferred",
+                # Allowlisted on sight, not deferred. These are explicit-new
+                # patches — ``patch(target, True)``, ``patch(target, tmp_path)``,
+                # ``patch(target, real_function)`` — where the replacement is
+                # not a Mock, so ``classify_mock`` returns "untracked" and
+                # liveness is undecidable by construction, not decayed. No
+                # amount of triage can resolve them; a bool being read leaves
+                # no trace. Deferring them just regrows a 1,153-row backlog on
+                # every regeneration.
+                "status": "allowlisted",
             }
         )
     return rows

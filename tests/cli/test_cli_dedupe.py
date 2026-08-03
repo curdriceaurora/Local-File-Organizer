@@ -836,7 +836,7 @@ class TestDedupeCommandDuplicates:
 
         with (
             patch(_DETECTOR_PATH, return_value=mock_detector),
-            patch(_BACKUP_MGR_PATH, return_value=MagicMock()),
+            patch(_BACKUP_MGR_PATH, return_value=MagicMock()) as mock_backup_mgr,
             patch(_SCAN_OPTS_PATH),
         ):
             result = dedupe_command(
@@ -850,6 +850,9 @@ class TestDedupeCommandDuplicates:
             )
         # Should still return 0 (error is per-file, not fatal)
         assert result == 0
+        # --no-safe-mode means no backups are taken, so the manager is never
+        # constructed even though removals happen.
+        mock_backup_mgr.assert_not_called()
 
     def test_keyboard_interrupt_during_scan(self, tmp_path):
         """KeyboardInterrupt returns exit code 130."""

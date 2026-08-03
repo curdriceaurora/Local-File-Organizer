@@ -38,12 +38,18 @@ class TestResolvePath:
         result = resolve_path(str(test_file), allowed_paths=[str(tmp_path)])
         assert result == Path(os.path.realpath(test_file))
 
-    def test_value_error_in_commonpath(self) -> None:
-        """On Windows, commonpath raises ValueError for paths on different drives."""
-        with (
-            patch("os.path.commonpath", side_effect=ValueError("different drives")),
-            pytest.raises(ApiError) as exc_info,
-        ):
+    def test_unrelated_root_rejected(self) -> None:
+        """A path sharing no ancestry with the allowed root is rejected.
+
+        Formerly ``test_value_error_in_commonpath``, which patched
+        ``os.path.commonpath`` with a ValueError side effect to drive a
+        cross-drive branch. ``resolve_path`` does not call ``commonpath`` --
+        it uses ``Path.resolve()`` + ``is_relative_to()`` (see its docstring)
+        -- so the patch never fired and the 403 came from the allowed-root
+        check all along. Asserting the mock was *not* called, as I first did,
+        only pinned that misunderstanding in place.
+        """
+        with pytest.raises(ApiError) as exc_info:
             resolve_path("/tmp/test", allowed_paths=["/other/path"])  # noqa: test-hardcoded-paths
         assert exc_info.value.status_code == 403
 
