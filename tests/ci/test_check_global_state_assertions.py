@@ -120,6 +120,10 @@ class TestLoggerClassPatch:
             """,
         )
         assert len(violations) == 1
+        # The object branch builds its own message; assert it, or a wrong or
+        # empty string there would still pass a count-only check.
+        assert "every logger in the process" in violations[0][1]
+        assert "error" in violations[0][1]
 
     def test_allows_patching_a_module_logger(self, tmp_path: Path) -> None:
         """The fix shape: patch the logger the code under test actually uses."""
@@ -196,6 +200,58 @@ def test_targeted_noqa_suppresses(tmp_path: Path) -> None:
 
         def test_platform_reporting(monkeypatch):
             monkeypatch.setattr(sys, "platform", "win32")  # noqa: global-state-assertion
+        """,
+    )
+    assert violations == []
+
+
+def test_noqa_on_the_closing_line_of_a_multiline_call_suppresses(tmp_path: Path) -> None:
+    """These calls are routinely multi-line; the closing line is a natural spot.
+
+    Reading only ``lines[node.lineno - 1]`` would ignore it, leaving a
+    finding that cannot be suppressed where an author would think to try.
+    """
+    violations = _check(
+        tmp_path,
+        """
+        import sys
+
+        def test_platform_reporting(monkeypatch):
+            monkeypatch.setattr(
+                sys,
+                "platform",
+                "win32",
+            )  # noqa: global-state-assertion
+        """,
+    )
+    assert violations == []
+
+
+def test_flags_dotted_string_setattr_form(tmp_path: Path) -> None:
+    """``monkeypatch.setattr("pkg.mod.sys.platform", v)`` is the same mutation.
+
+    pytest accepts a single dotted target as shorthand for (obj, name); the
+    rail must not be blind to the shorthand.
+    """
+    violations = _check(
+        tmp_path,
+        """
+        def test_windows_path(monkeypatch):
+            monkeypatch.setattr("pkg.mod.sys.platform", "win32")
+        """,
+    )
+    assert len(violations) == 1
+    assert "process-wide" in violations[0][1]
+
+
+def test_dotted_string_form_ignores_unrelated_targets(tmp_path: Path) -> None:
+    """Only the real sys module's platform is guarded, not any '.platform'."""
+    violations = _check(
+        tmp_path,
+        """
+        def test_other(monkeypatch):
+            monkeypatch.setattr("pkg.mod.config.platform", "win32")
+            monkeypatch.setattr("pkg.mod.sys.argv", [])
         """,
     )
     assert violations == []

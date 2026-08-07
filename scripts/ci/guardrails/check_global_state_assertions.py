@@ -65,9 +65,22 @@ def _check_sys_mutation(node: ast.Call) -> str | None:
     is_setattr = (isinstance(func, ast.Name) and func.id == "setattr") or (
         isinstance(func, ast.Attribute) and func.attr == "setattr"
     )
-    if not is_setattr or len(node.args) < 2:
+    if not is_setattr or not node.args:
         return None
-    if not _targets_sys_module(node.args[0]):
+
+    first = node.args[0]
+    # Single dotted-string form: monkeypatch.setattr("pkg.mod.sys.platform", v)
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        target, _, attr_name = first.value.rpartition(".")
+        if attr_name not in _GUARDED_SYS_ATTRS or not target.endswith("sys"):
+            return None
+        return (
+            f"mutates the real sys module's '{attr_name}' process-wide — anything "
+            f"first-imported during this window sees it. Patch the module under "
+            f"test's own 'sys' reference instead"
+        )
+
+    if len(node.args) < 2 or not _targets_sys_module(first):
         return None
     attr = node.args[1]
     if not (isinstance(attr, ast.Constant) and attr.value in _GUARDED_SYS_ATTRS):
@@ -166,8 +179,11 @@ def check_file(filepath: Path) -> list[tuple[int, str]]:
             message = _check_whole_stream_equality(node)
         if message is None:
             continue
-        line = lines[node.lineno - 1] if node.lineno <= len(lines) else ""
-        if has_targeted_noqa(line, RAIL_NAME):
+        # Span-aware: these nodes are routinely multi-line, and a noqa on the
+        # closing line is the natural place to put it.
+        end = getattr(node, "end_lineno", node.lineno) or node.lineno
+        span = lines[node.lineno - 1 : end]
+        if any(has_targeted_noqa(line, RAIL_NAME) for line in span):
             continue
         violations.append((node.lineno, message))
     return sorted(set(violations))
@@ -178,12 +194,24 @@ def _changed_lines_by_file() -> dict[str, set[int]]:
     import re
     import subprocess
 
-    result = subprocess.run(
-        ["git", "diff", "--cached", "-U0", "--no-color", "--", "tests/"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "-U0", "--no-color", "--", "tests/"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except OSError:
+        # git absent from PATH, or the call timed out. Returning an empty map
+        # makes --changed-only scope to nothing, which the caller sees as a
+        # clean run — so fail loudly instead of silently passing the gate.
+        print(
+            f"[{RAIL_NAME}] could not read the staged diff (git unavailable or "
+            f"timed out); re-run without --changed-only.",
+            file=sys.stderr,
+        )
+        raise
     changed: dict[str, set[int]] = {}
     current: str | None = None
     for line in result.stdout.splitlines():
@@ -217,8 +245,14 @@ def main() -> int:
 
     all_violations = []
     for path in paths:
+        # Diff keys are repository-relative; an absolute path would never match,
+        # silently dropping every violation in the file and passing the gate.
+        try:
+            key = path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+        except ValueError:
+            key = path.as_posix()
         for lineno, msg in check_file(path):
-            if changed is not None and lineno not in changed.get(path.as_posix(), set()):
+            if changed is not None and lineno not in changed.get(key, set()):
                 continue
             all_violations.append((path.as_posix(), lineno, msg))
 
