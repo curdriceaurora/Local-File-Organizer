@@ -43,6 +43,7 @@ from file_organizer.services.audio.transcriber import (
 from file_organizer.services.audio.transcriber import (
     TranscriptionOptions as ServiceTranscriptionOptions,
 )
+from file_organizer.services.deduplication import embedder as _embedder_mod
 from file_organizer.services.deduplication.embedder import DocumentEmbedder
 from file_organizer.services.video.scene_detector import (
     DetectionMethod,
@@ -864,7 +865,7 @@ class TestDocumentEmbedder:
         assert emb1.shape == (5,)
 
         # Cache hit
-        with patch("logging.Logger.debug") as mock_debug:
+        with patch.object(_embedder_mod.logger, "debug") as mock_debug:
             emb2 = embedder.transform(doc)
             assert np.array_equal(emb1, emb2)
             # Verify cache hit log message
@@ -970,20 +971,20 @@ class TestDocumentEmbedder:
 
         # 4. save_model on unfitted vectorizer
         unfitted = DocumentEmbedder(max_features=5)
-        with patch("logging.Logger.warning") as mock_warn:
+        with patch.object(_embedder_mod.logger, "warning") as mock_warn:
             unfitted.save_model(tmp_path / "unfitted.pkl")
             mock_warn.assert_called_with("Cannot save unfitted vectorizer")
 
         # 5. save_model raising pickling errors
         embedder.is_fitted = True
         with patch("builtins.open", side_effect=OSError("Save failed")):
-            with patch("logging.Logger.error") as mock_err:
+            with patch.object(_embedder_mod.logger, "error") as mock_err:
                 embedder.save_model(tmp_path / "fail.pkl")
                 mock_err.assert_called_once()
 
         # 6. load_model raising unpickling errors
         with patch("builtins.open", side_effect=OSError("Load failed")):
-            with patch("logging.Logger.error") as mock_err:
+            with patch.object(_embedder_mod.logger, "error") as mock_err:
                 with pytest.raises(OSError, match="Load failed"):
                     embedder.load_model(tmp_path / "fail.pkl")
                 mock_err.assert_called_once()
@@ -995,14 +996,14 @@ class TestDocumentEmbedder:
         # 8. _save_cache raising pickling errors
         embedder.cache_path = tmp_path / "cache_fail.pkl"
         with patch("builtins.open", side_effect=OSError("Cache save failed")):
-            with patch("logging.Logger.error") as mock_err:
+            with patch.object(_embedder_mod.logger, "error") as mock_err:
                 embedder._save_cache()
                 mock_err.assert_called_once()
 
         # 9. _load_cache raising unpickling errors
         embedder.cache_path = tmp_path / "cache_fail.pkl"
         embedder.cache_path.write_bytes(b"corrupted pickle data")
-        with patch("logging.Logger.error") as mock_err:
+        with patch.object(_embedder_mod.logger, "error") as mock_err:
             embedder._load_cache()
             mock_err.assert_called_once()
 
