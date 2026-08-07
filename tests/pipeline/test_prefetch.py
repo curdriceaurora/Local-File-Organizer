@@ -129,28 +129,44 @@ def _make_files(tmp_path: Path, count: int, size_bytes: int, seed: int = 42) -> 
 class TestPrefetchPerformance:
     """Verify prefetch gives >= 20% wall-clock speedup on a 10-file batch."""
 
-    def _median_batch_time(
+    def _paired_medians(
         self,
         files: list[Path],
-        prefetch_depth: int,
         io_delay: float,
         compute_delay: float,
-        iterations: int = 5,
-    ) -> float:
-        times: list[float] = []
-        for _ in range(iterations):
-            orchestrator = PipelineOrchestrator(
-                stages=[
-                    _SlowIOStage(delay_s=io_delay),
-                    _SlowComputeStage(delay_s=compute_delay),
-                ],
-                prefetch_depth=prefetch_depth,
-                prefetch_stages=1,
-            )
-            t0 = time.monotonic()
-            orchestrator.process_batch(files)
-            times.append(time.monotonic() - t0)
-        return statistics.median(times)
+        iterations: int = 8,
+    ) -> tuple[float, float]:
+        """Median time for depth=0 and depth=2, sampled interleaved.
+
+        Two biases to remove, not one:
+
+        - Timing all baseline runs and then all prefetch runs lets drift
+          between the two blocks drive the ratio — a runner that gets busier
+          mid-test makes prefetch look slower than it is. Hence pairing.
+        - Within a pair, always running depth=0 first hands depth=2 a warm
+          page cache every single time, which flatters prefetch. Seven
+          medians do not cancel a systematic order bias. Hence alternating,
+          over an even iteration count so each order runs equally often.
+        """
+        baseline: list[float] = []
+        prefetched: list[float] = []
+        for iteration in range(iterations):
+            runs = ((0, baseline), (2, prefetched))
+            if iteration % 2:
+                runs = ((2, prefetched), (0, baseline))
+            for depth, bucket in runs:
+                orchestrator = PipelineOrchestrator(
+                    stages=[
+                        _SlowIOStage(delay_s=io_delay),
+                        _SlowComputeStage(delay_s=compute_delay),
+                    ],
+                    prefetch_depth=depth,
+                    prefetch_stages=1,
+                )
+                t0 = time.monotonic()
+                orchestrator.process_batch(files)
+                bucket.append(time.monotonic() - t0)
+        return statistics.median(baseline), statistics.median(prefetched)
 
     def test_prefetch_faster_than_sequential(self, tmp_path: Path) -> None:
         """Prefetch depth=2 must be >= 20% faster than no-prefetch baseline.
@@ -165,11 +181,8 @@ class TestPrefetchPerformance:
         io_delay = 0.015  # 15 ms  — simulates file-read latency
         compute_delay = 0.04  # 40 ms  — simulates LLM inference
 
-        baseline = self._median_batch_time(
-            files, prefetch_depth=0, io_delay=io_delay, compute_delay=compute_delay
-        )
-        with_prefetch = self._median_batch_time(
-            files, prefetch_depth=2, io_delay=io_delay, compute_delay=compute_delay
+        baseline, with_prefetch = self._paired_medians(
+            files, io_delay=io_delay, compute_delay=compute_delay
         )
 
         speedup = (baseline - with_prefetch) / baseline

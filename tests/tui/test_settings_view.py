@@ -84,7 +84,11 @@ with patch("os.cpu_count", return_value=None):
     importlib.reload(settings_view_module)
     settings = settings_view_module.load_parallel_runtime_settings(manager=mock_manager)
 
-    print(f"{settings.max_workers},{settings.prefetch_depth}")
+    # Sentinel-prefixed: the subprocess imports the whole package, and
+    # libraries print to stdout on import (PyMuPDF emits a `fitz` deprecation
+    # notice, which broke an exact-match assertion here on py3.14). Assert on
+    # our own marked line rather than on the entire shared stream.
+    print(f"PARALLEL_SETTINGS:{settings.max_workers},{settings.prefetch_depth}")
 """
     src_root = Path(__file__).resolve().parents[2] / "src"
     existing_pythonpath = os.environ.get("PYTHONPATH", "")
@@ -100,7 +104,12 @@ with patch("os.cpu_count", return_value=None):
         text=True,
     )
 
-    assert result.stdout.strip() == "1,3"
+    marked = [
+        line.partition(":")[2]
+        for line in result.stdout.splitlines()
+        if line.startswith("PARALLEL_SETTINGS:")
+    ]
+    assert marked == ["1,3"], f"stdout was: {result.stdout!r}"
 
 
 def test_save_parallel_runtime_settings_persists_values() -> None:

@@ -15,6 +15,7 @@ from __future__ import annotations
 import sys
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -113,7 +114,13 @@ class TestAnchoredScanRoot:
         enforced on every platform (#1269)."""
         import file_organizer.services.deduplication.extractor as ext
 
-        monkeypatch.setattr(ext.sys, "platform", "win32")
+        # Give the module its own sys stand-in. ``ext.sys`` IS the real sys
+        # module, so setattr on it fakes the platform process-wide: anything
+        # first-importing during the window sees the lie. pydub.utils calls
+        # shutil.which("ffmpeg") at import, and shutil.which's win32 branch
+        # dereferences _winapi, which is None off Windows — an AttributeError
+        # whose appearance depends purely on which tests imported pydub first.
+        monkeypatch.setattr(ext, "sys", SimpleNamespace(platform="win32"))
 
         root = tmp_path / "root"
         root.mkdir()
@@ -148,7 +155,13 @@ class TestAnchoredScanRoot:
         except OSError:
             pytest.skip("symlink creation not supported")
 
-        monkeypatch.setattr(ext.sys, "platform", "win32")
+        # Give the module its own sys stand-in. ``ext.sys`` IS the real sys
+        # module, so setattr on it fakes the platform process-wide: anything
+        # first-importing during the window sees the lie. pydub.utils calls
+        # shutil.which("ffmpeg") at import, and shutil.which's win32 branch
+        # dereferences _winapi, which is None off Windows — an AttributeError
+        # whose appearance depends purely on which tests imported pydub first.
+        monkeypatch.setattr(ext, "sys", SimpleNamespace(platform="win32"))
         victim = root / "link" / "doc.txt"
         # Lexically victim is under root, but it resolves outside → refused ("").
         assert DocumentExtractor().extract_text(victim, scan_root=root) == ""
