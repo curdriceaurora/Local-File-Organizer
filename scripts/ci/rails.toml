@@ -97,6 +97,12 @@ mode = "enforce"
 description = "Flags tests that mutate class/global state or sys.modules without scoped restoration (issue #1414)."
 
 [[rail]]
+name = "global-state-assertion"
+command = ["python", "scripts/ci/guardrails/check_global_state_assertions.py"]
+mode = "enforce"
+description = "Flags tests asserting over process-global channels — the real sys.platform, the logging.Logger class, or a whole captured stream (issue #1721). Enforce from day one: the suite was at zero instances when the rail landed, the five flakes in #1720 having just been fixed."
+
+[[rail]]
 name = "unused-patch-argument"
 command = ["python", "scripts/ci/guardrails/check_unused_patch_argument.py"]
 mode = "enforce"

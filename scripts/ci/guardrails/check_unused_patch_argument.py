@@ -171,12 +171,24 @@ def _changed_lines_by_file() -> dict[str, set[int]]:
     import re
     import subprocess
 
-    result = subprocess.run(
-        ["git", "diff", "--cached", "-U0", "--no-color", "--", "tests/"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "-U0", "--no-color", "--", "tests/"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except OSError:
+        # git absent from PATH, or the call timed out. Returning an empty map
+        # makes --changed-only scope to nothing, which the caller sees as a
+        # clean run — so fail loudly instead of silently passing the gate.
+        print(
+            f"[{RAIL_NAME}] could not read the staged diff (git unavailable or "
+            f"timed out); re-run without --changed-only.",
+            file=sys.stderr,
+        )
+        raise
     changed: dict[str, set[int]] = {}
     current: str | None = None
     for line in result.stdout.splitlines():
@@ -210,8 +222,14 @@ def main() -> int:
 
     all_violations = []
     for path in paths:
+        # Diff keys are repository-relative; an absolute path would never match,
+        # silently dropping every violation in the file and passing the gate.
+        try:
+            key = path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+        except ValueError:
+            key = path.as_posix()
         for lineno, msg in check_file(path):
-            if changed is not None and lineno not in changed.get(path.as_posix(), set()):
+            if changed is not None and lineno not in changed.get(key, set()):
                 continue
             all_violations.append((path.as_posix(), lineno, msg))
 
