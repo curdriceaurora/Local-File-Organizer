@@ -523,9 +523,14 @@ class TestWriterStage:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Verify that when sys.platform is mocked as win32, the writer falls back to shutil.copy2."""
-        import sys
+        from types import SimpleNamespace
 
-        monkeypatch.setattr(sys, "platform", "win32")
+        from file_organizer.utils import safe_copy as _safe_copy
+
+        # Scope the fake to the module that branches on it. Patching the real
+        # sys.platform is process-wide and makes any first-import during the
+        # window take a Windows path it cannot survive off Windows.
+        monkeypatch.setattr(_safe_copy, "sys", SimpleNamespace(platform="win32"))
 
         src = tmp_path / "src.txt"
         src.parent.mkdir(parents=True, exist_ok=True)

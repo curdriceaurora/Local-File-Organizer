@@ -285,21 +285,28 @@ class TestConcurrencyFixes(unittest.TestCase):
         measure *continuous no-progress* time — reset on every healthy
         completion — so it does NOT fire here and ALL files complete.
         """
-        timeout = 0.2
+        # Two constraints shape these numbers:
+        #   1. total drain time must exceed 2 x timeout, or the scenario the
+        #      test exists for (a queued file aging past the guard while the
+        #      pool progresses) never arises: n * work > 2 * timeout.
+        #   2. each task must stay comfortably under timeout on a loaded CI
+        #      runner, or a healthy task is misread as a hung one.
+        # The original 6 tasks at 0.5 x timeout satisfied (1) with only a 2x
+        # margin on (2), and a 2x slowdown is routine on shared runners — this
+        # test failed that way on macOS/py3.12 CI. More tasks buy margin:
+        # 20 x 0.2 = 4 x timeout for (1), while leaving a 5x margin on (2).
+        timeout = 0.5
+        work_time = timeout * 0.2
         config = ParallelConfig(
             max_workers=1,
             timeout_per_file=timeout,
             retry_count=0,
         )
         processor = ParallelProcessor(config=config)
-        # Six files drained one-at-a-time: total ≈ 6 x 0.1s = 0.6s. Without the
-        # per-completion reset, the last queued file would age well past
-        # 2xtimeout (0.4s) and false-trip saturation before it ever runs.
-        paths = [Path(f"slow_progress_{i}") for i in range(6)]
+        paths = [Path(f"slow_progress_{i}") for i in range(20)]
 
         def slow_but_completes(_path: Path) -> str:
-            # Completes in ~half the timeout, so each task is healthy.
-            threading.Event().wait(timeout=timeout * 0.5)
+            threading.Event().wait(timeout=work_time)
             return "ok"
 
         results = processor.process_batch(paths, slow_but_completes)
