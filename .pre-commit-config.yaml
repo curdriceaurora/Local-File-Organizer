@@ -238,6 +238,20 @@ repos:
       # static backlog reached zero), so this hook is the fast path rather
       # than the only gate.
       # ----------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # global-state-assertion (#1721) — commit-time, diff-scoped.
+      # Catches a new assertion over sys.platform, the logging.Logger class,
+      # or a whole captured stream on the lines being committed, before the
+      # full-tree rail sees it in CI. These flakes never reproduce locally,
+      # so the commit-time catch is worth more here than usual.
+      # ----------------------------------------------------------------
+      - id: global-state-assertion
+        name: global-state assertion (changed lines)
+        entry: python scripts/ci/guardrails/check_global_state_assertions.py --changed-only
+        language: system
+        files: ^tests/.*test_.*\.py$
+        pass_filenames: true
+
       - id: unused-patch-argument
         name: unused @patch argument (changed lines)
         entry: python scripts/ci/guardrails/check_unused_patch_argument.py --changed-only
