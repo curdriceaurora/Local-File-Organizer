@@ -19,10 +19,19 @@ from file_organizer.utils.atomic_io import fsync_directory
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_JOBS_DIR = resolve_legacy_path(
-    get_data_dir() / "jobs",
-    Path.home() / ".file-organizer" / "jobs",
-)
+
+def _default_jobs_dir() -> Path:
+    """Resolve the default jobs directory at call time.
+
+    Deliberately not a module-level constant: both ``get_data_dir()`` and
+    ``Path.home()`` read the environment, so freezing this at import time
+    pins it to whatever the environment was when the module was first
+    imported and ignores any later repointing (see #1677).
+    """
+    return resolve_legacy_path(
+        get_data_dir() / "jobs",
+        Path.home() / ".file-organizer" / "jobs",
+    )
 
 
 class JobPersistence:
@@ -38,7 +47,7 @@ class JobPersistence:
 
     def __init__(self, jobs_dir: Path | None = None) -> None:
         """Set up job persistence with the given storage directory."""
-        self._jobs_dir = jobs_dir or _DEFAULT_JOBS_DIR
+        self._jobs_dir = jobs_dir or _default_jobs_dir()
 
     @property
     def jobs_dir(self) -> Path:

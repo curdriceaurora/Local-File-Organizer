@@ -20,7 +20,19 @@ from file_organizer.utils.atomic_io import fsync_directory
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CHECKPOINTS_DIR = get_data_dir() / "checkpoints"
+
+def _default_checkpoints_dir() -> Path:
+    """Resolve the default checkpoint directory at call time.
+
+    Deliberately not a module-level constant. ``get_data_dir()`` reads
+    ``XDG_DATA_HOME``/``HOME``, so computing it at import time freezes
+    whatever the environment happened to be when this module was first
+    imported — which, in a test session, is whichever test pulled it in
+    first. Anything that repoints the data directory afterwards is then
+    silently ignored (see #1677).
+    """
+    return get_data_dir() / "checkpoints"
+
 
 _HASH_CHUNK_SIZE = 8192
 
@@ -63,7 +75,7 @@ class CheckpointManager:
 
     def __init__(self, checkpoints_dir: Path | None = None) -> None:
         """Set up the checkpoint manager with the given directory."""
-        self._checkpoints_dir = checkpoints_dir or _DEFAULT_CHECKPOINTS_DIR
+        self._checkpoints_dir = checkpoints_dir or _default_checkpoints_dir()
 
     @property
     def checkpoints_dir(self) -> Path:

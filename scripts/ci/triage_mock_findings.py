@@ -36,6 +36,24 @@ from pathlib import Path
 
 FIXTURE_SPREAD = 5
 
+#: Conftest autouse fixtures that suppress a setup check for *every* test in
+#: the suite. They are deliberate, reviewed, and permanent — and because they
+#: are autouse they are attributed to all ~22.5k tests, so they arrive as 99.6%
+#: of the raw dead findings (51,125 of 51,308 on 2026-08-07). Carrying them
+#: into the worklist buries the ~180 rows that describe real decay under a
+#: 20,000-row wall, which is why the epic's inputs were filtered by hand.
+#:
+#: Encoding the filter here is what makes regeneration reproducible: running
+#: the documented recipe against a raw report used to yield a 21,908-row
+#: worklist instead of the curated ~1,600-row artifact. ``build_worklist``
+#: reports what it drops (see ``suppressed``) so the exclusion is never silent.
+AUTOUSE_SUPPRESSORS = frozenset(
+    {
+        "file_organizer.cli.organize._check_setup_completed",
+        "FileOrganizerApp._check_setup_needed",
+    }
+)
+
 
 def _test_name(nodeid: str) -> str:
     return nodeid.split("::")[-1].split("[")[0]
@@ -69,6 +87,8 @@ def build_worklist(
     if misrouted:
         dead = [d for d in dead if d.get("status") != "undecidable"]
         untracked = [*untracked, *misrouted]
+
+    dead = [d for d in dead if d["target"] not in AUTOUSE_SUPPRESSORS]
 
     # Spread is counted over distinct tests, not raw findings — otherwise
     # FIXTURE_SPREAD parametrizations of one test would fake fixture noise.
@@ -136,14 +156,18 @@ def build_worklist(
                 "sources": ["liveness"],
                 "dead_targets": [u["target"]],
                 "unused_params": [],
-                # Allowlisted on sight, not deferred. These are explicit-new
-                # patches — ``patch(target, True)``, ``patch(target, tmp_path)``,
-                # ``patch(target, real_function)`` — where the replacement is
-                # not a Mock, so ``classify_mock`` returns "untracked" and
-                # liveness is undecidable by construction, not decayed. No
-                # amount of triage can resolve them; a bool being read leaves
-                # no trace. Deferring them just regrows a 1,153-row backlog on
-                # every regeneration.
+                # Allowlisted on sight, not deferred. What survives here is
+                # explicit-new patches whose replacement carries no
+                # observable surface at all: constants (``patch(target,
+                # True)``, ``patch(target, tmp_path)``), classes, exception
+                # types, modules and instances. A bool being read leaves no
+                # trace, and ``except``/``isinstance`` need the real object,
+                # so no amount of triage resolves them; deferring them just
+                # regrows the backlog on every regeneration.
+                #
+                # Function replacements used to land here too. Issue #1719
+                # made them observable in the plugin, which moved them out of
+                # this bucket entirely — see ``_wrap_callable``.
                 "status": "allowlisted",
             }
         )
@@ -157,7 +181,18 @@ def main() -> int:
         return 2
     dead, unused, untracked, out = (Path(a) for a in sys.argv[1:5])
     prior = load_jsonl(Path(sys.argv[5])) if len(sys.argv) == 6 else None
-    rows = build_worklist(load_jsonl(dead), load_jsonl(unused), load_jsonl(untracked), prior=prior)
+    dead_rows = load_jsonl(dead)
+    rows = build_worklist(dead_rows, load_jsonl(unused), load_jsonl(untracked), prior=prior)
+
+    # Never let the autouse exclusion pass unremarked: a run that silently
+    # drops 51k findings looks identical to one where the detector broke.
+    suppressed = sum(1 for d in dead_rows if d["target"] in AUTOUSE_SUPPRESSORS)
+    if suppressed:
+        print(
+            f"note: excluded {suppressed} dead findings from "
+            f"{len(AUTOUSE_SUPPRESSORS)} autouse suppressors",
+            file=sys.stderr,
+        )
     with out.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, sort_keys=True) + "\n")

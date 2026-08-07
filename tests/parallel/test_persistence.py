@@ -8,6 +8,8 @@ save, load, list, delete, filtering, and error handling.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +38,21 @@ class TestJobPersistenceInit(unittest.TestCase):
         legacy = Path.home() / ".file-organizer" / "jobs"
         canonical = get_data_dir() / "jobs"
         self.assertIn(persistence.jobs_dir, {legacy, canonical})
+
+    def test_default_jobs_dir_follows_a_repointed_data_dir(self) -> None:
+        """The default must be resolved per call, not frozen at import.
+
+        Regression for #1677, the same import-time capture as
+        ``test_checkpoint.py``: with ``XDG_DATA_HOME`` repointed and no
+        legacy directory under the fake home, the jobs directory must
+        track the new location rather than the one captured at import.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"XDG_DATA_HOME": tmp, "HOME": tmp}):
+                from file_organizer.config.path_manager import get_data_dir
+
+                persistence = JobPersistence()
+                self.assertEqual(persistence.jobs_dir, get_data_dir() / "jobs")
 
     def test_custom_jobs_dir(self, tmp_path: Path | None = None) -> None:
         """Test that custom directory is used."""
