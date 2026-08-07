@@ -20,8 +20,15 @@ Semantics (pinned by tests/unit/plugins/test_patch_liveness.py):
   calls, so they count.
 - Test-side configuration (``return_value = ...``, ``side_effect = ...``)
   is NOT an access — a configured-but-unreached mock is still dead.
-- Non-mock replacements (``patch(..., None)``, plain sentinel values)
-  cannot be tracked and are reported as ``untracked``, never ``dead``.
+- A mock the test ran ``assert_not_called()`` on is ``asserted``, not
+  dead: staying unreached is the contract being pinned.
+- Plain-function replacements (``patch(..., some_fake)``) ARE tracked:
+  the function is wrapped in a recording proxy that delegates to it, so
+  calls become observable. See ``_wrap_callable`` for why only
+  ``FunctionType`` qualifies.
+- Other non-mock replacements (``patch(..., None)``, constants, classes,
+  exception types, module and instance stand-ins) cannot be tracked and
+  are reported as ``untracked``, never ``dead``.
 - ``monkeypatch.setattr`` is out of scope: it installs plain objects with
   no call recording, so liveness is undecidable statically here.
 
@@ -32,10 +39,12 @@ separate, later issue gated on the triage worklist being drained.
 
 from __future__ import annotations
 
+import functools
 import json
 import os
+import types
 from typing import Any
-from unittest.mock import NonCallableMock
+from unittest.mock import DEFAULT, MagicMock, NonCallableMock
 from unittest.mock import _patch as _MockPatch  # type: ignore[attr-defined]
 
 import pytest
@@ -52,11 +61,19 @@ _state: dict[str, Any] = {
     "records": [],
     "findings": [],
     "worker": None,  # xdist worker id, from pytest config (never the env)
+    "orig_assertions": None,  # unwrapped NonCallableMock assertion methods
 }
 
 
 #: Attributes a bare Mock carries that were not assigned by a test.
 _MOCK_OWN_ATTRS = frozenset({"method_calls"})
+
+#: Marker set on a mock the test asserted was never called. Underscore-
+#: prefixed so ``_test_assigned_attrs`` ignores it.
+_ASSERTED_FLAG = "_fo_asserted_not_called"
+
+#: Mock methods whose whole purpose is to assert a patch stayed unused.
+_NEGATIVE_ASSERTIONS = ("assert_not_called", "assert_not_awaited")
 
 
 def _test_assigned_attrs(mock: NonCallableMock) -> list[str]:
@@ -74,8 +91,12 @@ def _test_assigned_attrs(mock: NonCallableMock) -> list[str]:
 def classify_mock(new_obj: object) -> tuple[str, int | None]:
     """Classify a patch replacement object by observed accesses.
 
+    Accepts either a mock or an ``autospec``-produced function, which is
+    classified through the mock it carries on ``.mock``.
+
     Returns:
-        ("untracked", None) for non-mock replacements,
+        ("untracked", None) for replacements with nothing to observe,
+        ("asserted", 0) when the test asserted the mock was never called,
         ("live", n) for mocks with n > 0 recorded accesses,
         ("undecidable", 0) when nothing was recorded but the test assigned
             attributes onto the mock, whose reads are invisible to us,
@@ -89,13 +110,111 @@ def classify_mock(new_obj: object) -> tuple[str, int | None]:
     finding", never as dead.
     """
     if not isinstance(new_obj, NonCallableMock):
-        return ("untracked", None)
+        # ``autospec``/``create_autospec`` on a function hands back a real
+        # function with the recording mock hung off ``.mock``. Read it only
+        # on non-mocks: on a Mock, ``.mock`` would auto-create a child and
+        # manufacture the very access we are trying to measure.
+        autospec_mock = getattr(new_obj, "mock", None)
+        if not isinstance(autospec_mock, NonCallableMock):
+            return ("untracked", None)
+        new_obj = autospec_mock
+    # ``mock.assert_not_called()`` makes deadness the *contract*: the test is
+    # pinning that the code under test does not reach the patched target.
+    # Such a patch asserts more than most live ones, so reporting it as decay
+    # is backwards — it accounted for 98 of the 101 rows a regeneration
+    # reopened after the epic had marked them repaired.
+    # Read ``__dict__`` directly, never ``getattr``: a Mock manufactures a
+    # child for any unknown attribute, so ``getattr`` would return a truthy
+    # child AND register the access it was asked to measure.
+    if new_obj.__dict__.get(_ASSERTED_FLAG, False):
+        return ("asserted", 0)
     count = len(new_obj.mock_calls) + len(new_obj._mock_children)
     if count:
         return ("live", count)
     if _test_assigned_attrs(new_obj):
         return ("undecidable", 0)
     return ("dead", 0)
+
+
+def _wrap_callable(real: object) -> tuple[Any, MagicMock] | None:
+    """Return ``(installed, probe)`` making *real*'s calls observable.
+
+    Returns ``None`` when *real* must be installed unchanged.
+
+    A patch whose replacement is a plain fake function is invisible to
+    ``classify_mock`` — there is no mock to interrogate — so every such
+    site lands in the ``untracked`` bucket and gets allowlisted on sight.
+    That is the shape most likely to hide decay: a fixture installing a
+    fake ``initialize`` that nothing ever calls is indistinguishable from
+    one that is load bearing.
+
+    The fix is to install a *function* that records into a companion
+    ``probe`` mock and then delegates. The plugin classifies the probe,
+    not the installed object, so observability costs nothing at the call
+    site.
+
+    Only ``types.FunctionType`` (``def`` and ``lambda``) qualifies, and
+    the wrapper is deliberately a function too, because **binding must
+    match exactly**:
+
+    - A function set on a class is a descriptor: ``inst.meth()`` passes
+      ``self``. A ``MagicMock`` is not a descriptor, so swapping one in
+      silently drops ``self`` — the wrapper would be called with the
+      wrong arguments and the fake would raise ``TypeError``.
+    - Conversely, ``functools.partial``, ``builtin_function_or_method``
+      and bound methods do *not* bind when set on a class. Wrapping those
+      in a function would *add* a ``self`` argument that was never there.
+
+    Restricting to ``FunctionType`` and wrapping in a ``FunctionType``
+    keeps the descriptor protocol identical in both directions. Classes,
+    exception types, modules and instances are left alone: ``except``,
+    ``isinstance`` and attribute protocols all require the real object.
+
+    Replacements mock built for itself are also left alone. ``autospec``
+    yields a genuine ``FunctionType`` carrying mock machinery in its
+    ``__dict__``; it is already observable, and wrapping it hands the
+    test a copy whose recorded calls live on a different object.
+    """
+    # `staticmethod`/`classmethod` are binding decorators over a function.
+    # Wrap the function they carry and re-apply the decorator, so the
+    # binding the test asked for is exactly the binding installed.
+    if isinstance(real, (staticmethod, classmethod)):
+        inner = _wrap_callable(real.__func__)
+        if inner is None:
+            return None
+        recorder, probe = inner
+        return (type(real)(recorder), probe)
+    if type(real) is not types.FunctionType:
+        return None
+    if isinstance(getattr(real, "mock", None), NonCallableMock):
+        return None
+    probe = MagicMock()
+
+    if _is_async(real):
+
+        @functools.wraps(real)
+        async def recorder(*args: Any, **kwargs: Any) -> Any:
+            probe(*args, **kwargs)
+            return await real(*args, **kwargs)
+
+    else:
+
+        @functools.wraps(real)
+        def recorder(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+            probe(*args, **kwargs)
+            return real(*args, **kwargs)
+
+    return (recorder, probe)
+
+
+def _is_async(func: Any) -> bool:
+    """True when *func* is a coroutine function.
+
+    Checked on the raw flags rather than ``inspect.iscoroutinefunction``
+    so a fake that is itself already wrapped is judged by what it is, not
+    by what it delegates to.
+    """
+    return bool(func.__code__.co_flags & 0x80)  # CO_COROUTINE
 
 
 def _describe_target(patcher: _MockPatch) -> str:
@@ -111,11 +230,60 @@ def _describe_target(patcher: _MockPatch) -> str:
 
 
 def _tracking_enter(patcher: _MockPatch) -> object:
-    """Wrapper over ``_patch.__enter__`` recording patches per test."""
+    """Wrapper over ``_patch.__enter__`` recording patches per test.
+
+    Plain-function replacements are swapped for a recording proxy so
+    their calls become observable; the probe is what gets classified.
+    ``_patch.__exit__`` restores from its own saved ``temp_original`` and
+    never inspects what is currently installed, so the swap is invisible
+    to teardown.
+    """
     result = _state["orig_enter"](patcher)
-    if _state["current"] is not None:
-        _state["records"].append((_describe_target(patcher), result))
-    return result
+    if _state["current"] is None:
+        return result
+    target = _describe_target(patcher)
+    # Only replacements the *test* supplied are candidates. When ``new`` is
+    # DEFAULT, mock built the replacement itself (bare patch, spec,
+    # autospec) and it is already observable — and the test is handed that
+    # object, so substituting ours would strand its assertions on a copy.
+    wrapped = _wrap_callable(result) if patcher.new is not DEFAULT else None
+    if wrapped is None:
+        _state["records"].append((target, result))
+        return result
+    installed, probe = wrapped
+    setattr(patcher.target, patcher.attribute, installed)
+    _state["records"].append((target, probe))
+    return installed
+
+
+def _install_negative_assertion_tracking() -> dict[str, Any]:
+    """Record on the mock itself when a test asserts it was never called.
+
+    Done by wrapping the ``NonCallableMock`` methods rather than by reading
+    test source, so the flag lands on the exact object asserted — no name
+    matching, and it works through fixtures, helpers and aliases.
+
+    Returns the originals so ``pytest_unconfigure`` can restore them.
+    """
+    originals: dict[str, Any] = {}
+    for name in _NEGATIVE_ASSERTIONS:
+        original = getattr(NonCallableMock, name, None)
+        if original is None:  # assert_not_awaited only exists on AsyncMock
+            continue
+        originals[name] = original
+
+        def make(orig: Any) -> Any:
+            @functools.wraps(orig)
+            def tracked(self: Any, *args: Any, **kwargs: Any) -> Any:
+                result = orig(self, *args, **kwargs)
+                # Only on success: a failing assertion is not a contract.
+                object.__setattr__(self, _ASSERTED_FLAG, True)
+                return result
+
+            return tracked
+
+        setattr(NonCallableMock, name, make(original))
+    return originals
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -125,6 +293,7 @@ def pytest_configure(config: pytest.Config) -> None:
     if _state["enabled"]:  # already installed (defensive: nested sessions)
         return
     _state["enabled"] = True
+    _state["orig_assertions"] = _install_negative_assertion_tracking()
     # Ask pytest, not the environment, whether this session is an xdist
     # worker. ``PYTEST_XDIST_WORKER`` is inherited by any subprocess a test
     # spawns, so a nested session would otherwise believe it is a worker and
@@ -138,8 +307,11 @@ def pytest_unconfigure(config: pytest.Config) -> None:
     """Restore the original ``_patch.__enter__``."""
     if _state["enabled"] and _state["orig_enter"] is not None:
         _MockPatch.__enter__ = _state["orig_enter"]
+        for name, original in (_state["orig_assertions"] or {}).items():
+            setattr(NonCallableMock, name, original)
         _state["enabled"] = False
         _state["orig_enter"] = None
+        _state["orig_assertions"] = None
         _state["worker"] = None
 
 
@@ -159,7 +331,7 @@ def pytest_runtest_teardown(item: pytest.Item) -> None:
     nodeid, file, line = _state["current"]
     for target, new_obj in _state["records"]:
         status, count = classify_mock(new_obj)
-        if status == "live":
+        if status in ("live", "asserted"):
             continue
         _state["findings"].append(
             {
