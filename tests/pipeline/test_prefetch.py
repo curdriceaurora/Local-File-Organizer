@@ -134,20 +134,27 @@ class TestPrefetchPerformance:
         files: list[Path],
         io_delay: float,
         compute_delay: float,
-        iterations: int = 7,
+        iterations: int = 8,
     ) -> tuple[float, float]:
         """Median time for depth=0 and depth=2, sampled interleaved.
 
-        Timing all baseline runs and then all prefetch runs biases the ratio
-        by whatever the machine was doing between the two blocks — a CI
-        runner that gets busier mid-test makes prefetch look slower than it
-        is. Alternating the two configurations exposes both to the same
-        drift, which is what this comparison needs to mean anything.
+        Two biases to remove, not one:
+
+        - Timing all baseline runs and then all prefetch runs lets drift
+          between the two blocks drive the ratio — a runner that gets busier
+          mid-test makes prefetch look slower than it is. Hence pairing.
+        - Within a pair, always running depth=0 first hands depth=2 a warm
+          page cache every single time, which flatters prefetch. Seven
+          medians do not cancel a systematic order bias. Hence alternating,
+          over an even iteration count so each order runs equally often.
         """
         baseline: list[float] = []
         prefetched: list[float] = []
-        for _ in range(iterations):
-            for depth, bucket in ((0, baseline), (2, prefetched)):
+        for iteration in range(iterations):
+            runs = ((0, baseline), (2, prefetched))
+            if iteration % 2:
+                runs = ((2, prefetched), (0, baseline))
+            for depth, bucket in runs:
                 orchestrator = PipelineOrchestrator(
                     stages=[
                         _SlowIOStage(delay_s=io_delay),
