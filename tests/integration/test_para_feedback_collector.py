@@ -623,3 +623,63 @@ class TestPatternLearner:
         total = weights.temporal + weights.content + weights.structural + weights.ai
 
         assert abs(total - 1.0) < 1e-6
+
+
+class TestDefaultStorageDirResolution:
+    """The default storage directory is resolved per call, not at import (#1677)."""
+
+    def test_collector_without_storage_dir_follows_the_config_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Exercises the default branch, which every other test bypasses.
+
+        Integration tests all pass an explicit ``storage_dir``, so the default
+        path is otherwise never taken here — which is what dropped this module
+        under its per-file integration coverage floor when the module-level
+        constant became a function.
+        """
+        from file_organizer.methodologies.para.ai.feedback import FeedbackCollector
+
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        collector = FeedbackCollector()
+
+        assert tmp_path in collector._storage_dir.parents or collector._storage_dir == tmp_path
+
+
+class TestFeedbackStoreDegradesInsteadOfRaising:
+    """The store swallows I/O and parse errors by design; pin that it does.
+
+    These paths return an empty list or simply log, so a regression that
+    started raising would surface as a crash in the suggestion flow rather
+    than as a failure here. They were also the module's only untested
+    branches.
+    """
+
+    def test_corrupt_feedback_file_yields_no_events_rather_than_raising(
+        self, tmp_path: Path
+    ) -> None:
+        from file_organizer.methodologies.para.ai.feedback import FeedbackCollector
+
+        collector = FeedbackCollector(storage_dir=tmp_path)
+        collector._feedback_file.write_text("{not json at all", encoding="utf-8")
+
+        collector._ensure_loaded()
+
+        assert collector._events == []
+
+    def test_unwritable_storage_does_not_raise_on_save(self, tmp_path: Path) -> None:
+        from file_organizer.methodologies.para.ai.feedback import FeedbackCollector
+
+        collector = FeedbackCollector(storage_dir=tmp_path)
+        collector._loaded = True
+
+        with patch(
+            "file_organizer.methodologies.para.ai.feedback.open",
+            side_effect=OSError("disk full"),
+            create=True,
+        ) as mock_open:
+            collector._save_events()
+
+        mock_open.assert_called_once()
