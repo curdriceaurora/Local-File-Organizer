@@ -53,7 +53,11 @@ jobs:
       - name: Run the mutation pilot
         env:
           PROFILE: ${{ inputs.profile }}
-          ENFORCE: ${{ inputs.enforce == false && 'no' || 'yes' }}
+          # The `inputs` context is empty on a schedule trigger, and GitHub's
+          # loose equality makes `inputs.enforce == false` TRUE when it is
+          # null — so keying off that alone silently disabled enforcement on
+          # exactly the run that matters. Branch on the event first.
+          ENFORCE: ${{ github.event_name != 'workflow_dispatch' && 'yes' || (inputs.enforce && 'yes' || 'no') }}
         run: |
           set -euo pipefail
           args=()

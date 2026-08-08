@@ -16,7 +16,7 @@ anything".
 ```bash
 pip install --no-deps "mutmut==3.7.0" libcst
 python scripts/ci/mutation_pilot.py --list          # show profiles
-python scripts/ci/mutation_pilot.py optimization    # one profile
+python scripts/ci/mutation_pilot.py batch-sizer     # one profile
 python scripts/ci/mutation_pilot.py                 # all of them
 ```
 
@@ -32,7 +32,7 @@ accepts a manual dispatch. It never runs on a pull request.
 ## Reading the output
 
 ```text
--- optimization: mutating 3 module(s)
+-- batch-sizer: mutating 1 module(s)
    killed  129  survived   65  no-tests    0  score 66.5%
 ```
 
@@ -70,9 +70,9 @@ two distinct ways:
 - *Segfaults.* Broad test paths drag in ~240 native extension modules (torch,
   av, scipy) and the fork crashes. mutmut records the crash as a mutant
   verdict, so a profile can report a perfect score built entirely on
-  corpses — the pilot's own first run showed `optimization` and `organizer`
-  at 100% with 268 and 432 mutants segfaulted. The driver treats any
-  `segfault` in the stats as a hard error.
+  corpses — the pilot's own first run showed the grouped optimization profile
+  and `organizer` at 100% with 268 and 432 mutants segfaulted. The driver
+  treats any `segfault` in the stats as a hard error.
 - *Deadlocks.* Thread-heavy test files (for example
   `tests/parallel/test_processor_thread_safety.py`) make the forked children
   sit asleep forever, consuming no CPU. mutmut's own per-mutant timeout never
@@ -116,11 +116,11 @@ problem further, since `test_processor_thread_safety.py` and
 `test_concurrency_fixes.py` — the tests most worth mutating — are exactly the
 ones that trigger the hang.
 
-**`organizer` segfaults.** `core/organizer.py` imports the audio and video
-metadata extractors at module scope, so every fork loads av/torch and 432
-mutants crash. Making those imports lazy would unblock it, and would be worth
-doing: this is the module where `organize()`'s AI path was once deletable
-with all 126 tests still passing.
+**`organizer` segfaults.** `src/file_organizer/core/organizer.py` imports the
+audio and video metadata extractors at module scope, so every fork loads
+av/torch and 432 mutants crash. Making those imports lazy would unblock it,
+and would be worth doing: this is the module where `organize()`'s AI path was
+once deletable with all 126 tests still passing.
 
 ## Validating the harness before trusting a score
 
@@ -130,7 +130,7 @@ something and confirm the number moves:
 
 ```bash
 # neuter the assertions in a profile's test file, rerun, and compare
-python scripts/ci/mutation_pilot.py optimization
+python scripts/ci/mutation_pilot.py batch-sizer
 ```
 
 On the `batch_sizer` baseline, replacing every `assert X` with `_ = X` moved

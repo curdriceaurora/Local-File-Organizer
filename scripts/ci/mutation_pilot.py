@@ -10,7 +10,7 @@ runtime multiplied by mutant count, and the suite is ~22.5k tests.
 Usage::
 
     python scripts/ci/mutation_pilot.py                 # run every profile
-    python scripts/ci/mutation_pilot.py optimization    # run one
+    python scripts/ci/mutation_pilot.py batch-sizer     # run one
     python scripts/ci/mutation_pilot.py --enforce       # fail below floors
     python scripts/ci/mutation_pilot.py --list          # show profiles
 
@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -58,6 +59,10 @@ STATS_FILE = MUTANTS_DIR / "mutmut-cicd-stats.json"
 #: Pytest arguments shared by every profile. `--no-cov` is not optional; see
 #: the module docstring.
 BASE_PYTEST_ARGS = ["--no-cov", "-p", "no:randomly", "-p", "no:cacheprovider"]
+
+#: Reading already-written meta files should take seconds. Bounded anyway, so
+#: a wedged export cannot hang the nightly the way a wedged run would.
+EXPORT_TIMEOUT = 300
 
 
 @dataclass(frozen=True)
@@ -187,15 +192,30 @@ def run_profile(profile: Profile, max_children: int, timeout: int) -> dict[str, 
                 "Narrow this profile's test selection."
             ) from None
         if run.returncode not in (0, 1):  # 1 == some mutants survived
-            raise RuntimeError(f"mutmut run failed ({run.returncode}):\n{run.stdout[-3000:]}")
-        export = subprocess.run(
-            [sys.executable, "-m", "mutmut", "export-cicd-stats"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-        )
+            raise RuntimeError(
+                f"mutmut run failed ({run.returncode}):\n{run.stdout[-3000:]}\n{run.stderr[-3000:]}"
+            )
+        try:
+            export = subprocess.run(
+                [sys.executable, "-m", "mutmut", "export-cicd-stats"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=EXPORT_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                f"{profile.name}: export-cicd-stats hung for >{EXPORT_TIMEOUT}s"
+            ) from None
+        if export.returncode != 0:
+            raise RuntimeError(
+                f"{profile.name}: export-cicd-stats failed ({export.returncode}):\n"
+                f"{export.stdout[-2000:]}\n{export.stderr[-2000:]}"
+            )
         if not STATS_FILE.exists():
-            raise RuntimeError(f"no stats produced for {profile.name}:\n{export.stdout}")
+            raise RuntimeError(
+                f"no stats produced for {profile.name}:\n{export.stdout}\n{export.stderr}"
+            )
         return json.loads(STATS_FILE.read_text(encoding="utf-8"))
     finally:
         SETUP_CFG.unlink(missing_ok=True)
@@ -206,8 +226,21 @@ def _kill_stragglers() -> None:
 
     ``subprocess`` kills the process it started; the forked grandchildren are
     not in that tree and would otherwise sit around holding the sandbox.
+
+    Scoped to the current user so a shared runner — or a second profile
+    running in another shell — does not lose its processes to this. ``pkill``
+    is absent on some platforms, and raising ``FileNotFoundError`` here would
+    mask the timeout error this is called from.
     """
-    subprocess.run(["pkill", "-f", "mutmut run"], check=False, capture_output=True)
+    pkill = shutil.which("pkill")
+    if pkill is None:
+        print("pkill unavailable; mutmut children may still be running", file=sys.stderr)
+        return
+    subprocess.run(
+        [pkill, "-u", str(os.getuid()), "-f", "mutmut run"],
+        check=False,
+        capture_output=True,
+    )
 
 
 def score_of(stats: dict[str, int]) -> float | None:
@@ -217,10 +250,11 @@ def score_of(stats: dict[str, int]) -> float | None:
     measure coverage, which the project already gates separately, and folding
     them in would let a coverage change move the mutation score on its own.
     """
-    decided = stats.get("killed", 0) + stats.get("survived", 0)
+    killed = stats.get("killed", 0)
+    decided = killed + stats.get("survived", 0)
     if not decided:
         return None
-    return stats["killed"] / decided * 100
+    return killed / decided * 100
 
 
 def main() -> int:
@@ -266,7 +300,22 @@ def main() -> int:
     failures: list[str] = []
     for profile in selected:
         print(f"-- {profile.name}: mutating {len(profile.only_mutate)} module(s)", flush=True)
-        stats = run_profile(profile, args.max_children, args.timeout)
+        try:
+            stats = run_profile(profile, args.max_children, args.timeout)
+        except RuntimeError as exc:
+            # One wedged profile must not cost the others their results. Left
+            # to propagate, a hang in the first profile meant no report file,
+            # so the nightly's artifact upload had nothing to publish and the
+            # run looked like an infrastructure failure rather than a finding.
+            print(f"   ERROR: {exc}", file=sys.stderr, flush=True)
+            failures.append(f"{profile.name}: {exc}")
+            report[profile.name] = {
+                "stats": None,
+                "score": None,
+                "floor": profile.floor,
+                "error": str(exc),
+            }
+            continue
 
         # A segfault is a broken harness, not a surviving mutant. Reporting a
         # score over crashed runs is how this pilot would start lying.
@@ -281,13 +330,17 @@ def main() -> int:
             f"  no-tests {stats.get('no_tests', 0):4d}  score {shown}",
             flush=True,
         )
-        if (
-            args.enforce
-            and profile.floor is not None
-            and score is not None
-            and score < profile.floor
-        ):
-            failures.append(f"{profile.name}: {score:.1f}% below floor {profile.floor:.0f}%")
+        if args.enforce and profile.floor is not None:
+            if score is None:
+                # "No score" must not read as "floor cleared". Every mutant
+                # landing in `no_tests`, or empty stats, would otherwise pass
+                # a gated profile in silence — the precise shape of failure
+                # this pilot exists to detect.
+                failures.append(
+                    f"{profile.name}: produced no score, cannot check floor {profile.floor:.0f}%"
+                )
+            elif score < profile.floor:
+                failures.append(f"{profile.name}: {score:.1f}% below floor {profile.floor:.0f}%")
 
     if args.report:
         args.report.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
