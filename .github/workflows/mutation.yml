@@ -1,0 +1,73 @@
+name: Mutation Pilot
+
+# Mutation testing for epic #1678's pilot modules (#1684).
+#
+# Nightly and on demand only — never on a PR. Mutation runtime is test runtime
+# multiplied by mutant count, and this suite is ~22.5k tests; the pilot keeps
+# that tractable by mutating three small modules and running only the tests
+# that exercise them.
+on:
+  schedule:
+    - cron: "0 4 * * *"  # daily at 04:00 UTC, ahead of the ci-full matrix at 06:00
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Single profile to run (blank = all)"
+        required: false
+        default: ""
+      enforce:
+        description: "Fail the job when a profile is below its floor"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation pilot
+    runs-on: ubuntu-latest
+    # Generous: a profile is a full mutant sweep, and the point of the nightly
+    # slot is that it can take its time. Kept finite so a hung fork cannot burn
+    # a runner indefinitely.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      # --no-deps is required, not an optimisation. mutmut declares
+      # textual>=1.0; this project pins textual~=0.50 for the TUI, and letting
+      # pip resolve mutmut's dependencies silently upgrades textual and breaks
+      # the TUI suite. mutmut's `run`/`results`/`export-cicd-stats` all work
+      # against the pinned version — only `browse` needs the newer API.
+      - name: Install mutmut without its dependency closure
+        run: pip install --no-deps "mutmut==3.7.0" libcst
+      # The dispatch inputs go through the environment, never interpolated
+      # straight into the shell: `${{ inputs.profile }}` inline would let
+      # anyone who can dispatch this workflow run arbitrary commands here.
+      - name: Run the mutation pilot
+        env:
+          PROFILE: ${{ inputs.profile }}
+          # The `inputs` context is empty on a schedule trigger, and GitHub's
+          # loose equality makes `inputs.enforce == false` TRUE when it is
+          # null — so keying off that alone silently disabled enforcement on
+          # exactly the run that matters. Branch on the event first.
+          ENFORCE: ${{ github.event_name != 'workflow_dispatch' && 'yes' || (inputs.enforce && 'yes' || 'no') }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "${PROFILE}" ]; then args+=("${PROFILE}"); fi
+          if [ "${ENFORCE}" = "yes" ]; then args+=(--enforce); fi
+          python scripts/ci/mutation_pilot.py "${args[@]}" --report mutation-report.json
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: mutation-report
+          path: mutation-report.json
+          if-no-files-found: warn

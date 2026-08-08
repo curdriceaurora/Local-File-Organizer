@@ -147,6 +147,7 @@ nav:
       - API Clients: developer/api-clients.md
       - Contributing: developer/contributing.md
       - Testing: developer/testing.md
+      - Mutation Testing: developer/mutation-testing.md
   - Configuration & Migration:
       - Configuration Guide: CONFIGURATION.md
       - Path Standardization & Migration: config/path-standardization.md

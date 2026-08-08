@@ -126,3 +126,9 @@ coverage.json
 pallet_inventory_estimate.py
 Pallet_Inventory_Estimate.xlsx
 .~lock.Pallet_Inventory_Estimate.xlsx#
+
+# Mutation testing (#1684). `mutants/` is mutmut's working copy of the tree;
+# `setup.cfg` is generated per profile by scripts/ci/mutation_pilot.py and
+# removed after each run — neither belongs in the repo.
+mutants/
+/setup.cfg
