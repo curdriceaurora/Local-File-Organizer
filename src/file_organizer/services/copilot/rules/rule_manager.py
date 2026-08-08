@@ -16,10 +16,19 @@ from file_organizer.config.path_migration import resolve_legacy_path
 from file_organizer.services.copilot.rules.models import Rule, RuleSet
 from file_organizer.utils.atomic_write import atomic_write_text
 
-_DEFAULT_RULES_DIR = resolve_legacy_path(
-    get_config_dir() / "rules",
-    Path.home() / ".config" / "file-organizer" / "rules",
-)
+
+def _default_rules_dir() -> Path:
+    """Resolve the default rules directory at call time.
+
+    Deliberately not a module-level constant: ``get_config_dir()`` and
+    ``Path.home()`` both read the environment, so computing this at import
+    time pins it to whatever the environment was when the module was first
+    imported and ignores any later repointing (see #1677).
+    """
+    return resolve_legacy_path(
+        get_config_dir() / "rules",
+        Path.home() / ".config" / "file-organizer" / "rules",
+    )
 
 
 class RuleManager:
@@ -31,7 +40,7 @@ class RuleManager:
 
     def __init__(self, rules_dir: str | Path | None = None) -> None:
         """Initialize RuleManager."""
-        self._rules_dir = Path(rules_dir) if rules_dir else _DEFAULT_RULES_DIR
+        self._rules_dir = Path(rules_dir) if rules_dir else _default_rules_dir()
 
     @property
     def rules_dir(self) -> Path:

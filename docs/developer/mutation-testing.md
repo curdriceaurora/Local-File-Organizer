@@ -65,7 +65,9 @@ coverage gate and nothing else.
 
 **2. Test selection must be narrow, and one module per profile.** mutmut
 forks a process per mutant, and forking this test environment is fragile in
-two distinct ways:
+two distinct ways. Both are properties of the **test files** selected, not of
+the module being mutated — adding one thread-using test file to an otherwise
+clean profile is enough to break it:
 
 - *Segfaults.* Broad test paths drag in ~240 native extension modules (torch,
   av, scipy) and the fork crashes. mutmut records the crash as a mutant
@@ -116,11 +118,24 @@ problem further, since `test_processor_thread_safety.py` and
 `test_concurrency_fixes.py` — the tests most worth mutating — are exactly the
 ones that trigger the hang.
 
-**`organizer` segfaults.** `src/file_organizer/core/organizer.py` imports the
-audio and video metadata extractors at module scope, so every fork loads
-av/torch and 432 mutants crash. Making those imports lazy would unblock it,
-and would be worth doing: this is the module where `organize()`'s AI path was
-once deletable with all 126 tests still passing.
+**`organizer` segfaults**, 432 mutants — and the cause is the *test files*,
+not the module. Two controlled runs establish it:
+
+- Mutating the known-clean `batch_sizer.py` while merely adding
+  `tests/core/test_organizer.py` to the selection produces 42 segfaults, where
+  that profile is otherwise 129 killed / 65 survived / 0 crashed.
+- `--max-children 1` changes nothing (42 either way), so it is the fork
+  itself, not concurrency between children.
+
+Those tests create threads, and mutmut forks a process per mutant. This is the
+same root cause as `parallel`'s hang — one surfaces as a crash, the other as a
+deadlock — so neither is fixable by narrowing imports or tuning workers. It
+needs a non-forking runner (#1726).
+
+An earlier version of this page blamed `core/organizer.py`'s module-scope
+`av`/`torch` imports. That was wrong: making them lazy cut the module's import
+from 2,839 to 1,665 modules and removed av/torch entirely, and the segfault
+count did not move by one.
 
 ## Validating the harness before trusting a score
 

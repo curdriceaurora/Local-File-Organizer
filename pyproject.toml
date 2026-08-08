@@ -214,7 +214,11 @@ dedup = [
     # round-trips. Validated continuously by the ci-extras matrix.
     "imagededup>=0.3.0",  # 0.x — unstable API, keep >=; Image similarity and duplicate detection
     "scikit-learn~=1.4",  # ML-based text similarity for deduplication
-    "pypdf>=4,<7",  # PDF text extraction fallback in dedup extractor
+    # 6.15.0 fixes GHSA-fwg2-594c-jp42 (unbounded runtime/memory on large CID
+    # font width ranges) and GHSA-fp3f-mc75-235c (large /ToUnicode streams).
+    # Both are resource exhaustion reachable from a malformed PDF, and this
+    # extractor runs over user-supplied files, so the floor is a real bound.
+    "pypdf>=6.15.0,<7",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
 ]
 

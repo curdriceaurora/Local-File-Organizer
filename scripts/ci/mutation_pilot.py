@@ -125,9 +125,11 @@ PROFILES: tuple[Profile, ...] = (
         notes="Wave-B repairs plus the resume/persistence assertions.",
         blocked=(
             "deadlocks intermittently: forked children go to sleep and never "
-            "resume, so the run hangs until --timeout reaps it. Measured 44.5% "
-            "(233 killed / 291 survived) on the runs that did complete, but an "
-            "intermittent hang cannot gate a nightly."
+            "resume, so the run hangs until --timeout reaps it. Same root cause "
+            "as the organizer profile — thread-creating tests plus fork-per-mutant "
+            "— surfacing as a hang rather than a crash. Measured 44.5% (233 killed "
+            "/ 291 survived) on the runs that completed, but an intermittent hang "
+            "cannot gate a nightly (#1726)."
         ),
     ),
     Profile(
@@ -143,9 +145,12 @@ PROFILES: tuple[Profile, ...] = (
         # segfault (see the module docstring).
         notes="organize()'s AI path was deletable with all 126 tests passing.",
         blocked=(
-            "432 mutants segfault: organizer.py imports the audio/video metadata "
-            "extractors at module scope, so every fork loads av/torch. Needs those "
-            "imports made lazy, or a non-forking runner."
+            "432 mutants segfault. Cause is the TEST files, not this module: "
+            "mutating the known-clean batch_sizer.py while merely adding "
+            "tests/core/test_organizer.py to the selection produces 42 segfaults. "
+            "Those tests create threads, and mutmut forks per mutant. Unaffected "
+            "by --max-children 1, so it is the fork itself. Needs a non-forking "
+            "runner (#1726)."
         ),
     ),
 )

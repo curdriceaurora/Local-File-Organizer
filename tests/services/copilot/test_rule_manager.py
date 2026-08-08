@@ -715,3 +715,26 @@ class TestRuleManagerIntegration:
 
         archive_rule = manager.get_rule("archive", "pdf_rule")
         assert archive_rule.enabled is True
+
+
+@pytest.mark.unit
+class TestDefaultRulesDirResolution:
+    """The default rules directory must track the environment (#1677)."""
+
+    def test_default_dir_follows_a_repointed_config_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Resolved per call, not frozen at import.
+
+        ``_DEFAULT_RULES_DIR`` used to be a module-level constant, pinning the
+        directory to the environment present when this module was first
+        imported. Same defect shape as ``parallel/checkpoint.py`` in #1677.
+        """
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        manager = RuleManager()
+
+        assert tmp_path in manager._rules_dir.parents or manager._rules_dir == tmp_path, (
+            f"rules dir {manager._rules_dir} ignored the repointed config dir {tmp_path}"
+        )

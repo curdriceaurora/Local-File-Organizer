@@ -513,3 +513,28 @@ class TestPatternLearner:
         assert weights.structural <= 0.30  # Should be reduced
         total = weights.temporal + weights.content + weights.structural + weights.ai
         assert 0.99 <= total <= 1.01
+
+
+@pytest.mark.unit
+class TestDefaultStorageDirResolution:
+    """The default feedback directory must track the environment (#1677)."""
+
+    def test_default_dir_follows_a_repointed_config_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Resolved per call, not frozen at import.
+
+        ``_DEFAULT_FEEDBACK_DIR`` used to be a module-level constant, so the
+        directory was pinned to whatever the environment was when this module
+        was first imported — in a test session, whichever test imported it
+        first. Same shape as the ``parallel/checkpoint.py`` defect that made
+        four tests order-dependent.
+        """
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        collector = FeedbackCollector()
+
+        assert tmp_path in collector._storage_dir.parents or collector._storage_dir == tmp_path, (
+            f"feedback dir {collector._storage_dir} ignored the repointed config dir {tmp_path}"
+        )
