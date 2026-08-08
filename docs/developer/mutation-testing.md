@@ -132,7 +132,7 @@ same root cause as `parallel`'s hang — one surfaces as a crash, the other as a
 deadlock — so neither is fixable by narrowing imports or tuning workers. It
 needs a non-forking runner (#1726).
 
-An earlier version of this page blamed `core/organizer.py`'s module-scope
+An earlier version of this page blamed the organizer module's module-scope
 `av`/`torch` imports. That was wrong: making them lazy cut the module's import
 from 2,839 to 1,665 modules and removed av/torch entirely, and the segfault
 count did not move by one.
