@@ -379,8 +379,17 @@ class TestOrganizeInputValidation:
             },
             headers=csrf_headers,
         )
-        # Should accept valid sort/filter combinations
-        assert response.status_code in (200, 400)
+        # Should accept valid sort/filter combinations. 200 or 400 only: a 5xx
+        # or a CSRF rejection is a real failure.
+        #
+        # Reported with the body attached because this test has been seen to
+        # fail intermittently in full-suite runs under `-n auto` (#1729) and a
+        # bare status code gives whoever hits it nothing to work with. It could
+        # not be reproduced in six runs of `tests/web tests/api -n auto`, so the
+        # cause is still unknown — this is a diagnostic aid, not a fix.
+        assert response.status_code in (200, 400), (
+            f"unexpected status {response.status_code}; body={response.text[:500]!r}"
+        )
 
 
 @pytest.mark.unit
