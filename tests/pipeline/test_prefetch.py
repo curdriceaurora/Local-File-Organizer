@@ -219,10 +219,14 @@ class TestPrefetchOverlap:
         Asserts the *mechanism*, not the clock. The previous version of this
         test required a >= 20% wall-clock speedup, which is unmeasurable when
         the suite runs under ``-n auto``: 18 workers contend for 18 cores, and
-        the ratio drowns in scheduling noise. It failed roughly one run in
-        three on unmodified main (#1729) while passing in isolation, and no
-        amount of median-taking fixed it — the previous author had already
-        added interleaved pairing and alternating order.
+        the ratio drowns in scheduling noise.
+
+        Measured on unmodified main (#1729): 3 of 3 full-suite runs failed,
+        and 2 of 3 runs of the smaller ``pipeline + parallel + integration``
+        subset. It passed in isolation every time. No amount of median-taking
+        fixed it — the previous author had already added interleaved pairing,
+        alternating order to cancel page-cache bias, and medians over eight
+        iterations.
 
         Overlap is what prefetch actually promises, it is binary, and one
         observation across ten files is enough. Speed belongs in the benchmark

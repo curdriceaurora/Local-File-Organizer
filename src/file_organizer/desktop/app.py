@@ -9,17 +9,22 @@ pywebview main loop exits (i.e. when the user closes the window).
 
 Design constraints
 ------------------
-- Port allocation uses ``socket`` to find a free port before handing it to
-  uvicorn, avoiding TOCTOU races on busy machines.
-- A blocking poll loop (50 ms intervals, 10 s timeout) waits for the HTTP
-  server to be ready before creating the webview window; this prevents the
-  window from displaying a blank/error page on slow cold starts.
+- Port allocation binds an ephemeral port and hands uvicorn the **still-open**
+  socket. Binding, reading the port and then releasing the socket would leave
+  a multi-second window -- spanning uvicorn's import and app construction --
+  in which another process can take the port; passing the bound socket removes
+  that window rather than narrowing it.
+- Readiness comes from uvicorn's own ``started`` flag, relayed through a
+  ``threading.Event``, not from probing the port. With a pre-bound socket a TCP
+  connect succeeds as soon as the socket listens, which is well before the ASGI
+  app can serve, so a connect probe would open the window on a blank page.
 - ``webview.start()`` **must** be called from the main thread (OS requirement
   on macOS and Windows). The server thread is therefore a background daemon.
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import socket
 import subprocess
@@ -206,58 +211,110 @@ _DEFAULT_WIDTH = 1280
 _DEFAULT_HEIGHT = 800
 _READY_POLL_INTERVAL = 0.05  # seconds
 _READY_TIMEOUT = 10.0  # seconds
+_SHUTDOWN_TIMEOUT = 5.0  # seconds to wait for uvicorn to stop
 
 
-def _find_free_port() -> int:
-    """Return an ephemeral port that is free at the time of the call."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+def _bind_free_socket() -> socket.socket:
+    """Bind an ephemeral port and return the still-open listening socket.
+
+    The socket is deliberately **not** closed. Binding, reading the port and
+    then releasing the socket leaves a window — several seconds wide, spanning
+    uvicorn's import and app construction — in which any other process can take
+    that port. Handing the bound socket to uvicorn removes the window rather
+    than narrowing it.
+
+    Callers own the returned socket and must close it if they do not pass it
+    to :func:`_run_server`.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    sock.listen(128)
+    return sock
 
 
-def _wait_for_server(port: int, timeout: float = _READY_TIMEOUT) -> bool:
-    """Poll until the server is accepting TCP connections or timeout expires.
+def _wait_for_server(
+    ready: threading.Event,
+    server_thread: threading.Thread,
+    timeout: float = _READY_TIMEOUT,
+) -> bool:
+    """Wait for uvicorn to report startup complete.
+
+    Waits on an event the server thread sets once uvicorn's own ``started``
+    flag flips, rather than probing the port. With a pre-bound socket a TCP
+    connect succeeds the instant the socket is listening — the kernel accepts
+    into the backlog long before the ASGI app can serve a request — so a
+    connect-based probe would report ready while the app was still importing.
+
+    Returns ``False`` promptly if the server thread dies. uvicorn calls
+    ``sys.exit()`` on a startup failure, and a ``SystemExit`` raised inside a
+    thread is swallowed by ``Thread._bootstrap_inner``; without this check a
+    dead thread would still burn the full timeout.
 
     Args:
-        port: Local port to poll.
+        ready: Set by the server thread once uvicorn has started.
+        server_thread: The thread running uvicorn, watched for early death.
         timeout: Maximum seconds to wait before giving up.
 
     Returns:
-        ``True`` if the server became ready within *timeout* seconds, ``False``
-        otherwise.
+        ``True`` if the server started within *timeout* seconds.
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
-                return True
-        except OSError:
-            time.sleep(_READY_POLL_INTERVAL)
+        if ready.wait(timeout=_READY_POLL_INTERVAL):
+            return True
+        if not server_thread.is_alive():
+            return False
     return False
 
 
-def _run_server(port: int, **uvicorn_kwargs: Any) -> None:
-    """Start uvicorn with the File Organizer FastAPI app.
+def _run_server(
+    sock: socket.socket,
+    *,
+    ready: threading.Event | None = None,
+    server_box: dict[str, Any] | None = None,
+    **uvicorn_kwargs: Any,
+) -> None:
+    """Serve the File Organizer FastAPI app on an already-bound socket.
 
     Intended to be run in a daemon thread.
 
     Args:
-        port: Port to bind uvicorn to.
+        sock: Listening socket to serve on. Ownership transfers here.
+        ready: Set once uvicorn reports startup complete, so the caller does
+            not have to infer readiness from a TCP probe.
+        server_box: Optional dict receiving the ``uvicorn.Server`` under key
+            ``"server"``, so the caller can request shutdown.
         **uvicorn_kwargs: Additional keyword arguments forwarded to
-            ``uvicorn.run``.
+            ``uvicorn.Config``.
     """
+    import asyncio
+
     import uvicorn
 
     from file_organizer.api.main import create_app
 
     app = create_app()
-    uvicorn.run(
-        app,
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
-        **uvicorn_kwargs,
-    )
+    config = uvicorn.Config(app, log_level="warning", **uvicorn_kwargs)
+    server = uvicorn.Server(config)
+    if server_box is not None:
+        server_box["server"] = server
+
+    async def _serve() -> None:
+        serve_task = asyncio.ensure_future(server.serve(sockets=[sock]))
+        while not server.started and not serve_task.done():
+            await asyncio.sleep(_READY_POLL_INTERVAL)
+        # Only on a real start. Setting the event unconditionally here would
+        # report a failed boot as ready; a failure must instead reach the
+        # caller as the thread dying, which `_wait_for_server` watches for.
+        if server.started and ready is not None:
+            ready.set()
+        await serve_task
+
+    try:
+        asyncio.run(_serve())
+    finally:
+        with contextlib.suppress(OSError):
+            sock.close()
 
 
 def launch(
@@ -297,21 +354,30 @@ def launch(
             "Install it with: pip install 'file-organizer[desktop]'"
         ) from exc
 
-    port = _find_free_port()
+    sock = _bind_free_socket()
+    port = sock.getsockname()[1]
     url = f"http://127.0.0.1:{port}"
 
     logger.info("Starting File Organizer server on %s", url)
 
+    ready = threading.Event()
+    server_box: dict[str, Any] = {}
     server_thread = threading.Thread(
         target=_run_server,
-        args=(port,),
+        args=(sock,),
+        kwargs={"ready": ready, "server_box": server_box},
         daemon=True,
         name="fo-server",
     )
     server_thread.start()
 
-    if not _wait_for_server(port):
-        raise RuntimeError(f"File Organizer server did not become ready within {_READY_TIMEOUT}s")
+    if not _wait_for_server(ready, server_thread):
+        detail = (
+            "the server thread exited during startup"
+            if not server_thread.is_alive()
+            else f"it did not start within {_READY_TIMEOUT}s"
+        )
+        raise RuntimeError(f"File Organizer server failed to start: {detail}")
 
     logger.info("Server ready — opening window")
 
@@ -326,6 +392,15 @@ def launch(
         js_api=api,
     )
     # webview.start() blocks until the window is closed; MUST run on main thread.
-    webview.start(debug=False)
+    try:
+        webview.start(debug=False)
+    finally:
+        # Ask uvicorn to stop. Without this the daemon thread outlives the
+        # window, holding the port and its loguru sink for the life of the
+        # process -- which in a test session is the rest of the worker's run.
+        server = server_box.get("server")
+        if server is not None:
+            server.should_exit = True
+        server_thread.join(timeout=_SHUTDOWN_TIMEOUT)
     logger.info("Window closed — exiting")
     _ = window  # suppress "window created but never used" linters

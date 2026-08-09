@@ -26,7 +26,29 @@ _LOGURU_METHODS = {
 
 
 def _imports_loguru(source: str) -> bool:
-    return "loguru" in source and "logger" in source
+    """True when the module actually imports loguru.
+
+    Checked against the parsed import statements, not by substring. A plain
+    ``"loguru" in source`` also matches the word appearing in a comment or
+    docstring, which made this rail flag ``desktop/app.py`` — a module using
+    **stdlib** ``logging``, where ``%s`` lazy formatting is correct and
+    rewriting it to ``{}`` would emit literal braces.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(
+                alias.name == "loguru" or alias.name.startswith("loguru.") for alias in node.names
+            ):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module == "loguru" or module.startswith("loguru."):
+                return True
+    return False
 
 
 def _find_loguru_percent_formatting(path: Path) -> list[str]:
@@ -60,6 +82,25 @@ def _find_loguru_percent_formatting(path: Path) -> list[str]:
             if re.search(r"%[sd]\b", message):
                 violations.append(f"{path}: {message}")
     return violations
+
+
+def test_loguru_detection_ignores_prose_mentions() -> None:
+    """A module that only *mentions* loguru must not be treated as using it.
+
+    Regression: the check was ``"loguru" in source``, so a comment explaining
+    loguru behaviour turned a stdlib-``logging`` module into a false positive
+    and demanded ``{}`` placeholders that would print literally.
+    """
+    stdlib_module = (
+        "import logging\n"
+        "# The API server installs a loguru sink; this module does not.\n"
+        "logger = logging.getLogger(__name__)\n"
+        "logger.info('started on %s', url)\n"
+    )
+    assert not _imports_loguru(stdlib_module)
+
+    real_loguru = "from loguru import logger\nlogger.info('started on %s', url)\n"
+    assert _imports_loguru(real_loguru)
 
 
 def test_loguru_formatting_uses_braces() -> None:
