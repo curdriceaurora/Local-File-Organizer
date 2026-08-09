@@ -72,7 +72,7 @@ dependencies = [
     "jinja2~=3.1",
     "markupsafe~=3.0",  # Direct import in web csrf_input; also a jinja2 transitive dep
     "uvicorn[standard]~=0.27",
-    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
+    "websockets>=12.0,<18",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
@@ -123,7 +123,7 @@ web = [
     "fastapi~=0.109",
     "jinja2~=3.1",
     "uvicorn[standard]~=0.27",
-    "websockets>=12.0,<17",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
+    "websockets>=12.0,<18",  # 12.0 C wheels stop at cp312 (pure-py fallback on 3.13+); uvicorn[standard] needs only >=10.4
     "httpx~=0.26",
     "python-multipart>=0.0.9",  # 0.x — unstable API, keep >=
     # Pygments is transitive via rich/textual. Pin >= 2.20.0 for CVE-2026-4539.
