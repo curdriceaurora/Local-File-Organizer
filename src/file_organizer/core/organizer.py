@@ -45,8 +45,6 @@ from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
-from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
-from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 from file_organizer.undo import UndoManager
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
@@ -792,6 +790,17 @@ class FileOrganizer:
                     "Falling back to metadata-only categorization.[/yellow]"
                 )
 
+        # Imported here, not at module scope: this and its video counterpart
+        # pull in `av` and `torch`, taking this module's import from 1,665 to
+        # 2,839 modules for every invocation, including ones that never touch
+        # media. They are the only heavy dependency unique to this module —
+        # everything else already arrives via `file_organizer.services`.
+        #
+        # This does NOT make the module mutation-testable, which was #1725's
+        # premise. The segfaults come from the test files, not this import;
+        # see docs/developer/mutation-testing.md.
+        from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+
         return dispatcher.process_audio_files(
             files,
             extractor_cls=AudioMetadataExtractor,
@@ -801,4 +810,7 @@ class FileOrganizer:
 
     def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Classify video files and append results to the plan."""
+        # Lazy for the same reason as the audio extractor above.
+        from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+
         return dispatcher.process_video_files(files, extractor_cls=VideoMetadataExtractor)

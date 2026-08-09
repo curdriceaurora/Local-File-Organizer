@@ -22,10 +22,19 @@ from ..config import HeuristicWeights
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_FEEDBACK_DIR = resolve_legacy_path(
-    get_config_dir() / "feedback",
-    Path.home() / ".config" / "file-organizer" / "feedback",
-)
+
+def _default_feedback_dir() -> Path:
+    """Resolve the default feedback directory at call time.
+
+    Deliberately not a module-level constant: ``get_config_dir()`` and
+    ``Path.home()`` both read the environment, so computing this at import
+    time pins it to whatever the environment was when the module was first
+    imported and ignores any later repointing (see #1677).
+    """
+    return resolve_legacy_path(
+        get_config_dir() / "feedback",
+        Path.home() / ".config" / "file-organizer" / "feedback",
+    )
 
 
 @dataclass
@@ -152,7 +161,7 @@ class FeedbackCollector:
             storage_dir: Directory for storing feedback JSON. Uses default
                 ~/.config/file-organizer/feedback if not specified.
         """
-        self._storage_dir = storage_dir or _DEFAULT_FEEDBACK_DIR
+        self._storage_dir = storage_dir or _default_feedback_dir()
         self._feedback_file = self._storage_dir / "feedback_events.json"
         self._events: list[FeedbackEvent] = []
         self._loaded = False

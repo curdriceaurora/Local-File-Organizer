@@ -23,11 +23,13 @@ produces a confident number that means nothing:
    suite caught it" — reporting a ~100% score that measures the coverage
    gate rather than the tests.
 
-2. **Narrow test selection.** mutmut forks per mutant. Pointed at broad test
-   paths it drags in ~240 native extension modules (torch, av, scipy) and
-   segfaults, which mutmut records as a mutant verdict. Each profile names
-   only the test files that exercise its modules. ``segfault`` in the stats
-   is treated as a hard error here, not as a result.
+2. **Narrow test selection.** mutmut forks per mutant, and forks taken while
+   the parent has threads running crash or hang. This is a property of the
+   *test files* selected, not of the module being mutated: adding one
+   thread-creating test file to an otherwise clean profile produces
+   segfaults, which mutmut then records as mutant verdicts. Each profile
+   names only the test files that exercise its modules, and ``segfault`` in
+   the stats is treated as a hard error here rather than as a result.
 
 3. **Config lives in ``setup.cfg``, written per profile.** mutmut reads
    ``[tool.mutmut]`` from ``pyproject.toml`` when present and only falls back
@@ -125,9 +127,11 @@ PROFILES: tuple[Profile, ...] = (
         notes="Wave-B repairs plus the resume/persistence assertions.",
         blocked=(
             "deadlocks intermittently: forked children go to sleep and never "
-            "resume, so the run hangs until --timeout reaps it. Measured 44.5% "
-            "(233 killed / 291 survived) on the runs that did complete, but an "
-            "intermittent hang cannot gate a nightly."
+            "resume, so the run hangs until --timeout reaps it. Same root cause "
+            "as the organizer profile — thread-creating tests plus fork-per-mutant "
+            "— surfacing as a hang rather than a crash. Measured 44.5% (233 killed "
+            "/ 291 survived) on the runs that completed, but an intermittent hang "
+            "cannot gate a nightly (#1726)."
         ),
     ),
     Profile(
@@ -138,14 +142,22 @@ PROFILES: tuple[Profile, ...] = (
             "tests/core/test_organizer_coverage.py",
             "tests/core/test_organizer_sha256_safedir.py",
         ],
-        # test_audio_video_integration.py is deliberately excluded: it imports
-        # av/torch, and those native extensions are what make mutmut's fork
-        # segfault (see the module docstring).
+        # test_audio_video_integration.py is excluded, but the reason it was
+        # excluded turned out to be wrong: it was av/torch native extensions,
+        # and that explanation is retracted (see the `blocked` note below and
+        # docs/developer/mutation-testing.md). There is no separate evidence
+        # that this file is unsafe to fork. It stays out only because the
+        # profile is blocked outright and the selection is therefore untested
+        # — re-derive it when #1726 unblocks this profile rather than
+        # inheriting this list.
         notes="organize()'s AI path was deletable with all 126 tests passing.",
         blocked=(
-            "432 mutants segfault: organizer.py imports the audio/video metadata "
-            "extractors at module scope, so every fork loads av/torch. Needs those "
-            "imports made lazy, or a non-forking runner."
+            "432 mutants segfault. Cause is the TEST files, not this module: "
+            "mutating the known-clean batch_sizer.py while merely adding "
+            "tests/core/test_organizer.py to the selection produces 42 segfaults. "
+            "Those tests create threads, and mutmut forks per mutant. Unaffected "
+            "by --max-children 1, so it is the fork itself. Needs a non-forking "
+            "runner (#1726)."
         ),
     ),
 )

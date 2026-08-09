@@ -80,7 +80,7 @@ class TestProcessAudioFiles:
         organizer = FileOrganizer()
 
         with patch(
-            "file_organizer.core.organizer.AudioMetadataExtractor.extract",
+            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.extract",
             side_effect=RuntimeError("bad file"),
         ):
             results = organizer._process_audio_files([audio])
@@ -94,7 +94,7 @@ class TestProcessAudioFiles:
         organizer = FileOrganizer()
 
         with patch(
-            "file_organizer.core.organizer.AudioMetadataExtractor.extract",
+            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.extract",
             side_effect=RuntimeError("bad"),
         ):
             results = organizer._process_audio_files([audio])
@@ -196,7 +196,7 @@ class TestProcessVideoFiles:
         organizer = FileOrganizer()
 
         with patch(
-            "file_organizer.core.organizer.VideoMetadataExtractor.extract",
+            "file_organizer.services.video.metadata_extractor.VideoMetadataExtractor.extract",
             side_effect=RuntimeError("corrupt"),
         ):
             results = organizer._process_video_files([video])
