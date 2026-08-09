@@ -204,10 +204,9 @@ class TestOpenPath:
     def test_open_path_darwin_dispatches_open_r(self, api: DesktopAPI) -> None:
         """On macOS, open_path uses 'open -R <resolved_path>' and returns True."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "darwin"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
-            mock_sys.platform = "darwin"
             mock_run.return_value = CompletedProcess(args=[], returncode=0)
             result = api.open_path("/some/file.txt")
 
@@ -221,10 +220,9 @@ class TestOpenPath:
     def test_open_path_win32_dispatches_explorer_select(self, api: DesktopAPI) -> None:
         """On Windows, open_path uses 'explorer /select,<path>' and returns True."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "win32"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
-            mock_sys.platform = "win32"
             mock_run.return_value = CompletedProcess(args=[], returncode=0)
             result = api.open_path("/some/file.txt")
 
@@ -236,10 +234,9 @@ class TestOpenPath:
     def test_open_path_linux_dispatches_xdg_open(self, api: DesktopAPI, tmp_path: Path) -> None:
         """On Linux, open_path uses 'xdg-open <dir>' for a directory and returns True."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "linux"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
-            mock_sys.platform = "linux"
             mock_run.return_value = CompletedProcess(args=[], returncode=0)
             # Use a real directory path so Path.is_dir() returns True without extra mocking.
             result = api.open_path(str(tmp_path))
@@ -251,10 +248,9 @@ class TestOpenPath:
     def test_open_path_nonzero_exit_returns_false(self, api: DesktopAPI) -> None:
         """When the subprocess exits with a non-zero code, open_path returns False."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "darwin"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
-            mock_sys.platform = "darwin"
             mock_run.return_value = CompletedProcess(args=[], returncode=1)
             result = api.open_path("/some/path")
 
@@ -263,10 +259,9 @@ class TestOpenPath:
     def test_open_path_subprocess_oserror_returns_false(self, api: DesktopAPI) -> None:
         """OSError raised by subprocess.run is swallowed; open_path returns False."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "darwin"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
-            mock_sys.platform = "darwin"
             mock_run.side_effect = OSError("executable not found")
             result = api.open_path("/some/path")
 
@@ -275,12 +270,11 @@ class TestOpenPath:
     def test_open_path_unknown_platform_returns_false(self, api: DesktopAPI) -> None:
         """On an unrecognised platform, open_path returns False without spawning anything."""
         with (
-            patch("file_organizer.desktop.app.sys") as mock_sys,
+            patch("file_organizer.desktop.app.sys.platform", "freebsd13"),
             patch("file_organizer.desktop.app.subprocess.run") as mock_run,
         ):
             # "freebsd13" is not "darwin"/"win32" and doesn't startswith("linux")
             # so all three branches are skipped and open_path returns False.
-            mock_sys.platform = "freebsd13"
             result = api.open_path("/some/path")
 
         assert result is False

@@ -253,6 +253,14 @@ class TestProcessBatch(unittest.TestCase):
         self.assertEqual(result.total, 50)
         self.assertEqual(result.succeeded, 50)
 
+    # Spawns real interpreters. Each child re-imports the package, and with
+    # `concurrency = ["multiprocessing", "thread"]` coverage traces that import
+    # too, so the work genuinely takes longer than the global --timeout=30 when
+    # 18 xdist workers are already saturating the CPU. Raised deliberately: the
+    # work is slower, not racing. Where a timeout hides a race (see the desktop
+    # launcher port handoff) widening it makes things worse, and there the fix
+    # was structural instead (#1729).
+    @pytest.mark.timeout(120)
     def test_process_pool_executor(self) -> None:
         """Test processing with ProcessPoolExecutor."""
         config = ParallelConfig(

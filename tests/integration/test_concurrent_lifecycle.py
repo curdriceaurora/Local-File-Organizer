@@ -33,7 +33,7 @@ class TestConcurrentTextProcessing:
 
     def test_parallel_processes_multiple_files(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:
@@ -65,7 +65,7 @@ class TestConcurrentTextProcessing:
 
     def test_pool_exhaustion_many_files_few_workers(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:
@@ -146,7 +146,7 @@ class TestProcessorCleanup:
 
     def test_processors_cleaned_up_after_organize(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         integration_source_dir: Path,
         integration_output_dir: Path,
@@ -258,7 +258,7 @@ class TestRepeatedOrganize:
 
     def test_organize_twice_no_resource_leak(
         self,
-        stub_all_models: None,
+        stub_text_model: None,
         stub_nltk: None,
         tmp_path: Path,
     ) -> None:

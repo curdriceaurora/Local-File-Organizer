@@ -173,6 +173,8 @@ class TestSceneDetectorInit:
         assert detector.method == DetectionMethod.THRESHOLD
         assert detector.threshold == 15.0
         assert detector.min_scene_length == 2.5
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     def test_check_dependencies_missing_cv2(self) -> None:
         """When cv2 is missing, detector should still initialize."""
@@ -216,6 +218,8 @@ class TestDetectScenes:
         detector = SceneDetector()
         with pytest.raises(FileNotFoundError, match="Video file not found"):
             detector.detect_scenes(tmp_path / "no_such_video.mp4")
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_uses_default_method_and_threshold(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -232,6 +236,8 @@ class TestDetectScenes:
                 detector.detect_scenes(video)
                 # When scenedetect raises ImportError, it falls back to opencv with the threshold
                 mock_cv.assert_called_once_with(video, 42.0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_override_method_and_threshold(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -243,6 +249,8 @@ class TestDetectScenes:
             mock_sd.return_value = _make_result(video, method=DetectionMethod.THRESHOLD)
             detector.detect_scenes(video, method=DetectionMethod.THRESHOLD, threshold=10.0)
             mock_sd.assert_called_once_with(video, DetectionMethod.THRESHOLD, 10.0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_falls_back_to_opencv_on_import_error(
@@ -259,6 +267,8 @@ class TestDetectScenes:
                 mock_cv.return_value = _make_result(video)
                 detector.detect_scenes(video)
                 mock_cv.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_accepts_string_path(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -271,6 +281,8 @@ class TestDetectScenes:
                 mock_cv.return_value = _make_result(video)
                 detector.detect_scenes(str(video))
                 mock_cv.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +303,8 @@ class TestDetectWithScenedetect:
         result = _run_scenedetect_mock(detector, video, DetectionMethod.CONTENT, 27.0)
         assert result.method == DetectionMethod.CONTENT
         assert len(result.scenes) == 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_threshold_detector(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -299,6 +313,8 @@ class TestDetectWithScenedetect:
         detector = SceneDetector()
         result = _run_scenedetect_mock(detector, video, DetectionMethod.THRESHOLD, 20.0)
         assert result.method == DetectionMethod.THRESHOLD
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_adaptive_detector(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -307,6 +323,8 @@ class TestDetectWithScenedetect:
         detector = SceneDetector()
         result = _run_scenedetect_mock(detector, video, DetectionMethod.ADAPTIVE, 27.0)
         assert result.method == DetectionMethod.ADAPTIVE
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_histogram_defaults_to_content(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -316,6 +334,8 @@ class TestDetectWithScenedetect:
         result = _run_scenedetect_mock(detector, video, DetectionMethod.HISTOGRAM, 27.0)
         # HISTOGRAM is not explicitly handled, so the default branch adds ContentDetector
         assert result.method == DetectionMethod.HISTOGRAM
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +356,8 @@ class TestDetectWithOpencv:
         result = _run_opencv_mock(detector, video, threshold=10.0, scene_changes=[5])
         assert result.method == DetectionMethod.THRESHOLD
         assert len(result.scenes) >= 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_no_scene_changes(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -346,6 +368,8 @@ class TestDetectWithOpencv:
         result = _run_opencv_mock(detector, video, threshold=10.0, scene_changes=[])
         # Should still have the single initial scene
         assert len(result.scenes) == 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_opencv_video_open_failure(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -361,6 +385,8 @@ class TestDetectWithOpencv:
         with patch.dict("sys.modules", {"cv2": mock_cv2, "numpy": MagicMock()}):
             with pytest.raises(ValueError, match="Failed to open video"):
                 detector._detect_with_opencv(video, 27.0)
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +413,8 @@ class TestDetectScenesBatch:
             ]
             results = detector.detect_scenes_batch([v1, v2])
             assert len(results) == 2
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_batch_partial_failure(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -403,12 +431,16 @@ class TestDetectScenesBatch:
             ]
             results = detector.detect_scenes_batch([v1, v2])
             assert len(results) == 1
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_batch_empty(self, mock_deps: MagicMock) -> None:
         detector = SceneDetector()
         results = detector.detect_scenes_batch([])
         assert results == []
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
     def test_batch_with_method_override(self, mock_deps: MagicMock, tmp_path: Path) -> None:
@@ -420,6 +452,8 @@ class TestDetectScenesBatch:
             mock_detect.return_value = _make_result(v1)
             detector.detect_scenes_batch([v1], method=DetectionMethod.THRESHOLD)
             mock_detect.assert_called_once_with(v1, DetectionMethod.THRESHOLD)
+        # Pin that the patched dependency is what the code consulted.
+        mock_deps.assert_called()
 
 
 # ---------------------------------------------------------------------------

@@ -256,14 +256,18 @@ class TestAudioTranscriberInit:
         assert t.compute_type == "float32"
 
     def test_init_invalid_model_size(self) -> None:
-        with patch.object(AudioTranscriber, "_detect_device", return_value="cpu"):
+        with patch.object(AudioTranscriber, "_detect_device", return_value="cpu") as mock_detect:
             with pytest.raises(ValueError, match="Invalid model size"):
                 AudioTranscriber(model_size="nonexistent", compute_type="float32")
+        # Argument validation precedes any hardware probing.
+        mock_detect.assert_not_called()
 
     def test_init_invalid_compute_type(self) -> None:
-        with patch.object(AudioTranscriber, "_detect_device", return_value="cpu"):
+        with patch.object(AudioTranscriber, "_detect_device", return_value="cpu") as mock_detect:
             with pytest.raises(ValueError, match="Invalid compute type"):
                 AudioTranscriber(model_size="base", compute_type="float99")
+        # Argument validation precedes any hardware probing.
+        mock_detect.assert_not_called()
 
     def test_model_not_loaded_at_init(self, make_transcriber: Any) -> None:
         t = make_transcriber()

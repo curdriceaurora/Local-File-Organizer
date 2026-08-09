@@ -66,6 +66,14 @@ def test_load_parallel_runtime_settings_caps_workers_to_cpu_count() -> None:
     assert settings.prefetch_depth == 1
 
 
+# Spawns real interpreters. Each child re-imports the package, and with
+# `concurrency = ["multiprocessing", "thread"]` coverage traces that import
+# too, so the work genuinely takes longer than the global --timeout=30 when
+# 18 xdist workers are already saturating the CPU. Raised deliberately: the
+# work is slower, not racing. Where a timeout hides a race (see the desktop
+# launcher port handoff) widening it makes things worse, and there the fix
+# was structural instead (#1729).
+@pytest.mark.timeout(120)
 def test_load_parallel_runtime_settings_uses_cpu_count_fallback_when_unavailable() -> None:
     """Module-level worker cap should fall back to 1 when ``os.cpu_count()`` is unavailable."""
     code = """
@@ -84,7 +92,11 @@ with patch("os.cpu_count", return_value=None):
     importlib.reload(settings_view_module)
     settings = settings_view_module.load_parallel_runtime_settings(manager=mock_manager)
 
-    print(f"{settings.max_workers},{settings.prefetch_depth}")
+    # Sentinel-prefixed: the subprocess imports the whole package, and
+    # libraries print to stdout on import (PyMuPDF emits a `fitz` deprecation
+    # notice, which broke an exact-match assertion here on py3.14). Assert on
+    # our own marked line rather than on the entire shared stream.
+    print(f"PARALLEL_SETTINGS:{settings.max_workers},{settings.prefetch_depth}")
 """
     src_root = Path(__file__).resolve().parents[2] / "src"
     existing_pythonpath = os.environ.get("PYTHONPATH", "")
@@ -100,7 +112,12 @@ with patch("os.cpu_count", return_value=None):
         text=True,
     )
 
-    assert result.stdout.strip() == "1,3"
+    marked = [
+        line.partition(":")[2]
+        for line in result.stdout.splitlines()
+        if line.startswith("PARALLEL_SETTINGS:")
+    ]
+    assert marked == ["1,3"], f"stdout was: {result.stdout!r}"
 
 
 def test_save_parallel_runtime_settings_persists_values() -> None:
@@ -515,9 +532,11 @@ def test_settings_view_workers_up_increments_from_auto() -> None:
     view = SettingsView()
     view._max_workers = None
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_workers_up()
 
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
     assert view._max_workers == 2
 
 
@@ -526,9 +545,11 @@ def test_settings_view_workers_down_returns_to_auto_at_one() -> None:
     view = SettingsView()
     view._max_workers = 1
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_workers_down()
 
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
     assert view._max_workers is None
 
 
@@ -538,12 +559,15 @@ def test_settings_view_prefetch_up_and_down() -> None:
     view._max_workers = 2
     view._prefetch_depth = 0
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_prefetch_up()
         assert view._prefetch_depth == 1
         view.action_prefetch_down()
         view.action_prefetch_down()  # clamps, does not go negative
         assert view._prefetch_depth == 0
+
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
 
 
 def test_settings_view_toggle_auto_workers() -> None:
@@ -551,11 +575,14 @@ def test_settings_view_toggle_auto_workers() -> None:
     view = SettingsView()
     view._max_workers = None
 
-    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status"):
+    with patch.object(view, "_refresh_panel"), patch.object(view, "_set_status") as mock_status:
         view.action_toggle_auto_workers()
         assert view._max_workers == 1
         view.action_toggle_auto_workers()
         assert view._max_workers is None
+
+    # The success path updates the panel; it must not also post a status.
+    mock_status.assert_not_called()
 
 
 def test_settings_view_actions_blocked_in_sequential_mode() -> None:

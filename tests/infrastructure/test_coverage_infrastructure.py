@@ -2173,7 +2173,6 @@ class TestUpdateManager:
                 return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
             ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
-            patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=None),
         ):
             status = mgr.update()
@@ -2195,7 +2194,6 @@ class TestUpdateManager:
                 return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
             ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
-            patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
         ):
             status = mgr.update(dry_run=True)
@@ -2219,7 +2217,6 @@ class TestUpdateManager:
                 return_value={"assets": [{"name": "app.bin", "sha256": "abc", "size": 100}]},
             ),
             patch.object(mgr._installer, "select_asset", return_value=asset),
-            patch.object(mgr._installer, "find_checksum", return_value=""),
             patch.object(mgr._installer, "download_asset", return_value=download_path),
             patch.object(mgr._installer, "install", return_value=install_result),
         ):
@@ -2840,6 +2837,8 @@ class TestJohnnyDecimalMigrator:
             mock_data.return_value = tmp_path
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
         assert result.success is True
+        # No backup means no rollback info, so no rollback file is written.
+        mock_data.assert_not_called()
 
     def test_execute_migration_target_exists_skip(self, tmp_path):
         migrator = self._make_migrator()
@@ -2861,6 +2860,8 @@ class TestJohnnyDecimalMigrator:
             mock_data.return_value = tmp_path
             result = migrator.execute_migration(plan, dry_run=False, create_backup=False)
         assert result.skipped_count == 1
+        # No backup means no rollback info, so no rollback file is written.
+        mock_data.assert_not_called()
 
     def test_execute_migration_with_backup_failure(self, tmp_path):
         migrator = self._make_migrator()

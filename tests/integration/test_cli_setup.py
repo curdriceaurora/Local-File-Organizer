@@ -194,12 +194,15 @@ class TestSetupRunQuickStart:
 class TestSetupRunInvalidMode:
     def test_invalid_mode_exits_1(self) -> None:
         with (
-            patch("file_organizer.cli.setup.SetupWizard"),
+            patch("file_organizer.cli.setup.SetupWizard") as mock_setupwizard,
             patch("file_organizer.cli.setup.console"),
         ):
             result = runner.invoke(setup_app, ["run", "--mode", "unknown-mode"])
 
         assert result.exit_code == 1
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_setupwizard.assert_not_called()
 
     def test_underscore_mode_normalised(self) -> None:
         """Mode 'quick_start' should be normalised to 'quick-start' (not invalid)."""
@@ -236,7 +239,9 @@ class TestSetupRunDryRun:
         with (
             patch("file_organizer.cli.setup.SetupWizard") as mock_wiz_cls,
             patch("file_organizer.cli.setup.console"),
-            patch("file_organizer.cli.setup.confirm_action", return_value=True),
+            patch(
+                "file_organizer.cli.setup.confirm_action", return_value=True
+            ) as mock_confirm_action,
         ):
             mock_wiz = mock_wiz_cls.return_value
             mock_wiz.detect_capabilities.return_value = caps
@@ -247,6 +252,9 @@ class TestSetupRunDryRun:
 
         assert result.exit_code == 0
         mock_wiz.save_config.assert_not_called()
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_confirm_action.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

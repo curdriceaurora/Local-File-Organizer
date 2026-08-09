@@ -76,11 +76,14 @@ def _plan(input_dir: Path, output_dir: Path) -> OrganizationPlan:
     )
 
 
-def test_organize_fails_when_setup_not_completed(tmp_path: Path) -> None:
+def test_organize_fails_when_setup_not_completed(service: MagicMock, tmp_path: Path) -> None:
     input_dir, output_dir = _roots(tmp_path)
     with patch(_SETUP_PATCH, side_effect=_fake_check_setup):
         result = runner.invoke(app, ["organize", str(input_dir), str(output_dir)])
     assert result.exit_code == 1
+    # The setup gate must block before any organization runs.
+    service.execute.assert_not_called()
+    service.preview.assert_not_called()
 
 
 def test_organize_executes_through_application_service(service: MagicMock, tmp_path: Path) -> None:

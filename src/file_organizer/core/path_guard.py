@@ -45,9 +45,13 @@ Design invariants:
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Callable, Iterable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class PathTraversalError(ValueError):
@@ -112,6 +116,61 @@ def validate_within_roots(path: Path, allowed_roots: Iterable[Path]) -> Path:
     )
 
 
+@dataclass
+class TraversalBudget:
+    """A traversal bound shared across several :func:`safe_walk` calls.
+
+    ``max_entries=N`` gives each call its own budget of N. A caller walking
+    several roots under one global bound — as the search endpoints do, where
+    the bound is a denial-of-service guard on a remote-reachable request —
+    needs the count to carry over. Pass one instance to every call:
+
+        budget = TraversalBudget(limit=10_000)
+        for root in roots:
+            for path in safe_walk(root, max_entries=budget):
+                ...
+
+    ``examined`` counts directory entries seen, before the symlink / hidden /
+    file-type filters, for the reason given in :func:`safe_walk`.
+    """
+
+    limit: int
+    examined: int = 0
+
+    @property
+    def exhausted(self) -> bool:
+        """True once the limit has been reached.
+
+        ``>=``, not ``>``: with ``>`` a limit of N permitted N+1 entries to be
+        consumed, and a limit of 0 still consumed one. The bound is documented
+        as "examine at most N entries", so it should mean exactly that.
+        """
+        return self.examined >= self.limit
+
+
+def _report(
+    on_error: Callable[[Path, OSError], None] | None,
+    path: Path,
+    exc: OSError,
+) -> None:
+    """Log a skipped path and hand it to *on_error* if the caller wants it.
+
+    The ``logger.debug`` call is unconditional and deliberate. Before the
+    #1671 migration, call sites logged their own permission failures; folding
+    them into this primitive removed those lines wholesale (see #1674). Logging
+    here restores the diagnostic for all of them without touching a single call
+    site.
+
+    Exceptions raised by *on_error* are **not** caught. A caller that wants to
+    escalate a permission failure into a hard error should be able to, and
+    swallowing an exception raised by an error handler would be the same defect
+    this function exists to fix.
+    """
+    logger.debug("safe_walk skipping %s: %s", path, exc)
+    if on_error is not None:
+        on_error(path, exc)
+
+
 def _process_walk_entry(
     entry: os.DirEntry,
     *,
@@ -121,6 +180,7 @@ def _process_walk_entry(
     follow_symlinks: bool,
     include_hidden: bool,
     walk_fn: Callable[[Path], Iterator[Path]],
+    on_error: Callable[[Path, OSError], None] | None = None,
 ) -> Iterator[Path]:
     """Process a single directory entry during a secure walk."""
     name = entry.name
@@ -133,7 +193,8 @@ def _process_walk_entry(
     # that entry instead of aborting the whole walk.
     try:
         is_sym = entry_path.is_symlink()
-    except OSError:
+    except OSError as exc:
+        _report(on_error, entry_path, exc)
         return
 
     if not follow_symlinks and is_sym:
@@ -141,7 +202,8 @@ def _process_walk_entry(
 
     try:
         is_dir = entry_path.is_dir()
-    except OSError:
+    except OSError as exc:
+        _report(on_error, entry_path, exc)
         is_dir = False
 
     # Note: we do not descend into directory symlinks for recursion (secure)
@@ -154,7 +216,8 @@ def _process_walk_entry(
     else:
         try:
             is_file = entry_path.is_file()
-        except OSError:
+        except OSError as exc:
+            _report(on_error, entry_path, exc)
             is_file = False
 
         if only_files and not is_file:
@@ -172,6 +235,8 @@ def safe_walk(
     only_files: bool = True,
     follow_symlinks: bool = False,
     include_hidden: bool = False,
+    on_error: Callable[[Path, OSError], None] | None = None,
+    max_entries: int | TraversalBudget | None = None,
 ) -> Iterator[Path]:
     """Walk `root` with security filters.
 
@@ -208,6 +273,30 @@ def safe_walk(
             False (secure — skip symlink entries entirely).
         include_hidden: If True, include dot-prefixed files and descendants
             of dot-prefixed directories. Default False (secure).
+        on_error: Called as ``on_error(path, exc)`` for every entry skipped
+            because of an ``OSError`` — an unreadable root, an unreadable
+            directory, or a per-entry stat failure. The walk continues
+            regardless; this only lets the caller *observe* what was skipped
+            rather than silently receiving a short list (#1674).
+
+            Reported at every catch site, including per-entry. A caller that
+            finds per-entry reports noisy can filter them, whereas one that is
+            never told cannot recover the information — and a walk that
+            silently returns fewer files is exactly the failure this exists to
+            surface.
+
+            Exceptions raised by *on_error* propagate, so a caller can escalate
+            a permission failure into a hard error.
+        max_entries: If set, stop the walk once this many directory entries
+            have been **examined**. Accepts an ``int`` (a budget private to
+            this call) or a :class:`TraversalBudget` (shared across calls, for
+            a caller walking several roots under one global bound). Counted before the symlink / hidden /
+            file-type filters, so it bounds traversal work rather than results
+            — a budget on yielded entries would let a tree of dotfiles or
+            symlinks traverse arbitrarily far, since each is discarded before
+            being counted (#1675). Used by request-scoped walks on
+            remote-reachable endpoints, where the bound is a denial-of-service
+            guard rather than a UX nicety.
 
     Yields:
         `Path` objects for each entry under `root` that matches `pattern`
@@ -221,13 +310,37 @@ def safe_walk(
         # including paths outside the caller's allowed root.
         if not follow_symlinks and root.is_symlink():
             return
-    except OSError:
+    except OSError as exc:
+        _report(on_error, root, exc)
         return
 
+    # Entries *examined*, not entries yielded. See the `max_entries` docstring:
+    # counting survivors would let a tree of dotfiles or symlinks blow through
+    # any budget, because every one of them is discarded before it is yielded.
+    budget: TraversalBudget | None
+    if isinstance(max_entries, TraversalBudget):
+        budget = max_entries  # shared across calls; do not reset `examined`
+    elif max_entries is None:
+        budget = None
+    else:
+        budget = TraversalBudget(limit=max_entries)
+
+    def _budget_exhausted() -> bool:
+        return budget is not None and budget.exhausted
+
     def _walk(dir_path: Path) -> Iterator[Path]:
+        # Checked before opening the directory as well as before each entry, so
+        # an already-spent shared budget does not pay for another scandir, and
+        # a zero limit walks nothing at all.
+        if _budget_exhausted():
+            return
         try:
             with os.scandir(dir_path) as it:
                 for entry in it:
+                    if _budget_exhausted():
+                        return
+                    if budget is not None:
+                        budget.examined += 1
                     yield from _process_walk_entry(
                         entry,
                         pattern=pattern,
@@ -236,8 +349,14 @@ def safe_walk(
                         follow_symlinks=follow_symlinks,
                         include_hidden=include_hidden,
                         walk_fn=_walk,
+                        on_error=on_error,
                     )
-        except OSError:
+                    # A nested walk may have exhausted the budget; stop this
+                    # level too rather than finishing the current directory.
+                    if _budget_exhausted():
+                        return
+        except OSError as exc:
+            _report(on_error, dir_path, exc)
             return
 
     yield from _walk(root)

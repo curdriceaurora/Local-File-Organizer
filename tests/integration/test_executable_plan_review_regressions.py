@@ -299,7 +299,19 @@ def test_execute_plan_cleans_destination_when_history_logging_fails(
 
 
 @requires_safedir
-def test_file_organizer_plan_helpers_execute_and_restore_state(tmp_path: Path) -> None:
+def test_file_organizer_plan_helpers_execute_and_restore_state(
+    tmp_path: Path, stub_all_models: None
+) -> None:
+    """`build_plan` must restore `dry_run` after flipping it internally.
+
+    Takes ``stub_all_models`` because without it this test is not hermetic:
+    ``build_plan`` runs the real ``organize()`` pipeline, which initialises
+    ``TextModel`` and opens a live connection to whatever Ollama daemon
+    happens to be listening on the machine. Measured: 0.10 s with
+    ``OLLAMA_HOST`` pointed at a dead port versus 0.92 s with a daemon up —
+    the test was quietly doing real network work, and its runtime therefore
+    depended on the developer's environment and on load (#1729).
+    """
     input_dir = tmp_path / "input"
     input_dir.mkdir()
     source = input_dir / "notes.txt"
@@ -309,6 +321,8 @@ def test_file_organizer_plan_helpers_execute_and_restore_state(tmp_path: Path) -
     plan = organizer.build_plan(input_dir, tmp_path / "preview-output")
     result = organizer.execute_plan(plan)
 
+    # The regression this guards: build_plan sets dry_run=True internally and
+    # must put it back, or every later execute_plan silently does nothing.
     assert organizer.dry_run is False
     assert result.processed_files == 1
     assert any((tmp_path / "preview-output").rglob("*.txt"))

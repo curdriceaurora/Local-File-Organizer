@@ -151,6 +151,19 @@ def stub_vision_model_generate() -> Iterator[MagicMock]:
 
 
 @pytest.fixture()
+def stub_text_model(
+    stub_text_model_init: None,
+    stub_text_model_generate: MagicMock,
+) -> None:
+    """Convenience fixture: stubs init + generate for the text model only.
+
+    For tests that drive a text-only path. Requesting ``stub_all_models``
+    there leaves the vision stubs dead, which hides whether the path under
+    test reaches the vision model at all.
+    """
+
+
+@pytest.fixture()
 def stub_all_models(
     stub_text_model_init: None,
     stub_text_model_generate: MagicMock,

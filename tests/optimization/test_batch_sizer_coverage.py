@@ -37,6 +37,8 @@ class TestBatchSizerPerFileCostZero:
         batch_size = sizer.calculate_batch_size(file_sizes, overhead_per_file=0)
         # per_file_cost <= 0 => min(len(files), max_batch_size)
         assert batch_size == 50
+        # Pin that the patched dependency is what the code consulted.
+        mock_mem.assert_called()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -50,6 +52,8 @@ class TestBatchSizerPerFileCostZero:
         file_sizes = [0] * 50
         batch_size = sizer.calculate_batch_size(file_sizes, overhead_per_file=0)
         assert batch_size == 10
+        # Pin that the patched dependency is what the code consulted.
+        mock_mem.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +224,8 @@ class TestAdjustFromFeedbackCoverage:
         result = sizer.adjust_from_feedback(actual_memory=0, batch_size=10)
         # actual_per_file = 0/10 = 0, should return batch_size unchanged
         assert result == 10
+        # Pin that the patched dependency is what the code consulted.
+        mock_mem.assert_called()
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -231,6 +237,7 @@ class TestAdjustFromFeedbackCoverage:
         sizer = AdaptiveBatchSizer()
         result = sizer.adjust_from_feedback(actual_memory=1024, batch_size=-5)
         assert result == sizer.min_batch_size
+        mock_mem.assert_not_called()  # min-clamp short-circuits before the memory probe
 
     @patch.object(
         AdaptiveBatchSizer,
@@ -245,3 +252,5 @@ class TestAdjustFromFeedbackCoverage:
         # But min is 5
         result = sizer.adjust_from_feedback(actual_memory=700_000_000, batch_size=1)
         assert result >= 5
+        # Pin that the patched dependency is what the code consulted.
+        mock_mem.assert_called()

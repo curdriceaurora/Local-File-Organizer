@@ -112,6 +112,8 @@ class TestTextProcessor:
 
         assert processor._owns_model is True
         mock_get_text_model.assert_called_once()
+        # Pin that the patched dependency is what the code consulted.
+        mock_nltk.assert_called()
 
     @patch("file_organizer.services.text_processor.ensure_nltk_data")
     def test_init_uses_provided_model(

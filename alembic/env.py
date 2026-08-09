@@ -16,7 +16,13 @@ from file_organizer.api.database import resolve_database_url
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False` is load bearing, not a preference.
+    # The default is True, which disables every logger not named in
+    # alembic.ini — i.e. all of `file_organizer.*` — for the rest of the
+    # process. Alembic ships the True default because it assumes it owns a
+    # short-lived CLI process; here migrations also run in-process, so the
+    # default silently switches application logging off (#1677).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

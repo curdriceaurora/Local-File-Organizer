@@ -409,7 +409,7 @@ class TestAudioMetadataExtractor:
             "file_organizer.services.audio.metadata_extractor.MutagenFile",
             return_value=mock_audio,
             create=True,
-        ):
+        ) as mock_mutagenfile:
             with patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor"
                 "._extract_with_mutagen",
@@ -430,6 +430,9 @@ class TestAudioMetadataExtractor:
         assert result.bitrate == 128000
         assert result.sample_rate == 44100
         assert result.channels == 2
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_mutagenfile.assert_not_called()
 
     def test_extract_file_path_is_preserved(self, tmp_path: Path) -> None:
         from file_organizer.services.audio.metadata_extractor import (
@@ -1544,9 +1547,14 @@ class TestTextProcessor:
         mock_model = MagicMock()
         mock_model.config.model_type = ModelType.VISION
 
-        with patch("file_organizer.services.text_processor.ensure_nltk_data"):
+        with patch(
+            "file_organizer.services.text_processor.ensure_nltk_data"
+        ) as mock_ensure_nltk_data:
             with pytest.raises(ValueError, match="TEXT model"):
                 TextProcessor(text_model=mock_model)
+        # Recorded as never reached on this path; pin it so a change that
+        # starts calling it fails here instead of going unnoticed.
+        mock_ensure_nltk_data.assert_not_called()
 
     def test_process_file_returns_processed_file(self, tmp_path: Path) -> None:
         from file_organizer.services.text_processor import ProcessedFile, TextProcessor
@@ -1569,10 +1577,13 @@ class TestTextProcessor:
                     with patch(
                         "file_organizer.services.text_processor.clean_text",
                         return_value="programming",
-                    ):
+                    ) as mock_clean:
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
+        # A usable AI-generated name must not fall through to the
+        # keyword-extraction fallback.
+        mock_clean.assert_not_called()
         assert isinstance(result, ProcessedFile)
         assert result.file_path == fp
         assert result.error is None
@@ -1641,10 +1652,13 @@ class TestTextProcessor:
                     with patch(
                         "file_organizer.services.text_processor.clean_text",
                         return_value="programming",
-                    ):
+                    ) as mock_clean:
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
+        # A usable AI-generated name must not fall through to the
+        # keyword-extraction fallback.
+        mock_clean.assert_not_called()
         assert len(result.description) > 0
 
     def test_process_file_no_description(self, tmp_path: Path) -> None:
@@ -1667,12 +1681,15 @@ class TestTextProcessor:
                     with patch(
                         "file_organizer.services.text_processor.clean_text",
                         return_value="programming",
-                    ):
+                    ) as mock_clean:
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(
                             fp, generate_description=False, generate_folder=True
                         )
 
+        # A usable AI-generated name must not fall through to the
+        # keyword-extraction fallback.
+        mock_clean.assert_not_called()
         assert result.description == ""
 
     def test_process_file_preserves_file_path(self, tmp_path: Path) -> None:
@@ -1693,10 +1710,13 @@ class TestTextProcessor:
                 ):
                     with patch(
                         "file_organizer.services.text_processor.clean_text", return_value="notes"
-                    ):
+                    ) as mock_clean:
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
+        # A usable AI-generated name must not fall through to the
+        # keyword-extraction fallback.
+        mock_clean.assert_not_called()
         assert result.file_path == fp
 
     def test_clean_ai_generated_name_removes_stop_words(self) -> None:
@@ -1809,10 +1829,13 @@ class TestTextProcessor:
                 ):
                     with patch(
                         "file_organizer.services.text_processor.clean_text", return_value="sample"
-                    ):
+                    ) as mock_clean:
                         processor = TextProcessor(text_model=mock_model)
                         result = processor.process_file(fp)
 
+        # A usable AI-generated name must not fall through to the
+        # keyword-extraction fallback.
+        mock_clean.assert_not_called()
         assert result.processing_time >= 0.0
 
     def test_process_file_original_content_truncated(self, tmp_path: Path) -> None:
@@ -1876,13 +1899,20 @@ class TestTextProcessor:
         mock_model = self._make_mock_text_model()
         mock_model.generate = MagicMock(return_value="the a an")  # all stop words
 
-        with patch("file_organizer.services.text_processor.ensure_nltk_data"):
-            with patch(
+        with (
+            patch("file_organizer.services.text_processor.ensure_nltk_data"),
+            patch(
                 "file_organizer.services.text_processor.clean_text", return_value="programming"
-            ):
-                processor = TextProcessor(text_model=mock_model)
-        result = processor._generate_folder_name("Python programming tutorials and guides")
-        # Should be non-empty even with stop-word-only AI response
+            ) as mock_clean,
+        ):
+            processor = TextProcessor(text_model=mock_model)
+            # The call used to sit outside this block, so the patch was inert and
+            # the real clean_text ran -- the fallback this test is named for was
+            # never actually observed.
+            result = processor._generate_folder_name("Python programming tutorials and guides")
+
+        # A stop-word-only AI response must fall through to keyword extraction.
+        mock_clean.assert_called_once()
         assert len(result) >= 1
 
     def test_generate_folder_name_exception_returns_documents(self) -> None:

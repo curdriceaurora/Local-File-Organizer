@@ -82,11 +82,10 @@ class TestReadlineWithTimeout:
         with pytest.raises(PluginError, match="not running"):
             ex._readline_with_timeout()
 
-    @patch("file_organizer.plugins.executor.sys")
+    @patch("file_organizer.plugins.executor.sys.platform", "linux")
     @patch("file_organizer.plugins.executor.select")
-    def test_timeout_on_unix(self, mock_select: MagicMock, mock_sys: MagicMock) -> None:
+    def test_timeout_on_unix(self, mock_select: MagicMock) -> None:
         """When select returns empty ready-list, should raise timeout error."""
-        mock_sys.platform = "linux"
         mock_select.select.return_value = ([], [], [])
 
         ex = _make_executor()
@@ -96,11 +95,10 @@ class TestReadlineWithTimeout:
         with pytest.raises(PluginError, match="did not respond within"):
             ex._readline_with_timeout(timeout=0.1)
 
-    @patch("file_organizer.plugins.executor.sys")
+    @patch("file_organizer.plugins.executor.sys.platform", "linux")
     @patch("file_organizer.plugins.executor.select")
-    def test_successful_read_on_unix(self, mock_select: MagicMock, mock_sys: MagicMock) -> None:
+    def test_successful_read_on_unix(self, mock_select: MagicMock) -> None:
         """When select says ready, readline should be called and returned."""
-        mock_sys.platform = "linux"
         stdout_mock = MagicMock()
         stdout_mock.readline.return_value = b'{"success":true}\n'
         mock_select.select.return_value = ([stdout_mock], [], [])

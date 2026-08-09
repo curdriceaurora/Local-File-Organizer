@@ -245,24 +245,29 @@ class TestImageDeduplicator:
     def _require_pil(self) -> None:
         pytest.importorskip("PIL")
 
+    #: ``ImageDeduplicator.__init__`` selects exactly one of these by hash_method.
+    _HASHER_CLASSES = {"phash": "PHash", "dhash": "DHash", "ahash": "AHash"}
+
     def _make_deduplicator(self, method: str = "phash", threshold: int = 10) -> Any:
+        """Build an ImageDeduplicator with only the hasher it actually selects patched.
+
+        Patching all three hasher classes left two dead patches on every call,
+        and assigning ``dedup.hasher`` afterwards meant the patch could stop
+        working entirely without any test noticing. Patch the one class the
+        method selects and assert it is what supplied the hasher, so a
+        regression in the selection branch fails here.
+        """
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
         mock_hasher = MagicMock()
+        target = f"file_organizer.services.deduplication.image_dedup.{self._HASHER_CLASSES[method]}"
         with (
-            patch(
-                "file_organizer.services.deduplication.image_dedup.PHash", return_value=mock_hasher
-            ),
-            patch(
-                "file_organizer.services.deduplication.image_dedup.DHash", return_value=mock_hasher
-            ),
-            patch(
-                "file_organizer.services.deduplication.image_dedup.AHash", return_value=mock_hasher
-            ),
+            patch(target, return_value=mock_hasher) as mock_hasher_cls,
             patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
         ):
             dedup = ImageDeduplicator(hash_method=method, threshold=threshold)
-            dedup.hasher = mock_hasher
+        mock_hasher_cls.assert_called_once_with()
+        assert dedup.hasher is mock_hasher
         return dedup
 
     def test_init_phash(self) -> None:
@@ -281,20 +286,17 @@ class TestImageDeduplicator:
     def test_init_invalid_method_raises(self) -> None:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
-        with (
-            patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
-            patch("file_organizer.services.deduplication.image_dedup.PHash"),
-        ):
+        # No hasher patch: __init__ validates the method before it constructs
+        # any hasher, so patching PHash here protected nothing.
+        with patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True):
             with pytest.raises(ValueError, match="Unsupported hash method"):
                 ImageDeduplicator(hash_method="whash")
 
     def test_init_invalid_threshold_raises(self) -> None:
         from file_organizer.services.deduplication.image_dedup import ImageDeduplicator
 
-        with (
-            patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True),
-            patch("file_organizer.services.deduplication.image_dedup.PHash"),
-        ):
+        # No hasher patch: threshold validation also precedes hasher construction.
+        with patch("file_organizer.services.deduplication.image_dedup._IMAGEDEDUP_AVAILABLE", True):
             with pytest.raises(ValueError, match="Threshold must be between"):
                 ImageDeduplicator(hash_method="phash", threshold=100)
 

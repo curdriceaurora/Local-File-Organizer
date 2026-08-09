@@ -64,15 +64,16 @@ class TestCleanAiGeneratedName:
     """Unit tests for _clean_ai_generated_name without any model calls."""
 
     def setup_method(self) -> None:
-        # Patch the model so no Ollama/network access is needed
         import unittest.mock as mock
 
-        with mock.patch("file_organizer.services.text_processor.get_text_model") as mock_factory:
-            mock_factory.return_value = mock.MagicMock()
-            self.processor = TextProcessor.__new__(TextProcessor)
-            # Minimal initialisation — only the clean method is tested
-            self.processor.text_model = mock.MagicMock()
-            self.processor._owns_model = False
+        # ``__new__`` bypasses ``__init__`` entirely, so no model factory ever
+        # runs and no Ollama/network access is possible. The former
+        # ``patch("...get_text_model")`` around this block was inert for the
+        # same reason -- the factory it patched was never called.
+        self.processor = TextProcessor.__new__(TextProcessor)
+        # Minimal initialisation — only the clean method is tested
+        self.processor.text_model = mock.MagicMock()
+        self.processor._owns_model = False
 
     @pytest.mark.parametrize("raw,max_words,expected", FOLDER_CORPUS)
     def test_folder_name_cleaning(self, raw: str, max_words: int, expected: str) -> None:

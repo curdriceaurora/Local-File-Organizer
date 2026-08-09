@@ -330,6 +330,9 @@ class TestLoginSubmit:
             patch("file_organizer.web.profile_routes.create_token_bundle", return_value=bundle),
         ):
             result = login_submit(MagicMock(), username="u", password="p", settings=settings)
+        # No template is rendered on this path, so the page context
+        # helper must never run.
+        p["base_ctx"].assert_not_called()
         assert result.status_code == 303
         # Verify that auth cookie was set in response headers
         assert any(key.lower() == "set-cookie" for key in result.headers)
@@ -407,6 +410,9 @@ class TestRegisterSubmit:
                 full_name="Full Name",
                 settings=MagicMock(),
             )
+        # No template is rendered on this path, so the page context
+        # helper must never run.
+        p["base_ctx"].assert_not_called()
         assert result.status_code == 303
         db.add.assert_called_once()
         db.commit.assert_called_once()
@@ -843,6 +849,9 @@ class TestAvatarUpload:
             result = asyncio.get_event_loop().run_until_complete(
                 profile_avatar_upload(MagicMock(), avatar=avatar, settings=MagicMock())
             )
+        # No template is rendered on this path, so the page context
+        # helper must never run.
+        p["base_ctx"].assert_not_called()
         assert "5MB" in result.body.decode()
 
     def test_avatar_success(self, tmp_path) -> None:
@@ -865,6 +874,9 @@ class TestAvatarUpload:
             result = asyncio.get_event_loop().run_until_complete(
                 profile_avatar_upload(MagicMock(), avatar=avatar, settings=MagicMock())
             )
+        # No template is rendered on this path, so the page context
+        # helper must never run.
+        p["base_ctx"].assert_not_called()
         assert "Avatar updated" in result.body.decode()
         assert (tmp_path / "u1.png").read_bytes() == b"png-data"
 
@@ -876,12 +888,15 @@ class TestAvatarUpload:
         avatar = MagicMock()
         avatar.read = AsyncMock(return_value=b"png-data")
 
-        stack, _ = _patch_route_deps(user_mock=user)
+        stack, p = _patch_route_deps(user_mock=user)
         with stack:
             result = asyncio.get_event_loop().run_until_complete(
                 profile_avatar_upload(MagicMock(), avatar=avatar, settings=MagicMock())
             )
 
+        # No template is rendered on this path, so the page context
+        # helper must never run.
+        p["base_ctx"].assert_not_called()
         assert result.status_code == 400
         assert "Invalid user ID" in result.body.decode()
 

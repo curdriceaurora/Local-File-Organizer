@@ -139,6 +139,8 @@ class TestMemoryProfilerProfile:
         assert profiler.last_result is not None
         assert profiler.last_result.func_name == "sample_func"
         assert profiler.last_result.duration_ms >= 0.0
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
     def test_profile_preserves_function_name(self, mock_rss: MagicMock) -> None:
@@ -150,6 +152,7 @@ class TestMemoryProfilerProfile:
             pass
 
         assert my_named_function.__name__ == "my_named_function"
+        mock_rss.assert_not_called()  # decorating alone must not sample memory
 
     def test_profile_records_duration(self) -> None:
         """Test that duration is recorded correctly."""
@@ -225,6 +228,8 @@ class TestMemoryProfilerProfile:
         result = add(3, 4)
         assert result == 7
         assert profiler.last_result is not None
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
     def test_profile_with_kwargs(self, mock_rss: MagicMock) -> None:
@@ -237,6 +242,8 @@ class TestMemoryProfilerProfile:
 
         result = greet("World", greeting="Hi")
         assert result == "Hi, World"
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     def test_profile_peak_memory(self) -> None:
         """Test that peak memory is the max of before/after RSS."""
@@ -280,6 +287,8 @@ class TestMemoryProfilerProfile:
 
         func_b()
         assert profiler.last_result.func_name == "func_b"
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 4
 
 
 @pytest.mark.unit
@@ -305,6 +314,9 @@ class TestMemoryProfilerSnapshot:
         assert snapshot.vms == 200_000_000
         assert len(snapshot.objects_by_type) == 2
         assert snapshot.timestamp > 0
+        # Pin that the patched probe is what the code consulted.
+        mock_objects.assert_called_once()
+        mock_rss_vms.assert_called_once()
 
     @patch.object(
         MemoryProfiler,
@@ -325,6 +337,9 @@ class TestMemoryProfilerSnapshot:
 
         assert snapshot.rss == 0
         assert snapshot.vms == 0
+        # Pin that the patched probe is what the code consulted.
+        mock_objects.assert_called_once()
+        mock_rss_vms.assert_called_once()
 
 
 @pytest.mark.unit
@@ -351,6 +366,9 @@ class TestMemoryProfilerTracking:
         # Should have at least 2 snapshots (start + stop)
         assert len(timeline.snapshots) >= 2
         assert timeline.interval_seconds == 0.5
+        # Each snapshot samples both probes exactly once.
+        assert mock_objects.call_count == len(timeline.snapshots)
+        assert mock_rss_vms.call_count == len(timeline.snapshots)
 
     @patch.object(
         MemoryProfiler,
@@ -375,6 +393,9 @@ class TestMemoryProfilerTracking:
         timeline = profiler.stop_tracking()
         # start snapshot + 2 manual + stop snapshot = 4
         assert len(timeline.snapshots) == 4
+        # Each snapshot samples both probes exactly once.
+        assert mock_objects.call_count == len(timeline.snapshots)
+        assert mock_rss_vms.call_count == len(timeline.snapshots)
 
     def test_add_snapshot_without_tracking_raises(self) -> None:
         """Test that add_snapshot raises when not tracking."""
@@ -403,6 +424,9 @@ class TestMemoryProfilerTracking:
         # Internal snapshots should be cleared
         assert profiler._snapshots == []
         assert profiler._tracking is False
+        # start + stop each took a snapshot before the list was cleared.
+        assert mock_objects.call_count == 2
+        assert mock_rss_vms.call_count == 2
 
     @patch.object(
         MemoryProfiler,
@@ -424,6 +448,9 @@ class TestMemoryProfilerTracking:
         # Should still return a valid timeline (empty)
         assert isinstance(timeline, MemoryTimeline)
         assert len(timeline.snapshots) == 0
+        # Never-started tracking must not take any snapshots
+        mock_rss_vms.assert_not_called()
+        mock_objects.assert_not_called()
 
 
 @pytest.mark.unit
@@ -493,6 +520,8 @@ class TestProfileGCBehavior:
 
         # Expected order: collect (pre-clean), disable, enable, collect (post-clean)
         assert gc_calls == ["collect", "disable", "enable", "collect"]
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
     def test_gc_reenabled_on_exception(self, mock_rss: MagicMock) -> None:
@@ -518,6 +547,8 @@ class TestProfileGCBehavior:
                 exploding()
 
         assert enable_called, "gc.enable() must be called even when function raises"
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
     def test_no_gc_collect_during_measurement(self, mock_rss: MagicMock) -> None:
@@ -546,3 +577,5 @@ class TestProfileGCBehavior:
         # Second collect is post-measurement (after gc.enable)
         assert collect_timestamps[0] >= before
         assert collect_timestamps[1] <= after
+        # Pin that the patched probe is what the code consulted.
+        assert mock_rss.call_count == 2

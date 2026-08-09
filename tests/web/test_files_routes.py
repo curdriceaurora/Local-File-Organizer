@@ -344,7 +344,9 @@ class TestBuildFileResultsContext:
     def test_with_valid_path(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
             patch("file_organizer.web.file_operations.validate_depth"),
         ):
@@ -360,6 +362,8 @@ class TestBuildFileResultsContext:
                 limit=50,
                 page_size=50,
             )
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert ctx["current_path"] == str(tree)
         assert ctx["view"] == "grid"
         assert "entries" in ctx
@@ -372,7 +376,9 @@ class TestBuildFileResultsContext:
         request = MagicMock()
         fake_entries = [{"name": f"entry-{index}"} for index in range(8)]
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
             patch("file_organizer.web.file_operations.validate_depth"),
             patch(
@@ -393,6 +399,8 @@ class TestBuildFileResultsContext:
                 page_size=2,
             )
 
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert ctx["limit"] == 3
         assert ctx["page_size"] == 2
         assert ctx["next_limit"] == 5
@@ -401,7 +409,9 @@ class TestBuildFileResultsContext:
     def test_with_no_path(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch("file_organizer.web.file_operations.resolve_selected_path", return_value=None),
         ):
             ctx = build_file_results_context(
@@ -416,12 +426,16 @@ class TestBuildFileResultsContext:
                 limit=50,
                 page_size=50,
             )
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert ctx["error_message"] is not None
 
     def test_with_api_error(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch(
                 "file_organizer.web.file_operations.resolve_selected_path",
                 side_effect=ApiError(status_code=403, error="nope", message="bad"),
@@ -439,12 +453,16 @@ class TestBuildFileResultsContext:
                 limit=50,
                 page_size=50,
             )
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert "bad" in ctx["error_message"]
 
     def test_depth_validation_error(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
             patch(
                 "file_organizer.web.file_operations.validate_depth",
@@ -463,12 +481,16 @@ class TestBuildFileResultsContext:
                 limit=50,
                 page_size=50,
             )
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert "too deep" in ctx["error_message"]
 
     def test_invalid_view_normalized(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            # build_file_results_context imports allowed_roots from _helpers inside
+            # the function body, so the file_operations name is never consulted.
+            patch("file_organizer.web._helpers.allowed_roots", return_value=[tree]) as mock_roots,
             patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
             patch("file_organizer.web.file_operations.validate_depth"),
         ):
@@ -484,4 +506,6 @@ class TestBuildFileResultsContext:
                 limit=50,
                 page_size=50,
             )
+        # The builder must actually consult the allowed roots.
+        mock_roots.assert_called_once_with(settings)
         assert ctx["view"] == "grid"

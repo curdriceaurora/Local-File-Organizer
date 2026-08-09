@@ -89,19 +89,15 @@ class TestRulesSets:
         assert "3" in result.output  # count
 
 
-_RULE_MGR_PATCHES = (
-    "file_organizer.services.copilot.rules.RuleManager",
-    "file_organizer.services.copilot.rules.rule_manager.RuleManager",
-)
+_RULE_MGR_PATCH = "file_organizer.services.copilot.rules.rule_manager.RuleManager"
 
 
 class TestRulesAdd:
     def test_rules_add_valid_move_action(self) -> None:
         mock_mgr = MagicMock()
-        with (
-            patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-            patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-        ):
+        # One target is enough: the rules package resolves RuleManager from
+        # rule_manager, so patching the definition covers the re-export too.
+        with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
             result = runner.invoke(
                 app,
                 ["rules", "add", "my-rule", "--action", "move", "--dest", "Archive/"],
@@ -112,10 +108,9 @@ class TestRulesAdd:
 
     def test_rules_add_with_extension_filter(self) -> None:
         mock_mgr = MagicMock()
-        with (
-            patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-            patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-        ):
+        # One target is enough: the rules package resolves RuleManager from
+        # rule_manager, so patching the definition covers the re-export too.
+        with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
             result = runner.invoke(
                 app,
                 ["rules", "add", "pdf-rule", "--ext", ".pdf", "--action", "move"],
@@ -124,10 +119,9 @@ class TestRulesAdd:
 
     def test_rules_add_with_pattern_filter(self) -> None:
         mock_mgr = MagicMock()
-        with (
-            patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-            patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-        ):
+        # One target is enough: the rules package resolves RuleManager from
+        # rule_manager, so patching the definition covers the re-export too.
+        with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
             result = runner.invoke(
                 app,
                 ["rules", "add", "report-rule", "--pattern", "report*", "--action", "move"],
@@ -146,10 +140,7 @@ class TestRulesAdd:
         valid_actions = ["move", "rename", "tag", "categorize", "archive", "copy", "delete"]
         for action in valid_actions:
             mock_mgr = MagicMock()
-            with (
-                patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-                patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-            ):
+            with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
                 result = runner.invoke(
                     app,
                     ["rules", "add", f"{action}-rule", "--action", action],
@@ -158,10 +149,9 @@ class TestRulesAdd:
 
     def test_rules_add_with_priority(self) -> None:
         mock_mgr = MagicMock()
-        with (
-            patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-            patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-        ):
+        # One target is enough: the rules package resolves RuleManager from
+        # rule_manager, so patching the definition covers the re-export too.
+        with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
             result = runner.invoke(
                 app,
                 ["rules", "add", "priority-rule", "--priority", "100", "--action", "move"],
@@ -170,10 +160,9 @@ class TestRulesAdd:
 
     def test_rules_add_to_custom_set(self) -> None:
         mock_mgr = MagicMock()
-        with (
-            patch(_RULE_MGR_PATCHES[0], return_value=mock_mgr),
-            patch(_RULE_MGR_PATCHES[1], return_value=mock_mgr),
-        ):
+        # One target is enough: the rules package resolves RuleManager from
+        # rule_manager, so patching the definition covers the re-export too.
+        with patch(_RULE_MGR_PATCH, return_value=mock_mgr):
             result = runner.invoke(
                 app,
                 ["rules", "add", "my-rule", "--set", "work-rules", "--action", "move"],

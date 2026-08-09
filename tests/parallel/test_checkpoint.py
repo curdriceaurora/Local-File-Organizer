@@ -8,7 +8,9 @@ and file change detection.
 from __future__ import annotations
 
 import hashlib
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -81,6 +83,23 @@ class TestCheckpointManagerInit(unittest.TestCase):
             mgr.checkpoints_dir,
             get_data_dir() / "checkpoints",
         )
+
+    def test_default_dir_follows_a_repointed_data_dir(self) -> None:
+        """The default must be resolved per call, not frozen at import.
+
+        Regression for #1677: ``_DEFAULT_CHECKPOINTS_DIR`` was a
+        module-level constant, so the directory was pinned to whatever
+        the environment was when this module was first imported. Under
+        xdist that is whichever test imported it first, which made
+        ``test_default_dir`` fail on roughly one run in three depending
+        on scheduling.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"XDG_DATA_HOME": tmp}):
+                from file_organizer.config.path_manager import get_data_dir
+
+                mgr = CheckpointManager()
+                self.assertEqual(mgr.checkpoints_dir, get_data_dir() / "checkpoints")
 
     def test_custom_dir(self) -> None:
         """Test that custom directory is used."""

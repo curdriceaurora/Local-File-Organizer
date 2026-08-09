@@ -197,6 +197,8 @@ class TestOpencvFallback:
         assert metadata.height == 720
         assert metadata.fps == 24.0
         assert metadata.duration == 100.0  # 2400 / 24
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +221,8 @@ class TestFilesystemFallback:
         assert metadata.width is None
         assert metadata.height is None
         assert metadata.duration is None
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     def test_file_not_found_raises(self, extractor: VideoMetadataExtractor) -> None:
         with pytest.raises(FileNotFoundError, match="Video file not found"):
@@ -249,6 +253,8 @@ class TestBatchExtraction:
         assert all(isinstance(r, VideoMetadata) for r in results)
         assert results[0].file_size == 100
         assert results[2].file_size == 300
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +319,8 @@ class TestFfprobeErrorHandling:
         assert metadata.width is None
         assert metadata.duration is None
         assert metadata.file_size == 1024  # filesystem baseline preserved
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch("subprocess.run")
     def test_nonzero_return_code_falls_back(
@@ -475,6 +483,8 @@ class TestOpencvEdgeCases:
         assert metadata.height is None
         assert metadata.fps is None
         assert metadata.file_size == 1024  # filesystem baseline
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_zero_fps_does_not_set_duration(
@@ -486,6 +496,8 @@ class TestOpencvEdgeCases:
 
         assert metadata.fps is None  # 0.0 → falsy → or None
         assert metadata.duration is None  # no valid fps → duration not computed
+        # Pin that the patched dependency is what the code consulted.
+        mock_run.assert_called()
 
 
 # ---------------------------------------------------------------------------

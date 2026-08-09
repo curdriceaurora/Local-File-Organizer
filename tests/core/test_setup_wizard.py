@@ -108,6 +108,7 @@ class TestDetectCapabilities:
         assert capabilities.ollama_status.installed is False
         assert capabilities.ollama_status.running is False
         assert len(capabilities.installed_models) == 0
+        mock_list_models.assert_not_called()  # Should not list models if not installed
 
 
 class TestGenerateConfig:
@@ -603,6 +604,8 @@ class TestWizardRun:
 
         assert result.success is True
         mock_generate.assert_called_once_with(mock_capabilities, custom_settings)
+        # Pin that the patched dependency is what the code consulted.
+        mock_save.assert_called()
 
     @patch.object(SetupWizard, "validate_config")
     @patch.object(SetupWizard, "generate_config")
