@@ -149,30 +149,39 @@ class PatternAnalyzer:
             metadata={"min_pattern_count": self.min_pattern_count, "max_depth": self.max_depth},
         )
 
-    def _collect_files(self, directory: Path, current_depth: int = 0) -> list[Path]:
-        """Recursively collect all files up to max_depth.
+    def _collect_files(self, directory: Path) -> list[Path]:
+        """Collect files up to ``max_depth``, using the walk's hidden-path rule.
+
+        Previously this hand-rolled its own traversal and applied a *different*
+        definition of "hidden" from :meth:`get_location_patterns`, so one
+        ``PatternAnalysis`` carried two rules (#1680):
+
+        - it dot-checked directories only, so hidden **files** such as ``.env``
+          were counted in ``total_files`` and ``content_clusters``;
+        - the check was leaf-only, so ``root/.cache/visible/`` was skipped here
+          but for a different reason than in the other path;
+        - symlinks were followed.
+
+        ``safe_walk`` is now the single rule for both. It excludes any path with
+        a dot component relative to the root, and skips symlinks — the stricter,
+        security-hardened definition, and the one the location analysis has used
+        since #1671. Aligning on the looser rule would have meant feeding
+        credential-bearing files like ``.ssh/`` into pattern analysis.
 
         Args:
             directory: Directory to scan
-            current_depth: Current recursion depth
 
         Returns:
             List of file paths
         """
-        if current_depth > self.max_depth:
-            return []
-
-        files = []
-        try:
-            for item in directory.iterdir():
-                if item.is_file():
-                    files.append(item)
-                elif item.is_dir() and not item.name.startswith("."):
-                    files.extend(self._collect_files(item, current_depth + 1))
-        except PermissionError:
-            logger.warning(f"Permission denied: {directory}")
-
-        return files
+        # `safe_walk` has no depth parameter, so the bound is applied here.
+        # A file directly inside `directory` has one relative part and sits at
+        # depth 0, matching the old `current_depth` numbering exactly.
+        return [
+            path
+            for path in safe_walk(directory, only_files=True)
+            if len(path.relative_to(directory).parts) - 1 <= self.max_depth
+        ]
 
     def detect_naming_patterns(self, files: list[Path]) -> list[NamingPattern]:
         """Detect naming patterns across files.

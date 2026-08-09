@@ -471,3 +471,101 @@ class TestEdgeCases:
             analysis = analyzer.analyze_directory(tmppath)
 
             assert analysis.total_files == 1
+
+
+@pytest.mark.unit
+class TestSingleHiddenPathRule:
+    """One `PatternAnalysis` must not carry two definitions of "hidden" (#1680).
+
+    `_collect_files` hand-rolled a traversal that dot-checked directories only,
+    while `get_location_patterns` walked via `safe_walk`, which excludes any
+    path with a dot component relative to the root. So a hidden file was
+    counted in `total_files` but its directory never reached
+    `location_patterns` — one object, two rules.
+    """
+
+    @staticmethod
+    def _tree(root: Path) -> None:
+        docs = root / "docs"
+        docs.mkdir()
+        for i in range(4):
+            (docs / f"report_{i}.txt").write_text("x")
+        # Hidden file at the root, and one inside a visible directory.
+        (root / ".env").write_text("SECRET=1")
+        (docs / ".secret").write_text("SECRET=2")
+        # Visible directory buried under a hidden one.
+        buried = root / ".cache" / "visible"
+        buried.mkdir(parents=True)
+        (buried / "cached.txt").write_text("x")
+
+    def test_hidden_files_are_excluded_from_collection(self) -> None:
+        """`.env` and `.secret` must not reach pattern analysis.
+
+        They were previously counted: the old check only dot-tested
+        directories, so hidden *files* passed straight through into
+        `total_files` and `content_clusters`. Feeding credential-bearing files
+        into pattern analysis is the reason the strict rule was chosen.
+        """
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._tree(root)
+
+            collected = PatternAnalyzer()._collect_files(root)
+            names = {p.name for p in collected}
+
+            assert names == {f"report_{i}.txt" for i in range(4)}, (
+                f"expected only the visible reports, got {sorted(names)}"
+            )
+
+    def test_collection_and_location_analysis_agree_on_hidden(self) -> None:
+        """The two paths must apply the same rule — the actual defect.
+
+        Anything under `.cache/` is excluded from the location patterns by
+        `safe_walk`; the file collection must exclude it too, or `total_files`
+        counts a directory that `location_patterns` will never mention.
+        """
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._tree(root)
+            analyzer = PatternAnalyzer()
+
+            collected_dirs = {p.parent for p in analyzer._collect_files(root)}
+            located = {lp.directory for lp in analyzer.get_location_patterns(root)}
+
+            buried = root / ".cache" / "visible"
+            assert buried not in collected_dirs, "buried dir leaked into collection"
+            assert buried not in located, "premise: safe_walk already excludes it"
+            assert collected_dirs <= located | {root}, (
+                f"collection saw directories the location analysis did not: "
+                f"{sorted(collected_dirs - located - {root})}"
+            )
+
+    def test_max_depth_bound_is_preserved(self) -> None:
+        """Migrating to safe_walk must not lose the depth limit.
+
+        `safe_walk` has no depth parameter, so the bound moved to a filter on
+        the relative path. Depth numbering is unchanged: a file directly inside
+        the root is depth 0.
+        """
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "top.txt").write_text("x")
+            deep = root / "a" / "b" / "c"
+            deep.mkdir(parents=True)
+            (root / "a" / "one.txt").write_text("x")
+            (root / "a" / "b" / "two.txt").write_text("x")
+            (deep / "three.txt").write_text("x")
+
+            assert {p.name for p in PatternAnalyzer(max_depth=0)._collect_files(root)} == {
+                "top.txt"
+            }
+            assert {p.name for p in PatternAnalyzer(max_depth=1)._collect_files(root)} == {
+                "top.txt",
+                "one.txt",
+            }
+            assert {p.name for p in PatternAnalyzer(max_depth=10)._collect_files(root)} == {
+                "top.txt",
+                "one.txt",
+                "two.txt",
+                "three.txt",
+            }
