@@ -472,10 +472,13 @@ class TestEdgeCasesAndErrorHandling:
         test_file = test_dir / "file.txt"
         test_file.write_text("content")
 
-        def mock_iterdir(_self: Path) -> None:
+        def mock_safe_walk(*_args: object, **_kwargs: object) -> None:
             raise OSError("Permission denied")
 
-        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.ai.feature_extractor.safe_walk",
+            mock_safe_walk,
+        )
         features = extractor.extract_structural_features(test_file)
         # Should handle error gracefully and return 0 siblings
         assert features.sibling_count == 0
@@ -499,7 +502,7 @@ class TestEdgeCasesAndErrorHandling:
         result = extractor._has_project_structure(test_file)
         assert result is False
 
-    def test_has_project_structure_with_iterdir_error(
+    def test_has_project_structure_with_walk_error(
         self,
         extractor: FeatureExtractor,
         tmp_path: Path,
@@ -509,10 +512,13 @@ class TestEdgeCasesAndErrorHandling:
         test_dir = tmp_path / "proj"
         test_dir.mkdir()
 
-        def mock_iterdir(_self: Path) -> None:
+        def mock_safe_walk(*_args: object, **_kwargs: object) -> None:
             raise OSError("Permission denied")
 
-        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.ai.feature_extractor.safe_walk",
+            mock_safe_walk,
+        )
         result = extractor._has_project_structure(test_dir)
         # Should handle error and return False
         assert result is False

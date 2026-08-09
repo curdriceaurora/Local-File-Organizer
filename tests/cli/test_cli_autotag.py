@@ -136,6 +136,7 @@ class TestHandleAutotagCommand:
                 handle_autotag_command(args)
                 mock_handler.assert_called_once()
 
+    @pytest.mark.integration
     def test_route_batch(self, mock_service):
         args = Namespace(
             autotag_command="batch",

@@ -28,6 +28,7 @@ class _FakeRecommendation:
 
 
 @pytest.mark.ci
+@pytest.mark.integration
 @pytest.mark.parametrize("command", ["suggest", "batch"])
 def test_traversal_error_fails_command(command: str, tmp_path: Path) -> None:
     from file_organizer.cli.autotag_v2 import autotag_app

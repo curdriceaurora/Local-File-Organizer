@@ -7,6 +7,7 @@ using mocked templates/settings.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -220,6 +221,33 @@ class TestCollectEntries:
             limit=100,
         )
         assert len(entries) > 0
+
+    def test_sort_by_size_handles_stat_error(self, tmp_path):
+        broken = MagicMock(spec=Path)
+        broken.name = "broken.txt"
+        broken.is_dir.return_value = False
+        broken.is_file.return_value = True
+        broken.stat.side_effect = OSError("unreadable")
+
+        with (
+            patch("file_organizer.web.file_listing.safe_walk", return_value=[broken]),
+            patch(
+                "file_organizer.web.file_listing._file_entry",
+                return_value={"name": "broken.txt"},
+            ),
+        ):
+            entries, total = collect_entries(
+                tmp_path,
+                query=None,
+                file_type=None,
+                sort_by="size",
+                sort_order="asc",
+                include_hidden=False,
+                limit=100,
+            )
+
+        assert entries == [{"name": "broken.txt"}]
+        assert total == 1
 
     def test_sort_by_created(self, tree):
         entries, _ = collect_entries(
