@@ -66,6 +66,14 @@ def test_load_parallel_runtime_settings_caps_workers_to_cpu_count() -> None:
     assert settings.prefetch_depth == 1
 
 
+# Spawns real interpreters. Each child re-imports the package, and with
+# `concurrency = ["multiprocessing", "thread"]` coverage traces that import
+# too, so the work genuinely takes longer than the global --timeout=30 when
+# 18 xdist workers are already saturating the CPU. Raised deliberately: the
+# work is slower, not racing. Where a timeout hides a race (see the desktop
+# launcher port handoff) widening it makes things worse, and there the fix
+# was structural instead (#1729).
+@pytest.mark.timeout(120)
 def test_load_parallel_runtime_settings_uses_cpu_count_fallback_when_unavailable() -> None:
     """Module-level worker cap should fall back to 1 when ``os.cpu_count()`` is unavailable."""
     code = """

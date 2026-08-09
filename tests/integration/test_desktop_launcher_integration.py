@@ -10,9 +10,12 @@ serves HTTP — only ``webview`` (absent in this env) is faked so its
 
 from __future__ import annotations
 
+import errno
 import os
 import socket
 import sys
+import threading
+import time
 import types
 from pathlib import Path
 from typing import Any
@@ -76,42 +79,88 @@ def test_launch_boots_real_server_and_opens_window(monkeypatch: pytest.MonkeyPat
     assert fake_webview.captured["kwargs"]["width"] == 900  # type: ignore[attr-defined]
 
 
+class _FakeLauncherSocket:
+    """Stands in for a bound socket so launch() does not hold a real port."""
+
+    def __init__(self, port: int) -> None:
+        self._port = port
+        self.closed = False
+
+    def getsockname(self) -> tuple[str, int]:
+        return ("127.0.0.1", self._port)
+
+    def close(self) -> None:
+        self.closed = True
+
+
 def test_launch_raises_when_server_never_ready(monkeypatch: pytest.MonkeyPatch) -> None:
-    """If the server never binds, launch() times out with a RuntimeError."""
+    """If the server never starts, launch() raises rather than opening a window."""
     fake_webview = _make_fake_webview(lambda captured: None)
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
 
-    # Force readiness to fail fast instead of booting a real server.
-    monkeypatch.setattr(desktop_app, "_run_server", lambda port, **kw: None)
-    monkeypatch.setattr(desktop_app, "_wait_for_server", lambda port, timeout=0.0: False)
+    # Patch the binder too. Unpatched, launch() binds a real socket that the
+    # stub _run_server never takes ownership of, and launch() raises before its
+    # shutdown block — leaking a bound loopback port per run.
+    fake_sock = _FakeLauncherSocket(43998)
+    monkeypatch.setattr(desktop_app, "_bind_free_socket", lambda: fake_sock)
+    monkeypatch.setattr(desktop_app, "_run_server", lambda sock, **kw: None)
+    monkeypatch.setattr(desktop_app, "_wait_for_server", lambda ready, thread, timeout=0.0: False)
 
-    with pytest.raises(RuntimeError, match="did not become ready"):
+    with pytest.raises(RuntimeError, match="failed to start"):
         desktop_app.launch()
 
 
-def test_find_free_port_returns_bindable_port() -> None:
-    """_find_free_port returns a port that is actually free to bind."""
-    port = desktop_app._find_free_port()
-    assert isinstance(port, int)
-    assert 1024 < port < 65536
-    # It is free right now: we can bind it ourselves.
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", port))
+def test_bind_free_socket_holds_the_port() -> None:
+    """The port must NOT be re-bindable — that is the anti-TOCTOU property.
+
+    The previous helper returned a bare int and released the socket, so the
+    port was free for anything else to claim during uvicorn's multi-second
+    boot. This asserts the inverse of that old contract.
+    """
+    sock = desktop_app._bind_free_socket()
+    try:
+        port = sock.getsockname()[1]
+        assert 1024 < port < 65536
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as other:
+            # errno, not message text: Windows reports WSAEADDRINUSE
+            # with different wording.
+            with pytest.raises(OSError) as excinfo:  # noqa: pytest-raises-hygiene
+                other.bind(("127.0.0.1", port))
+        assert excinfo.value.errno == errno.EADDRINUSE
+    finally:
+        sock.close()
 
 
-def test_wait_for_server_times_out_on_dead_port() -> None:
-    """_wait_for_server returns False when nothing is listening."""
-    dead_port = desktop_app._find_free_port()  # free => nothing is listening
-    assert desktop_app._wait_for_server(dead_port, timeout=0.3) is False
+def test_wait_for_server_times_out_when_never_signalled() -> None:
+    """Readiness comes from an event, not from a TCP probe."""
+    ready = threading.Event()
+    stop = threading.Event()
+    alive = threading.Thread(target=stop.wait, daemon=True)
+    alive.start()
+
+    assert desktop_app._wait_for_server(ready, alive, timeout=0.3) is False
 
 
-def test_wait_for_server_detects_live_socket() -> None:
-    """_wait_for_server returns True once a socket is accepting connections."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.bind(("127.0.0.1", 0))
-        server.listen(1)
-        port = server.getsockname()[1]
-        assert desktop_app._wait_for_server(port, timeout=2.0) is True
+def test_wait_for_server_returns_true_once_signalled() -> None:
+    ready = threading.Event()
+    stop = threading.Event()
+    alive = threading.Thread(target=stop.wait, daemon=True)
+    alive.start()
+    threading.Timer(0.05, ready.set).start()
+
+    assert desktop_app._wait_for_server(ready, alive, timeout=2.0) is True
+
+
+def test_wait_for_server_gives_up_immediately_if_the_thread_died() -> None:
+    """A dead server must not cost the full timeout before being noticed."""
+    ready = threading.Event()  # never set
+    dead = threading.Thread(target=lambda: None, daemon=True)
+    dead.start()
+    dead.join()
+
+    started = time.monotonic()
+    assert desktop_app._wait_for_server(ready, dead, timeout=10.0) is False
+    assert time.monotonic() - started < 2.0
 
 
 # ---------------------------------------------------------------------------

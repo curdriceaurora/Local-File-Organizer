@@ -6,10 +6,10 @@ error handling in PipelineOrchestrator._process_batch_prefetch.
 
 from __future__ import annotations
 
+import contextlib
 import random
-import statistics
 import threading
-import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -91,6 +91,72 @@ class _SlowComputeStage:
         return context
 
 
+class _OverlapProbe:
+    """Records whether an I/O stage ever ran while a compute stage was running.
+
+    This is what prefetch actually promises: the I/O stage for file N+1 runs
+    on the executor's thread pool while the compute stages for file N run on
+    the calling thread. That overlap either happens or it does not, which
+    makes it a *structural* observation rather than a timing measurement.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._io_in_flight = 0
+        self._compute_in_flight = 0
+        self.overlap_count = 0
+
+    @contextlib.contextmanager
+    def io(self) -> Iterator[None]:
+        """Mark an I/O stage as in flight for the duration of the block."""
+        with self._lock:
+            self._io_in_flight += 1
+            if self._compute_in_flight:
+                self.overlap_count += 1
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._io_in_flight -= 1
+
+    @contextlib.contextmanager
+    def compute(self) -> Iterator[None]:
+        """Mark a compute stage as in flight for the duration of the block."""
+        with self._lock:
+            self._compute_in_flight += 1
+            if self._io_in_flight:
+                self.overlap_count += 1
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._compute_in_flight -= 1
+
+
+class _ProbedIOStage(_SlowIOStage):
+    """``_SlowIOStage`` that reports its in-flight window to a probe."""
+
+    def __init__(self, probe: _OverlapProbe, delay_s: float) -> None:
+        super().__init__(delay_s=delay_s)
+        self._probe = probe
+
+    def process(self, context: StageContext) -> StageContext:
+        with self._probe.io():
+            return super().process(context)
+
+
+class _ProbedComputeStage(_SlowComputeStage):
+    """``_SlowComputeStage`` that reports its in-flight window to a probe."""
+
+    def __init__(self, probe: _OverlapProbe, delay_s: float) -> None:
+        super().__init__(delay_s=delay_s)
+        self._probe = probe
+
+    def process(self, context: StageContext) -> StageContext:
+        with self._probe.compute():
+            return super().process(context)
+
+
 class _ErrorIOStage:
     """I/O stage that raises on files matching a predicate."""
 
@@ -120,75 +186,75 @@ def _make_files(tmp_path: Path, count: int, size_bytes: int, seed: int = 42) -> 
 
 
 # ---------------------------------------------------------------------------
-# Performance test
+# I/O-compute overlap
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.slow
 @pytest.mark.unit
-class TestPrefetchPerformance:
-    """Verify prefetch gives >= 20% wall-clock speedup on a 10-file batch."""
+class TestPrefetchOverlap:
+    """Verify prefetch overlaps I/O with compute, and that depth=0 does not.
 
-    def _paired_medians(
-        self,
-        files: list[Path],
-        io_delay: float,
-        compute_delay: float,
-        iterations: int = 8,
-    ) -> tuple[float, float]:
-        """Median time for depth=0 and depth=2, sampled interleaved.
+    Deliberately asserts structure rather than elapsed time. See #1729 for why
+    the wall-clock version could not survive ``-n auto``.
+    """
 
-        Two biases to remove, not one:
+    def _run_with_probe(self, files: list[Path], depth: int) -> _OverlapProbe:
+        """Process *files* at ``prefetch_depth=depth``, returning the probe."""
+        probe = _OverlapProbe()
+        orchestrator = PipelineOrchestrator(
+            stages=[
+                _ProbedIOStage(probe, delay_s=0.015),
+                _ProbedComputeStage(probe, delay_s=0.04),
+            ],
+            prefetch_depth=depth,
+            prefetch_stages=1,
+        )
+        orchestrator.process_batch(files)
+        return probe
 
-        - Timing all baseline runs and then all prefetch runs lets drift
-          between the two blocks drive the ratio — a runner that gets busier
-          mid-test makes prefetch look slower than it is. Hence pairing.
-        - Within a pair, always running depth=0 first hands depth=2 a warm
-          page cache every single time, which flatters prefetch. Seven
-          medians do not cancel a systematic order bias. Hence alternating,
-          over an even iteration count so each order runs equally often.
-        """
-        baseline: list[float] = []
-        prefetched: list[float] = []
-        for iteration in range(iterations):
-            runs = ((0, baseline), (2, prefetched))
-            if iteration % 2:
-                runs = ((2, prefetched), (0, baseline))
-            for depth, bucket in runs:
-                orchestrator = PipelineOrchestrator(
-                    stages=[
-                        _SlowIOStage(delay_s=io_delay),
-                        _SlowComputeStage(delay_s=compute_delay),
-                    ],
-                    prefetch_depth=depth,
-                    prefetch_stages=1,
-                )
-                t0 = time.monotonic()
-                orchestrator.process_batch(files)
-                bucket.append(time.monotonic() - t0)
-        return statistics.median(baseline), statistics.median(prefetched)
+    def test_prefetch_overlaps_io_with_compute(self, tmp_path: Path) -> None:
+        """Prefetch must run a file's I/O stage while another file computes.
 
-    def test_prefetch_faster_than_sequential(self, tmp_path: Path) -> None:
-        """Prefetch depth=2 must be >= 20% faster than no-prefetch baseline.
+        Asserts the *mechanism*, not the clock. The previous version of this
+        test required a >= 20% wall-clock speedup, which is unmeasurable when
+        the suite runs under ``-n auto``: 18 workers contend for 18 cores, and
+        the ratio drowns in scheduling noise.
 
-        Uses 10 x 1 MB files (seed=42), controlled sleep values to make
-        the I/O-compute overlap measurable in CI without flakiness.
+        Measured on unmodified main (#1729): 3 of 3 full-suite runs failed,
+        and 2 of 3 runs of the smaller ``pipeline + parallel + integration``
+        subset. It passed in isolation every time. No amount of median-taking
+        fixed it — the previous author had already added interleaved pairing,
+        alternating order to cancel page-cache bias, and medians over eight
+        iterations.
+
+        Overlap is what prefetch actually promises, it is binary, and one
+        observation across ten files is enough. Speed belongs in the benchmark
+        suite, where nothing else is competing for the CPU.
         """
         files = _make_files(tmp_path, count=10, size_bytes=1024 * 1024, seed=42)
 
-        # Keep delays large enough that overlap is clearly measurable and
-        # small enough that the test finishes within the 30 s CI timeout.
-        io_delay = 0.015  # 15 ms  — simulates file-read latency
-        compute_delay = 0.04  # 40 ms  — simulates LLM inference
+        probe = self._run_with_probe(files, depth=2)
 
-        baseline, with_prefetch = self._paired_medians(
-            files, io_delay=io_delay, compute_delay=compute_delay
+        assert probe.overlap_count > 0, (
+            "prefetch_depth=2 never ran an I/O stage concurrently with a "
+            "compute stage; the double-buffering is not happening"
         )
 
-        speedup = (baseline - with_prefetch) / baseline
-        assert speedup >= 0.20, (
-            f"Expected >= 20% speedup, got {speedup:.1%} "
-            f"(baseline={baseline:.3f}s, prefetch={with_prefetch:.3f}s)"
+    def test_without_prefetch_io_and_compute_never_overlap(self, tmp_path: Path) -> None:
+        """The counterfactual, without which the overlap assertion proves nothing.
+
+        If the probe reported overlap here too, it would be measuring its own
+        bookkeeping rather than prefetch. depth=0 runs strictly sequentially on
+        the calling thread, so the two stages can never be in flight together.
+        """
+        files = _make_files(tmp_path, count=10, size_bytes=1024 * 1024, seed=42)
+
+        probe = self._run_with_probe(files, depth=0)
+
+        assert probe.overlap_count == 0, (
+            f"depth=0 must run sequentially, but observed "
+            f"{probe.overlap_count} overlapping stage windows"
         )
 
     def test_no_prefetch_flag_produces_sequential_timing(self, tmp_path: Path) -> None:
