@@ -19,7 +19,8 @@ from file_organizer.api.openapi_responses import (
     success_response,
     validation_error_response,
 )
-from file_organizer.api.utils import is_hidden, resolve_path
+from file_organizer.api.utils import resolve_path
+from file_organizer.core.path_guard import TraversalBudget, safe_walk
 
 logger = logging.getLogger(__name__)
 
@@ -130,30 +131,22 @@ def _collect_matching_files(
     if file_type:
         ext_filter = file_type.lower() if file_type.startswith(".") else f".{file_type.lower()}"
 
-    traversed = 0
-    try:
-        for entry in root.rglob("*"):
-            traversed += 1
-            if traversed > max_files:
-                break
-            # Skip symlinks to prevent traversing into hidden/protected directories
-            if entry.is_symlink():
-                continue
-            if not entry.is_file():
-                continue
-            if is_hidden(entry):
-                continue
-            if ext_filter and entry.suffix.lower() != ext_filter:
-                continue
-            # Check if query matches name or path
-            try:
-                rel = entry.relative_to(root)
-            except ValueError:
-                rel = entry
-            if q_lower in entry.name.lower() or q_lower in str(rel).lower():
-                yield entry
-    except PermissionError:
-        logger.debug("Permission denied traversing %s", root)
+    # safe_walk applies the symlink / non-file / hidden filters this loop used
+    # to hand-roll, and `max_entries` preserves the traversal bound exactly:
+    # entries are counted as they are examined, before filtering, so a tree of
+    # dotfiles cannot walk past the budget (#1675). Counting yielded results
+    # instead would have quietly loosened a denial-of-service guard on a
+    # remote-reachable endpoint.
+    for entry in safe_walk(root, max_entries=max_files):
+        if ext_filter and entry.suffix.lower() != ext_filter:
+            continue
+        # Check if query matches name or path
+        try:
+            rel = entry.relative_to(root)
+        except ValueError:
+            rel = entry
+        if q_lower in entry.name.lower() or q_lower in str(rel).lower():
+            yield entry
 
 
 def _build_semantic_corpus(
@@ -179,33 +172,26 @@ def _build_semantic_corpus(
 
     documents: list[str] = []
     paths: list[Path] = []
-    total = 0
-    done = False
+    # One budget across every root, matching the previous `total` counter.
+    # A per-call `max_entries=max_files` would hand each root the full budget
+    # and multiply the traversal bound by the number of roots.
+    budget = TraversalBudget(limit=max_files)
 
     for root in roots:
-        if done or not root.exists() or not root.is_dir():
+        if budget.exhausted or not root.exists() or not root.is_dir():
             continue
-        try:
-            for entry in root.rglob("*"):
-                total += 1
-                if total > max_files:
-                    done = True
-                    break
-                try:
-                    rel_entry = entry.relative_to(root)
-                except ValueError:
-                    logger.debug("Skipping entry outside root: %s", entry)
-                    continue
-                if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
-                    continue
-                # root is the trusted walked root: anchor the read so a symlink
-                # swapped into any intermediate directory is refused (#286).
-                text = read_text_safe(entry, scan_root=root)
-                doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
-                documents.append(doc)
-                paths.append(entry)
-        except PermissionError:
-            logger.debug("Permission denied traversing %s", root)
+        for entry in safe_walk(root, max_entries=budget):
+            try:
+                rel_entry = entry.relative_to(root)
+            except ValueError:
+                logger.debug("Skipping entry outside root: %s", entry)
+                continue
+            # root is the trusted walked root: anchor the read so a symlink
+            # swapped into any intermediate directory is refused (#286).
+            text = read_text_safe(entry, scan_root=root)
+            doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
+            documents.append(doc)
+            paths.append(entry)
 
     return documents, paths
 

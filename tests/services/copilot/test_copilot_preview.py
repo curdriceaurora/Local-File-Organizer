@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -318,17 +316,38 @@ class TestPreviewEngine:
         assert result.total_files == 3
         assert result.match_count == 3
 
-    def test_permission_error(self, tmp_path):
+    def test_permission_error(self, tmp_path, monkeypatch):
+        """An unreadable directory must surface in `errors`, not vanish.
+
+        Patched at `os.scandir`, not `Path.rglob`: preview now walks via
+        `safe_walk`, which uses scandir, so the old patch intercepted nothing.
+        A test patching a target the code no longer calls does not fail loudly
+        — it keeps passing while asserting nothing, which is why #1674 warned
+        about exactly this rewrite.
+        """
+        (tmp_path / "note.txt").write_text("x")
         engine = PreviewEngine()
         rule = Rule(
             name="r",
             conditions=[RuleCondition(ConditionType.EXTENSION, ".txt")],
         )
         rs = RuleSet(rules=[rule])
-        with patch.object(Path, "rglob", side_effect=PermissionError("denied")):
-            result = engine.preview(rs, tmp_path)
+
+        # Control: unpatched, the same call finds the file. Without this, the
+        # assertions below would also pass against a walk that returned
+        # nothing for an unrelated reason.
+        control = engine.preview(rs, tmp_path)
+        assert control.total_files == 1, "control run must see the readable file"
+        assert control.errors == []
+
+        monkeypatch.setattr(
+            os, "scandir", lambda path: (_ for _ in ()).throw(PermissionError("denied"))
+        )
+        result = engine.preview(rs, tmp_path)
+
         assert len(result.errors) == 1
         assert "Permission denied" in result.errors[0][1]
+        assert result.total_files == 0
 
     def test_unmatched_files(self, tmp_path):
         (tmp_path / "a.pdf").write_text("pdf")

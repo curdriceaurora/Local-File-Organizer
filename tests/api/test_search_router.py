@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -510,3 +511,124 @@ class TestSearchAuthEnforcement:
 
         resp = client.get("/api/v1/search?q=test")
         assert resp.status_code == 401
+
+
+class TestTraversalBudget:
+    """The traversal bound survives the safe_walk migration (#1675).
+
+    `_MAX_TRAVERSAL` / `_MAX_SEMANTIC` are denial-of-service guards on
+    remote-reachable endpoints, not UX niceties. The migration risk was that
+    the counter would move from entries *visited* to entries *yielded*: since
+    safe_walk filters symlinks, dotfiles and directories before yielding, an
+    identical constant would then permit far more traversal on a tree made
+    mostly of discarded entries.
+    """
+
+    @staticmethod
+    def _counting_scandir(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Record every directory entry the walk consumes."""
+        consumed: list[str] = []
+        real_scandir = os.scandir
+
+        class _Counting:
+            def __init__(self, inner) -> None:
+                self._inner = inner
+
+            def __enter__(self):
+                self._it = self._inner.__enter__()
+                return self
+
+            def __exit__(self, *exc) -> None:
+                self._inner.__exit__(*exc)
+
+            def __iter__(self):
+                for entry in self._it:
+                    consumed.append(entry.name)
+                    yield entry
+
+        monkeypatch.setattr(os, "scandir", lambda path: _Counting(real_scandir(path)))
+        return consumed
+
+    def test_budget_bounds_work_on_a_tree_of_discarded_entries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The test the pre-migration code lacked, per #1675.
+
+        60 dotfiles and one match: a budget counting *results* would traverse
+        the whole tree, because the dotfiles never reach the counter.
+        """
+        from file_organizer.api.routers.search import _collect_matching_files
+
+        for i in range(60):
+            (tmp_path / f".hidden_{i:03d}.txt").write_text("x")
+        (tmp_path / "match.txt").write_text("x")
+
+        consumed = self._counting_scandir(monkeypatch)
+        list(_collect_matching_files(tmp_path, "match", None, max_files=10))
+
+        # Two-sided: a bare upper bound also passes when nothing was walked.
+        assert 10 <= len(consumed) <= 11, (
+            f"budget of 10 examined {len(consumed)} entries — expected it to "
+            "walk up to the bound and stop; a result-counting bound would have "
+            "walked all 61"
+        )
+
+    def test_ordinary_tree_results_are_unchanged(self, tmp_path: Path) -> None:
+        """Characterisation: matching behaviour is the same as before migrating."""
+        from file_organizer.api.routers.search import _collect_matching_files
+
+        (tmp_path / "report_final.txt").write_text("x")
+        (tmp_path / "report_draft.md").write_text("x")
+        (tmp_path / "unrelated.txt").write_text("x")
+        nested = tmp_path / "sub"
+        nested.mkdir()
+        (nested / "report_nested.txt").write_text("x")
+
+        found = {p.name for p in _collect_matching_files(tmp_path, "report", None)}
+        assert found == {"report_final.txt", "report_draft.md", "report_nested.txt"}
+
+        typed = {p.name for p in _collect_matching_files(tmp_path, "report", "txt")}
+        assert typed == {"report_final.txt", "report_nested.txt"}
+
+    def test_symlinks_and_hidden_files_stay_excluded(self, tmp_path: Path) -> None:
+        """Characterisation guard: both sites already filtered these."""
+        from file_organizer.api.routers.search import _collect_matching_files
+
+        (tmp_path / "report_visible.txt").write_text("x")
+        (tmp_path / ".report_hidden.txt").write_text("x")
+        outside = tmp_path.parent / "report_outside.txt"
+        outside.write_text("x")
+        try:
+            (tmp_path / "report_link.txt").symlink_to(outside)
+        except (OSError, NotImplementedError):  # pragma: no cover - platform
+            pytest.skip("symlinks unavailable")
+
+        found = {p.name for p in _collect_matching_files(tmp_path, "report", None)}
+        assert found == {"report_visible.txt"}
+
+    def test_semantic_corpus_budget_is_shared_across_roots(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """One global bound, not one per root.
+
+        A per-call budget would multiply the traversal bound by the number of
+        roots — the guard would loosen as a user configured more directories.
+        """
+        from file_organizer.api.routers.search import _build_semantic_corpus
+
+        roots = []
+        for r in range(3):
+            root = tmp_path / f"root_{r}"
+            root.mkdir()
+            for i in range(20):
+                (root / f"f{i:02d}.txt").write_text("hello")
+            roots.append(root)
+
+        consumed = self._counting_scandir(monkeypatch)
+        _build_semantic_corpus(roots, max_files=10)
+
+        assert 10 <= len(consumed) <= 11, (
+            f"shared budget of 10 examined {len(consumed)} entries across "
+            "3 roots — expected one global bound; a per-root budget would "
+            "examine up to 3x that"
+        )

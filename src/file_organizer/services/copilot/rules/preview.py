@@ -14,6 +14,7 @@ from pathlib import Path
 
 from loguru import logger
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.services.copilot.rules.models import (
     ConditionType,
     Rule,
@@ -105,19 +106,19 @@ class PreviewEngine:
             logger.debug("No enabled rules in set '{}'", rule_set.name)
             return result
 
-        # Collect files
+        # Collect files. `on_error` is what makes this migration possible:
+        # before it, safe_walk swallowed every OSError, so a permission failure
+        # produced a short file list and an empty `errors` — the preview
+        # reported success over a directory it could not read (#1674).
         files: list[Path] = []
-        try:
-            pattern = target.rglob("*") if recursive else target.iterdir()
-            for entry in pattern:
-                if entry.is_symlink():
-                    continue
-                if entry.is_file():
-                    files.append(entry)
-                    if len(files) >= max_files:
-                        break
-        except PermissionError as exc:
-            result.errors.append((str(target), f"Permission denied: {exc}"))
+
+        def _record(path: Path, exc: OSError) -> None:
+            result.errors.append((str(path), f"Permission denied: {exc}"))
+
+        for entry in safe_walk(target, recursive=recursive, on_error=_record):
+            files.append(entry)
+            if len(files) >= max_files:
+                break
 
         result.total_files = len(files)
 

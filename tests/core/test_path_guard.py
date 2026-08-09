@@ -434,6 +434,226 @@ class TestSafeWalk:
 
 @pytest.mark.ci
 @pytest.mark.integration
+class TestSafeWalkOnError:
+    """`on_error` lets callers observe what the walk skipped (#1674).
+
+    Before this, a walk that hit a permission error returned a short list and
+    the caller had no way to tell — "organized 40 of 50 files" reported
+    success. The default is unchanged: no callback, same silent skipping.
+    """
+
+    def test_reports_unreadable_directory_and_keeps_walking(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The readable remainder must still arrive; a skip is not an abort."""
+        (tmp_path / "readable.txt").write_text("x")
+        blocked = tmp_path / "blocked"
+        blocked.mkdir()
+        (blocked / "hidden_from_us.txt").write_text("x")
+
+        real_scandir = os.scandir
+        failure = PermissionError(13, "Permission denied")
+
+        def fake_scandir(path):
+            if Path(path).name == "blocked":
+                raise failure
+            return real_scandir(path)
+
+        monkeypatch.setattr(os, "scandir", fake_scandir)
+
+        seen: list[tuple[Path, OSError]] = []
+        found = list(safe_walk(tmp_path, on_error=lambda p, e: seen.append((p, e))))
+
+        assert [p.name for p in found] == ["readable.txt"], (
+            "the walk must continue past an unreadable directory"
+        )
+        assert len(seen) == 1
+        assert seen[0][0] == blocked, "callback must receive the offending path"
+        assert seen[0][1] is failure, "callback must receive the original OSError"
+
+    def test_unreadable_subtree_does_not_abort_walk_without_callback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Default behaviour is unchanged when no callback is supplied."""
+        (tmp_path / "readable.txt").write_text("x")
+        blocked = tmp_path / "blocked"
+        blocked.mkdir()
+
+        real_scandir = os.scandir
+
+        def fake_scandir(path):
+            if Path(path).name == "blocked":
+                raise PermissionError(13, "Permission denied")
+            return real_scandir(path)
+
+        monkeypatch.setattr(os, "scandir", fake_scandir)
+
+        assert [p.name for p in safe_walk(tmp_path)] == ["readable.txt"]
+
+    def test_reports_per_entry_stat_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Per-entry failures are reported too, not just per-directory ones.
+
+        A caller that finds these noisy can filter them; one that is never
+        told cannot recover the information.
+        """
+        (tmp_path / "good.txt").write_text("x")
+        (tmp_path / "bad.txt").write_text("x")
+
+        original_is_symlink = Path.is_symlink
+
+        def fake_is_symlink(self: Path) -> bool:
+            if self.name == "bad.txt":
+                raise OSError(5, "Input/output error")
+            return original_is_symlink(self)
+
+        monkeypatch.setattr(Path, "is_symlink", fake_is_symlink)
+
+        seen: list[Path] = []
+        found = list(safe_walk(tmp_path, on_error=lambda p, e: seen.append(p)))
+
+        assert [p.name for p in found] == ["good.txt"]
+        assert [p.name for p in seen] == ["bad.txt"]
+
+    def test_callback_exceptions_propagate(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A caller must be able to escalate a permission failure.
+
+        Swallowing an exception raised by an error handler would be the same
+        silent-failure defect this parameter exists to fix.
+        """
+        blocked = tmp_path / "blocked"
+        blocked.mkdir()
+
+        real_scandir = os.scandir
+
+        def fake_scandir(path):
+            if Path(path).name == "blocked":
+                raise PermissionError(13, "Permission denied")
+            return real_scandir(path)
+
+        monkeypatch.setattr(os, "scandir", fake_scandir)
+
+        def escalate(path: Path, exc: OSError) -> None:
+            raise RuntimeError(f"refusing to continue past {path.name}")
+
+        with pytest.raises(RuntimeError, match="refusing to continue past blocked"):
+            list(safe_walk(tmp_path, on_error=escalate))
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+class TestSafeWalkMaxEntries:
+    """`max_entries` bounds traversal work, not results (#1675)."""
+
+    @staticmethod
+    def _counting_scandir(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Patch `os.scandir` to record every entry the walk actually consumes.
+
+        Measuring yielded paths cannot distinguish an entry-counting budget
+        from a result-counting one on a tree whose entries are mostly
+        discarded — which is precisely the regression #1675 describes. This
+        observes traversal directly.
+        """
+        consumed: list[str] = []
+        real_scandir = os.scandir
+
+        class _Counting:
+            def __init__(self, inner) -> None:
+                self._inner = inner
+
+            def __enter__(self):
+                self._it = self._inner.__enter__()
+                return self
+
+            def __exit__(self, *exc) -> None:
+                self._inner.__exit__(*exc)
+
+            def __iter__(self):
+                for entry in self._it:
+                    consumed.append(entry.name)
+                    yield entry
+
+        monkeypatch.setattr(os, "scandir", lambda path: _Counting(real_scandir(path)))
+        return consumed
+
+    def test_budget_counts_entries_the_filters_discard(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The test the previous code lacked, and why the regression was invisible.
+
+        A budget applied to *yielded* entries would let a tree of dotfiles walk
+        arbitrarily far: every dotfile is discarded before it could be counted,
+        so the budget never trips. Here 49 of 50 entries are discarded, and the
+        assertion is on entries **consumed from scandir**, which is the only
+        way to tell the two budgets apart.
+        """
+        for i in range(49):
+            (tmp_path / f".dotfile_{i:03d}").write_text("x")
+        (tmp_path / "visible.txt").write_text("x")
+
+        consumed = self._counting_scandir(monkeypatch)
+        list(safe_walk(tmp_path, max_entries=10))
+
+        # Two-sided on purpose. A bare `<= 11` also passes when the walk
+        # examined nothing at all, which would hide a broken walk behind a
+        # green budget assertion.
+        assert 10 <= len(consumed) <= 11, (
+            f"budget of 10 examined {len(consumed)} entries; expected it to walk "
+            "up to the bound and stop — a result-counting budget would have "
+            "walked all 50 because the dotfiles are discarded"
+        )
+
+    def test_unbudgeted_walk_examines_the_whole_tree(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Control for the test above: without a budget, all 50 are examined.
+
+        Without this, the assertion above would pass even if `max_entries` did
+        nothing and the tree were simply small.
+        """
+        for i in range(49):
+            (tmp_path / f".dotfile_{i:03d}").write_text("x")
+        (tmp_path / "visible.txt").write_text("x")
+
+        consumed = self._counting_scandir(monkeypatch)
+        list(safe_walk(tmp_path))
+
+        assert len(consumed) == 50
+
+    def test_budget_stops_traversal_across_subdirectories(self, tmp_path: Path) -> None:
+        """The bound is global, not per-directory."""
+        for d in range(5):
+            sub = tmp_path / f"dir_{d}"
+            sub.mkdir()
+            for i in range(10):
+                (sub / f"file_{i}.txt").write_text("x")
+
+        unbounded = list(safe_walk(tmp_path))
+        bounded = list(safe_walk(tmp_path, max_entries=12))
+
+        assert len(unbounded) == 50
+        assert len(bounded) < len(unbounded), "budget must curtail a 55-entry tree"
+
+    def test_no_budget_yields_everything(self, tmp_path: Path) -> None:
+        """Default is unchanged: `max_entries=None` imposes no bound."""
+        for i in range(30):
+            (tmp_path / f"f{i}.txt").write_text("x")
+
+        assert len(list(safe_walk(tmp_path))) == 30
+        assert len(list(safe_walk(tmp_path, max_entries=None))) == 30
+
+    def test_budget_larger_than_tree_is_a_no_op(self, tmp_path: Path) -> None:
+        for i in range(5):
+            (tmp_path / f"f{i}.txt").write_text("x")
+
+        assert len(list(safe_walk(tmp_path, max_entries=1000))) == 5
+
+
+@pytest.mark.ci
+@pytest.mark.integration
 class TestPathTraversalError:
     def test_is_value_error_subclass(self) -> None:
         """Downstream code that catches ValueError continues to work —
