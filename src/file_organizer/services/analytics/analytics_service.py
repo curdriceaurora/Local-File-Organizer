@@ -111,7 +111,11 @@ class AnalyticsService:
         storage_stats = self.get_storage_stats(directory, max_depth)
 
         # Get file distribution
-        file_distribution = self.storage_analyzer.calculate_size_distribution(directory)
+        # Reuse the storage walk. Without this line the parameter above would
+        # be dead weight — the failure mode #1672 records from #1664.
+        file_distribution = self.storage_analyzer.calculate_size_distribution(
+            directory, files=storage_stats.all_files
+        )
 
         # Get duplicate statistics
         duplicate_stats = self.get_duplicate_stats(duplicate_groups or [], storage_stats.total_size)

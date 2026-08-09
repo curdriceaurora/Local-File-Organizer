@@ -811,17 +811,17 @@ class TestDashboardTraversalCount:
         monkeypatch.setattr(sa_mod, "safe_walk", counting_safe_walk)
         return traversals
 
-    def test_dashboard_walks_the_tree_twice_not_three_times(
+    def test_dashboard_walks_the_tree_exactly_once(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Storage stats and quality metrics share one walk.
+        """All three consumers share a single traversal (#1672).
 
-        Before this, `get_storage_stats` and `get_quality_metrics` each ran
-        `_walk_directory` over the same tree with the same `max_depth` —
-        identical traversals, done twice. `calculate_size_distribution` still
-        walks separately; it uses `safe_walk`, which excludes symlinks where
-        `_walk_directory` includes them, so sharing that one would change the
-        reported numbers rather than just the cost.
+        Storage stats, the size distribution and the quality metrics each used
+        to walk the same tree independently. They now read one scan.
+
+        Sharing was only possible once the two walkers agreed on symlinks:
+        `safe_walk` skipped them, `_walk_directory` followed them and counted
+        the target's bytes. `_scan` now skips them too.
         """
         for d in range(3):
             sub = tmp_path / f"dir_{d}"
@@ -833,11 +833,12 @@ class TestDashboardTraversalCount:
         AnalyticsService().generate_dashboard(tmp_path)
 
         assert traversals.count("_walk_directory") == 1, (
-            f"expected storage stats and quality metrics to share one walk, "
-            f"got {traversals.count('_walk_directory')}"
+            f"expected one shared walk, got {traversals.count('_walk_directory')}"
         )
-        assert traversals.count("safe_walk") == 1
-        assert len(traversals) == 2, f"expected 2 traversals total, got {traversals}"
+        assert traversals.count("safe_walk") == 0, (
+            "the distribution should read the shared scan, not walk again"
+        )
+        assert len(traversals) == 1, f"expected exactly 1 traversal, got {traversals}"
 
     def test_quality_metrics_identical_whether_it_walked_or_reused(self, tmp_path: Path) -> None:
         """The reused list must produce the same metrics as walking afresh.
@@ -864,6 +865,56 @@ class TestDashboardTraversalCount:
         assert reused.structure_consistency == walked.structure_consistency
         assert reused.metadata_completeness == walked.metadata_completeness
         assert reused.categorization_accuracy == walked.categorization_accuracy
+
+    def test_distribution_identical_whether_it_walked_or_reused(self, tmp_path: Path) -> None:
+        """The shared scan must produce the same distribution as walking.
+
+        This is the assertion that makes the traversal-count test meaningful:
+        without it, sharing the walk could change every bucket while the count
+        assertion still passed.
+        """
+        for i in range(12):
+            (tmp_path / f"f{i:02d}.txt").write_bytes(b"x" * (i * 100 + 1))
+        (tmp_path / "big.bin").write_bytes(b"y" * 2048)
+        sub = tmp_path / "nested"
+        sub.mkdir()
+        (sub / "deep.md").write_text("z")
+
+        analyzer = StorageAnalyzer()
+        walked = analyzer.calculate_size_distribution(tmp_path)
+        reused = analyzer.calculate_size_distribution(
+            tmp_path, files=analyzer.analyze_directory(tmp_path, use_cache=False).all_files
+        )
+
+        assert reused.total_files == walked.total_files
+        assert reused.by_type == walked.by_type
+        assert reused.by_size_range == walked.by_size_range
+
+    def test_symlinked_files_are_excluded_from_storage_totals(self, tmp_path: Path) -> None:
+        """Behaviour change: the storage walk no longer follows symlinks.
+
+        It used to, so `item.stat()` returned the *target's* size and bytes
+        living outside the scanned tree were counted as if they were inside it.
+        `safe_walk` — and therefore the size distribution — always excluded
+        them, which is why the two disagreed and could not share a walk.
+        """
+        outside = tmp_path.parent / f"outside_{tmp_path.name}.bin"
+        outside.write_bytes(b"x" * 4000)
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "real.txt").write_bytes(b"y" * 5)
+        try:
+            (root / "link.bin").symlink_to(outside)
+        except (OSError, NotImplementedError):  # pragma: no cover - platform
+            pytest.skip("symlinks unavailable")
+
+        stats = StorageAnalyzer().analyze_directory(root, use_cache=False)
+
+        assert stats.file_count == 1, "the symlink must not be counted as a file"
+        assert stats.total_size == 5, (
+            f"total_size {stats.total_size} includes bytes from outside the tree"
+        )
+        assert ".bin" not in stats.size_by_type
 
     def test_storage_stats_retains_every_file_not_just_the_largest(self, tmp_path: Path) -> None:
         """`all_files` is the whole scan; `largest_files` stays capped at 20."""
