@@ -253,8 +253,20 @@ class PatternAnalyzer:
             if not subdir.is_dir():
                 continue
 
-            # Get files in this directory (non-recursive)
-            files = [f for f in subdir.iterdir() if f.is_file()]
+            # Get files in this directory (non-recursive).
+            #
+            # `safe_walk`, not `iterdir()`: this enumeration is the THIRD place
+            # the analysis decides what counts as hidden, and it was the one
+            # left behind. The outer walk above excluded hidden directories and
+            # `_collect_files` excluded hidden files, but a raw `iterdir()` here
+            # still admitted `docs/.secret` into `file_count`, `file_types` and
+            # `naming_patterns` — so `total_files` and `location_patterns`
+            # disagreed even after #1680's first pass (caught in review).
+            #
+            # `recursive=False` keeps this a single-level listing; the hidden
+            # check is relative to `subdir`, which is what excludes a dotfile
+            # sitting directly inside it.
+            files = list(safe_walk(subdir, recursive=False, only_files=True))
 
             if not files:
                 continue

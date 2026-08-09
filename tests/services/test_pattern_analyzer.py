@@ -540,6 +540,33 @@ class TestSingleHiddenPathRule:
                 f"{sorted(collected_dirs - located - {root})}"
             )
 
+    def test_location_patterns_do_not_count_hidden_files(self) -> None:
+        """`docs/.secret` must not reach the `docs` LocationPattern.
+
+        The gap this catches, found in review: unifying `_collect_files` was
+        not enough, because `get_location_patterns` enumerated each
+        directory's direct files with a raw `iterdir()`. So a third rule
+        survived — hidden files were excluded from `total_files` but still
+        counted in `file_count`, `file_types` and `naming_patterns`.
+
+        The directory-level assertion in the sibling test could not see this:
+        `docs` legitimately appears in both paths. Only the count reveals it.
+        """
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._tree(root)
+
+            patterns = {
+                lp.directory.name: lp for lp in PatternAnalyzer().get_location_patterns(root)
+            }
+
+            assert "docs" in patterns, "premise: docs is analysed"
+            assert patterns["docs"].file_count == 4, (
+                f"docs counted {patterns['docs'].file_count} files; the four visible "
+                "reports plus .secret means the hidden rule is not applied here"
+            )
+            assert ".secret" not in patterns["docs"].file_types
+
     def test_max_depth_bound_is_preserved(self) -> None:
         """Migrating to safe_walk must not lose the depth limit.
 
