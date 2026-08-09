@@ -533,8 +533,11 @@ class TestDefaultStorageDirResolution:
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
         monkeypatch.setenv("HOME", str(tmp_path))
 
+        from file_organizer.config.path_manager import get_config_dir
+
         collector = FeedbackCollector()
 
-        assert tmp_path in collector._storage_dir.parents or collector._storage_dir == tmp_path, (
-            f"feedback dir {collector._storage_dir} ignored the repointed config dir {tmp_path}"
+        expected = get_config_dir() / "feedback"
+        assert collector._storage_dir == expected, (
+            f"feedback dir {collector._storage_dir} ignored the repointed config dir"
         )

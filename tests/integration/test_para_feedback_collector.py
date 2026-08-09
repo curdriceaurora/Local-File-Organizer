@@ -638,6 +638,7 @@ class TestDefaultStorageDirResolution:
         under its per-file integration coverage floor when the module-level
         constant became a function.
         """
+        from file_organizer.config.path_manager import get_config_dir
         from file_organizer.methodologies.para.ai.feedback import FeedbackCollector
 
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
@@ -645,7 +646,13 @@ class TestDefaultStorageDirResolution:
 
         collector = FeedbackCollector()
 
-        assert tmp_path in collector._storage_dir.parents or collector._storage_dir == tmp_path
+        # Compared against `get_config_dir()` resolved AFTER the patch, not
+        # against `tmp_path`. The conftest already points HOME and
+        # XDG_CONFIG_HOME at subdirectories of this same tmp_path, so
+        # "is it under tmp_path" is true whether or not the default follows
+        # the repointed environment — a vacuous assertion that passed against
+        # a deliberately frozen constant.
+        assert collector._storage_dir == get_config_dir() / "feedback"
 
 
 class TestFeedbackStoreDegradesInsteadOfRaising:

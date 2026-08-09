@@ -733,8 +733,11 @@ class TestDefaultRulesDirResolution:
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
         monkeypatch.setenv("HOME", str(tmp_path))
 
+        from file_organizer.config.path_manager import get_config_dir
+
         manager = RuleManager()
 
-        assert tmp_path in manager._rules_dir.parents or manager._rules_dir == tmp_path, (
-            f"rules dir {manager._rules_dir} ignored the repointed config dir {tmp_path}"
+        expected = get_config_dir() / "rules"
+        assert manager._rules_dir == expected, (
+            f"rules dir {manager._rules_dir} ignored the repointed config dir"
         )
