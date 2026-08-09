@@ -94,10 +94,20 @@ class PreviewEngine:
         Returns:
             A ``PreviewResult`` with match details.
         """
-        target = Path(target_dir).expanduser().resolve()
         result = PreviewResult()
 
-        if not target.is_dir():
+        # Resolution and the is_dir() probe both touch the filesystem and can
+        # raise before safe_walk is ever called, so `on_error` cannot see them.
+        # An unreadable target root must land in `errors` like any other
+        # permission failure, not escape as an exception (#1674).
+        try:
+            target = Path(target_dir).expanduser().resolve()
+            is_directory = target.is_dir()
+        except OSError as exc:
+            result.errors.append((str(target_dir), f"Permission denied: {exc}"))
+            return result
+
+        if not is_directory:
             result.errors.append((str(target), "Not a directory"))
             return result
 

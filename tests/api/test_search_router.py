@@ -567,10 +567,9 @@ class TestTraversalBudget:
         list(_collect_matching_files(tmp_path, "match", None, max_files=10))
 
         # Two-sided: a bare upper bound also passes when nothing was walked.
-        assert 10 <= len(consumed) <= 11, (
-            f"budget of 10 examined {len(consumed)} entries — expected it to "
-            "walk up to the bound and stop; a result-counting bound would have "
-            "walked all 61"
+        assert len(consumed) == 10, (
+            f"budget of 10 examined {len(consumed)} entries — expected exactly "
+            "10; a result-counting bound would have walked all 61"
         )
 
     def test_ordinary_tree_results_are_unchanged(self, tmp_path: Path) -> None:
@@ -606,6 +605,62 @@ class TestTraversalBudget:
         found = {p.name for p in _collect_matching_files(tmp_path, "report", None)}
         assert found == {"report_visible.txt"}
 
+    def test_keyword_budget_is_shared_across_roots(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Drives the real endpoint, not a hand-rolled loop.
+
+        An earlier version of this test built its own budget and iterated the
+        roots itself. It passed against production code that gave each root a
+        fresh budget — it verified only that `_collect_matching_files` accepts
+        a shared budget, never that `search()` passes one. Mutation-checking
+        caught that, so this goes through the endpoint.
+
+        The quota used to derive from a counter of *yielded matches*, so
+        discarded entries never reduced it and every root received close to
+        the full allowance. Each root here is padded with dotfiles that yield
+        nothing, so a match-derived quota traverses all three.
+        """
+        from file_organizer.api.routers import search as search_mod
+
+        for r in range(3):
+            root = tmp_path / f"root_{r}"
+            root.mkdir()
+            for i in range(20):
+                (root / f".skip_{i:02d}.txt").write_text("x")
+
+        # THREE allowed roots, not one. Configuring a single root (as
+        # `_build_app` does) put all three directories under one walk, where a
+        # per-root budget is indistinguishable from a shared one — which is
+        # why an earlier version of this test also survived the mutation.
+        settings = ApiSettings(
+            environment="test",
+            allowed_paths=[str(tmp_path / f"root_{r}") for r in range(3)],
+        )
+        app = FastAPI()
+        setup_exception_handlers(app)
+        app.dependency_overrides[get_settings] = lambda: settings
+        from file_organizer.api.dependencies import get_current_active_user
+
+        app.dependency_overrides[get_current_active_user] = lambda: None
+        app.include_router(search_mod.router, prefix="/api/v1")
+        client = TestClient(app)
+
+        monkeypatch.setattr(search_mod, "_MAX_TRAVERSAL", 10)
+        consumed = self._counting_scandir(monkeypatch)
+
+        resp = client.get("/api/v1/search?q=skip")
+        assert resp.status_code == 200
+
+        # One range assertion, not two: a bare upper bound passes when the
+        # walk never ran, and the lower bound is what proves it did.
+        assert 10 <= len(consumed) <= 12, (
+            f"the request examined {len(consumed)} entries against a bound of "
+            "10 — expected it to walk up to the bound and stop. A per-root "
+            "budget would examine up to 60 across three roots; zero would mean "
+            "the walk never ran and the bound proves nothing."
+        )
+
     def test_semantic_corpus_budget_is_shared_across_roots(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -627,8 +682,8 @@ class TestTraversalBudget:
         consumed = self._counting_scandir(monkeypatch)
         _build_semantic_corpus(roots, max_files=10)
 
-        assert 10 <= len(consumed) <= 11, (
+        assert len(consumed) == 10, (
             f"shared budget of 10 examined {len(consumed)} entries across "
-            "3 roots — expected one global bound; a per-root budget would "
-            "examine up to 3x that"
+            "3 roots — expected exactly 10; a per-root budget would examine "
+            "up to 3x that"
         )

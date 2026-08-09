@@ -123,7 +123,7 @@ def _collect_matching_files(
     root: Path,
     query: str,
     file_type: str | None,
-    max_files: int = _MAX_TRAVERSAL,
+    max_files: int | TraversalBudget = _MAX_TRAVERSAL,
 ) -> Iterator[Path]:
     """Yield files under *root* whose name or path matches *query*."""
     q_lower = query.lower()
@@ -137,7 +137,7 @@ def _collect_matching_files(
     # dotfiles cannot walk past the budget (#1675). Counting yielded results
     # instead would have quietly loosened a denial-of-service guard on a
     # remote-reachable endpoint.
-    for entry in safe_walk(root, max_entries=max_files):
+    for entry in safe_walk(root, max_entries=max_files):  # budget may be shared
         if ext_filter and entry.suffix.lower() != ext_filter:
             continue
         # Check if query matches name or path
@@ -347,14 +347,20 @@ def search(
     results: list[SearchResult] = []
     total_traversed = 0
 
+    # One budget for the whole request. The previous quota was derived from
+    # `total_traversed`, which counts *yielded matches* — so hidden files,
+    # symlinks, directories and non-matches never reduced it, and each root
+    # received close to the full allowance. With several configured roots the
+    # bound multiplied. That is the same count-results-not-traversal mistake
+    # #1675 describes, one level up from the walk itself.
+    budget = TraversalBudget(limit=_MAX_TRAVERSAL)
+
     for root in search_roots:
         if not root.exists() or not root.is_dir():
             continue
-        # Adjust remaining quota for this root (global limit across all roots)
-        remaining = _MAX_TRAVERSAL - total_traversed
-        if remaining <= 0:
+        if budget.exhausted:
             break
-        for fp in _collect_matching_files(root, q, file_type, max_files=remaining):
+        for fp in _collect_matching_files(root, q, file_type, max_files=budget):
             total_traversed += 1
             score = _compute_score(fp, q)
             result = _build_result(fp, score, search_roots)

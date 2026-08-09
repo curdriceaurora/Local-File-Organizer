@@ -600,10 +600,10 @@ class TestSafeWalkMaxEntries:
         # Two-sided on purpose. A bare `<= 11` also passes when the walk
         # examined nothing at all, which would hide a broken walk behind a
         # green budget assertion.
-        assert 10 <= len(consumed) <= 11, (
-            f"budget of 10 examined {len(consumed)} entries; expected it to walk "
-            "up to the bound and stop — a result-counting budget would have "
-            "walked all 50 because the dotfiles are discarded"
+        assert len(consumed) == 10, (
+            f"budget of 10 examined {len(consumed)} entries; expected exactly 10 "
+            "— a result-counting budget would have walked all 50 because the "
+            "dotfiles are discarded before they could be counted"
         )
 
     def test_unbudgeted_walk_examines_the_whole_tree(

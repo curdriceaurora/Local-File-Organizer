@@ -139,8 +139,13 @@ class TraversalBudget:
 
     @property
     def exhausted(self) -> bool:
-        """True once more entries have been examined than the limit allows."""
-        return self.examined > self.limit
+        """True once the limit has been reached.
+
+        ``>=``, not ``>``: with ``>`` a limit of N permitted N+1 entries to be
+        consumed, and a limit of 0 still consumed one. The bound is documented
+        as "examine at most N entries", so it should mean exactly that.
+        """
+        return self.examined >= self.limit
 
 
 def _report(
@@ -324,13 +329,18 @@ def safe_walk(
         return budget is not None and budget.exhausted
 
     def _walk(dir_path: Path) -> Iterator[Path]:
+        # Checked before opening the directory as well as before each entry, so
+        # an already-spent shared budget does not pay for another scandir, and
+        # a zero limit walks nothing at all.
+        if _budget_exhausted():
+            return
         try:
             with os.scandir(dir_path) as it:
                 for entry in it:
-                    if budget is not None:
-                        budget.examined += 1
                     if _budget_exhausted():
                         return
+                    if budget is not None:
+                        budget.examined += 1
                     yield from _process_walk_entry(
                         entry,
                         pattern=pattern,
