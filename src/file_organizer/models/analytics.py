@@ -34,6 +34,11 @@ class StorageStats:
     largest_files: list[FileInfo] = field(default_factory=list)
     size_by_type: dict[str, int] = field(default_factory=dict)
     size_by_category: dict[str, int] = field(default_factory=dict)
+    #: Every file seen by the traversal that produced these stats, not just the
+    #: top-20 in `largest_files`. Retained so downstream consumers can reuse the
+    #: walk instead of repeating it (#1672). Appended last so existing
+    #: positional construction is unaffected.
+    all_files: list[FileInfo] = field(default_factory=list)
 
     @property
     def formatted_total_size(self) -> str:

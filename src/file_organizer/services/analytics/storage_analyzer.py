@@ -58,38 +58,20 @@ class StorageAnalyzer:
 
         logger.info(f"Analyzing directory: {path}")
 
+        files_list, directory_count = self._scan(path, max_depth)
+
         total_size = 0
-        file_count = 0
-        directory_count = 0
         size_by_type: dict[str, int] = {}
-        files_list: list[FileInfo] = []
-
-        # Walk directory
-        for item in self._walk_directory(path, max_depth):
-            if item.is_file():
-                file_count += 1
-                size = item.stat().st_size
-                total_size += size
-
-                file_type = item.suffix.lower() or "no_extension"
-                size_by_type[file_type] = size_by_type.get(file_type, 0) + size
-
-                files_list.append(
-                    FileInfo(
-                        path=item,
-                        size=size,
-                        type=file_type,
-                        modified=datetime.fromtimestamp(item.stat().st_mtime, tz=UTC),
-                    )
-                )
-
-            elif item.is_dir():
-                directory_count += 1
+        for info in files_list:
+            total_size += info.size
+            size_by_type[info.type] = size_by_type.get(info.type, 0) + info.size
+        file_count = len(files_list)
 
         # Find largest files
         largest_files = sorted(files_list, key=lambda f: f.size, reverse=True)[:20]
 
         stats = StorageStats(
+            all_files=files_list,
             total_size=total_size,
             organized_size=total_size,  # Would be calculated from organized files
             saved_size=0,  # Would be calculated from deduplication
@@ -109,6 +91,47 @@ class StorageAnalyzer:
         )
 
         return stats
+
+    def _scan(self, path: Path, max_depth: int | None = None) -> tuple[list[FileInfo], int]:
+        """Walk *path* once, returning every file plus the directory count.
+
+        The single traversal behind :meth:`analyze_directory`, extracted so its
+        result can be reused instead of re-walked (#1672).
+
+        ``item.stat()`` is called **once** per file here. It was previously
+        called twice — once for the size and again for the mtime — which
+        doubled the stat syscalls of the dashboard's largest walk for no
+        benefit.
+
+        Args:
+            path: Directory to walk.
+            max_depth: Maximum depth to traverse (None = unlimited).
+
+        Returns:
+            ``(files, directory_count)``. Directories are counted but not
+            returned, matching what :meth:`analyze_directory` needs.
+        """
+        files_list: list[FileInfo] = []
+        directory_count = 0
+
+        for item in self._walk_directory(path, max_depth):
+            if item.is_file():
+                try:
+                    st = item.stat()
+                except OSError:
+                    continue
+                files_list.append(
+                    FileInfo(
+                        path=item,
+                        size=st.st_size,
+                        type=item.suffix.lower() or "no_extension",
+                        modified=datetime.fromtimestamp(st.st_mtime, tz=UTC),
+                    )
+                )
+            elif item.is_dir():
+                directory_count += 1
+
+        return files_list, directory_count
 
     def calculate_size_distribution(self, path: Path) -> FileDistribution:
         """Calculate file distribution by type and size ranges.

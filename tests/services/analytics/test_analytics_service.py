@@ -772,3 +772,106 @@ class TestLargeFilesIdentification:
         assert any(f.path == large_file for f in stats.largest_files)
         largest = next(f for f in stats.largest_files if f.path == large_file)
         assert largest.size > 100 * 1024 * 1024
+
+
+@pytest.mark.unit
+class TestDashboardTraversalCount:
+    """`generate_dashboard` must not re-walk the tree for each consumer (#1672)."""
+
+    @staticmethod
+    def _count_traversals(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Record each *top-level* traversal, across both walkers.
+
+        Counting raw `_walk_directory` calls would measure the fixture's
+        directory count, since it recurses into itself once per directory.
+        Only `current_depth == 0` entries are real traversals. `safe_walk` is
+        counted separately because it walks with `os.scandir`, not `iterdir` —
+        a counter on either one alone sees half the picture.
+        """
+        from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
+
+        traversals: list[str] = []
+        real_walk = StorageAnalyzer._walk_directory
+
+        def counting_walk(self, path, max_depth=None, current_depth=0):
+            if current_depth == 0:
+                traversals.append("_walk_directory")
+            return real_walk(self, path, max_depth, current_depth)
+
+        monkeypatch.setattr(StorageAnalyzer, "_walk_directory", counting_walk)
+
+        import file_organizer.services.analytics.storage_analyzer as sa_mod
+
+        real_safe_walk = sa_mod.safe_walk
+
+        def counting_safe_walk(*args, **kwargs):
+            traversals.append("safe_walk")
+            return real_safe_walk(*args, **kwargs)
+
+        monkeypatch.setattr(sa_mod, "safe_walk", counting_safe_walk)
+        return traversals
+
+    def test_dashboard_walks_the_tree_twice_not_three_times(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Storage stats and quality metrics share one walk.
+
+        Before this, `get_storage_stats` and `get_quality_metrics` each ran
+        `_walk_directory` over the same tree with the same `max_depth` —
+        identical traversals, done twice. `calculate_size_distribution` still
+        walks separately; it uses `safe_walk`, which excludes symlinks where
+        `_walk_directory` includes them, so sharing that one would change the
+        reported numbers rather than just the cost.
+        """
+        for d in range(3):
+            sub = tmp_path / f"dir_{d}"
+            sub.mkdir()
+            for i in range(4):
+                (sub / f"f{i}.txt").write_text("x")
+
+        traversals = self._count_traversals(monkeypatch)
+        AnalyticsService().generate_dashboard(tmp_path)
+
+        assert traversals.count("_walk_directory") == 1, (
+            f"expected storage stats and quality metrics to share one walk, "
+            f"got {traversals.count('_walk_directory')}"
+        )
+        assert traversals.count("safe_walk") == 1
+        assert len(traversals) == 2, f"expected 2 traversals total, got {traversals}"
+
+    def test_quality_metrics_identical_whether_it_walked_or_reused(self, tmp_path: Path) -> None:
+        """The reused list must produce the same metrics as walking afresh.
+
+        Without this, sharing the walk could silently change every quality
+        score while the traversal-count test above still passed.
+        """
+        for d in range(3):
+            sub = tmp_path / f"dir_{d}"
+            sub.mkdir()
+            for i in range(4):
+                (sub / f"Report_{i}.TXT").write_text("x")
+        (tmp_path / "loose.md").write_text("x")
+
+        service = AnalyticsService()
+        walked = service.get_quality_metrics(tmp_path)
+
+        stats = service.get_storage_stats(tmp_path)
+        reused = service.get_quality_metrics(
+            tmp_path, file_paths=[info.path for info in stats.all_files]
+        )
+
+        assert reused.naming_compliance == walked.naming_compliance
+        assert reused.structure_consistency == walked.structure_consistency
+        assert reused.metadata_completeness == walked.metadata_completeness
+        assert reused.categorization_accuracy == walked.categorization_accuracy
+
+    def test_storage_stats_retains_every_file_not_just_the_largest(self, tmp_path: Path) -> None:
+        """`all_files` is the whole scan; `largest_files` stays capped at 20."""
+        for i in range(25):
+            (tmp_path / f"f{i:02d}.txt").write_bytes(b"x" * (i + 1))
+
+        stats = AnalyticsService().get_storage_stats(tmp_path)
+
+        assert len(stats.all_files) == 25
+        assert len(stats.largest_files) == 20
+        assert stats.file_count == 25
