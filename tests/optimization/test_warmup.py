@@ -240,27 +240,37 @@ class TestModelWarmupAsync:
         assert "model-a" in result.loaded
 
     def test_warmup_async_runs_in_background(self) -> None:
-        """Test that warmup_async returns immediately."""
+        """`warmup_async` must hand back a future without waiting for the load.
+
+        Asserts that by holding the loader open rather than by timing the
+        call. The previous version measured wall-clock and required
+        ``call_duration < 50`` ms, which is not a property of the code under
+        test when 18 xdist workers are competing for 18 cores — merely
+        submitting to an executor can exceed that budget under load (#1729).
+
+        Gating the loader on an event proves the same thing and cannot be
+        perturbed by scheduling: if `warmup_async` were synchronous, the call
+        could not return while the loader is still parked.
+        """
         cache = ModelCache(max_models=5)
 
         loader_started = threading.Event()
+        release_loader = threading.Event()
 
         def loader_factory(name: str):
             def loader():
                 loader_started.set()
-                threading.Event().wait(0.1)
+                release_loader.wait(timeout=10)
                 return _make_mock_model(name)
 
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
-        start = time.monotonic()
         future = warmup.warmup_async(["model-a"])
-        call_duration = (time.monotonic() - start) * 1000
 
-        # The call should return almost immediately
-        assert call_duration < 50  # ms
+        assert loader_started.wait(timeout=10), "loader never ran in the background"
+        assert not future.done(), "warmup_async blocked until the load finished"
 
-        # But the result takes longer
+        release_loader.set()
         result = future.result(timeout=10)
         assert "model-a" in result.loaded

@@ -306,6 +306,22 @@ class TestRunServer:
 
         assert not ready.is_set()
 
+    def test_publishes_the_server_so_the_caller_can_stop_it(self) -> None:
+        """`launch()` needs a handle to shut uvicorn down when the window closes."""
+        from file_organizer.desktop.app import _run_server
+
+        mock_uvicorn, server = self._uvicorn_double()
+        mock_api_main = MagicMock()
+        mock_api_main.create_app.return_value = MagicMock()
+        box: dict[str, object] = {}
+
+        with patch.dict(
+            sys.modules, {"uvicorn": mock_uvicorn, "file_organizer.api.main": mock_api_main}
+        ):
+            _run_server(_FakeSocket(54324), server_box=box)
+
+        assert box["server"] is server
+
     def test_forwards_extra_kwargs_to_uvicorn_config(self) -> None:
         from file_organizer.desktop.app import _run_server
 
@@ -320,6 +336,40 @@ class TestRunServer:
             _run_server(_FakeSocket(9999), workers=2)
 
         mock_uvicorn.Config.assert_called_once_with(mock_app, log_level="warning", workers=2)
+
+
+class TestLaunchShutdown:
+    """The window closing must stop the server, not leak the thread."""
+
+    def test_window_close_requests_uvicorn_shutdown(self) -> None:
+        """Previously the daemon thread outlived the window.
+
+        It kept the port bound and its loguru sink installed for the life of
+        the process — which in a test session is the rest of the worker's run.
+        """
+        mock_webview = MagicMock()
+        fake_server = MagicMock()
+
+        from file_organizer.desktop import app as desktop_app
+
+        def _fake_run_server(sock, *, ready=None, server_box=None, **kw):
+            if server_box is not None:
+                server_box["server"] = fake_server
+            if ready is not None:
+                ready.set()
+
+        with (
+            patch.dict(sys.modules, {"webview": mock_webview}),
+            patch(
+                "file_organizer.desktop.app._bind_free_socket",
+                return_value=_FakeSocket(43999),
+            ),
+            patch("file_organizer.desktop.app._run_server", _fake_run_server),
+            patch("file_organizer.desktop.app._wait_for_server", return_value=True),
+        ):
+            desktop_app.launch()
+
+        assert fake_server.should_exit is True
 
 
 # ---------------------------------------------------------------------------
