@@ -48,6 +48,7 @@ are **enforced**; rails with pre-existing violation backlogs remain
 | Rail | What it flags | Status |
 |---|---|---|
 | `safedir-required` | Raw `open()`/`Path.open()`/`shutil.copy*`/`shutil.move` outside the `SafeDir` primitives themselves | enforced |
+| `raw-filesystem-traversal` | Raw `iterdir`/`glob`/`rglob`/`walk`/`scandir`/`listdir` calls outside the exact reviewed `safe_walk` exemption inventory | enforced |
 | `atomic-write` | Raw file-write operations bypassing `atomic_write()` | enforced |
 | `cli-path-validation` | A CLI command's `Path` parameter not wrapped in `resolve_cli_path()` | enforced |
 | `cli-file-kind-validation` | A CLI path resolved with `must_be_dir=False` without a subsequent file/directory kind check | advisory |

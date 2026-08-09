@@ -132,6 +132,7 @@ def test_repo_registry_loads_registered_rails() -> None:
     rails = ci_rails.load_rails(ci_rails.DEFAULT_REGISTRY)
     expected_modes = {
         "safedir-required": "enforce",
+        "raw-filesystem-traversal": "enforce",
         "atomic-write": "enforce",
         "cli-path-validation": "enforce",
         "cli-file-kind-validation": "advisory",

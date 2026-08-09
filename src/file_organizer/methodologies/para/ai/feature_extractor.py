@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.utils.file_times import creation_timestamp
 
 logger = logging.getLogger(__name__)
@@ -368,7 +369,7 @@ class FeatureExtractor:
         parent_dir = file_path.parent
         if parent_dir.exists() and parent_dir.is_dir():
             try:
-                sibling_count = sum(1 for f in parent_dir.iterdir() if f.is_file()) - 1
+                sibling_count = sum(1 for _ in safe_walk(parent_dir, recursive=False)) - 1
             except OSError:
                 sibling_count = 0
 
@@ -490,7 +491,15 @@ class FeatureExtractor:
         }
 
         try:
-            entries = {entry.name.lower() for entry in directory.iterdir()}
+            entries = {
+                entry.name.lower()
+                for entry in safe_walk(
+                    directory,
+                    recursive=False,
+                    only_files=False,
+                    include_hidden=True,
+                )
+            }
             return bool(entries & project_indicators)
         except OSError:
             return False

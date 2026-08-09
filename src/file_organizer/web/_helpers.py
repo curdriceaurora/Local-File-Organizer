@@ -17,6 +17,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.web._forms import TRUE_FORM_VALUES, form_bool
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -49,6 +50,7 @@ PAGE_SIZE = 48
 THUMBNAIL_SIZE = (240, 160)
 MAX_LIMIT = 500
 MAX_NAV_DEPTH = 12
+MAX_DIRECTORY_ENTRIES = 10_000
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 MAX_THUMBNAIL_BYTES = 15 * 1024 * 1024
@@ -205,12 +207,14 @@ def validate_depth(path: Path, roots: list[Path]) -> None:
 
 def has_children(path: Path) -> bool:
     """Check whether a directory contains visible subdirectories."""
-    try:
-        for entry in path.iterdir():
-            if entry.is_dir() and not is_hidden(entry):
-                return True
-    except OSError:
-        return False
+    for entry in safe_walk(
+        path,
+        recursive=False,
+        only_files=False,
+        max_entries=MAX_DIRECTORY_ENTRIES,
+    ):
+        if entry.is_dir() and not is_hidden(entry):
+            return True
     return False
 
 

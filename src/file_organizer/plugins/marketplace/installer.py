@@ -10,6 +10,7 @@ import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.plugins.marketplace.errors import MarketplaceInstallError
 from file_organizer.plugins.marketplace.models import InstalledPlugin
 from file_organizer.plugins.marketplace.repository import PluginRepository
@@ -215,7 +216,16 @@ class PluginInstaller:
         if direct_plugin.exists():
             return extracted_dir
 
-        children = [path for path in extracted_dir.iterdir() if path.name != "__MACOSX"]
+        children = [
+            path
+            for path in safe_walk(
+                extracted_dir,
+                recursive=False,
+                only_files=False,
+                include_hidden=True,
+            )
+            if path.name != "__MACOSX"
+        ]
         directory_children = [path for path in children if path.is_dir()]
         if len(directory_children) == 1 and (directory_children[0] / "plugin.py").exists():
             return directory_children[0]

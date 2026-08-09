@@ -35,6 +35,7 @@ from typing import Any
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import DecompressionBombError
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.utils.safedir import SafeDir
 
 logger = logging.getLogger(__name__)
@@ -393,10 +394,10 @@ def find_images_in_directory(
 
     image_files: list[Path] = []
 
-    pattern = "**/*" if recursive else "*"
-
-    for path in directory.glob(pattern):
-        if path.is_file() and path.suffix.lower() in extensions:
+    # Hidden images are part of this public helper's established result set;
+    # safe_walk still supplies the required symlink and file-type filtering.
+    for path in safe_walk(directory, recursive=recursive, include_hidden=True):
+        if path.suffix.lower() in extensions:
             image_files.append(path)
 
     return image_files

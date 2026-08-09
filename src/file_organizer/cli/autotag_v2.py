@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.core.path_guard import safe_walk
 
 autotag_app = typer.Typer(
     name="autotag",
@@ -54,7 +55,7 @@ def suggest(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    files = [f for f in resolved.iterdir() if f.is_file()]
+    files = list(safe_walk(resolved, recursive=False))
     if not files:
         console.print("[dim]No files found in directory.[/dim]")
         raise typer.Exit(code=0)
@@ -212,8 +213,7 @@ def batch(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    glob_pattern = f"**/{pattern}" if recursive else pattern
-    files = [f for f in resolved.glob(glob_pattern) if f.is_file()]
+    files = list(safe_walk(resolved, pattern=pattern, recursive=recursive))
 
     if not files:
         console.print(f"[dim]No files found matching pattern: {pattern}[/dim]")

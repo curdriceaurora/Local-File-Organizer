@@ -10,6 +10,8 @@ import json
 import sys
 from pathlib import Path
 
+from file_organizer.core.path_guard import safe_walk
+
 from ..services.auto_tagging import AutoTaggingService
 
 
@@ -238,14 +240,10 @@ def handle_batch(service: AutoTaggingService, args: argparse.Namespace) -> None:
         print(f"Error: Not a directory: {directory}", file=sys.stderr)
         sys.exit(1)
 
-    # Find files
-    if args.recursive:
-        pattern = f"**/{args.pattern}"
-    else:
-        pattern = args.pattern
-
-    files = list(directory.glob(pattern))
-    files = [f for f in files if f.is_file()]
+    # Find files under the guarded hidden/symlink policy used by other
+    # user-supplied CLI traversal roots.
+    pattern = args.pattern
+    files = list(safe_walk(directory, pattern=pattern, recursive=args.recursive))
 
     if not files:
         print(f"No files found matching pattern: {pattern}")

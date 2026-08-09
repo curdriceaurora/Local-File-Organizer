@@ -9,10 +9,12 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
+from file_organizer.core.path_guard import safe_walk
 from file_organizer.methodologies.johnny_decimal.categories import get_default_scheme
 from file_organizer.methodologies.johnny_decimal.scanner import FolderInfo, FolderScanner
 from file_organizer.methodologies.johnny_decimal.system import JohnnyDecimalSystem
@@ -191,21 +193,24 @@ class TestScannerCoverage:
         assert result.folder_tree[0].name == "sub"
         assert result.folder_tree[0].children == []
 
-    # Lines 158->148: _scan_folder PermissionError in iterdir (branch)
+    # Unreadable child walks are represented by safe_walk's empty iterator.
     def test_scan_folder_permission_denied(self, scanner: FolderScanner, tmp_path: Path) -> None:
         restricted = tmp_path / "restricted"
         restricted.mkdir()
-        original_iterdir = Path.iterdir
 
-        def guarded_iterdir(path_self: Path) -> Iterator[Path]:
-            if path_self == restricted:
-                raise PermissionError("permission denied")
-            return original_iterdir(path_self)
+        def guarded_walk(root: Path, **kwargs: Any) -> Iterator[Path]:
+            if root == restricted:
+                return iter(())
+            return safe_walk(root, **kwargs)
 
-        with patch.object(Path, "iterdir", guarded_iterdir):
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
+            side_effect=guarded_walk,
+        ):
             result = scanner.scan_directory(tmp_path)
         assert result is not None
-        assert any(folder.path == restricted for folder in result.folder_tree)
+        restricted_info = next(folder for folder in result.folder_tree if folder.path == restricted)
+        assert restricted_info.children == []
 
     # Lines 163-164: _scan_folder counts files and handles OSError on stat
     def test_scan_counts_files(self, scanner: FolderScanner, tmp_path: Path) -> None:
@@ -213,7 +218,7 @@ class TestScannerCoverage:
         result = scanner.scan_directory(tmp_path)
         assert result.total_files >= 1
 
-    # Lines 188-191: _create_folder_info PermissionError
+    # An unreadable immediate listing is empty after safe_walk handles the error.
     def test_create_folder_info_permission_error(
         self, scanner: FolderScanner, tmp_path: Path
     ) -> None:
@@ -222,12 +227,10 @@ class TestScannerCoverage:
         inner_file = restricted / "data.txt"
         inner_file.write_text("data")
 
-        def denied_iterdir(path_self: Path) -> Iterator[Path]:
-            if path_self == restricted:
-                raise PermissionError("permission denied")
-            return iter(())
-
-        with patch.object(Path, "iterdir", denied_iterdir):
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
+            return_value=iter(()),
+        ):
             info = scanner._create_folder_info(restricted, depth=0)
         assert info.file_count == 0
 
@@ -245,7 +248,10 @@ class TestScannerCoverage:
             def stat(self) -> object:
                 raise OSError("bad stat")
 
-        with patch.object(Path, "iterdir", return_value=iter([BrokenSizeFile()])):
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
+            return_value=iter([BrokenSizeFile()]),
+        ):
             result = scanner.scan_directory(tmp_path)
         assert result is not None
         assert result.total_files == 1
@@ -267,7 +273,10 @@ class TestScannerCoverage:
             def stat(self) -> object:
                 raise OSError("bad stat")
 
-        with patch.object(Path, "iterdir", return_value=iter([BrokenSizeFile()])):
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
+            return_value=iter([BrokenSizeFile()]),
+        ):
             info = scanner._create_folder_info(sub, depth=0)
         assert info.file_count == 1
         assert info.total_size == 0
@@ -293,21 +302,23 @@ class TestScannerCoverage:
         result = scanner.scan_directory(tmp_path)
         assert result.total_files == 0
 
-    # PermissionError in _scan_folder during sorted(path.iterdir())
-    def test_scan_folder_iterdir_permission_error(
+    def test_scan_folder_delegates_each_level_to_safe_walk(
         self, scanner: FolderScanner, tmp_path: Path
     ) -> None:
         sub = tmp_path / "noperm"
         sub.mkdir()
         (sub / "inner").mkdir()
 
-        original_iterdir = Path.iterdir
-
-        def guarded_iterdir(path_self: Path) -> Iterator[Path]:
-            if path_self == sub:
-                raise PermissionError("permission denied")
-            return original_iterdir(path_self)
-
-        with patch.object(Path, "iterdir", guarded_iterdir):
+        with patch(
+            "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
+            wraps=safe_walk,
+        ) as mock_walk:
             result = scanner.scan_directory(tmp_path)
+
         assert result is not None
+        mock_walk.assert_any_call(
+            sub,
+            recursive=False,
+            only_files=False,
+            include_hidden=False,
+        )
