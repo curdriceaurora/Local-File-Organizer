@@ -111,13 +111,24 @@ class AnalyticsService:
         storage_stats = self.get_storage_stats(directory, max_depth)
 
         # Get file distribution
-        file_distribution = self.storage_analyzer.calculate_size_distribution(directory)
+        # Reuse the storage walk. Without this line the parameter above would
+        # be dead weight — the failure mode #1672 records from #1664.
+        file_distribution = self.storage_analyzer.calculate_size_distribution(
+            directory, files=storage_stats.all_files
+        )
 
         # Get duplicate statistics
         duplicate_stats = self.get_duplicate_stats(duplicate_groups or [], storage_stats.total_size)
 
         # Get quality metrics
-        quality_metrics = self.get_quality_metrics(directory, max_depth=max_depth)
+        # Reuse the walk `get_storage_stats` already performed rather than
+        # repeating it. Safe because both go through `_walk_directory` with the
+        # same `max_depth`; see get_quality_metrics.
+        quality_metrics = self.get_quality_metrics(
+            directory,
+            max_depth=max_depth,
+            file_paths=[info.path for info in storage_stats.all_files],
+        )
 
         # Calculate time savings
         time_savings = self.calculate_time_saved(
@@ -223,6 +234,7 @@ class AnalyticsService:
         self,
         directory: Path,
         max_depth: int | None = None,
+        file_paths: list[Path] | None = None,
     ) -> QualityMetrics:
         """Calculate organization quality metrics.
 
@@ -236,6 +248,9 @@ class AnalyticsService:
 
         Args:
             directory: Directory to analyze
+            file_paths: Pre-walked file list to reuse. When omitted the tree is
+                walked here. Supplying the list from `analyze_directory` avoids
+                a second identical traversal (#1672).
             max_depth: Maximum directory depth to traverse (None = unlimited).
                 Must match the depth used when computing storage statistics to
                 ensure consistent denominators across all metrics.
@@ -247,9 +262,15 @@ class AnalyticsService:
 
         # Collect files using the same depth limit as storage analysis so that
         # all metric denominators are consistent with storage_stats.file_count.
-        file_paths = [
-            p for p in self.storage_analyzer.walk_directory(directory, max_depth) if p.is_file()
-        ]
+        #
+        # When the caller already walked the tree, reuse its result. This is the
+        # same traversal — `walk_directory` and the storage scan are both
+        # `_walk_directory(directory, max_depth)`, filtered to files — so the
+        # denominators are identical, not merely similar (#1672).
+        if file_paths is None:
+            file_paths = [
+                p for p in self.storage_analyzer.walk_directory(directory, max_depth) if p.is_file()
+            ]
 
         # Calculate individual metrics
         naming_compliance = self.metrics_calculator.measure_naming_compliance(
