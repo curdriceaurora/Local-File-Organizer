@@ -258,6 +258,7 @@ class TestScannerCoverage:
         assert result.total_size == 0
 
     # Lines 188-189: OSError on file stat in _create_folder_info
+    @pytest.mark.ci
     def test_create_folder_info_file_stat_oserror(
         self, scanner: FolderScanner, tmp_path: Path
     ) -> None:

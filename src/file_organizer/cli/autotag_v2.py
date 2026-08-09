@@ -29,6 +29,12 @@ console = Console()
 logger = logging.getLogger(__name__)
 
 
+def _abort_on_walk_error(path: Path, exc: OSError) -> None:
+    """Report an incomplete traversal and fail the current CLI command."""
+    console.print("[red]Filesystem traversal failed:[/red]", path, exc)
+    raise typer.Exit(code=1) from exc
+
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -55,7 +61,7 @@ def suggest(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    files = list(safe_walk(resolved, recursive=False))
+    files = list(safe_walk(resolved, recursive=False, on_error=_abort_on_walk_error))
     if not files:
         console.print("[dim]No files found in directory.[/dim]")
         raise typer.Exit(code=0)
@@ -213,7 +219,14 @@ def batch(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    files = list(safe_walk(resolved, pattern=pattern, recursive=recursive))
+    files = list(
+        safe_walk(
+            resolved,
+            pattern=pattern,
+            recursive=recursive,
+            on_error=_abort_on_walk_error,
+        )
+    )
 
     if not files:
         console.print(f"[dim]No files found matching pattern: {pattern}[/dim]")

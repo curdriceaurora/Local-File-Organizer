@@ -111,6 +111,26 @@ def test_audit_rejects_stale_or_changed_exemption_count() -> None:
     assert stale == [(key, 2, 1)]
 
 
+@pytest.mark.parametrize(
+    ("exemption", "message"),
+    [
+        (
+            checker.TraversalExemption(count=0, reason="app-owned directory"),
+            "count must be at least 1",
+        ),
+        (checker.TraversalExemption(count=1, reason="  \t"), "blank reason"),
+    ],
+)
+def test_audit_rejects_invalid_exemption_definition(
+    exemption: checker.TraversalExemption,
+    message: str,
+) -> None:
+    key = ("legacy.py", "scan", "Path.glob")
+
+    with pytest.raises(ValueError, match=message):
+        checker.audit_sites([], {key: exemption})
+
+
 def test_repository_inventory_matches_executable_scope_note() -> None:
     sites = checker.scan_package()
     unexpected, stale = checker.audit_sites(sites, checker._EXEMPTIONS)

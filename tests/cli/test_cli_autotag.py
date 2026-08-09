@@ -491,6 +491,7 @@ class TestHandleBatch:
         captured = capsys.readouterr()
         assert "No files found" in captured.out
 
+    @pytest.mark.ci
     def test_batch_recursive(self, mock_service, tmp_path, capsys):
         sub = tmp_path / "sub"
         sub.mkdir()

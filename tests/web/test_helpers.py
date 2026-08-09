@@ -480,6 +480,7 @@ class TestValidateDepth:
 class TestHasChildren:
     """Test directory children detection."""
 
+    @pytest.mark.ci
     def test_directory_with_subdirs(self, file_tree):
         """Should detect subdirectories."""
         assert has_children(file_tree) is True

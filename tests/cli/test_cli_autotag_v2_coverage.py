@@ -27,6 +27,29 @@ class _FakeRecommendation:
     suggestions: list = field(default_factory=list)
 
 
+@pytest.mark.ci
+@pytest.mark.parametrize("command", ["suggest", "batch"])
+def test_traversal_error_fails_command(command: str, tmp_path: Path) -> None:
+    from file_organizer.cli.autotag_v2 import autotag_app
+
+    def failed_walk(root: Path, **kwargs):
+        kwargs["on_error"](root, PermissionError("denied"))
+        return iter(())
+
+    with (
+        patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=MagicMock(),
+        ),
+        patch("file_organizer.cli.autotag_v2.safe_walk", side_effect=failed_walk),
+    ):
+        result = runner.invoke(autotag_app, [command, str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert str(tmp_path) in result.output.replace("\n", "")
+    assert "denied" in result.output
+
+
 class TestAutotagSuggestErrors:
     """Covers error branches in suggest command (lines 47-49, 53-54, 61-62)."""
 

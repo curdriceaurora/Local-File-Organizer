@@ -242,6 +242,7 @@ class TestPluginInstallerLocateRoot:
         result = installer._locate_plugin_root(extracted)
         assert result == extracted
 
+    @pytest.mark.ci
     def test_nested_single_dir(self, tmp_path):
         extracted = tmp_path / "extract"
         nested = extracted / "my-plugin"

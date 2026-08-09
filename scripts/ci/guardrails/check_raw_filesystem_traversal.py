@@ -322,6 +322,17 @@ def audit_sites(
     exemptions: dict[TraversalKey, TraversalExemption],
 ) -> tuple[list[TraversalSite], list[tuple[TraversalKey, int, int]]]:
     """Return unexpected sites and stale/mismatched exemption counts."""
+    invalid: list[str] = []
+    for key, exemption in sorted(exemptions.items()):
+        label = "::".join(key)
+        if exemption.count < 1:
+            invalid.append(f"{label} has count {exemption.count}; count must be at least 1")
+        if not exemption.reason.strip():
+            invalid.append(f"{label} has a blank reason")
+
+    if invalid:
+        raise ValueError("invalid traversal exemptions: " + "; ".join(invalid))
+
     counts = Counter(site.key for site in sites)
     unexpected = [site for site in sites if site.key not in exemptions]
     stale = [
@@ -356,7 +367,11 @@ def main() -> int:
         print(f"[{RAIL_NAME}] could not scan package: {exc}", file=sys.stderr)
         return 1
 
-    unexpected, stale = audit_sites(sites, _EXEMPTIONS)
+    try:
+        unexpected, stale = audit_sites(sites, _EXEMPTIONS)
+    except ValueError as exc:
+        print(f"[{RAIL_NAME}] invalid executable scope note: {exc}", file=sys.stderr)
+        return 1
     if unexpected or stale:
         print(f"[{RAIL_NAME}] traversal scope drift found:", file=sys.stderr)
         for site in unexpected:
