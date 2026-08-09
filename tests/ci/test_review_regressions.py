@@ -45,6 +45,10 @@ def _imports_loguru(source: str) -> bool:
             ):
                 return True
         elif isinstance(node, ast.ImportFrom):
+            # level > 0 is a relative import: `from .loguru import x` refers to
+            # a sibling module that merely shares the name.
+            if node.level:
+                continue
             module = node.module or ""
             if module == "loguru" or module.startswith("loguru."):
                 return True

@@ -7,6 +7,7 @@ launch() without requiring pywebview to be installed.
 
 from __future__ import annotations
 
+import errno
 import runpy
 import socket
 import sys
@@ -65,8 +66,11 @@ class TestBindFreeSocket:
         try:
             port = sock.getsockname()[1]
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as other:
-                with pytest.raises(OSError, match="Address already in use"):
+                # errno, not message text: Windows reports WSAEADDRINUSE
+                # with different wording.
+                with pytest.raises(OSError) as excinfo:  # noqa: pytest-raises-hygiene
                     other.bind(("127.0.0.1", port))
+            assert excinfo.value.errno == errno.EADDRINUSE
         finally:
             sock.close()
 

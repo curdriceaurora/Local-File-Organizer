@@ -10,6 +10,7 @@ serves HTTP — only ``webview`` (absent in this env) is faked so its
 
 from __future__ import annotations
 
+import errno
 import os
 import socket
 import sys
@@ -78,11 +79,30 @@ def test_launch_boots_real_server_and_opens_window(monkeypatch: pytest.MonkeyPat
     assert fake_webview.captured["kwargs"]["width"] == 900  # type: ignore[attr-defined]
 
 
+class _FakeLauncherSocket:
+    """Stands in for a bound socket so launch() does not hold a real port."""
+
+    def __init__(self, port: int) -> None:
+        self._port = port
+        self.closed = False
+
+    def getsockname(self) -> tuple[str, int]:
+        return ("127.0.0.1", self._port)
+
+    def close(self) -> None:
+        self.closed = True
+
+
 def test_launch_raises_when_server_never_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     """If the server never starts, launch() raises rather than opening a window."""
     fake_webview = _make_fake_webview(lambda captured: None)
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
 
+    # Patch the binder too. Unpatched, launch() binds a real socket that the
+    # stub _run_server never takes ownership of, and launch() raises before its
+    # shutdown block — leaking a bound loopback port per run.
+    fake_sock = _FakeLauncherSocket(43998)
+    monkeypatch.setattr(desktop_app, "_bind_free_socket", lambda: fake_sock)
     monkeypatch.setattr(desktop_app, "_run_server", lambda sock, **kw: None)
     monkeypatch.setattr(desktop_app, "_wait_for_server", lambda ready, thread, timeout=0.0: False)
 
@@ -102,8 +122,11 @@ def test_bind_free_socket_holds_the_port() -> None:
         port = sock.getsockname()[1]
         assert 1024 < port < 65536
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as other:
-            with pytest.raises(OSError, match="Address already in use"):
+            # errno, not message text: Windows reports WSAEADDRINUSE
+            # with different wording.
+            with pytest.raises(OSError) as excinfo:  # noqa: pytest-raises-hygiene
                 other.bind(("127.0.0.1", port))
+        assert excinfo.value.errno == errno.EADDRINUSE
     finally:
         sock.close()
 

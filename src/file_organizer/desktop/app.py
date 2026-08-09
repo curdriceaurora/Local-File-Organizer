@@ -293,13 +293,7 @@ def _run_server(
 
     from file_organizer.api.main import create_app
 
-    app = create_app()
-    config = uvicorn.Config(app, log_level="warning", **uvicorn_kwargs)
-    server = uvicorn.Server(config)
-    if server_box is not None:
-        server_box["server"] = server
-
-    async def _serve() -> None:
+    async def _serve(server: Any) -> None:
         serve_task = asyncio.ensure_future(server.serve(sockets=[sock]))
         while not server.started and not serve_task.done():
             await asyncio.sleep(_READY_POLL_INTERVAL)
@@ -311,7 +305,17 @@ def _run_server(
         await serve_task
 
     try:
-        asyncio.run(_serve())
+        # Inside the guard: `create_app()` builds 15 routers and can raise, as
+        # can Config/Server construction. Outside it, such a failure killed the
+        # thread with the socket still bound — leaking the port for the life of
+        # the process, which is the very failure mode this function exists to
+        # make survivable.
+        app = create_app()
+        config = uvicorn.Config(app, log_level="warning", **uvicorn_kwargs)
+        server = uvicorn.Server(config)
+        if server_box is not None:
+            server_box["server"] = server
+        asyncio.run(_serve(server))
     finally:
         with contextlib.suppress(OSError):
             sock.close()

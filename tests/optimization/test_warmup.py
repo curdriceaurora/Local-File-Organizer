@@ -259,7 +259,12 @@ class TestModelWarmupAsync:
         def loader_factory(name: str):
             def loader():
                 loader_started.set()
-                release_loader.wait(timeout=10)
+                # No timeout: a self-releasing wait would let the loader finish
+                # on its own if this thread were descheduled, and `future` could
+                # then be done before the assertion below — reintroducing the
+                # very scheduling flake this test exists to remove. Release is
+                # the test's job, and the `finally` guarantees it.
+                release_loader.wait()
                 return _make_mock_model(name)
 
             return loader
@@ -267,9 +272,11 @@ class TestModelWarmupAsync:
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
         future = warmup.warmup_async(["model-a"])
 
-        assert loader_started.wait(timeout=10), "loader never ran in the background"
-        assert not future.done(), "warmup_async blocked until the load finished"
+        try:
+            assert loader_started.wait(timeout=30), "loader never ran in the background"
+            assert not future.done(), "warmup_async blocked until the load finished"
+        finally:
+            release_loader.set()
 
-        release_loader.set()
-        result = future.result(timeout=10)
+        result = future.result(timeout=30)
         assert "model-a" in result.loaded
