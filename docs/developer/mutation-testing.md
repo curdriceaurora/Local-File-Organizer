@@ -69,10 +69,9 @@ two distinct ways. Both are properties of the **test files** selected, not of
 the module being mutated — adding one thread-using test file to an otherwise
 clean profile is enough to break it:
 
-- *Segfaults.* Broad test paths drag in ~240 native extension modules (torch,
-  av, scipy) and the fork crashes. mutmut records the crash as a mutant
-  verdict, so a profile can report a perfect score built entirely on
-  corpses — the pilot's own first run showed the grouped optimization profile
+- *Segfaults.* The fork crashes, and mutmut records the crash as a mutant
+  verdict — so a profile can report a perfect score built entirely on
+  corpses. The pilot's own first run showed the grouped optimization profile
   and `organizer` at 100% with 268 and 432 mutants segfaulted. The driver
   treats any `segfault` in the stats as a hard error.
 - *Deadlocks.* Thread-heavy test files (for example
