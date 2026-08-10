@@ -37,9 +37,11 @@ class TestBuildTreeContext:
 
     def test_root_probes_share_request_budget(self, tmp_path: Path, settings: ApiSettings) -> None:
         roots = [tmp_path / "first", tmp_path / "second"]
+        observed_paths: list[Path] = []
         observed_budgets: list[TraversalBudget] = []
 
-        def observe_budget(_path: Path, *, budget: TraversalBudget) -> bool:
+        def observe_budget(path: Path, *, budget: TraversalBudget) -> bool:
+            observed_paths.append(path)
             observed_budgets.append(budget)
             return False
 
@@ -53,6 +55,8 @@ class TestBuildTreeContext:
             context = build_tree_context(None, settings, depth=0, active=None)
 
         assert len(context["nodes"]) == 2
+        assert {node["path"] for node in context["nodes"]} == {str(root) for root in roots}
+        assert observed_paths == roots
         assert len(observed_budgets) == 2
         assert observed_budgets[0] is observed_budgets[1]
 
