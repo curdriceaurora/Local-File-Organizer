@@ -151,10 +151,6 @@ class FolderScanner:
         )
 
         for item in items:
-            # Skip hidden files/folders if configured
-            if self.skip_hidden and item.name.startswith("."):
-                continue
-
             if item.is_dir():
                 # Scan subdirectory
                 folder_info = self._create_folder_info(item, depth)

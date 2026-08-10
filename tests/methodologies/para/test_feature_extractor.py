@@ -252,6 +252,39 @@ class TestExtractStructuralFeatures:
         features = extractor.extract_structural_features(target)
         assert features.sibling_count == 4  # 5 files minus the target
 
+    def test_hidden_file_sibling_count_does_not_subtract_excluded_target(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+    ) -> None:
+        """A hidden target is absent from safe_walk and must not be subtracted."""
+        target = tmp_path / ".target.txt"
+        target.write_text("hidden")
+        (tmp_path / "first.txt").write_text("first")
+        (tmp_path / "second.txt").write_text("second")
+
+        features = extractor.extract_structural_features(target)
+
+        assert features.sibling_count == 2
+
+    def test_symlink_file_sibling_count_does_not_subtract_excluded_target(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+    ) -> None:
+        """A symlink target is absent from safe_walk and must not be subtracted."""
+        parent = tmp_path / "files"
+        parent.mkdir()
+        source = tmp_path / "source.txt"
+        source.write_text("source")
+        target = parent / "target.txt"
+        target.symlink_to(source)
+        (parent / "sibling.txt").write_text("sibling")
+
+        features = extractor.extract_structural_features(target)
+
+        assert features.sibling_count == 1
+
     def test_parent_category_hint_project(
         self,
         extractor: FeatureExtractor,

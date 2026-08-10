@@ -14,6 +14,7 @@ import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.path_guard import TraversalBudget
 from file_organizer.web.file_operations import (
     build_breadcrumbs,
     build_file_results_context,
@@ -131,6 +132,13 @@ class TestListTreeNodes:
             assert "path_param" in node
             assert "has_children" in node
 
+    def test_marks_tree_budget_exhausted(self, tree):
+        budget = TraversalBudget(limit=1)
+
+        list_tree_nodes(tree, include_hidden=False, budget=budget)
+
+        assert budget.exhausted is True
+
 
 # ---------------------------------------------------------------------------
 # collect_entries
@@ -246,8 +254,26 @@ class TestCollectEntries:
                 limit=100,
             )
 
+        broken.stat.assert_called_once_with()
         assert entries == [{"name": "broken.txt"}]
         assert total == 1
+
+    def test_marks_listing_budget_exhausted(self, tree):
+        budget = TraversalBudget(limit=2)
+
+        entries, total = collect_entries(
+            tree,
+            query=None,
+            file_type=None,
+            sort_by="name",
+            sort_order="asc",
+            include_hidden=False,
+            limit=100,
+            budget=budget,
+        )
+
+        assert budget.exhausted is True
+        assert len(entries) == total == 2
 
     def test_sort_by_created(self, tree):
         entries, _ = collect_entries(

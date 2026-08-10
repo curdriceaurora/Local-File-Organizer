@@ -1,6 +1,11 @@
 {% if error_message %}
     <div class="tree-error">{{ error_message }}</div>
 {% endif %}
+{% if tree_truncated %}
+    <div class="tree-error" role="status">
+        Safety limit reached after examining {{ directory_entry_limit }} directory entries. Some folders may be omitted.
+    </div>
+{% endif %}
 
 <ul class="tree-list" data-depth="{{ depth }}">
     {% for node in nodes %}

@@ -212,16 +212,14 @@ class TestScannerCoverage:
         restricted_info = next(folder for folder in result.folder_tree if folder.path == restricted)
         assert restricted_info.children == []
 
-    def test_scan_folder_defensively_skips_hidden_and_non_file_entries(
+    def test_scan_folder_skips_non_file_entries(
         self, scanner: FolderScanner, tmp_path: Path
     ) -> None:
-        hidden = tmp_path / ".hidden"
-        hidden.mkdir()
         missing = tmp_path / "missing"
 
         with patch(
             "file_organizer.methodologies.johnny_decimal.scanner.safe_walk",
-            return_value=iter([hidden, missing]),
+            return_value=iter([missing]),
         ):
             result = scanner.scan_directory(tmp_path)
 

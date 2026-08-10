@@ -17,7 +17,7 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
-from file_organizer.core.path_guard import safe_walk
+from file_organizer.core.path_guard import TraversalBudget, safe_walk
 from file_organizer.web._forms import TRUE_FORM_VALUES, form_bool
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -207,15 +207,19 @@ def validate_depth(path: Path, roots: list[Path]) -> None:
 
 def has_children(path: Path) -> bool:
     """Check whether a directory contains visible subdirectories."""
+    budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
     for entry in safe_walk(
         path,
         recursive=False,
         only_files=False,
-        max_entries=MAX_DIRECTORY_ENTRIES,
+        max_entries=budget,
     ):
         if entry.is_dir() and not is_hidden(entry):
             return True
-    return False
+    # Once the cap is reached, preserve the expand control: a visible
+    # subdirectory may exist beyond the examined prefix. Expanding the node
+    # will show the explicit truncation notice from ``build_tree_context``.
+    return budget.exhausted
 
 
 def is_probably_text(path: Path) -> bool:
