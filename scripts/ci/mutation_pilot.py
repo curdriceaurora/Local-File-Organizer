@@ -23,13 +23,24 @@ produces a confident number that means nothing:
    suite caught it" — reporting a ~100% score that measures the coverage
    gate rather than the tests.
 
-2. **Narrow test selection.** mutmut forks per mutant, and forks taken while
-   the parent has threads running crash or hang. This is a property of the
-   *test files* selected, not of the module being mutated: adding one
-   thread-creating test file to an otherwise clean profile produces
-   segfaults, which mutmut then records as mutant verdicts. Each profile
-   names only the test files that exercise its modules, and ``segfault`` in
-   the stats is treated as a hard error here rather than as a result.
+2. **Narrow test selection.** mutmut forks per mutant, and a forked child may
+   legally call only async-signal-safe functions until it ``exec``s.
+   ``sqlite3.connect()`` is not one of those **on macOS**: Apple's system
+   ``libsqlite3`` lazily builds its log handle through ``dispatch_once`` ->
+   ``os_log_create``, and libdispatch is not fork-safe. A child that opens a
+   database therefore takes ``EXC_BAD_ACCESS`` in ``_os_log_find``, which
+   mutmut records as a mutant verdict. This is a property of the *test files*
+   selected, not of the module being mutated: any selection reaching sqlite3
+   (e.g. the organizer tests, via ``execute_plan`` -> ``UndoManager`` ->
+   ``HistoryTracker``) can trigger it. Each profile names only the test files
+   that exercise its modules, and ``segfault`` in the stats is treated as a
+   hard error here rather than as a result.
+
+   The crash is macOS-only and does **not** occur on ``ubuntu-latest``, where
+   ``.github/workflows/mutation.yml`` actually runs -- measured 0/20 on Linux
+   versus 20/20 on macOS for the same probe (#1726). Profiles blocked on the
+   strength of a local macOS run should be re-measured on Linux before being
+   treated as permanently blocked.
 
 3. **Config lives in ``setup.cfg``, written per profile.** mutmut reads
    ``[tool.mutmut]`` from ``pyproject.toml`` when present and only falls back
@@ -67,6 +78,17 @@ BASE_PYTEST_ARGS = ["--no-cov", "-p", "no:randomly", "-p", "no:cacheprovider"]
 EXPORT_TIMEOUT = 300
 
 
+def current_platform() -> str:
+    """Return the running platform as a ``sys.platform`` string.
+
+    Indirection on purpose: tests need to vary the platform, and patching
+    ``sys.platform`` itself mutates the real module process-wide, so anything
+    first imported during that window sees the fake value. Patching this
+    function instead keeps the override scoped to this module.
+    """
+    return sys.platform
+
+
 @dataclass(frozen=True)
 class Profile:
     """One pilot target: what to mutate, and what to run against it."""
@@ -83,7 +105,23 @@ class Profile:
     #: run — loudly, never silently — but still run when named explicitly, so
     #: anyone attempting a fix can measure it.
     blocked: str | None = None
+    #: ``sys.platform`` values the block applies to; ``None`` means every
+    #: platform. Scope a block when its cause is OS-specific, so it does not
+    #: silently suppress the profile everywhere: the organizer/parallel
+    #: failures are a macOS libsqlite3 fork fault (#1726) that cannot occur on
+    #: the ubuntu-latest nightly, and blocking them globally hid two profiles
+    #: from CI for a reason that never applied there.
+    blocked_platforms: frozenset[str] | None = None
     extra_pytest_args: list[str] = field(default_factory=list)
+
+    def block_reason(self, platform: str | None = None) -> str | None:
+        """Return why this profile is skipped on *platform*, else ``None``."""
+        if not self.blocked:
+            return None
+        target = current_platform() if platform is None else platform
+        if self.blocked_platforms is None or target in self.blocked_platforms:
+            return self.blocked
+        return None
 
 
 PROFILES: tuple[Profile, ...] = (
@@ -126,13 +164,18 @@ PROFILES: tuple[Profile, ...] = (
         # docs/developer/mutation-testing.md.
         notes="Wave-B repairs plus the resume/persistence assertions.",
         blocked=(
-            "deadlocks intermittently: forked children go to sleep and never "
-            "resume, so the run hangs until --timeout reaps it. Same root cause "
-            "as the organizer profile — thread-creating tests plus fork-per-mutant "
-            "— surfacing as a hang rather than a crash. Measured 44.5% (233 killed "
-            "/ 291 survived) on the runs that completed, but an intermittent hang "
-            "cannot gate a nightly (#1726)."
+            "deadlocks intermittently ON macOS: forked children go to sleep and "
+            "never resume, so the run hangs until --timeout reaps it. Consistent "
+            "with the organizer profile's confirmed root cause (#1726) — a forked "
+            "child touching non-fork-safe libdispatch state — surfacing as a hang "
+            "rather than a crash, since dispatch_once blocks rather than faulting "
+            "when the lock was held at fork time. NOT independently confirmed for "
+            "this profile. Measured 44.5% (233 killed / 291 survived) on the runs "
+            "that completed. Like the organizer profile, re-measure on Linux "
+            "before treating this as blocked in CI."
         ),
+        # macOS-only fault; the nightly runs on ubuntu-latest.
+        blocked_platforms=frozenset({"darwin"}),
     ),
     Profile(
         name="organizer",
@@ -152,13 +195,19 @@ PROFILES: tuple[Profile, ...] = (
         # inheriting this list.
         notes="organize()'s AI path was deletable with all 126 tests passing.",
         blocked=(
-            "432 mutants segfault. Cause is the TEST files, not this module: "
-            "mutating the known-clean batch_sizer.py while merely adding "
-            "tests/core/test_organizer.py to the selection produces 42 segfaults. "
-            "Those tests create threads, and mutmut forks per mutant. Unaffected "
-            "by --max-children 1, so it is the fork itself. Needs a non-forking "
-            "runner (#1726)."
+            "432 mutants segfault ON macOS ONLY. Root cause (#1726): mutmut forks "
+            "per mutant, and these tests reach sqlite3 via execute_plan -> "
+            "UndoManager -> HistoryTracker. Apple's system libsqlite3 initialises "
+            "its os_log handle through dispatch_once, which is not fork-safe, so "
+            "the child dies with EXC_BAD_ACCESS in _os_log_find. The earlier "
+            "'these tests create threads' explanation is RETRACTED -- it is the "
+            "sqlite3 call in the child, not thread count. Linux is immune (0/20 "
+            "vs 20/20 on macOS), and the nightly runs on ubuntu-latest, so this "
+            "profile is very likely NOT blocked in CI: re-measure there before "
+            "assuming otherwise."
         ),
+        # macOS-only fault; the nightly runs on ubuntu-latest.
+        blocked_platforms=frozenset({"darwin"}),
     ),
 )
 
@@ -269,6 +318,23 @@ def score_of(stats: dict[str, int]) -> float | None:
     return killed / decided * 100
 
 
+def _print_profile_list() -> None:
+    """Print each profile with its floor and where it is blocked."""
+    for p in PROFILES:
+        floor = f"{p.floor:.0f}%" if p.floor is not None else "not gated"
+        reason = p.block_reason()
+        if reason:
+            status = f"BLOCKED here ({current_platform()}) — {reason}"
+        elif p.blocked:
+            # Blocked somewhere, but not on this platform. Say so, or the
+            # listing reads as though the blocker was resolved.
+            where = ", ".join(sorted(p.blocked_platforms or ()))
+            status = f"runs here; blocked on {where} — {p.notes}"
+        else:
+            status = p.notes
+        print(f"{p.name:16s} floor={floor:10s} {status}")
+
+
 def main() -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -287,10 +353,7 @@ def main() -> int:
 
     by_name = {p.name: p for p in PROFILES}
     if args.list:
-        for p in PROFILES:
-            floor = f"{p.floor:.0f}%" if p.floor is not None else "not gated"
-            status = f"BLOCKED — {p.blocked}" if p.blocked else p.notes
-            print(f"{p.name:16s} floor={floor:10s} {status}")
+        _print_profile_list()
         return 0
 
     unknown = set(args.profiles) - set(by_name)
@@ -302,11 +365,14 @@ def main() -> int:
         # blocker can measure whether they have fixed it.
         selected = [by_name[n] for n in args.profiles]
     else:
-        selected = [p for p in PROFILES if not p.blocked]
-        for skipped in (p for p in PROFILES if p.blocked):
+        selected = [p for p in PROFILES if p.block_reason() is None]
+        for skipped in (p for p in PROFILES if p.block_reason() is not None):
             # Announce every exclusion. A pilot that quietly drops a target
             # reads as "we measured everything" when it did not.
-            print(f"-- {skipped.name}: SKIPPED — {skipped.blocked}", flush=True)
+            print(
+                f"-- {skipped.name}: SKIPPED on {current_platform()} — {skipped.block_reason()}",
+                flush=True,
+            )
 
     report: dict[str, dict] = {}
     failures: list[str] = []

@@ -20,6 +20,7 @@ Library-specific notes:
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -31,13 +32,6 @@ except ImportError:
     H5PY_AVAILABLE = False
 
 try:
-    import netCDF4
-
-    NETCDF4_AVAILABLE = True
-except ImportError:
-    NETCDF4_AVAILABLE = False
-
-try:
     from scipy.io import loadmat
 
     SCIPY_AVAILABLE = True
@@ -47,6 +41,43 @@ except ImportError:
 from loguru import logger
 
 from file_organizer.utils.readers._base import FileReadError, _check_fd_size, _check_file_size
+
+# netCDF4 is probed, never imported, at module scope: find_spec() locates the
+# module without executing it.
+#
+# Two reasons. The plain one is import weight -- tests/conftest.py reaches this
+# module via file_organizer.api, so an eager import loaded netCDF4 and its
+# bundled OpenSSL/Kerberos/curl dylibs into *every* pytest process.
+#
+# The sharp one is fork safety on macOS. Measured: with netCDF4 imported, 10 of
+# 12 processes had every forked child die in sqlite3.connect(); with it absent,
+# 0 of 12 (#1726). The underlying fault is Apple's system libsqlite3
+# initialising its os_log handle through the non-fork-safe dispatch_once, so
+# netCDF4 is a strong *trigger* rather than the sole cause -- dropping it does
+# not by itself make forking safe here, and the fault does not occur on Linux
+# at all. Not importing it is still strictly better.
+#
+# Pinned by tests/utils/test_readers_lazy_imports.py.
+NETCDF4_AVAILABLE = importlib.util.find_spec("netCDF4") is not None
+
+
+def _netcdf4() -> Any:
+    """Import netCDF4 on first use and cache it as a module attribute.
+
+    Deliberately reads and writes ``globals()`` rather than binding a local
+    name: reader tests patch ``...scientific.netCDF4`` (with ``create=True``)
+    to inject a mock ``Dataset``, and a function-local ``import netCDF4``
+    would shadow that patch. Going through the module global keeps those
+    patches authoritative while still deferring the real import.
+    """
+    cached = globals().get("netCDF4")
+    if cached is not None:
+        return cached
+
+    import netCDF4
+
+    globals()["netCDF4"] = netCDF4
+    return netCDF4
 
 
 def _parse_hdf5(source: object, max_datasets: int, label: str) -> str:
@@ -229,7 +260,7 @@ def read_netcdf_file(
             # ``memory=`` requires a non-empty placeholder name; the actual
             # path on disk is never opened. Library docs: pass anything
             # non-empty as ``filename`` when ``memory`` is given.
-            with netCDF4.Dataset("inmemory", mode="r", memory=data) as nc:
+            with _netcdf4().Dataset("inmemory", mode="r", memory=data) as nc:
                 return _parse_netcdf(nc, label)
         except Exception as e:  # Intentional catch-all: netCDF4 raises library-specific errors
             raise FileReadError(f"Failed to read NetCDF file {label}: {e}") from e
@@ -240,7 +271,7 @@ def read_netcdf_file(
     # so oversized files don't get buffered into memory by netCDF4.
     _check_file_size(path)
     try:
-        with netCDF4.Dataset(path, "r") as nc:
+        with _netcdf4().Dataset(path, "r") as nc:
             return _parse_netcdf(nc, path.name)
     except Exception as e:  # Intentional catch-all: netCDF4 raises library-specific errors
         raise FileReadError(f"Failed to read NetCDF file {path}: {e}") from e

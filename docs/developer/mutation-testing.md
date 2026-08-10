@@ -126,15 +126,77 @@ not the module. Two controlled runs establish it:
 - `--max-children 1` changes nothing (42 either way), so it is the fork
   itself, not concurrency between children.
 
-Those tests create threads, and mutmut forks a process per mutant. This is the
-same root cause as `parallel`'s hang — one surfaces as a crash, the other as a
-deadlock — so neither is fixable by narrowing imports or tuning workers. It
-needs a non-forking runner (#1726).
+### Confirmed root cause (macOS only)
 
-An earlier version of this page blamed the organizer module's module-scope
-`av`/`torch` imports. That was wrong: making them lazy cut the module's import
-from 2,839 to 1,665 modules and removed av/torch entirely, and the segfault
-count did not move by one.
+The crash is **not** about thread count, and it is **not** portable. macOS
+records it as `EXC_BAD_ACCESS` with this faulting stack:
+
+```
+libsystem_trace   _os_log_find          <- fault
+libsystem_trace   os_log_create
+libsqlite3        __sqlite3GetLog_block_invoke
+libdispatch       _dispatch_once_callout
+libsqlite3        openDatabase
+_sqlite3.so       pysqlite_connection_init
+```
+
+A forked child may call only async-signal-safe functions until it `exec`s.
+Apple's system `libsqlite3` lazily builds its log handle via `dispatch_once` ->
+`os_log_create`, and libdispatch is not fork-safe — so any child that opens a
+database can fault. The organizer tests reach sqlite3 through `execute_plan` ->
+`UndoManager` -> `HistoryTracker`, which is why adding that file is what
+triggers it.
+
+Three predictions confirm the mechanism:
+
+- Pre-opening a connection in the *parent* makes the crash **deterministic**
+  (20/20 rather than an intermittent ~0-or-10/10), because the child inherits
+  the "already initialised" `dispatch_once` flag and skips re-initialising a
+  handle that is invalid post-fork. Pre-warming is the wrong fix.
+- Within one process the outcome is all-or-nothing; it varies *between*
+  processes, which is why per-run counts looked erratic.
+- **Linux is immune**: 0/20 with and without pre-warm on `python:3.12-slim`,
+  versus 20/20 on macOS.
+
+`.github/workflows/mutation.yml` runs on `ubuntu-latest`, so this blocker very
+likely does not exist where the nightly actually runs. Both blocked profiles
+were measured locally on macOS and should be re-measured on Linux before being
+treated as permanently blocked (#1726).
+
+Two earlier explanations on this page are **retracted**:
+
+- *Module-scope `av`/`torch` imports.* Making them lazy cut the module's import
+  from 2,839 to 1,665 modules and removed av/torch entirely, and the segfault
+  count did not move by one.
+- *"Those tests create threads."* Only one Python thread is alive at fork time.
+  The relevant call is `sqlite3.connect()` in the child, not thread count.
+
+### How blocks are scoped
+
+`Profile.blocked` records *why* a target is skipped; `Profile.blocked_platforms`
+records *where* that reason applies, as `sys.platform` values. A block with no
+platform set applies everywhere, so existing entries keep their meaning.
+
+`organizer` and `parallel` are scoped to `{"darwin"}`. They are skipped on a
+developer's Mac — loudly, with the reason — and run normally on the
+`ubuntu-latest` nightly. `--list` distinguishes the two states rather than
+printing a bare "BLOCKED", because a profile that is blocked *somewhere* should
+not read as blocked *here*:
+
+```
+parallel   floor=not gated  BLOCKED here (darwin) — deadlocks intermittently ON macOS: ...
+organizer  floor=not gated  BLOCKED here (darwin) — 432 mutants segfault ON macOS ONLY: ...
+```
+
+Naming a profile explicitly still runs it regardless of platform, so anyone
+working on the blocker can measure progress.
+
+**Both profiles are deliberately ungated** (`floor=None`). There is no measured
+Linux baseline for either, and a guessed floor would fail the first nightly
+that ran it. The sequence is: let the nightly report scores, read two or three
+runs, then set floors ~3pp below the observed value as the other profiles do.
+`scripts/ci/mutation_pilot.py --enforce` ignores a profile whose floor is
+`None`, so this is report-only until someone sets one.
 
 ## Validating the harness before trusting a score
 
