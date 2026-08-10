@@ -252,6 +252,39 @@ class TestExtractStructuralFeatures:
         features = extractor.extract_structural_features(target)
         assert features.sibling_count == 4  # 5 files minus the target
 
+    def test_hidden_file_sibling_count_does_not_subtract_excluded_target(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+    ) -> None:
+        """A hidden target is absent from safe_walk and must not be subtracted."""
+        target = tmp_path / ".target.txt"
+        target.write_text("hidden")
+        (tmp_path / "first.txt").write_text("first")
+        (tmp_path / "second.txt").write_text("second")
+
+        features = extractor.extract_structural_features(target)
+
+        assert features.sibling_count == 2
+
+    def test_symlink_file_sibling_count_does_not_subtract_excluded_target(
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
+    ) -> None:
+        """A symlink target is absent from safe_walk and must not be subtracted."""
+        parent = tmp_path / "files"
+        parent.mkdir()
+        source = tmp_path / "source.txt"
+        source.write_text("source")
+        target = parent / "target.txt"
+        target.symlink_to(source)
+        (parent / "sibling.txt").write_text("sibling")
+
+        features = extractor.extract_structural_features(target)
+
+        assert features.sibling_count == 1
+
     def test_parent_category_hint_project(
         self,
         extractor: FeatureExtractor,
@@ -472,10 +505,13 @@ class TestEdgeCasesAndErrorHandling:
         test_file = test_dir / "file.txt"
         test_file.write_text("content")
 
-        def mock_iterdir(_self: Path) -> None:
+        def mock_safe_walk(*_args: object, **_kwargs: object) -> None:
             raise OSError("Permission denied")
 
-        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.ai.feature_extractor.safe_walk",
+            mock_safe_walk,
+        )
         features = extractor.extract_structural_features(test_file)
         # Should handle error gracefully and return 0 siblings
         assert features.sibling_count == 0
@@ -499,7 +535,7 @@ class TestEdgeCasesAndErrorHandling:
         result = extractor._has_project_structure(test_file)
         assert result is False
 
-    def test_has_project_structure_with_iterdir_error(
+    def test_has_project_structure_with_walk_error(
         self,
         extractor: FeatureExtractor,
         tmp_path: Path,
@@ -509,10 +545,13 @@ class TestEdgeCasesAndErrorHandling:
         test_dir = tmp_path / "proj"
         test_dir.mkdir()
 
-        def mock_iterdir(_self: Path) -> None:
+        def mock_safe_walk(*_args: object, **_kwargs: object) -> None:
             raise OSError("Permission denied")
 
-        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+        monkeypatch.setattr(
+            "file_organizer.methodologies.para.ai.feature_extractor.safe_walk",
+            mock_safe_walk,
+        )
         result = extractor._has_project_structure(test_dir)
         # Should handle error and return False
         assert result is False

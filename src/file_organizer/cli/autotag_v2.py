@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -17,6 +18,7 @@ from rich.console import Console
 from rich.table import Table
 
 from file_organizer.cli.path_validation import resolve_cli_path
+from file_organizer.core.path_guard import safe_walk
 
 autotag_app = typer.Typer(
     name="autotag",
@@ -26,6 +28,18 @@ autotag_app = typer.Typer(
 
 console = Console()
 logger = logging.getLogger(__name__)
+
+
+def _walk_error_handler(root: Path) -> Callable[[Path, OSError], None]:
+    """Fail for an unreadable root while skipping unreadable descendants."""
+
+    def handle(path: Path, exc: OSError) -> None:
+        if path == root:
+            console.print("[red]Filesystem traversal failed:[/red]", path, exc)
+            raise typer.Exit(code=1) from exc
+        console.print("[yellow]Skipping unreadable path:[/yellow]", path, exc)
+
+    return handle
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +68,7 @@ def suggest(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    files = [f for f in resolved.iterdir() if f.is_file()]
+    files = list(safe_walk(resolved, recursive=False, on_error=_walk_error_handler(resolved)))
     if not files:
         console.print("[dim]No files found in directory.[/dim]")
         raise typer.Exit(code=0)
@@ -212,8 +226,14 @@ def batch(
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    glob_pattern = f"**/{pattern}" if recursive else pattern
-    files = [f for f in resolved.glob(glob_pattern) if f.is_file()]
+    files = list(
+        safe_walk(
+            resolved,
+            pattern=pattern,
+            recursive=recursive,
+            on_error=_walk_error_handler(resolved),
+        )
+    )
 
     if not files:
         console.print(f"[dim]No files found matching pattern: {pattern}[/dim]")

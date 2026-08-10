@@ -7,12 +7,14 @@ using mocked templates/settings.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.path_guard import TraversalBudget
 from file_organizer.web.file_operations import (
     build_breadcrumbs,
     build_file_results_context,
@@ -94,6 +96,7 @@ class TestBuildBreadcrumbs:
 class TestListTreeNodes:
     """Test sidebar tree node listing."""
 
+    @pytest.mark.integration
     def test_excludes_hidden(self, tree):
         nodes = list_tree_nodes(tree, include_hidden=False)
         names = [n["name"] for n in nodes]
@@ -130,6 +133,29 @@ class TestListTreeNodes:
             assert "path_param" in node
             assert "has_children" in node
 
+    def test_marks_tree_budget_exhausted(self, tree):
+        budget = TraversalBudget(limit=1)
+
+        list_tree_nodes(tree, include_hidden=False, budget=budget)
+
+        assert budget.exhausted is True
+
+    def test_child_probes_share_tree_budget(self, tmp_path):
+        root = tmp_path / "root"
+        root.mkdir()
+        for directory_name in ("first", "second"):
+            child = root / directory_name
+            child.mkdir()
+            for index in range(3):
+                (child / f"file-{index}.txt").write_text("data")
+        budget = TraversalBudget(limit=5)
+
+        nodes = list_tree_nodes(root, include_hidden=False, budget=budget)
+
+        assert len(nodes) == 2
+        assert budget.examined == budget.limit
+        assert budget.exhausted is True
+
 
 # ---------------------------------------------------------------------------
 # collect_entries
@@ -140,6 +166,7 @@ class TestListTreeNodes:
 class TestCollectEntries:
     """Test directory entry collection, filtering, and sorting."""
 
+    @pytest.mark.integration
     def test_basic_listing(self, tree):
         entries, total = collect_entries(
             tree,
@@ -220,6 +247,52 @@ class TestCollectEntries:
             limit=100,
         )
         assert len(entries) > 0
+
+    def test_sort_by_size_handles_stat_error(self, tmp_path):
+        broken = MagicMock(spec=Path)
+        broken.name = "broken.txt"
+        broken.is_dir.return_value = False
+        broken.is_file.return_value = True
+        broken.stat.side_effect = OSError("unreadable")
+
+        with (
+            patch("file_organizer.web.file_listing.safe_walk", return_value=[broken]),
+            patch(
+                "file_organizer.web.file_listing._file_entry",
+                return_value={"name": "broken.txt"},
+            ),
+        ):
+            entries, total = collect_entries(
+                tmp_path,
+                query=None,
+                file_type=None,
+                sort_by="size",
+                sort_order="asc",
+                include_hidden=False,
+                limit=100,
+            )
+
+        broken.stat.assert_called_once_with()
+        assert entries == [{"name": "broken.txt"}]
+        assert total == 1
+
+    def test_marks_listing_budget_exhausted(self, tree):
+        budget = TraversalBudget(limit=2)
+
+        entries, total = collect_entries(
+            tree,
+            query=None,
+            file_type=None,
+            sort_by="name",
+            sort_order="asc",
+            include_hidden=False,
+            limit=100,
+            budget=budget,
+        )
+
+        assert budget.exhausted is True
+        assert len(entries) == total
+        assert 0 < total <= budget.limit
 
     def test_sort_by_created(self, tree):
         entries, _ = collect_entries(

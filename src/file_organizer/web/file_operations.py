@@ -17,7 +17,9 @@ from PIL import Image, UnidentifiedImageError
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.utils import file_info_from_path, resolve_path
+from file_organizer.core.path_guard import TraversalBudget
 from file_organizer.web._helpers import (
+    MAX_DIRECTORY_ENTRIES,
     MAX_THUMBNAIL_BYTES,
     TEXT_PREVIEW_CHARS,
     THUMBNAIL_SIZE,
@@ -152,6 +154,7 @@ def build_file_results_context(
     entries: list[dict[str, Any]] = []
     total = 0
     current_path: Path | None = None
+    listing_budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
 
     try:
         current_path = resolve_selected_path(path, settings)
@@ -172,6 +175,7 @@ def build_file_results_context(
                 sort_order=sort_order,
                 include_hidden=False,
                 limit=limit,
+                budget=listing_budget,
             )
         except ApiError as exc:
             error_message = exc.message
@@ -201,6 +205,8 @@ def build_file_results_context(
         "next_limit": next_limit,
         "has_more": next_limit > limit,
         "error_message": error_message,
+        "listing_truncated": listing_budget.exhausted,
+        "directory_entry_limit": f"{MAX_DIRECTORY_ENTRIES:,}",
         "roots": [str(root) for root in roots],
         "page_size": page_size,
         "request": request,
@@ -229,12 +235,13 @@ def build_tree_context(
     active_path_param = quote(active_path) if active_path else ""
     nodes: list[dict[str, Any]] = []
     error_message: str | None = None
+    tree_budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
 
     if path:
         try:
             current = resolve_path(path, settings.allowed_paths)
             validate_depth(current, roots)
-            nodes = list_tree_nodes(current, include_hidden=False)
+            nodes = list_tree_nodes(current, include_hidden=False, budget=tree_budget)
         except ApiError as exc:
             error_message = exc.message
     else:
@@ -245,7 +252,7 @@ def build_tree_context(
                     "name": root.name or root.as_posix(),
                     "path": str(root),
                     "path_param": quote(str(root)),
-                    "has_children": has_children(root),
+                    "has_children": has_children(root, budget=tree_budget),
                     "is_root": True,
                 }
             )
@@ -259,6 +266,8 @@ def build_tree_context(
         "active_path": active_path,
         "active_path_param": active_path_param,
         "error_message": error_message,
+        "tree_truncated": tree_budget.exhausted,
+        "directory_entry_limit": f"{MAX_DIRECTORY_ENTRIES:,}",
     }
 
 

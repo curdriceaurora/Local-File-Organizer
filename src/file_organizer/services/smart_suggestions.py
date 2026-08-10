@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from ..models.suggestion_types import ConfidenceFactors, Suggestion, SuggestionType
 from ..models.text_model import TextModel
 from .pattern_analyzer import PatternAnalysis, PatternAnalyzer
@@ -108,7 +110,7 @@ class ConfidenceScorer:
 
         # Check if target directory has similar file types
         target_dir = target_path if target_path.is_dir() else target_path.parent
-        similar_files = list(target_dir.glob(f"*{file_path.suffix}"))
+        similar_files = list(safe_walk(target_dir, pattern=f"*{file_path.suffix}", recursive=False))
 
         if not similar_files:
             return 20.0
@@ -212,7 +214,7 @@ class ConfidenceScorer:
             target_dir = target_path if target_path.is_dir() else target_path.parent
 
             # Get sizes of existing files in target
-            existing_files = [f for f in target_dir.iterdir() if f.is_file()]
+            existing_files = list(safe_walk(target_dir, recursive=False))
             if not existing_files:
                 return 50.0
 

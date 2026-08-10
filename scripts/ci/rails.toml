@@ -19,6 +19,12 @@ mode = "enforce"
 description = "Flags raw open(), Path.open(), and shutil copy/move functions on caller-supplied paths (WP-6.1)."
 
 [[rail]]
+name = "raw-filesystem-traversal"
+command = ["python", "scripts/ci/guardrails/check_raw_filesystem_traversal.py"]
+mode = "enforce"
+description = "Flags raw filesystem enumeration outside the exact reviewed safe_walk exemption inventory (issue #1736)."
+
+[[rail]]
 name = "atomic-write"
 command = ["python", "scripts/ci/guardrails/check_atomic_write.py"]
 mode = "enforce"

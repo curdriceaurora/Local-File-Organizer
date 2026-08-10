@@ -136,6 +136,7 @@ class TestHandleAutotagCommand:
                 handle_autotag_command(args)
                 mock_handler.assert_called_once()
 
+    @pytest.mark.integration
     def test_route_batch(self, mock_service):
         args = Namespace(
             autotag_command="batch",
@@ -491,6 +492,7 @@ class TestHandleBatch:
         captured = capsys.readouterr()
         assert "No files found" in captured.out
 
+    @pytest.mark.ci
     def test_batch_recursive(self, mock_service, tmp_path, capsys):
         sub = tmp_path / "sub"
         sub.mkdir()

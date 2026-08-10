@@ -17,16 +17,16 @@ Epic A.foundation (hardening roadmap #154). Provides two primitives:
   out of scope (see *Scope note* below) and continue to use `glob`/`rglob`
   until they cross a user-input boundary.
 
-Scope note — system-managed paths that *don't* need `safe_walk`:
+Scope note — reviewed paths that *don't* use `safe_walk`:
 
-- `undo/validator.py` (trash directory, system-managed)
-- `services/copilot/rules/rule_manager.py` (app-shipped rule yamls)
-- `services/intelligence/profile_{manager,migrator}.py` (profile/backup dir)
-- `config/path_migration.py` (legacy XDG migration, run once)
-- `parallel/persistence.py` (job-queue state, internal only)
-- `methodologies/para/migration_manager.py` (internal migration helper)
-- `core/file_ops.py::collect_files` (called on a pre-validated organize
-  root; safe_walk adoption here tracked as a follow-up)
+The executable, reason-bearing inventory lives in
+`scripts/ci/guardrails/check_raw_filesystem_traversal.py::_EXEMPTIONS` and is
+enforced by the `raw-filesystem-traversal` rail. It covers only these contract
+classes: app-owned state and shipped assets; bounded single-level UI or shell
+completion listings that intentionally expose symlinks; depth-pruned or
+directory-pruned walkers whose semantics `safe_walk` does not provide; static
+repository audits; and the fd-anchored `SafeDir.scandir` primitive. Adding or
+removing a raw traversal without updating that exact inventory fails CI.
 
 Design invariants:
 

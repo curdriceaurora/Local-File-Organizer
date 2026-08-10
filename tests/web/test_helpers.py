@@ -480,6 +480,7 @@ class TestValidateDepth:
 class TestHasChildren:
     """Test directory children detection."""
 
+    @pytest.mark.ci
     def test_directory_with_subdirs(self, file_tree):
         """Should detect subdirectories."""
         assert has_children(file_tree) is True
@@ -507,6 +508,16 @@ class TestHasChildren:
         hidden = visible / ".hidden"
         hidden.mkdir()
         assert has_children(visible) is False
+
+    def test_cap_keeps_directory_expandable(self, tmp_path, monkeypatch):
+        """A capped prefix must not imply that no later subdirectory exists."""
+        parent = tmp_path / "many"
+        parent.mkdir()
+        for name in ("one.txt", "two.txt", "three.txt"):
+            (parent / name).write_text(name)
+        monkeypatch.setattr("file_organizer.web._helpers.MAX_DIRECTORY_ENTRIES", 2)
+
+        assert has_children(parent) is True
 
 
 # ---------------------------------------------------------------------------

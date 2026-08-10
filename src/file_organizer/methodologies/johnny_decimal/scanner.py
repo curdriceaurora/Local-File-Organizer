@@ -10,6 +10,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from file_organizer.core.path_guard import safe_walk
+
 from .categories import JohnnyDecimalNumber, NumberingScheme
 
 logger = logging.getLogger(__name__)
@@ -139,17 +141,16 @@ class FolderScanner:
 
         folders: list[FolderInfo] = []
 
-        try:
-            items = sorted(path.iterdir())
-        except PermissionError:
-            logger.warning(f"Permission denied: {path}")
-            return folders
+        items = sorted(
+            safe_walk(
+                path,
+                recursive=False,
+                only_files=False,
+                include_hidden=not self.skip_hidden,
+            )
+        )
 
         for item in items:
-            # Skip hidden files/folders if configured
-            if self.skip_hidden and item.name.startswith("."):
-                continue
-
             if item.is_dir():
                 # Scan subdirectory
                 folder_info = self._create_folder_info(item, depth)
@@ -178,17 +179,18 @@ class FolderScanner:
         file_count = 0
         total_size = 0
 
-        try:
-            # Count immediate files
-            for item in path.iterdir():
-                if item.is_file():
-                    file_count += 1
-                    try:
-                        total_size += item.stat().st_size
-                    except OSError:
-                        pass
-        except PermissionError:
-            pass
+        # Count immediate files through the same hidden/symlink policy as the
+        # recursive scan that discovered this folder.
+        for item in safe_walk(
+            path,
+            recursive=False,
+            include_hidden=not self.skip_hidden,
+        ):
+            file_count += 1
+            try:
+                total_size += item.stat().st_size
+            except OSError:
+                pass
 
         folder_info = FolderInfo(
             path=path,

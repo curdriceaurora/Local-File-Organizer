@@ -9,8 +9,10 @@ from typing import Any
 from urllib.parse import quote
 
 from file_organizer.api.utils import file_info_from_path, is_hidden
+from file_organizer.core.path_guard import TraversalBudget, safe_walk
 from file_organizer.utils.file_times import creation_timestamp
 from file_organizer.web._helpers import (
+    MAX_DIRECTORY_ENTRIES,
     detect_kind,
     format_bytes,
     format_timestamp,
@@ -30,16 +32,30 @@ def normalized_extension(path: Path) -> str:
     return suffixes[-1] if suffixes else ""
 
 
-def list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
+def list_tree_nodes(
+    path: Path,
+    include_hidden: bool,
+    *,
+    budget: TraversalBudget | None = None,
+) -> list[dict[str, Any]]:
     """List immediate child directories of *path* as sidebar tree nodes."""
+    if budget is None:
+        budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
     nodes: list[dict[str, Any]] = []
-    try:
-        entries = sorted(
-            [p for p in path.iterdir() if p.is_dir()],
-            key=lambda p: p.name.lower(),
-        )
-    except OSError:
-        return nodes
+    entries = sorted(
+        (
+            p
+            for p in safe_walk(
+                path,
+                recursive=False,
+                only_files=False,
+                include_hidden=include_hidden,
+                max_entries=budget,
+            )
+            if p.is_dir()
+        ),
+        key=lambda p: p.name.lower(),
+    )
     for entry in entries:
         if not include_hidden and is_hidden(entry):
             continue
@@ -49,7 +65,7 @@ def list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
                 "name": entry.name,
                 "path": str(entry),
                 "path_param": quote(str(entry)),
-                "has_children": has_children(entry),
+                "has_children": has_children(entry, budget=budget),
             }
         )
     return nodes
@@ -64,12 +80,20 @@ def collect_entries(
     sort_order: str,
     include_hidden: bool,
     limit: int,
+    budget: TraversalBudget | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """Collect, filter, and sort directory entries for the file browser."""
-    try:
-        children = list(path.iterdir())
-    except OSError:
-        return [], 0
+    if budget is None:
+        budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
+    children = list(
+        safe_walk(
+            path,
+            recursive=False,
+            only_files=False,
+            include_hidden=include_hidden,
+            max_entries=budget,
+        )
+    )
 
     query_token = query.lower() if query else None
     allowed_types = parse_file_type_filter(file_type)

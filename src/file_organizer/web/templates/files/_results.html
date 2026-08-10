@@ -114,6 +114,11 @@
 {% if error_message %}
     <div class="banner banner-error">{{ error_message }}</div>
 {% endif %}
+{% if listing_truncated %}
+    <div class="banner banner-info" role="status">
+        Safety limit reached after examining {{ directory_entry_limit }} directory entries. This listing may be incomplete.
+    </div>
+{% endif %}
 
 <div class="bulk-toolbar">
     <span class="bulk-count" data-selection-count>0 selected</span>

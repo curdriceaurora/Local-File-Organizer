@@ -12,6 +12,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from file_organizer.core.path_guard import safe_walk
+
 from .categories import JohnnyDecimalNumber, NumberLevel
 from .config import JohnnyDecimalConfig, PARAIntegrationConfig
 
@@ -198,7 +200,7 @@ class CompatibilityAnalyzer:
             return detected
 
         # Look for PARA folders
-        for item in root_path.iterdir():
+        for item in safe_walk(root_path, recursive=False, only_files=False):
             if not item.is_dir():
                 continue
 
@@ -229,7 +231,7 @@ class CompatibilityAnalyzer:
 
         # Check for JD numbers
         has_jd = False
-        for item in root_path.iterdir():
+        for item in safe_walk(root_path, recursive=False, only_files=False):
             if item.is_dir() and self._looks_like_jd(item.name):
                 has_jd = True
                 break

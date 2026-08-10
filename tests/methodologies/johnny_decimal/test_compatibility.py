@@ -179,6 +179,7 @@ class TestPARAJohnnyDecimalBridge:
 class TestCompatibilityAnalyzer:
     """Tests for CompatibilityAnalyzer."""
 
+    @pytest.mark.ci
     def test_detect_para_structure(self, analyzer, para_structure):
         """Test PARA structure detection."""
         detected = analyzer.detect_para_structure(para_structure)
@@ -207,6 +208,7 @@ class TestCompatibilityAnalyzer:
         assert detected[PARACategory.RESOURCES] is None
         assert detected[PARACategory.ARCHIVE] is None
 
+    @pytest.mark.ci
     def test_is_mixed_structure(self, analyzer, tmp_path):
         """Test mixed structure detection."""
         # Create both PARA and JD folders

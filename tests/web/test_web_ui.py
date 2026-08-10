@@ -273,6 +273,28 @@ def test_file_browser_endpoints(tmp_path: Path) -> None:
     assert (root / "upload.txt").exists()
 
 
+def test_file_browser_reports_directory_entry_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "large"
+    root.mkdir()
+    for name in ("alpha", "beta", "gamma"):
+        (root / name).mkdir()
+
+    monkeypatch.setattr("file_organizer.web.file_operations.MAX_DIRECTORY_ENTRIES", 2)
+    client = _build_client(tmp_path, allowed_root=root)
+
+    listing = client.get("/ui/files/list", params={"path": str(root)})
+    tree = client.get("/ui/files/tree", params={"path": str(root)})
+
+    assert listing.status_code == 200
+    assert "Safety limit reached after examining 2 directory entries" in listing.text
+    assert "This listing may be incomplete" in listing.text
+    assert tree.status_code == 200
+    assert "Safety limit reached after examining 2 directory entries" in tree.text
+    assert "Some folders may be omitted" in tree.text
+
+
 def test_upload_rejects_hidden_files(tmp_path: Path) -> None:
     root = tmp_path / "library"
     root.mkdir()

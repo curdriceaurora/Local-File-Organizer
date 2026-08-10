@@ -27,6 +27,60 @@ class _FakeRecommendation:
     suggestions: list = field(default_factory=list)
 
 
+@pytest.mark.ci
+@pytest.mark.integration
+@pytest.mark.parametrize("command", ["suggest", "batch"])
+def test_traversal_error_fails_command(command: str, tmp_path: Path) -> None:
+    from file_organizer.cli.autotag_v2 import autotag_app
+
+    def failed_walk(root: Path, **kwargs):
+        kwargs["on_error"](root, PermissionError("denied"))
+        return iter(())
+
+    with (
+        patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=MagicMock(),
+        ),
+        patch("file_organizer.cli.autotag_v2.safe_walk", side_effect=failed_walk),
+    ):
+        result = runner.invoke(autotag_app, [command, str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert str(tmp_path) in result.output.replace("\n", "")
+    assert "denied" in result.output
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+def test_batch_skips_unreadable_descendant_and_processes_other_files(tmp_path: Path) -> None:
+    from file_organizer.cli.autotag_v2 import autotag_app
+
+    good_file = tmp_path / "good.txt"
+    good_file.write_text("good")
+    restricted = tmp_path / "restricted"
+    mock_service = MagicMock()
+    mock_service.recommender.batch_recommend.return_value = {}
+
+    def partial_walk(_root: Path, **kwargs):
+        kwargs["on_error"](restricted, PermissionError("denied"))
+        return iter([good_file])
+
+    with (
+        patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=mock_service,
+        ),
+        patch("file_organizer.cli.autotag_v2.safe_walk", side_effect=partial_walk),
+    ):
+        result = runner.invoke(autotag_app, ["batch", str(tmp_path), "--recursive"])
+
+    assert result.exit_code == 0
+    assert "Skipping unreadable path" in result.output
+    assert str(restricted) in result.output.replace("\n", "")
+    mock_service.recommender.batch_recommend.assert_called_once_with([good_file], top_n=5)
+
+
 class TestAutotagSuggestErrors:
     """Covers error branches in suggest command (lines 47-49, 53-54, 61-62)."""
 

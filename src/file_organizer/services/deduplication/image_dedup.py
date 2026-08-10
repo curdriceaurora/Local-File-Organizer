@@ -31,6 +31,8 @@ except ImportError:  # pragma: no cover - numpy is optional ([dedup]/[search] ex
 
 from PIL.Image import DecompressionBombError
 
+from file_organizer.core.path_guard import safe_walk
+
 from .image_utils import SUPPORTED_FORMATS, safedir_image_open
 
 logger = logging.getLogger(__name__)
@@ -436,20 +438,8 @@ class ImageDeduplicator:
         """
         image_files: list[Path] = []
 
-        if recursive:
-            pattern = "**/*"
-        else:
-            pattern = "*"
-
-        for path in directory.glob(pattern):
-            # ``Path.is_file()`` follows symlinks. Filter symlinked entries here
-            # so SafeDir's per-component check inside the dedup hash flow remains
-            # the only place that decides whether a symlinked image is
-            # processed — never silently accepted by the walk.
-            if path.is_symlink():
-                logger.debug("Skipping symlinked image in walk: %s", path)
-                continue
-            if path.is_file() and path.suffix.lower() in SUPPORTED_FORMATS:
+        for path in safe_walk(directory, recursive=recursive, include_hidden=True):
+            if path.suffix.lower() in SUPPORTED_FORMATS:
                 image_files.append(path)
 
         return image_files
