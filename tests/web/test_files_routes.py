@@ -96,6 +96,7 @@ class TestBuildBreadcrumbs:
 class TestListTreeNodes:
     """Test sidebar tree node listing."""
 
+    @pytest.mark.integration
     def test_excludes_hidden(self, tree):
         nodes = list_tree_nodes(tree, include_hidden=False)
         names = [n["name"] for n in nodes]
@@ -149,6 +150,7 @@ class TestListTreeNodes:
 class TestCollectEntries:
     """Test directory entry collection, filtering, and sorting."""
 
+    @pytest.mark.integration
     def test_basic_listing(self, tree):
         entries, total = collect_entries(
             tree,
