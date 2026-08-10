@@ -70,12 +70,14 @@ def _netcdf4() -> Any:
     would shadow that patch. Going through the module global keeps those
     patches authoritative while still deferring the real import.
     """
-    module = globals().get("netCDF4")
-    if module is None:
-        import netCDF4 as module
+    cached = globals().get("netCDF4")
+    if cached is not None:
+        return cached
 
-        globals()["netCDF4"] = module
-    return module
+    import netCDF4
+
+    globals()["netCDF4"] = netCDF4
+    return netCDF4
 
 
 def _parse_hdf5(source: object, max_datasets: int, label: str) -> str:
