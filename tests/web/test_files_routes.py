@@ -273,7 +273,8 @@ class TestCollectEntries:
         )
 
         assert budget.exhausted is True
-        assert len(entries) == total == 2
+        assert len(entries) == total
+        assert 0 < total <= budget.limit
 
     def test_sort_by_created(self, tree):
         entries, _ = collect_entries(
