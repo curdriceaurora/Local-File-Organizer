@@ -11,6 +11,7 @@ import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
+from file_organizer.core.path_guard import TraversalBudget
 from file_organizer.web.file_operations import (
     build_preview_context,
     build_tree_context,
@@ -33,6 +34,27 @@ class TestBuildTreeContext:
 
         assert context["error_message"] is None
         assert context["nodes"][0]["is_root"] is True
+
+    def test_root_probes_share_request_budget(self, tmp_path: Path, settings: ApiSettings) -> None:
+        roots = [tmp_path / "first", tmp_path / "second"]
+        observed_budgets: list[TraversalBudget] = []
+
+        def observe_budget(_path: Path, *, budget: TraversalBudget) -> bool:
+            observed_budgets.append(budget)
+            return False
+
+        with (
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=roots),
+            patch(
+                "file_organizer.web.file_operations.has_children",
+                side_effect=observe_budget,
+            ),
+        ):
+            context = build_tree_context(None, settings, depth=0, active=None)
+
+        assert len(context["nodes"]) == 2
+        assert len(observed_budgets) == 2
+        assert observed_budgets[0] is observed_budgets[1]
 
     def test_returns_error_when_resolve_fails(self, settings: ApiSettings) -> None:
         with patch(

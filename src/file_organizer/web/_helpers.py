@@ -205,9 +205,10 @@ def validate_depth(path: Path, roots: list[Path]) -> None:
         )
 
 
-def has_children(path: Path) -> bool:
-    """Check whether a directory contains visible subdirectories."""
-    budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
+def has_children(path: Path, *, budget: TraversalBudget | None = None) -> bool:
+    """Check for visible subdirectories within an optional shared budget."""
+    if budget is None:
+        budget = TraversalBudget(limit=MAX_DIRECTORY_ENTRIES)
     for entry in safe_walk(
         path,
         recursive=False,

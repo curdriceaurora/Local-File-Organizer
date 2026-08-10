@@ -140,6 +140,22 @@ class TestListTreeNodes:
 
         assert budget.exhausted is True
 
+    def test_child_probes_share_tree_budget(self, tmp_path):
+        root = tmp_path / "root"
+        root.mkdir()
+        for directory_name in ("first", "second"):
+            child = root / directory_name
+            child.mkdir()
+            for index in range(3):
+                (child / f"file-{index}.txt").write_text("data")
+        budget = TraversalBudget(limit=5)
+
+        nodes = list_tree_nodes(root, include_hidden=False, budget=budget)
+
+        assert len(nodes) == 2
+        assert budget.examined == budget.limit
+        assert budget.exhausted is True
+
 
 # ---------------------------------------------------------------------------
 # collect_entries

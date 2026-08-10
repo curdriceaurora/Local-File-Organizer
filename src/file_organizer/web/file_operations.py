@@ -252,7 +252,7 @@ def build_tree_context(
                     "name": root.name or root.as_posix(),
                     "path": str(root),
                     "path_param": quote(str(root)),
-                    "has_children": has_children(root),
+                    "has_children": has_children(root, budget=tree_budget),
                     "is_root": True,
                 }
             )

@@ -65,7 +65,7 @@ def list_tree_nodes(
                 "name": entry.name,
                 "path": str(entry),
                 "path_param": quote(str(entry)),
-                "has_children": has_children(entry),
+                "has_children": has_children(entry, budget=budget),
             }
         )
     return nodes
