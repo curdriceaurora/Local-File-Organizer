@@ -277,3 +277,94 @@ class TestSegfaultHandling:
         monkeypatch.setattr(sys, "argv", ["mutation_pilot.py", "no-such-profile"])
 
         assert mutation_pilot.main() == 2
+
+
+@pytest.mark.unit
+class TestPlatformScopedBlocking:
+    """A blocker with an OS-specific cause must not suppress a profile everywhere.
+
+    The organizer/parallel profiles were blocked on the strength of local macOS
+    runs, for a fault in Apple's libsqlite3 that cannot occur on the
+    ubuntu-latest nightly (#1726). Two profiles were therefore hidden from CI
+    for a reason that never applied there.
+    """
+
+    def test_unscoped_block_applies_to_every_platform(self) -> None:
+        """Back-compat: `blocked` without a platform set still blocks anywhere."""
+        p = mutation_pilot.Profile(
+            name="everywhere", only_mutate=["*"], tests=["t"], blocked="broken"
+        )
+        for platform in ("darwin", "linux", "win32"):
+            assert p.block_reason(platform) == "broken"
+
+    def test_scoped_block_applies_only_to_named_platforms(self) -> None:
+        p = mutation_pilot.Profile(
+            name="mac-only",
+            only_mutate=["*"],
+            tests=["t"],
+            blocked="libsqlite3 fork fault",
+            blocked_platforms=frozenset({"darwin"}),
+        )
+        assert p.block_reason("darwin") == "libsqlite3 fork fault"
+        assert p.block_reason("linux") is None
+        assert p.block_reason("win32") is None
+
+    def test_unblocked_profile_is_never_blocked(self) -> None:
+        p = mutation_pilot.Profile(name="fine", only_mutate=["*"], tests=["t"])
+        assert p.block_reason("darwin") is None
+        assert p.block_reason("linux") is None
+
+    def test_profile_blocked_on_darwin_runs_on_linux(self, monkeypatch) -> None:
+        """The behaviour that actually unblocks CI, not just the predicate."""
+        called: list[str] = []
+        stats = {"killed": 1, "survived": 0, "no_tests": 0, "segfault": 0}
+        monkeypatch.setattr(
+            mutation_pilot,
+            "run_profile",
+            lambda profile, max_children, timeout: (called.append(profile.name), stats)[1],
+        )
+        monkeypatch.setattr(
+            mutation_pilot,
+            "PROFILES",
+            (
+                mutation_pilot.Profile(
+                    name="mac-only",
+                    only_mutate=["*"],
+                    tests=["t"],
+                    blocked="libsqlite3 fork fault",
+                    blocked_platforms=frozenset({"darwin"}),
+                ),
+            ),
+        )
+        monkeypatch.setattr(sys, "argv", ["mutation_pilot.py"])
+
+        monkeypatch.setattr(mutation_pilot, "current_platform", lambda: "linux")
+        assert mutation_pilot.main() == 0
+        assert called == ["mac-only"], "a darwin-scoped block must not skip the Linux run"
+
+        called.clear()
+        monkeypatch.setattr(mutation_pilot, "current_platform", lambda: "darwin")
+        assert mutation_pilot.main() == 0
+        assert called == [], "the same profile must still be skipped on darwin"
+
+    def test_real_blocked_profiles_run_on_linux(self) -> None:
+        """The #1726 profiles must be scoped, not globally blocked."""
+        by_name = {p.name: p for p in mutation_pilot.PROFILES}
+        for name in ("organizer", "parallel"):
+            profile = by_name[name]
+            assert profile.blocked, f"{name} is expected to carry a blocker note"
+            assert profile.block_reason("darwin"), f"{name} must stay blocked on macOS"
+            assert profile.block_reason("linux") is None, (
+                f"{name} must run on Linux, where the libsqlite3 fork fault cannot occur"
+            )
+
+    def test_newly_unblocked_profiles_are_not_gated_yet(self) -> None:
+        """No floor until there is a Linux baseline to set one from.
+
+        Unblocking with a guessed floor would fail the very first nightly.
+        """
+        by_name = {p.name: p for p in mutation_pilot.PROFILES}
+        for name in ("organizer", "parallel"):
+            assert by_name[name].floor is None, (
+                f"{name} has no measured Linux baseline; a floor here would gate on a guess"
+            )
