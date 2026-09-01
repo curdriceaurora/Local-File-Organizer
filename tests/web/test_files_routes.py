@@ -277,6 +277,10 @@ class TestCollectEntries:
         assert total == 1
 
     def test_marks_listing_budget_exhausted(self, tree):
+        tree = tree / "visible-only"
+        tree.mkdir()
+        for index in range(3):
+            (tree / f"entry-{index}.txt").write_text("data")
         budget = TraversalBudget(limit=2)
 
         entries, total = collect_entries(

@@ -20,15 +20,27 @@ from .transcriber import Segment, TranscriptionResult
 logger = logging.getLogger(__name__)
 
 # D6: sentiment / keyword lexicons moved to an external JSON file.
-# Module-level constants are the default lexicon's fields — pre-D6
-# consumers importing ``STOP_WORDS`` etc. keep working unchanged.
-# See ``src/services/audio/lexicons.py`` for the loader + schema.
-_DEFAULT_LEXICON = SentimentLexicon.load_default()
-STOP_WORDS: frozenset[str] = _DEFAULT_LEXICON.stop_words
-TOPIC_CATEGORIES: dict[str, list[str]] = _DEFAULT_LEXICON.topic_categories
-POSITIVE_WORDS: frozenset[str] = _DEFAULT_LEXICON.positive_words
-NEGATIVE_WORDS: frozenset[str] = _DEFAULT_LEXICON.negative_words
-NEUTRAL_WORDS: frozenset[str] = _DEFAULT_LEXICON.neutral_words
+# Keep the compatibility constants lazy so non-audio commands can import the
+# organizer even if an installed wheel is missing the bundled JSON (#1744).
+_LEXICON_EXPORTS = {
+    "STOP_WORDS": "stop_words",
+    "TOPIC_CATEGORIES": "topic_categories",
+    "POSITIVE_WORDS": "positive_words",
+    "NEGATIVE_WORDS": "negative_words",
+    "NEUTRAL_WORDS": "neutral_words",
+}
+
+
+def _default_lexicon() -> SentimentLexicon:
+    return SentimentLexicon.load_default()
+
+
+def __getattr__(name: str) -> object:
+    """Resolve legacy module constants lazily."""
+    field_name = _LEXICON_EXPORTS.get(name)
+    if field_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(_default_lexicon(), field_name)
 
 
 @dataclass
@@ -93,6 +105,14 @@ class AudioContentAnalyzer:
         self.max_keywords = max_keywords
         self.max_topics = max_topics
         self.min_keyword_freq = min_keyword_freq
+        self._lexicon: SentimentLexicon | None = None
+
+    @property
+    def lexicon(self) -> SentimentLexicon:
+        """Return the default lexicon without loading it at module import time."""
+        if self._lexicon is None:
+            self._lexicon = _default_lexicon()
+        return self._lexicon
 
     def analyze(
         self,
@@ -162,7 +182,7 @@ class AudioContentAnalyzer:
         text_lower = text.lower()
         topic_scores: dict[str, int] = {}
 
-        for category, keywords in TOPIC_CATEGORIES.items():
+        for category, keywords in self.lexicon.topic_categories.items():
             score = sum(1 for kw in keywords if kw in text_lower)
             if score > 0:
                 topic_scores[category] = score
@@ -185,7 +205,8 @@ class AudioContentAnalyzer:
         tokens = _tokenize(text)
 
         # Filter stop words and very short tokens
-        filtered = [t for t in tokens if t not in STOP_WORDS and len(t) > 2 and not t.isdigit()]
+        stop_words = self.lexicon.stop_words
+        filtered = [t for t in tokens if t not in stop_words and len(t) > 2 and not t.isdigit()]
 
         # Count frequencies
         freq = Counter(filtered)
@@ -250,8 +271,7 @@ class AudioContentAnalyzer:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _analyze_sentiment(text: str) -> dict[str, float]:
+    def _analyze_sentiment(self, text: str) -> dict[str, float]:
         """Compute simple sentiment indicators from word frequency.
 
         Returns a dict with 'positive', 'negative', and 'neutral' scores
@@ -259,9 +279,10 @@ class AudioContentAnalyzer:
         """
         tokens = set(_tokenize(text))
 
-        pos_count = len(tokens & POSITIVE_WORDS)
-        neg_count = len(tokens & NEGATIVE_WORDS)
-        neu_count = len(tokens & NEUTRAL_WORDS)
+        lexicon = self.lexicon
+        pos_count = len(tokens & lexicon.positive_words)
+        neg_count = len(tokens & lexicon.negative_words)
+        neu_count = len(tokens & lexicon.neutral_words)
         total = pos_count + neg_count + neu_count
 
         if total == 0:

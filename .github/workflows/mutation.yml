@@ -46,7 +46,9 @@ jobs:
       # the TUI suite. mutmut's `run`/`results`/`export-cicd-stats` all work
       # against the pinned version — only `browse` needs the newer API.
       - name: Install mutmut without its dependency closure
-        run: pip install --no-deps "mutmut==3.7.0" libcst
+        run: pip install --no-deps "mutmut==3.7.0" libcst setproctitle
+      - name: Verify mutmut imports
+        run: python -m mutmut --version
       # The dispatch inputs go through the environment, never interpolated
       # straight into the shell: `${{ inputs.profile }}` inline would let
       # anyone who can dispatch this workflow run arbitrary commands here.

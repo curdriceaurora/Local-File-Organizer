@@ -281,6 +281,7 @@ file_organizer = [
     "py.typed",
     "core/*.json",
     "config/*.yaml",
+    "services/audio/data/*.json",
     "web/templates/**/*.html",
     "web/static/**/*",
 ]
