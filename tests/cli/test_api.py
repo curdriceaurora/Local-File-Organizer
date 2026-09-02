@@ -562,7 +562,8 @@ def test_remote_preview_save_plan_rejects_existing_directory(
     mock_client_cls, tmp_path: Path, as_json: bool
 ) -> None:
     """Remote preview must reject an existing directory passed to --save-plan."""
-    mock_client_cls.return_value = MagicMock()
+    mock_instance = MagicMock()
+    mock_client_cls.return_value = mock_instance
     plan_dir = tmp_path / "plan_dir"
     plan_dir.mkdir()
 
@@ -573,6 +574,7 @@ def test_remote_preview_save_plan_rejects_existing_directory(
     result = runner.invoke(api_app, args)
 
     assert result.exit_code == 2
+    mock_instance.preview_organize.assert_not_called()
     if as_json:
         payload = json.loads(result.stdout)
         assert payload["outcome"] == "error"
@@ -588,7 +590,8 @@ def test_remote_preview_save_plan_rejects_special_file(
     mock_client_cls, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, as_json: bool
 ) -> None:
     """Remote preview must reject a special file (e.g. FIFO) passed to --save-plan."""
-    mock_client_cls.return_value = MagicMock()
+    mock_instance = MagicMock()
+    mock_client_cls.return_value = mock_instance
     special = _make_special_file(tmp_path / "plan_fifo", monkeypatch)
 
     args = ["preview", "/remote/input", "/remote/output", "--save-plan", str(special)]
@@ -598,6 +601,7 @@ def test_remote_preview_save_plan_rejects_special_file(
     result = runner.invoke(api_app, args)
 
     assert result.exit_code == 2
+    mock_instance.preview_organize.assert_not_called()
     if as_json:
         payload = json.loads(result.stdout)
         assert payload["outcome"] == "error"
@@ -613,7 +617,8 @@ def test_remote_organize_plan_rejects_existing_directory(
     mock_client_cls, tmp_path: Path, as_json: bool
 ) -> None:
     """Remote organize must reject an existing directory passed to --plan."""
-    mock_client_cls.return_value = MagicMock()
+    mock_instance = MagicMock()
+    mock_client_cls.return_value = mock_instance
     plan_dir = tmp_path / "plan_dir"
     plan_dir.mkdir()
 
@@ -624,6 +629,7 @@ def test_remote_organize_plan_rejects_existing_directory(
     result = runner.invoke(api_app, args)
 
     assert result.exit_code == 2
+    mock_instance.organize.assert_not_called()
     if as_json:
         payload = json.loads(result.stdout)
         assert payload["outcome"] == "error"
@@ -639,7 +645,8 @@ def test_remote_organize_plan_rejects_special_file(
     mock_client_cls, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, as_json: bool
 ) -> None:
     """Remote organize must reject a special file (e.g. FIFO) passed to --plan."""
-    mock_client_cls.return_value = MagicMock()
+    mock_instance = MagicMock()
+    mock_client_cls.return_value = mock_instance
     special = _make_special_file(tmp_path / "plan_fifo", monkeypatch)
 
     args = ["organize", "/remote/input", "/remote/output", "--plan", str(special)]
@@ -649,6 +656,7 @@ def test_remote_organize_plan_rejects_special_file(
     result = runner.invoke(api_app, args)
 
     assert result.exit_code == 2
+    mock_instance.organize.assert_not_called()
     if as_json:
         payload = json.loads(result.stdout)
         assert payload["outcome"] == "error"
