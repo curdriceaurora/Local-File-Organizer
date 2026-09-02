@@ -358,13 +358,20 @@ class TestPlatformScopedBlocking:
                 f"{name} must run on Linux, where the libsqlite3 fork fault cannot occur"
             )
 
-    def test_newly_unblocked_profiles_are_not_gated_yet(self) -> None:
-        """No floor until there is a Linux baseline to set one from.
-
-        Unblocking with a guessed floor would fail the very first nightly.
-        """
+    def test_linux_profiles_have_measured_floors(self) -> None:
+        """#1740 gates profiles only after measured Linux baselines exist."""
         by_name = {p.name: p for p in mutation_pilot.PROFILES}
-        for name in ("organizer", "parallel"):
-            assert by_name[name].floor is None, (
-                f"{name} has no measured Linux baseline; a floor here would gate on a guess"
-            )
+
+        assert by_name["parallel"].floor == 63.0
+        assert by_name["organizer"].floor == 48.0
+
+    def test_linux_profiles_include_rederived_test_selections(self) -> None:
+        """#1740 re-adds tests that were excluded for macOS-only fork faults."""
+        by_name = {p.name: p for p in mutation_pilot.PROFILES}
+
+        assert {
+            "tests/parallel/test_processor.py",
+            "tests/parallel/test_processor_thread_safety.py",
+            "tests/parallel/test_concurrency_fixes.py",
+        }.issubset(by_name["parallel"].tests)
+        assert "tests/core/test_audio_video_integration.py" in by_name["organizer"].tests

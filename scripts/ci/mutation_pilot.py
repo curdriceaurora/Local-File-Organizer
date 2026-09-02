@@ -148,14 +148,16 @@ PROFILES: tuple[Profile, ...] = (
     Profile(
         name="parallel",
         only_mutate=["*/parallel/processor.py"],
-        tests=["tests/parallel/test_processor.py"],
-        # test_processor_thread_safety.py and test_concurrency_fixes.py are
-        # excluded from the macOS measurement: including them made mutmut
-        # deadlock intermittently (forked children asleep, no CPU, no
-        # progress). They are the tests most worth mutating, so this is a
-        # known Darwin gap, not a preference -- see
-        # docs/developer/mutation-testing.md. Re-derive the Linux selection
-        # before setting the floor in #1740.
+        tests=[
+            "tests/parallel/test_processor.py",
+            "tests/parallel/test_processor_thread_safety.py",
+            "tests/parallel/test_concurrency_fixes.py",
+        ],
+        # The extra thread-safety/concurrency tests deadlocked intermittently
+        # in forked mutmut children on macOS. That remains a Darwin-only block;
+        # Linux CI should include them because they exercise the exact behavior
+        # this profile is meant to mutation-test (#1740).
+        floor=63.0,  # measured 65.5-65.7% on two Linux workflow_dispatch runs
         notes="Wave-B repairs plus the resume/persistence assertions.",
         blocked=(
             "deadlocks intermittently ON macOS: forked children go to sleep and "
@@ -167,7 +169,7 @@ PROFILES: tuple[Profile, ...] = (
             "(#1726); this profile surfaces as a hang rather than a crash and is "
             "not independently root-caused. The Darwin block is permanent. "
             "Measured 44.5% (233 killed / 291 survived) on the macOS runs that "
-            "completed; re-derive the Linux test selection and floor in #1740."
+            "completed; Linux selection and floor re-derived in #1740."
         ),
         # macOS-only fault; the nightly runs on ubuntu-latest.
         blocked_platforms=frozenset({"darwin"}),
@@ -179,15 +181,13 @@ PROFILES: tuple[Profile, ...] = (
             "tests/core/test_organizer.py",
             "tests/core/test_organizer_coverage.py",
             "tests/core/test_organizer_sha256_safedir.py",
+            "tests/core/test_audio_video_integration.py",
         ],
-        # test_audio_video_integration.py is excluded from the macOS
-        # measurement, but the reason it was excluded turned out to be wrong:
-        # it was av/torch native extensions, and that explanation is retracted
-        # (see the `blocked` note below and docs/developer/mutation-testing.md).
-        # There is no separate evidence that this file is unsafe to fork. It
-        # stays out only because the Darwin profile is blocked outright and the
-        # selection is therefore untested there; re-derive it on Linux in #1740
-        # rather than inheriting this list.
+        # The old macOS exclusion for test_audio_video_integration.py was based
+        # on a retracted av/torch explanation. Linux CI now includes it so the
+        # profile measures the selected organizer behavior before a floor is set
+        # (#1740).
+        floor=48.0,  # measured 51.1% on two Linux workflow_dispatch runs
         notes="organize()'s AI path was deletable with all 126 tests passing.",
         blocked=(
             "432 mutants segfault ON macOS ONLY. Root cause (#1726): mutmut forks "
@@ -200,8 +200,8 @@ PROFILES: tuple[Profile, ...] = (
             "'these tests create threads' explanation is RETRACTED -- it is the "
             "sqlite3 call in the child, not thread count. The Darwin block is "
             "permanent. Linux is immune to this sqlite probe (0/20 vs 20/20 on "
-            "macOS), and the nightly runs on ubuntu-latest; measure there before "
-            "setting the #1740 floor."
+            "macOS), and the nightly runs on ubuntu-latest; Linux floor re-derived "
+            "in #1740."
         ),
         # macOS-only fault; the nightly runs on ubuntu-latest.
         blocked_platforms=frozenset({"darwin"}),
