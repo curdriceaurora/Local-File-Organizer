@@ -28,7 +28,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         shard: [1, 2, 3, 4, 5, 6]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # fetch-depth: 0 so tests/ci guardrails can resolve origin/main for their
           # diff (shallow checkout leaves it unreachable, e.g. on epic/** branches).
@@ -66,7 +66,7 @@ jobs:
     needs: test-linux-full
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
@@ -93,7 +93,7 @@ jobs:
     env:
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # fetch-depth: 0 so the tests/ci guardrails in the ci/smoke subset can
           # resolve origin/main for their changed-files diff (a shallow checkout
@@ -119,7 +119,7 @@ jobs:
     env:
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # fetch-depth: 0 so the tests/ci guardrails in the ci/smoke subset can
           # resolve origin/main for their changed-files diff (a shallow checkout
