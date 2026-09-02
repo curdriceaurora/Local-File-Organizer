@@ -167,10 +167,9 @@ Three predictions confirm the mechanism:
   versus 20/20 on macOS.
 
 `.github/workflows/mutation.yml` runs on `ubuntu-latest`, so the Darwin block
-does not apply where the nightly actually runs. Both profiles still need Linux
-measurement before floors are set (#1740), but the macOS guidance is not to
-wait for an upstream fix: run the affected profiles in a Linux container or on
-Linux CI.
+does not apply where the nightly actually runs. The Linux measurements and
+floors for both profiles were restored under #1740; the macOS guidance remains
+to run the affected profiles in a Linux container or on Linux CI.
 
 Two earlier explanations on this page are **retracted**:
 
