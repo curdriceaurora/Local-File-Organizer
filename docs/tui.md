@@ -1,6 +1,6 @@
 # Terminal User Interface (TUI)
 
-> **Version**: 2.1.1
+> **Version**: 2.2.0
 
 The Textual framework builds the TUI. You start the TUI from the CLI.
 

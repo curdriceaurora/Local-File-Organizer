@@ -24,7 +24,7 @@ Components:
 
 Based on the Johnny Decimal system by Johnny Noble (johnnydecimal.com).
 
-Author: File Organizer v2.1.1
+Author: File Organizer v2.2.0
 License: MIT
 """
 
