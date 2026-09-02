@@ -66,8 +66,8 @@ coverage gate and nothing else.
 **2. Test selection must be narrow, and one module per profile.** mutmut
 forks a process per mutant, and forking this test environment is fragile in
 two distinct ways. Both are properties of the **test files** selected, not of
-the module being mutated — adding one thread-using test file to an otherwise
-clean profile is enough to break it:
+the module being mutated — adding one test file that reaches non-fork-safe
+state to an otherwise clean profile is enough to break it:
 
 - *Segfaults.* The fork crashes, and mutmut records the crash as a mutant
   verdict — so a profile can report a perfect score built entirely on
@@ -126,7 +126,7 @@ not the module. Two controlled runs establish it:
 - `--max-children 1` changes nothing (42 either way), so it is the fork
   itself, not concurrency between children.
 
-### Confirmed root cause (macOS only)
+### Confirmed root cause (Darwin only)
 
 The crash is **not** about thread count, and it is **not** portable. macOS
 records it as `EXC_BAD_ACCESS` with this faulting stack:
@@ -140,8 +140,16 @@ libsqlite3        openDatabase
 _sqlite3.so       pysqlite_connection_init
 ```
 
-A forked child may call only async-signal-safe functions until it `exec`s.
-Apple's system `libsqlite3` lazily builds its log handle via `dispatch_once` ->
+Darwin's `fork(2)` contract is the blocker: after `fork`, the child must not
+call into frameworks or libraries unless they are async-signal-safe or
+explicitly documented as safe after fork. mutmut's execution model forks a
+child for each mutant and does not `exec`; the child depends on the parent's
+warmed interpreter and collected test state. That makes the affected profiles
+outside the documented platform contract on macOS, independent of whether a
+specific Apple crash changes in a future release.
+
+Apple's system `libsqlite3` is the confirmed mechanism for the organizer
+profile. It lazily builds its log handle via `dispatch_once` ->
 `os_log_create`, and libdispatch is not fork-safe — so any child that opens a
 database can fault. The organizer tests reach sqlite3 through `execute_plan` ->
 `UndoManager` -> `HistoryTracker`, which is why adding that file is what
@@ -158,10 +166,11 @@ Three predictions confirm the mechanism:
 - **Linux is immune**: 0/20 with and without pre-warm on `python:3.12-slim`,
   versus 20/20 on macOS.
 
-`.github/workflows/mutation.yml` runs on `ubuntu-latest`, so this blocker very
-likely does not exist where the nightly actually runs. Both blocked profiles
-were measured locally on macOS and should be re-measured on Linux before being
-treated as permanently blocked (#1726).
+`.github/workflows/mutation.yml` runs on `ubuntu-latest`, so the Darwin block
+does not apply where the nightly actually runs. Both profiles still need Linux
+measurement before floors are set (#1740), but the macOS guidance is not to
+wait for an upstream fix: run the affected profiles in a Linux container or on
+Linux CI.
 
 Two earlier explanations on this page are **retracted**:
 
@@ -177,11 +186,11 @@ Two earlier explanations on this page are **retracted**:
 records *where* that reason applies, as `sys.platform` values. A block with no
 platform set applies everywhere, so existing entries keep their meaning.
 
-`organizer` and `parallel` are scoped to `{"darwin"}`. They are skipped on a
-developer's Mac — loudly, with the reason — and run normally on the
-`ubuntu-latest` nightly. `--list` distinguishes the two states rather than
-printing a bare "BLOCKED", because a profile that is blocked *somewhere* should
-not read as blocked *here*:
+`organizer` and `parallel` are scoped to `{"darwin"}`. They are permanently
+skipped by default on a developer's Mac — loudly, with the reason — and run
+normally on the `ubuntu-latest` nightly. `--list` distinguishes the two states
+rather than printing a bare "BLOCKED", because a profile that is blocked
+*somewhere* should not read as blocked *here*:
 
 ```
 parallel   floor=not gated  BLOCKED here (darwin) — deadlocks intermittently ON macOS: ...
@@ -193,10 +202,11 @@ working on the blocker can measure progress.
 
 **Both profiles are deliberately ungated** (`floor=None`). There is no measured
 Linux baseline for either, and a guessed floor would fail the first nightly
-that ran it. The sequence is: let the nightly report scores, read two or three
-runs, then set floors ~3pp below the observed value as the other profiles do.
-`scripts/ci/mutation_pilot.py --enforce` ignores a profile whose floor is
-`None`, so this is report-only until someone sets one.
+that ran it. The sequence is: re-derive the Linux test selection, let the
+nightly report scores, read two or three runs, then set floors ~3pp below the
+observed value as the other profiles do. `scripts/ci/mutation_pilot.py
+--enforce` ignores a profile whose floor is `None`, so this is report-only
+until someone sets one.
 
 ## Validating the harness before trusting a score
 

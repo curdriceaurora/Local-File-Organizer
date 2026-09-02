@@ -24,23 +24,14 @@ produces a confident number that means nothing:
    gate rather than the tests.
 
 2. **Narrow test selection.** mutmut forks per mutant, and a forked child may
-   legally call only async-signal-safe functions until it ``exec``s.
-   ``sqlite3.connect()`` is not one of those **on macOS**: Apple's system
-   ``libsqlite3`` lazily builds its log handle through ``dispatch_once`` ->
-   ``os_log_create``, and libdispatch is not fork-safe. A child that opens a
-   database therefore takes ``EXC_BAD_ACCESS`` in ``_os_log_find``, which
-   mutmut records as a mutant verdict. This is a property of the *test files*
-   selected, not of the module being mutated: any selection reaching sqlite3
-   (e.g. the organizer tests, via ``execute_plan`` -> ``UndoManager`` ->
-   ``HistoryTracker``) can trigger it. Each profile names only the test files
-   that exercise its modules, and ``segfault`` in the stats is treated as a
-   hard error here rather than as a result.
-
-   The crash is macOS-only and does **not** occur on ``ubuntu-latest``, where
-   ``.github/workflows/mutation.yml`` actually runs -- measured 0/20 on Linux
-   versus 20/20 on macOS for the same probe (#1726). Profiles blocked on the
-   strength of a local macOS run should be re-measured on Linux before being
-   treated as permanently blocked.
+   safely call only async-signal-safe functions until it ``exec``s. mutmut's
+   child does not ``exec`` because it depends on the parent's warmed
+   interpreter and collected test state, so Darwin profiles that reach
+   non-fork-safe framework/library state are treated as permanently blocked
+   for this pilot. Each profile names only the test files that exercise its
+   modules, and ``segfault`` in the stats is treated as a hard error here
+   rather than as a result. See ``docs/developer/mutation-testing.md`` for the
+   confirmed sqlite/libdispatch mechanism and Linux measurement guidance.
 
 3. **Config lives in ``setup.cfg``, written per profile.** mutmut reads
    ``[tool.mutmut]`` from ``pyproject.toml`` when present and only falls back
@@ -107,10 +98,11 @@ class Profile:
     blocked: str | None = None
     #: ``sys.platform`` values the block applies to; ``None`` means every
     #: platform. Scope a block when its cause is OS-specific, so it does not
-    #: silently suppress the profile everywhere: the organizer/parallel
-    #: failures are a macOS libsqlite3 fork fault (#1726) that cannot occur on
-    #: the ubuntu-latest nightly, and blocking them globally hid two profiles
-    #: from CI for a reason that never applied there.
+    #: silently suppress the profile everywhere. Darwin fork blocks are treated
+    #: as permanent for this pilot when selected tests are confirmed or
+    #: suspected to reach framework/library state without a documented
+    #: post-fork safety contract, but they do not describe Linux nightly
+    #: behavior.
     blocked_platforms: frozenset[str] | None = None
     extra_pytest_args: list[str] = field(default_factory=list)
 
@@ -158,21 +150,24 @@ PROFILES: tuple[Profile, ...] = (
         only_mutate=["*/parallel/processor.py"],
         tests=["tests/parallel/test_processor.py"],
         # test_processor_thread_safety.py and test_concurrency_fixes.py are
-        # excluded: including them made mutmut deadlock intermittently (forked
-        # children asleep, no CPU, no progress). They are the tests most worth
-        # mutating, so this is a known gap, not a preference -- see
-        # docs/developer/mutation-testing.md.
+        # excluded from the macOS measurement: including them made mutmut
+        # deadlock intermittently (forked children asleep, no CPU, no
+        # progress). They are the tests most worth mutating, so this is a
+        # known Darwin gap, not a preference -- see
+        # docs/developer/mutation-testing.md. Re-derive the Linux selection
+        # before setting the floor in #1740.
         notes="Wave-B repairs plus the resume/persistence assertions.",
         blocked=(
             "deadlocks intermittently ON macOS: forked children go to sleep and "
-            "never resume, so the run hangs until --timeout reaps it. Consistent "
-            "with the organizer profile's confirmed root cause (#1726) — a forked "
-            "child touching non-fork-safe libdispatch state — surfacing as a hang "
-            "rather than a crash, since dispatch_once blocks rather than faulting "
-            "when the lock was held at fork time. NOT independently confirmed for "
-            "this profile. Measured 44.5% (233 killed / 291 survived) on the runs "
-            "that completed. Like the organizer profile, re-measure on Linux "
-            "before treating this as blocked in CI."
+            "never resume, so the run hangs until --timeout reaps it. This is "
+            "consistent with Darwin's fork contract: after fork, mutmut children "
+            "do not exec, so selected tests that reach non-fork-safe "
+            "framework/library state are outside the platform guarantee. The "
+            "organizer profile has a confirmed libdispatch/sqlite variant "
+            "(#1726); this profile surfaces as a hang rather than a crash and is "
+            "not independently root-caused. The Darwin block is permanent. "
+            "Measured 44.5% (233 killed / 291 survived) on the macOS runs that "
+            "completed; re-derive the Linux test selection and floor in #1740."
         ),
         # macOS-only fault; the nightly runs on ubuntu-latest.
         blocked_platforms=frozenset({"darwin"}),
@@ -185,26 +180,28 @@ PROFILES: tuple[Profile, ...] = (
             "tests/core/test_organizer_coverage.py",
             "tests/core/test_organizer_sha256_safedir.py",
         ],
-        # test_audio_video_integration.py is excluded, but the reason it was
-        # excluded turned out to be wrong: it was av/torch native extensions,
-        # and that explanation is retracted (see the `blocked` note below and
-        # docs/developer/mutation-testing.md). There is no separate evidence
-        # that this file is unsafe to fork. It stays out only because the
-        # profile is blocked outright and the selection is therefore untested
-        # — re-derive it when #1726 unblocks this profile rather than
-        # inheriting this list.
+        # test_audio_video_integration.py is excluded from the macOS
+        # measurement, but the reason it was excluded turned out to be wrong:
+        # it was av/torch native extensions, and that explanation is retracted
+        # (see the `blocked` note below and docs/developer/mutation-testing.md).
+        # There is no separate evidence that this file is unsafe to fork. It
+        # stays out only because the Darwin profile is blocked outright and the
+        # selection is therefore untested there; re-derive it on Linux in #1740
+        # rather than inheriting this list.
         notes="organize()'s AI path was deletable with all 126 tests passing.",
         blocked=(
             "432 mutants segfault ON macOS ONLY. Root cause (#1726): mutmut forks "
-            "per mutant, and these tests reach sqlite3 via execute_plan -> "
+            "per mutant and does not exec; Darwin only permits async-signal-safe "
+            "work in that child unless a framework/library explicitly documents "
+            "post-fork safety. These tests reach sqlite3 via execute_plan -> "
             "UndoManager -> HistoryTracker. Apple's system libsqlite3 initialises "
             "its os_log handle through dispatch_once, which is not fork-safe, so "
             "the child dies with EXC_BAD_ACCESS in _os_log_find. The earlier "
             "'these tests create threads' explanation is RETRACTED -- it is the "
-            "sqlite3 call in the child, not thread count. Linux is immune (0/20 "
-            "vs 20/20 on macOS), and the nightly runs on ubuntu-latest, so this "
-            "profile is very likely NOT blocked in CI: re-measure there before "
-            "assuming otherwise."
+            "sqlite3 call in the child, not thread count. The Darwin block is "
+            "permanent. Linux is immune to this sqlite probe (0/20 vs 20/20 on "
+            "macOS), and the nightly runs on ubuntu-latest; measure there before "
+            "setting the #1740 floor."
         ),
         # macOS-only fault; the nightly runs on ubuntu-latest.
         blocked_platforms=frozenset({"darwin"}),
