@@ -39,7 +39,7 @@ description = "Ensures all CLI command path arguments are validated before use (
 [[rail]]
 name = "cli-file-kind-validation"
 command = ["python", "scripts/ci/guardrails/check_cli_file_kind_validation.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Ensures file/directory kind is validated at CLI boundaries after resolve_cli_path (WP-6.1)."
 
 [[rail]]
@@ -93,7 +93,7 @@ description = "Reminds to mark tests sharing xdist-wide temp state with xdist_gr
 [[rail]]
 name = "subprocess-returncode"
 command = ["python", "scripts/ci/guardrails/check_subprocess_returncode.py"]
-mode = "advisory"
+mode = "enforce"
 description = "Flags subprocess.run() calls where returncode is not checked and check=True is absent (issue #1408)."
 
 [[rail]]

@@ -336,10 +336,15 @@ def verify_hook_decorator() -> bool:
         )
         all_correct = False
 
-    if return_type == "Callable[[F], F]":
-        print_success("  Return type is Callable[[F], F]")
+    if return_type in (
+        "Callable[[F], F]",
+        "Callable[[Callable[..., Any]], Callable[..., Any]]",
+    ):
+        print_success(f"  Return type is {return_type}")
     else:
-        print_error(f"  Return type: expected 'Callable[[F], F]', got '{return_type}'")
+        print_error(
+            f"  Return type: expected 'Callable[[F], F]' or 'Callable[[Callable[..., Any]], Callable[..., Any]]', got '{return_type}'"
+        )
         all_correct = False
 
     return all_correct

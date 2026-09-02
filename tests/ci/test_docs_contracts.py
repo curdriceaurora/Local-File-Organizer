@@ -91,3 +91,15 @@ def test_linux_desktop_prereqs_are_consistent(doc: Path) -> None:
         f"{doc.name}: missing libgirepository1.0-dev in Linux desktop prerequisites.\n"
         "Reference: desktop/README.md line 67."
     )
+
+
+def test_documented_apis_match_implementation() -> None:
+    """Documented plugin APIs must match code signatures (verify_documented_apis.py)."""
+    from scripts import verify_documented_apis
+
+    assert verify_documented_apis.verify_plugin_class()
+    assert verify_documented_apis.verify_hook_decorator()
+    assert verify_documented_apis.verify_hook_event_enum()
+    assert verify_documented_apis.verify_plugin_metadata()
+    assert verify_documented_apis.verify_manifest_schema()
+    assert verify_documented_apis.verify_documentation_usage()
