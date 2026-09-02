@@ -17,6 +17,8 @@ from file_organizer.client.models import OrganizationOptionsPayload
 
 runner = CliRunner()
 
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
+
 
 @pytest.fixture
 def mock_client_cls():
