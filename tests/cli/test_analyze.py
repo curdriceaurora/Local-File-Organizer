@@ -260,6 +260,27 @@ def test_analyze_image_cleanup_failure_does_not_fail_success(tmp_path: Path):
     assert "Category:" in result.stdout
 
 
+def test_analyze_image_import_error_init_cleans_up_processor(tmp_path: Path):
+    """ImportError after processor construction must still release resources."""
+    f = tmp_path / "receipt.jpg"
+    f.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+    processor = MagicMock()
+    processor.initialize.side_effect = ImportError("vision dependency missing")
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock(name="vision-model")),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+    ):
+        result = runner.invoke(app, ["analyze", str(f)])
+
+    assert result.exit_code == 1
+    processor.cleanup.assert_called_once_with()
+    assert "vision analysis dependencies" in result.stdout.lower()
+
+
 def test_analyze_json_output(tmp_path: Path):
     """``--json`` flag produces valid JSON with expected keys."""
     f = tmp_path / "sample.txt"
