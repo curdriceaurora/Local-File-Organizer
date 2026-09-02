@@ -532,6 +532,10 @@ def organization_preview(
             from file_organizer.cli.path_validation import resolve_cli_path
 
             save_plan = resolve_cli_path(save_plan, must_exist=False, must_be_dir=False)
+            if save_plan.exists() and not save_plan.is_file():
+                raise typer.BadParameter(
+                    f"Save plan output path is not a regular file: {save_plan!s}"
+                )
         options = _organization_options(
             recursive=recursive,
             include_hidden=include_hidden,
@@ -637,6 +641,8 @@ def organization_execute(
             from file_organizer.cli.path_validation import resolve_cli_path
 
             plan_path = resolve_cli_path(plan_path, must_exist=True, must_be_dir=False)
+            if not plan_path.is_file():
+                raise typer.BadParameter(f"Plan path is not a regular file: {plan_path!s}")
         plan = _load_remote_plan(plan_path) if plan_path is not None else None
         options = None
         has_explicit_options = any(

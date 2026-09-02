@@ -18,7 +18,7 @@ state, representative examples, remediation guidance, and acceptance criteria.
 |---|---|---|---|
 | [#1405](https://github.com/curdriceaurora/Local-File-Organizer/issues/1405) Guardrail suppression bypasses | Broad `noqa`, string-literal suppressions, or unrelated suppression codes disable rails | `scripts/ci/guardrails` shared suppression parser | `ci-rails` enforced |
 | [#1406](https://github.com/curdriceaurora/Local-File-Organizer/issues/1406) CLI file-kind validation gaps | CLI paths are resolved but directories pass where files are required | `cli-path-validation` | `ci-rails` enforced |
-| [#1408](https://github.com/curdriceaurora/Local-File-Organizer/issues/1408) Subprocess return-code gaps | `subprocess.run` success is reported without checking non-zero exits | `tests/ci` semantic process check | CI-only first |
+| [#1408](https://github.com/curdriceaurora/Local-File-Organizer/issues/1408) Subprocess return-code gaps | `subprocess.run` success is reported without checking non-zero exits | `check_subprocess_returncode.py` | `ci-rails` enforced |
 | [#1409](https://github.com/curdriceaurora/Local-File-Organizer/issues/1409) PID lifecycle races | PID files are signaled/unlinked after stale checks without ownership revalidation | daemon regression tests plus `tests/ci` | CI-only first |
 | [#1410](https://github.com/curdriceaurora/Local-File-Organizer/issues/1410) Filesystem link/copy races | Symlink, hardlink, copy, move, or unlink operations mutate without identity/root validation | protected-module semantic check | CI-only first |
 | [#1411](https://github.com/curdriceaurora/Local-File-Organizer/issues/1411) Raw persistence writes | Production writes bypass atomic helpers | existing `atomic-write` rail | `ci-rails` enforced |
