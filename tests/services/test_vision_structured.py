@@ -62,6 +62,90 @@ class TestStructuredJsonParser:
         with pytest.raises(StructuredParseError, match="validation"):
             parse_structured_json('{"description": "desc"}', VisionSchema)
 
+    def test_object_shaped_extracted_text_is_normalized(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": {"text": "Payment process"}}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text == "Payment process"
+
+    def test_string_extracted_text_is_preserved(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": "Payment process"}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text == "Payment process"
+
+    def test_none_extracted_text_is_preserved(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": false, '
+            '"extracted_text": null}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text is None
+
+    def test_object_text_list_shaped_extracted_text_is_joined(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": {"text": ["Payment", "process"]}}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text == "Payment\nprocess"
+
+    def test_unknown_object_shaped_extracted_text_becomes_none(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": {"confidence": 0.7}}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text is None
+
+    def test_list_shaped_extracted_text_is_joined(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": ["Payment", "process"]}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text == "Payment\nprocess"
+
+    def test_object_lines_shaped_extracted_text_is_joined(self) -> None:
+        text = (
+            '{"description": "desc", "folder_name": "screenshots", '
+            '"filename": "payment_process", "has_text": true, '
+            '"extracted_text": {"lines": ["Payment", "process"]}}'
+        )
+
+        res = parse_structured_json(text, VisionSchema)
+
+        assert isinstance(res, VisionSchema)
+        assert res.extracted_text == "Payment\nprocess"
+
     def test_generate_structured_adds_schema_instruction(self) -> None:
         class DummyModel(BaseModel):
             def __init__(self) -> None:

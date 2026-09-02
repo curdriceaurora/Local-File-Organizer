@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pydantic
 
 
@@ -24,3 +26,22 @@ class VisionSchema(pydantic.BaseModel):
         default=None,
         description="The exact text extracted from the image if has_text is True. Provide it exactly as it appears.",
     )
+
+    @pydantic.field_validator("extracted_text", mode="before")
+    @classmethod
+    def normalize_extracted_text(cls, value: Any) -> str | None:
+        """Accept common object-shaped OCR responses from local vision models."""
+        if value is None or isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            text = value.get("text")
+            if isinstance(text, str):
+                return text
+            if isinstance(text, list) and all(isinstance(line, str) for line in text):
+                return "\n".join(text)
+            lines = value.get("lines")
+            if isinstance(lines, list) and all(isinstance(line, str) for line in lines):
+                return "\n".join(lines)
+        if isinstance(value, list) and all(isinstance(line, str) for line in value):
+            return "\n".join(value)
+        return None

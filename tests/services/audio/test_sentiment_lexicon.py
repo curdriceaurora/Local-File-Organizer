@@ -13,7 +13,9 @@ file loaded by ``SentimentLexicon``. These tests pin:
 
 from __future__ import annotations
 
+import importlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -226,6 +228,36 @@ class TestBackwardCompatModuleConstants:
         assert isinstance(POSITIVE_WORDS, frozenset)
         assert isinstance(NEGATIVE_WORDS, frozenset)
         assert isinstance(NEUTRAL_WORDS, frozenset)
+
+    def test_content_analyzer_import_does_not_load_default_lexicon(self, monkeypatch) -> None:
+        """Non-audio commands must be able to import the organizer without lexicon I/O."""
+        module_name = "file_organizer.services.audio.content_analyzer"
+        parent = importlib.import_module("file_organizer.services.audio")
+        sys.modules.pop(module_name, None)
+        if hasattr(parent, "content_analyzer"):
+            delattr(parent, "content_analyzer")
+
+        calls = 0
+        lexicon = SentimentLexicon(
+            stop_words=frozenset({"the"}),
+            topic_categories={"Technology": ["ai"]},
+            positive_words=frozenset({"great"}),
+            negative_words=frozenset({"bad"}),
+            neutral_words=frozenset({"however"}),
+        )
+
+        def fake_load_default(cls) -> SentimentLexicon:
+            nonlocal calls
+            calls += 1
+            return lexicon
+
+        monkeypatch.setattr(SentimentLexicon, "load_default", classmethod(fake_load_default))
+
+        module = importlib.import_module(module_name)
+
+        assert calls == 0
+        assert module.STOP_WORDS == frozenset({"the"})
+        assert calls == 1
 
     def test_module_constants_match_default_lexicon(self) -> None:
         """The constants ARE the default lexicon's fields — not a copy."""

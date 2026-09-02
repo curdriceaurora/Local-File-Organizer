@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -156,6 +157,128 @@ def test_analyze_binary_file(tmp_path: Path):
 
     assert result.exit_code == 1
     assert "binary" in result.output.lower()
+
+
+def test_analyze_image_file_uses_vision_processor(tmp_path: Path):
+    """Known image extensions route to vision analysis instead of text decoding."""
+    f = tmp_path / "receipt.jpg"
+    f.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+    processor = MagicMock()
+    processor.process_file.return_value = SimpleNamespace(
+        description="A receipt with payment details.",
+        folder_name="receipts",
+        filename="payment_receipt",
+        confidence=0.91,
+        has_text=True,
+        extracted_text="Payment process",
+        source="vision",
+        error=None,
+    )
+    vision_config = MagicMock(name="vision-model")
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), vision_config),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+    ):
+        result = runner.invoke(app, ["analyze", str(f)])
+
+    assert result.exit_code == 0
+    processor.initialize.assert_called_once_with()
+    processor.process_file.assert_called_once_with(f)
+    processor.cleanup.assert_called_once_with()
+    assert "Category:" in result.stdout
+    assert "receipts" in result.stdout
+
+
+def test_analyze_image_file_exposes_degraded_vision_result(tmp_path: Path):
+    """Image fallback results stay successful but visible to users and JSON clients."""
+    f = tmp_path / "receipt.jpg"
+    f.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+    processor = MagicMock()
+    processor.process_file.return_value = SimpleNamespace(
+        description="Image from receipt.jpg",
+        folder_name="Images",
+        filename="receipt",
+        confidence=0.3,
+        has_text=False,
+        extracted_text=None,
+        source="fallback_filename",
+        error="vision backend unavailable",
+    )
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock(name="vision-model")),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+    ):
+        text_result = runner.invoke(app, ["analyze", str(f)])
+        json_result = runner.invoke(app, ["analyze", str(f), "--json"])
+
+    assert text_result.exit_code == 0
+    assert "Warning:" in text_result.stdout
+    assert "fallback_filename" in text_result.stdout
+
+    assert json_result.exit_code == 0
+    data = json.loads(json_result.stdout)
+    assert data["source"] == "fallback_filename"
+    assert data["error"] == "vision backend unavailable"
+
+
+def test_analyze_image_cleanup_failure_does_not_fail_success(tmp_path: Path):
+    """Best-effort cleanup must not mask a completed image analysis."""
+    f = tmp_path / "receipt.jpg"
+    f.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+    processor = MagicMock()
+    processor.process_file.return_value = SimpleNamespace(
+        description="A receipt with payment details.",
+        folder_name="receipts",
+        filename="payment_receipt",
+        confidence=0.91,
+        has_text=False,
+        extracted_text=None,
+        source="vision",
+        error=None,
+    )
+    processor.cleanup.side_effect = RuntimeError("cleanup exploded")
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock(name="vision-model")),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+    ):
+        result = runner.invoke(app, ["analyze", str(f)])
+
+    assert result.exit_code == 0
+    assert "Vision cleanup failed" in result.stdout
+    assert "Category:" in result.stdout
+
+
+def test_analyze_image_import_error_init_cleans_up_processor(tmp_path: Path):
+    """ImportError after processor construction must still release resources."""
+    f = tmp_path / "receipt.jpg"
+    f.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg")
+    processor = MagicMock()
+    processor.initialize.side_effect = ImportError("vision dependency missing")
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock(name="vision-model")),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+    ):
+        result = runner.invoke(app, ["analyze", str(f)])
+
+    assert result.exit_code == 1
+    processor.cleanup.assert_called_once_with()
+    assert "vision analysis dependencies" in result.stdout.lower()
 
 
 def test_analyze_json_output(tmp_path: Path):

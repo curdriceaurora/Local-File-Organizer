@@ -7,7 +7,7 @@ import os
 import time
 import warnings
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -381,13 +381,6 @@ def analyze(
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Analyze a file using AI and show description, category, and confidence."""
-    from file_organizer.services.analyzer import (
-        calculate_confidence,
-        generate_category,
-        generate_description,
-        truncate_content,
-    )
-
     # A.cli: `resolve_cli_path(must_be_dir=False)` accepts any existing
     # path (file, dir, socket, fifo). Keep the explicit is_file() guard so
     # directories and special files get a clear "not a regular file"
@@ -396,6 +389,99 @@ def analyze(
     if not file_path.is_file():
         console.print(f"[red]Error: File '{file_path}' is not a regular file.[/red]")
         raise typer.Exit(code=1)
+
+    if _normalized_extension(file_path) in TYPE_EXTENSIONS["image"]:
+        _analyze_image_file(file_path, verbose=verbose, json_output=json_output)
+        raise typer.Exit(code=0)
+
+    _analyze_text_file(file_path, verbose=verbose, json_output=json_output)
+    raise typer.Exit(code=0)
+
+
+def _analyze_image_file(file_path: Path, *, verbose: bool, json_output: bool) -> None:
+    """Analyze a single image with the configured vision model."""
+    processor: Any | None = None
+    try:
+        from file_organizer.config.provider_env import get_model_configs
+        from file_organizer.services.vision_processor import VisionProcessor
+
+        _, vision_config = get_model_configs()
+        processor = VisionProcessor(config=vision_config)
+        processor.initialize()
+    except ImportError as exc:
+        _cleanup_vision_processor(processor, json_output=json_output)
+        console.print(
+            "[red]Error: Vision analysis dependencies are not available. "
+            "Install the required vision extras and model backend.[/red]"
+        )
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        _cleanup_vision_processor(processor, json_output=json_output)
+        console.print(f"[red]Error: Could not initialize vision analysis: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    start = time.monotonic()
+    try:
+        result = processor.process_file(file_path)
+    except Exception as exc:
+        console.print(f"[red]Error: AI analysis failed: {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    finally:
+        _cleanup_vision_processor(processor, json_output=json_output)
+
+    elapsed = time.monotonic() - start
+    warning = None
+    if result.error:
+        warning = f"Vision analysis degraded ({result.source}): {result.error}"
+
+    _emit_analysis_result(
+        description=result.description,
+        category=result.folder_name,
+        confidence=result.confidence,
+        json_output=json_output,
+        verbose=verbose,
+        json_extra={
+            "filename": result.filename,
+            "has_text": result.has_text,
+            "extracted_text": result.extracted_text,
+            "source": result.source,
+            "error": result.error,
+        },
+        verbose_rows=[
+            ("Model", vision_config.name),
+            ("Processing time", f"{elapsed:.2f}s"),
+            *(
+                [("Extracted text", result.extracted_text)]
+                if result.has_text and result.extracted_text
+                else []
+            ),
+        ],
+        warning=warning,
+    )
+
+
+def _cleanup_vision_processor(processor: Any | None, *, json_output: bool) -> None:
+    """Best-effort cleanup that never masks the primary analysis result."""
+    if processor is None:
+        return
+    try:
+        processor.cleanup()
+    except Exception as exc:
+        message = f"Warning: Vision cleanup failed: {exc}"
+        if json_output or _get_state().json_output:
+            typer.echo(message, err=True)
+        else:
+            console.print(f"[yellow]{message}[/yellow]")
+
+
+def _analyze_text_file(file_path: Path, *, verbose: bool, json_output: bool) -> None:
+    """Analyze a single text file with the configured text model."""
+    from file_organizer.services.analyzer import (
+        calculate_confidence,
+        generate_category,
+        generate_description,
+        truncate_content,
+    )
 
     # Detect binary files before reading as text
     _BINARY_PEEK = 8192
@@ -447,24 +533,50 @@ def analyze(
 
     elapsed = time.monotonic() - start
 
-    # Output
-    if json_output or _get_state().json_output:
-        typer.echo(
-            json_mod.dumps(
-                {
-                    "description": description,
-                    "category": category,
-                    "confidence": confidence,
-                },
-                indent=2,
-            )
-        )
-    else:
-        console.print(f"[bold]Category:[/bold] {category}")
-        console.print(f"[bold]Description:[/bold] {description}")
-        console.print(f"[bold]Confidence:[/bold] {confidence:.0%}")
+    _emit_analysis_result(
+        description=description,
+        category=category,
+        confidence=confidence,
+        json_output=json_output,
+        verbose=verbose,
+        verbose_rows=[
+            ("Model", config.name),
+            ("Processing time", f"{elapsed:.2f}s"),
+            ("Content length", f"{content_length} chars"),
+        ],
+    )
 
-        if verbose or _get_state().verbose:
-            console.print(f"[bold]Model:[/bold] {config.name}")
-            console.print(f"[bold]Processing time:[/bold] {elapsed:.2f}s")
-            console.print(f"[bold]Content length:[/bold] {content_length} chars")
+
+def _emit_analysis_result(
+    *,
+    description: str,
+    category: str,
+    confidence: float,
+    json_output: bool,
+    verbose: bool,
+    json_extra: dict[str, object] | None = None,
+    verbose_rows: list[tuple[str, object]] | None = None,
+    warning: str | None = None,
+) -> None:
+    """Render shared analyze output for text and image paths."""
+    payload: dict[str, object] = {
+        "description": description,
+        "category": category,
+        "confidence": confidence,
+    }
+    if json_extra:
+        payload.update(json_extra)
+
+    if json_output or _get_state().json_output:
+        typer.echo(json_mod.dumps(payload, indent=2))
+        return
+
+    if warning:
+        console.print(f"[yellow]Warning: {warning}[/yellow]")
+    console.print(f"[bold]Category:[/bold] {category}")
+    console.print(f"[bold]Description:[/bold] {description}")
+    console.print(f"[bold]Confidence:[/bold] {confidence:.0%}")
+
+    if verbose or _get_state().verbose:
+        for label, value in verbose_rows or []:
+            console.print(f"[bold]{label}:[/bold] {value}")
