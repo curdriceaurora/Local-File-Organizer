@@ -102,8 +102,8 @@ absorbs test additions changing the denominator, not run-to-run noise.
 | `batch-sizer` | 129 | 65 | 66.5% | 63% |
 | `memory-limiter` | 67 | 17 | 79.8% | 76% |
 | `memory-profiler` | 96 | 23 | 80.7% | 77% |
-| `parallel` | 233 | 291 | 44.5% | blocked |
-| `organizer` | — | — | blocked | — |
+| `parallel` | 344-345 | 180-181 | 65.5-65.7% | 63% |
+| `organizer` | 337 | 322 | 51.1% | 48% |
 
 Two of the five targets are blocked, for different reasons. Blocked profiles
 are skipped in a default run — announced, never silently — and still run when
@@ -200,13 +200,21 @@ organizer  floor=not gated  BLOCKED here (darwin) — 432 mutants segfault ON ma
 Naming a profile explicitly still runs it regardless of platform, so anyone
 working on the blocker can measure progress.
 
-**Both profiles are deliberately ungated** (`floor=None`). There is no measured
-Linux baseline for either, and a guessed floor would fail the first nightly
-that ran it. The sequence is: re-derive the Linux test selection, let the
-nightly report scores, read two or three runs, then set floors ~3pp below the
-observed value as the other profiles do. `scripts/ci/mutation_pilot.py
---enforce` ignores a profile whose floor is `None`, so this is report-only
-until someone sets one.
+The first green Linux nightly after #1739 reported `parallel` at 44.5% (233
+killed / 291 survived) and `organizer` at 46.2% (301 killed / 351 survived),
+but those numbers still used the pre-#1740 trimmed selections. #1740 restored
+the Linux-only test selections that had been excluded for macOS fork faults and
+measured them twice with `workflow_dispatch` on Linux:
+
+| Run | `parallel` | `organizer` |
+| :--- | :--- | :--- |
+| `33643651272` | 344 killed / 181 survived, 65.5% | 337 killed / 322 survived, 51.1% |
+| `33643665584` | 345 killed / 180 survived, 65.7% | 337 killed / 322 survived, 51.1% |
+
+Those results justify restoring Linux gating at floors ~3pp below the measured
+scores. `scripts/ci/mutation_pilot.py --enforce` still ignores any profile
+whose floor is `None`, which is the right shape for future profiles until they
+have measured baselines.
 
 ## Validating the harness before trusting a score
 
