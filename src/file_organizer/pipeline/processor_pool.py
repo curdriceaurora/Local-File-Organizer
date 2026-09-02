@@ -16,11 +16,12 @@ from .router import ProcessorType
 logger = logging.getLogger(__name__)
 
 
-class ProcessorResult(TypedDict):
+class ProcessorResult(TypedDict, total=False):
     """Normalised output from any file processor."""
 
     category: str
     filename: str
+    tags: list[str]
 
 
 @runtime_checkable
@@ -187,12 +188,34 @@ def normalize_processor_result(file_path: Path, result: Any) -> ProcessorResult:
     """
     category = "uncategorized"
     filename = file_path.stem
+    tags: list[str] = []
 
-    if hasattr(result, "folder_name") and result.folder_name:
-        category = result.folder_name
-    if hasattr(result, "filename") and result.filename:
-        filename = result.filename
-    if hasattr(result, "error") and result.error:
-        raise RuntimeError(f"Processor reported error: {result.error}")
+    from collections.abc import Mapping
 
-    return ProcessorResult(category=category, filename=filename)
+    if isinstance(result, Mapping):
+        if result.get("category"):
+            category = str(result["category"])
+        elif result.get("folder_name"):
+            category = str(result["folder_name"])
+        if result.get("filename"):
+            filename = str(result["filename"])
+        if isinstance(result.get("tags"), list):
+            tags = result["tags"]
+        if result.get("error"):
+            raise RuntimeError(f"Processor reported error: {result['error']}")
+    else:
+        if hasattr(result, "folder_name") and result.folder_name:
+            category = result.folder_name
+        elif hasattr(result, "category") and result.category:
+            category = result.category
+        if hasattr(result, "filename") and result.filename:
+            filename = result.filename
+        if hasattr(result, "tags") and isinstance(result.tags, list):
+            tags = result.tags
+        if hasattr(result, "error") and result.error:
+            raise RuntimeError(f"Processor reported error: {result.error}")
+
+    res = ProcessorResult(category=category, filename=filename)
+    if tags:
+        res["tags"] = tags
+    return res

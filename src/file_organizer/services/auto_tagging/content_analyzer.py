@@ -13,8 +13,125 @@ import logging
 import re
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+STYLE_PRESETS: dict[str, dict[str, Any]] = {
+    "sfx": {
+        "description": "Sound effects and Foley library categorization",
+        "keywords": {
+            "foley",
+            "impact",
+            "explosion",
+            "weapon",
+            "gunshot",
+            "laser",
+            "blaster",
+            "sci-fi",
+            "ambience",
+            "ambient",
+            "ui",
+            "click",
+            "beep",
+            "button",
+            "footstep",
+            "whoosh",
+            "transition",
+            "magic",
+            "spell",
+            "vehicle",
+            "engine",
+            "crash",
+            "creature",
+            "monster",
+            "vocal",
+            "water",
+            "splash",
+            "fire",
+            "wind",
+            "nature",
+            "glitch",
+            "distortion",
+            "drone",
+            "cinematic",
+            "sub",
+            "bass",
+            "drop",
+            "loop",
+            "oneshot",
+            "stereo",
+            "mono",
+            "audio",
+            "sound",
+            "punch",
+            "hit",
+            "gore",
+        },
+    },
+    "audio": {
+        "description": "Music and audio production",
+        "keywords": {
+            "music",
+            "beat",
+            "melody",
+            "synth",
+            "vocal",
+            "drums",
+            "bass",
+            "guitar",
+            "piano",
+            "acoustic",
+            "electronic",
+            "ambient",
+            "loop",
+            "sample",
+            "stem",
+            "mix",
+            "master",
+            "tempo",
+            "bpm",
+            "chord",
+            "audio",
+            "track",
+            "song",
+        },
+    },
+    "code": {
+        "description": "Software development and source code",
+        "keywords": {
+            "backend",
+            "frontend",
+            "api",
+            "cli",
+            "test",
+            "service",
+            "model",
+            "controller",
+            "util",
+            "helper",
+            "config",
+            "schema",
+            "router",
+            "auth",
+            "component",
+            "hook",
+            "database",
+            "migration",
+            "script",
+            "pipeline",
+            "docker",
+            "ci",
+        },
+    },
+    "descriptive": {
+        "description": "Detailed conceptual and semantic descriptors",
+    },
+    "hierarchical": {
+        "description": "Multi-level category hierarchy",
+    },
+}
 
 
 class ContentTagAnalyzer:
@@ -106,11 +223,18 @@ class ContentTagAnalyzer:
 
         logger.info("ContentTagAnalyzer initialized")
 
-    def analyze_file(self, file_path: Path) -> list[str]:
+    def analyze_file(
+        self,
+        file_path: Path,
+        style: str | None = None,
+        custom_prompt: str | None = None,
+    ) -> list[str]:
         """Analyze a file and return suggested tags.
 
         Args:
             file_path: Path to the file to analyze
+            style: Optional tag style preset (e.g. "sfx", "audio", "code", "descriptive", "hierarchical")
+            custom_prompt: Optional custom user prompt or instruction
 
         Returns:
             List of suggested tags
@@ -124,7 +248,8 @@ class ContentTagAnalyzer:
         tags = set()
 
         # Extract tags from different sources
-        tags.update(self._extract_from_filename(file_path))
+        filename_tags = self._extract_from_filename(file_path)
+        tags.update(filename_tags)
         tags.update(self._extract_from_extension(file_path))
         tags.update(self._extract_from_directory(file_path))
 
@@ -137,24 +262,66 @@ class ContentTagAnalyzer:
         metadata_tags = self._extract_from_metadata(file_path)
         tags.update(metadata_tags)
 
+        # Style-guided enrichment
+        if style:
+            style_key = style.lower().strip()
+            tags.update(self._extract_style_tags(file_path, style_key, filename_tags))
+
+        # Custom prompt-guided enrichment
+        if custom_prompt:
+            tags.update(self._extract_prompt_tags(file_path, custom_prompt))
+
         # Clean and normalize tags
         cleaned_tags = self._clean_tags(list(tags))
 
         logger.info(f"Extracted {len(cleaned_tags)} tags from {file_path.name}")
         return cleaned_tags[: self.max_keywords]
 
-    def extract_keywords(self, file_path: Path, top_n: int = 10) -> list[tuple[str, float]]:
+    def extract_keywords(
+        self,
+        file_path: Path,
+        top_n: int = 10,
+        style: str | None = None,
+        custom_prompt: str | None = None,
+    ) -> list[tuple[str, float]]:
         """Extract keywords with confidence scores using TF-IDF.
 
         Args:
             file_path: Path to the file
             top_n: Number of top keywords to return
+            style: Optional tag style preset
+            custom_prompt: Optional custom user prompt
 
         Returns:
             List of (keyword, score) tuples
         """
-        if not file_path.exists() or not self._is_text_file(file_path):
+        if not file_path.exists():
             return []
+
+        if not self._is_text_file(file_path):
+            if not style and not custom_prompt:
+                return []
+            # For non-text files (e.g. audio SFX or binary assets), extract and score keywords from filename & metadata
+            filename_tags = self._extract_from_filename(file_path)
+            metadata_tags = self._extract_from_metadata(file_path)
+            combined_tags = list(filename_tags + metadata_tags)
+            if style:
+                combined_tags.extend(
+                    self._extract_style_tags(file_path, style.lower().strip(), filename_tags)
+                )
+            if custom_prompt:
+                combined_tags.extend(self._extract_prompt_tags(file_path, custom_prompt))
+            cleaned = self._clean_tags(combined_tags)
+            preset_kws = STYLE_PRESETS.get(style.lower().strip() if style else "", {}).get(
+                "keywords", set()
+            )
+            scored = []
+            for tag in cleaned[:top_n]:
+                score = 15.0 if tag in preset_kws else 10.0
+                if len(tag) > 6:
+                    score *= 1.2
+                scored.append((tag, score))
+            return sorted(scored, key=lambda x: x[1], reverse=True)[:top_n]
 
         try:
             content = self._read_text_content(file_path)
@@ -165,31 +332,136 @@ class ContentTagAnalyzer:
             words = self._tokenize(content)
             word_freq = Counter(words)
 
-            # Simple TF-IDF-like scoring
-            # In a full implementation, this would use scikit-learn or similar
             total_words = len(words)
             unique_words = len(set(words))
 
+            preset_kws = (
+                STYLE_PRESETS.get(style.lower().strip(), {}).get("keywords", set())
+                if style
+                else set()
+            )
+            prompt_terms = (
+                set(re.findall(r"\w{3,}", custom_prompt.lower())) if custom_prompt else set()
+            )
+
             scored_keywords = []
             for word, freq in word_freq.most_common(top_n * 2):
-                # Score based on frequency and word characteristics
                 tf = freq / total_words
-                idf = 1.0 + (unique_words / (1 + freq))  # Simplified IDF
+                idf = 1.0 + (unique_words / (1 + freq))
                 score = tf * idf
 
-                # Boost score for longer words (usually more meaningful)
                 if len(word) > 6:
                     score *= 1.2
+                if word in preset_kws:
+                    score *= 2.0
+                if word in prompt_terms:
+                    score *= 2.0
 
                 scored_keywords.append((word, score))
 
-            # Sort by score and return top N
             scored_keywords.sort(key=lambda x: x[1], reverse=True)
             return scored_keywords[:top_n]
 
         except (OSError, UnicodeDecodeError, ValueError) as e:
             logger.error(f"Error extracting keywords from {file_path}: {e}")
             return []
+
+    def _extract_style_tags(
+        self, file_path: Path, style_key: str, filename_tags: list[str]
+    ) -> list[str]:
+        """Extract tags according to the specified style preset."""
+        style_tags: list[str] = []
+        preset = STYLE_PRESETS.get(style_key)
+
+        if style_key == "hierarchical":
+            parts = [p for p in file_path.parts if p not in ("/", "\\")]
+            if len(parts) >= 2:
+                parent = parts[-2].lower()
+                stem = file_path.stem.lower()
+                style_tags.append(f"{parent}-{stem}")
+            ext = file_path.suffix.lstrip(".").lower()
+            if ext:
+                style_tags.append(f"type-{ext}")
+            return style_tags
+
+        if preset and "keywords" in preset:
+            domain_keywords = preset["keywords"]
+            fn_tokens = re.split(r"[-_\s.]+", file_path.stem.lower())
+            parent_tokens = re.split(r"[-_\s.]+", file_path.parent.name.lower())
+            for token in fn_tokens + parent_tokens:
+                if token in domain_keywords:
+                    style_tags.append(token)
+
+            if style_key in ("sfx", "audio"):
+                style_tags.append("sfx" if style_key == "sfx" else "audio")
+                for descriptor in (
+                    "loop",
+                    "stereo",
+                    "mono",
+                    "oneshot",
+                    "foley",
+                    "impact",
+                    "reverb",
+                    "ambience",
+                ):
+                    if descriptor in file_path.stem.lower():
+                        style_tags.append(descriptor)
+
+        elif style_key == "descriptive":
+            for tag in filename_tags:
+                if len(tag) >= 4:
+                    style_tags.append(tag)
+
+        return style_tags
+
+    def _extract_prompt_tags(self, file_path: Path, custom_prompt: str) -> list[str]:
+        """Extract tags matching guidance from a user prompt."""
+        prompt_tags: list[str] = []
+        prompt_lower = custom_prompt.lower()
+        candidates = re.split(r"[,;:\s]+", prompt_lower)
+        stem_lower = file_path.stem.lower()
+        parent_lower = file_path.parent.name.lower()
+
+        prompt_ignore = self.stop_words | {
+            "sort",
+            "tags",
+            "tag",
+            "based",
+            "files",
+            "folder",
+            "folders",
+            "into",
+            "from",
+            "different",
+            "with",
+            "like",
+            "using",
+            "contents",
+            "properties",
+            "name",
+            "library",
+            "whole",
+            "mess",
+            "please",
+            "want",
+            "would",
+            "look",
+            "only",
+            "also",
+            "each",
+        }
+
+        for cand in candidates:
+            cand_clean = re.sub(r"[^\w_]", "", cand).strip("_")
+            if len(cand_clean) >= 3 and cand_clean not in prompt_ignore:
+                if cand_clean in ("genre", "emotion", "category", "mood", "theme"):
+                    continue
+                if cand_clean in stem_lower or cand_clean in parent_lower:
+                    prompt_tags.append(cand_clean)
+                else:
+                    prompt_tags.append(cand_clean)
+
+        return prompt_tags
 
     def extract_entities(self, file_path: Path) -> list[str]:
         """Extract named entities from file content.

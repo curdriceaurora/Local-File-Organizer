@@ -91,6 +91,7 @@ class PipelineConfig:
     notification_callback: Callable[[Path, bool], None] | None = None
     supported_extensions: set[str] | None = None
     max_concurrent: int = 4
+    generate_tags: bool = False
 
     def __post_init__(self) -> None:
         """Validate and normalize configuration after initialization."""

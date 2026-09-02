@@ -113,7 +113,12 @@ class TagRecommender:
         logger.info("TagRecommender initialized")
 
     def recommend_tags(
-        self, file_path: Path, existing_tags: list[str] | None = None, top_n: int = 10
+        self,
+        file_path: Path,
+        existing_tags: list[str] | None = None,
+        top_n: int = 10,
+        style: str | None = None,
+        prompt: str | None = None,
     ) -> TagRecommendation:
         """Generate tag recommendations for a file.
 
@@ -121,6 +126,8 @@ class TagRecommender:
             file_path: Path to the file
             existing_tags: Tags already applied
             top_n: Maximum number of suggestions
+            style: Optional tag style preset
+            prompt: Optional custom user prompt
 
         Returns:
             TagRecommendation with ranked suggestions
@@ -139,13 +146,17 @@ class TagRecommender:
         all_suggestions = {}
 
         # 1. Content-based suggestions
-        content_suggestions = self._get_content_suggestions(file_path)
+        content_suggestions = self._get_content_suggestions(file_path, style=style, prompt=prompt)
         for tag, confidence in content_suggestions:
+            metadata: dict[str, Any] = {}
+            if style:
+                metadata["style"] = style
             all_suggestions[tag] = TagSuggestion(
                 tag=tag,
                 confidence=confidence,
                 source="content",
                 reasoning=self._generate_content_reasoning(tag, file_path),
+                metadata=metadata,
             )
 
         # 2. Behavior-based suggestions
@@ -204,12 +215,20 @@ class TagRecommender:
             confidence_threshold=self.min_confidence,
         )
 
-    def batch_recommend(self, files: list[Path], top_n: int = 10) -> dict[Path, TagRecommendation]:
-        """Generate recommendations for multiple files.
+    def batch_recommend(
+        self,
+        files: list[Path],
+        top_n: int = 10,
+        style: str | None = None,
+        prompt: str | None = None,
+    ) -> dict[Path, TagRecommendation]:
+        """Generate tag recommendations for multiple files.
 
         Args:
             files: list of file paths
             top_n: Maximum suggestions per file
+            style: Optional tag style preset
+            prompt: Optional custom user prompt
 
         Returns:
             Dictionary mapping file paths to recommendations
@@ -219,7 +238,9 @@ class TagRecommender:
         results = {}
         for file_path in files:
             try:
-                recommendation = self.recommend_tags(file_path, top_n=top_n)
+                recommendation = self.recommend_tags(
+                    file_path, top_n=top_n, style=style, prompt=prompt
+                )
                 results[file_path] = recommendation
             except (OSError, ValueError, KeyError) as e:
                 logger.error(f"Error recommending tags for {file_path}: {e}")
@@ -303,11 +324,18 @@ class TagRecommender:
 
         return " • ".join(explanations)
 
-    def _get_content_suggestions(self, file_path: Path) -> list[tuple[str, float]]:
+    def _get_content_suggestions(
+        self,
+        file_path: Path,
+        style: str | None = None,
+        prompt: str | None = None,
+    ) -> list[tuple[str, float]]:
         """Get suggestions from content analysis."""
         try:
             # Get keywords with scores
-            keywords = self.content_analyzer.extract_keywords(file_path, top_n=10)
+            keywords = self.content_analyzer.extract_keywords(
+                file_path, top_n=10, style=style, custom_prompt=prompt
+            )
 
             # Normalize scores to 0-100 range
             if not keywords:

@@ -146,6 +146,7 @@ class OrganizationOperation:
     folder_name: str
     file_name: str
     description: str = ""
+    tags: list[str] = field(default_factory=list)
     fingerprint: SourceFingerprint | None = None
     error: str | None = None
 
@@ -305,6 +306,7 @@ class OrganizationPlan:
                     folder_name=raw["folder_name"],
                     file_name=raw["file_name"],
                     description=raw.get("description", ""),
+                    tags=list(raw.get("tags", [])),
                     fingerprint=fingerprint,
                     error=raw.get("error"),
                 )
@@ -420,6 +422,7 @@ def build_plan_from_processed(
                 folder_name=result.folder_name,
                 file_name=base_name,
                 description=result.description,
+                tags=list(getattr(result, "tags", []) or []),
                 fingerprint=fingerprint,
                 error=error,
             )

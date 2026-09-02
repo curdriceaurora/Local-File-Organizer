@@ -39,10 +39,13 @@ class AnalyzerStage:
         self,
         router: FileRouter | None = None,
         processor_pool: ProcessorPool | None = None,
+        *,
+        generate_tags: bool = False,
     ) -> None:
-        """Initialize with optional router and processor pool."""
+        """Initialize with optional router, processor pool, and tagging flag."""
         self._router = router
         self._pool = processor_pool
+        self._generate_tags = generate_tags
 
     @property
     def name(self) -> str:
@@ -71,12 +74,18 @@ class AnalyzerStage:
             return context
 
         try:
+            generate_tags = bool(context.extra.get("generate_tags", False) or self._generate_tags)
             result = self._run_processor(
-                context.file_path, processor, scan_root=context.trusted_root
+                context.file_path,
+                processor,
+                scan_root=context.trusted_root,
+                generate_tags=generate_tags,
             )
             context.analysis = result
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
+            if "tags" in result:
+                context.extra["tags"] = result["tags"]
             context.extra["analyzer.processor_type"] = processor_type
         except Exception as exc:  # Intentional catch-all: processor is user-provided
             logger.exception("Analyzer failed for %s", context.file_path)
@@ -86,22 +95,46 @@ class AnalyzerStage:
 
     @staticmethod
     def _run_processor(
-        file_path: Path, processor: BaseProcessor, scan_root: Path | None = None
-    ) -> dict[str, str]:
+        file_path: Path,
+        processor: BaseProcessor,
+        scan_root: Path | None = None,
+        generate_tags: bool = False,
+    ) -> dict[str, Any]:
         """Invoke the processor and normalise output to a dict."""
-        # Only pass scan_root if the processor's process_file accepts it (like
-        # TextProcessor). BaseProcessor's Protocol signature doesn't declare
-        # scan_root since not every concrete processor supports it, so the
-        # conditional call below is checked via runtime introspection rather
-        # than the static type, hence the cast. type(processor) is also cast
-        # to Hashable here: Pyre's stub for the @cache-wrapped callee checks
-        # the call site's argument type against Hashable directly, regardless
-        # of the callee's own declared parameter type.
-        if AnalyzerStage._processor_accepts_scan_root(cast(Hashable, type(processor))):
-            raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
-        else:
-            raw = processor.process_file(file_path)
-        return cast(dict[str, str], normalize_processor_result(file_path, raw))
+        proc_hashable = cast(Hashable, type(processor))
+        kwargs: dict[str, Any] = {}
+        if AnalyzerStage._processor_accepts_param(proc_hashable, "scan_root"):
+            kwargs["scan_root"] = scan_root
+        if AnalyzerStage._processor_accepts_param(proc_hashable, "relative_path"):
+            if scan_root is not None:
+                try:
+                    kwargs["relative_path"] = file_path.relative_to(scan_root)
+                except ValueError:
+                    kwargs["relative_path"] = file_path.name
+            else:
+                kwargs["relative_path"] = file_path.name
+        if AnalyzerStage._processor_accepts_param(proc_hashable, "generate_tags"):
+            kwargs["generate_tags"] = generate_tags
+
+        raw = cast(Any, processor).process_file(file_path, **kwargs)
+        return cast(dict[str, Any], normalize_processor_result(file_path, raw))
+
+    @staticmethod
+    @cache
+    def _processor_params(processor_type: Hashable) -> frozenset[str]:
+        """Inspect and cache parameter names of processor_type's process_file."""
+        try:
+            processor_cls = cast(type[BaseProcessor], processor_type)
+            params = inspect.signature(processor_cls.process_file).parameters
+            return frozenset(params.keys())
+        except (AttributeError, TypeError, ValueError):
+            return frozenset()
+
+    @staticmethod
+    @cache
+    def _processor_accepts_param(processor_type: Hashable, param_name: str) -> bool:
+        """Whether *processor_type*'s ``process_file`` accepts *param_name*."""
+        return param_name in AnalyzerStage._processor_params(processor_type)
 
     @staticmethod
     @cache
@@ -117,9 +150,4 @@ class AnalyzerStage:
         ``functools.cache`` requires args to satisfy ``Hashable``, and
         doesn't infer that ``Type[BaseProcessor]`` (a Protocol) qualifies.
         """
-        try:
-            processor_cls = cast(type[BaseProcessor], processor_type)
-            params = inspect.signature(processor_cls.process_file).parameters
-        except (AttributeError, TypeError, ValueError):
-            return False
-        return "scan_root" in params
+        return AnalyzerStage._processor_accepts_param(processor_type, "scan_root")

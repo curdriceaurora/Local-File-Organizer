@@ -26,6 +26,10 @@ class VisionSchema(pydantic.BaseModel):
         default=None,
         description="The exact text extracted from the image if has_text is True. Provide it exactly as it appears.",
     )
+    tags: list[str] = pydantic.Field(
+        default_factory=list,
+        description="A list of 3-6 relevant lowercase tags describing key visual elements, objects, or themes.",
+    )
 
     @pydantic.field_validator("extracted_text", mode="before")
     @classmethod

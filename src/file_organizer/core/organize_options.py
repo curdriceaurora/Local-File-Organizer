@@ -84,6 +84,7 @@ class OrganizeOptions:
     methodology: OrganizationMethodology | str = OrganizationMethodology.NONE
     enable_vision: bool = True
     transcribe_audio: bool = False
+    generate_tags: bool = False
     max_transcribe_seconds: float | None = 600.0
     whisper_model: str = "tiny"
     parallel_workers: int | None = None
@@ -107,6 +108,7 @@ class OrganizeOptions:
             "skip_existing",
             "enable_vision",
             "transcribe_audio",
+            "generate_tags",
         ):
             if not isinstance(getattr(self, field_name), bool):
                 raise ValueError(f"{field_name} must be a boolean")

@@ -62,6 +62,7 @@ class ProcessingResult:
     error: str | None = None
     processor_type: ProcessorType = ProcessorType.UNKNOWN
     dry_run: bool = True
+    tags: tuple[str, ...] = ()
 
 
 @dataclass
@@ -663,6 +664,9 @@ class PipelineOrchestrator:
 
         self._notify(context.file_path, not context.failed)
 
+        tags_raw = context.analysis.get("tags") or context.extra.get("tags") or ()
+        tags: tuple[str, ...] = tuple(tags_raw) if isinstance(tags_raw, (list, tuple)) else ()
+
         return ProcessingResult(
             file_path=context.file_path,
             success=not context.failed,
@@ -672,6 +676,7 @@ class PipelineOrchestrator:
             error=context.error,
             processor_type=processor_type,
             dry_run=context.dry_run,
+            tags=tags,
         )
 
     def _make_context(self, file_path: Path, trusted_root: Path | None = None) -> StageContext:
@@ -681,11 +686,14 @@ class PipelineOrchestrator:
         (``_process_file_staged``, the prefetch priming loop, and the
         prefetch fallback path) stay in sync.
         """
-        return StageContext(
+        ctx = StageContext(
             file_path=file_path,
             dry_run=not self.config.should_move_files,
             trusted_root=trusted_root,
         )
+        if getattr(self.config, "generate_tags", False):
+            ctx.extra["generate_tags"] = True
+        return ctx
 
     def _acquire_buffer(self, file_path: Path) -> bytearray | None:
         """Acquire a reusable buffer for processing *file_path*."""

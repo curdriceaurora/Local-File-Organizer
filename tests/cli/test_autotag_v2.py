@@ -189,3 +189,53 @@ def test_autotag_json_output(mock_service_cls, tmp_path):
     assert len(parsed) >= 1
     assert "suggestions" in parsed[0]
     assert parsed[0]["suggestions"][0]["tag"] == "csv"
+
+
+@patch("file_organizer.services.auto_tagging.AutoTaggingService")
+def test_autotag_suggest_with_style_and_prompt(mock_service_cls, tmp_path):
+    """suggest forwards --style and --prompt to suggest_tags."""
+    (tmp_path / "laser.wav").write_bytes(b"data")
+
+    mock_service = MagicMock()
+    mock_service_cls.return_value = mock_service
+
+    suggestions = [_make_suggestion("sfx", 90.0, "content", "SFX preset")]
+    mock_service.suggest_tags.return_value = _make_recommendation(
+        tmp_path / "laser.wav", suggestions
+    )
+
+    result = runner.invoke(
+        app,
+        ["autotag", "suggest", str(tmp_path), "--style", "sfx", "--prompt", "arcade sci-fi"],
+    )
+    assert result.exit_code == 0
+    mock_service.suggest_tags.assert_called_once()
+    _, kwargs = mock_service.suggest_tags.call_args
+    assert kwargs.get("style") == "sfx"
+    assert kwargs.get("prompt") == "arcade sci-fi"
+
+
+@patch("file_organizer.services.auto_tagging.AutoTaggingService")
+def test_autotag_batch_with_style_and_prompt(mock_service_cls, tmp_path):
+    """batch forwards --style and --prompt to batch_recommend."""
+    (tmp_path / "server.py").write_text("print('server')")
+
+    mock_service = MagicMock()
+    mock_service_cls.return_value = mock_service
+
+    batch_results = {
+        tmp_path / "server.py": _make_recommendation(
+            tmp_path / "server.py", [_make_suggestion("code", 95.0, "content", "Python")]
+        )
+    }
+    mock_service.recommender.batch_recommend.return_value = batch_results
+
+    result = runner.invoke(
+        app,
+        ["autotag", "batch", str(tmp_path), "-s", "code", "-p", "backend api"],
+    )
+    assert result.exit_code == 0
+    mock_service.recommender.batch_recommend.assert_called_once()
+    _, kwargs = mock_service.recommender.batch_recommend.call_args
+    assert kwargs.get("style") == "code"
+    assert kwargs.get("prompt") == "backend api"

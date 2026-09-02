@@ -8,7 +8,7 @@ import re
 import threading
 import time
 import types as _t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +53,7 @@ class ProcessedImage:
     # Files below `AppConfig.processing.low_confidence_threshold` are
     # surfaced in the summary's "Review recommended" section.
     confidence: float = 1.0
+    tags: list[str] = field(default_factory=list)
 
 
 def _mime_type_for_image_format(image_format: str | None) -> str:
@@ -411,6 +412,8 @@ class VisionProcessor:
 
             processing_time = time.time() - start_time
 
+            tags = getattr(schema_result, "tags", []) or []
+
             return (
                 ProcessedImage(
                     file_path=file_path,
@@ -422,6 +425,7 @@ class VisionProcessor:
                     processing_time=processing_time,
                     source="vision",
                     confidence=1.0,
+                    tags=tags,
                 ),
                 model_invoked,
             )
@@ -469,8 +473,9 @@ class VisionProcessor:
         perform_ocr: bool,
     ) -> str:
         """Build the structured single-call image analysis prompt."""
+        parent_hint = f" in folder '{file_path.parent.name}'" if file_path.parent.name else ""
         prompt_lines = [
-            "Analyze this image and provide the following details:",
+            f"Analyze this image (file '{file_path.name}'{parent_hint}) and provide the following details:",
             "- description: A detailed description of the main subject and important details.",
         ]
         if generate_folder:
@@ -497,6 +502,10 @@ class VisionProcessor:
         else:
             prompt_lines.append("- has_text: Return False.")
             prompt_lines.append("- extracted_text: Return null.")
+
+        prompt_lines.append(
+            "- tags: A list of 3-6 concise, relevant lowercase tags describing key visual subjects, objects, or themes (e.g. ['receipt', 'finance', 'store'])."
+        )
 
         return "\n".join(prompt_lines)
 

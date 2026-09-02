@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import sys
 import types as _t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from loguru import logger
@@ -33,6 +33,7 @@ class ProcessedFile:
     original_content: str | None = None
     processing_time: float = 0.0
     error: str | None = None
+    tags: list[str] = field(default_factory=list)
     # Best-effort audio transcript (#WP-4.1 anti-cascade audio path).
     # Populated by the dispatcher's audio pipeline when a transcriber is
     # configured and transcription succeeds within the duration cap; None
@@ -142,8 +143,10 @@ class TextProcessor:
         if scan_root is not None and sys.platform != "win32":
             try:
                 return read_file_via_safedir_anchored(file_path, trusted_root=Path(scan_root))
-            except NotImplementedError:
-                logger.debug("SafeDir unavailable; legacy read for {}", file_path.name)
+            except (NotImplementedError, ValueError):
+                logger.debug(
+                    "SafeDir unavailable or path outside root; legacy read for {}", file_path.name
+                )
         return read_file(file_path)
 
     def process_file(
@@ -154,6 +157,8 @@ class TextProcessor:
         generate_filename: bool = True,
         *,
         scan_root: str | Path | None = None,
+        relative_path: str | Path | None = None,
+        generate_tags: bool = False,
     ) -> ProcessedFile:
         """Process a single text file.
 
@@ -167,6 +172,10 @@ class TextProcessor:
                 ``read_file_via_safedir_anchored`` so a symlink swapped in after
                 the scan is refused rather than dereferenced (#264/#286).
                 ``None`` keeps the legacy path-based read.
+            relative_path: Relative path or directory context of the file to
+                enrich LLM prompts (Upstream #66). If omitted and ``scan_root``
+                is present, automatically computed from ``scan_root``.
+            generate_tags: Whether to generate descriptive tags (Upstream #64).
 
         Returns:
             ProcessedFile with metadata
@@ -175,6 +184,13 @@ class TextProcessor:
 
         file_path = Path(file_path)
         start_time = time.time()
+
+        if relative_path is None and scan_root is not None:
+            try:
+                relative_path = file_path.relative_to(Path(scan_root))
+            except ValueError:
+                relative_path = file_path.name
+        rel_str = str(relative_path) if relative_path is not None else None
 
         try:
             # Read file content
@@ -196,14 +212,18 @@ class TextProcessor:
             # Generate description (summary)
             description = ""
             if generate_description:
-                description = self._generate_description(content)
+                description = self._generate_description(
+                    content, file_name=file_path.name, relative_path=rel_str
+                )
                 logger.debug("Generated description ({} chars)", len(description))
 
             # Generate folder name
             folder_name = ""
             if generate_folder:
                 folder_name = self._generate_folder_name(
-                    description or content, original_stem=file_path.stem
+                    description or content,
+                    original_stem=file_path.stem,
+                    relative_path=rel_str,
                 )
                 logger.debug("Generated folder name ({} chars)", len(folder_name))
 
@@ -211,9 +231,21 @@ class TextProcessor:
             filename = ""
             if generate_filename:
                 filename = self._generate_filename(
-                    description or content, original_stem=file_path.stem
+                    description or content,
+                    original_stem=file_path.stem,
+                    relative_path=rel_str,
                 )
                 logger.debug("Generated filename ({} chars)", len(filename))
+
+            # Generate tags
+            tags: list[str] = []
+            if generate_tags:
+                tags = self._generate_tags(
+                    description or content,
+                    file_name=file_path.name,
+                    relative_path=rel_str,
+                )
+                logger.debug("Generated tags ({} items)", len(tags))
 
             processing_time = time.time() - start_time
 
@@ -224,6 +256,7 @@ class TextProcessor:
                 filename=filename,
                 original_content=content[:500],  # Keep first 500 chars for reference
                 processing_time=processing_time,
+                tags=tags,
             )
 
         except FileReadError as e:
@@ -281,17 +314,30 @@ class TextProcessor:
         # Join with underscores
         return "_".join(filtered) if filtered else ""
 
-    def _generate_description(self, content: str) -> str:
+    def _generate_description(
+        self,
+        content: str,
+        file_name: str | None = None,
+        relative_path: str | Path | None = None,
+    ) -> str:
         """Generate a summary/description of the content.
 
         Args:
             content: File content
+            file_name: Name of the file being summarized
+            relative_path: Relative path or directory context of the file
 
         Returns:
             Summary text
         """
-        prompt = f"""Summarize the following text in 100-150 words. Focus on main ideas and key details.
+        context_parts = []
+        if file_name:
+            context_parts.append(f"FILENAME: {file_name}")
+        if relative_path:
+            context_parts.append(f"PATH CONTEXT: {relative_path}")
+        context_header = ("\n" + "\n".join(context_parts) + "\n") if context_parts else ""
 
+        prompt = f"""Summarize the following text in 100-150 words. Focus on main ideas and key details.{context_header}
 TEXT:
 {content}
 
@@ -311,22 +357,34 @@ SUMMARY:"""
             logger.error(f"Failed to generate description: {e}")
             return f"Content about {content[:100]}..."
 
-    def _generate_folder_name(self, text: str, original_stem: str | None = None) -> str:
+    def _generate_folder_name(
+        self,
+        text: str,
+        original_stem: str | None = None,
+        relative_path: str | Path | None = None,
+    ) -> str:
         """Generate a folder name from text.
 
         Args:
             text: Description or content
             original_stem: Original filename stem (without extension) used as an
                 additional hint for small models with limited context.
+            relative_path: Relative path or directory context of the file.
 
         Returns:
             Folder name (max 2 words)
         """
-        hint_line = (
-            f"\nFILENAME HINT: {original_stem} (original filename — use only if helpful)\n"
-            if original_stem
-            else ""
-        )
+        hint_parts = []
+        if relative_path:
+            hint_parts.append(
+                f"PATH & FILENAME HINT: {relative_path} (existing file path context — use only if helpful)"
+            )
+        elif original_stem:
+            hint_parts.append(
+                f"FILENAME HINT: {original_stem} (original filename — use only if helpful)"
+            )
+        hint_line = ("\n" + "\n".join(hint_parts) + "\n") if hint_parts else ""
+
         prompt = f"""Based on the text below, generate a general category or theme.
 
 RULES:
@@ -390,22 +448,34 @@ CATEGORY:"""
             logger.error(f"Failed to generate folder name: {e}")
             return "documents"
 
-    def _generate_filename(self, text: str, original_stem: str | None = None) -> str:
+    def _generate_filename(
+        self,
+        text: str,
+        original_stem: str | None = None,
+        relative_path: str | Path | None = None,
+    ) -> str:
         """Generate a filename from text.
 
         Args:
             text: Description or content
             original_stem: Original filename stem (without extension) used as an
                 additional hint for small models with limited context.
+            relative_path: Relative path or directory context of the file.
 
         Returns:
             Filename (max 3 words, no extension)
         """
-        hint_line = (
-            f"\nFILENAME HINT: {original_stem} (original filename — use only if helpful)\n"
-            if original_stem
-            else ""
-        )
+        hint_parts = []
+        if relative_path:
+            hint_parts.append(
+                f"PATH & FILENAME HINT: {relative_path} (existing file path context — use only if helpful)"
+            )
+        elif original_stem:
+            hint_parts.append(
+                f"FILENAME HINT: {original_stem} (original filename — use only if helpful)"
+            )
+        hint_line = ("\n" + "\n".join(hint_parts) + "\n") if hint_parts else ""
+
         prompt = f"""Based on the text below, generate a specific descriptive filename.
 
 RULES:
@@ -473,6 +543,70 @@ FILENAME:"""
         except (RuntimeError, ValueError, OSError, AttributeError) as e:
             logger.error(f"Failed to generate filename: {e}")
             return "document"
+
+    def _generate_tags(
+        self,
+        text: str,
+        file_name: str | None = None,
+        relative_path: str | Path | None = None,
+        style: str | None = None,
+        custom_prompt: str | None = None,
+        max_tags: int = 6,
+    ) -> list[str]:
+        """Generate descriptive tags for the file using the AI model.
+
+        Args:
+            text: File content or description
+            file_name: Name of the file
+            relative_path: Relative path or directory context of the file
+            style: Optional tagging style (e.g., "sfx", "audio", "code", "descriptive")
+            custom_prompt: Optional user instructions for tag selection
+            max_tags: Maximum number of tags to generate
+
+        Returns:
+            List of clean, lowercase, underscore-separated tags
+        """
+        hint_parts = []
+        if file_name:
+            hint_parts.append(f"FILENAME: {file_name}")
+        if relative_path:
+            hint_parts.append(f"PATH: {relative_path}")
+        if style:
+            hint_parts.append(f"STYLE: {style}")
+        if custom_prompt:
+            hint_parts.append(f"INSTRUCTIONS: {custom_prompt}")
+        context_header = ("\n" + "\n".join(hint_parts) + "\n") if hint_parts else ""
+
+        prompt = f"""Generate up to {max_tags} concise, relevant tags for this file.
+
+RULES:
+1. Each tag must be 1-2 words in lowercase, separated by commas (e.g. machine_learning, finance, audio)
+2. Use ONLY lowercase alphanumeric characters and underscores
+3. NO generic words like 'file', 'document', 'text', 'untitled'
+4. Output ONLY the comma-separated tags, nothing else
+{context_header}
+CONTENT:
+{text[:1000]}
+
+TAGS:"""
+        try:
+            response = self.text_model.generate(prompt, temperature=0.3, max_tokens=60)
+            raw_tags = [t.strip().lower() for t in response.split(",") if t.strip()]
+            cleaned_tags = []
+            for t in raw_tags:
+                tag = re.sub(r"[^\w_]", "_", t)
+                tag = re.sub(r"_+", "_", tag).strip("_")
+                if (
+                    tag
+                    and tag not in _CLEAN_NAME_STOP_WORDS
+                    and len(tag) > 1
+                    and tag not in cleaned_tags
+                ):
+                    cleaned_tags.append(tag)
+            return cleaned_tags[:max_tags]
+        except Exception as e:
+            logger.debug("Failed to generate AI tags: {}", e)
+            return []
 
     def cleanup(self) -> None:
         """Cleanup resources.

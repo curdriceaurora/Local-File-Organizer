@@ -54,6 +54,22 @@ def suggest(
     min_confidence: Annotated[
         float, typer.Option("--min-confidence", help="Minimum confidence %.")
     ] = 40.0,
+    style: Annotated[
+        str | None,
+        typer.Option(
+            "--style",
+            "-s",
+            help="Tagging style preset (e.g. sfx, audio, code, descriptive, hierarchical).",
+        ),
+    ] = None,
+    prompt: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt",
+            "-p",
+            help="Custom prompt instructions for tag selection.",
+        ),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Suggest tags for files in a directory."""
@@ -77,7 +93,12 @@ def suggest(
 
     for file_path in files:
         try:
-            recommendation = service.suggest_tags(file_path, top_n=top_n)
+            recommendation = service.suggest_tags(
+                file_path,
+                top_n=top_n,
+                style=style,
+                prompt=prompt,
+            )
         except Exception:
             logger.debug(
                 "Skipping file during auto-tag suggest due to inference error: %s",
@@ -213,6 +234,22 @@ def batch(
     directory: Annotated[Path, typer.Argument(help="Directory to process.")],
     pattern: Annotated[str, typer.Option(help="File pattern.")] = "*",
     recursive: Annotated[bool, typer.Option("--recursive/--no-recursive")] = True,
+    style: Annotated[
+        str | None,
+        typer.Option(
+            "--style",
+            "-s",
+            help="Tagging style preset (e.g. sfx, audio, code, descriptive, hierarchical).",
+        ),
+    ] = None,
+    prompt: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt",
+            "-p",
+            help="Custom prompt instructions for tag selection.",
+        ),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
 ) -> None:
     """Batch tag suggestion for directory."""
@@ -242,7 +279,12 @@ def batch(
     console.print(f"Processing [bold]{len(files)}[/bold] files...")
 
     try:
-        results = service.recommender.batch_recommend(files, top_n=5)
+        results = service.recommender.batch_recommend(
+            files,
+            top_n=5,
+            style=style,
+            prompt=prompt,
+        )
     except Exception as exc:
         console.print(f"[red]Error during batch processing: {exc}[/red]")
         raise typer.Exit(code=1) from exc

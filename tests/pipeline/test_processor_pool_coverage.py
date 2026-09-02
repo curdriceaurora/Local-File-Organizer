@@ -114,6 +114,57 @@ class TestProcessorPoolProperties:
         pool.get_processor(ProcessorType.TEXT)
         assert pool.active_count == 1
 
+
+class TestNormalizeProcessorResult:
+    def test_normalize_mapping_with_folder_and_tags(self):
+        from pathlib import Path
+
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        raw = {
+            "folder_name": "reports",
+            "filename": "annual_summary",
+            "tags": ["finance", "annual"],
+        }
+        res = normalize_processor_result(Path("summary.pdf"), raw)
+        assert res["category"] == "reports"
+        assert res["filename"] == "annual_summary"
+        assert res["tags"] == ["finance", "annual"]
+
+    def test_normalize_mapping_with_error_raises(self):
+        from pathlib import Path
+
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        with pytest.raises(RuntimeError, match="Processor reported error"):
+            normalize_processor_result(Path("doc.txt"), {"error": "Corrupted file"})
+
+    def test_normalize_object_with_category_and_tags(self):
+        from pathlib import Path
+
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        class ObjResult:
+            category = "photos"
+            filename = "beach"
+            tags = ["vacation", "summer"]
+
+        res = normalize_processor_result(Path("img.jpg"), ObjResult())
+        assert res["category"] == "photos"
+        assert res["filename"] == "beach"
+        assert res["tags"] == ["vacation", "summer"]
+
+    def test_normalize_object_with_error_raises(self):
+        from pathlib import Path
+
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        class ErrorResult:
+            error = "Inference timed out"
+
+        with pytest.raises(RuntimeError, match="Inference timed out"):
+            normalize_processor_result(Path("img.jpg"), ErrorResult())
+
     def test_registered_types(self):
         pool = ProcessorPool()
         pool.register_factory(ProcessorType.TEXT, lambda: _make_processor())

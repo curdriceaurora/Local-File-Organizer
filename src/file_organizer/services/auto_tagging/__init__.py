@@ -47,6 +47,8 @@ class AutoTaggingService:
         file_path: Path,
         existing_tags: list[str] | None = None,
         top_n: int = 10,
+        style: str | None = None,
+        prompt: str | None = None,
     ) -> TagRecommendation:
         """Suggest tags for a file.
 
@@ -54,11 +56,19 @@ class AutoTaggingService:
             file_path: Path to the file
             existing_tags: Tags already applied
             top_n: Maximum suggestions
+            style: Optional tag style preset
+            prompt: Optional custom user prompt
 
         Returns:
             TagRecommendation object
         """
-        return self.recommender.recommend_tags(file_path, existing_tags=existing_tags, top_n=top_n)
+        return self.recommender.recommend_tags(
+            file_path,
+            existing_tags=existing_tags,
+            top_n=top_n,
+            style=style,
+            prompt=prompt,
+        )
 
     def record_tag_usage(
         self,
