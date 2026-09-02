@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-02
+
+### Highlights
+
+- **Cross-surface organization parity**: Landed the canonical organization service, capability registry, and job-lifecycle contracts, then migrated CLI, REST API, official Python/TypeScript SDKs, Web, Desktop, and TUI onto them, so `organize`/`preview`/execute behave identically — and are conformance-tested against the same golden corpus — across every surface (epic #1593).
+- **Filesystem traversal hardened**: Migrated every remaining raw directory walk (services, API, plugins, TUI, config, methodologies, misplacement detection) to a shared `safe_walk` primitive that skips symlinks and hidden entries, added an error-reporting channel and traversal budget to it, and closed a Windows-specific trailing-dot/space path-escape bypass.
+- **Repository security remediation**: Resolved 17 Dependabot CVEs and 65 CodeQL/code-scanning alerts in one pass (Pillow, soupsieve, transformers, torch upgrades plus path-injection fixes in the plugin installer and profile-avatar routes), and separately raised the `pypdf` floor to close two resource-exhaustion CVEs and fixed Alembic logger-poisoning.
+- **Mutation-testing pilot**: Landed a nightly mutation-testing gate with measured per-module kill-rate floors, closing out a four-wave epic that repaired 417 tests found to assert nothing meaningful against real code mutations.
+- **Stability and CI reliability**: Fixed SQLite lock contention that could break auth requests under load, added TTL expiration to the web organize-plan store, repaired persistent nightly CI Full Matrix failures on macOS and Windows, and removed several flaky-test mechanisms.
+
+### Changed
+
+- Added the canonical `OrganizationService`/`OrganizeOptions`/`OrganizeRequest` contracts and a versioned capability registry describing target support, implementation, and conformance status per surface (CLI, REST, Python/TypeScript SDK, Web/Desktop, TUI) (#1612, #1613).
+- Unified transfer (`copy`/`hardlink`) and methodology semantics across surfaces, bumping organization plans to schema 3 with migration support for older plans (#1616).
+- Defined canonical job-lifecycle contracts (scheduling, cancellation, progress, idempotency, recovery, rollback) shared by direct, REST, SDK, and Web execution paths, including an Alembic migration for persisted lifecycle metadata (#1620).
+- Migrated `fo organize`/`fo preview` (#1622), REST + official Python/TypeScript SDKs (#1623), Web/Desktop (#1624), `fo api` remote organization (#1625), and the TUI workspace (#1631) onto the canonical organization service, each verified against the shared golden conformance corpus.
+- Promoted cross-surface adapter conformance checks to required, blocking CI gates, generated a capability matrix from live registry state, and linked README feature claims to registry evidence with a freshness check (#1606, #1609, #1610).
+- Migrated the remaining raw filesystem walks (`services/`, `api/`, `plugins/`, `tui/`, `config/`, `methodologies/`, misplacement detection) to `core.path_guard.safe_walk`, and gave `safe_walk` an error-reporting channel and a traversal budget so a partial walk is surfaced instead of silently returning fewer files (#1671, #1674, #1675).
+- Dependency maintenance: bumped `pypdf` (CVE fixes), `openai` (dev, ~=2.44 to ~=3.6), `isort` (dev, ~=8.0 to ~=9.0), `websockets` (<17 to <18), and routine `actions/checkout`, `actions/setup-python` (v6 to v7), and CodeQL action upgrades across CI workflows, plus assorted Dependabot bumps merged throughout the cycle.
+
+### Fixed
+
+- **Security**: Rejected a Win32-specific path-traversal bypass where trailing dots/spaces on a path component (`".. "`, `"..."`) are silently trimmed by the filesystem to `".."`, letting a crafted classifier folder name escape the output root (`_safe_folder`).
+- **Security**: Enforced a safe filesystem traversal scope end-to-end (audited traversal call sites, CLI failure handling, and shared web traversal budgets across tree probes) (#1737).
+- Stopped SQLite lock contention from breaking auth requests under concurrent load by setting a 30s `busy_timeout` on file-backed connections and serializing first-call schema creation.
+- Added TTL expiration (1 hour) to the web organize-plan store so stale plans are evicted by age, not only by count, and guarded plan pruning against records missing a `created_at` timestamp.
+- Fixed the PARA methodology's `suggest_archive` dividing by a non-positive `inactive_days` threshold, and applied the same non-positive-threshold guard to archive selection, not just confidence scoring.
+- Fixed Johnny Decimal category numbering so multiple classifier folders in the same area get unique numbers instead of colliding on `.01`.
+- Fixed the TUI's persisted model-provider setting silently outranking the `FO_PROVIDER` environment variable on startup, and added a per-request provider override with documented resolution order.
+- Repaired persistent nightly "CI Full Matrix" failures on macOS (a stalling reverse-DNS lookup in a test HTTP server) and Windows (SafeDir tests now properly skip on a platform where the POSIX-only backend isn't implemented).
+- Removed three flaky-test mechanisms and widened two timing margins; made the mutation-test suite deterministic under load and closed a test-launcher port race.
+
+### Security
+
+- Resolved 17 Dependabot CVEs (Pillow, soupsieve, transformers, torch) and 65 CodeQL code-scanning alerts, including high-severity path-injection findings in the plugin marketplace installer and the profile-avatar route, hardened with canonical path resolution.
+- Raised the `pypdf` floor to 6.15.0, closing two resource-exhaustion CVEs (GHSA-fwg2-594c-jp42, GHSA-fp3f-mc75-235c) reachable from a malformed PDF via the dedup text extractor, and fixed an Alembic logger-poisoning issue.
+
 ## [2.1.1] - 2026-07-20
 
 Release recovery patch for the partially published `2.1.0` flow. This release
