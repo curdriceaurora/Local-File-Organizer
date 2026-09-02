@@ -146,7 +146,7 @@ dev = [
     "types-PyYAML~=6.0",
     "ruff>=0.1.0",  # 0.x — unstable API, keep >=
     "black>=23.12,<27.0",
-    "isort~=8.0",
+    "isort~=9.0",
     "pre-commit~=4.6",
     "codespell~=2.2",
     "faker~=40.12",
