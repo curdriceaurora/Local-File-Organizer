@@ -409,6 +409,7 @@ def _analyze_image_file(file_path: Path, *, verbose: bool, json_output: bool) ->
         processor = VisionProcessor(config=vision_config)
         processor.initialize()
     except ImportError as exc:
+        _cleanup_vision_processor(processor, json_output=json_output)
         console.print(
             "[red]Error: Vision analysis dependencies are not available. "
             "Install the required vision extras and model backend.[/red]"

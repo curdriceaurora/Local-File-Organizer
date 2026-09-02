@@ -133,6 +133,26 @@ def test_analyze_image_file_cleans_up_after_init_failure(tmp_path: Path) -> None
     processor.cleanup.assert_called_once_with()
 
 
+def test_analyze_image_file_cleans_up_after_import_error_init_failure(tmp_path: Path) -> None:
+    image = tmp_path / "receipt.jpg"
+    image.write_bytes(b"jpeg")
+    processor = MagicMock()
+    processor.initialize.side_effect = ImportError("vision dependency missing")
+
+    with (
+        patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), SimpleNamespace(name="vision-model")),
+        ),
+        patch("file_organizer.services.vision_processor.VisionProcessor", return_value=processor),
+        pytest.raises(typer.Exit) as exc_info,
+    ):
+        utilities._analyze_image_file(image, verbose=False, json_output=False)
+
+    assert exc_info.value.exit_code == 1
+    processor.cleanup.assert_called_once_with()
+
+
 def test_analyze_image_file_cleans_up_after_process_failure(tmp_path: Path) -> None:
     image = tmp_path / "receipt.jpg"
     image.write_bytes(b"jpeg")
