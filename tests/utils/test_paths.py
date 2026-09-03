@@ -125,3 +125,21 @@ def test_format_path_context_clause_control_characters() -> None:
     assert r"\u0000" in clause
     assert r"\n" in clause
     assert r"\t" in clause
+
+
+def test_format_path_context_clause_strips_traversal_segments() -> None:
+    """format_path_context_clause() must not trust its input is already
+    sanitized by resolve_relative_path() -- it's independently reachable
+    (e.g. via TextProcessor.process_file()'s explicit relative_path=
+    override, which bypasses resolve_relative_path() entirely)."""
+    clause = format_path_context_clause("../../etc/passwd")
+    assert '"etc/passwd"' in clause
+    assert ".." not in clause
+
+    clause_dot = format_path_context_clause("./sub/../file.txt")
+    assert '"sub/file.txt"' in clause_dot
+    assert ".." not in clause_dot
+
+    # Purely traversal segments leave nothing meaningful to show.
+    assert format_path_context_clause("..") == ""
+    assert format_path_context_clause("../..") == ""

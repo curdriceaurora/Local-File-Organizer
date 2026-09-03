@@ -89,7 +89,12 @@ def format_path_context_clause(path_context: str | None) -> str:
     """Format a path context clause for prompt injection.
 
     - If path_context is None, empty, or whitespace-only: returns "".
-    - Depth is capped at the last 3 path components.
+    - ``.``/``..`` path components are dropped, not merely displayed --
+      this function does not assume its input has already been sanitized
+      by :func:`resolve_relative_path` (e.g. it's also reachable directly
+      through ``TextProcessor.process_file()``'s explicit ``relative_path``
+      override, which bypasses that helper).
+    - Depth is capped at the last 3 (remaining) path components.
     - If the joined 3-component path exceeds 200 characters, falls back
       to the filename (last component) capped at 200 characters.
     - The resulting string is JSON-encoded via json.dumps(..., ensure_ascii=True)
@@ -100,7 +105,7 @@ def format_path_context_clause(path_context: str | None) -> str:
     if not path_context or not path_context.strip():
         return ""
 
-    parts = [p for p in path_context.split("/") if p]
+    parts = [p for p in path_context.split("/") if p and p not in (".", "..")]
     if not parts:
         return ""
 
