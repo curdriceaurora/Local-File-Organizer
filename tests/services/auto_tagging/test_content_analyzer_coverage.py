@@ -260,9 +260,9 @@ class TestCleanTags:
         assert len(tags) == 1
 
     def test_removes_short_tags(self, analyzer):
-        tags = analyzer._clean_tags(["py", "ab", "python"])
+        tags = analyzer._clean_tags(["a", "b", "python"])
         assert "python" in tags
-        assert "py" not in tags
+        assert "a" not in tags
 
     def test_removes_special_chars(self, analyzer):
         tags = analyzer._clean_tags(["hello!world", "test@tag"])

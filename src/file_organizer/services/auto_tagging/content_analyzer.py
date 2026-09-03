@@ -14,6 +14,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from .styles import ScoredTag, rank_tag_candidates
+
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +31,7 @@ class ContentTagAnalyzer:
 
     def __init__(
         self,
-        min_keyword_length: int = 3,
+        min_keyword_length: int = 2,
         max_keywords: int = 20,
         stop_words: set[str] | None = None,
     ):
@@ -142,6 +144,64 @@ class ContentTagAnalyzer:
 
         logger.info(f"Extracted {len(cleaned_tags)} tags from {file_path.name}")
         return cleaned_tags[: self.max_keywords]
+
+    def extract_tag_candidates(
+        self,
+        file_path: Path,
+        *,
+        style: str | None = None,
+        prompt: str | None = None,
+        top_n: int | None = None,
+    ) -> list[ScoredTag]:
+        """Extract multi-signal tag candidates and rank them using heuristic scoring rules.
+
+        Combines:
+        - Filename tokens (base weight 1.0, source: filename)
+        - Extension and category tags (base weight 0.8, source: extension)
+        - Directory tokens (base weight 0.6, source: directory)
+        - Metadata tags (base weight 0.4, source: metadata)
+        - Content keywords (normalized to [0.0, 1.0], source: content)
+        """
+        if not file_path.exists():
+            return []
+
+        raw_candidates: list[ScoredTag] = []
+
+        # 1. Filename tokens (weight 1.0)
+        for tag in self._extract_from_filename(file_path):
+            raw_candidates.append(ScoredTag(tag=tag, score=1.0, sources=("filename",)))
+
+        # 2. Extension & category tokens (weight 0.8)
+        for tag in self._extract_from_extension(file_path):
+            raw_candidates.append(ScoredTag(tag=tag, score=0.8, sources=("extension",)))
+
+        # 3. Directory tokens (weight 0.6)
+        for tag in self._extract_from_directory(file_path):
+            raw_candidates.append(ScoredTag(tag=tag, score=0.6, sources=("directory",)))
+
+        # 4. Metadata tags (weight 0.4)
+        for tag in self._extract_from_metadata(file_path):
+            raw_candidates.append(ScoredTag(tag=tag, score=0.4, sources=("metadata",)))
+
+        # 5. Content-sourced keywords (normalized to [0.0, 1.0] via score / max_tfidf)
+        if self._is_text_file(file_path):
+            keywords = self.extract_keywords(file_path, top_n=self.max_keywords)
+            if keywords:
+                max_tfidf = max(s for _, s in keywords)
+                if max_tfidf > 0:
+                    for word, tfidf in keywords:
+                        normalized_score = tfidf / max_tfidf
+                        raw_candidates.append(
+                            ScoredTag(tag=word, score=normalized_score, sources=("content",))
+                        )
+
+        return rank_tag_candidates(
+            raw_candidates,
+            style=style,
+            prompt=prompt,
+            top_n=top_n,
+            stop_words=self.stop_words,
+        )
 
     def extract_keywords(self, file_path: Path, top_n: int = 10) -> list[tuple[str, float]]:
         """Extract keywords with confidence scores using TF-IDF.

@@ -6,9 +6,12 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
+
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
