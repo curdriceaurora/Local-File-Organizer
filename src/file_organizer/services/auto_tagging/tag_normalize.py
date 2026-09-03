@@ -22,6 +22,19 @@ MIN_TAG_LENGTH = 2
 MAX_TAG_LENGTH = 40
 DEFAULT_MAX_TAGS = 8
 
+# Upper bound on collapse/strip iterations in normalize_tag(). Each pass either
+# shortens the string or leaves it unchanged, so real inputs converge in 2-3
+# passes; this just guards against an unforeseen non-terminating pattern.
+_MAX_COLLAPSE_PASSES = 8
+
+
+def _collapse_separators_once(text: str) -> str:
+    """Run one round of mixed/repeated-separator collapsing plus edge strip."""
+    text = _MIXED_SLASH_HYPHEN_RE.sub("-", text)
+    text = _MULTI_SLASH_RE.sub("/", text)
+    text = _MULTI_HYPHEN_RE.sub("-", text)
+    return text.strip("-/")
+
 
 def normalize_tag(raw: str) -> str | None:
     """Normalize a single tag to canonical form, or return None if invalid.
@@ -35,6 +48,16 @@ def normalize_tag(raw: str) -> str | None:
     - Repeated ``-`` and ``/`` collapse, and mixed ``/-`` / ``-/`` collapse to ``-``.
     - Leading and trailing ``-`` and ``/`` are stripped.
     - Length must be between 2 and 40 characters (inclusive).
+
+    Idempotent: ``normalize_tag(normalize_tag(x))`` always equals
+    ``normalize_tag(x)`` for any ``x`` where the inner call doesn't return
+    ``None``. This matters because ``validate_canonical_tags()`` checks a
+    stored tag against a fresh call to this function — a non-idempotent
+    normalizer would reject tags this function itself just produced. The
+    collapse/strip step therefore loops to a fixed point rather than running
+    a single hardcoded pass: one pass can expose a new mixed-separator or
+    edge pattern that only the next pass resolves (e.g. stripping a trailing
+    ``-`` can reveal a ``/`` that's now itself trailing).
     """
     if not isinstance(raw, str):
         return None
@@ -50,18 +73,20 @@ def normalize_tag(raw: str) -> str | None:
     # Replace disallowed characters with hyphens
     text = _ALLOWED_CHARS_RE.sub("-", text)
 
-    # Collapse mixed and repeated separators
-    text = _MIXED_SLASH_HYPHEN_RE.sub("-", text)
-    text = _MULTI_SLASH_RE.sub("/", text)
-    text = _MULTI_HYPHEN_RE.sub("-", text)
-
-    # Strip leading/trailing delimiters
-    text = text.strip("-/")
-
-    # Clean any artifacts resulting from stripping
-    text = _MIXED_SLASH_HYPHEN_RE.sub("-", text)
-    text = _MULTI_HYPHEN_RE.sub("-", text)
-    text = _MULTI_SLASH_RE.sub("/", text)
+    # Collapse mixed/repeated separators and strip edges, repeating until
+    # a fixed point is reached (see the idempotence note above).
+    for _ in range(_MAX_COLLAPSE_PASSES):
+        collapsed = _collapse_separators_once(text)
+        if collapsed == text:
+            break
+        text = collapsed
+    else:
+        logger.debug(
+            "normalize_tag did not converge for %r after %d passes",
+            raw,
+            _MAX_COLLAPSE_PASSES,
+        )
+        text = collapsed
 
     if len(text) < MIN_TAG_LENGTH or len(text) > MAX_TAG_LENGTH:
         return None

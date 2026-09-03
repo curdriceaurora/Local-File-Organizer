@@ -205,3 +205,49 @@ class TestNormalizeProcessorResult:
 
         with pytest.raises(RuntimeError, match="Processor reported error: corrupted file"):
             normalize_processor_result(file_path, obj)
+
+    def test_normalize_mapping_neither_folder_name_nor_category(self, tmp_path):
+        """Mirrors the object-branch default (test_registered_types-style fallback)."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        normalized = normalize_processor_result(file_path, {})
+        assert normalized["category"] == "uncategorized"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
+
+    def test_normalize_object_category_fallback_when_no_folder_name(self, tmp_path):
+        """The object-branch mirror of test_normalize_mapping_precedence_and_fallbacks'
+        category-without-folder_name case -- previously untested, same elif as the
+        Mapping branch but on the attribute-access side."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        obj = MagicMock(spec=["folder_name", "category", "filename", "tags", "error"])
+        obj.folder_name = None
+        obj.category = "FallbackCategory"
+        obj.filename = None
+        obj.tags = None
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized["category"] == "FallbackCategory"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
+
+    def test_normalize_object_neither_folder_name_nor_category(self, tmp_path):
+        """Object-branch mirror of test_normalize_mapping_neither_folder_name_nor_category."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        obj = MagicMock(spec=["folder_name", "category", "filename", "tags", "error"])
+        obj.folder_name = None
+        obj.category = None
+        obj.filename = None
+        obj.tags = None
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized["category"] == "uncategorized"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
