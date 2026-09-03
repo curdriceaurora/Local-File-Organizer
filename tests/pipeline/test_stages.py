@@ -215,6 +215,75 @@ class TestAnalyzerStage:
         pool.get_processor.assert_called_once()
 
 
+@pytest.mark.ci
+@pytest.mark.integration
+class TestAnalyzerStageProcessorPoolIntegration:
+    """AnalyzerStage wired to a real ProcessorPool + FileRouter (not mocked).
+
+    Exercises normalize_processor_result()'s full contract -- including the
+    Mapping-result branch, which no built-in processor (TextProcessor,
+    VisionProcessor) ever returns, but which BaseProcessor's Protocol
+    explicitly permits any conforming implementation to use.
+    """
+
+    @staticmethod
+    def _make_stage(tmp_path: Path, result: object) -> tuple[AnalyzerStage, Path]:
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        class _StubProcessor:
+            def initialize(self) -> None:
+                pass
+
+            def process_file(self, file_path: Path) -> object:
+                return result
+
+            def cleanup(self) -> None:
+                pass
+
+        f = tmp_path / "doc.txt"
+        f.write_text("hello")
+
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.TEXT, _StubProcessor)
+        stage = AnalyzerStage(router=FileRouter(), processor_pool=pool)
+        return stage, f
+
+    def test_mapping_result_through_real_pool(self, tmp_path: Path) -> None:
+        stage, f = self._make_stage(
+            tmp_path,
+            {"folder_name": "Invoices", "filename": "march_invoice", "tags": ["finance"]},
+        )
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "Invoices"
+        assert result.filename == "march_invoice"
+
+    def test_mapping_result_with_no_category_signal(self, tmp_path: Path) -> None:
+        """Neither folder_name nor category present -> falls back to 'uncategorized'."""
+        stage, f = self._make_stage(tmp_path, {"filename": "notes"})
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "uncategorized"
+        assert result.filename == "notes"
+
+    def test_object_result_category_fallback_through_real_pool(self, tmp_path: Path) -> None:
+        """Object with `category` but no `folder_name` -- the elif fallback path."""
+
+        class _Result:
+            folder_name = None
+            category = "Reports"
+            filename = "q3"
+            tags = None
+            error = None
+
+        stage, f = self._make_stage(tmp_path, _Result())
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "Reports"
+        assert result.filename == "q3"
+
+
 # ---------------------------------------------------------------------------
 # PostprocessorStage
 # ---------------------------------------------------------------------------

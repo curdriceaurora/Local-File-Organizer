@@ -161,6 +161,9 @@ def test_all_behavior_flags_map_losslessly(service: MagicMock, tmp_path: Path) -
         "vision_model": "vision-v1",
         "text_provider": "openai",
         "vision_provider": "claude",
+        "generate_tags": False,
+        "tag_style": None,
+        "tag_prompt": None,
     }
 
 

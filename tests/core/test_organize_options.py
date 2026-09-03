@@ -45,11 +45,43 @@ def test_options_defaults_round_trip() -> None:
             "conflicts with transfer_mode",
         ),
         ({"future_option": True}, "unknown organization option"),
+        ({"generate_tags": "yes"}, "generate_tags"),
+        ({"tag_style": "invalid", "generate_tags": True}, "Invalid tag_style"),
+        (
+            {"tag_prompt": "a" * 501, "generate_tags": True},
+            "tag_prompt exceeds maximum length",
+        ),
+        (
+            {"tag_style": "descriptive", "generate_tags": False},
+            "require generate_tags=True",
+        ),
+        (
+            {"tag_prompt": "some prompt", "generate_tags": False},
+            "require generate_tags=True",
+        ),
     ],
 )
 def test_options_reject_invalid_values(values: dict[str, object], message: str) -> None:
     with pytest.raises((TypeError, ValueError), match=message):
         OrganizeOptions.from_dict(values)
+
+
+def test_tag_options_round_trip() -> None:
+    options = OrganizeOptions(
+        generate_tags=True,
+        tag_style="descriptive",
+        tag_prompt="focus on genres",
+    )
+    assert OrganizeOptions.from_dict(options.to_dict()) == options
+    assert options.generate_tags is True
+    assert options.tag_style == "descriptive"
+    assert options.tag_prompt == "focus on genres"
+
+
+def test_tag_prompt_empty_string_normalizes_to_none() -> None:
+    options = OrganizeOptions(generate_tags=True, tag_prompt="   ")
+    assert options.tag_prompt is None
+    assert OrganizeOptions(generate_tags=False, tag_prompt="").tag_prompt is None
 
 
 def test_request_normalizes_path_like_values() -> None:
