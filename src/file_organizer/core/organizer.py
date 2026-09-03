@@ -407,7 +407,9 @@ class FileOrganizer:
                         and self.vision_processor.vision_model.is_initialized
                     )
                     if vision_ready:
-                        all_processed.extend(self._process_image_files(image_files))
+                        all_processed.extend(
+                            self._process_image_files(image_files, context_root=scan_root)
+                        )
                     else:
                         all_processed.extend(self._fallback_by_extension(image_files))
                 else:
@@ -751,11 +753,21 @@ class FileOrganizer:
             scan_root=scan_root,
         )
 
-    def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:
-        """Classify image files using the vision processor and append results to the plan."""
+    def _process_image_files(
+        self, files: list[Path], *, context_root: Path | None = None
+    ) -> list[ProcessedImage]:
+        """Classify image files using the vision processor and append results to the plan.
+
+        *context_root* (the directory walked to discover *files*) is forwarded
+        for prompt context hints (relative path / parent folder).
+        """
         assert self.vision_processor is not None
         return dispatcher.process_image_files(
-            files, self.vision_processor, self.parallel_processor, self.console
+            files,
+            self.vision_processor,
+            self.parallel_processor,
+            self.console,
+            context_root=context_root,
         )
 
     def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:

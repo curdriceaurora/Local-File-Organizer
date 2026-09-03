@@ -256,6 +256,8 @@ def process_image_files(
     vision_processor: VisionProcessor,
     parallel_processor: ParallelProcessor,
     console: Console,
+    *,
+    context_root: Path | None = None,
 ) -> list[ProcessedImage]:
     """Process image files through the AI vision model.
 
@@ -264,6 +266,8 @@ def process_image_files(
         vision_processor: Initialized vision processor.
         parallel_processor: Parallel processing engine.
         console: Rich console for progress output.
+        context_root: Optional directory path used exclusively for prompt
+            context hints (relative path / parent folder).
 
     Returns:
         List of processed image results.
@@ -279,7 +283,7 @@ def process_image_files(
 
         def _process_one_image(path: Path) -> ProcessedImage:
             """Process a single image file in the dispatcher thread pool."""
-            return vision_processor.process_file(path)
+            return vision_processor.process_file(path, context_root=context_root)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one_image):
             if file_result.success:
@@ -399,7 +403,7 @@ def process_image_files(
         retry_processor = ParallelProcessor(config=retry_config)
 
         def _retry_one_image(path: Path) -> ProcessedImage:
-            return vision_processor.process_file(path)
+            return vision_processor.process_file(path, context_root=context_root)
 
         for retry_result in retry_processor.process_batch_iter(retry_paths, _retry_one_image):
             if retry_result.success:

@@ -14,6 +14,7 @@ from file_organizer.models import TextModel
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_text_model
 from file_organizer.utils.file_readers import FileReadError, read_file
+from file_organizer.utils.paths import format_path_context_clause, resolve_relative_path
 from file_organizer.utils.readers import read_file_via_safedir_anchored
 from file_organizer.utils.text_processing import (
     clean_text,
@@ -155,6 +156,7 @@ class TextProcessor:
         generate_filename: bool = True,
         *,
         scan_root: str | Path | None = None,
+        relative_path: str | None = None,
     ) -> ProcessedFile:
         """Process a single text file.
 
@@ -168,6 +170,9 @@ class TextProcessor:
                 ``read_file_via_safedir_anchored`` so a symlink swapped in after
                 the scan is refused rather than dereferenced (#264/#286).
                 ``None`` keeps the legacy path-based read.
+            relative_path: Optional explicit relative path context for prompts.
+                When omitted, auto-derived from *scan_root* via
+                :func:`resolve_relative_path`.
 
         Returns:
             ProcessedFile with metadata
@@ -176,6 +181,10 @@ class TextProcessor:
 
         file_path = Path(file_path)
         start_time = time.time()
+
+        if relative_path is None:
+            relative_path = resolve_relative_path(file_path, scan_root)
+        path_clause = format_path_context_clause(relative_path)
 
         try:
             # Read file content
@@ -197,14 +206,16 @@ class TextProcessor:
             # Generate description (summary)
             description = ""
             if generate_description:
-                description = self._generate_description(content)
+                description = self._generate_description(content, path_clause=path_clause)
                 logger.debug("Generated description ({} chars)", len(description))
 
             # Generate folder name
             folder_name = ""
             if generate_folder:
                 folder_name = self._generate_folder_name(
-                    description or content, original_stem=file_path.stem
+                    description or content,
+                    original_stem=file_path.stem,
+                    path_clause=path_clause,
                 )
                 logger.debug("Generated folder name ({} chars)", len(folder_name))
 
@@ -212,7 +223,9 @@ class TextProcessor:
             filename = ""
             if generate_filename:
                 filename = self._generate_filename(
-                    description or content, original_stem=file_path.stem
+                    description or content,
+                    original_stem=file_path.stem,
+                    path_clause=path_clause,
                 )
                 logger.debug("Generated filename ({} chars)", len(filename))
 
@@ -282,17 +295,18 @@ class TextProcessor:
         # Join with underscores
         return "_".join(filtered) if filtered else ""
 
-    def _generate_description(self, content: str) -> str:
+    def _generate_description(self, content: str, path_clause: str = "") -> str:
         """Generate a summary/description of the content.
 
         Args:
             content: File content
+            path_clause: Formatted path context clause for prompt enrichment
 
         Returns:
             Summary text
         """
-        prompt = f"""Summarize the following text in 100-150 words. Focus on main ideas and key details.
-
+        path_line = f"\n{path_clause.strip()}\n" if path_clause else ""
+        prompt = f"""Summarize the following text in 100-150 words. Focus on main ideas and key details.{path_line}
 TEXT:
 {content}
 
@@ -312,13 +326,19 @@ SUMMARY:"""
             logger.error(f"Failed to generate description: {e}")
             return f"Content about {content[:100]}..."
 
-    def _generate_folder_name(self, text: str, original_stem: str | None = None) -> str:
+    def _generate_folder_name(
+        self,
+        text: str,
+        original_stem: str | None = None,
+        path_clause: str = "",
+    ) -> str:
         """Generate a folder name from text.
 
         Args:
             text: Description or content
             original_stem: Original filename stem (without extension) used as an
                 additional hint for small models with limited context.
+            path_clause: Formatted path context clause for prompt enrichment
 
         Returns:
             Folder name (max 2 words)
@@ -328,6 +348,7 @@ SUMMARY:"""
             if original_stem
             else ""
         )
+        path_line = f"\n{path_clause.strip()}\n" if path_clause else ""
         prompt = f"""Based on the text below, generate a general category or theme.
 
 RULES:
@@ -343,7 +364,7 @@ EXAMPLES:
 - Text about Python coding → "programming"
 - Text about chocolate recipes → "recipes"
 - Text about financial planning → "finance"
-{hint_line}
+{hint_line}{path_line}
 TEXT:
 {text[:1000]}
 
@@ -391,13 +412,19 @@ CATEGORY:"""
             logger.error(f"Failed to generate folder name: {e}")
             return "documents"
 
-    def _generate_filename(self, text: str, original_stem: str | None = None) -> str:
+    def _generate_filename(
+        self,
+        text: str,
+        original_stem: str | None = None,
+        path_clause: str = "",
+    ) -> str:
         """Generate a filename from text.
 
         Args:
             text: Description or content
             original_stem: Original filename stem (without extension) used as an
                 additional hint for small models with limited context.
+            path_clause: Formatted path context clause for prompt enrichment
 
         Returns:
             Filename (max 3 words, no extension)
@@ -407,6 +434,7 @@ CATEGORY:"""
             if original_stem
             else ""
         )
+        path_line = f"\n{path_clause.strip()}\n" if path_clause else ""
         prompt = f"""Based on the text below, generate a specific descriptive filename.
 
 RULES:
@@ -422,7 +450,7 @@ EXAMPLES:
 - Text about Python coding tips → "python_coding_guide"
 - Text about chocolate chip cookies → "chocolate_chip_cookies"
 - Text about 2023 budget → "budget_2023"
-{hint_line}
+{hint_line}{path_line}
 TEXT:
 {text[:1000]}
 

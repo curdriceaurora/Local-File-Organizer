@@ -19,6 +19,7 @@ from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_vision_model
 from file_organizer.models.vision_schema import VisionSchema
 from file_organizer.services.inference_timer import time_inference
+from file_organizer.utils.paths import format_path_context_clause, resolve_relative_path
 
 
 @dataclass
@@ -219,6 +220,8 @@ class VisionProcessor:
         generate_folder: bool = True,
         generate_filename: bool = True,
         perform_ocr: bool = True,
+        *,
+        context_root: Path | None = None,
     ) -> ProcessedImage:
         """Process a single image file.
 
@@ -228,6 +231,9 @@ class VisionProcessor:
             generate_folder: Whether to generate folder name
             generate_filename: Whether to generate filename
             perform_ocr: Whether to extract text (OCR)
+            context_root: Optional directory path used exclusively for prompt
+                context hints (relative path / parent folder). Does not gate
+                the image read.
 
         Returns:
             ProcessedImage with metadata
@@ -250,6 +256,7 @@ class VisionProcessor:
                 generate_folder=generate_folder,
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
+                context_root=context_root,
             )
             if model_invoked:
                 _timer.mark_invoked()
@@ -266,6 +273,7 @@ class VisionProcessor:
         generate_folder: bool,
         generate_filename: bool,
         perform_ocr: bool,
+        context_root: Path | None = None,
     ) -> tuple[ProcessedImage, bool]:
         """Inner body of :meth:`process_file` using structured generation.
 
@@ -352,11 +360,15 @@ class VisionProcessor:
             # Preprocess and clamp image
             image_bytes, image_mime_type = preprocess_and_clamp_image(file_path)
 
+            relative_path = resolve_relative_path(file_path, context_root)
+            path_clause = format_path_context_clause(relative_path)
+
             prompt = self._build_structured_prompt(
                 file_path=file_path,
                 generate_folder=generate_folder,
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
+                path_clause=path_clause,
             )
 
             logger.debug(f"Analyzing image: {file_path.name}")
@@ -468,12 +480,17 @@ class VisionProcessor:
         generate_folder: bool,
         generate_filename: bool,
         perform_ocr: bool,
+        path_clause: str = "",
     ) -> str:
         """Build the structured single-call image analysis prompt."""
         prompt_lines = [
             "Analyze this image and provide the following details:",
-            "- description: A detailed description of the main subject and important details.",
         ]
+        if path_clause:
+            prompt_lines.append(path_clause.strip())
+        prompt_lines.append(
+            "- description: A detailed description of the main subject and important details."
+        )
         if generate_folder:
             prompt_lines.append(
                 "- folder_name: A general plural lowercase category (max 2 words) e.g. 'screenshots', 'receipts'."
