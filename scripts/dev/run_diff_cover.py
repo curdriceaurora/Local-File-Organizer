@@ -43,6 +43,7 @@ Prerequisites:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -51,10 +52,22 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_MARKER_EXCLUSIONS = "not benchmark and not e2e and not integration"
 
 
+def to_ref() -> str:
+    """The revision actually being pushed.
+
+    pre-commit's pre-push hook sets PRE_COMMIT_TO_REF to the local revision
+    being pushed, parsed from git's pre-push stdin protocol -- which is NOT
+    always HEAD (e.g. `git push origin HEAD~1:branch`). Falls back to the
+    literal "HEAD" when unset (a direct `python run_diff_cover.py` outside
+    the hook, or a pre-commit version that doesn't set it).
+    """
+    return os.environ.get("PRE_COMMIT_TO_REF") or "HEAD"
+
+
 def merge_base(repo_root: Path = REPO_ROOT) -> str | None:
-    """origin/main merge base for HEAD, or None if unavailable."""
+    """origin/main merge base for the revision being pushed, or None if unavailable."""
     result = subprocess.run(
-        ["git", "merge-base", "HEAD", "origin/main"],
+        ["git", "merge-base", to_ref(), "origin/main"],
         cwd=repo_root,
         capture_output=True,
         text=True,
@@ -65,7 +78,7 @@ def merge_base(repo_root: Path = REPO_ROOT) -> str | None:
 
 
 def changed_python_files(base: str, repo_root: Path = REPO_ROOT) -> list[str]:
-    """Files under src/ or tests/ changed since *base*, excluding deletions.
+    """Files under src/ or tests/ changed between *base* and the pushed revision.
 
     --diff-filter=d excludes deleted paths -- otherwise a deleted test file
     both has nothing left to run and can't be passed to pytest as a path.
@@ -76,7 +89,7 @@ def changed_python_files(base: str, repo_root: Path = REPO_ROOT) -> list[str]:
             "diff",
             "--name-only",
             "--diff-filter=d",
-            f"{base}...HEAD",
+            f"{base}...{to_ref()}",
             "--",
             "src/*.py",
             "src/**/*.py",

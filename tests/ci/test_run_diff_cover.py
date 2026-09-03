@@ -140,6 +140,43 @@ class TestGitFacingHelpers:
         assert "src/file_organizer/added.py" in changed
         assert "src/file_organizer/existing.py" not in changed
 
+    def test_uses_pre_commit_to_ref_for_a_non_head_push(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """PR review (issue #1767): pre-commit's pre-push hook sets
+        PRE_COMMIT_TO_REF to the revision actually being pushed, which isn't
+        always HEAD (e.g. `git push origin HEAD~1:branch`). merge_base()/
+        changed_python_files() must diff against that ref, not a hardcoded
+        HEAD, or they'd report coverage for the wrong revision."""
+        repo = _init_repo_with_origin_main(tmp_path)
+
+        _touch(repo / "src" / "file_organizer" / "at_b.py")
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "commit B"], cwd=repo, check=True)
+        commit_b = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+        _touch(repo / "src" / "file_organizer" / "at_c.py")
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "commit C (HEAD)"], cwd=repo, check=True)
+
+        # Without PRE_COMMIT_TO_REF, HEAD (commit C) is used -- both files show up.
+        monkeypatch.delenv("PRE_COMMIT_TO_REF", raising=False)
+        base = run_diff_cover.merge_base(repo_root=repo)
+        assert base is not None
+        changed_at_head = run_diff_cover.changed_python_files(base, repo_root=repo)
+        assert "src/file_organizer/at_b.py" in changed_at_head
+        assert "src/file_organizer/at_c.py" in changed_at_head
+
+        # Simulating `git push origin HEAD~1:branch`: pushing commit B, not C.
+        monkeypatch.setenv("PRE_COMMIT_TO_REF", commit_b)
+        base_for_push = run_diff_cover.merge_base(repo_root=repo)
+        assert base_for_push is not None
+        changed_for_push = run_diff_cover.changed_python_files(base_for_push, repo_root=repo)
+        assert "src/file_organizer/at_b.py" in changed_for_push
+        assert "src/file_organizer/at_c.py" not in changed_for_push
+
 
 @pytest.mark.unit
 class TestMainEndToEnd:

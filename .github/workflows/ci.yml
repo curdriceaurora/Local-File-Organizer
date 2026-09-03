@@ -139,19 +139,31 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        id: setup-python
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Cache dependencies venv
         # Issue #1767 (item 4): replaces a cold `pip install -e ".[dev,...]"`
-        # on every run with a venv restored from cache, keyed on pyproject.toml's
-        # hash — only the first run after a dependency change pays full install
-        # cost. Mirrors the playwright job's venv-cache pattern below.
+        # on every run with a venv restored from cache — only the first run
+        # after a dependency change pays full install cost. Mirrors the
+        # playwright job's venv-cache pattern below.
+        #
+        # Keyed on setup-python's *resolved* python-version output, not
+        # matrix.python-version: the matrix value is a selector ("3.11") that
+        # setup-python can resolve to a different patch version, and a stale
+        # venv built against an unavailable interpreter would otherwise be
+        # silently restored on a cache hit (PR review, issue #1767).
+        #
+        # Also hashes ci.yml itself, not just pyproject.toml: the install
+        # step's `pip install "pytest-asyncio>=0.23.0" faker` version
+        # constraints live here, not in pyproject.toml, so a change to them
+        # needs to invalidate the cache too (same review).
         id: deps-venv-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
         with:
           path: .venv-test
-          key: test-venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          key: test-venv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('pyproject.toml', '.github/workflows/ci.yml') }}
       - name: Install dependencies
         if: steps.deps-venv-cache.outputs.cache-hit != 'true'
         run: |
