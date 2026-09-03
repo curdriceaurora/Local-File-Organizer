@@ -38,7 +38,7 @@ class TestScoredTag:
 
     def test_immutability(self) -> None:
         tag = ScoredTag(tag="python", score=0.8, sources=("filename",))
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="cannot assign to field"):
             tag.score = 1.0  # type: ignore[misc]
 
 
@@ -207,17 +207,17 @@ class TestRankTagCandidates:
         validate_tag_style(None)
         for s in STYLE_PRESETS:
             validate_tag_style(s)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid tag_style 'unknown'"):
             validate_tag_style("unknown")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="tag_style must be a string or None"):
             validate_tag_style(42)  # type: ignore[arg-type]
 
         assert normalize_tag_prompt(None) is None
         assert normalize_tag_prompt("   ") is None
         assert normalize_tag_prompt("hello") == "hello"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="tag_prompt must be a string or None"):
             normalize_tag_prompt(42)  # type: ignore[arg-type]
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="tag_prompt exceeds maximum length"):
             normalize_tag_prompt("a" * 501)
 
     def test_whitespace_only_prompt_does_not_boost(self) -> None:

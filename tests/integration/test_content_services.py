@@ -145,7 +145,7 @@ class TestContentTagAnalyzerInit:
         assert analyzer.max_keywords == 20
 
     def test_default_min_keyword_length(self, analyzer: ContentTagAnalyzer) -> None:
-        assert analyzer.min_keyword_length == 3
+        assert analyzer.min_keyword_length == 2
 
     def test_custom_params(self) -> None:
         a = ContentTagAnalyzer(min_keyword_length=5, max_keywords=10)
