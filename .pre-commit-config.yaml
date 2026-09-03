@@ -1,3 +1,18 @@
+# diff-cover (below) runs at the pre-push stage, not pre-commit (issue #1767
+# item 3) -- a push-level concern, not a per-keystroke one. This makes both
+# stages install automatically the moment someone runs `pre-commit install`;
+# existing clones need to re-run that once to pick up the pre-push hook type.
+#
+# default_stages confines every hook that doesn't declare its own `stages:`
+# to pre-commit. Without it, adding pre-push to default_install_hook_types
+# makes pre-commit's own fallback ("no stages: means every installed hook
+# type") apply pre-push to ALL of them -- the smoke suite, ci-guardrails,
+# websocket and web-ui pytest hooks included, doubling that work on every
+# push in addition to the newly-scoped diff-cover run. Confirmed by running
+# `pre-commit run --hook-stage pre-push` before adding this line.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   # ----------------------------------------------------------------
   # Standard pre-commit hooks: trailing newlines, whitespace, syntax
@@ -107,21 +122,29 @@ repos:
       # Diff-coverage gate: changed lines must have ≥80% test coverage.
       # Mirrors the CI gate in .github/workflows/ci.yml ("Diff coverage gate").
       #
-      # Logic lives in scripts/dev/run-diff-cover.sh so that it can use
-      # set -euo pipefail for fail-fast behaviour and avoid YAML folded-scalar
-      # newline-collapse bugs with inline bash -c scripts.
+      # Runs at pre-push, not pre-commit (issue #1767 item 3): a push-level
+      # concern, not a per-keystroke one, and it's scoped to the diff's
+      # related tests rather than the near-full suite -- see
+      # scripts/dev/run_diff_cover.py for the scoping logic and its
+      # fail-open fallback. CI's 3.11-leg diff-cover step is the actual
+      # enforced gate; this hook is a fast local approximation of it.
       #
-      # The hook only fires when src/ or tests/ Python files are staged,
-      # so documentation-only or config-only commits are unaffected.
+      # Logic lives in a Python script, not inline/bash, so the file-mapping
+      # logic is portable (no bash-version dependency -- a prior bash version
+      # of this hook broke on macOS's Bash 3.2) and unit testable; see
+      # tests/ci/test_run_diff_cover.py.
+      #
+      # The hook only fires when src/ or tests/ Python files changed in the
+      # push, so documentation-only or config-only pushes are unaffected.
       # See CONTRIBUTING.md for the fetch-depth requirement.
       # ----------------------------------------------------------------
       - id: diff-cover
         name: diff-cover gate (80%)
-        entry: bash scripts/dev/run-diff-cover.sh
+        entry: python3 scripts/dev/run_diff_cover.py
         language: system
         pass_filenames: false
         files: ^(src|tests)/.*\.py$
-        stages: [pre-commit]
+        stages: [pre-push]
 
       # ----------------------------------------------------------------
       # Spelling
