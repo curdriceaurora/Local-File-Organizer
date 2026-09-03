@@ -86,7 +86,7 @@ to your changed files (by directory + name match) instead of the whole
 suite, so it stays fast. If it can't find a related test for a changed
 file, it warns and skips rather than blocking the push; CI's diff-cover
 step (`test` job, Python 3.11 leg) is the actual enforced gate. See
-`scripts/dev/run-diff-cover.sh` for the scoping logic.
+`scripts/dev/run_diff_cover.py` for the scoping logic.
 
 > **Note — `diff-cover` and git history**: The `diff-cover` hook computes a
 > merge base against `origin/main`, which requires full git history.  If you

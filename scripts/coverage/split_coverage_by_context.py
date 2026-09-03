@@ -21,14 +21,16 @@ How it works:
      This has to be nodeid-exact rather than a directory/filename regex:
      some files apply `unit`/`integration` per test function rather than
      per module, so a handful of files contribute tests to both views.
-  2. Build ONE combined regex alternating every (escaped) nodeid and pass
-     it as a single-element list to CoverageData.set_query_contexts().
-     Passing one pattern per nodeid instead blows past SQLite's default
-     "expression tree too large" limit (~1000) once there are more than a
-     few hundred nodeids -- set_query_contexts() ORs its patterns together
-     as separate SQL clauses, but a single regex can alternate as many
-     branches as re allows, so folding all nodeids into one pattern stays
-     under that limit no matter how large the suite gets.
+  2. Build ONE combined regex alternating every (escaped) nodeid plus the
+     empty context (collection-time/import-time execution -- see
+     build_context_pattern()), and pass it via `contexts=[pattern]` to
+     Coverage.json_report() itself. Passing one pattern per nodeid to
+     CoverageData.set_query_contexts() ahead of time instead blows past
+     SQLite's default "expression tree too large" limit (~1000) once
+     there are more than a few hundred nodeids -- and json_report() does
+     not honor query-context state set that way regardless: it rebuilds
+     its own filtered view strictly from the `contexts=` argument, so the
+     filter has to be passed there, not applied beforehand.
   3. Generate a `coverage json` report against that filtered view.
 
 Usage:
@@ -112,9 +114,23 @@ def collect_nodeids(markers: str, tests_dir: str) -> list[str]:
 
 
 def build_context_pattern(nodeids: list[str]) -> str:
-    """One regex alternating every nodeid, anchored to the phase separator."""
+    """One regex alternating every nodeid (phase-suffixed) plus the empty context.
+
+    The empty context ("") is coverage.py's bucket for lines executed
+    outside any test's setup/call/teardown -- collection-time imports,
+    class bodies, and top-level `def`/`class` statements chief among them.
+    That code always runs once, regardless of which tests get selected, so
+    every dedicated marker run always saw it as covered; a plain
+    `pytest -m unit ...` run has no context tracking at all; it collects
+    (and therefore imports) every test file before deselecting by marker,
+    so import-time execution of the modules under test was never
+    marker-specific to begin with. Excluding "" here would make every
+    view under-report definition-line coverage relative to the floors
+    computed from those old dedicated runs -- confirmed against a real
+    fixture, not just reasoned about (see the PR discussion on #1767).
+    """
     escaped = "|".join(re.escape(n) for n in nodeids)
-    return rf"^(?:{escaped})\{_CONTEXT_PHASE_SEP}"
+    return rf"^$|^(?:{escaped})\{_CONTEXT_PHASE_SEP}"
 
 
 def compute_combined_percent(totals: dict) -> float | None:

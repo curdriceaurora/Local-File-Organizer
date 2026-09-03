@@ -91,18 +91,28 @@ def _write_fixture_project(tmp_path: Path) -> Path:
 
 
 def _write_synthetic_coverage_db(tmp_path: Path, module_path: Path) -> None:
-    """Two contexts covering different subsets of module.py's statement lines.
+    """Realistic context attribution across module.py's four statement lines.
 
     module.py is "def a():\\n    return 1\\n\\n\\ndef b():\\n    return 2\\n" --
     lines 1, 2, 5, 6 are the four statements (def a / return 1 / def b / return 2).
-    "test_a" covers only a() (lines 1-2, 50%); "test_b" covers a()'s def line
-    plus all of b() (lines 1, 5, 6, 75%).
+
+    Lines 1 and 5 (the `def` lines) go to the empty context "" -- matching
+    real pytest-cov behavior, where collection-time imports execute a
+    module's top-level `def`/`class` statements before any test's own
+    setup/call/teardown context is active (see build_context_pattern()'s
+    docstring). Only the *bodies* (lines 2 and 6) are attributed to the
+    test that actually calls them: test_a calls a() (line 2), test_b calls
+    b() (line 6). A synthetic db that instead assigned def-lines directly
+    to test contexts (as an earlier version of this fixture did) can't
+    catch a regression in the "" handling -- it never exercises that path.
     """
     data = coverage.CoverageData(basename=str(tmp_path / ".coverage"))
+    data.set_context("")
+    data.add_lines({str(module_path): [1, 5]})
     data.set_context("tests/test_sample.py::test_a|run")
-    data.add_lines({str(module_path): [1, 2]})
+    data.add_lines({str(module_path): [2]})
     data.set_context("tests/test_sample.py::test_b|run")
-    data.add_lines({str(module_path): [1, 5, 6]})
+    data.add_lines({str(module_path): [6]})
     data.write()
 
 
@@ -140,8 +150,9 @@ class TestSplitScriptEndToEnd:
         # root (per [tool.coverage.run] source = ["src"]), not the absolute
         # path we wrote synthetic data against.
         summary = report["files"]["src/mypkg/module.py"]["summary"]
-        # "unit" only ran test_a, which covered lines 1-2 of the 4 statements.
-        assert summary["covered_lines"] == 2
+        # "unit" ran test_a (line 2) plus the shared "" collection-time
+        # lines (1, 5) that every view sees -- 3 of the 4 statements.
+        assert summary["covered_lines"] == 3
         assert summary["num_statements"] == 4
 
     def test_integration_view_sees_different_coverage_than_unit_view(self, tmp_path: Path) -> None:
@@ -176,15 +187,55 @@ class TestSplitScriptEndToEnd:
         # root (per [tool.coverage.run] source = ["src"]), not the absolute
         # path we wrote synthetic data against.
         summary = report["files"]["src/mypkg/module.py"]["summary"]
-        # "integration" only ran test_b, which covered all 3 of its lines (1, 4, 5).
+        # "integration" ran test_b (line 6) plus the shared "" lines (1, 5) --
+        # same count as the unit view (3/4), but a *different* set of lines.
         assert summary["covered_lines"] == 3
         assert summary["num_statements"] == 4
+
+    def test_definition_lines_from_empty_context_appear_in_every_view(self, tmp_path: Path) -> None:
+        """The core fix (PR review, issue #1767): collection-time/definition
+        lines (the "" context) must be included in EVERY marker view, not
+        just whichever test happens to run first -- they're executed once,
+        unconditionally, regardless of which tests get selected."""
+        module_path = _write_fixture_project(tmp_path)
+        _write_synthetic_coverage_db(tmp_path, module_path)
+
+        import json
+
+        for markers, out_name in [
+            ("unit", "out-unit.json"),
+            ("integration", "out-integration.json"),
+        ]:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--data-file",
+                    ".coverage",
+                    "--markers",
+                    markers,
+                    "--out",
+                    out_name,
+                    "--tests-dir",
+                    "tests",
+                    "--pyproject",
+                    "pyproject.toml",
+                ],
+                cwd=tmp_path,
+                capture_output=True,
+                text=True,
+            )
+            assert result.returncode == 0, result.stderr
+            report = json.loads((tmp_path / out_name).read_text())
+            executed = report["files"]["src/mypkg/module.py"]["executed_lines"]
+            assert 1 in executed, f"{markers} view is missing the def-a line from the '' context"
+            assert 5 in executed, f"{markers} view is missing the def-b line from the '' context"
 
     def test_min_combined_fails_below_threshold(self, tmp_path: Path) -> None:
         module_path = _write_fixture_project(tmp_path)
         _write_synthetic_coverage_db(tmp_path, module_path)
 
-        # unit view is 2/4 = 50% combined (no branches in this fixture) — below 60.
+        # unit view is 3/4 = 75% combined (no branches in this fixture) — below 90.
         result = subprocess.run(
             [
                 sys.executable,
@@ -200,7 +251,7 @@ class TestSplitScriptEndToEnd:
                 "--pyproject",
                 "pyproject.toml",
                 "--min-combined",
-                "60",
+                "90",
             ],
             cwd=tmp_path,
             capture_output=True,
