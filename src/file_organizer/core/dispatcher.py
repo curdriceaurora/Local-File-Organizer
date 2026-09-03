@@ -183,6 +183,48 @@ def _is_timeout_error(error_msg: str) -> bool:
     return error_msg.startswith("Timed out after")
 
 
+def _dispatch_text_process(
+    processor: TextProcessor,
+    path: Path,
+    *,
+    scan_root: Path | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
+) -> ProcessedFile:
+    """Invoke text processor, omitting tagging kwargs when disabled to preserve exact mock compatibility."""
+    if generate_tags:
+        return processor.process_file(
+            path,
+            scan_root=scan_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
+        )
+    return processor.process_file(path, scan_root=scan_root)
+
+
+def _dispatch_vision_process(
+    processor: VisionProcessor,
+    path: Path,
+    *,
+    context_root: Path | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
+) -> ProcessedImage:
+    """Invoke vision processor, omitting tagging kwargs when disabled to preserve exact mock compatibility."""
+    if generate_tags:
+        return processor.process_file(
+            path,
+            context_root=context_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
+        )
+    return processor.process_file(path, context_root=context_root)
+
+
 def process_text_files(
     files: list[Path],
     text_processor: TextProcessor,
@@ -218,7 +260,8 @@ def process_text_files(
 
         def _process_one(path: Path) -> ProcessedFile:
             """Process a single text file in the dispatcher thread pool."""
-            return text_processor.process_file(
+            return _dispatch_text_process(
+                text_processor,
                 path,
                 scan_root=scan_root,
                 generate_tags=generate_tags,
@@ -301,7 +344,8 @@ def process_image_files(
 
         def _process_one_image(path: Path) -> ProcessedImage:
             """Process a single image file in the dispatcher thread pool."""
-            return vision_processor.process_file(
+            return _dispatch_vision_process(
+                vision_processor,
                 path,
                 context_root=context_root,
                 generate_tags=generate_tags,
@@ -427,7 +471,8 @@ def process_image_files(
         retry_processor = ParallelProcessor(config=retry_config)
 
         def _retry_one_image(path: Path) -> ProcessedImage:
-            return vision_processor.process_file(
+            return _dispatch_vision_process(
+                vision_processor,
                 path,
                 context_root=context_root,
                 generate_tags=generate_tags,

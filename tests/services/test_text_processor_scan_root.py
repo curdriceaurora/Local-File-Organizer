@@ -172,10 +172,4 @@ class TestDispatcherForwardsScanRoot:
             [Path("a.txt")], processor, parallel, console, scan_root=Path("/") / "root"
         )
 
-        processor.process_file.assert_called_once_with(
-            Path("a.txt"),
-            scan_root=Path("/") / "root",
-            generate_tags=False,
-            tag_style=None,
-            tag_prompt=None,
-        )
+        processor.process_file.assert_called_once_with(Path("a.txt"), scan_root=Path("/") / "root")
