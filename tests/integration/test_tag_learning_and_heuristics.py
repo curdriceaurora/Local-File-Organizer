@@ -484,3 +484,57 @@ class TestAutoTaggingHeuristicsAndPresets:
         # Should contain lang/py and 2-char tokens
         assert "lang/py" in tags or "python" in tags
         assert any(t in tags for t in ["db", "ui", "handler"])
+
+    def test_recommender_integration_methods(self, tmp_path: Path) -> None:
+        from file_organizer.services.auto_tagging import AutoTaggingService
+
+        code_file = tmp_path / "app.py"
+        code_file.write_text("def run(): pass\n")
+        doc_file = tmp_path / "readme.txt"
+        doc_file.write_text("Documentation file\n")
+
+        service = AutoTaggingService(storage_path=tmp_path / "tag_storage.json")
+
+        # 1. Batch recommendation with style and prompt
+        batch_results = service.recommender.batch_recommend(
+            [code_file, doc_file], top_n=5, style="code", prompt="python"
+        )
+        assert len(batch_results) == 2
+        assert code_file in batch_results
+        assert doc_file in batch_results
+
+        # 2. Batch recommendation handling exception on bad path
+        bad_results = service.recommender.batch_recommend([tmp_path / "does_not_exist.txt"])
+        assert len(bad_results) == 1
+
+        # 3. Recommender with custom_prompt alias and existing_tags
+        rec = service.recommender.recommend_tags(
+            code_file, existing_tags=["python"], custom_prompt="app launcher"
+        )
+        assert rec is not None
+        assert not any(s.tag == "python" for s in rec.suggestions)
+
+        # 4. Calculate confidence
+        conf = service.recommender.calculate_confidence("python", code_file)
+        assert isinstance(conf, float)
+        conf_zero = service.recommender.calculate_confidence("nonexistent_tag", code_file)
+        assert conf_zero == 0.0
+
+        # 5. Explain tag
+        explanation = service.recommender.explain_tag("python", code_file)
+        assert isinstance(explanation, str)
+        explanation_with_existing = service.recommender.explain_tag(
+            "python", code_file, existing_tags=["python"]
+        )
+        assert isinstance(explanation_with_existing, str)
+
+        # 6. Reasoning helpers
+        assert "content or metadata" in service.recommender._generate_content_reasoning(
+            "unknown", code_file
+        )
+        assert "tagging patterns" in service.recommender._generate_behavior_reasoning(
+            "unknown", code_file
+        )
+        assert "matches your usage patterns" in service.recommender._generate_hybrid_reasoning(
+            "unknown", code_file
+        )
