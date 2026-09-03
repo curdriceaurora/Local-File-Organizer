@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import mimetypes
 import re
 import threading
@@ -17,7 +18,8 @@ from loguru import logger
 from file_organizer.models import VisionModel
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_vision_model
-from file_organizer.models.vision_schema import VisionSchema
+from file_organizer.models.vision_schema import TaggedVisionSchema, VisionSchema
+from file_organizer.services.auto_tagging.tag_normalize import normalize_tags
 from file_organizer.services.inference_timer import time_inference
 from file_organizer.utils.paths import format_path_context_clause, resolve_relative_path
 
@@ -222,6 +224,9 @@ class VisionProcessor:
         perform_ocr: bool = True,
         *,
         context_root: Path | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> ProcessedImage:
         """Process a single image file.
 
@@ -234,6 +239,9 @@ class VisionProcessor:
             context_root: Optional directory path used exclusively for prompt
                 context hints (relative path / parent folder). Does not gate
                 the image read.
+            generate_tags: Whether to generate descriptive tags using the vision model.
+            tag_style: Optional tagging style preset name.
+            tag_prompt: Optional user-supplied tagging guidance prompt.
 
         Returns:
             ProcessedImage with metadata
@@ -257,6 +265,9 @@ class VisionProcessor:
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
                 context_root=context_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
             if model_invoked:
                 _timer.mark_invoked()
@@ -274,6 +285,9 @@ class VisionProcessor:
         generate_filename: bool,
         perform_ocr: bool,
         context_root: Path | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> tuple[ProcessedImage, bool]:
         """Inner body of :meth:`process_file` using structured generation.
 
@@ -281,7 +295,13 @@ class VisionProcessor:
         """
         model_invoked = False
         try:
-            if not (generate_description or generate_folder or generate_filename or perform_ocr):
+            if not (
+                generate_description
+                or generate_folder
+                or generate_filename
+                or perform_ocr
+                or generate_tags
+            ):
                 # All flags off, bypass model call entirely
                 processing_time = time.time() - start_time
                 return (
@@ -369,15 +389,19 @@ class VisionProcessor:
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
                 path_clause=path_clause,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
 
             logger.debug(f"Analyzing image: {file_path.name}")
             model_invoked = True
 
             # Call structured generation
+            schema_class = TaggedVisionSchema if generate_tags else VisionSchema
             schema_result = self._guarded_generate_structured(
                 prompt=prompt,
-                schema=VisionSchema,
+                schema=schema_class,
                 image_data=image_bytes,
                 mime_type=image_mime_type,
             )
@@ -387,6 +411,13 @@ class VisionProcessor:
             extracted_text = (
                 (schema_result.extracted_text if has_text else None) if perform_ocr else None
             )
+
+            tags: list[str] = []
+            if generate_tags and hasattr(schema_result, "tags"):
+                raw_tags = getattr(schema_result, "tags", [])
+                if isinstance(raw_tags, str):
+                    raw_tags = [t.strip() for t in raw_tags.split(",")]
+                tags = normalize_tags(raw_tags)
 
             # Clean folder name
             folder_name = ""
@@ -435,6 +466,7 @@ class VisionProcessor:
                     processing_time=processing_time,
                     source="vision",
                     confidence=1.0,
+                    tags=tags,
                 ),
                 model_invoked,
             )
@@ -481,6 +513,9 @@ class VisionProcessor:
         generate_filename: bool,
         perform_ocr: bool,
         path_clause: str = "",
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> str:
         """Build the structured single-call image analysis prompt."""
         prompt_lines = [
@@ -515,6 +550,17 @@ class VisionProcessor:
         else:
             prompt_lines.append("- has_text: Return False.")
             prompt_lines.append("- extracted_text: Return null.")
+
+        if generate_tags:
+            style_part = f" Favor terms fitting the '{tag_style}' domain." if tag_style else ""
+            prompt_part = (
+                f" Additional guidance: {json.dumps(tag_prompt, ensure_ascii=True)}"
+                if tag_prompt
+                else ""
+            )
+            prompt_lines.append(
+                f"- tags: 3-8 concise, relevant lowercase tags for key visual subjects, objects, or themes.{style_part}{prompt_part}"
+            )
 
         return "\n".join(prompt_lines)
 

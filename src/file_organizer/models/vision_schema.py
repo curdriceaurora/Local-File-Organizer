@@ -45,3 +45,12 @@ class VisionSchema(pydantic.BaseModel):
         if isinstance(value, list) and all(isinstance(line, str) for line in value):
             return "\n".join(value)
         return None
+
+
+class TaggedVisionSchema(VisionSchema):
+    """Pydantic schema for single-call structured image analysis with tags."""
+
+    tags: list[str] = pydantic.Field(
+        default_factory=list,
+        description="3-8 lowercase descriptive tags (single words or hyphenated phrases) categorizing the image.",
+    )

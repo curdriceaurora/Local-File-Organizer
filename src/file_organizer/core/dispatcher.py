@@ -183,6 +183,48 @@ def _is_timeout_error(error_msg: str) -> bool:
     return error_msg.startswith("Timed out after")
 
 
+def _dispatch_text_process(
+    processor: TextProcessor,
+    path: Path,
+    *,
+    scan_root: Path | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
+) -> ProcessedFile:
+    """Invoke text processor, omitting tagging kwargs when disabled to preserve exact mock compatibility."""
+    if generate_tags:
+        return processor.process_file(
+            path,
+            scan_root=scan_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
+        )
+    return processor.process_file(path, scan_root=scan_root)
+
+
+def _dispatch_vision_process(
+    processor: VisionProcessor,
+    path: Path,
+    *,
+    context_root: Path | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
+) -> ProcessedImage:
+    """Invoke vision processor, omitting tagging kwargs when disabled to preserve exact mock compatibility."""
+    if generate_tags:
+        return processor.process_file(
+            path,
+            context_root=context_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
+        )
+    return processor.process_file(path, context_root=context_root)
+
+
 def process_text_files(
     files: list[Path],
     text_processor: TextProcessor,
@@ -190,6 +232,9 @@ def process_text_files(
     console: Console,
     *,
     scan_root: Path | None = None,
+    generate_tags: bool = False,
+    tag_style: str | None = None,
+    tag_prompt: str | None = None,
 ) -> list[ProcessedFile]:
     """Process text files through the AI text model.
 
@@ -201,6 +246,9 @@ def process_text_files(
         scan_root: Trusted directory the files were discovered under. When
             supplied it is forwarded to ``process_file`` so content reads go
             through SafeDir anchored traversal (symlink-swap refusal, #264/#286).
+        generate_tags: Whether to generate descriptive tags.
+        tag_style: Optional tagging style preset name.
+        tag_prompt: Optional user-supplied tagging guidance prompt.
 
     Returns:
         List of processed file results.
@@ -212,7 +260,14 @@ def process_text_files(
 
         def _process_one(path: Path) -> ProcessedFile:
             """Process a single text file in the dispatcher thread pool."""
-            return text_processor.process_file(path, scan_root=scan_root)
+            return _dispatch_text_process(
+                text_processor,
+                path,
+                scan_root=scan_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one):
             if file_result.success:
@@ -258,6 +313,9 @@ def process_image_files(
     console: Console,
     *,
     context_root: Path | None = None,
+    generate_tags: bool = False,
+    tag_style: str | None = None,
+    tag_prompt: str | None = None,
 ) -> list[ProcessedImage]:
     """Process image files through the AI vision model.
 
@@ -268,6 +326,9 @@ def process_image_files(
         console: Rich console for progress output.
         context_root: Optional directory path used exclusively for prompt
             context hints (relative path / parent folder).
+        generate_tags: Whether to generate descriptive tags.
+        tag_style: Optional tagging style preset name.
+        tag_prompt: Optional user-supplied tagging guidance prompt.
 
     Returns:
         List of processed image results.
@@ -283,7 +344,14 @@ def process_image_files(
 
         def _process_one_image(path: Path) -> ProcessedImage:
             """Process a single image file in the dispatcher thread pool."""
-            return vision_processor.process_file(path, context_root=context_root)
+            return _dispatch_vision_process(
+                vision_processor,
+                path,
+                context_root=context_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one_image):
             if file_result.success:
@@ -403,7 +471,14 @@ def process_image_files(
         retry_processor = ParallelProcessor(config=retry_config)
 
         def _retry_one_image(path: Path) -> ProcessedImage:
-            return vision_processor.process_file(path, context_root=context_root)
+            return _dispatch_vision_process(
+                vision_processor,
+                path,
+                context_root=context_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for retry_result in retry_processor.process_batch_iter(retry_paths, _retry_one_image):
             if retry_result.success:

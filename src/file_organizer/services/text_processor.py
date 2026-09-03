@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import types as _t
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import cast
 
+import pydantic
 from loguru import logger
 
 from file_organizer.models import TextModel
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+from file_organizer.models.base import (
+    BaseModel,
+    ModelConfig,
+    ModelType,
+    StructuredParseError,
+)
 from file_organizer.models.provider_factory import get_text_model
+from file_organizer.services.auto_tagging.tag_normalize import normalize_tags
 from file_organizer.utils.file_readers import FileReadError, read_file
 from file_organizer.utils.paths import format_path_context_clause, resolve_relative_path
 from file_organizer.utils.readers import read_file_via_safedir_anchored
@@ -21,6 +30,18 @@ from file_organizer.utils.text_processing import (
     ensure_nltk_data,
     truncate_text,
 )
+
+
+class TextAnalysisSchema(pydantic.BaseModel):
+    """Schema for structured text analysis including description and tags."""
+
+    description: str = pydantic.Field(
+        description="A 100-150 word summary of the text focusing on main ideas and key details."
+    )
+    tags: list[str] = pydantic.Field(
+        default_factory=list,
+        description="3-8 lowercase tags (single words or hyphenated phrases) describing the content.",
+    )
 
 
 @dataclass
@@ -157,6 +178,9 @@ class TextProcessor:
         *,
         scan_root: str | Path | None = None,
         relative_path: str | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> ProcessedFile:
         """Process a single text file.
 
@@ -173,6 +197,9 @@ class TextProcessor:
             relative_path: Optional explicit relative path context for prompts.
                 When omitted, auto-derived from *scan_root* via
                 :func:`resolve_relative_path`.
+            generate_tags: Whether to generate descriptive tags using the text model.
+            tag_style: Optional tagging style preset name.
+            tag_prompt: Optional user-supplied tagging guidance prompt.
 
         Returns:
             ProcessedFile with metadata
@@ -203,9 +230,18 @@ class TextProcessor:
             # Truncate if too long
             content = truncate_text(content, max_chars=5000)
 
-            # Generate description (summary)
+            # Generate description (summary) and tags
             description = ""
-            if generate_description:
+            tags: list[str] = []
+            if generate_tags:
+                description, tags = self._analyze_structured(
+                    content,
+                    path_clause=path_clause,
+                    tag_style=tag_style,
+                    tag_prompt=tag_prompt,
+                    generate_description=generate_description,
+                )
+            elif generate_description:
                 description = self._generate_description(content, path_clause=path_clause)
                 logger.debug("Generated description ({} chars)", len(description))
 
@@ -238,6 +274,7 @@ class TextProcessor:
                 filename=filename,
                 original_content=content[:500],  # Keep first 500 chars for reference
                 processing_time=processing_time,
+                tags=tags,
             )
 
         except FileReadError as e:
@@ -294,6 +331,65 @@ class TextProcessor:
 
         # Join with underscores
         return "_".join(filtered) if filtered else ""
+
+    def _analyze_structured(
+        self,
+        content: str,
+        *,
+        path_clause: str,
+        tag_style: str | None,
+        tag_prompt: str | None,
+        generate_description: bool,
+    ) -> tuple[str, list[str]]:
+        """Run structured generation to produce description and tags.
+
+        When *generate_description* is True, falls back to plain-text description
+        generation on failure and returns ``(description, [])``. When False, skips
+        the fallback call and returns ``("", [])``.
+        """
+        style_clause = f"Favor terms fitting the '{tag_style}' domain.\n" if tag_style else ""
+        prompt_clause = (
+            f"Additional guidance: {json.dumps(tag_prompt, ensure_ascii=True)}\n"
+            if tag_prompt
+            else ""
+        )
+        parts = [
+            "Analyze the following text. Provide a 100-150 word summary in the 'description' field, "
+            "and 3-8 lowercase tags (single words or hyphenated phrases) in the 'tags' field."
+        ]
+        if path_clause:
+            parts.append(path_clause.strip())
+        if style_clause:
+            parts.append(style_clause.strip())
+        if prompt_clause:
+            parts.append(prompt_clause.strip())
+        structured_prompt = "\n".join(parts) + f"\n\nTEXT:\n{content}\n"
+
+        try:
+            schema_result = cast(
+                TextAnalysisSchema,
+                self.text_model.generate_structured(structured_prompt, schema=TextAnalysisSchema),
+            )
+            description = ""
+            if generate_description:
+                description = schema_result.description.strip()
+                for prefix in ["summary:", "here is the summary:", "the summary is:"]:
+                    if description.lower().startswith(prefix):
+                        description = description[len(prefix) :].strip()
+                logger.debug("Generated description ({} chars)", len(description))
+            raw_tags = schema_result.tags
+            if isinstance(raw_tags, str):
+                raw_tags = [t.strip() for t in raw_tags.split(",")]
+            tags = normalize_tags(raw_tags)
+            logger.debug("Generated tags: {}", tags)
+            return description, tags
+        except (RuntimeError, ValueError, OSError, AttributeError, StructuredParseError) as e:
+            logger.warning("Structured text analysis failed, falling back: {}", e)
+            if generate_description:
+                desc = self._generate_description(content, path_clause=path_clause)
+                logger.debug("Generated description via fallback ({} chars)", len(desc))
+                return desc, []
+            return "", []
 
     def _generate_description(self, content: str, path_clause: str = "") -> str:
         """Generate a summary/description of the content.

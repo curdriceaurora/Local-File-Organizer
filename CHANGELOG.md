@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- LLM-based tag generation for text and image files during organization analysis, supporting style hints and custom guidance prompts (#1760).
+
 ## [2.2.0] - 2026-09-02
 
 ### Highlights
