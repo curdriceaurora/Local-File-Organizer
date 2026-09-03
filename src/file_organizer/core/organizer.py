@@ -105,6 +105,9 @@ class FileOrganizer:
         whisper_model: str = "tiny",
         recursive: bool = True,
         include_hidden: bool = False,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
         organize_options: OrganizeOptions | None = None,
     ) -> None:
         """Initialize file organizer.
@@ -139,6 +142,9 @@ class FileOrganizer:
                 the cost of download size and inference time.
             recursive: Whether collection descends into nested directories.
             include_hidden: Whether collection includes dot-prefixed entries.
+            generate_tags: Whether to generate descriptive tags using the model.
+            tag_style: Optional tagging style preset name.
+            tag_prompt: Optional user-supplied tagging guidance prompt.
             organize_options: Canonical options to persist with generated plans.
         """
         self._organize_options_supplied = organize_options is not None
@@ -153,6 +159,9 @@ class FileOrganizer:
             whisper_model = organize_options.whisper_model
             recursive = organize_options.recursive
             include_hidden = organize_options.include_hidden
+            generate_tags = organize_options.generate_tags
+            tag_style = organize_options.tag_style
+            tag_prompt = organize_options.tag_prompt
 
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -209,6 +218,9 @@ class FileOrganizer:
             )
         self.max_transcribe_seconds = max_transcribe_seconds
         self.whisper_model = whisper_model
+        self.generate_tags = generate_tags
+        self.tag_style = tag_style
+        self.tag_prompt = tag_prompt
         if organize_options is not None:
             self.organize_options = replace(
                 organize_options,
@@ -248,6 +260,9 @@ class FileOrganizer:
                     if isinstance(self.vision_model_config, ModelConfig)
                     else None
                 ),
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
@@ -377,7 +392,15 @@ class FileOrganizer:
                     f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
                 )
                 if text_ready:
-                    all_processed.extend(self._process_text_files(text_files, scan_root=scan_root))
+                    all_processed.extend(
+                        self._process_text_files(
+                            text_files,
+                            scan_root=scan_root,
+                            generate_tags=self.generate_tags,
+                            tag_style=self.tag_style,
+                            tag_prompt=self.tag_prompt,
+                        )
+                    )
                 else:
                     all_processed.extend(self._fallback_by_extension(text_files))
 
@@ -386,7 +409,15 @@ class FileOrganizer:
                     f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]"
                 )
                 if text_ready:
-                    all_processed.extend(self._process_text_files(cad_files, scan_root=scan_root))
+                    all_processed.extend(
+                        self._process_text_files(
+                            cad_files,
+                            scan_root=scan_root,
+                            generate_tags=self.generate_tags,
+                            tag_style=self.tag_style,
+                            tag_prompt=self.tag_prompt,
+                        )
+                    )
                 else:
                     all_processed.extend(self._fallback_by_extension(cad_files))
 
@@ -408,7 +439,13 @@ class FileOrganizer:
                     )
                     if vision_ready:
                         all_processed.extend(
-                            self._process_image_files(image_files, context_root=scan_root)
+                            self._process_image_files(
+                                image_files,
+                                context_root=scan_root,
+                                generate_tags=self.generate_tags,
+                                tag_style=self.tag_style,
+                                tag_prompt=self.tag_prompt,
+                            )
                         )
                     else:
                         all_processed.extend(self._fallback_by_extension(image_files))
@@ -736,7 +773,13 @@ class FileOrganizer:
         )
 
     def _process_text_files(
-        self, files: list[Path], scan_root: Path | None = None
+        self,
+        files: list[Path],
+        scan_root: Path | None = None,
+        *,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> list[ProcessedFile]:
         """Classify text files using the text processor and append results to the plan.
 
@@ -751,10 +794,19 @@ class FileOrganizer:
             self.parallel_processor,
             self.console,
             scan_root=scan_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
 
     def _process_image_files(
-        self, files: list[Path], *, context_root: Path | None = None
+        self,
+        files: list[Path],
+        *,
+        context_root: Path | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> list[ProcessedImage]:
         """Classify image files using the vision processor and append results to the plan.
 
@@ -768,6 +820,9 @@ class FileOrganizer:
             self.parallel_processor,
             self.console,
             context_root=context_root,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
 
     def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:

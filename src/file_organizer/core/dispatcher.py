@@ -190,6 +190,9 @@ def process_text_files(
     console: Console,
     *,
     scan_root: Path | None = None,
+    generate_tags: bool = False,
+    tag_style: str | None = None,
+    tag_prompt: str | None = None,
 ) -> list[ProcessedFile]:
     """Process text files through the AI text model.
 
@@ -201,6 +204,9 @@ def process_text_files(
         scan_root: Trusted directory the files were discovered under. When
             supplied it is forwarded to ``process_file`` so content reads go
             through SafeDir anchored traversal (symlink-swap refusal, #264/#286).
+        generate_tags: Whether to generate descriptive tags.
+        tag_style: Optional tagging style preset name.
+        tag_prompt: Optional user-supplied tagging guidance prompt.
 
     Returns:
         List of processed file results.
@@ -212,6 +218,14 @@ def process_text_files(
 
         def _process_one(path: Path) -> ProcessedFile:
             """Process a single text file in the dispatcher thread pool."""
+            if generate_tags:
+                return text_processor.process_file(
+                    path,
+                    scan_root=scan_root,
+                    generate_tags=generate_tags,
+                    tag_style=tag_style,
+                    tag_prompt=tag_prompt,
+                )
             return text_processor.process_file(path, scan_root=scan_root)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one):
@@ -258,6 +272,9 @@ def process_image_files(
     console: Console,
     *,
     context_root: Path | None = None,
+    generate_tags: bool = False,
+    tag_style: str | None = None,
+    tag_prompt: str | None = None,
 ) -> list[ProcessedImage]:
     """Process image files through the AI vision model.
 
@@ -268,6 +285,9 @@ def process_image_files(
         console: Rich console for progress output.
         context_root: Optional directory path used exclusively for prompt
             context hints (relative path / parent folder).
+        generate_tags: Whether to generate descriptive tags.
+        tag_style: Optional tagging style preset name.
+        tag_prompt: Optional user-supplied tagging guidance prompt.
 
     Returns:
         List of processed image results.
@@ -283,6 +303,14 @@ def process_image_files(
 
         def _process_one_image(path: Path) -> ProcessedImage:
             """Process a single image file in the dispatcher thread pool."""
+            if generate_tags:
+                return vision_processor.process_file(
+                    path,
+                    context_root=context_root,
+                    generate_tags=generate_tags,
+                    tag_style=tag_style,
+                    tag_prompt=tag_prompt,
+                )
             return vision_processor.process_file(path, context_root=context_root)
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one_image):
@@ -403,6 +431,14 @@ def process_image_files(
         retry_processor = ParallelProcessor(config=retry_config)
 
         def _retry_one_image(path: Path) -> ProcessedImage:
+            if generate_tags:
+                return vision_processor.process_file(
+                    path,
+                    context_root=context_root,
+                    generate_tags=generate_tags,
+                    tag_style=tag_style,
+                    tag_prompt=tag_prompt,
+                )
             return vision_processor.process_file(path, context_root=context_root)
 
         for retry_result in retry_processor.process_batch_iter(retry_paths, _retry_one_image):
