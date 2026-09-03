@@ -378,6 +378,106 @@ class TestCIWorkflow:
             f"Per-file floor step (idx {floor_idx}) must come after pytest step (idx {pytest_idx})"
         )
 
+    def test_test_job_run_tests_step_covers_every_floor_gate_marker(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """The 3.11 leg's combined run must be a safe superset of every marker
+        the diff-cover/unit/integration gates need -- not just 'ci' (issue #1767).
+
+        257 test files apply pytestmark = pytest.mark.unit/.integration at
+        module level without also carrying `ci`, so "ci and not benchmark"
+        alone silently drops those files' tests from the floor computation.
+        """
+        run_step = next(
+            (
+                s
+                for s in workflow["jobs"]["test"]["steps"]
+                if isinstance(s, dict) and s.get("name") == "Run tests"
+            ),
+            None,
+        )
+        assert run_step is not None, "'test' job must have a Run tests step"
+        run_cmd = run_step.get("run", "")
+        assert "(ci or unit or integration or conformance) and not benchmark" in run_cmd, (
+            "'test' job's combined 3.11-leg run must select the full marker superset, not just 'ci'"
+        )
+        assert "--cov-branch" in run_cmd and "--cov-context=test" in run_cmd, (
+            "'test' job's combined run must record branch coverage with per-test "
+            "contexts so the floor gates can filter it by marker"
+        )
+
+    def test_diff_cover_gated_to_single_python_leg(self, workflow: dict[str, Any]) -> None:
+        """diff-cover must run once per PR, not once per matrix leg (issue #1767 item 1)."""
+        steps = workflow["jobs"]["test"]["steps"]
+        diff_cover_step = next(
+            (s for s in steps if isinstance(s, dict) and s.get("name") == "Diff coverage gate"),
+            None,
+        )
+        assert diff_cover_step is not None, "'test' job must have a 'Diff coverage gate' step"
+        assert "matrix.python-version == '3.11'" in diff_cover_step.get("if", ""), (
+            "diff-cover step must be gated to a single matrix leg (3.11)"
+        )
+
+    def test_test_job_has_consolidated_floor_gate_steps(self, workflow: dict[str, Any]) -> None:
+        """The 'test' job's 3.11 leg must run both floor gates via the
+        context-splitting script instead of test-unit-floors/test-integration
+        re-running the suite (issue #1767 item 2)."""
+        steps = workflow["jobs"]["test"]["steps"]
+
+        unit_step = next(
+            (
+                s
+                for s in steps
+                if isinstance(s, dict) and s.get("name") == "Unit coverage floor gate"
+            ),
+            None,
+        )
+        assert unit_step is not None, "'test' job must have a 'Unit coverage floor gate' step"
+        assert unit_step.get("if") == "matrix.python-version == '3.11'"
+        unit_run = unit_step.get("run", "")
+        assert "split_coverage_by_context.py" in unit_run
+        assert "--markers unit" in unit_run
+        assert "check_module_coverage_floor.py" in unit_run
+
+        integration_step = next(
+            (
+                s
+                for s in steps
+                if isinstance(s, dict) and s.get("name") == "Integration coverage floor gate"
+            ),
+            None,
+        )
+        assert integration_step is not None, (
+            "'test' job must have an 'Integration coverage floor gate' step"
+        )
+        assert integration_step.get("if") == "matrix.python-version == '3.11'"
+        integration_run = integration_step.get("run", "")
+        assert "split_coverage_by_context.py" in integration_run
+        assert "integration or conformance" in integration_run
+        assert "--min-combined 76.5" in integration_run
+        assert "check-integration-floors.py" in integration_run
+
+    def test_test_unit_floors_and_test_integration_are_push_only(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """test-unit-floors/test-integration must no longer run on pull_request --
+        PRs get the equivalent gate from the 'test' job's 3.11 leg now (issue #1767).
+        Push-to-main keeps its own dedicated run: it never had the PR-time ×3
+        overlap the issue is about, so it's out of scope for this change.
+        """
+        jobs = workflow.get("jobs", {})
+        for job_name in ("test-unit-floors", "test-integration"):
+            job = jobs.get(job_name)
+            assert job is not None, f"CI workflow must still have a '{job_name}' job"
+            condition = job.get("if", "")
+            assert "pull_request" not in condition, (
+                f"'{job_name}' must no longer trigger on pull_request "
+                f"(now handled by 'test'), got if: {condition!r}"
+            )
+            assert "push" in condition and "refs/heads/main" in condition, (
+                f"'{job_name}' must still trigger on push to main, got if: {condition!r}"
+            )
+
 
 @pytest.mark.unit
 class TestCIFullWorkflow:

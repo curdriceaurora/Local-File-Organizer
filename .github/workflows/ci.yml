@@ -142,8 +142,23 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+      - name: Cache dependencies venv
+        # Issue #1767 (item 4): replaces a cold `pip install -e ".[dev,...]"`
+        # on every run with a venv restored from cache, keyed on pyproject.toml's
+        # hash — only the first run after a dependency change pays full install
+        # cost. Mirrors the playwright job's venv-cache pattern below.
+        id: deps-venv-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
+        with:
+          path: .venv-test
+          key: test-venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
       - name: Install dependencies
+        if: steps.deps-venv-cache.outputs.cache-hit != 'true'
         run: |
+          python -m venv .venv-test
+          . .venv-test/bin/activate
+          python -m pip install --upgrade pip
+
           # Install core package with dev dependencies + search (rank-bm25, scikit-learn)
           # search is required for TestBM25Index, TestVectorIndexRecall, TestHybridRetriever,
           # and related CLI/API/copilot tests — not in dev because it is an optional runtime extra.
@@ -158,6 +173,7 @@ jobs:
           pip install "pytest-asyncio>=0.23.0" faker --no-cache-dir
       - name: Verify test dependencies
         run: |
+          . .venv-test/bin/activate
           # Fast plugin registration check — replaces the former pytest --collect-only
           # scan which took 5-6 minutes on CI to import all test files.
           python -c "
@@ -168,19 +184,79 @@ jobs:
           print(f'faker {importlib.metadata.version(\"faker\")} importable')
           "
       - name: Run tests
+        # Issue #1767 (item 2): only the 3.11 leg records branch coverage with
+        # per-test contexts (--cov-branch --cov-context=test) and selects the
+        # superset of every marker any gate needs -- "(ci or unit or
+        # integration or conformance)", NOT just "ci": 257 test files apply
+        # unit/integration markers without also carrying ci, so "ci" alone is
+        # not a safe superset. That one combined run's .coverage database is
+        # what diff-cover and the two floor-gate steps below all read, in
+        # place of the three separate pytest invocations this job, and the
+        # now-PR-scoped-out test-unit-floors/test-integration jobs, used to
+        # run. The other legs stay a plain pass/fail run -- they never fed
+        # the floor gates and don't need coverage instrumentation to do
+        # their job of catching version-specific breakage.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pytest tests/ --strict-markers -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+        run: |
+          . .venv-test/bin/activate
+          if [ "${{ matrix.python-version }}" = "3.11" ]; then
+            pytest tests/ --strict-markers -m "(ci or unit or integration or conformance) and not benchmark" \
+              --cov=file_organizer --cov-branch --cov-context=test --cov-report=xml \
+              --timeout=30 -n=auto --override-ini="addopts="
+          else
+            pytest tests/ --strict-markers -m "ci and not benchmark" --timeout=30 -n=auto --override-ini="addopts="
+          fi
       - name: Diff coverage gate
-        if: ${{ github.event.pull_request.changed_files <= 75 }}
+        if: ${{ github.event.pull_request.changed_files <= 75 && matrix.python-version == '3.11' }}
         # Checks that lines added/changed in this PR are ≥80% covered.
-        # Uses the ci-suite coverage.xml generated above — fast, no full-suite re-run.
+        # Uses the combined run's coverage.xml above — fast, no full-suite re-run.
+        # Gated to the 3.11 leg only (issue #1767 item 1): the other three legs
+        # produced an equivalent coverage.xml before this change too, so running
+        # diff-cover once instead of 4x drops nothing but redundant checks
+        # against data that should always agree.
         # Ratchet: bump --fail-under as coverage improves. Target: 90% per issue #855.
         # Broad refactors and type-cleanup sweeps exceed the signal-to-noise ratio
         # where diff coverage is useful, so we skip the gate for very large PRs.
         run: |
+          . .venv-test/bin/activate
           pip install diff-cover --quiet
           diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
+      - name: Unit coverage floor gate
+        if: matrix.python-version == '3.11'
+        # Filters the combined run's .coverage database down to the "unit"-marked
+        # tests' view (issue #1767 item 2) instead of test-unit-floors' old
+        # dedicated `pytest -m unit` run, then checks it the same way that job did.
+        run: |
+          . .venv-test/bin/activate
+          python scripts/coverage/split_coverage_by_context.py \
+            --data-file .coverage --markers unit --out .coverage-unit.json
+          python scripts/coverage/check_module_coverage_floor.py
+      - name: Upload unit coverage JSON
+        # The artifact is the source of truth for regenerating
+        # [tool.coverage.floors.unit] (generate_module_coverage_floor.py):
+        # floors must be reconciled against CI's own environment, not a
+        # contributor's local run.
+        if: always() && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: coverage-unit-json
+          path: .coverage-unit.json
+          retention-days: 30
+          include-hidden-files: true
+      - name: Integration coverage floor gate
+        if: matrix.python-version == '3.11'
+        # Same filtering approach as the unit gate above, against the
+        # "integration or conformance" view -- replaces test-integration's old
+        # dedicated pytest run for PRs. See that view's own combined-coverage
+        # ratchet history in the (still-existing, now push-only) test-integration
+        # job below; --min-combined enforces the same floor here.
+        run: |
+          . .venv-test/bin/activate
+          python scripts/coverage/split_coverage_by_context.py \
+            --data-file .coverage --markers "integration or conformance" \
+            --out .coverage-integration.json --min-combined 76.5
+          python scripts/coverage/check-integration-floors.py
 
   test-full:
     name: "Test (shard ${{ matrix.shard }}, py${{ matrix.python-version }})"
@@ -467,7 +543,11 @@ jobs:
   test-integration:
     name: Integration coverage gate
     needs: changes
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    # PR runs get this same gate from the "test" job's 3.11 leg now (issue #1767
+    # item 2 — one combined coverage run instead of three). This job still owns
+    # push-to-main: that path never had the PR-time ×3 overlap the issue is
+    # about, so it's untouched here beyond dropping the pull_request condition.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -506,7 +586,9 @@ jobs:
   test-unit-floors:
     name: Unit coverage floor gate
     needs: changes
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    # See test-integration above: PR runs get this gate from "test"'s 3.11 leg
+    # now (issue #1767); this job stays push-only.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
