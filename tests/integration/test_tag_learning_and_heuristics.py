@@ -425,3 +425,62 @@ class TestHeuristicResult:
             recommended_category=None,
         )
         assert hr.recommended_category is None
+
+
+# ---------------------------------------------------------------------------
+# AutoTagging Heuristics & Style Presets Integration
+# ---------------------------------------------------------------------------
+
+
+class TestAutoTaggingHeuristicsAndPresets:
+    def test_non_text_audio_file_heuristics_and_sfx_style(self, tmp_path: Path) -> None:
+        from file_organizer.services.auto_tagging import AutoTaggingService
+
+        audio_file = tmp_path / "ambient_drone_sub_drop.wav"
+        audio_file.write_bytes(b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00" + b"\x00" * 40)
+
+        service = AutoTaggingService(storage_path=tmp_path / "tag_storage.json")
+        rec = service.suggest_tags(audio_file, style="sfx", prompt="ambient sound effects")
+
+        assert len(rec.suggestions) > 0
+        tags = [s.tag for s in rec.suggestions]
+        assert any(t in tags for t in ["ambient", "drone", "sub", "drop", "audio", "wav"])
+        # Check that top suggestions have reasonings
+        for s in rec.suggestions:
+            assert s.source == "content"
+            assert "Found in" in s.reasoning
+
+    def test_non_text_image_file_hierarchical_style(self, tmp_path: Path) -> None:
+        from file_organizer.services.auto_tagging import AutoTaggingService
+
+        nature_dir = tmp_path / "nature"
+        nature_dir.mkdir()
+        img_file = nature_dir / "mountain_sunset.jpg"
+        img_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 50)
+
+        service = AutoTaggingService(storage_path=tmp_path / "tag_storage.json")
+        rec = service.suggest_tags(img_file, style="hierarchical")
+
+        assert len(rec.suggestions) > 0
+        tags = [s.tag for s in rec.suggestions]
+        # Should contain hierarchical compound tags
+        assert any("/" in t for t in tags)
+
+    def test_code_style_compound_and_two_char_tokens(self, tmp_path: Path) -> None:
+        from file_organizer.services.auto_tagging import AutoTaggingService
+
+        code_file = tmp_path / "db_ui_handler.py"
+        code_file.write_text(
+            "import os\n"
+            "# Connects db to user interface (ui) using js and go scripts\n"
+            "def connect_db(): pass\n"
+        )
+
+        service = AutoTaggingService(storage_path=tmp_path / "tag_storage.json")
+        rec = service.suggest_tags(code_file, style="code", prompt="database ui")
+
+        assert len(rec.suggestions) > 0
+        tags = [s.tag for s in rec.suggestions]
+        # Should contain lang/py and 2-char tokens
+        assert "lang/py" in tags or "python" in tags
+        assert any(t in tags for t in ["db", "ui", "handler"])

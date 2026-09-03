@@ -402,3 +402,28 @@ class TestTagRecommender:
         # Weights should be reasonable
         for weight in recommender.source_weights.values():
             assert 0 < weight <= 1.0
+
+    def test_recommend_tags_with_style_and_prompt(self, recommender, sample_file):
+        """Test recommend_tags with style preset and guidance prompt."""
+        recommendation = recommender.recommend_tags(
+            sample_file, style="descriptive", prompt="deep neural"
+        )
+        assert len(recommendation.suggestions) > 0
+        for s in recommendation.suggestions:
+            assert s.source in {"content", "behavior", "hybrid"}
+            if s.source == "content":
+                assert "Found in" in s.reasoning
+
+    def test_batch_recommend_with_style_and_prompt(self, recommender, sample_file, temp_dir):
+        """Test batch_recommend with style and prompt."""
+        other_file = temp_dir / "second.py"
+        other_file.write_text("import sys\nprint(sys.version)")
+
+        results = recommender.batch_recommend(
+            [sample_file, other_file], style="code", prompt="python system"
+        )
+        assert len(results) == 2
+        assert sample_file in results
+        assert other_file in results
+        for rec in results.values():
+            assert len(rec.suggestions) > 0
