@@ -255,8 +255,11 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
         "vision_model": "conformance-vision",
         "text_provider": "ollama",
         "vision_provider": "ollama",
+        "generate_tags": False,
+        "tag_style": None,
+        "tag_prompt": None,
     }
-    assert envelope["plan"]["schema_version"] == 3
+    assert envelope["plan"]["schema_version"] == 4
 
 
 def test_explicit_provider_override_round_trips_golden(

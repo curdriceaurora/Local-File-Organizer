@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import sys
 import types as _t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from loguru import logger
@@ -40,6 +40,7 @@ class ProcessedFile:
     # recoverable failure. Stored for the organizer's text-categorization
     # path; rendering consumers are out of scope for this port.
     transcript: str | None = None
+    tags: list[str] = field(default_factory=list)
 
 
 # Stop-words and noise words filtered from AI-generated names.

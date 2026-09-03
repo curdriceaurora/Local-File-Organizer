@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from file_organizer._compat import StrEnum
+from file_organizer.services.auto_tagging.styles import (
+    normalize_tag_prompt,
+    validate_tag_style,
+)
 
 ModelProvider = Literal["ollama", "openai", "llama_cpp", "mlx", "claude"]
 
@@ -92,6 +96,9 @@ class OrganizeOptions:
     vision_model: str | None = None
     text_provider: ModelProvider | None = None
     vision_provider: ModelProvider | None = None
+    generate_tags: bool = False
+    tag_style: str | None = None
+    tag_prompt: str | None = None
 
     def __post_init__(self) -> None:
         """Reject invalid combinations before filesystem or model work starts."""
@@ -107,9 +114,17 @@ class OrganizeOptions:
             "skip_existing",
             "enable_vision",
             "transcribe_audio",
+            "generate_tags",
         ):
             if not isinstance(getattr(self, field_name), bool):
                 raise ValueError(f"{field_name} must be a boolean")
+
+        validate_tag_style(self.tag_style)
+        normalized_prompt = normalize_tag_prompt(self.tag_prompt)
+        object.__setattr__(self, "tag_prompt", normalized_prompt)
+
+        if (self.tag_style is not None or normalized_prompt is not None) and not self.generate_tags:
+            raise ValueError("tag_style and tag_prompt require generate_tags=True")
         if isinstance(self.parallel_workers, bool) or (
             self.parallel_workers is not None and not isinstance(self.parallel_workers, int)
         ):

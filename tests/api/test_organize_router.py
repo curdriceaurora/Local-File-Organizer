@@ -274,6 +274,9 @@ class TestPreviewOrganization:
             "vision_model": "vision-custom",
             "text_provider": "openai",
             "vision_provider": "openai",
+            "generate_tags": False,
+            "tag_style": None,
+            "tag_prompt": None,
         }
 
         response = client.post(

@@ -8,7 +8,7 @@ import re
 import threading
 import time
 import types as _t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +53,7 @@ class ProcessedImage:
     # Files below `AppConfig.processing.low_confidence_threshold` are
     # surfaced in the summary's "Review recommended" section.
     confidence: float = 1.0
+    tags: list[str] = field(default_factory=list)
 
 
 def _mime_type_for_image_format(image_format: str | None) -> str:
