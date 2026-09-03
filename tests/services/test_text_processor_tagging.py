@@ -10,7 +10,7 @@ import pytest
 from file_organizer.models.base import ModelType, StructuredParseError
 from file_organizer.services.text_processor import ProcessedFile, TextAnalysisSchema, TextProcessor
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 @pytest.fixture

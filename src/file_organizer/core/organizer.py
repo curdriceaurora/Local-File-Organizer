@@ -218,9 +218,6 @@ class FileOrganizer:
             )
         self.max_transcribe_seconds = max_transcribe_seconds
         self.whisper_model = whisper_model
-        self.generate_tags = generate_tags
-        self.tag_style = tag_style
-        self.tag_prompt = tag_prompt
         if organize_options is not None:
             self.organize_options = replace(
                 organize_options,
@@ -264,6 +261,9 @@ class FileOrganizer:
                 tag_style=tag_style,
                 tag_prompt=tag_prompt,
             )
+        self.generate_tags = self.organize_options.generate_tags
+        self.tag_style = self.organize_options.tag_style
+        self.tag_prompt = self.organize_options.tag_prompt
         self._audio_model: Any = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None

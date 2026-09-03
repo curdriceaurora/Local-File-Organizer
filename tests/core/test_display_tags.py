@@ -17,7 +17,7 @@ from file_organizer.core.plan import (
 )
 from file_organizer.core.types import OrganizationResult
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 def test_show_summary_displays_tags_suffix(tmp_path: Path) -> None:

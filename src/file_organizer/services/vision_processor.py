@@ -552,11 +552,7 @@ class VisionProcessor:
             prompt_lines.append("- extracted_text: Return null.")
 
         if generate_tags:
-            style_part = (
-                f" Favor terms fitting the '{tag_style}' domain (see the {tag_style} vocabulary hints below)."
-                if tag_style
-                else ""
-            )
+            style_part = f" Favor terms fitting the '{tag_style}' domain." if tag_style else ""
             prompt_part = (
                 f" Additional guidance: {json.dumps(tag_prompt, ensure_ascii=True)}"
                 if tag_prompt

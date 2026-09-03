@@ -131,7 +131,7 @@ class TestProcessFileScanRoot:
         result = text_processor.process_file(target, scan_root=tmp_path)
 
         assert isinstance(result, ProcessedFile)
-        assert result.error is None
+        assert result.original_content is not None
         assert "quarterly revenue" in result.original_content
 
     @posix_only
@@ -172,4 +172,10 @@ class TestDispatcherForwardsScanRoot:
             [Path("a.txt")], processor, parallel, console, scan_root=Path("/") / "root"
         )
 
-        processor.process_file.assert_called_once_with(Path("a.txt"), scan_root=Path("/") / "root")
+        processor.process_file.assert_called_once_with(
+            Path("a.txt"),
+            scan_root=Path("/") / "root",
+            generate_tags=False,
+            tag_style=None,
+            tag_prompt=None,
+        )

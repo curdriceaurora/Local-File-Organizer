@@ -218,15 +218,13 @@ def process_text_files(
 
         def _process_one(path: Path) -> ProcessedFile:
             """Process a single text file in the dispatcher thread pool."""
-            if generate_tags:
-                return text_processor.process_file(
-                    path,
-                    scan_root=scan_root,
-                    generate_tags=generate_tags,
-                    tag_style=tag_style,
-                    tag_prompt=tag_prompt,
-                )
-            return text_processor.process_file(path, scan_root=scan_root)
+            return text_processor.process_file(
+                path,
+                scan_root=scan_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one):
             if file_result.success:
@@ -303,15 +301,13 @@ def process_image_files(
 
         def _process_one_image(path: Path) -> ProcessedImage:
             """Process a single image file in the dispatcher thread pool."""
-            if generate_tags:
-                return vision_processor.process_file(
-                    path,
-                    context_root=context_root,
-                    generate_tags=generate_tags,
-                    tag_style=tag_style,
-                    tag_prompt=tag_prompt,
-                )
-            return vision_processor.process_file(path, context_root=context_root)
+            return vision_processor.process_file(
+                path,
+                context_root=context_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for file_result in parallel_processor.process_batch_iter(files, _process_one_image):
             if file_result.success:
@@ -431,15 +427,13 @@ def process_image_files(
         retry_processor = ParallelProcessor(config=retry_config)
 
         def _retry_one_image(path: Path) -> ProcessedImage:
-            if generate_tags:
-                return vision_processor.process_file(
-                    path,
-                    context_root=context_root,
-                    generate_tags=generate_tags,
-                    tag_style=tag_style,
-                    tag_prompt=tag_prompt,
-                )
-            return vision_processor.process_file(path, context_root=context_root)
+            return vision_processor.process_file(
+                path,
+                context_root=context_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
+            )
 
         for retry_result in retry_processor.process_batch_iter(retry_paths, _retry_one_image):
             if retry_result.success:

@@ -218,3 +218,19 @@ def test_file_organizer_direct_organize_with_tags_and_display(
         assert "[dim](" in printed
         assert "notes, team" in printed
         assert "photo, green" in printed
+
+
+def test_file_organizer_normalizes_whitespace_tag_prompt() -> None:
+    organizer = FileOrganizer(
+        tag_prompt="   \n\t  ",
+        generate_tags=True,
+    )
+    assert organizer.tag_prompt is None
+    assert organizer.organize_options.tag_prompt is None
+
+    organizer_with_prompt = FileOrganizer(
+        tag_prompt="  custom keywords  ",
+        generate_tags=True,
+    )
+    assert organizer_with_prompt.tag_prompt == "custom keywords"
+    assert organizer_with_prompt.organize_options.tag_prompt == "custom keywords"

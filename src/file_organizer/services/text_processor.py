@@ -347,11 +347,7 @@ class TextProcessor:
         generation on failure and returns ``(description, [])``. When False, skips
         the fallback call and returns ``("", [])``.
         """
-        style_clause = (
-            f"Favor terms fitting the '{tag_style}' domain (see the {tag_style} vocabulary hints below).\n"
-            if tag_style
-            else ""
-        )
+        style_clause = f"Favor terms fitting the '{tag_style}' domain.\n" if tag_style else ""
         prompt_clause = (
             f"Additional guidance: {json.dumps(tag_prompt, ensure_ascii=True)}\n"
             if tag_prompt

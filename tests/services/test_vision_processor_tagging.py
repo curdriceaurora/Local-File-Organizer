@@ -12,7 +12,7 @@ from file_organizer.models.base import ModelType
 from file_organizer.models.vision_schema import TaggedVisionSchema, VisionSchema
 from file_organizer.services.vision_processor import ProcessedImage, VisionProcessor
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.integration]
 
 
 @pytest.fixture
