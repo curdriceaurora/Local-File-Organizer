@@ -7,7 +7,7 @@ from file_organizer.services.auto_tagging.styles import (
     validate_tag_style,
 )
 
-pytestmark = [pytest.mark.ci, pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit, pytest.mark.integration]
 
 
 class TestValidateTagStyle:

@@ -1590,6 +1590,8 @@ file-organizer autotag suggest DIRECTORY [OPTIONS]
 Options:
 - `--top-n, -n INTEGER` — Max suggestions per file (default: 10)
 - `--min-confidence FLOAT` — Minimum confidence % (default: 40.0)
+- `--style, -s TEXT` — Tagging style preset (`sfx`, `audio`, `code`, `descriptive`, `hierarchical`)
+- `--prompt, -p TEXT` — Custom tagging guidance prompt (max 500 characters)
 - `--json` — Output as JSON
 
 #### `autotag apply`
@@ -1638,6 +1640,8 @@ file-organizer autotag batch DIRECTORY [OPTIONS]
 Options:
 - `--pattern TEXT` — File pattern (default: `*`)
 - `--recursive / --no-recursive` — Recurse into subdirectories (default: true)
+- `--style, -s TEXT` — Tagging style preset (`sfx`, `audio`, `code`, `descriptive`, `hierarchical`)
+- `--prompt, -p TEXT` — Custom tagging guidance prompt (max 500 characters)
 - `--json` — Output as JSON
 
 **Examples:**

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.integration]
 
 runner = CliRunner()
 
@@ -286,3 +286,112 @@ class TestAutotagBatchErrors:
             result = runner.invoke(autotag_app, ["batch", str(tmp_path)])
 
         assert result.exit_code == 1
+
+    def test_batch_invalid_style(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        result = runner.invoke(autotag_app, ["batch", str(tmp_path), "--style", "invalid_style"])
+        assert result.exit_code == 2
+        assert "Invalid tag_style" in result.output
+
+    def test_batch_invalid_prompt(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        result = runner.invoke(autotag_app, ["batch", str(tmp_path), "--prompt", "x" * 501])
+        assert result.exit_code == 2
+        assert "exceeds maximum length" in result.output
+
+    def test_batch_valid_style_and_prompt(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        good_file = tmp_path / "file.py"
+        good_file.write_text("print('hi')")
+
+        mock_service = MagicMock()
+        mock_service.recommender.batch_recommend.return_value = {
+            good_file: _FakeRecommendation(
+                suggestions=[_FakeTagSuggestion(tag="py", confidence=85.0)]
+            )
+        }
+
+        with patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=mock_service,
+        ):
+            result = runner.invoke(
+                autotag_app,
+                ["batch", str(tmp_path), "-s", "code", "-p", "python code", "--no-recursive"],
+            )
+
+        assert result.exit_code == 0
+        mock_service.recommender.batch_recommend.assert_called_once_with(
+            [good_file], top_n=5, style="code", prompt="python code"
+        )
+
+    def test_batch_json_output(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        good_file = tmp_path / "file.py"
+        good_file.write_text("print('hi')")
+
+        mock_service = MagicMock()
+        mock_service.recommender.batch_recommend.return_value = {
+            good_file: _FakeRecommendation(
+                suggestions=[_FakeTagSuggestion(tag="py", confidence=85.0)]
+            )
+        }
+
+        with patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=mock_service,
+        ):
+            result = runner.invoke(
+                autotag_app,
+                ["batch", str(tmp_path), "--json"],
+            )
+
+        assert result.exit_code == 0
+        assert '"tag": "py"' in result.output
+
+
+class TestAutotagSuggestOptions:
+    """Covers style and prompt options for suggest command."""
+
+    def test_suggest_invalid_style(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        result = runner.invoke(autotag_app, ["suggest", str(tmp_path), "--style", "invalid_style"])
+        assert result.exit_code == 2
+        assert "Invalid tag_style" in result.output
+
+    def test_suggest_invalid_prompt(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        result = runner.invoke(autotag_app, ["suggest", str(tmp_path), "--prompt", "x" * 501])
+        assert result.exit_code == 2
+        assert "exceeds maximum length" in result.output
+
+    def test_suggest_valid_style_and_prompt(self, tmp_path: Path) -> None:
+        from file_organizer.cli.autotag_v2 import autotag_app
+
+        good_file = tmp_path / "audio.wav"
+        good_file.write_text("dummy")
+
+        mock_service = MagicMock()
+        mock_service.suggest_tags.return_value = _FakeRecommendation(
+            suggestions=[_FakeTagSuggestion(tag="whoosh", confidence=90.0)]
+        )
+
+        with patch(
+            "file_organizer.services.auto_tagging.AutoTaggingService",
+            return_value=mock_service,
+        ):
+            result = runner.invoke(
+                autotag_app,
+                ["suggest", str(tmp_path), "-s", "sfx", "-p", "whoosh impact"],
+            )
+
+        assert result.exit_code == 0
+        mock_service.suggest_tags.assert_called_once_with(
+            good_file, top_n=10, style="sfx", prompt="whoosh impact"
+        )

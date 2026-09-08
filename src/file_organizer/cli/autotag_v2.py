@@ -55,9 +55,31 @@ def suggest(
         float, typer.Option("--min-confidence", help="Minimum confidence %.")
     ] = 40.0,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
+    style: Annotated[
+        str | None,
+        typer.Option(
+            "--style",
+            "-s",
+            help="Tagging style preset (sfx, audio, code, descriptive, hierarchical).",
+        ),
+    ] = None,
+    prompt: Annotated[
+        str | None,
+        typer.Option("--prompt", "-p", help="Custom tagging guidance prompt."),
+    ] = None,
 ) -> None:
     """Suggest tags for files in a directory."""
-    from file_organizer.services.auto_tagging import AutoTaggingService
+    from file_organizer.services.auto_tagging import (
+        AutoTaggingService,
+        normalize_tag_prompt,
+        validate_tag_style,
+    )
+
+    try:
+        validate_tag_style(style)
+        prompt = normalize_tag_prompt(prompt)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     # A.cli: consolidates the prior inline ``resolve() + is_dir()`` check.
     resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
@@ -75,9 +97,15 @@ def suggest(
 
     all_results: list[dict[str, Any]] = []
 
+    suggest_kwargs: dict[str, Any] = {"top_n": top_n}
+    if style is not None:
+        suggest_kwargs["style"] = style
+    if prompt is not None:
+        suggest_kwargs["prompt"] = prompt
+
     for file_path in files:
         try:
-            recommendation = service.suggest_tags(file_path, top_n=top_n)
+            recommendation = service.suggest_tags(file_path, **suggest_kwargs)
         except Exception:
             logger.debug(
                 "Skipping file during auto-tag suggest due to inference error: %s",
@@ -214,9 +242,31 @@ def batch(
     pattern: Annotated[str, typer.Option(help="File pattern.")] = "*",
     recursive: Annotated[bool, typer.Option("--recursive/--no-recursive")] = True,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON.")] = False,
+    style: Annotated[
+        str | None,
+        typer.Option(
+            "--style",
+            "-s",
+            help="Tagging style preset (sfx, audio, code, descriptive, hierarchical).",
+        ),
+    ] = None,
+    prompt: Annotated[
+        str | None,
+        typer.Option("--prompt", "-p", help="Custom tagging guidance prompt."),
+    ] = None,
 ) -> None:
     """Batch tag suggestion for directory."""
-    from file_organizer.services.auto_tagging import AutoTaggingService
+    from file_organizer.services.auto_tagging import (
+        AutoTaggingService,
+        normalize_tag_prompt,
+        validate_tag_style,
+    )
+
+    try:
+        validate_tag_style(style)
+        prompt = normalize_tag_prompt(prompt)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 
@@ -241,8 +291,14 @@ def batch(
 
     console.print(f"Processing [bold]{len(files)}[/bold] files...")
 
+    batch_kwargs: dict[str, Any] = {"top_n": 5}
+    if style is not None:
+        batch_kwargs["style"] = style
+    if prompt is not None:
+        batch_kwargs["prompt"] = prompt
+
     try:
-        results = service.recommender.batch_recommend(files, top_n=5)
+        results = service.recommender.batch_recommend(files, **batch_kwargs)
     except Exception as exc:
         console.print(f"[red]Error during batch processing: {exc}[/red]")
         raise typer.Exit(code=1) from exc

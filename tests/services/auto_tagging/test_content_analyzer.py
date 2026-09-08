@@ -273,3 +273,53 @@ class TestContentTagAnalyzer:
         # Should still extract from filename and extension
         assert len(tags) > 0
         assert "txt" in tags
+
+    def test_extract_tag_candidates_non_existent_file(self, analyzer, temp_dir):
+        """Test extract_tag_candidates on missing file returns empty list."""
+        assert analyzer.extract_tag_candidates(temp_dir / "non_existent.txt") == []
+
+    def test_extract_tag_candidates_text_file(self, analyzer, sample_text_file):
+        """Test extract_tag_candidates combines signals on text files."""
+        candidates = analyzer.extract_tag_candidates(sample_text_file)
+        assert len(candidates) > 0
+        tags = [c.tag for c in candidates]
+        # Should include filename/extension or content signals
+        assert "document" in tags or "txt" in tags or "learning" in tags
+        for c in candidates:
+            assert 0.0 <= c.score <= 2.0
+            assert len(c.sources) > 0
+
+    def test_extract_tag_candidates_non_text_file(self, analyzer, temp_dir):
+        """Test extract_tag_candidates extracts structural signals on non-text files."""
+        img_file = temp_dir / "holiday_photo.jpg"
+        img_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+        candidates = analyzer.extract_tag_candidates(img_file)
+        assert len(candidates) > 0
+        tags = [c.tag for c in candidates]
+        assert "jpg" in tags or "image" in tags or "holiday" in tags or "photo" in tags
+
+    def test_extract_tag_candidates_with_style_and_prompt(self, analyzer, temp_dir):
+        """Test extract_tag_candidates forwards style and prompt."""
+        py_file = temp_dir / "service_worker.py"
+        py_file.write_text("def run(): pass")
+
+        candidates = analyzer.extract_tag_candidates(py_file, style="code", prompt="worker service")
+        tags = [c.tag for c in candidates]
+        assert "lang/py" in tags or "python" in tags or "code" in tags
+
+    def test_default_min_keyword_length_is_two(self):
+        """Test default min_keyword_length is 2 and preserves valid 2-char tokens."""
+        default_analyzer = ContentTagAnalyzer()
+        assert default_analyzer.min_keyword_length == 2
+
+        # 2-char tokens should be preserved
+        tokens = default_analyzer._tokenize("ui go rs js db a b")
+        assert "ui" in tokens
+        assert "go" in tokens
+        assert "rs" in tokens
+        assert "js" in tokens
+        assert "db" in tokens
+        # 1-char tokens should be filtered
+        assert "a" not in tokens
+        assert "b" not in tokens

@@ -113,7 +113,14 @@ class TagRecommender:
         logger.info("TagRecommender initialized")
 
     def recommend_tags(
-        self, file_path: Path, existing_tags: list[str] | None = None, top_n: int = 10
+        self,
+        file_path: Path,
+        existing_tags: list[str] | None = None,
+        top_n: int = 10,
+        *,
+        style: str | None = None,
+        prompt: str | None = None,
+        custom_prompt: str | None = None,
     ) -> TagRecommendation:
         """Generate tag recommendations for a file.
 
@@ -121,6 +128,9 @@ class TagRecommender:
             file_path: Path to the file
             existing_tags: Tags already applied
             top_n: Maximum number of suggestions
+            style: Optional tagging style preset name
+            prompt: Optional user-supplied tagging guidance prompt
+            custom_prompt: Alias for prompt
 
         Returns:
             TagRecommendation with ranked suggestions
@@ -134,12 +144,15 @@ class TagRecommender:
         logger.debug(f"Generating tag recommendations for: {file_path.name}")
 
         existing_tags = existing_tags or []
+        effective_prompt = prompt if prompt is not None else custom_prompt
 
         # Collect suggestions from different sources
         all_suggestions = {}
 
         # 1. Content-based suggestions
-        content_suggestions = self._get_content_suggestions(file_path)
+        content_suggestions = self._get_content_suggestions(
+            file_path, style=style, prompt=effective_prompt
+        )
         for tag, confidence in content_suggestions:
             all_suggestions[tag] = TagSuggestion(
                 tag=tag,
@@ -204,22 +217,36 @@ class TagRecommender:
             confidence_threshold=self.min_confidence,
         )
 
-    def batch_recommend(self, files: list[Path], top_n: int = 10) -> dict[Path, TagRecommendation]:
+    def batch_recommend(
+        self,
+        files: list[Path],
+        top_n: int = 10,
+        *,
+        style: str | None = None,
+        prompt: str | None = None,
+        custom_prompt: str | None = None,
+    ) -> dict[Path, TagRecommendation]:
         """Generate recommendations for multiple files.
 
         Args:
             files: list of file paths
             top_n: Maximum suggestions per file
+            style: Optional tagging style preset name
+            prompt: Optional user-supplied tagging guidance prompt
+            custom_prompt: Alias for prompt
 
         Returns:
             Dictionary mapping file paths to recommendations
         """
         logger.info(f"Batch recommending tags for {len(files)} files")
 
+        effective_prompt = prompt if prompt is not None else custom_prompt
         results = {}
         for file_path in files:
             try:
-                recommendation = self.recommend_tags(file_path, top_n=top_n)
+                recommendation = self.recommend_tags(
+                    file_path, top_n=top_n, style=style, prompt=effective_prompt
+                )
                 results[file_path] = recommendation
             except (OSError, ValueError, KeyError) as e:
                 logger.error(f"Error recommending tags for {file_path}: {e}")
@@ -303,23 +330,32 @@ class TagRecommender:
 
         return " • ".join(explanations)
 
-    def _get_content_suggestions(self, file_path: Path) -> list[tuple[str, float]]:
+    def _get_content_suggestions(
+        self,
+        file_path: Path,
+        *,
+        style: str | None = None,
+        prompt: str | None = None,
+    ) -> list[tuple[str, float]]:
         """Get suggestions from content analysis."""
         try:
-            # Get keywords with scores
-            keywords = self.content_analyzer.extract_keywords(file_path, top_n=10)
+            candidates = self.content_analyzer.extract_tag_candidates(
+                file_path, style=style, prompt=prompt
+            )
 
             # Normalize scores to 0-100 range
-            if not keywords:
+            if not candidates:
                 return []
 
-            max_score = max(score for _, score in keywords)
+            max_score = max(c.score for c in candidates)
             if max_score == 0:
                 return []
 
+            self._content_sources = {c.tag: c.sources for c in candidates}
+
             normalized = [
-                (tag, (score / max_score) * 80)  # Max 80% from content
-                for tag, score in keywords
+                (c.tag, (c.score / max_score) * 80)  # Max 80% from content
+                for c in candidates
             ]
 
             return normalized
@@ -394,6 +430,9 @@ class TagRecommender:
 
     def _generate_content_reasoning(self, tag: str, file_path: Path) -> str:
         """Generate reasoning for content-based suggestion."""
+        sources = getattr(self, "_content_sources", {}).get(tag)
+        if sources:
+            return f"Found in {', '.join(sources)}"
         return f"Found in {file_path.name} content or metadata"
 
     def _generate_behavior_reasoning(self, tag: str, file_path: Path) -> str:
