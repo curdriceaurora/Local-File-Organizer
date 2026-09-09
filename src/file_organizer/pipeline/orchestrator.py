@@ -52,6 +52,7 @@ class ProcessingResult:
         error: Error message if processing failed, None otherwise.
         processor_type: The processor type that handled the file.
         dry_run: Whether this was a dry-run (no files actually moved).
+        tags: Descriptive tags generated for the file, if any.
     """
 
     file_path: Path
@@ -62,6 +63,7 @@ class ProcessingResult:
     error: str | None = None
     processor_type: ProcessorType = ProcessorType.UNKNOWN
     dry_run: bool = True
+    tags: tuple[str, ...] = ()
 
 
 @dataclass
@@ -478,7 +480,9 @@ class PipelineOrchestrator:
             return self._process_file_staged(file_path, stages, trusted_root=trusted_root)
         return self._process_file_legacy(file_path)
 
-    def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
+    def process_batch(
+        self, files: list[Path], trusted_root: Path | None = None
+    ) -> list[ProcessingResult]:
         """Process a batch of files through the pipeline.
 
         When stages are configured, ``prefetch_depth > 0``,
@@ -491,6 +495,9 @@ class PipelineOrchestrator:
 
         Args:
             files: List of file paths to process.
+            trusted_root: Optional trusted root directory for anchored reads,
+                threaded through to every file's context the same way
+                :meth:`process_file` does for a single file.
 
         Returns:
             List of ProcessingResult instances, one per file, in order.
@@ -518,7 +525,7 @@ class PipelineOrchestrator:
         if stages and self._prefetch_depth > 0 and self._prefetch_stages > 0 and len(files) > 1:
             # Keep prefetch behavior deterministic (Issue #713 contracts) while
             # still applying proactive memory feedback to the shared buffer pool.
-            results = self._process_batch_prefetch(files, stages)
+            results = self._process_batch_prefetch(files, stages, trusted_root=trusted_root)
             self._rebalance_buffer_pool()
             return results
 
@@ -527,7 +534,9 @@ class PipelineOrchestrator:
             upper = min(index + batch_size, len(files))
             batch_files = files[index:upper]
             chunk_start_rss = self._safe_current_rss()
-            results.extend(self._process_batch_chunk(batch_files, stages))
+            results.extend(
+                self._process_batch_chunk(batch_files, stages, trusted_root=trusted_root)
+            )
             self._rebalance_buffer_pool()
 
             if upper < len(files):
@@ -597,10 +606,13 @@ class PipelineOrchestrator:
         self,
         files: list[Path],
         stages: list[PipelineStage],
+        trusted_root: Path | None = None,
     ) -> list[ProcessingResult]:
         """Process one adaptive batch chunk while preserving file order."""
         if stages:
-            return [self._process_file_staged(path, stages) for path in files]
+            return [
+                self._process_file_staged(path, stages, trusted_root=trusted_root) for path in files
+            ]
         return [self._process_file_legacy(path) for path in files]
 
     # ------------------------------------------------------------------
@@ -672,6 +684,7 @@ class PipelineOrchestrator:
             error=context.error,
             processor_type=processor_type,
             dry_run=context.dry_run,
+            tags=tuple(context.analysis.get("tags") or ()),
         )
 
     def _make_context(self, file_path: Path, trusted_root: Path | None = None) -> StageContext:
@@ -724,7 +737,10 @@ class PipelineOrchestrator:
             self._release_buffer(file_path, buffer)
 
     def _process_batch_prefetch(
-        self, files: list[Path], stages: list[PipelineStage]
+        self,
+        files: list[Path],
+        stages: list[PipelineStage],
+        trusted_root: Path | None = None,
     ) -> list[ProcessingResult]:
         """Process a batch with I/O-compute overlap via the resource executor.
 
@@ -743,6 +759,11 @@ class PipelineOrchestrator:
         Args:
             files: Ordered list of file paths to process.
             stages: Snapshot of the stage list taken by the caller.
+            trusted_root: Optional trusted root directory, closed over so
+                every context ``run_prefetched_batch`` builds via its
+                ``make_context`` callback carries it -- that callback takes
+                only a path, so it can't be threaded through as a plain
+                argument the way it is for :meth:`_process_file_staged`.
 
         Returns:
             List of :class:`ProcessingResult` instances in the same
@@ -756,7 +777,7 @@ class PipelineOrchestrator:
             files=files,
             stages=stages,
             run_stages=self._run_stages,
-            make_context=self._make_context,
+            make_context=lambda path: self._make_context(path, trusted_root=trusted_root),
             finalize_result=self._finalize_result,
         )
 
