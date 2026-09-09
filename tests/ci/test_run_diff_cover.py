@@ -8,6 +8,7 @@ decisions in main()) against small real git repos built in tmp_path.
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 from pathlib import Path
 
@@ -93,29 +94,66 @@ class TestMappedSrcFiles:
         assert result == ["src/file_organizer/api/auth.py"]
 
 
+def _clean_git_env() -> dict[str, str]:
+    """Return os.environ without git hook variables that would poison nested repos.
+
+    When git invokes hooks (e.g. pre-commit), it sets GIT_DIR, GIT_WORK_TREE,
+    and GIT_INDEX_FILE pointing at the outer repo.  These leak into
+    subprocess.run(["git", ...]) calls that create or operate on tmp_path repos,
+    causing "fatal: this operation must be run in a work tree" failures.
+    """
+    env = dict(os.environ)
+    for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(key, None)
+    return env
+
+
+def _git_run(
+    *args: str, cwd: Path, check: bool = True, capture_output: bool = False, text: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run a git command with a sanitized environment."""
+    return subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        check=check,
+        capture_output=capture_output,
+        text=text,
+        env=_clean_git_env(),
+    )
+
+
 def _init_repo_with_origin_main(tmp_path: Path) -> Path:
     """A repo with one commit, and refs/remotes/origin/main pointing at it --
     enough for `git merge-base HEAD origin/main` to resolve without a real
     remote."""
     repo = tmp_path / "repo"
     repo.mkdir()
-    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    _git_run("init", "-q", cwd=repo)
+    _git_run("config", "user.email", "test@example.com", cwd=repo)
+    _git_run("config", "user.name", "Test", cwd=repo)
     _touch(repo / "src" / "file_organizer" / "existing.py")
-    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "initial"], cwd=repo, check=True)
-    base_sha = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True
+    _git_run("add", "-A", cwd=repo)
+    _git_run("commit", "-q", "-m", "initial", cwd=repo)
+    base_sha = _git_run(
+        "rev-parse",
+        "HEAD",
+        cwd=repo,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
-    subprocess.run(
-        ["git", "update-ref", "refs/remotes/origin/main", base_sha], cwd=repo, check=True
-    )
+    _git_run("update-ref", "refs/remotes/origin/main", base_sha, cwd=repo)
     return repo
 
 
 @pytest.mark.unit
 class TestGitFacingHelpers:
+    @pytest.fixture(autouse=True)
+    def _strip_git_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Prevent GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE from leaking into
+        the run_diff_cover module's own subprocess calls (e.g. inside pre-commit)."""
+        for var in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+            monkeypatch.delenv(var, raising=False)
+
     def test_merge_base_resolves_against_crafted_origin_main(self, tmp_path: Path) -> None:
         repo = _init_repo_with_origin_main(tmp_path)
         assert run_diff_cover.merge_base(repo_root=repo) is not None
@@ -123,15 +161,15 @@ class TestGitFacingHelpers:
     def test_merge_base_none_without_origin(self, tmp_path: Path) -> None:
         repo = tmp_path / "norepo"
         repo.mkdir()
-        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        _git_run("init", "-q", cwd=repo)
         assert run_diff_cover.merge_base(repo_root=repo) is None
 
     def test_changed_python_files_excludes_deletions(self, tmp_path: Path) -> None:
         repo = _init_repo_with_origin_main(tmp_path)
         (repo / "src" / "file_organizer" / "existing.py").unlink()
         _touch(repo / "src" / "file_organizer" / "added.py")
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "delete + add"], cwd=repo, check=True)
+        _git_run("add", "-A", cwd=repo)
+        _git_run("commit", "-q", "-m", "delete + add", cwd=repo)
 
         base = run_diff_cover.merge_base(repo_root=repo)
         assert base is not None
@@ -151,15 +189,19 @@ class TestGitFacingHelpers:
         repo = _init_repo_with_origin_main(tmp_path)
 
         _touch(repo / "src" / "file_organizer" / "at_b.py")
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "commit B"], cwd=repo, check=True)
-        commit_b = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True
+        _git_run("add", "-A", cwd=repo)
+        _git_run("commit", "-q", "-m", "commit B", cwd=repo)
+        commit_b = _git_run(
+            "rev-parse",
+            "HEAD",
+            cwd=repo,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
 
         _touch(repo / "src" / "file_organizer" / "at_c.py")
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "commit C (HEAD)"], cwd=repo, check=True)
+        _git_run("add", "-A", cwd=repo)
+        _git_run("commit", "-q", "-m", "commit C (HEAD)", cwd=repo)
 
         # Without PRE_COMMIT_TO_REF, HEAD (commit C) is used -- both files show up.
         monkeypatch.delenv("PRE_COMMIT_TO_REF", raising=False)
@@ -180,6 +222,13 @@ class TestGitFacingHelpers:
 
 @pytest.mark.unit
 class TestMainEndToEnd:
+    @pytest.fixture(autouse=True)
+    def _strip_git_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Prevent GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE from leaking into
+        the run_diff_cover module's own subprocess calls (e.g. inside pre-commit)."""
+        for var in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+            monkeypatch.delenv(var, raising=False)
+
     def test_noop_when_nothing_changed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -193,8 +242,8 @@ class TestMainEndToEnd:
     ) -> None:
         repo = _init_repo_with_origin_main(tmp_path)
         _touch(repo / "src" / "file_organizer" / "orphan.py")
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "orphan"], cwd=repo, check=True)
+        _git_run("add", "-A", cwd=repo)
+        _git_run("commit", "-q", "-m", "orphan", cwd=repo)
 
         monkeypatch.setattr(run_diff_cover, "REPO_ROOT", repo)
         monkeypatch.chdir(repo)
@@ -209,8 +258,8 @@ class TestMainEndToEnd:
         push over a file it never had local test evidence for."""
         repo = _init_repo_with_origin_main(tmp_path)
         _touch(repo / "tests" / "api" / "test_auth.py")
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "add test dir"], cwd=repo, check=True)
+        _git_run("add", "-A", cwd=repo)
+        _git_run("commit", "-q", "-m", "add test dir", cwd=repo)
 
         changed = ["src/file_organizer/api/auth.py", "src/file_organizer/_compat.py"]
         test_paths, unmapped = run_diff_cover.map_to_tests(changed, repo_root=repo)

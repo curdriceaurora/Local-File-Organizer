@@ -162,12 +162,16 @@ class TestCIWorkflow:
         """Verify the split PR/push test structure uses correct Python versions.
 
         ci.yml uses two separate jobs:
-        - 'test': PR-only, Python 3.11-3.14 (~2 400 tests, ci marker)
+        - 'test': PR-only, Python 3.11 + 3.14 only (#1786 fanout reduction) —
+          3.11 is the leg that records coverage/floor-gate data, and 3.14 is
+          the newest supported interpreter, so this pair catches both the
+          coverage-instrumented path and latest-version compatibility without
+          paying for all four versions on every PR.
         - 'test-full': push-only, 6 shards x Python 3.11-3.14 (~17 000 tests)
+          — the full version matrix still runs on every push to main, so a
+          3.12/3.13-specific regression is still caught before release.
 
-        Both jobs cover every supported version directly on PRs rather than
-        waiting until after merge (or the daily ci-full.yml run) to catch
-        version-specific issues. 3.13/3.14 were added in issue #882.
+        3.13/3.14 were added in issue #882.
         """
         jobs = workflow.get("jobs", {})
 
@@ -180,12 +184,12 @@ class TestCIWorkflow:
             "'test' job must have if: github.event_name == 'pull_request'"
         )
 
-        # Must run all supported Python versions so each is validated on every PR
+        # PR job runs a reduced 2-version matrix (#1786): 3.11 for coverage, 3.14 for latest compat.
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert set(python_versions) == {"3.11", "3.12", "3.13", "3.14"}, (
-            f"'test' (PR) job must include 3.11-3.14, got {python_versions}"
+        assert set(python_versions) == {"3.11", "3.14"}, (
+            f"'test' (PR) job must include only 3.11 and 3.14, got {python_versions}"
         )
 
         # Must have a timeout to prevent indefinite hangs
@@ -456,6 +460,135 @@ class TestCIWorkflow:
         integration_condition = integration_job.get("if", "")
         assert "pull_request" in integration_condition
         assert "push" in integration_condition and "refs/heads/main" in integration_condition
+
+    def test_pr_fanout_budget(self, workflow: dict[str, Any]) -> None:
+        """PR jobs from ci.yml must stay within the fanout budget (#1786).
+
+        Budget: test matrix ≤ 2 Python versions on PR, keeping the total
+        non-skipped ci.yml job count at ~10–12.  test-benchmark is conditional
+        and excluded from the budget.
+        """
+        test_versions = workflow["jobs"]["test"]["strategy"]["matrix"]["python-version"]
+        assert len(test_versions) == 2, (
+            f"PR test matrix must have exactly 2 Python versions, got {len(test_versions)}"
+        )
+
+    def test_coverage_gates_preserved(self, workflow: dict[str, Any]) -> None:
+        """Coverage scripts, floor gates, and the 3.11 combined run must survive fanout reduction (#1786)."""
+        all_runs = " ".join(
+            step.get("run", "")
+            for job in workflow["jobs"].values()
+            if isinstance(job, dict)
+            for step in job.get("steps", [])
+            if isinstance(step, dict)
+        )
+        assert "split_coverage_by_context.py" in all_runs, (
+            "split_coverage_by_context.py must still be referenced in ci.yml"
+        )
+        assert "check_module_coverage_floor.py" in all_runs, (
+            "check_module_coverage_floor.py must still be referenced in ci.yml"
+        )
+        assert "check-integration-floors.py" in all_runs, (
+            "check-integration-floors.py must still be referenced in ci.yml"
+        )
+        # The 3.11 combined run must still use branch-coverage with per-test contexts
+        test_run_step = next(
+            s
+            for s in workflow["jobs"]["test"]["steps"]
+            if isinstance(s, dict) and s.get("name") == "Run tests"
+        )
+        run_cmd = test_run_step.get("run", "")
+        assert "--cov-branch" in run_cmd and "--cov-context=test" in run_cmd, (
+            "The 3.11 combined run must record branch coverage with per-test contexts"
+        )
+        # test-integration must still run on PRs
+        integration_condition = workflow["jobs"]["test-integration"].get("if", "")
+        assert "pull_request" in integration_condition, (
+            "test-integration must still run on pull_request events"
+        )
+
+    def test_changes_job_has_web_filter(self, workflow: dict[str, Any]) -> None:
+        """changes job must output a web filter for conditional browser testing (#1786)."""
+        jobs = workflow["jobs"]
+        changes_job = jobs["changes"]
+        outputs = changes_job.get("outputs", {})
+        assert "web" in outputs, "changes job must output 'web' for conditional browser testing"
+
+    def test_playwright_conditional_browser_matrix(self, workflow: dict[str, Any]) -> None:
+        """Playwright runs chromium-only on non-web PRs, all browsers on web PRs and push (#1786)."""
+        jobs = workflow["jobs"]
+        playwright_job = jobs["playwright"]
+        needs = playwright_job.get("needs")
+        if isinstance(needs, str):
+            needs = [needs]
+        assert "changes" in (needs or []), "playwright job must depend on changes job"
+        browser_matrix = str(playwright_job["strategy"]["matrix"]["browser"])
+        assert "fromJSON" in browser_matrix, "browser matrix must use dynamic fromJSON expression"
+        assert "chromium" in browser_matrix, "browser matrix must include chromium"
+        assert "web" in browser_matrix, "browser matrix expression must reference web output"
+
+    def test_benchmark_filter_excludes_workflow_file(self, workflow: dict[str, Any]) -> None:
+        """Workflow-only changes must not trigger the benchmark suite (#1786)."""
+        changes_job = workflow["jobs"]["changes"]
+        filter_step = next(
+            s
+            for s in changes_job["steps"]
+            if isinstance(s, dict) and "paths-filter" in str(s.get("uses", ""))
+        )
+        filters_text = filter_step.get("with", {}).get("filters", "")
+        # Parse the benchmark section only
+        in_benchmark = False
+        benchmark_paths = []
+        for line in filters_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("benchmark:"):
+                in_benchmark = True
+                continue
+            if in_benchmark and stripped.startswith("- "):
+                benchmark_paths.append(stripped.lstrip("- ").strip().strip('"'))
+            elif (
+                in_benchmark
+                and stripped
+                and not stripped.startswith("#")
+                and not stripped.startswith("- ")
+            ):
+                break
+        assert ".github/workflows/ci.yml" not in benchmark_paths, (
+            "Benchmark path filter must not include .github/workflows/ci.yml — "
+            "a workflow-only change should not launch the benchmark suite (#1786)"
+        )
+
+    def test_pr_required_aggregation_job(self, workflow: dict[str, Any]) -> None:
+        """PR required job provides a stable branch-protection target (#1786)."""
+        jobs = workflow["jobs"]
+        assert "pr-required" in jobs, "CI workflow must have a 'pr-required' aggregation job"
+        job = jobs["pr-required"]
+        condition = job.get("if", "")
+        assert "always()" in condition, "pr-required must use always() to run even when deps skip"
+        assert "pull_request" in condition, "pr-required must be gated to pull_request events"
+        needs = job.get("needs", [])
+        required_deps = {
+            "lint",
+            "unused-deps",
+            "type-check",
+            "link-integrity",
+            "test",
+            "playwright",
+            "test-integration",
+        }
+        assert set(needs) == required_deps, (
+            f"pr-required must depend on exactly {required_deps}, got {set(needs)}"
+        )
+        assert "test-benchmark" not in needs, (
+            "test-benchmark is advisory and must not be in pr-required"
+        )
+        # The aggregation step must also fail when required deps are skipped,
+        # not just failed/cancelled — otherwise a changes-job failure silently
+        # lets pr-required pass with no test coverage (#1786 review).
+        step_run = job["steps"][0].get("run", "")
+        assert "skipped" in step_run, (
+            "pr-required must check for skipped results so required suites cannot be bypassed"
+        )
 
 
 @pytest.mark.unit
@@ -874,11 +1007,26 @@ class TestExtrasMatrixWorkflow:
         return load_workflow("ci-extras.yml")
 
     def test_linux_matrix_covers_migration_pythons(self, workflow: dict[str, Any]) -> None:
-        """Verify the Linux extras job installs on 3.12 through 3.14."""
+        """Verify the Linux extras job installs on 3.14 (PR) and 3.12-3.14 (push/schedule).
+
+        #1786: the matrix is now a dynamic fromJSON expression so PRs only
+        pay for the newest Python, while push-to-main and the weekly schedule
+        run still cover the full 3.12-3.14 migration range.
+        """
         job = workflow["jobs"]["install-extra"]
         matrix = job["strategy"]["matrix"]
-        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
-            f"install-extra must cover 3.12-3.14, got {matrix['python-version']}"
+        python_version = matrix["python-version"]
+        assert isinstance(python_version, str), (
+            f"install-extra python-version must be a dynamic expression string, got {python_version!r}"
+        )
+        assert '["3.14"]' in python_version, (
+            f"install-extra python-version must select 3.14-only for the PR lane, got {python_version!r}"
+        )
+        assert '["3.12", "3.13", "3.14"]' in python_version, (
+            f"install-extra python-version must select 3.12-3.14 for push/schedule lanes, got {python_version!r}"
+        )
+        assert "pull_request" in python_version, (
+            f"install-extra python-version must gate the slim lane on pull_request event, got {python_version!r}"
         )
         assert job["strategy"].get("fail-fast") is False, (
             "install-extra must not fail-fast: each extra/python cell is independent evidence"
@@ -906,11 +1054,34 @@ class TestExtrasMatrixWorkflow:
         assert job is not None, "ci-extras must keep the macOS lane (install-extra-macos)"
         assert job["runs-on"] == "macos-latest"
         matrix = job["strategy"]["matrix"]
-        assert matrix["python-version"] == ["3.12", "3.13", "3.14"], (
-            f"install-extra-macos must cover 3.12-3.14, got {matrix['python-version']}"
+        python_version = matrix["python-version"]
+        assert isinstance(python_version, str), (
+            f"install-extra-macos python-version must be a dynamic expression string, got {python_version!r}"
+        )
+        assert '["3.14"]' in python_version, (
+            f"install-extra-macos python-version must select 3.14-only for the PR lane, got {python_version!r}"
+        )
+        assert '["3.12", "3.13", "3.14"]' in python_version, (
+            f"install-extra-macos python-version must select 3.12-3.14 for push/schedule lanes, got {python_version!r}"
+        )
+        assert "pull_request" in python_version, (
+            f"install-extra-macos python-version must gate the slim lane on pull_request event, got {python_version!r}"
         )
         assert "mlx" in matrix["extra"], (
             "install-extra-macos must include mlx — no other lane can exercise it"
+        )
+
+    def test_extras_required_aggregation_job(self, workflow: dict[str, Any]) -> None:
+        """Extras required aggregation job provides a stable branch-protection target (#1786)."""
+        jobs = workflow["jobs"]
+        assert "extras-required" in jobs, (
+            "ci-extras.yml must have an 'extras-required' aggregation job"
+        )
+        job = jobs["extras-required"]
+        assert "always()" in job.get("if", ""), "extras-required must use if: always()"
+        needs = job.get("needs", [])
+        assert "install-extra" in needs and "install-extra-macos" in needs, (
+            f"extras-required must depend on both matrix jobs, got {needs}"
         )
 
 

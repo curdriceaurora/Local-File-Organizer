@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       benchmark: ${{ steps.filter.outputs.benchmark }}
+      web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -36,7 +37,12 @@ jobs:
               - "tests/fixtures/benchmark*/**"
               - "docs/admin/performance-tuning.md"
               - "docs/cli-reference.md"
-              - ".github/workflows/ci.yml"
+            web:
+              - "src/file_organizer/web/**"
+              - "src/file_organizer/api/**"
+              - "src/file_organizer/tui/**"
+              - "src/file_organizer/desktop/**"
+              - "tests/playwright/**"
 
   lint:
     runs-on: ubuntu-latest
@@ -130,7 +136,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -304,21 +310,20 @@ jobs:
           retention-days: 1
 
   playwright:
-    # Matrix execution policy: all three browsers run on every PR and push.
-    # Rationale: catching firefox/webkit-only regressions at PR review time is
-    # the entire point of cross-browser testing — chromium-only on PRs would
-    # let those regressions land and be discovered later by nightly runs (or
-    # users). The three browsers run in parallel, so wall-clock cost is ~1x
-    # the chromium-only run, only the runner-minute cost is ~3x. fail-fast is
-    # disabled so a firefox failure does not cancel the in-progress webkit run
-    # (review value of seeing all three results > saving a few runner minutes).
+    # Matrix execution policy (#1786): Chromium runs on every PR. Firefox and
+    # WebKit run on PRs only when browser-facing files (web/, api/, tui/,
+    # desktop/, tests/playwright/) change. All three browsers run on pushes to
+    # main and on scheduled runs so cross-browser regressions are always caught
+    # before release. fail-fast is disabled so a firefox failure does not cancel
+    # the in-progress webkit run.
     name: "Playwright E2E (${{ matrix.browser }})"
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.web == 'true') && fromJSON('["chromium", "firefox", "webkit"]') || fromJSON('["chromium"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -579,6 +584,28 @@ jobs:
 
       - name: Check per-file integration coverage floors
         run: python scripts/coverage/check-integration-floors.py
+
+  pr-required:
+    name: PR required
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - lint
+      - unused-deps
+      - type-check
+      - link-integrity
+      - test
+      - playwright
+      - test-integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required PR checks passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+            echo "One or more required checks failed, were cancelled, or were skipped"
+            exit 1
+          fi
 
   test-unit-floors:
     name: Unit coverage floor gate

@@ -30,6 +30,19 @@ def _is_guarded_test_path(rel_path: str) -> bool:
     )
 
 
+def _clean_git_env() -> dict[str, str]:
+    """Return os.environ without git hook variables that would poison subprocess git calls.
+
+    When git invokes hooks (e.g. pre-commit), it sets GIT_DIR, GIT_WORK_TREE,
+    and GIT_INDEX_FILE pointing at the outer repo.  These override the ``cwd``
+    parameter and cause "fatal: this operation must be run in a work tree".
+    """
+    env = dict(os.environ)
+    for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(key, None)
+    return env
+
+
 def _git_stdout(*args: str, check: bool = True) -> str:
     """Run git and return stripped stdout."""
     result = subprocess.run(
@@ -38,6 +51,7 @@ def _git_stdout(*args: str, check: bool = True) -> str:
         check=check,
         capture_output=True,
         text=True,
+        env=_clean_git_env(),
     )
     return result.stdout.strip()
 
@@ -66,6 +80,7 @@ def _git_ref_exists(ref: str) -> bool:
         check=False,
         capture_output=True,
         text=True,
+        env=_clean_git_env(),
     )
     return result.returncode == 0
 
@@ -86,6 +101,7 @@ def _fetch_base_ref(base_branch: str) -> str | None:
             capture_output=True,
             text=True,
             timeout=5,
+            env=_clean_git_env(),
         )
     except subprocess.TimeoutExpired:
         return f"git fetch origin {base_branch!r} timed out after 5 seconds"
