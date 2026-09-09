@@ -196,6 +196,102 @@ def test_to_dict_drops_use_hardlinks_legacy_alias() -> None:
     assert "use_hardlinks" not in canonical
 
 
+def test_operation_tags_survive_rest_and_sdk_plan_serialization() -> None:
+    """OrganizationOperation.tags must survive the exact real construction
+    path each payload uses to build a plan from a domain OrganizationPlan
+    (#1764): ``PayloadModel(**plan.to_dict())`` (REST, see
+    api/routers/organize.py) and ``PayloadModel.model_validate(plan.to_dict())``
+    (SDK response parsing).
+    """
+    from file_organizer.api.models import OrganizationPlanPayload as RestPlanPayload
+    from file_organizer.client.models import OrganizationPlanPayload as SdkPlanPayload
+    from file_organizer.core.plan import (
+        PLAN_SCHEMA_VERSION,
+        CollisionAction,
+        OrganizationOperation,
+        OrganizationOperationStatus,
+        OrganizationOperationType,
+        OrganizationPlan,
+    )
+
+    plan = OrganizationPlan(
+        plan_id="plan-1",
+        schema_version=PLAN_SCHEMA_VERSION,
+        input_path="/workspace/in",
+        output_path="/workspace/out",
+        created_at="2026-01-01T00:00:00Z",
+        skip_existing=True,
+        use_hardlinks=True,
+        total_files=1,
+        processed_files=0,
+        skipped_files=0,
+        failed_files=0,
+        deduplicated_files=0,
+        operations=[
+            OrganizationOperation(
+                operation_id="op-1",
+                source_path="/workspace/in/a.txt",
+                destination_path="/workspace/out/Docs/a.txt",
+                operation_type=OrganizationOperationType.HARDLINK,
+                collision_action=CollisionAction.CREATE,
+                status=OrganizationOperationStatus.READY,
+                folder_name="Docs",
+                file_name="a",
+                tags=["invoice", "march"],
+            )
+        ],
+    )
+    plan_dict = plan.to_dict()
+
+    rest_payload = RestPlanPayload(**plan_dict)
+    sdk_payload = SdkPlanPayload.model_validate(plan_dict)
+
+    assert rest_payload.operations[0].tags == ["invoice", "march"]
+    assert sdk_payload.operations[0].tags == ["invoice", "march"]
+
+
+def test_rest_options_payload_to_domain_is_generic_field_forwarding() -> None:
+    """OrganizationOptionsPayload.to_domain() must stay a generic
+    ``OrganizeOptions.from_dict(self.model_dump())`` (#1764).
+
+    Guards against a future rewrite that forwards fields one at a time --
+    every field set here, including a non-default value for each of the
+    three tag options, must survive the conversion unchanged. A
+    field-by-field rewrite that silently drops a newly added field would
+    still pass a spot-check on defaults alone; this exercises non-default
+    values for every field the payload declares.
+    """
+    non_defaults = RestOptionsPayload(
+        recursive=False,
+        include_hidden=True,
+        skip_existing=False,
+        transfer_mode="copy",
+        methodology="para",
+        enable_vision=False,
+        transcribe_audio=True,
+        max_transcribe_seconds=42.0,
+        whisper_model="base",
+        parallel_workers=3,
+        prefetch_depth=4,
+        text_model="text-custom",
+        vision_model="vision-custom",
+        text_provider="openai",
+        vision_provider="openai",
+        generate_tags=True,
+        tag_style="sfx",
+        tag_prompt="ambient textures",
+    )
+
+    domain = non_defaults.to_domain()
+
+    assert isinstance(domain, OrganizeOptions)
+    for field in RestOptionsPayload.model_fields:
+        assert getattr(domain, field) == getattr(non_defaults, field), (
+            f"to_domain() diverges on {field!r}: "
+            f"domain={getattr(domain, field)!r} vs payload={getattr(non_defaults, field)!r}"
+        )
+
+
 def test_rest_and_sdk_payloads_declare_identical_fields() -> None:
     """The REST and SDK payload models must agree on exactly which fields exist."""
     rest = set(RestOptionsPayload.model_fields)

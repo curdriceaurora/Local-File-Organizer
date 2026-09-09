@@ -110,6 +110,7 @@ class OrganizationOperationPayload(BaseModel):
     description: str = ""
     fingerprint: SourceFingerprintPayload | None = None
     error: str | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class OrganizationOptionsPayload(BaseModel):
