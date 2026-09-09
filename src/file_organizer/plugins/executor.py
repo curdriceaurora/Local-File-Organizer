@@ -93,10 +93,18 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
 
     stdin_bin = sys.stdin.buffer
     stdout_bin = sys.stdout.buffer
-    # Keep stdout reserved for the JSON IPC protocol. Plugin code can run at
-    # import time and during construction, so redirect normal prints before
-    # loading any plugin-controlled module.
+    # Keep stdout reserved for the JSON IPC protocol. Plugin code (and its
+    # dependencies) can produce output at import time and during
+    # construction — both through Python's `sys.stdout` (`print`, ordinary
+    # writes) and, for C-extension modules, by writing straight to the
+    # OS-level stdout file descriptor, which bypasses `sys.stdout` entirely
+    # (e.g. PyMuPDF's "`fitz` API is deprecated" notice — see #1784).
+    # Redirecting only `sys.stdout` catches the first case; the fd-level
+    # dup2 below is what catches the second. Both are undone before the
+    # readiness handshake so real stdout is exclusively the IPC channel.
     sys.stdout = sys.stderr
+    real_stdout_fd = os.dup(1)
+    os.dup2(2, 1)
 
     # ------------------------------------------------------------------
     # 1. Apply resource limits (best-effort; Linux/macOS only)
@@ -113,42 +121,50 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     except Exception:
         logger.debug("Failed to apply plugin worker resource limits", exc_info=True)
 
-    # ------------------------------------------------------------------
-    # 2. Dynamically load the plugin module
-    # ------------------------------------------------------------------
-    path = Path(plugin_path)
-    spec = importlib.util.spec_from_file_location(path.stem, path)
-    if spec is None or spec.loader is None:
-        sys.stderr.write(f"Cannot create module spec for plugin: {plugin_path}\n")
-        sys.exit(1)
-
-    loader = spec.loader
-    module = types.ModuleType(path.stem)
     try:
-        loader.exec_module(module)
-    except Exception as exc:
-        sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
-        sys.exit(1)
+        # --------------------------------------------------------------
+        # 2. Dynamically load the plugin module
+        # --------------------------------------------------------------
+        path = Path(plugin_path)
+        spec = importlib.util.spec_from_file_location(path.stem, path)
+        if spec is None or spec.loader is None:
+            sys.stderr.write(f"Cannot create module spec for plugin: {plugin_path}\n")
+            sys.exit(1)
 
-    # ------------------------------------------------------------------
-    # 3. Find and instantiate the first concrete Plugin subclass
-    # ------------------------------------------------------------------
-    from file_organizer.plugins.base import Plugin
+        loader = spec.loader
+        module = types.ModuleType(path.stem)
+        try:
+            loader.exec_module(module)
+        except Exception as exc:
+            sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
+            sys.exit(1)
 
-    plugin_instance: Plugin | None = None
-    for _attr_name in dir(module):
-        obj = getattr(module, _attr_name)
-        if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
-            try:
-                plugin_instance = obj()
-            except Exception as exc:
-                sys.stderr.write(f"Error instantiating plugin class '{_attr_name}': {exc}\n")
-                sys.exit(1)
-            break
+        # --------------------------------------------------------------
+        # 3. Find and instantiate the first concrete Plugin subclass
+        # --------------------------------------------------------------
+        from file_organizer.plugins.base import Plugin
 
-    if plugin_instance is None:
-        sys.stderr.write(f"No Plugin subclass found in: {plugin_path}\n")
-        sys.exit(1)
+        plugin_instance: Plugin | None = None
+        for _attr_name in dir(module):
+            obj = getattr(module, _attr_name)
+            if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
+                try:
+                    plugin_instance = obj()
+                except Exception as exc:
+                    sys.stderr.write(f"Error instantiating plugin class '{_attr_name}': {exc}\n")
+                    sys.exit(1)
+                break
+
+        if plugin_instance is None:
+            sys.stderr.write(f"No Plugin subclass found in: {plugin_path}\n")
+            sys.exit(1)
+    finally:
+        # Restore real stdout before anything below writes the readiness
+        # line. Runs even on the sys.exit(1) paths above (SystemExit still
+        # unwinds through `finally`) so a crashed worker's own exit is never
+        # left holding fd 1 open on stderr.
+        os.dup2(real_stdout_fd, 1)
+        os.close(real_stdout_fd)
 
     # ------------------------------------------------------------------
     # 4. IPC loop — read PluginCall from stdin, write PluginResult to stdout

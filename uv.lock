@@ -2560,7 +2560,7 @@ requires-dist = [
     { name = "pyjwt", marker = "extra == 'web'", specifier = "~=2.8" },
     { name = "pymarkdownlnt", marker = "extra == 'dev'", specifier = ">=0.9.25" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = "~=11.0" },
-    { name = "pymupdf", marker = "extra == 'parsers'", specifier = "~=1.23" },
+    { name = "pymupdf", marker = "extra == 'parsers'", specifier = "~=1.28.0" },
     { name = "pypdf", marker = "extra == 'dedup'", specifier = ">=6.15.0,<7" },
     { name = "pyqt6", marker = "extra == 'gui'", specifier = "~=6.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "~=9.1.1" },

@@ -446,6 +446,25 @@ _NOISY_STARTUP_PLUGIN_SRC = (
     "    def on_unload(self): pass\n"
 )
 
+_NATIVE_STDOUT_NOISE_PLUGIN_SRC = (
+    "import os\n"
+    "os.write(1, b'warning: The `fitz` API is deprecated and will be"
+    " removed in future. Use `import pymupdf` instead.\\n')\n"
+    "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
+    "class NativeNoisePlugin(Plugin):\n"
+    "    name = 'native-noise'\n"
+    "    version = '1.0.0'\n"
+    "    allowed_paths = []\n"
+    "    def get_metadata(self):\n"
+    "        return PluginMetadata(name=self.name, version=self.version,"
+    " author='test', description='native-noise')\n"
+    "    def on_load(self):\n"
+    "        return 'loaded'\n"
+    "    def on_enable(self): pass\n"
+    "    def on_disable(self): pass\n"
+    "    def on_unload(self): pass\n"
+)
+
 # src/ root of the package the TEST process imports — the worker child must
 # run this exact tree, not whatever a stale editable install resolves to.
 _PARENT_SRC_ROOT = (
@@ -507,6 +526,29 @@ class TestExecutorStartupHandshake:
         """Plugin import/constructor prints are redirected away from IPC stdout."""
         plugin = tmp_path / "noisy_plugin.py"
         plugin.write_text(_NOISY_STARTUP_PLUGIN_SRC)
+
+        executor = PluginExecutor(plugin_path=str(plugin))
+        executor.start()
+        try:
+            assert executor.call("on_load") == "loaded"
+        finally:
+            executor.stop()
+
+    def test_native_stdout_write_during_import_does_not_break_handshake(
+        self, tmp_path: Path
+    ) -> None:
+        """A C-extension writing straight to fd 1 at import must not corrupt readiness.
+
+        Reproduces the class of failure behind #1784: PyMuPDF's ``fitz``
+        deprecation notice is written directly to the OS-level stdout file
+        descriptor, bypassing ``sys.stdout`` entirely — so it survives the
+        existing ``sys.stdout = sys.stderr`` reassignment in ``_worker()``
+        (which only intercepts Python-level writes) and corrupts the
+        readiness handshake for *any* plugin whose import graph happens to
+        load such a dependency, regardless of what the plugin itself does.
+        """
+        plugin = tmp_path / "native_noise_plugin.py"
+        plugin.write_text(_NATIVE_STDOUT_NOISE_PLUGIN_SRC)
 
         executor = PluginExecutor(plugin_path=str(plugin))
         executor.start()
