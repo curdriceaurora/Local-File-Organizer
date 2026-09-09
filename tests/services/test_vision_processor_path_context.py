@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,10 @@ from file_organizer.models.vision_schema import VisionSchema
 from file_organizer.services.vision_processor import ProcessedImage, VisionProcessor
 
 pytestmark = pytest.mark.unit
+
+posix_only = pytest.mark.skipif(
+    sys.platform == "win32", reason="control character filenames require POSIX filesystem"
+)
 
 
 def _create_vision_processor() -> tuple[VisionProcessor, MagicMock]:
@@ -85,6 +90,34 @@ def test_process_file_threads_context_root(mock_preprocess: MagicMock, tmp_path:
 
 
 @patch("file_organizer.services.vision_processor.preprocess_and_clamp_image")
+def test_process_file_threads_scan_root_alias(mock_preprocess: MagicMock, tmp_path: Path) -> None:
+    mock_preprocess.return_value = (b"fake_image_bytes", "image/jpeg")
+    proc, mock_model = _create_vision_processor()
+
+    scan_root = tmp_path / "album"
+    sub_dir = scan_root / "2024" / "summer"
+    sub_dir.mkdir(parents=True)
+    img_file = sub_dir / "beach.jpg"
+    img_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
+
+    mock_schema = VisionSchema(
+        description="A sunny beach",
+        folder_name="beaches",
+        filename="summer_beach",
+        has_text=False,
+    )
+    proc._guarded_generate_structured = MagicMock(return_value=mock_schema)  # type: ignore[method-assign]
+
+    result = proc.process_file(img_file, scan_root=scan_root)
+    assert isinstance(result, ProcessedImage)
+    assert result.error is None
+
+    call_args = proc._guarded_generate_structured.call_args
+    prompt_used = call_args.kwargs["prompt"]
+    assert 'Context: File relative path is "2024/summer/beach.jpg".' in prompt_used
+
+
+@patch("file_organizer.services.vision_processor.preprocess_and_clamp_image")
 def test_process_file_without_context_root_uses_filename(
     mock_preprocess: MagicMock, tmp_path: Path
 ) -> None:
@@ -109,6 +142,7 @@ def test_process_file_without_context_root_uses_filename(
     assert 'Context: File relative path is "single_photo.jpg".' in prompt_used
 
 
+@posix_only
 @patch("file_organizer.services.vision_processor.preprocess_and_clamp_image")
 def test_process_file_control_characters_escaped(
     mock_preprocess: MagicMock, tmp_path: Path

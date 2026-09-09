@@ -36,7 +36,8 @@ class TextAnalysisSchema(pydantic.BaseModel):
     """Schema for structured text analysis including description and tags."""
 
     description: str = pydantic.Field(
-        description="A 100-150 word summary of the text focusing on main ideas and key details."
+        default="",
+        description="A 100-150 word summary of the text focusing on main ideas and key details.",
     )
     tags: list[str] = pydantic.Field(
         default_factory=list,
@@ -353,10 +354,17 @@ class TextProcessor:
             if tag_prompt
             else ""
         )
-        parts = [
-            "Analyze the following text. Provide a 100-150 word summary in the 'description' field, "
-            "and 3-8 lowercase tags (single words or hyphenated phrases) in the 'tags' field."
-        ]
+        if generate_description:
+            instruction = (
+                "Analyze the following text. Provide a 100-150 word summary in the 'description' field, "
+                "and 3-8 lowercase tags (single words or hyphenated phrases) in the 'tags' field."
+            )
+        else:
+            instruction = (
+                "Analyze the following text. Provide 3-8 lowercase tags (single words or hyphenated phrases) "
+                "in the 'tags' field."
+            )
+        parts = [instruction]
         if path_clause:
             parts.append(path_clause.strip())
         if style_clause:

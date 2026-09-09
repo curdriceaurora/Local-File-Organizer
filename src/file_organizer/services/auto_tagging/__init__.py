@@ -81,7 +81,9 @@ class AutoTaggingService:
         Returns:
             TagRecommendation object
         """
+        validate_tag_style(style)
         effective_prompt = prompt if prompt is not None else custom_prompt
+        effective_prompt = normalize_tag_prompt(effective_prompt)
         return self.recommender.recommend_tags(
             file_path,
             existing_tags=existing_tags,

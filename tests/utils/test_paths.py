@@ -143,3 +143,15 @@ def test_format_path_context_clause_strips_traversal_segments() -> None:
     # Purely traversal segments leave nothing meaningful to show.
     assert format_path_context_clause("..") == ""
     assert format_path_context_clause("../..") == ""
+
+
+def test_format_path_context_clause_windows_backslashes() -> None:
+    """Windows backslashes must be normalized to POSIX slashes before splitting."""
+    clause = format_path_context_clause(r"level1\level2\level3\level4\file.txt")
+    assert '"level3/level4/file.txt"' in clause
+    assert "\\" not in clause.split("is ")[1].split(". (Metadata")[0]
+
+    # Traversal segments with backslashes must also be stripped
+    clause_traversal = format_path_context_clause(r"..\..\etc\passwd")
+    assert '"etc/passwd"' in clause_traversal
+    assert ".." not in clause_traversal

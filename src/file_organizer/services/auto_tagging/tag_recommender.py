@@ -150,7 +150,7 @@ class TagRecommender:
         all_suggestions = {}
 
         # 1. Content-based suggestions
-        content_suggestions = self._get_content_suggestions(
+        content_suggestions, source_map = self._get_content_suggestions(
             file_path, style=style, prompt=effective_prompt
         )
         for tag, confidence in content_suggestions:
@@ -158,7 +158,9 @@ class TagRecommender:
                 tag=tag,
                 confidence=confidence,
                 source="content",
-                reasoning=self._generate_content_reasoning(tag, file_path),
+                reasoning=self._generate_content_reasoning(
+                    tag, file_path, sources=source_map.get(tag)
+                ),
             )
 
         # 2. Behavior-based suggestions
@@ -336,7 +338,7 @@ class TagRecommender:
         *,
         style: str | None = None,
         prompt: str | None = None,
-    ) -> list[tuple[str, float]]:
+    ) -> tuple[list[tuple[str, float]], dict[str, tuple[str, ...]]]:
         """Get suggestions from content analysis."""
         try:
             candidates = self.content_analyzer.extract_tag_candidates(
@@ -345,24 +347,24 @@ class TagRecommender:
 
             # Normalize scores to 0-100 range
             if not candidates:
-                return []
+                return [], {}
 
             max_score = max(c.score for c in candidates)
             if max_score == 0:
-                return []
+                return [], {}
 
-            self._content_sources = {c.tag: c.sources for c in candidates}
+            source_map = {c.tag: c.sources for c in candidates}
 
             normalized = [
                 (c.tag, (c.score / max_score) * 80)  # Max 80% from content
                 for c in candidates
             ]
 
-            return normalized
+            return normalized, source_map
 
         except (OSError, ValueError, ZeroDivisionError) as e:
             logger.debug(f"Error getting content suggestions: {e}")
-            return []
+            return [], {}
 
     def _get_behavior_suggestions(
         self, file_path: Path, existing_tags: list[str]
@@ -428,9 +430,15 @@ class TagRecommender:
             reverse=True,
         )
 
-    def _generate_content_reasoning(self, tag: str, file_path: Path) -> str:
+    def _generate_content_reasoning(
+        self,
+        tag: str,
+        file_path: Path,
+        sources: tuple[str, ...] | list[str] | None = None,
+    ) -> str:
         """Generate reasoning for content-based suggestion."""
-        sources = getattr(self, "_content_sources", {}).get(tag)
+        if sources is None:
+            sources = getattr(self, "_content_sources", {}).get(tag)
         if sources:
             return f"Found in {', '.join(sources)}"
         return f"Found in {file_path.name} content or metadata"

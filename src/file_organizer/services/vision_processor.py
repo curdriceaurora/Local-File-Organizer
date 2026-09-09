@@ -223,7 +223,8 @@ class VisionProcessor:
         generate_filename: bool = True,
         perform_ocr: bool = True,
         *,
-        context_root: Path | None = None,
+        context_root: Path | str | None = None,
+        scan_root: Path | str | None = None,
         generate_tags: bool = False,
         tag_style: str | None = None,
         tag_prompt: str | None = None,
@@ -239,6 +240,8 @@ class VisionProcessor:
             context_root: Optional directory path used exclusively for prompt
                 context hints (relative path / parent folder). Does not gate
                 the image read.
+            scan_root: Alias for ``context_root``, matching the ``TextProcessor``
+                interface.
             generate_tags: Whether to generate descriptive tags using the vision model.
             tag_style: Optional tagging style preset name.
             tag_prompt: Optional user-supplied tagging guidance prompt.
@@ -248,6 +251,11 @@ class VisionProcessor:
         """
         file_path = Path(file_path)
         start_time = time.time()
+        effective_root = (
+            Path(context_root)
+            if context_root is not None
+            else (Path(scan_root) if scan_root is not None else None)
+        )
 
         # Per-file inference timer (#410). The context manager exposes the
         # measured duration on ``_timer.elapsed_ms`` and emits a structured
@@ -264,7 +272,7 @@ class VisionProcessor:
                 generate_folder=generate_folder,
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
-                context_root=context_root,
+                context_root=effective_root,
                 generate_tags=generate_tags,
                 tag_style=tag_style,
                 tag_prompt=tag_prompt,
@@ -284,7 +292,8 @@ class VisionProcessor:
         generate_folder: bool,
         generate_filename: bool,
         perform_ocr: bool,
-        context_root: Path | None = None,
+        context_root: Path | str | None = None,
+        scan_root: Path | str | None = None,
         generate_tags: bool = False,
         tag_style: str | None = None,
         tag_prompt: str | None = None,
@@ -380,7 +389,8 @@ class VisionProcessor:
             # Preprocess and clamp image
             image_bytes, image_mime_type = preprocess_and_clamp_image(file_path)
 
-            relative_path = resolve_relative_path(file_path, context_root)
+            effective_root = context_root if context_root is not None else scan_root
+            relative_path = resolve_relative_path(file_path, effective_root)
             path_clause = format_path_context_clause(relative_path)
 
             prompt = self._build_structured_prompt(
@@ -413,8 +423,8 @@ class VisionProcessor:
             )
 
             tags: list[str] = []
-            if generate_tags and hasattr(schema_result, "tags"):
-                raw_tags = getattr(schema_result, "tags", [])
+            if generate_tags:
+                raw_tags = schema_result.tags
                 if isinstance(raw_tags, str):
                     raw_tags = [t.strip() for t in raw_tags.split(",")]
                 tags = normalize_tags(raw_tags)

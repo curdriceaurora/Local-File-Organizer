@@ -107,6 +107,9 @@ def test_tagging_enabled_with_generate_description_false(
 
     assert result.description == ""
     assert result.tags == ["database", "migration", "sql"]
+    (prompt_used,) = mock_text_model.generate_structured.call_args[0]
+    assert "100-150 word summary" not in prompt_used
+    assert "tags" in prompt_used
 
 
 def test_structured_failure_with_generate_description_true_falls_back(

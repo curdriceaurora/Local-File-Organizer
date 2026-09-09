@@ -42,6 +42,28 @@ def _walk_error_handler(root: Path) -> Callable[[Path, OSError], None]:
     return handle
 
 
+def _parse_tag_style_and_prompt(
+    style: str | None,
+    prompt: str | None,
+) -> tuple[str | None, str | None]:
+    """Validate tag style preset and normalize prompt.
+
+    Raises:
+        typer.BadParameter: If style is unknown or prompt exceeds length limits.
+    """
+    from file_organizer.services.auto_tagging import (
+        normalize_tag_prompt,
+        validate_tag_style,
+    )
+
+    try:
+        validate_tag_style(style)
+        prompt = normalize_tag_prompt(prompt)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    return style, prompt
+
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -69,17 +91,9 @@ def suggest(
     ] = None,
 ) -> None:
     """Suggest tags for files in a directory."""
-    from file_organizer.services.auto_tagging import (
-        AutoTaggingService,
-        normalize_tag_prompt,
-        validate_tag_style,
-    )
+    from file_organizer.services.auto_tagging import AutoTaggingService
 
-    try:
-        validate_tag_style(style)
-        prompt = normalize_tag_prompt(prompt)
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
+    style, prompt = _parse_tag_style_and_prompt(style, prompt)
 
     # A.cli: consolidates the prior inline ``resolve() + is_dir()`` check.
     resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
@@ -256,17 +270,9 @@ def batch(
     ] = None,
 ) -> None:
     """Batch tag suggestion for directory."""
-    from file_organizer.services.auto_tagging import (
-        AutoTaggingService,
-        normalize_tag_prompt,
-        validate_tag_style,
-    )
+    from file_organizer.services.auto_tagging import AutoTaggingService
 
-    try:
-        validate_tag_style(style)
-        prompt = normalize_tag_prompt(prompt)
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
+    style, prompt = _parse_tag_style_and_prompt(style, prompt)
 
     resolved = resolve_cli_path(directory, must_exist=True, must_be_dir=True)
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-import sys
-from pathlib import Path, PureWindowsPath
+import sys  # noqa: F401
+from pathlib import Path
 
 
 def resolve_relative_path(file_path: str | Path, scan_root: str | Path | None) -> str:
@@ -40,20 +40,14 @@ def resolve_relative_path(file_path: str | Path, scan_root: str | Path | None) -
     # Try lexical relative_to first
     try:
         rel = file_p.relative_to(root_p)
-        if sys.platform == "win32":
-            rel_str = PureWindowsPath(rel).as_posix()
-        else:
-            rel_str = rel.as_posix()
+        rel_str = rel.as_posix()
     except ValueError:
         # Symlinked roots or mismatched path representations: try resolved paths
         try:
             resolved_file = file_p.resolve()
             resolved_root = root_p.resolve()
             rel = resolved_file.relative_to(resolved_root)
-            if sys.platform == "win32":
-                rel_str = PureWindowsPath(rel).as_posix()
-            else:
-                rel_str = rel.as_posix()
+            rel_str = rel.as_posix()
         except (ValueError, OSError):
             pass
 
@@ -61,10 +55,7 @@ def resolve_relative_path(file_path: str | Path, scan_root: str | Path | None) -
         # Fallback to os.path.relpath if within root
         try:
             raw_rel = os.path.relpath(str(file_p), str(root_p))
-            if sys.platform == "win32":
-                posix_rel = PureWindowsPath(raw_rel).as_posix()
-            else:
-                posix_rel = raw_rel.replace(os.sep, "/")
+            posix_rel = raw_rel.replace(os.sep, "/").replace("\\", "/")
             if not posix_rel.startswith("..") and "/../" not in f"/{posix_rel}/":
                 rel_str = posix_rel
         except (ValueError, OSError):
@@ -105,7 +96,8 @@ def format_path_context_clause(path_context: str | None) -> str:
     if not path_context or not path_context.strip():
         return ""
 
-    parts = [p for p in path_context.split("/") if p and p not in (".", "..")]
+    normalized_context = path_context.replace("\\", "/")
+    parts = [p for p in normalized_context.split("/") if p and p not in (".", "..")]
     if not parts:
         return ""
 

@@ -26,6 +26,10 @@ class VisionSchema(pydantic.BaseModel):
         default=None,
         description="The exact text extracted from the image if has_text is True. Provide it exactly as it appears.",
     )
+    tags: list[str] = pydantic.Field(
+        default_factory=list,
+        description="3-8 lowercase descriptive tags (single words or hyphenated phrases) categorizing the image.",
+    )
 
     @pydantic.field_validator("extracted_text", mode="before")
     @classmethod
@@ -50,7 +54,4 @@ class VisionSchema(pydantic.BaseModel):
 class TaggedVisionSchema(VisionSchema):
     """Pydantic schema for single-call structured image analysis with tags."""
 
-    tags: list[str] = pydantic.Field(
-        default_factory=list,
-        description="3-8 lowercase descriptive tags (single words or hyphenated phrases) categorizing the image.",
-    )
+    pass

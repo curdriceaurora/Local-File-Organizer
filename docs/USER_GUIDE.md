@@ -386,7 +386,7 @@ extracted from filename, extension, directory, metadata, and content signals; th
 AI model.
 
 ```bash
-# Boost sound-design vocabulary (whoosh, impact, riser, foley, ...) and emit lang/<ext> tags
+# Boost sound-design vocabulary (whoosh, impact, riser, foley, ...)
 file-organizer autotag suggest ~/SoundLibrary --style sfx
 
 # Nudge ranking toward tags matching your own words (tokenized, case-insensitive)
@@ -401,7 +401,8 @@ The five presets:
   whichever name reads better for your library.
 - **`code`** — doubles the score of candidates that are a known source-file extension or its
   language name (`py`/`python`, `js`/`javascript`, `rs`/`rust`, etc.), and additionally emits a
-  compound `lang/<language>` tag (e.g. `lang/python`) whenever the file's own extension matches.
+  compound `lang/<ext>` tag (e.g. `lang/py`) from extension candidates whenever the file's own
+  extension matches.
 - **`descriptive`** — gives a modest 1.2x boost to longer tags (more than 6 characters) that came
   from the filename or directory rather than file content, favoring specific, human-readable
   labels over generic content keywords.
