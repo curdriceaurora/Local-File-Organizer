@@ -2444,8 +2444,8 @@ class TestAnalyzerStage:
                 pass
 
         # Clear cache so test is deterministic
-        AnalyzerStage._processor_accepts_scan_root.cache_clear()
-        assert AnalyzerStage._processor_accepts_scan_root(ProcessorWithScanRoot) is True
+        AnalyzerStage._processor_accepted_params.cache_clear()
+        assert AnalyzerStage._processor_accepted_params(ProcessorWithScanRoot) == {"scan_root"}
 
     def test_processor_accepts_scan_root_false(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
@@ -2460,15 +2460,15 @@ class TestAnalyzerStage:
             def cleanup(self):
                 pass
 
-        AnalyzerStage._processor_accepts_scan_root.cache_clear()
-        assert AnalyzerStage._processor_accepts_scan_root(ProcessorNoScanRoot) is False
+        AnalyzerStage._processor_accepted_params.cache_clear()
+        assert AnalyzerStage._processor_accepted_params(ProcessorNoScanRoot) == frozenset()
 
     def test_processor_accepts_scan_root_introspection_error(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage
 
-        AnalyzerStage._processor_accepts_scan_root.cache_clear()
+        AnalyzerStage._processor_accepted_params.cache_clear()
         # Use a non-introspectable object
-        assert AnalyzerStage._processor_accepts_scan_root(object) is False
+        assert AnalyzerStage._processor_accepted_params(object) == frozenset()
 
     def test_stage_name(self):
         from file_organizer.pipeline.stages.analyzer import AnalyzerStage

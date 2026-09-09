@@ -466,3 +466,77 @@ class TestPrefetchBoundary:
         )
         results = orchestrator.process_batch(files)
         assert [r.file_path for r in results] == files
+
+
+# ---------------------------------------------------------------------------
+# trusted_root threading (#1762): process_batch() -> _process_batch_chunk() /
+# _process_batch_prefetch() -> _make_context(), for both execution modes.
+# ---------------------------------------------------------------------------
+
+
+class _TrustedRootProbeStage:
+    """Records each context's trusted_root as it's seen, keyed by file path."""
+
+    def __init__(self) -> None:
+        self.seen: dict[Path, Path | None] = {}
+
+    @property
+    def name(self) -> str:
+        return "trusted_root_probe"
+
+    def process(self, context: StageContext) -> StageContext:
+        self.seen[context.file_path] = context.trusted_root
+        return context
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+@pytest.mark.integration
+class TestTrustedRootThreading:
+    """trusted_root must reach _make_context via both the ordinary chunk
+    path (prefetch disabled) and the prefetch path -- tested explicitly,
+    not just one or the other.
+
+    Marked ``integration`` as well as ``unit``: the prefetch case wires the
+    real ResourceAwareExecutor and thread pool (not a mock), so it carries
+    orchestrator.py's integration coverage floor for this path.
+    """
+
+    def test_trusted_root_reaches_ordinary_chunk_path(self, tmp_path: Path) -> None:
+        """prefetch_depth=0 forces process_batch() through
+        _process_batch_chunk() -> _process_file_staged()."""
+        files = _make_files(tmp_path, count=3, size_bytes=64, seed=11)
+        probe = _TrustedRootProbeStage()
+        orchestrator = PipelineOrchestrator(stages=[probe], prefetch_depth=0)
+
+        root = tmp_path
+        orchestrator.process_batch(files, trusted_root=root)
+
+        assert probe.seen == dict.fromkeys(files, root)
+
+    def test_trusted_root_reaches_prefetch_path(self, tmp_path: Path) -> None:
+        """prefetch_depth>0 with multiple files forces process_batch()
+        through _process_batch_prefetch()'s make_context closure."""
+        files = _make_files(tmp_path, count=4, size_bytes=64, seed=12)
+        probe = _TrustedRootProbeStage()
+        orchestrator = PipelineOrchestrator(stages=[probe], prefetch_depth=2, prefetch_stages=1)
+
+        root = tmp_path
+        orchestrator.process_batch(files, trusted_root=root)
+
+        assert probe.seen == dict.fromkeys(files, root)
+
+    def test_trusted_root_defaults_to_none_when_omitted(self, tmp_path: Path) -> None:
+        """Backward compatibility: omitting trusted_root keeps the prior
+        None default for every context, both execution modes."""
+        files = _make_files(tmp_path, count=3, size_bytes=64, seed=13)
+
+        chunk_probe = _TrustedRootProbeStage()
+        PipelineOrchestrator(stages=[chunk_probe], prefetch_depth=0).process_batch(files)
+        assert chunk_probe.seen == dict.fromkeys(files)
+
+        prefetch_probe = _TrustedRootProbeStage()
+        PipelineOrchestrator(
+            stages=[prefetch_probe], prefetch_depth=2, prefetch_stages=1
+        ).process_batch(files)
+        assert prefetch_probe.seen == dict.fromkeys(files)
