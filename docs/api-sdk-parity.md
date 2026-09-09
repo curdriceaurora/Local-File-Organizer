@@ -25,8 +25,9 @@ in the same change.
 Organization preview and execution accept a nested `options` object containing
 the complete canonical `OrganizeOptions` contract. The legacy
 `skip_existing` and `use_hardlinks` fields remain compatibility aliases and are
-rejected when they contradict `options`. Reviewed schema-3 plans and their
-resolved options round-trip through every official SDK.
+rejected when they contradict `options`. Reviewed schema-4 plans and their
+resolved options — including per-operation `tags` and the `generate_tags`/
+`tag_style`/`tag_prompt` option fields — round-trip through every official SDK.
 
 Background submissions may include an `idempotency_key`. Repeated submissions
 return the original job and do not schedule duplicate work. Jobs support
