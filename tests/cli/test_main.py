@@ -93,6 +93,9 @@ def test_organize_help_hides_advanced_flags_by_default():
     assert "--prefetch-depth" not in plain
     assert "--no-prefetch" not in plain
     assert "--transcribe-audio" not in plain
+    assert "--generate-tags" not in plain
+    assert "--tag-style" not in plain
+    assert "--tag-prompt" not in plain
 
 
 @pytest.mark.ci
@@ -106,6 +109,9 @@ def test_organize_advanced_help_lists_hidden_tuning_flags():
     assert "--prefetch-depth" in plain
     assert "--no-prefetch" in plain
     assert "--transcribe-audio" in plain
+    assert "--generate-tags" in plain
+    assert "--tag-style" in plain
+    assert "--tag-prompt" in plain
 
 
 @patch("file_organizer.cli.organize._check_setup_completed", return_value=True)

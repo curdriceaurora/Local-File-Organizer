@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - LLM-based tag generation for text and image files during organization analysis, supporting style hints and custom guidance prompts (#1760).
+- `--generate-tags`/`--tag-style`/`--tag-prompt` flags on `organize` and `preview` to control LLM-based tag generation from the CLI, with reviewed-plan (`--plan`) semantics matching the rest of `organize`'s options (#1763).
 
 ## [2.2.0] - 2026-09-02
 

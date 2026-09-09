@@ -47,6 +47,9 @@ _PLAN_PARAMETER_FIELDS: dict[str, tuple[str, ...]] = {
     "vision_model": ("vision_model",),
     "text_provider": ("text_provider",),
     "vision_provider": ("vision_provider",),
+    "generate_tags": ("generate_tags",),
+    "tag_style": ("tag_style",),
+    "tag_prompt": ("tag_prompt",),
 }
 
 
@@ -126,6 +129,10 @@ def _print_organize_advanced_help() -> None:
                 "[bold]`--no-vision`, `--text-only`[/bold] — Disable image vision processing.",
                 "[bold]`--transcribe-audio`[/bold] — Enable audio transcription.",
                 "[bold]`--max-transcribe-seconds FLOAT`[/bold] — Set `0` for no cap.",
+                "[bold]`--generate-tags`[/bold] — Generate tags for each organized file.",
+                "[bold]`--tag-style TEXT`[/bold] — Tagging style preset "
+                "(sfx, audio, code, descriptive, hierarchical).",
+                "[bold]`--tag-prompt TEXT`[/bold] — Custom tagging guidance prompt.",
             ]
         )
     )
@@ -157,6 +164,9 @@ def _build_options(
     vision_model: str | None,
     text_provider: str | None,
     vision_provider: str | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
 ) -> OrganizeOptions:
     """Map every behavior-affecting CLI flag to the canonical contract."""
     workers, resolved_prefetch = _resolve_parallel_settings(
@@ -179,6 +189,9 @@ def _build_options(
             vision_model=vision_model,
             text_provider=text_provider,  # type: ignore[arg-type]
             vision_provider=vision_provider,  # type: ignore[arg-type]
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -447,6 +460,9 @@ def organize(
     vision_model: Annotated[str | None, typer.Option("--vision-model", hidden=True)] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider", hidden=True)] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider", hidden=True)] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags", hidden=True)] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style", hidden=True)] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt", hidden=True)] = None,
 ) -> None:
     """Preview or apply organization through the canonical application service."""
     _ = (advanced_help, verbose)
@@ -495,6 +511,9 @@ def organize(
                 vision_model=vision_model,
                 text_provider=text_provider,
                 vision_provider=vision_provider,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
             options = (
                 _merge_explicit_plan_options(ctx, plan.options, cli_options)
@@ -571,6 +590,9 @@ def preview(
     vision_model: Annotated[str | None, typer.Option("--vision-model")] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider")] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider")] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags")] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style")] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt")] = None,
 ) -> None:
     """Build a canonical plan without applying filesystem changes."""
     json_output = json_output or _get_state().json_output
@@ -609,6 +631,9 @@ def preview(
             vision_model=vision_model,
             text_provider=text_provider,
             vision_provider=vision_provider,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
         request = OrganizeRequest(input_dir, output_dir, options)
         if not json_output:
