@@ -461,6 +461,52 @@ class TestCIWorkflow:
         assert "pull_request" in integration_condition
         assert "push" in integration_condition and "refs/heads/main" in integration_condition
 
+    def test_pr_fanout_budget(self, workflow: dict[str, Any]) -> None:
+        """PR jobs from ci.yml must stay within the fanout budget (#1786).
+
+        Budget: test matrix ≤ 2 Python versions on PR, keeping the total
+        non-skipped ci.yml job count at ~10–12.  test-benchmark is conditional
+        and excluded from the budget.
+        """
+        test_versions = workflow["jobs"]["test"]["strategy"]["matrix"]["python-version"]
+        assert len(test_versions) <= 2, (
+            f"PR test matrix must not exceed 2 Python versions, got {len(test_versions)}"
+        )
+
+    def test_coverage_gates_preserved(self, workflow: dict[str, Any]) -> None:
+        """Coverage scripts, floor gates, and the 3.11 combined run must survive fanout reduction (#1786)."""
+        all_runs = " ".join(
+            step.get("run", "")
+            for job in workflow["jobs"].values()
+            if isinstance(job, dict)
+            for step in job.get("steps", [])
+            if isinstance(step, dict)
+        )
+        assert "split_coverage_by_context.py" in all_runs, (
+            "split_coverage_by_context.py must still be referenced in ci.yml"
+        )
+        assert "check_module_coverage_floor.py" in all_runs, (
+            "check_module_coverage_floor.py must still be referenced in ci.yml"
+        )
+        assert "check-integration-floors.py" in all_runs, (
+            "check-integration-floors.py must still be referenced in ci.yml"
+        )
+        # The 3.11 combined run must still use branch-coverage with per-test contexts
+        test_run_step = next(
+            s
+            for s in workflow["jobs"]["test"]["steps"]
+            if isinstance(s, dict) and s.get("name") == "Run tests"
+        )
+        run_cmd = test_run_step.get("run", "")
+        assert "--cov-branch" in run_cmd and "--cov-context=test" in run_cmd, (
+            "The 3.11 combined run must record branch coverage with per-test contexts"
+        )
+        # test-integration must still run on PRs
+        integration_condition = workflow["jobs"]["test-integration"].get("if", "")
+        assert "pull_request" in integration_condition, (
+            "test-integration must still run on pull_request events"
+        )
+
     def test_changes_job_has_web_filter(self, workflow: dict[str, Any]) -> None:
         """changes job must output a web filter for conditional browser testing (#1786)."""
         jobs = workflow["jobs"]
