@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import io
+import json
 import mimetypes
 import re
 import threading
 import time
 import types as _t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +18,10 @@ from loguru import logger
 from file_organizer.models import VisionModel
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_vision_model
-from file_organizer.models.vision_schema import VisionSchema
+from file_organizer.models.vision_schema import TaggedVisionSchema, VisionSchema
+from file_organizer.services.auto_tagging.tag_normalize import normalize_tags
 from file_organizer.services.inference_timer import time_inference
+from file_organizer.utils.paths import format_path_context_clause, resolve_relative_path
 
 
 @dataclass
@@ -53,6 +56,7 @@ class ProcessedImage:
     # Files below `AppConfig.processing.low_confidence_threshold` are
     # surfaced in the summary's "Review recommended" section.
     confidence: float = 1.0
+    tags: list[str] = field(default_factory=list)
 
 
 def _mime_type_for_image_format(image_format: str | None) -> str:
@@ -218,6 +222,12 @@ class VisionProcessor:
         generate_folder: bool = True,
         generate_filename: bool = True,
         perform_ocr: bool = True,
+        *,
+        context_root: Path | str | None = None,
+        scan_root: Path | str | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> ProcessedImage:
         """Process a single image file.
 
@@ -227,12 +237,25 @@ class VisionProcessor:
             generate_folder: Whether to generate folder name
             generate_filename: Whether to generate filename
             perform_ocr: Whether to extract text (OCR)
+            context_root: Optional directory path used exclusively for prompt
+                context hints (relative path / parent folder). Does not gate
+                the image read.
+            scan_root: Alias for ``context_root``, matching the ``TextProcessor``
+                interface.
+            generate_tags: Whether to generate descriptive tags using the vision model.
+            tag_style: Optional tagging style preset name.
+            tag_prompt: Optional user-supplied tagging guidance prompt.
 
         Returns:
             ProcessedImage with metadata
         """
         file_path = Path(file_path)
         start_time = time.time()
+        effective_root = (
+            Path(context_root)
+            if context_root is not None
+            else (Path(scan_root) if scan_root is not None else None)
+        )
 
         # Per-file inference timer (#410). The context manager exposes the
         # measured duration on ``_timer.elapsed_ms`` and emits a structured
@@ -249,6 +272,10 @@ class VisionProcessor:
                 generate_folder=generate_folder,
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
+                context_root=effective_root,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
             if model_invoked:
                 _timer.mark_invoked()
@@ -265,6 +292,11 @@ class VisionProcessor:
         generate_folder: bool,
         generate_filename: bool,
         perform_ocr: bool,
+        context_root: Path | str | None = None,
+        scan_root: Path | str | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> tuple[ProcessedImage, bool]:
         """Inner body of :meth:`process_file` using structured generation.
 
@@ -272,7 +304,13 @@ class VisionProcessor:
         """
         model_invoked = False
         try:
-            if not (generate_description or generate_folder or generate_filename or perform_ocr):
+            if not (
+                generate_description
+                or generate_folder
+                or generate_filename
+                or perform_ocr
+                or generate_tags
+            ):
                 # All flags off, bypass model call entirely
                 processing_time = time.time() - start_time
                 return (
@@ -351,20 +389,29 @@ class VisionProcessor:
             # Preprocess and clamp image
             image_bytes, image_mime_type = preprocess_and_clamp_image(file_path)
 
+            effective_root = context_root if context_root is not None else scan_root
+            relative_path = resolve_relative_path(file_path, effective_root)
+            path_clause = format_path_context_clause(relative_path)
+
             prompt = self._build_structured_prompt(
                 file_path=file_path,
                 generate_folder=generate_folder,
                 generate_filename=generate_filename,
                 perform_ocr=perform_ocr,
+                path_clause=path_clause,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
 
             logger.debug(f"Analyzing image: {file_path.name}")
             model_invoked = True
 
             # Call structured generation
+            schema_class = TaggedVisionSchema if generate_tags else VisionSchema
             schema_result = self._guarded_generate_structured(
                 prompt=prompt,
-                schema=VisionSchema,
+                schema=schema_class,
                 image_data=image_bytes,
                 mime_type=image_mime_type,
             )
@@ -374,6 +421,13 @@ class VisionProcessor:
             extracted_text = (
                 (schema_result.extracted_text if has_text else None) if perform_ocr else None
             )
+
+            tags: list[str] = []
+            if generate_tags:
+                raw_tags = schema_result.tags
+                if isinstance(raw_tags, str):
+                    raw_tags = [t.strip() for t in raw_tags.split(",")]
+                tags = normalize_tags(raw_tags)
 
             # Clean folder name
             folder_name = ""
@@ -422,6 +476,7 @@ class VisionProcessor:
                     processing_time=processing_time,
                     source="vision",
                     confidence=1.0,
+                    tags=tags,
                 ),
                 model_invoked,
             )
@@ -467,12 +522,20 @@ class VisionProcessor:
         generate_folder: bool,
         generate_filename: bool,
         perform_ocr: bool,
+        path_clause: str = "",
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> str:
         """Build the structured single-call image analysis prompt."""
         prompt_lines = [
             "Analyze this image and provide the following details:",
-            "- description: A detailed description of the main subject and important details.",
         ]
+        if path_clause:
+            prompt_lines.append(path_clause.strip())
+        prompt_lines.append(
+            "- description: A detailed description of the main subject and important details."
+        )
         if generate_folder:
             prompt_lines.append(
                 "- folder_name: A general plural lowercase category (max 2 words) e.g. 'screenshots', 'receipts'."
@@ -497,6 +560,17 @@ class VisionProcessor:
         else:
             prompt_lines.append("- has_text: Return False.")
             prompt_lines.append("- extracted_text: Return null.")
+
+        if generate_tags:
+            style_part = f" Favor terms fitting the '{tag_style}' domain." if tag_style else ""
+            prompt_part = (
+                f" Additional guidance: {json.dumps(tag_prompt, ensure_ascii=True)}"
+                if tag_prompt
+                else ""
+            )
+            prompt_lines.append(
+                f"- tags: 3-8 concise, relevant lowercase tags for key visual subjects, objects, or themes.{style_part}{prompt_part}"
+            )
 
         return "\n".join(prompt_lines)
 

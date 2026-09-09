@@ -138,6 +138,7 @@ export interface OrganizationOperationPayload {
   description: string;
   fingerprint: SourceFingerprintPayload | null;
   error: string | null;
+  tags: string[];
 }
 
 export interface OrganizationOptionsPayload {
@@ -156,6 +157,9 @@ export interface OrganizationOptionsPayload {
   vision_model: string | null;
   text_provider: "ollama" | "openai" | "llama_cpp" | "mlx" | "claude" | null;
   vision_provider: "ollama" | "openai" | "llama_cpp" | "mlx" | "claude" | null;
+  generate_tags: boolean;
+  tag_style: string | null;
+  tag_prompt: string | null;
 }
 
 export type OrganizationOptionsInput = Partial<OrganizationOptionsPayload>;

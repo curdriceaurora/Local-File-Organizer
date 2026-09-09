@@ -636,9 +636,13 @@ class CLIConformanceDriver:
             ("--vision-model", options.vision_model),
             ("--text-provider", options.text_provider),
             ("--vision-provider", options.vision_provider),
+            ("--tag-style", options.tag_style),
+            ("--tag-prompt", options.tag_prompt),
         ):
             if value is not None:
                 args.extend((flag, value))
+        if options.generate_tags:
+            args.append("--generate-tags")
         return args
 
     def _invoke(self, args: list[str]) -> dict[str, Any]:

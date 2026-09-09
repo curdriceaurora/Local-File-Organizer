@@ -119,3 +119,135 @@ class TestProcessorPoolProperties:
         pool.register_factory(ProcessorType.TEXT, lambda: _make_processor())
         pool.register_factory(ProcessorType.IMAGE, lambda: _make_processor())
         assert set(pool.registered_types) == {ProcessorType.TEXT, ProcessorType.IMAGE}
+
+
+class TestNormalizeProcessorResult:
+    def test_normalize_mapping_with_tags(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        mapping_result = {
+            "category": "Invoices",
+            "filename": "sample_invoice",
+            "tags": ["finance", "tax-2024"],
+        }
+        normalized = normalize_processor_result(file_path, mapping_result)
+        assert normalized == {
+            "category": "Invoices",
+            "filename": "sample_invoice",
+            "tags": ["finance", "tax-2024"],
+        }
+
+    def test_normalize_mapping_precedence_and_fallbacks(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        # folder_name takes precedence over category
+        mapping_result = {
+            "category": "OldDocs",
+            "folder_name": "Docs",
+        }
+        normalized = normalize_processor_result(file_path, mapping_result)
+        assert normalized["category"] == "Docs"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
+
+        # category fallback when folder_name absent
+        mapping_fallback = {"category": "Spreadsheets"}
+        normalized_fb = normalize_processor_result(file_path, mapping_fallback)
+        assert normalized_fb["category"] == "Spreadsheets"
+
+    def test_normalize_mapping_error_raises(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        with pytest.raises(RuntimeError, match="Processor reported error: model failed"):
+            normalize_processor_result(file_path, {"error": "model failed"})
+
+    def test_normalize_object_with_tags(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "photo.jpg"
+        obj = MagicMock(spec=["folder_name", "category", "filename", "tags", "error"])
+        obj.folder_name = "Photos"
+        obj.category = "IgnoredCategory"
+        obj.filename = "beach"
+        obj.tags = ["vacation", "summer"]
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized == {
+            "category": "Photos",
+            "filename": "beach",
+            "tags": ["vacation", "summer"],
+        }
+
+    def test_normalize_object_folder_name_fallback(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "photo.jpg"
+        obj = MagicMock(spec=["folder_name", "filename", "error", "tags"])
+        obj.folder_name = "FallbackPhotos"
+        obj.filename = "beach"
+        obj.tags = []
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized["category"] == "FallbackPhotos"
+        assert "tags" not in normalized
+
+    def test_normalize_object_error_raises(self, tmp_path):
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "photo.jpg"
+        obj = MagicMock()
+        obj.error = "corrupted file"
+
+        with pytest.raises(RuntimeError, match="Processor reported error: corrupted file"):
+            normalize_processor_result(file_path, obj)
+
+    def test_normalize_mapping_neither_folder_name_nor_category(self, tmp_path):
+        """Mirrors the object-branch default (test_registered_types-style fallback)."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        normalized = normalize_processor_result(file_path, {})
+        assert normalized["category"] == "uncategorized"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
+
+    def test_normalize_object_category_fallback_when_no_folder_name(self, tmp_path):
+        """The object-branch mirror of test_normalize_mapping_precedence_and_fallbacks'
+        category-without-folder_name case -- previously untested, same elif as the
+        Mapping branch but on the attribute-access side."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        obj = MagicMock(spec=["folder_name", "category", "filename", "tags", "error"])
+        obj.folder_name = None
+        obj.category = "FallbackCategory"
+        obj.filename = None
+        obj.tags = None
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized["category"] == "FallbackCategory"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized
+
+    def test_normalize_object_neither_folder_name_nor_category(self, tmp_path):
+        """Object-branch mirror of test_normalize_mapping_neither_folder_name_nor_category."""
+        from file_organizer.pipeline.processor_pool import normalize_processor_result
+
+        file_path = tmp_path / "sample.pdf"
+        obj = MagicMock(spec=["folder_name", "category", "filename", "tags", "error"])
+        obj.folder_name = None
+        obj.category = None
+        obj.filename = None
+        obj.tags = None
+        obj.error = None
+
+        normalized = normalize_processor_result(file_path, obj)
+        assert normalized["category"] == "uncategorized"
+        assert normalized["filename"] == "sample"
+        assert "tags" not in normalized

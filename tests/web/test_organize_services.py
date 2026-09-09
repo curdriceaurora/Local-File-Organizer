@@ -176,6 +176,9 @@ def test_parse_organize_options_maps_complete_canonical_contract() -> None:
         "vision_model": "vision-test",
         "text_provider": "openai",
         "vision_provider": "mlx",
+        "generate_tags": False,
+        "tag_style": None,
+        "tag_prompt": None,
     }
 
 

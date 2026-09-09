@@ -27,13 +27,16 @@ def _options() -> OrganizationOptionsPayload:
         vision_model="vision-custom",
         text_provider="openai",
         vision_provider="openai",
+        generate_tags=True,
+        tag_style="sfx",
+        tag_prompt="ambient textures",
     )
 
 
 def _plan() -> OrganizationPlanPayload:
     return OrganizationPlanPayload(
         plan_id="plan-1",
-        schema_version=3,
+        schema_version=4,
         input_path="/workspace/in",
         output_path="/workspace/out",
         created_at="2026-07-21T12:00:00+00:00",
@@ -74,10 +77,13 @@ def test_payload_preserves_options_plan_and_idempotency_key() -> None:
     assert "use_hardlinks" not in payload
 
 
-def test_plan_model_round_trips_schema_three_options_without_loss() -> None:
+def test_plan_model_round_trips_schema_four_options_without_loss() -> None:
     plan = _plan()
 
     restored = OrganizationPlanPayload.model_validate(plan.model_dump(mode="json"))
 
     assert restored == plan
     assert restored.options == _options()
+    assert restored.options.generate_tags is True
+    assert restored.options.tag_style == "sfx"
+    assert restored.options.tag_prompt == "ambient textures"

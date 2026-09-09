@@ -7,9 +7,9 @@ proper resource cleanup, and shared result normalization.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Protocol, TypedDict, cast, runtime_checkable
+from typing import Any, NotRequired, Protocol, TypedDict, cast, runtime_checkable
 
 from .router import ProcessorType
 
@@ -21,6 +21,7 @@ class ProcessorResult(TypedDict):
 
     category: str
     filename: str
+    tags: NotRequired[list[str]]
 
 
 @runtime_checkable
@@ -173,26 +174,46 @@ def normalize_processor_result(file_path: Path, result: Any) -> ProcessorResult:
 
     Works with any result object that exposes ``folder_name``,
     ``filename``, and/or ``error`` attributes (e.g. ``ProcessedFile``,
-    ``ProcessedImage``).
+    ``ProcessedImage``), or mapping with equivalent keys.
 
     Args:
         file_path: Original file path (used as filename fallback).
         result: Return value of ``processor.process_file()``.
 
     Returns:
-        Dict with ``"category"`` and ``"filename"`` keys.
+        Dict with ``"category"`` and ``"filename"`` keys, plus optional ``"tags"``.
 
     Raises:
         RuntimeError: If the result carries a non-empty ``error`` attribute.
     """
     category = "uncategorized"
     filename = file_path.stem
+    tags: list[str] = []
 
-    if hasattr(result, "folder_name") and result.folder_name:
-        category = result.folder_name
-    if hasattr(result, "filename") and result.filename:
-        filename = result.filename
-    if hasattr(result, "error") and result.error:
-        raise RuntimeError(f"Processor reported error: {result.error}")
+    if isinstance(result, Mapping):
+        if result.get("error"):
+            raise RuntimeError(f"Processor reported error: {result['error']}")
+        if result.get("folder_name"):
+            category = str(result["folder_name"])
+        elif result.get("category"):
+            category = str(result["category"])
+        if result.get("filename"):
+            filename = str(result["filename"])
+        if isinstance(result.get("tags"), list):
+            tags = list(result["tags"])
+    else:
+        if hasattr(result, "error") and result.error:
+            raise RuntimeError(f"Processor reported error: {result.error}")
+        if hasattr(result, "folder_name") and result.folder_name:
+            category = result.folder_name
+        elif hasattr(result, "category") and result.category:
+            category = result.category
+        if hasattr(result, "filename") and result.filename:
+            filename = result.filename
+        if hasattr(result, "tags") and isinstance(result.tags, list):
+            tags = list(result.tags)
 
-    return ProcessorResult(category=category, filename=filename)
+    normalized = ProcessorResult(category=category, filename=filename)
+    if tags:
+        normalized["tags"] = tags
+    return normalized

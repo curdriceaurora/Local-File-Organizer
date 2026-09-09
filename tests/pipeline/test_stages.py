@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from file_organizer.interfaces.pipeline import PipelineStage, StageContext
+from file_organizer.pipeline.processor_pool import ProcessorResult
 from file_organizer.pipeline.stages.analyzer import AnalyzerStage
 from file_organizer.pipeline.stages.postprocessor import PostprocessorStage
 from file_organizer.pipeline.stages.preprocessor import PreprocessorStage
@@ -213,6 +214,356 @@ class TestAnalyzerStage:
         assert result.filename == "hello_doc"
         mock_processor.process_file.assert_called_once_with(f)
         pool.get_processor.assert_called_once()
+
+    def test_run_processor_forwards_scan_root_only(self, tmp_path: Path) -> None:
+        """A processor accepting only ``scan_root`` (like TextProcessor) gets
+        the trusted root there, and no tag kwargs it doesn't declare."""
+
+        class _ScanRootProcessor:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, object]] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, scan_root: Path | None = None
+            ) -> dict[str, str]:
+                self.calls.append({"file_path": file_path, "scan_root": scan_root})
+                return {"category": "Docs", "filename": "doc"}
+
+            def cleanup(self) -> None:
+                pass
+
+        processor = _ScanRootProcessor()
+        result = AnalyzerStage._run_processor(
+            tmp_path / "f.txt",
+            processor,
+            scan_root=tmp_path,
+            generate_tags=True,
+            tag_style="sfx",
+            tag_prompt="hint",
+        )
+        assert result == {"category": "Docs", "filename": "doc"}
+        assert processor.calls == [{"file_path": tmp_path / "f.txt", "scan_root": tmp_path}]
+
+    def test_run_processor_forwards_context_root_when_scan_root_unsupported(
+        self, tmp_path: Path
+    ) -> None:
+        """A processor accepting only ``context_root`` (like VisionProcessor)
+        gets the trusted root there, never as ``scan_root=``."""
+
+        class _ContextRootProcessor:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, object]] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, context_root: Path | None = None
+            ) -> dict[str, str]:
+                self.calls.append({"context_root": context_root})
+                return {"category": "Images", "filename": "pic"}
+
+            def cleanup(self) -> None:
+                pass
+
+        processor = _ContextRootProcessor()
+        AnalyzerStage._run_processor(tmp_path / "f.jpg", processor, scan_root=tmp_path)
+        assert processor.calls == [{"context_root": tmp_path}]
+
+    def test_run_processor_forwards_tag_config_when_accepted(self, tmp_path: Path) -> None:
+        """generate_tags/tag_style/tag_prompt are forwarded when the
+        processor's process_file declares them, alongside scan_root."""
+
+        class _TaggingProcessor:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, object]] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self,
+                file_path: Path,
+                *,
+                scan_root: Path | None = None,
+                generate_tags: bool = False,
+                tag_style: str | None = None,
+                tag_prompt: str | None = None,
+            ) -> dict[str, object]:
+                self.calls.append(
+                    {
+                        "scan_root": scan_root,
+                        "generate_tags": generate_tags,
+                        "tag_style": tag_style,
+                        "tag_prompt": tag_prompt,
+                    }
+                )
+                return {"category": "Audio", "filename": "clip", "tags": ["whoosh"]}
+
+            def cleanup(self) -> None:
+                pass
+
+        processor = _TaggingProcessor()
+        result = AnalyzerStage._run_processor(
+            tmp_path / "f.wav",
+            processor,
+            scan_root=tmp_path,
+            generate_tags=True,
+            tag_style="sfx",
+            tag_prompt="ambient",
+        )
+        assert processor.calls == [
+            {
+                "scan_root": tmp_path,
+                "generate_tags": True,
+                "tag_style": "sfx",
+                "tag_prompt": "ambient",
+            }
+        ]
+        assert result["tags"] == ["whoosh"]
+
+    def test_run_processor_omits_tag_config_when_unsupported(self, tmp_path: Path) -> None:
+        """A processor whose process_file doesn't declare generate_tags/
+        tag_style/tag_prompt never receives them, even when the stage is
+        configured to generate tags -- the not-taken branch of each ``if``."""
+
+        class _PlainProcessor:
+            def __init__(self) -> None:
+                self.calls: list[Path] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(self, file_path: Path) -> dict[str, str]:
+                self.calls.append(file_path)
+                return {"category": "Misc", "filename": "x"}
+
+            def cleanup(self) -> None:
+                pass
+
+        processor = _PlainProcessor()
+        AnalyzerStage._run_processor(
+            tmp_path / "f.txt",
+            processor,
+            scan_root=tmp_path,
+            generate_tags=True,
+            tag_style="sfx",
+            tag_prompt="ambient",
+        )
+        assert processor.calls == [tmp_path / "f.txt"]
+
+    def test_run_processor_return_type_is_processor_result_shaped(self, tmp_path: Path) -> None:
+        """_run_processor's return value type-checks as ProcessorResult, not
+        the old dict[str, str] (which had no ``tags`` key at all)."""
+
+        class _TaggingProcessor:
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, generate_tags: bool = False
+            ) -> dict[str, object]:
+                return {"category": "Audio", "filename": "clip", "tags": ["whoosh"]}
+
+            def cleanup(self) -> None:
+                pass
+
+        result: ProcessorResult = AnalyzerStage._run_processor(
+            tmp_path / "f.wav", _TaggingProcessor(), generate_tags=True
+        )
+        assert set(result.keys()) <= {"category", "filename", "tags"}
+        assert result["tags"] == ["whoosh"]
+
+    def test_process_forwards_configured_tag_settings(self, tmp_path: Path) -> None:
+        """AnalyzerStage's own generate_tags/tag_style/tag_prompt constructor
+        config reaches _run_processor via process(), end to end."""
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        f = tmp_path / "doc.txt"
+        f.write_text("hello")
+
+        class _TaggingProcessor:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, object]] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self,
+                file_path: Path,
+                *,
+                generate_tags: bool = False,
+                tag_style: str | None = None,
+                tag_prompt: str | None = None,
+            ) -> dict[str, object]:
+                self.calls.append(
+                    {
+                        "generate_tags": generate_tags,
+                        "tag_style": tag_style,
+                        "tag_prompt": tag_prompt,
+                    }
+                )
+                return {"category": "Docs", "filename": "doc", "tags": ["note"]}
+
+            def cleanup(self) -> None:
+                pass
+
+        processor = _TaggingProcessor()
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.TEXT, lambda: processor)
+        stage = AnalyzerStage(
+            router=FileRouter(),
+            processor_pool=pool,
+            generate_tags=True,
+            tag_style="descriptive",
+            tag_prompt="focus on topic",
+        )
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert processor.calls == [
+            {"generate_tags": True, "tag_style": "descriptive", "tag_prompt": "focus on topic"}
+        ]
+        assert result.analysis["tags"] == ["note"]
+
+
+@pytest.mark.ci
+@pytest.mark.integration
+class TestAnalyzerStageProcessorPoolIntegration:
+    """AnalyzerStage wired to a real ProcessorPool + FileRouter (not mocked).
+
+    Exercises normalize_processor_result()'s full contract -- including the
+    Mapping-result branch, which no built-in processor (TextProcessor,
+    VisionProcessor) ever returns, but which BaseProcessor's Protocol
+    explicitly permits any conforming implementation to use.
+    """
+
+    @staticmethod
+    def _make_stage(tmp_path: Path, result: object) -> tuple[AnalyzerStage, Path]:
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        class _StubProcessor:
+            def initialize(self) -> None:
+                pass
+
+            def process_file(self, file_path: Path) -> object:
+                return result
+
+            def cleanup(self) -> None:
+                pass
+
+        f = tmp_path / "doc.txt"
+        f.write_text("hello")
+
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.TEXT, _StubProcessor)
+        stage = AnalyzerStage(router=FileRouter(), processor_pool=pool)
+        return stage, f
+
+    def test_mapping_result_through_real_pool(self, tmp_path: Path) -> None:
+        stage, f = self._make_stage(
+            tmp_path,
+            {"folder_name": "Invoices", "filename": "march_invoice", "tags": ["finance"]},
+        )
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "Invoices"
+        assert result.filename == "march_invoice"
+
+    def test_mapping_result_with_no_category_signal(self, tmp_path: Path) -> None:
+        """Neither folder_name nor category present -> falls back to 'uncategorized'."""
+        stage, f = self._make_stage(tmp_path, {"filename": "notes"})
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "uncategorized"
+        assert result.filename == "notes"
+
+    def test_object_result_category_fallback_through_real_pool(self, tmp_path: Path) -> None:
+        """Object with `category` but no `folder_name` -- the elif fallback path."""
+
+        class _Result:
+            folder_name = None
+            category = "Reports"
+            filename = "q3"
+            tags = None
+            error = None
+
+        stage, f = self._make_stage(tmp_path, _Result())
+        result = stage.process(StageContext(file_path=f))
+        assert not result.failed
+        assert result.category == "Reports"
+        assert result.filename == "q3"
+
+    def test_forwards_scan_root_through_real_pool(self, tmp_path: Path) -> None:
+        """A processor accepting scan_root (like TextProcessor) gets the
+        context's trusted_root there, via the real pool/router/stage."""
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        class _ScanRootProcessor:
+            def __init__(self) -> None:
+                self.calls: list[Path | None] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, scan_root: Path | None = None
+            ) -> dict[str, str]:
+                self.calls.append(scan_root)
+                return {"category": "Docs", "filename": "doc"}
+
+            def cleanup(self) -> None:
+                pass
+
+        f = tmp_path / "doc.txt"
+        f.write_text("hello")
+        processor = _ScanRootProcessor()
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.TEXT, lambda: processor)
+        stage = AnalyzerStage(router=FileRouter(), processor_pool=pool)
+
+        result = stage.process(StageContext(file_path=f, trusted_root=tmp_path))
+        assert not result.failed
+        assert processor.calls == [tmp_path]
+
+    def test_forwards_context_root_through_real_pool(self, tmp_path: Path) -> None:
+        """A processor accepting context_root (like VisionProcessor) gets
+        the trusted_root there, never as scan_root, via the real stage."""
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        class _ContextRootProcessor:
+            def __init__(self) -> None:
+                self.calls: list[Path | None] = []
+
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, context_root: Path | None = None
+            ) -> dict[str, str]:
+                self.calls.append(context_root)
+                return {"category": "Images", "filename": "pic"}
+
+            def cleanup(self) -> None:
+                pass
+
+        f = tmp_path / "pic.jpg"
+        f.write_text("hello")
+        processor = _ContextRootProcessor()
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.IMAGE, lambda: processor)
+        stage = AnalyzerStage(router=FileRouter(), processor_pool=pool)
+
+        result = stage.process(StageContext(file_path=f, trusted_root=tmp_path))
+        assert not result.failed
+        assert processor.calls == [tmp_path]
 
 
 # ---------------------------------------------------------------------------
@@ -1001,6 +1352,63 @@ class TestPipelineComposition:
         assert result.success
         assert result.destination is not None
         assert result.dry_run is True
+
+    @pytest.mark.integration
+    def test_orchestrator_populates_tags_end_to_end(self, tmp_path: Path) -> None:
+        """ProcessingResult.tags is populated through the full staged path:
+        AnalyzerStage -> context.analysis -> _finalize_result, for both
+        process_file() and process_batch().
+
+        Marked ``integration`` as well as ``unit``: wires together the real
+        PipelineOrchestrator, ProcessorPool, FileRouter, and every real
+        stage (only the leaf processor is a Protocol-conforming stub), so
+        it carries analyzer.py/orchestrator.py's integration coverage floor
+        for this cross-component path -- a unit test with mocked
+        collaborators wouldn't count toward it.
+        """
+        from file_organizer.pipeline.config import PipelineConfig
+        from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+        from file_organizer.pipeline.processor_pool import ProcessorPool
+        from file_organizer.pipeline.router import FileRouter, ProcessorType
+
+        class _TaggingProcessor:
+            def initialize(self) -> None:
+                pass
+
+            def process_file(
+                self, file_path: Path, *, generate_tags: bool = False
+            ) -> dict[str, object]:
+                tags = ["invoice", "march"] if generate_tags else []
+                return {"category": "Finance", "filename": file_path.stem, "tags": tags}
+
+            def cleanup(self) -> None:
+                pass
+
+        pool = ProcessorPool()
+        pool.register_factory(ProcessorType.TEXT, _TaggingProcessor)
+
+        src1 = tmp_path / "a.txt"
+        src1.write_text("hello")
+        src2 = tmp_path / "b.txt"
+        src2.write_text("world")
+
+        config = PipelineConfig(output_directory=tmp_path / "out", dry_run=True)
+        pipeline = PipelineOrchestrator(
+            config,
+            stages=[
+                PreprocessorStage(),
+                AnalyzerStage(router=FileRouter(), processor_pool=pool, generate_tags=True),
+                PostprocessorStage(output_directory=config.output_directory),
+                WriterStage(),
+            ],
+        )
+
+        single = pipeline.process_file(src1)
+        assert single.success
+        assert single.tags == ("invoice", "march")
+
+        batch = pipeline.process_batch([src1, src2])
+        assert [r.tags for r in batch] == [("invoice", "march"), ("invoice", "march")]
 
     def test_error_propagation_through_stages(self) -> None:
         """Error in early stage propagates; later stages skip."""

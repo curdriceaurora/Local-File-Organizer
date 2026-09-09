@@ -289,9 +289,10 @@ class TestTagRecommender:
 
     def test_content_suggestions(self, recommender, sample_file):
         """Test getting content-based suggestions."""
-        suggestions = recommender._get_content_suggestions(sample_file)
+        suggestions, source_map = recommender._get_content_suggestions(sample_file)
 
         assert isinstance(suggestions, list)
+        assert isinstance(source_map, dict)
         assert len(suggestions) > 0
         # Check format
         for tag, confidence in suggestions:
@@ -402,3 +403,48 @@ class TestTagRecommender:
         # Weights should be reasonable
         for weight in recommender.source_weights.values():
             assert 0 < weight <= 1.0
+
+    def test_recommend_tags_with_style_and_prompt(self, recommender, sample_file):
+        """Test recommend_tags with style preset and guidance prompt."""
+        recommendation = recommender.recommend_tags(
+            sample_file, style="descriptive", prompt="deep neural"
+        )
+        assert len(recommendation.suggestions) > 0
+        for s in recommendation.suggestions:
+            assert s.source in {"content", "behavior", "hybrid"}
+            if s.source == "content":
+                assert "Found in" in s.reasoning
+
+    def test_batch_recommend_with_style_and_prompt(self, recommender, sample_file, temp_dir):
+        """Test batch_recommend with style and prompt."""
+        other_file = temp_dir / "second.py"
+        other_file.write_text("import sys\nprint(sys.version)")
+
+        results = recommender.batch_recommend(
+            [sample_file, other_file], style="code", prompt="python system"
+        )
+        assert len(results) == 2
+        assert sample_file in results
+        assert other_file in results
+        for rec in results.values():
+            assert len(rec.suggestions) > 0
+
+    def test_suggest_tags_prompt_validation(self, sample_file):
+        """Test that AutoTaggingService.suggest_tags validates prompt length and style at public boundary."""
+        from file_organizer.services.auto_tagging import AutoTaggingService
+
+        service = AutoTaggingService()
+        with pytest.raises(ValueError, match="tag_prompt exceeds maximum length"):
+            service.suggest_tags(sample_file, prompt="a" * 501)
+
+        with pytest.raises(ValueError, match="Invalid tag_style 'invalid'"):
+            service.suggest_tags(sample_file, style="invalid")
+
+    def test_content_sources_not_leaked_on_instance(self, recommender, sample_file):
+        """Test that recommend_tags does not persist _content_sources on recommender instance."""
+        assert not hasattr(recommender, "_content_sources")
+        rec = recommender.recommend_tags(sample_file)
+        assert not hasattr(recommender, "_content_sources")
+        for s in rec.suggestions:
+            if s.source == "content":
+                assert "Found in" in s.reasoning
