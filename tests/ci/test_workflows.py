@@ -582,6 +582,13 @@ class TestCIWorkflow:
         assert "test-benchmark" not in needs, (
             "test-benchmark is advisory and must not be in pr-required"
         )
+        # The aggregation step must also fail when required deps are skipped,
+        # not just failed/cancelled — otherwise a changes-job failure silently
+        # lets pr-required pass with no test coverage (#1786 review).
+        step_run = job["steps"][0].get("run", "")
+        assert "skipped" in step_run, (
+            "pr-required must check for skipped results so required suites cannot be bypassed"
+        )
 
 
 @pytest.mark.unit
@@ -1000,11 +1007,11 @@ class TestExtrasMatrixWorkflow:
         return load_workflow("ci-extras.yml")
 
     def test_linux_matrix_covers_migration_pythons(self, workflow: dict[str, Any]) -> None:
-        """Verify the Linux extras job installs on 3.14 (PR) and 3.12-3.14 (schedule).
+        """Verify the Linux extras job installs on 3.14 (PR) and 3.12-3.14 (push/schedule).
 
         #1786: the matrix is now a dynamic fromJSON expression so PRs only
-        pay for the newest Python, while the weekly schedule run still
-        covers the full 3.12-3.14 migration range.
+        pay for the newest Python, while push-to-main and the weekly schedule
+        run still cover the full 3.12-3.14 migration range.
         """
         job = workflow["jobs"]["install-extra"]
         matrix = job["strategy"]["matrix"]
@@ -1016,7 +1023,10 @@ class TestExtrasMatrixWorkflow:
             f"install-extra python-version must select 3.14-only for the PR lane, got {python_version!r}"
         )
         assert '["3.12", "3.13", "3.14"]' in python_version, (
-            f"install-extra python-version must select 3.12-3.14 for the schedule lane, got {python_version!r}"
+            f"install-extra python-version must select 3.12-3.14 for push/schedule lanes, got {python_version!r}"
+        )
+        assert "pull_request" in python_version, (
+            f"install-extra python-version must gate the slim lane on pull_request event, got {python_version!r}"
         )
         assert job["strategy"].get("fail-fast") is False, (
             "install-extra must not fail-fast: each extra/python cell is independent evidence"
@@ -1052,7 +1062,10 @@ class TestExtrasMatrixWorkflow:
             f"install-extra-macos python-version must select 3.14-only for the PR lane, got {python_version!r}"
         )
         assert '["3.12", "3.13", "3.14"]' in python_version, (
-            f"install-extra-macos python-version must select 3.12-3.14 for the schedule lane, got {python_version!r}"
+            f"install-extra-macos python-version must select 3.12-3.14 for push/schedule lanes, got {python_version!r}"
+        )
+        assert "pull_request" in python_version, (
+            f"install-extra-macos python-version must gate the slim lane on pull_request event, got {python_version!r}"
         )
         assert "mlx" in matrix["extra"], (
             "install-extra-macos must include mlx — no other lane can exercise it"

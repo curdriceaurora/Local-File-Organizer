@@ -601,8 +601,9 @@ jobs:
       - name: Verify all required PR checks passed
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
-             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "One or more required checks failed or were cancelled"
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+            echo "One or more required checks failed, were cancelled, or were skipped"
             exit 1
           fi
 

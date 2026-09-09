@@ -46,6 +46,7 @@ All PR checks plus:
 | Unit coverage floor gate | ci.yml | dedicated unit-only `pytest -m unit` run |
 | Benchmark suite | ci.yml | always — uploads baseline artifact |
 | Playwright E2E (all 3 browsers) | ci.yml | always on push |
+| Extras Matrix (3.12–3.14 × all extras) | ci-extras.yml | full Python matrix on push |
 
 ## Scheduled / full-matrix checks
 
