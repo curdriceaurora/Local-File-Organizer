@@ -469,8 +469,8 @@ class TestCIWorkflow:
         and excluded from the budget.
         """
         test_versions = workflow["jobs"]["test"]["strategy"]["matrix"]["python-version"]
-        assert len(test_versions) <= 2, (
-            f"PR test matrix must not exceed 2 Python versions, got {len(test_versions)}"
+        assert len(test_versions) == 2, (
+            f"PR test matrix must have exactly 2 Python versions, got {len(test_versions)}"
         )
 
     def test_coverage_gates_preserved(self, workflow: dict[str, Any]) -> None:
