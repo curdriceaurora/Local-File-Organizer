@@ -8,7 +8,7 @@ import sys
 import types as _t
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pydantic
 from loguru import logger
@@ -43,6 +43,20 @@ class TextAnalysisSchema(pydantic.BaseModel):
         default_factory=list,
         description="3-8 lowercase tags (single words or hyphenated phrases) describing the content.",
     )
+
+    @pydantic.field_validator("tags", mode="before")
+    @classmethod
+    def normalize_tags_field(cls, value: Any) -> Any:
+        """Accept a comma-separated string as well as a list for tags.
+
+        Small local models sometimes emit tags as a single comma-separated
+        string instead of a JSON array; splitting it here (before Pydantic's
+        list[str] validation) lets that shape through instead of failing
+        structured parsing and silently dropping every tag.
+        """
+        if isinstance(value, str):
+            return [tag.strip() for tag in value.split(",") if tag.strip()]
+        return value
 
 
 @dataclass

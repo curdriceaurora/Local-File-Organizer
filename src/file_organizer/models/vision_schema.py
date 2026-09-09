@@ -31,6 +31,21 @@ class VisionSchema(pydantic.BaseModel):
         description="3-8 lowercase descriptive tags (single words or hyphenated phrases) categorizing the image.",
     )
 
+    @pydantic.field_validator("tags", mode="before")
+    @classmethod
+    def normalize_tags_field(cls, value: Any) -> Any:
+        """Accept a comma-separated string as well as a list for tags.
+
+        Small local vision models sometimes emit tags as a single
+        comma-separated string instead of a JSON array; splitting it here
+        (before Pydantic's list[str] validation) lets that shape through
+        instead of failing structured parsing and silently dropping every
+        tag. ``TaggedVisionSchema`` inherits this validator unchanged.
+        """
+        if isinstance(value, str):
+            return [tag.strip() for tag in value.split(",") if tag.strip()]
+        return value
+
     @pydantic.field_validator("extracted_text", mode="before")
     @classmethod
     def normalize_extracted_text(cls, value: Any) -> str | None:

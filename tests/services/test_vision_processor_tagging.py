@@ -92,6 +92,43 @@ def test_vision_tagging_enabled_selects_tagged_vision_schema(
     assert "focus on colors" in called_prompt
 
 
+def test_comma_separated_string_tags_from_model_survive_validation(
+    processor: VisionProcessor, sample_image: Path
+) -> None:
+    """A model returning tags as one comma-separated string, not a JSON
+    array, must not fail structured validation and fall back to no tags
+    (#1783 review finding)."""
+    # Simulates the exact real path: the raw dict a small model can emit is
+    # what TaggedVisionSchema.model_validate() actually receives.
+    schema_res = TaggedVisionSchema.model_validate(
+        {
+            "description": "A blue image",
+            "folder_name": "graphics",
+            "filename": "blue_graphic",
+            "has_text": False,
+            "tags": "blue, graphic, square-shape",
+        }
+    )
+    processor._guarded_generate_structured = MagicMock(return_value=schema_res)  # type: ignore[method-assign]
+
+    result = processor.process_file(sample_image, generate_tags=True)
+
+    assert result.tags == ["blue", "graphic", "square-shape"]
+
+
+def test_vision_schema_splits_comma_separated_tags_string() -> None:
+    schema = VisionSchema.model_validate(
+        {
+            "description": "d",
+            "folder_name": "f",
+            "filename": "n",
+            "has_text": False,
+            "tags": " a , b ,, c ",
+        }
+    )
+    assert schema.tags == ["a", "b", "c"]
+
+
 def test_vision_fast_path_only_generate_tags_invokes_model(
     processor: VisionProcessor, sample_image: Path
 ) -> None:

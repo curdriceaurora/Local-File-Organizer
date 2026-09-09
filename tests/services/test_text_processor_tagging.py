@@ -112,6 +112,38 @@ def test_tagging_enabled_with_generate_description_false(
     assert "tags" in prompt_used
 
 
+def test_comma_separated_string_tags_from_model_survive_validation(
+    processor: TextProcessor, mock_text_model: MagicMock, tmp_path: Path
+) -> None:
+    """A model returning tags as one comma-separated string, not a JSON array,
+    must not fail structured validation and fall back to no tags (#1783
+    review finding)."""
+    test_file = tmp_path / "invoice.txt"
+    test_file.write_text("Invoice for March consulting services.", encoding="utf-8")
+
+    # Simulates the exact real path: the raw dict a small model can emit is
+    # what TextAnalysisSchema.model_validate() actually receives.
+    fake_schema_result = TextAnalysisSchema.model_validate(
+        {"description": "March invoice.", "tags": "invoice, march, consulting"}
+    )
+    mock_text_model.generate_structured = MagicMock(return_value=fake_schema_result)
+
+    result = processor.process_file(test_file, generate_tags=True)
+
+    mock_text_model.generate_structured.assert_called_once()
+    assert result.tags == ["invoice", "march", "consulting"]
+
+
+def test_text_analysis_schema_splits_comma_separated_tags_string() -> None:
+    schema = TextAnalysisSchema.model_validate({"description": "d", "tags": " a , b ,, c "})
+    assert schema.tags == ["a", "b", "c"]
+
+
+def test_text_analysis_schema_preserves_list_tags() -> None:
+    schema = TextAnalysisSchema.model_validate({"description": "d", "tags": ["a", "b"]})
+    assert schema.tags == ["a", "b"]
+
+
 def test_structured_failure_with_generate_description_true_falls_back(
     processor: TextProcessor, mock_text_model: MagicMock, tmp_path: Path
 ) -> None:
