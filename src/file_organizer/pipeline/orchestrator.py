@@ -481,7 +481,7 @@ class PipelineOrchestrator:
         return self._process_file_legacy(file_path)
 
     def process_batch(
-        self, files: list[Path], trusted_root: Path | None = None
+        self, files: list[Path], *, trusted_root: Path | None = None
     ) -> list[ProcessingResult]:
         """Process a batch of files through the pipeline.
 
