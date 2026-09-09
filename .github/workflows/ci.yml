@@ -202,12 +202,11 @@ jobs:
         # integration or conformance)", NOT just "ci": 257 test files apply
         # unit/integration markers without also carrying ci, so "ci" alone is
         # not a safe superset. That one combined run's .coverage database is
-        # what diff-cover and the two floor-gate steps below all read, in
-        # place of the three separate pytest invocations this job, and the
-        # now-PR-scoped-out test-unit-floors/test-integration jobs, used to
-        # run. The other legs stay a plain pass/fail run -- they never fed
-        # the floor gates and don't need coverage instrumentation to do
-        # their job of catching version-specific breakage.
+        # what diff-cover and the unit floor gate below read, in place of the
+        # old duplicate unit run. Integration floors remain in their own
+        # process because session-scoped fixtures and other process-global
+        # state cannot be attributed accurately to both marker views after a
+        # combined run. The other legs stay plain pass/fail runs.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -256,20 +255,6 @@ jobs:
           path: .coverage-unit.json
           retention-days: 30
           include-hidden-files: true
-      - name: Integration coverage floor gate
-        if: matrix.python-version == '3.11'
-        # Same filtering approach as the unit gate above, against the
-        # "integration or conformance" view -- replaces test-integration's old
-        # dedicated pytest run for PRs. See that view's own combined-coverage
-        # ratchet history in the (still-existing, now push-only) test-integration
-        # job below; --min-combined enforces the same floor here.
-        run: |
-          . .venv-test/bin/activate
-          python scripts/coverage/split_coverage_by_context.py \
-            --data-file .coverage --markers "integration or conformance" \
-            --out .coverage-integration.json --min-combined 76.5
-          python scripts/coverage/check-integration-floors.py
-
   test-full:
     name: "Test (shard ${{ matrix.shard }}, py${{ matrix.python-version }})"
     needs: changes
@@ -555,11 +540,11 @@ jobs:
   test-integration:
     name: Integration coverage gate
     needs: changes
-    # PR runs get this same gate from the "test" job's 3.11 leg now (issue #1767
-    # item 2 — one combined coverage run instead of three). This job still owns
-    # push-to-main: that path never had the PR-time ×3 overlap the issue is
-    # about, so it's untouched here beyond dropping the pull_request condition.
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Keep this gate in a dedicated process on PRs as well as main pushes.
+    # Integration coverage includes session-scoped fixture paths whose lines
+    # cannot be reconstructed faithfully from contexts in the combined test
+    # process used by the main test job.
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -598,8 +583,8 @@ jobs:
   test-unit-floors:
     name: Unit coverage floor gate
     needs: changes
-    # See test-integration above: PR runs get this gate from "test"'s 3.11 leg
-    # now (issue #1767); this job stays push-only.
+    # Unit coverage is reconstructed from the combined test job on PRs; this
+    # dedicated job remains the source of truth for push-to-main floor updates.
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:

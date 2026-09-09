@@ -419,9 +419,10 @@ class TestCIWorkflow:
         )
 
     def test_test_job_has_consolidated_floor_gate_steps(self, workflow: dict[str, Any]) -> None:
-        """The 'test' job's 3.11 leg must run both floor gates via the
-        context-splitting script instead of test-unit-floors/test-integration
-        re-running the suite (issue #1767 item 2)."""
+        """The 'test' job's 3.11 leg must run the unit floor gate from
+        context-filtered coverage (issue #1767 item 2). Integration floors stay
+        in a dedicated process because shared fixture state cannot be recovered
+        faithfully from one combined coverage database."""
         steps = workflow["jobs"]["test"]["steps"]
 
         unit_step = next(
@@ -439,44 +440,22 @@ class TestCIWorkflow:
         assert "--markers unit" in unit_run
         assert "check_module_coverage_floor.py" in unit_run
 
-        integration_step = next(
-            (
-                s
-                for s in steps
-                if isinstance(s, dict) and s.get("name") == "Integration coverage floor gate"
-            ),
-            None,
-        )
-        assert integration_step is not None, (
-            "'test' job must have an 'Integration coverage floor gate' step"
-        )
-        assert integration_step.get("if") == "matrix.python-version == '3.11'"
-        integration_run = integration_step.get("run", "")
-        assert "split_coverage_by_context.py" in integration_run
-        assert "integration or conformance" in integration_run
-        assert "--min-combined 76.5" in integration_run
-        assert "check-integration-floors.py" in integration_run
-
-    def test_test_unit_floors_and_test_integration_are_push_only(
-        self, workflow: dict[str, Any]
-    ) -> None:
-        """test-unit-floors/test-integration must no longer run on pull_request --
-        PRs get the equivalent gate from the 'test' job's 3.11 leg now (issue #1767).
-        Push-to-main keeps its own dedicated run: it never had the PR-time ×3
-        overlap the issue is about, so it's out of scope for this change.
-        """
+    def test_test_unit_floors_and_test_integration_triggers(self, workflow: dict[str, Any]) -> None:
+        """Unit floors stay push-only; integration floors use a dedicated
+        process on PRs and push-to-main to preserve the old measurement basis."""
         jobs = workflow.get("jobs", {})
-        for job_name in ("test-unit-floors", "test-integration"):
-            job = jobs.get(job_name)
-            assert job is not None, f"CI workflow must still have a '{job_name}' job"
-            condition = job.get("if", "")
-            assert "pull_request" not in condition, (
-                f"'{job_name}' must no longer trigger on pull_request "
-                f"(now handled by 'test'), got if: {condition!r}"
-            )
-            assert "push" in condition and "refs/heads/main" in condition, (
-                f"'{job_name}' must still trigger on push to main, got if: {condition!r}"
-            )
+        unit_job = jobs.get("test-unit-floors")
+        integration_job = jobs.get("test-integration")
+        assert unit_job is not None, "CI workflow must still have a 'test-unit-floors' job"
+        assert integration_job is not None, "CI workflow must still have a 'test-integration' job"
+
+        unit_condition = unit_job.get("if", "")
+        assert "pull_request" not in unit_condition
+        assert "push" in unit_condition and "refs/heads/main" in unit_condition
+
+        integration_condition = integration_job.get("if", "")
+        assert "pull_request" in integration_condition
+        assert "push" in integration_condition and "refs/heads/main" in integration_condition
 
 
 @pytest.mark.unit
