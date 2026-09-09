@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ${{ github.event_name == 'schedule' && fromJSON('["3.12", "3.13", "3.14"]') || fromJSON('["3.14"]') }}
         extra:
           - audio
           - video
@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ${{ github.event_name == 'schedule' && fromJSON('["3.12", "3.13", "3.14"]') || fromJSON('["3.14"]') }}
         extra:
           - mlx
           - audio
@@ -64,3 +64,16 @@ jobs:
           - scientific
           - dedup
     steps: *install-extra-steps
+
+  extras-required:
+    name: Extras required
+    if: always()
+    needs: [install-extra, install-extra-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check extras results
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] || \
+             [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            exit 1
+          fi
