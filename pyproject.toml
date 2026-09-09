@@ -547,7 +547,9 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 # Map distribution names → import names for packages that differ
 [tool.deptry.package_module_name_map]
 "Pillow" = "PIL"
-"PyMuPDF" = "fitz"
+# PyMuPDF exposes both its supported module name and its legacy compatibility
+# alias. Keep both mapped because the TUI preview still supports the alias.
+"PyMuPDF" = ["pymupdf", "fitz"]
 "python-docx" = "docx"
 "python-pptx" = "pptx"
 "beautifulsoup4" = "bs4"

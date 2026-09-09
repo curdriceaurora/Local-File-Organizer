@@ -55,7 +55,11 @@ does not read — the package installs locally but CI fails with `ModuleNotFound
 This project uses automated pre-commit validation to catch common issues before commits:
 
 ```bash
-# Install git pre-commit hooks (one-time setup after first time)
+# Install git pre-commit AND pre-push hooks (one-time setup; also re-run this
+# once after pulling a change to .pre-commit-config.yaml's
+# default_install_hook_types, e.g. issue #1767's move of diff-cover to
+# pre-push — an existing `pre-commit install` from before that change only
+# registered the commit-time hook type)
 pre-commit install
 
 # Now on every commit, these hooks automatically run:
@@ -69,12 +73,25 @@ pre-commit install
 | **codespell** | Spelling consistency | Typos, spelling inconsistencies |
 | **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
 | **pytest** (multiple) | CI guardrails, web UI, websocket tests | Test failures block commit |
+
+**Pre-Push Hooks** (run automatically on `git push`):
+
+| Hook | Purpose | Catches |
+|------|---------|---------|
 | **diff-cover** | Changed-line coverage gate (≥80%) | New/modified lines not covered by tests |
+
+`diff-cover` runs at push time, not commit time — a push-level concern
+rather than a per-keystroke one — and it's scoped to just the tests related
+to your changed files (by directory + name match) instead of the whole
+suite, so it stays fast. If it can't find a related test for a changed
+file, it warns and skips rather than blocking the push; CI's diff-cover
+step (`test` job, Python 3.11 leg) is the actual enforced gate. See
+`scripts/dev/run_diff_cover.py` for the scoping logic.
 
 > **Note — `diff-cover` and git history**: The `diff-cover` hook computes a
 > merge base against `origin/main`, which requires full git history.  If you
 > cloned with `--depth 1` (a shallow clone), the hook gracefully skips with a
-> warning rather than blocking the commit.  To enable it, run:
+> warning rather than blocking the push.  To enable it, run:
 >
 > ```bash
 > git fetch --unshallow

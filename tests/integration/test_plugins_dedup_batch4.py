@@ -160,8 +160,9 @@ class TestPluginExecutor:
             ),
         ):
             mock_proc = MagicMock()
-            mock_proc.stderr.read.return_value = b"startup stderr"
             mock_popen.return_value = mock_proc
+            executor._stderr_buffer.append(b"startup stderr")
+            executor._stderr_buffer_size = len(b"startup stderr")
 
             with pytest.raises(
                 PluginLoadError,
@@ -203,7 +204,6 @@ class TestPluginExecutor:
             ),
         ):
             mock_proc = MagicMock()
-            mock_proc.stderr.read.return_value = b""
             mock_popen.return_value = mock_proc
 
             with pytest.raises(PluginLoadError, match=message):

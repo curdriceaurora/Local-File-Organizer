@@ -19,7 +19,10 @@ from pathlib import Path
 from typing import BinaryIO
 
 try:
-    import fitz  # PyMuPDF
+    # Use PyMuPDF's supported module name. The legacy ``fitz`` alias emits a
+    # deprecation message at import time, which can corrupt subprocess IPC
+    # protocols that reserve stdout for structured responses.
+    import pymupdf as fitz
 
     PYMUPDF_AVAILABLE = True
 except ImportError:

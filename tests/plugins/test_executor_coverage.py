@@ -71,10 +71,11 @@ class TestPluginExecutorStart:
     @patch("file_organizer.plugins.executor.subprocess.Popen")
     def test_start_aborts_when_ready_line_times_out(self, mock_popen, _mock_ready):
         mock_proc = MagicMock()
-        mock_proc.stderr.read.return_value = b"child stderr"
         mock_popen.return_value = mock_proc
 
         executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
+        executor._stderr_buffer.append(b"child stderr")
+        executor._stderr_buffer_size = len(b"child stderr")
 
         with pytest.raises(
             PluginLoadError,
@@ -106,7 +107,6 @@ class TestPluginExecutorStart:
         message,
     ):
         mock_proc = MagicMock()
-        mock_proc.stderr.read.return_value = b""
         mock_popen.return_value = mock_proc
 
         executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
@@ -124,7 +124,6 @@ class TestPluginExecutorStart:
     def test_abort_startup_tolerates_cleanup_errors(self):
         mock_proc = MagicMock()
         mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="worker", timeout=5)
-        mock_proc.stderr.read.side_effect = OSError("stderr unavailable")
         mock_proc.stdin.close.side_effect = OSError("stdin close failed")
         mock_proc.stdout.close.side_effect = OSError("stdout close failed")
         mock_proc.stderr.close.side_effect = OSError("stderr close failed")
@@ -135,7 +134,6 @@ class TestPluginExecutorStart:
         with pytest.raises(PluginLoadError, match=r"Stderr: ''"):
             executor._abort_startup("failed early")
 
-        mock_proc.stderr.read.assert_not_called()
         assert executor._proc is None
 
 
@@ -242,8 +240,9 @@ class TestPluginExecutorCall:
         mock_readline.return_value = b""
         executor = PluginExecutor(plugin_path=Path("/") / "x.py", plugin_name="test")
         mock_proc = MagicMock()
-        mock_proc.stderr.read.return_value = b"error output"
         executor._proc = mock_proc
+        executor._stderr_buffer.append(b"error output")
+        executor._stderr_buffer_size = len(b"error output")
 
         with pytest.raises(PluginError, match="closed stdout unexpectedly"):
             executor.call("method")

@@ -38,8 +38,9 @@ import subprocess
 import sys
 import threading
 import types
+from collections import deque
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, BinaryIO, NoReturn
 
 from file_organizer.plugins.errors import PluginError, PluginLoadError
 from file_organizer.plugins.ipc import (
@@ -57,13 +58,45 @@ logger = logging.getLogger(__name__)
 # measure call latency — never the child's multi-second (and, under
 # pytest-cov subprocess instrumentation, several-times-slower) startup.
 _READY_LINE = b'{"ready": true}\n'
+_STDERR_BUFFER_LIMIT = 64 * 1024
+_STDERR_READ_SIZE = 4096
+
+
+def _build_worker_bootstrap(plugin_path: str, policy_dict: dict[str, Any]) -> str:
+    """Build child startup code that reserves stdout before package imports.
+
+    Importing this package can itself load noisy dependencies, so redirecting
+    inside ``_worker`` is too late. Keep fd 1 on stderr for the child's entire
+    lifetime; only the saved descriptor can write readiness and IPC responses.
+    This also catches buffered native output flushed after plugin startup.
+
+    Args:
+        plugin_path: Path to the plugin module.
+        policy_dict: JSON-safe security policy passed to the worker.
+
+    Returns:
+        Python source for ``sys.executable -c``.
+    """
+    # repr protects paths and policy strings from being interpreted as code.
+    # The context manager closes the saved descriptor even if imports fail.
+    return (
+        "import os, sys, json\n"
+        "with os.fdopen(os.dup(1), 'wb') as ipc_stdout:\n"
+        "    os.dup2(2, 1)\n"
+        "    sys.stdout = sys.stderr\n"
+        "    from file_organizer.plugins.executor import _worker\n"
+        f"    _worker({plugin_path!r}, json.loads({json.dumps(policy_dict)!r}), ipc_stdout)\n"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Worker entrypoint (runs inside the child process)
 # ---------------------------------------------------------------------------
 
 
-def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: no cover
+def _worker(
+    plugin_path: str, policy_dict: dict[str, Any], stdout_bin: BinaryIO
+) -> None:  # pragma: no cover
     """Entry-point executed inside the sandboxed child process.
 
     This function is *not* called from the host process; it is invoked by
@@ -86,26 +119,14 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
         policy_dict: JSON-safe dict representation of the security policy
             (currently used for future enforcement hooks; resource limits are
             applied unconditionally when available).
+        stdout_bin: Dedicated IPC stream saved by the bootstrap before it
+            redirects stdout. The bootstrap owns and closes this stream.
     """
     import importlib.util
     import sys
     from pathlib import Path
 
     stdin_bin = sys.stdin.buffer
-    stdout_bin = sys.stdout.buffer
-    # Keep stdout reserved for the JSON IPC protocol. Plugin code (and its
-    # dependencies) can produce output at import time and during
-    # construction — both through Python's `sys.stdout` (`print`, ordinary
-    # writes) and, for C-extension modules, by writing straight to the
-    # OS-level stdout file descriptor, which bypasses `sys.stdout` entirely
-    # (e.g. PyMuPDF's "`fitz` API is deprecated" notice — see #1784).
-    # Redirecting only `sys.stdout` catches the first case; the fd-level
-    # dup2 below is what catches the second. Both are undone before the
-    # readiness handshake so real stdout is exclusively the IPC channel.
-    sys.stdout = sys.stderr
-    real_stdout_fd = os.dup(1)
-    os.dup2(2, 1)
-
     # ------------------------------------------------------------------
     # 1. Apply resource limits (best-effort; Linux/macOS only)
     # ------------------------------------------------------------------
@@ -121,50 +142,42 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     except Exception:
         logger.debug("Failed to apply plugin worker resource limits", exc_info=True)
 
+    # --------------------------------------------------------------
+    # 2. Dynamically load the plugin module
+    # --------------------------------------------------------------
+    path = Path(plugin_path)
+    spec = importlib.util.spec_from_file_location(path.stem, path)
+    if spec is None or spec.loader is None:
+        sys.stderr.write(f"Cannot create module spec for plugin: {plugin_path}\n")
+        sys.exit(1)
+
+    loader = spec.loader
+    module = types.ModuleType(path.stem)
     try:
-        # --------------------------------------------------------------
-        # 2. Dynamically load the plugin module
-        # --------------------------------------------------------------
-        path = Path(plugin_path)
-        spec = importlib.util.spec_from_file_location(path.stem, path)
-        if spec is None or spec.loader is None:
-            sys.stderr.write(f"Cannot create module spec for plugin: {plugin_path}\n")
-            sys.exit(1)
+        loader.exec_module(module)
+    except Exception as exc:
+        sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
+        sys.exit(1)
 
-        loader = spec.loader
-        module = types.ModuleType(path.stem)
-        try:
-            loader.exec_module(module)
-        except Exception as exc:
-            sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
-            sys.exit(1)
+    # --------------------------------------------------------------
+    # 3. Find and instantiate the first concrete Plugin subclass
+    # --------------------------------------------------------------
+    from file_organizer.plugins.base import Plugin
 
-        # --------------------------------------------------------------
-        # 3. Find and instantiate the first concrete Plugin subclass
-        # --------------------------------------------------------------
-        from file_organizer.plugins.base import Plugin
+    plugin_instance: Plugin | None = None
+    for _attr_name in dir(module):
+        obj = getattr(module, _attr_name)
+        if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
+            try:
+                plugin_instance = obj()
+            except Exception as exc:
+                sys.stderr.write(f"Error instantiating plugin class '{_attr_name}': {exc}\n")
+                sys.exit(1)
+            break
 
-        plugin_instance: Plugin | None = None
-        for _attr_name in dir(module):
-            obj = getattr(module, _attr_name)
-            if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
-                try:
-                    plugin_instance = obj()
-                except Exception as exc:
-                    sys.stderr.write(f"Error instantiating plugin class '{_attr_name}': {exc}\n")
-                    sys.exit(1)
-                break
-
-        if plugin_instance is None:
-            sys.stderr.write(f"No Plugin subclass found in: {plugin_path}\n")
-            sys.exit(1)
-    finally:
-        # Restore real stdout before anything below writes the readiness
-        # line. Runs even on the sys.exit(1) paths above (SystemExit still
-        # unwinds through `finally`) so a crashed worker's own exit is never
-        # left holding fd 1 open on stderr.
-        os.dup2(real_stdout_fd, 1)
-        os.close(real_stdout_fd)
+    if plugin_instance is None:
+        sys.stderr.write(f"No Plugin subclass found in: {plugin_path}\n")
+        sys.exit(1)
 
     # ------------------------------------------------------------------
     # 4. IPC loop — read PluginCall from stdin, write PluginResult to stdout
@@ -262,6 +275,10 @@ class PluginExecutor:
         self._policy = policy or PluginSecurityPolicy()
         self._startup_timeout = startup_timeout
         self._proc: subprocess.Popen[bytes] | None = None
+        self._stderr_buffer: deque[bytes] = deque()
+        self._stderr_buffer_size = 0
+        self._stderr_lock = threading.Lock()
+        self._stderr_thread: threading.Thread | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -286,16 +303,7 @@ class PluginExecutor:
             "allow_all_operations": self._policy.allow_all_operations,
         }
 
-        # Build a self-contained bootstrap expression that:
-        # 1. Imports _worker from this very module.
-        # 2. Calls it with the plugin path and the JSON-encoded policy dict.
-        # Using repr() for the string args ensures correct quoting and
-        # escaping regardless of path content.
-        bootstrap = (
-            "import sys, json; "
-            "from file_organizer.plugins.executor import _worker; "
-            f"_worker({str(self._plugin_path)!r}, json.loads({json.dumps(policy_dict)!r}))"
-        )
+        bootstrap = _build_worker_bootstrap(str(self._plugin_path), policy_dict)
 
         # The child must execute the same file_organizer tree as this
         # process. A bare ``sys.executable -c`` child resolves imports
@@ -319,6 +327,7 @@ class PluginExecutor:
                 stderr=subprocess.PIPE,
                 env=env,
             )
+            self._start_stderr_drainer()
         except OSError as exc:
             raise PluginLoadError(
                 f"Failed to spawn worker for plugin '{self._plugin_name}': {exc}"
@@ -342,11 +351,57 @@ class PluginExecutor:
                 else f"sent unexpected first stdout line {first_line!r}"
             )
 
+    def _start_stderr_drainer(self) -> None:
+        """Drain worker stderr continuously into a bounded diagnostic buffer.
+
+        The worker is allowed to write diagnostics independently of the IPC
+        protocol. Reading stderr only after startup failure leaves the OS pipe
+        able to fill, which can block the worker before it writes its next IPC
+        response. The bounded buffer retains recent diagnostics without
+        allowing an untrusted plugin to consume host memory indefinitely.
+        """
+        proc = self._proc
+        if proc is None or proc.stderr is None:
+            return
+
+        stderr = proc.stderr
+
+        def drain() -> None:
+            """Copy stderr chunks until the worker closes its pipe."""
+            nonlocal stderr
+            try:
+                while True:
+                    chunk = stderr.read(_STDERR_READ_SIZE)
+                    if not chunk:
+                        return
+                    if not isinstance(chunk, bytes):
+                        return
+                    with self._stderr_lock:
+                        self._stderr_buffer.append(chunk)
+                        self._stderr_buffer_size += len(chunk)
+                        while self._stderr_buffer_size > _STDERR_BUFFER_LIMIT:
+                            removed = self._stderr_buffer.popleft()
+                            self._stderr_buffer_size -= len(removed)
+            except (OSError, ValueError):
+                logger.debug("Failed while draining plugin worker stderr", exc_info=True)
+
+        self._stderr_thread = threading.Thread(
+            target=drain,
+            name=f"plugin-stderr-{self._plugin_name}",
+            daemon=True,
+        )
+        self._stderr_thread.start()
+
+    def _stderr_snapshot(self) -> str:
+        """Return the recent worker diagnostics captured by the drainer."""
+        with self._stderr_lock:
+            return b"".join(self._stderr_buffer).decode(errors="replace")
+
     def _abort_startup(self, detail: str) -> NoReturn:
         """Kill a worker that failed its readiness handshake and raise.
 
-        Kills the child BEFORE reading stderr — draining a live child's
-        stderr pipe would block indefinitely.
+        Kills the child before taking the final snapshot. A background
+        drainer has already consumed stderr while the worker was running.
 
         Args:
             detail: Failure description embedded in the raised error.
@@ -358,20 +413,16 @@ class PluginExecutor:
         proc = self._proc
         stderr_output = ""
         if proc is not None:
-            reaped = False
             try:
                 proc.kill()
                 proc.wait(timeout=5)
-                reaped = True
             except OSError:
                 logger.debug("Failed to reap worker during startup abort", exc_info=True)
             except subprocess.TimeoutExpired:
                 logger.debug("Worker did not exit after kill during startup abort")
-            if reaped and proc.stderr is not None:
-                try:
-                    stderr_output = proc.stderr.read().decode(errors="replace")
-                except OSError:
-                    stderr_output = "<unavailable>"
+            if self._stderr_thread is not None:
+                self._stderr_thread.join(timeout=1)
+            stderr_output = self._stderr_snapshot()
             for pipe in (proc.stdin, proc.stdout, proc.stderr):
                 if pipe:
                     try:
@@ -406,6 +457,8 @@ class PluginExecutor:
                 proc.kill()
                 proc.wait()
         finally:
+            if self._stderr_thread is not None:
+                self._stderr_thread.join(timeout=1)
             self._proc = None
 
     def __enter__(self) -> PluginExecutor:
@@ -517,7 +570,6 @@ class PluginExecutor:
             )
         stdin = proc.stdin
         stdout = proc.stdout
-        stderr = proc.stderr
         if stdin is None or stdout is None:
             raise PluginError(f"Worker pipes for '{self._plugin_name}' are unexpectedly closed.")
 
@@ -532,9 +584,7 @@ class PluginExecutor:
 
         raw = self._readline_with_timeout(timeout=30.0)
         if not raw:
-            stderr_output = ""
-            if stderr is not None:
-                stderr_output = stderr.read().decode(errors="replace")
+            stderr_output = self._stderr_snapshot()
             raise PluginError(
                 f"Worker for '{self._plugin_name}' closed stdout unexpectedly "
                 f"(method='{method}'). Stderr: {stderr_output!r}"
