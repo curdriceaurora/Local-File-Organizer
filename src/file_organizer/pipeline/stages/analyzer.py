@@ -17,11 +17,19 @@ from file_organizer.interfaces.pipeline import StageContext
 from file_organizer.pipeline.processor_pool import (
     BaseProcessor,
     ProcessorPool,
+    ProcessorResult,
     normalize_processor_result,
 )
 from file_organizer.pipeline.router import FileRouter, ProcessorType
 
 logger = logging.getLogger(__name__)
+
+# process_file() kwargs AnalyzerStage knows how to forward. Whether a given
+# processor accepts any of them is decided per-class by introspection in
+# _processor_accepted_params(), never guessed from processor type.
+_KNOWN_PROCESS_FILE_KWARGS = frozenset(
+    {"scan_root", "context_root", "generate_tags", "tag_style", "tag_prompt"}
+)
 
 
 class AnalyzerStage:
@@ -39,10 +47,29 @@ class AnalyzerStage:
         self,
         router: FileRouter | None = None,
         processor_pool: ProcessorPool | None = None,
+        *,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
     ) -> None:
-        """Initialize with optional router and processor pool."""
+        """Initialize with optional router and processor pool.
+
+        Args:
+            router: Determines which processor handles a given file.
+            processor_pool: Supplies lazily-initialized processor instances.
+            generate_tags: Whether to ask the processor to generate
+                descriptive tags. Forwarded to ``process_file`` only for
+                processors whose signature declares this parameter.
+            tag_style: Optional tagging style preset name, forwarded the
+                same way as *generate_tags*.
+            tag_prompt: Optional user-supplied tagging guidance prompt,
+                forwarded the same way as *generate_tags*.
+        """
         self._router = router
         self._pool = processor_pool
+        self._generate_tags = generate_tags
+        self._tag_style = tag_style
+        self._tag_prompt = tag_prompt
 
     @property
     def name(self) -> str:
@@ -72,9 +99,14 @@ class AnalyzerStage:
 
         try:
             result = self._run_processor(
-                context.file_path, processor, scan_root=context.trusted_root
+                context.file_path,
+                processor,
+                scan_root=context.trusted_root,
+                generate_tags=self._generate_tags,
+                tag_style=self._tag_style,
+                tag_prompt=self._tag_prompt,
             )
-            context.analysis = result
+            context.analysis = dict(result)
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
             context.extra["analyzer.processor_type"] = processor_type
@@ -86,32 +118,52 @@ class AnalyzerStage:
 
     @staticmethod
     def _run_processor(
-        file_path: Path, processor: BaseProcessor, scan_root: Path | None = None
-    ) -> dict[str, str]:
-        """Invoke the processor and normalise output to a dict."""
-        # Only pass scan_root if the processor's process_file accepts it (like
-        # TextProcessor). BaseProcessor's Protocol signature doesn't declare
-        # scan_root since not every concrete processor supports it, so the
-        # conditional call below is checked via runtime introspection rather
-        # than the static type, hence the cast. type(processor) is also cast
-        # to Hashable here: Pyre's stub for the @cache-wrapped callee checks
-        # the call site's argument type against Hashable directly, regardless
-        # of the callee's own declared parameter type.
-        if AnalyzerStage._processor_accepts_scan_root(cast(Hashable, type(processor))):
-            raw = cast(Any, processor).process_file(file_path, scan_root=scan_root)
+        file_path: Path,
+        processor: BaseProcessor,
+        scan_root: Path | None = None,
+        generate_tags: bool = False,
+        tag_style: str | None = None,
+        tag_prompt: str | None = None,
+    ) -> ProcessorResult:
+        """Invoke the processor and normalise output to a ProcessorResult."""
+        # Only pass the kwargs a given processor's process_file actually
+        # declares (like TextProcessor's scan_root or VisionProcessor's
+        # context_root). BaseProcessor's Protocol signature doesn't declare
+        # any of them since not every concrete processor supports them, so
+        # the conditional call below is checked via runtime introspection
+        # rather than the static type, hence the cast. type(processor) is
+        # also cast to Hashable here: Pyre's stub for the @cache-wrapped
+        # callee checks the call site's argument type against Hashable
+        # directly, regardless of the callee's own declared parameter type.
+        accepted = AnalyzerStage._processor_accepted_params(cast(Hashable, type(processor)))
+        kwargs: dict[str, Any] = {}
+        if "scan_root" in accepted:
+            kwargs["scan_root"] = scan_root
+        elif "context_root" in accepted:
+            kwargs["context_root"] = scan_root
+        if "generate_tags" in accepted:
+            kwargs["generate_tags"] = generate_tags
+        if "tag_style" in accepted:
+            kwargs["tag_style"] = tag_style
+        if "tag_prompt" in accepted:
+            kwargs["tag_prompt"] = tag_prompt
+
+        if kwargs:
+            raw = cast(Any, processor).process_file(file_path, **kwargs)
         else:
             raw = processor.process_file(file_path)
-        return cast(dict[str, str], normalize_processor_result(file_path, raw))
+        return normalize_processor_result(file_path, raw)
 
     @staticmethod
     @cache
-    def _processor_accepts_scan_root(processor_type: Hashable) -> bool:
-        """Whether *processor_type*'s ``process_file`` accepts ``scan_root``.
+    def _processor_accepted_params(processor_type: Hashable) -> frozenset[str]:
+        """Which of the known ``process_file`` kwargs *processor_type* accepts.
 
         Memoized per class so the introspection cost isn't paid on every
-        file processed. Returns ``False`` if ``process_file`` can't be
-        introspected on the class (e.g. an unspecced test double), matching
-        the pre-introspection behaviour of calling without ``scan_root``.
+        file processed. Returns an empty ``frozenset`` if ``process_file``
+        can't be introspected on the class (e.g. an unspecced test double),
+        matching the pre-introspection behaviour of calling with no extra
+        kwargs at all.
 
         Takes ``Hashable`` rather than ``type`` because Pyre's stub for
         ``functools.cache`` requires args to satisfy ``Hashable``, and
@@ -121,5 +173,5 @@ class AnalyzerStage:
             processor_cls = cast(type[BaseProcessor], processor_type)
             params = inspect.signature(processor_cls.process_file).parameters
         except (AttributeError, TypeError, ValueError):
-            return False
-        return "scan_root" in params
+            return frozenset()
+        return frozenset(params) & _KNOWN_PROCESS_FILE_KWARGS

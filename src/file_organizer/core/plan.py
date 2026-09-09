@@ -25,11 +25,12 @@ from file_organizer._compat import StrEnum
 from file_organizer.core.organize_options import OrganizeOptions, TransferMode
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
+from file_organizer.services.auto_tagging.tag_normalize import validate_canonical_tags
 from file_organizer.undo import UndoManager
 from file_organizer.utils.safedir import SafeDir, SymlinkRejected
 
-PLAN_SCHEMA_VERSION = 3
-_LEGACY_PLAN_SCHEMA_VERSIONS = frozenset({1, 2})
+PLAN_SCHEMA_VERSION = 4
+_LEGACY_PLAN_SCHEMA_VERSIONS = frozenset({1, 2, 3})
 _CHUNK_SIZE = 65536
 
 
@@ -148,6 +149,7 @@ class OrganizationOperation:
     description: str = ""
     fingerprint: SourceFingerprint | None = None
     error: str | None = None
+    tags: list[str] = field(default_factory=list)
 
     @property
     def source(self) -> Path:
@@ -244,10 +246,12 @@ class OrganizationPlan:
     def from_dict(cls, data: dict[str, Any]) -> OrganizationPlan:
         """Deserialize a plan previously returned by :meth:`to_dict`."""
         schema_version = int(data.get("schema_version", PLAN_SCHEMA_VERSION))
+        valid_versions = sorted({*_LEGACY_PLAN_SCHEMA_VERSIONS, PLAN_SCHEMA_VERSION})
         if schema_version not in {*_LEGACY_PLAN_SCHEMA_VERSIONS, PLAN_SCHEMA_VERSION}:
+            expected = ", ".join(str(v) for v in valid_versions[:-1]) + f", or {valid_versions[-1]}"
             raise ValueError(
                 f"Unsupported organization plan schema_version {schema_version}; "
-                f"expected 1, 2, or {PLAN_SCHEMA_VERSION}."
+                f"expected {expected}."
             )
 
         metadata = dict(data.get("metadata", {}))
@@ -264,8 +268,10 @@ class OrganizationPlan:
                 raise ValueError(
                     f"Organization plan schema {schema_version} requires an options object."
                 )
-            if schema_version == PLAN_SCHEMA_VERSION and "transfer_mode" not in raw_options:
-                raise ValueError("Organization plan schema 3 requires transfer_mode.")
+            if schema_version >= 3 and "transfer_mode" not in raw_options:
+                raise ValueError(
+                    f"Organization plan schema {schema_version} requires transfer_mode."
+                )
             options = OrganizeOptions.from_dict(raw_options)
             if options.skip_existing != bool(data.get("skip_existing", True)):
                 raise ValueError("Organization plan skip_existing does not match its options.")
@@ -294,6 +300,13 @@ class OrganizationPlan:
                     raise ValueError
             except (TypeError, ValueError) as exc:
                 raise ValueError("Invalid source fingerprint in organization plan.") from exc
+
+            tags: list[str] = []
+            if schema_version >= 4:
+                raw_tags = raw.get("tags")
+                if raw_tags is not None:
+                    tags = validate_canonical_tags(raw_tags)
+
             operations.append(
                 OrganizationOperation(
                     operation_id=raw["operation_id"],
@@ -307,6 +320,7 @@ class OrganizationPlan:
                     description=raw.get("description", ""),
                     fingerprint=fingerprint,
                     error=raw.get("error"),
+                    tags=tags,
                 )
             )
 
@@ -422,6 +436,7 @@ def build_plan_from_processed(
                 description=result.description,
                 fingerprint=fingerprint,
                 error=error,
+                tags=list(getattr(result, "tags", []) or []),
             )
         )
 

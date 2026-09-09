@@ -74,11 +74,19 @@ def show_summary(
         console.print("\n[bold]Organized Structure:[/bold]")
         console.print(f"[cyan]{output_path}/[/cyan]")
 
+        tags_by_target: dict[tuple[str, str], list[str]] = {}
+        if result.plan is not None:
+            for op in result.plan.operations:
+                if op.tags:
+                    tags_by_target[(op.folder_name, op.file_name)] = op.tags
+
         for folder, files in sorted(result.organized_structure.items()):
             console.print(f"  [cyan]├── {folder}/[/cyan]")
             for i, filename in enumerate(sorted(files)):
                 prefix = "└──" if i == len(files) - 1 else "├──"
-                console.print(f"       {prefix} {filename}")
+                tags = tags_by_target.get((folder, filename), [])
+                tag_suffix = f" [dim]({', '.join(tags)})[/dim]" if tags else ""
+                console.print(f"       {prefix} {filename}{tag_suffix}")
 
     if dry_run:
         console.print("\n[yellow]⚠️  DRY RUN - No files were actually moved[/yellow]")

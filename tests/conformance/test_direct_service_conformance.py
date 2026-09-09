@@ -255,8 +255,42 @@ def test_resolved_options_are_persisted(conformance: ConformanceContext) -> None
         "vision_model": "conformance-vision",
         "text_provider": "ollama",
         "vision_provider": "ollama",
+        "generate_tags": False,
+        "tag_style": None,
+        "tag_prompt": None,
     }
-    assert envelope["plan"]["schema_version"] == 3
+    assert envelope["plan"]["schema_version"] == 4
+
+
+def test_non_default_tag_options_round_trip(conformance_tagging: ConformanceContext) -> None:
+    """Non-default generate_tags/tag_style/tag_prompt survive every transport
+    that exposes tag controls (#1764).
+
+    Scoped to conformance_tagging (direct, cli, rest, python-sdk,
+    python-async-sdk, typescript-sdk, fo-api) rather than the full
+    conformance fixture: web-form-adapter and tui-workspace-adapter don't
+    yet have UI-facing fields for these options, so a non-default value
+    would silently reset to the default on their round trip -- an unbuilt
+    control surface, not a conformance regression. Default-value parity for
+    those two is already covered by test_resolved_options_are_persisted
+    above via the full conformance fixture.
+    """
+    conformance_tagging.stage("flat-documents")
+
+    envelope = _ok(
+        conformance_tagging.driver.preview(
+            conformance_tagging.request(
+                generate_tags=True,
+                tag_style="sfx",
+                tag_prompt="ambient textures",
+            )
+        )
+    )
+
+    options = envelope["plan"]["options"]
+    assert options["generate_tags"] is True
+    assert options["tag_style"] == "sfx"
+    assert options["tag_prompt"] == "ambient textures"
 
 
 def test_explicit_provider_override_round_trips_golden(

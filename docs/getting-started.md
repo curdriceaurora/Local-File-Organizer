@@ -287,6 +287,7 @@ file-organizer analyze ./report.pdf --verbose
 
 # Auto-tag files
 file-organizer autotag suggest ./Documents
+file-organizer autotag suggest ./Documents --style descriptive
 file-organizer autotag popular
 
 # Detect duplicates

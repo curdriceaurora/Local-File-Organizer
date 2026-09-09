@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Path-aware prompt enrichment and auto-tagging** (epic #1757): text/vision analysis prompts and both tagging paths now factor in a file's location, and organized files can be tagged automatically, end to end across CLI, REST, and both official SDKs.
+  - Enriched text and vision analysis prompts with filename, parent-folder, and relative-path context (safely encoded against prompt injection), so classification can use where a file lives, not just its content (#1759).
+  - LLM-based tag generation for text and image files during organization analysis, supporting style hints and custom guidance prompts (#1760). Tags returned as a single comma-separated string (a small-model quirk) are now split into a list instead of failing structured parsing and silently dropping every tag.
+  - Heuristic tag suggestions (`fo autotag suggest`/`batch`) gained `--style`/`-s` (`sfx`, `audio`, `code`, `descriptive`, `hierarchical` — scoring boosts and, for `code`/`hierarchical`, compound `lang/<ext>`/`<category>/<subcategory>` tags) and `--prompt`/`-p` (custom guidance, re-weighting matching candidate tags) (#1761).
+  - `--generate-tags`/`--tag-style`/`--tag-prompt` flags on `organize` and `preview` to control LLM-based tag generation from the CLI, with reviewed-plan (`--plan`) semantics matching the rest of `organize`'s options (#1763).
+  - Organization plan schema bumped to v4 to carry per-operation tags, plumbed through the `AnalyzerStage`/`PipelineOrchestrator` pipeline alongside the existing single-pass path (#1758, #1762).
+  - Mirrored the tag option and per-operation tag fields across the REST API, Python SDK, TypeScript SDK, and remote `fo api organize`/`fo api preview`, so tags round-trip losslessly through every official transport (#1764).
+
 ## [2.2.0] - 2026-09-02
 
 ### Highlights

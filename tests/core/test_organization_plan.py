@@ -167,6 +167,94 @@ def test_schema_two_plan_upgrades_legacy_transfer_selector(tmp_path: Path) -> No
     assert restored.options.to_dict()["methodology"] == "none"
 
 
+def test_schema_three_plan_is_upgraded_with_empty_tags(tmp_path: Path) -> None:
+    data = _single_op_plan(tmp_path).to_dict()
+    data["schema_version"] = 3
+    data["operations"][0].pop("tags", None)
+
+    restored = OrganizationPlan.from_dict(data)
+
+    assert restored.schema_version == PLAN_SCHEMA_VERSION
+    assert restored.operations[0].tags == []
+
+
+def test_schema_four_round_trip_with_tags(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    plan.operations[0].tags = ["invoice", "finance/2024"]
+
+    data = plan.to_dict()
+    assert data["schema_version"] == 4
+    assert data["operations"][0]["tags"] == ["invoice", "finance/2024"]
+
+    restored = OrganizationPlan.from_dict(data)
+    assert restored.schema_version == 4
+    assert restored.operations[0].tags == ["invoice", "finance/2024"]
+
+
+def test_schema_four_rejects_non_canonical_tags(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["operations"][0]["tags"] = ["UpperCaseTag"]
+
+    with pytest.raises(ValueError, match="not in canonical normalized form"):
+        OrganizationPlan.from_dict(data)
+
+
+def test_schema_four_missing_tags_defaults_to_empty(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["operations"][0].pop("tags", None)
+
+    restored = OrganizationPlan.from_dict(data)
+    assert restored.operations[0].tags == []
+
+
+def test_from_dict_dynamic_version_error_message(tmp_path: Path) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["schema_version"] = 999
+
+    with pytest.raises(
+        ValueError,
+        match=r"Unsupported organization plan schema_version 999; expected 1, 2, 3, or 4\.",
+    ):
+        OrganizationPlan.from_dict(data)
+
+
+@pytest.mark.parametrize("version", [3, 4])
+def test_schema_three_and_four_require_transfer_mode(tmp_path: Path, version: int) -> None:
+    plan = _single_op_plan(tmp_path)
+    data = plan.to_dict()
+    data["schema_version"] = version
+    data["options"].pop("transfer_mode")
+
+    with pytest.raises(
+        ValueError,
+        match=f"Organization plan schema {version} requires transfer_mode",
+    ):
+        OrganizationPlan.from_dict(data)
+
+
+def test_build_plan_from_processed_copies_tags(tmp_path: Path) -> None:
+    source = tmp_path / "doc.txt"
+    source.write_text("content")
+    proc = _processed(source)
+    proc.tags = ["reports", "annual/2024"]
+
+    plan = build_plan_from_processed(
+        input_path=tmp_path,
+        output_path=tmp_path / "out",
+        processed=[proc],
+        skip_existing=True,
+        use_hardlinks=False,
+        total_files=1,
+        skipped_files=0,
+        deduplicated_files=0,
+    )
+
+    assert plan.operations[0].tags == ["reports", "annual/2024"]
+
+
 def test_plan_operations_are_sorted_by_source_path(tmp_path: Path) -> None:
     first = tmp_path / "a.txt"
     second = tmp_path / "b.txt"
