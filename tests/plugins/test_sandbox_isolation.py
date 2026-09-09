@@ -551,7 +551,7 @@ class TestExecutorStartupHandshake:
         import os
 
         imported = tmp_path / "dependency-imported"
-        (tmp_path / "fitz.py").write_text(
+        (tmp_path / "pymupdf.py").write_text(
             f"{noise}\nfrom pathlib import Path\nPath({str(imported)!r}).write_text('imported')\n",
             encoding="utf-8",
         )
