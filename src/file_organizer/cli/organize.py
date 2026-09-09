@@ -145,7 +145,7 @@ def _advanced_help_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _build_options(
+def _resolve_option_values(
     *,
     recursive: bool,
     include_hidden: bool,
@@ -167,50 +167,84 @@ def _build_options(
     generate_tags: bool,
     tag_style: str | None,
     tag_prompt: str | None,
-) -> OrganizeOptions:
-    """Map every behavior-affecting CLI flag to the canonical contract."""
+) -> dict[str, Any]:
+    """Resolve every behavior-affecting CLI flag into raw OrganizeOptions values.
+
+    Deliberately returns a plain dict rather than a constructed (and thus
+    validated) OrganizeOptions: a caller merging these onto a reviewed
+    plan's own options must defer cross-field validation (e.g. tag_style
+    requiring generate_tags=True) until *after* that merge -- an unset
+    field's CLI default can look invalid in isolation while the final,
+    merged combination (which inherits the plan's own value for any field
+    the user didn't repeat) is perfectly valid.
+    """
     workers, resolved_prefetch = _resolve_parallel_settings(
         sequential, max_workers, prefetch_depth, no_prefetch
     )
+    return {
+        "recursive": recursive,
+        "include_hidden": include_hidden,
+        "skip_existing": skip_existing,
+        "transfer_mode": transfer_mode,
+        "methodology": methodology,
+        "enable_vision": not no_vision,
+        "transcribe_audio": transcribe_audio,
+        "max_transcribe_seconds": (max_transcribe_seconds if max_transcribe_seconds > 0 else None),
+        "whisper_model": whisper_model,
+        "parallel_workers": workers,
+        "prefetch_depth": resolved_prefetch,
+        "text_model": text_model,
+        "vision_model": vision_model,
+        "text_provider": text_provider,
+        "vision_provider": vision_provider,
+        "generate_tags": generate_tags,
+        "tag_style": tag_style,
+        "tag_prompt": tag_prompt,
+    }
+
+
+def _construct_options(values: dict[str, Any]) -> OrganizeOptions:
+    """Construct OrganizeOptions from resolved values.
+
+    The single point where cross-field validation actually runs, so every
+    caller -- direct construction or a reviewed-plan merge -- gets the same
+    ValueError -> typer.BadParameter conversion.
+    """
     try:
-        return OrganizeOptions(
-            recursive=recursive,
-            include_hidden=include_hidden,
-            skip_existing=skip_existing,
-            transfer_mode=transfer_mode,
-            methodology=methodology,
-            enable_vision=not no_vision,
-            transcribe_audio=transcribe_audio,
-            max_transcribe_seconds=(max_transcribe_seconds if max_transcribe_seconds > 0 else None),
-            whisper_model=whisper_model,
-            parallel_workers=workers,
-            prefetch_depth=resolved_prefetch,
-            text_model=text_model,
-            vision_model=vision_model,
-            text_provider=text_provider,  # type: ignore[arg-type]
-            vision_provider=vision_provider,  # type: ignore[arg-type]
-            generate_tags=generate_tags,
-            tag_style=tag_style,
-            tag_prompt=tag_prompt,
-        )
+        return OrganizeOptions(**values)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
+
+
+def _build_options(**kwargs: Any) -> OrganizeOptions:
+    """Map every behavior-affecting CLI flag to the canonical contract."""
+    return _construct_options(_resolve_option_values(**kwargs))
 
 
 def _merge_explicit_plan_options(
     ctx: typer.Context,
     plan_options: OrganizeOptions,
-    cli_options: OrganizeOptions,
+    cli_values: dict[str, Any],
 ) -> OrganizeOptions:
-    """Overlay only explicit CLI option fields onto reviewed plan options."""
+    """Overlay only explicit CLI option fields onto reviewed plan options.
+
+    *cli_values* is the raw, not-yet-validated dict from
+    _resolve_option_values() -- validation happens once, below, on the
+    fully-merged result, so an explicit flag that only looks invalid
+    against the CLI's own unset-field defaults (e.g. --tag-style repeating
+    a plan's stored style without repeating --generate-tags) is judged
+    against what the option will actually resolve to.
+    """
     merged = plan_options.to_dict()
-    explicit = cli_options.to_dict()
     for parameter, fields in _PLAN_PARAMETER_FIELDS.items():
         if ctx.get_parameter_source(parameter) != ParameterSource.COMMANDLINE:
             continue
         for field in fields:
-            merged[field] = explicit[field]
-    return OrganizeOptions.from_dict(merged)
+            merged[field] = cli_values[field]
+    try:
+        return OrganizeOptions.from_dict(merged)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 def _result_payload(result: OrganizationResult) -> dict[str, Any]:
@@ -493,7 +527,7 @@ def organize(
         if plan is not None and not has_explicit_options:
             options = plan.options
         else:
-            cli_options = _build_options(
+            cli_values = _resolve_option_values(
                 recursive=recursive,
                 include_hidden=include_hidden,
                 skip_existing=skip_existing,
@@ -516,9 +550,9 @@ def organize(
                 tag_prompt=tag_prompt,
             )
             options = (
-                _merge_explicit_plan_options(ctx, plan.options, cli_options)
+                _merge_explicit_plan_options(ctx, plan.options, cli_values)
                 if plan is not None
-                else cli_options
+                else _construct_options(cli_values)
             )
         request = OrganizeRequest(input_dir, output_dir, options)
         if not json_output:

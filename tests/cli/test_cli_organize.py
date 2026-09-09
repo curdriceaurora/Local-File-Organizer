@@ -457,6 +457,103 @@ def test_plan_matching_tag_flags_merge_identically(service: MagicMock, tmp_path:
     assert request.options == plan.options
 
 
+def test_plan_matching_tag_style_without_repeating_generate_tags(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Repeating only --tag-style (matching the plan's stored style) must
+    succeed without also repeating --generate-tags.
+
+    Regression: _build_options() used to validate tag_style/tag_prompt
+    against the CLI's OWN generate_tags default (False) before the plan
+    merge ever ran, so this raised a spurious usage error even though the
+    fully-merged result (inheriting generate_tags=True from the plan) is
+    valid.
+    """
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # generate_tags=True, tag_style="sfx"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-style",
+            "sfx",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options == plan.options
+
+
+def test_plan_matching_tag_prompt_without_repeating_generate_tags(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Repeating only --tag-prompt (matching the plan's stored prompt) must
+    succeed without also repeating --generate-tags. Same regression as
+    test_plan_matching_tag_style_without_repeating_generate_tags, for the
+    other dependent field."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # tag_prompt="ambient textures"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-prompt",
+            "ambient textures",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options == plan.options
+
+
+def test_plan_conflicting_tag_style_without_repeating_generate_tags_is_mismatch(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """A conflicting --tag-style, given without repeating --generate-tags,
+    must still reach OrganizationService.execute() as the explicit override
+    (surfacing PLAN_MISMATCH) -- not a usage error from validating the
+    unmerged CLI defaults, and not a silent ignore."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # stored tag_style == "sfx"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    service.execute.side_effect = DomainError(
+        DomainErrorCode.PLAN_MISMATCH,
+        "Organization plan options do not match request options.",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-style",
+            "descriptive",
+        ],
+    )
+    assert result.exit_code == 3, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert plan.options.tag_style == "sfx"
+    assert request.options.tag_style == "descriptive"
+
+
 def test_plan_conflicting_tag_flag_reaches_service_as_mismatch(
     service: MagicMock, tmp_path: Path
 ) -> None:

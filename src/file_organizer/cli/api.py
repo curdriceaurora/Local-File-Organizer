@@ -216,16 +216,21 @@ def _load_remote_plan(path: Path) -> OrganizationPlanPayload:
 def _merge_remote_plan_options(
     ctx: typer.Context,
     plan_options: OrganizationOptionsPayload,
-    cli_options: OrganizationOptionsPayload,
+    cli_values: dict[str, Any],
 ) -> OrganizationOptionsPayload:
-    """Overlay only explicitly supplied remote flags onto reviewed plan options."""
+    """Overlay only explicitly supplied remote flags onto reviewed plan options.
+
+    *cli_values* is the raw, not-yet-validated dict from
+    _resolve_option_values() -- see that function's docstring for why
+    cross-field validation must be deferred until after this merge.
+    """
     from file_organizer.client.models import OrganizationOptionsPayload
     from file_organizer.core.organize_options import OrganizeOptions
 
     merged = _merge_explicit_plan_options(
         ctx,
         OrganizeOptions.from_dict(plan_options.model_dump(mode="json")),
-        OrganizeOptions.from_dict(cli_options.model_dump(mode="json")),
+        cli_values,
     )
     return OrganizationOptionsPayload.model_validate(merged.to_dict())
 
@@ -665,7 +670,10 @@ def organization_execute(
             for name in _REMOTE_PLAN_OPTION_NAMES
         )
         if plan is None or has_explicit_options:
-            cli_options = _organization_options(
+            from file_organizer.cli.organize import _construct_options, _resolve_option_values
+            from file_organizer.client.models import OrganizationOptionsPayload
+
+            cli_values = _resolve_option_values(
                 recursive=recursive,
                 include_hidden=include_hidden,
                 skip_existing=skip_existing,
@@ -689,9 +697,11 @@ def organization_execute(
             )
             plan_options = getattr(plan, "options", None)
             options = (
-                _merge_remote_plan_options(ctx, plan_options, cli_options)
+                _merge_remote_plan_options(ctx, plan_options, cli_values)
                 if plan_options is not None
-                else cli_options
+                else OrganizationOptionsPayload.model_validate(
+                    _construct_options(cli_values).to_dict()
+                )
             )
         result = client.organize(
             input_dir,
