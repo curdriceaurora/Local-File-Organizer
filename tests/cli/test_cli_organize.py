@@ -76,6 +76,32 @@ def _plan(input_dir: Path, output_dir: Path) -> OrganizationPlan:
     )
 
 
+def _plan_with_tags(input_dir: Path, output_dir: Path) -> OrganizationPlan:
+    options = OrganizeOptions(
+        recursive=False,
+        transfer_mode="copy",
+        methodology="para",
+        generate_tags=True,
+        tag_style="sfx",
+        tag_prompt="ambient textures",
+    )
+    return OrganizationPlan(
+        plan_id="plan-tags-1",
+        schema_version=PLAN_SCHEMA_VERSION,
+        input_path=str(input_dir.resolve()),
+        output_path=str(output_dir.resolve()),
+        created_at="2026-01-01T00:00:00Z",
+        skip_existing=options.skip_existing,
+        use_hardlinks=options.use_hardlinks,
+        total_files=0,
+        processed_files=0,
+        skipped_files=0,
+        failed_files=0,
+        deduplicated_files=0,
+        options=options,
+    )
+
+
 def test_organize_fails_when_setup_not_completed(service: MagicMock, tmp_path: Path) -> None:
     input_dir, output_dir = _roots(tmp_path)
     with patch(_SETUP_PATCH, side_effect=_fake_check_setup):
@@ -141,6 +167,11 @@ def test_all_behavior_flags_map_losslessly(service: MagicMock, tmp_path: Path) -
             "openai",
             "--vision-provider",
             "claude",
+            "--generate-tags",
+            "--tag-style",
+            "code",
+            "--tag-prompt",
+            "focus on languages",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -161,9 +192,9 @@ def test_all_behavior_flags_map_losslessly(service: MagicMock, tmp_path: Path) -
         "vision_model": "vision-v1",
         "text_provider": "openai",
         "vision_provider": "claude",
-        "generate_tags": False,
-        "tag_style": None,
-        "tag_prompt": None,
+        "generate_tags": True,
+        "tag_style": "code",
+        "tag_prompt": "focus on languages",
     }
 
 
@@ -230,6 +261,58 @@ def test_invalid_canonical_option_is_usage_error(service: MagicMock, tmp_path: P
     )
     assert result.exit_code == 2
     assert "not supported" in result.output
+    service.execute.assert_not_called()
+
+
+def test_preview_generate_tags_flags_map_to_options(service: MagicMock, tmp_path: Path) -> None:
+    input_dir, output_dir = _roots(tmp_path)
+    result = runner.invoke(
+        app,
+        [
+            "preview",
+            str(input_dir),
+            "--output-dir",
+            str(output_dir),
+            "--generate-tags",
+            "--tag-style",
+            "hierarchical",
+            "--tag-prompt",
+            "org by project",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    options = service.preview.call_args.args[0].options
+    assert options.generate_tags is True
+    assert options.tag_style == "hierarchical"
+    assert options.tag_prompt == "org by project"
+
+
+def test_tag_style_without_generate_tags_is_usage_error(service: MagicMock, tmp_path: Path) -> None:
+    input_dir, output_dir = _roots(tmp_path)
+    result = runner.invoke(
+        app,
+        ["organize", str(input_dir), str(output_dir), "--tag-style", "sfx"],
+    )
+    assert result.exit_code == 2
+    assert "generate_tags" in result.output
+    service.execute.assert_not_called()
+
+
+def test_invalid_tag_style_is_usage_error(service: MagicMock, tmp_path: Path) -> None:
+    input_dir, output_dir = _roots(tmp_path)
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--generate-tags",
+            "--tag-style",
+            "bogus",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "Invalid tag_style" in result.output
     service.execute.assert_not_called()
 
 
@@ -324,6 +407,187 @@ def test_plan_overlays_only_explicit_behavior_fields(service: MagicMock, tmp_pat
     assert request.options.transfer_mode == TransferMode.COPY
     assert request.options.methodology == OrganizationMethodology.PARA
     assert request.options.text_model == plan.options.text_model
+
+
+def test_plan_tag_fields_pass_through_unchanged_without_explicit_flags(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Case 1 (#1763): no tag flags on the CLI -> plan's stored values pass
+    through unchanged."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        ["organize", str(input_dir), str(output_dir), "--plan", str(plan_path)],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options.generate_tags is True
+    assert request.options.tag_style == "sfx"
+    assert request.options.tag_prompt == "ambient textures"
+
+
+def test_plan_matching_tag_flags_merge_identically(service: MagicMock, tmp_path: Path) -> None:
+    """Case 2 (#1763): explicit flags matching what's stored succeed identically."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--generate-tags",
+            "--tag-style",
+            "sfx",
+            "--tag-prompt",
+            "ambient textures",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options == plan.options
+
+
+def test_plan_matching_tag_style_without_repeating_generate_tags(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Repeating only --tag-style (matching the plan's stored style) must
+    succeed without also repeating --generate-tags.
+
+    Regression: _build_options() used to validate tag_style/tag_prompt
+    against the CLI's OWN generate_tags default (False) before the plan
+    merge ever ran, so this raised a spurious usage error even though the
+    fully-merged result (inheriting generate_tags=True from the plan) is
+    valid.
+    """
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # generate_tags=True, tag_style="sfx"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-style",
+            "sfx",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options == plan.options
+
+
+def test_plan_matching_tag_prompt_without_repeating_generate_tags(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Repeating only --tag-prompt (matching the plan's stored prompt) must
+    succeed without also repeating --generate-tags. Same regression as
+    test_plan_matching_tag_style_without_repeating_generate_tags, for the
+    other dependent field."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # tag_prompt="ambient textures"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-prompt",
+            "ambient textures",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert request.options == plan.options
+
+
+def test_plan_conflicting_tag_style_without_repeating_generate_tags_is_mismatch(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """A conflicting --tag-style, given without repeating --generate-tags,
+    must still reach OrganizationService.execute() as the explicit override
+    (surfacing PLAN_MISMATCH) -- not a usage error from validating the
+    unmerged CLI defaults, and not a silent ignore."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # stored tag_style == "sfx"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    service.execute.side_effect = DomainError(
+        DomainErrorCode.PLAN_MISMATCH,
+        "Organization plan options do not match request options.",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--tag-style",
+            "descriptive",
+        ],
+    )
+    assert result.exit_code == 3, result.output
+    request, applied_plan = service.execute.call_args.args
+    assert applied_plan == plan
+    assert plan.options.tag_style == "sfx"
+    assert request.options.tag_style == "descriptive"
+
+
+def test_plan_conflicting_tag_flag_reaches_service_as_mismatch(
+    service: MagicMock, tmp_path: Path
+) -> None:
+    """Case 3 (#1763): explicit flags conflicting with what's stored reach
+    OrganizationService.execute() as the CLI's explicit override -- not a
+    silent ignore or a mutated plan -- so the existing
+    ``plan.options != resolved_options`` check raises PLAN_MISMATCH."""
+    input_dir, output_dir = _roots(tmp_path)
+    plan = _plan_with_tags(input_dir, output_dir)  # stored tag_style == "sfx"
+    plan_path = tmp_path / "review.json"
+    plan_path.write_text(json.dumps(plan.to_dict()))
+    service.execute.side_effect = DomainError(
+        DomainErrorCode.PLAN_MISMATCH,
+        "Organization plan options do not match request options.",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "organize",
+            str(input_dir),
+            str(output_dir),
+            "--plan",
+            str(plan_path),
+            "--generate-tags",
+            "--tag-style",
+            "descriptive",
+        ],
+    )
+    assert result.exit_code == 3
+    request, applied_plan = service.execute.call_args.args
+    # The CLI passed its explicit override through -- the plan itself is untouched.
+    assert applied_plan == plan
+    assert plan.options.tag_style == "sfx"
+    assert request.options.tag_style == "descriptive"
 
 
 def test_domain_errors_have_stable_json_and_exit_code(service: MagicMock, tmp_path: Path) -> None:

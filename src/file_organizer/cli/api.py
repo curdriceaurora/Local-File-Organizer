@@ -171,6 +171,9 @@ def _organization_options(
     vision_model: str | None,
     text_provider: str | None,
     vision_provider: str | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
 ) -> OrganizationOptionsPayload:
     """Build the SDK payload from the same canonical CLI mapper as local runs."""
     from file_organizer.cli.organize import _build_options
@@ -194,6 +197,9 @@ def _organization_options(
         vision_model=vision_model,
         text_provider=text_provider,
         vision_provider=vision_provider,
+        generate_tags=generate_tags,
+        tag_style=tag_style,
+        tag_prompt=tag_prompt,
     )
     return OrganizationOptionsPayload.model_validate(options.to_dict())
 
@@ -210,16 +216,21 @@ def _load_remote_plan(path: Path) -> OrganizationPlanPayload:
 def _merge_remote_plan_options(
     ctx: typer.Context,
     plan_options: OrganizationOptionsPayload,
-    cli_options: OrganizationOptionsPayload,
+    cli_values: dict[str, Any],
 ) -> OrganizationOptionsPayload:
-    """Overlay only explicitly supplied remote flags onto reviewed plan options."""
+    """Overlay only explicitly supplied remote flags onto reviewed plan options.
+
+    *cli_values* is the raw, not-yet-validated dict from
+    _resolve_option_values() -- see that function's docstring for why
+    cross-field validation must be deferred until after this merge.
+    """
     from file_organizer.client.models import OrganizationOptionsPayload
     from file_organizer.core.organize_options import OrganizeOptions
 
     merged = _merge_explicit_plan_options(
         ctx,
         OrganizeOptions.from_dict(plan_options.model_dump(mode="json")),
-        OrganizeOptions.from_dict(cli_options.model_dump(mode="json")),
+        cli_values,
     )
     return OrganizationOptionsPayload.model_validate(merged.to_dict())
 
@@ -520,6 +531,9 @@ def organization_preview(
     vision_model: Annotated[str | None, typer.Option("--vision-model")] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider")] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider")] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags")] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style")] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt")] = None,
     timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
@@ -554,6 +568,9 @@ def organization_preview(
             vision_model=vision_model,
             text_provider=text_provider,
             vision_provider=vision_provider,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
         result = client.preview_organize(input_dir, output_dir, options=options)
         payload = result.model_dump(mode="json")
@@ -629,6 +646,9 @@ def organization_execute(
     vision_model: Annotated[str | None, typer.Option("--vision-model")] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider")] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider")] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags")] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style")] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt")] = None,
     timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
@@ -650,7 +670,10 @@ def organization_execute(
             for name in _REMOTE_PLAN_OPTION_NAMES
         )
         if plan is None or has_explicit_options:
-            cli_options = _organization_options(
+            from file_organizer.cli.organize import _construct_options, _resolve_option_values
+            from file_organizer.client.models import OrganizationOptionsPayload
+
+            cli_values = _resolve_option_values(
                 recursive=recursive,
                 include_hidden=include_hidden,
                 skip_existing=skip_existing,
@@ -668,12 +691,17 @@ def organization_execute(
                 vision_model=vision_model,
                 text_provider=text_provider,
                 vision_provider=vision_provider,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
             plan_options = getattr(plan, "options", None)
             options = (
-                _merge_remote_plan_options(ctx, plan_options, cli_options)
+                _merge_remote_plan_options(ctx, plan_options, cli_values)
                 if plan_options is not None
-                else cli_options
+                else OrganizationOptionsPayload.model_validate(
+                    _construct_options(cli_values).to_dict()
+                )
             )
         result = client.organize(
             input_dir,

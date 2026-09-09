@@ -273,6 +273,11 @@ def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
             "ollama",
             "--vision-provider",
             "openai",
+            "--generate-tags",
+            "--tag-style",
+            "code",
+            "--tag-prompt",
+            "focus on languages",
             "--json",
         ],
     )
@@ -295,6 +300,9 @@ def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
         "vision_model": "vision-model",
         "text_provider": "ollama",
         "vision_provider": "openai",
+        "generate_tags": True,
+        "tag_style": "code",
+        "tag_prompt": "focus on languages",
     }
 
 
@@ -378,6 +386,92 @@ def test_remote_plan_overlays_only_explicit_behavior_flags(mock_client_cls, tmp_
         **reviewed_options.model_dump(),
         "methodology": "jd",
     }
+
+
+def test_remote_plan_matching_tag_style_without_repeating_generate_tags(mock_client_cls, tmp_path):
+    """Repeating only --tag-style (matching the plan's stored style) on
+    `fo api organize` must succeed without also repeating --generate-tags.
+
+    Regression: _organization_options() used to validate tag_style/tag_prompt
+    against the CLI's OWN generate_tags default (False) before the plan
+    merge ever ran, so this raised a spurious usage error even though the
+    fully-merged result (inheriting generate_tags=True from the plan) is
+    valid. Mirrors test_plan_matching_tag_style_without_repeating_generate_tags
+    in tests/cli/test_cli_organize.py for the local `organize` command.
+    """
+    mock_instance = MagicMock()
+    response = MagicMock(job_id="job-1", result=None, status="queued")
+    response.model_dump.return_value = {"status": "queued", "job_id": "job-1"}
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+    reviewed_options = OrganizationOptionsPayload(
+        generate_tags=True,
+        tag_style="sfx",
+        tag_prompt="ambient textures",
+    )
+    plan = MagicMock(options=reviewed_options)
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text("{}", encoding="utf-8")
+
+    with patch("file_organizer.cli.api._load_remote_plan", return_value=plan):
+        result = runner.invoke(
+            api_app,
+            [
+                "organize",
+                "/remote/input",
+                "/remote/output",
+                "--plan",
+                str(plan_path),
+                "--tag-style",
+                "sfx",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.stdout
+    options = mock_instance.organize.call_args.kwargs["options"]
+    assert options.model_dump() == reviewed_options.model_dump()
+
+
+def test_remote_plan_conflicting_tag_style_without_repeating_generate_tags(
+    mock_client_cls, tmp_path
+):
+    """A conflicting --tag-style on `fo api organize`, given without
+    repeating --generate-tags, must still reach the SDK as the explicit
+    override -- not a usage error from validating the unmerged CLI
+    defaults."""
+    mock_instance = MagicMock()
+    response = MagicMock(job_id="job-1", result=None, status="queued")
+    response.model_dump.return_value = {"status": "queued", "job_id": "job-1"}
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+    reviewed_options = OrganizationOptionsPayload(
+        generate_tags=True,
+        tag_style="sfx",
+        tag_prompt="ambient textures",
+    )
+    plan = MagicMock(options=reviewed_options)
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text("{}", encoding="utf-8")
+
+    with patch("file_organizer.cli.api._load_remote_plan", return_value=plan):
+        result = runner.invoke(
+            api_app,
+            [
+                "organize",
+                "/remote/input",
+                "/remote/output",
+                "--plan",
+                str(plan_path),
+                "--tag-style",
+                "descriptive",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.stdout
+    options = mock_instance.organize.call_args.kwargs["options"]
+    assert options.model_dump() == {**reviewed_options.model_dump(), "tag_style": "descriptive"}
 
 
 def test_remote_foreground_reserves_result_for_operation_result(mock_client_cls):
