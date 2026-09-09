@@ -171,6 +171,9 @@ def _organization_options(
     vision_model: str | None,
     text_provider: str | None,
     vision_provider: str | None,
+    generate_tags: bool,
+    tag_style: str | None,
+    tag_prompt: str | None,
 ) -> OrganizationOptionsPayload:
     """Build the SDK payload from the same canonical CLI mapper as local runs."""
     from file_organizer.cli.organize import _build_options
@@ -194,6 +197,9 @@ def _organization_options(
         vision_model=vision_model,
         text_provider=text_provider,
         vision_provider=vision_provider,
+        generate_tags=generate_tags,
+        tag_style=tag_style,
+        tag_prompt=tag_prompt,
     )
     return OrganizationOptionsPayload.model_validate(options.to_dict())
 
@@ -520,6 +526,9 @@ def organization_preview(
     vision_model: Annotated[str | None, typer.Option("--vision-model")] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider")] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider")] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags")] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style")] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt")] = None,
     timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
@@ -554,6 +563,9 @@ def organization_preview(
             vision_model=vision_model,
             text_provider=text_provider,
             vision_provider=vision_provider,
+            generate_tags=generate_tags,
+            tag_style=tag_style,
+            tag_prompt=tag_prompt,
         )
         result = client.preview_organize(input_dir, output_dir, options=options)
         payload = result.model_dump(mode="json")
@@ -629,6 +641,9 @@ def organization_execute(
     vision_model: Annotated[str | None, typer.Option("--vision-model")] = None,
     text_provider: Annotated[str | None, typer.Option("--text-provider")] = None,
     vision_provider: Annotated[str | None, typer.Option("--vision-provider")] = None,
+    generate_tags: Annotated[bool, typer.Option("--generate-tags")] = False,
+    tag_style: Annotated[str | None, typer.Option("--tag-style")] = None,
+    tag_prompt: Annotated[str | None, typer.Option("--tag-prompt")] = None,
     timeout: Annotated[float, typer.Option(help="Request timeout in seconds.")] = 30.0,
     as_json: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
@@ -668,6 +683,9 @@ def organization_execute(
                 vision_model=vision_model,
                 text_provider=text_provider,
                 vision_provider=vision_provider,
+                generate_tags=generate_tags,
+                tag_style=tag_style,
+                tag_prompt=tag_prompt,
             )
             plan_options = getattr(plan, "options", None)
             options = (

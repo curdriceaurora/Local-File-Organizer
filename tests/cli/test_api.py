@@ -273,6 +273,11 @@ def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
             "ollama",
             "--vision-provider",
             "openai",
+            "--generate-tags",
+            "--tag-style",
+            "code",
+            "--tag-prompt",
+            "focus on languages",
             "--json",
         ],
     )
@@ -295,6 +300,9 @@ def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
         "vision_model": "vision-model",
         "text_provider": "ollama",
         "vision_provider": "openai",
+        "generate_tags": True,
+        "tag_style": "code",
+        "tag_prompt": "focus on languages",
     }
 
 

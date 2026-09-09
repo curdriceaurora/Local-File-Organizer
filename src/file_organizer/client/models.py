@@ -130,6 +130,9 @@ class OrganizationOptionsPayload(BaseModel):
     vision_model: str | None = None
     text_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
     vision_provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] | None = None
+    generate_tags: bool = False
+    tag_style: str | None = None
+    tag_prompt: str | None = None
 
 
 class OrganizationPlanPayload(BaseModel):
