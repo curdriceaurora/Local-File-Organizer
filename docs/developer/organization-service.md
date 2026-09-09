@@ -143,18 +143,19 @@ site above agrees with the enum, so an incomplete addition cannot ship.
 
 ## Plan compatibility
 
-Organization plan schema 3 records canonical `transfer_mode` and `methodology` options. Schema-1
-and schema-2 plans remain loadable and are upgraded in memory using their legacy
-`skip_existing`, `use_hardlinks`, and metadata fields. Unknown schema versions are rejected with
-an actionable error. Current plans reject conflicting legacy and canonical values and reject
-operation types that disagree with `transfer_mode`.
+Organization plan schema 4 records canonical `transfer_mode` and `methodology` options plus
+per-operation `tags` (populated when `generate_tags` is enabled). Schema-1 and schema-2 plans
+remain loadable and are upgraded in memory using their legacy `skip_existing`, `use_hardlinks`,
+and metadata fields; schema-3 plans load as-is with an empty `tags` list on every operation.
+Unknown schema versions are rejected with an actionable error. Current plans reject conflicting
+legacy and canonical values and reject operation types that disagree with `transfer_mode`.
 
 Legacy-plan compatibility is load/inspect compatibility. The direct service requires callers to
 re-preview before execution because legacy plans do not record the complete canonical contract and
-cannot match a fully resolved schema-3 request safely.
+cannot match a fully resolved schema-4 request safely.
 
-The REST plan payload exposes schema-3 options. Updating the Python SDK's mirrored plan model is
-owned by the REST/SDK adapter migration in #1596.
+The REST plan payload and both official SDKs' mirrored plan models expose the complete schema-4
+options contract, including the tag fields.
 
 Operations are ordered by source path before serialization. Existing `SourceFingerprint`
 validation remains the authority for detecting changed sources between preview and execution.

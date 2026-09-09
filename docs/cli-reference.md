@@ -125,6 +125,9 @@ Advanced help includes:
 - `--transcribe-audio` — Transcribe audio files with Whisper and use the transcript for content-aware categorization (requires the `[audio]` extra; off by default because transcription is the expensive step)
 - `--max-transcribe-seconds FLOAT` — Skip transcription for audio files longer than this (default: 600; `0` disables the cap)
 - `--whisper-model TEXT` — Whisper model size for `--transcribe-audio`: `tiny` (default), `base`, `small`, `medium`, `large-v2`, or `large-v3`. Larger models transcribe more accurately but are slower and need a bigger download
+- `--generate-tags` — Ask the AI model to attach tags to each organized file during analysis
+- `--tag-style TEXT` — Tagging domain hint for `--generate-tags` (`sfx`, `audio`, `code`, `descriptive`, `hierarchical`); requires `--generate-tags`
+- `--tag-prompt TEXT` — Custom free-text tagging guidance for `--generate-tags` (max 500 characters); requires `--generate-tags`
 
 **Examples:**
 
@@ -158,6 +161,9 @@ file-organizer organize ~/Downloads ~/Organized --transcribe-audio
 
 # Higher-accuracy transcription with a larger Whisper model
 file-organizer organize ~/Downloads ~/Organized --transcribe-audio --whisper-model small
+
+# Generate AI tags for each organized file
+file-organizer organize ~/Downloads ~/Organized --generate-tags --tag-style descriptive
 ```
 
 > **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.
@@ -174,13 +180,20 @@ Preview how files would be organized without moving them (dry-run shortcut).
 file-organizer preview INPUT_DIR
 ```
 
-Supports the same processing options as `organize` (`--max-workers`, `--sequential`, `--no-vision`, `--prefetch-depth`, `--transcribe-audio`, `--max-transcribe-seconds`, `--whisper-model`).
+Supports the same processing options as `organize` (`--max-workers`, `--sequential`, `--no-vision`, `--prefetch-depth`, `--transcribe-audio`, `--max-transcribe-seconds`, `--whisper-model`), plus the AI tag-generation options below — unlike `organize`, these are always visible (no `--advanced-help` needed):
+
+- `--generate-tags` — Ask the AI model to attach tags to each file during analysis
+- `--tag-style TEXT` — Tagging domain hint (`sfx`, `audio`, `code`, `descriptive`, `hierarchical`); requires `--generate-tags`
+- `--tag-prompt TEXT` — Custom free-text tagging guidance (max 500 characters); requires `--generate-tags`
 
 **Examples:**
 
 ```bash
 file-organizer preview ~/Downloads
 fo preview ~/Downloads
+
+# Preview with AI-generated tags
+file-organizer preview ~/Downloads --generate-tags --tag-style sfx
 ```
 
 ---
@@ -1370,7 +1383,9 @@ file-organizer api preview INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 Use `--save-plan PATH` to persist the reviewed plan. The command accepts the
 same recursion, hidden-file, collision, transfer, methodology, media, model,
-provider, and performance options as local organization.
+provider, and performance options as local organization, including
+`--generate-tags`/`--tag-style`/`--tag-prompt` for AI tag generation (see
+[`organize`](#organize) above for their semantics).
 
 #### `api organize`
 
@@ -1390,6 +1405,10 @@ for a result, `--plan PATH` to execute a reviewed plan, and
 In JSON mode, `result` is `null` for a queued submission and `job` contains
 its `job_id` and `status`; foreground execution places the operation result in
 `result` and emits `job: null`.
+
+Accepts the same `--generate-tags`/`--tag-style`/`--tag-prompt` flags as
+[`api preview`](#api-preview) and local `organize`; with `--plan`, omitting
+these flags inherits the reviewed plan's own tag settings.
 
 #### `api job`
 
