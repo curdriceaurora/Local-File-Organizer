@@ -579,6 +579,22 @@ class TestExecutorStartupHandshake:
             assert executor.call("on_load") == "loaded"
             assert executor.call("on_load") == "loaded"
 
+    @pytest.mark.timeout(60)
+    def test_large_stderr_output_does_not_block_ipc_response(self, tmp_path: Path) -> None:
+        """Worker diagnostics larger than the OS pipe still allow calls to finish."""
+        plugin = tmp_path / "noisy_stderr_plugin.py"
+        plugin.write_text(
+            "import os\n"
+            + _NOISY_STARTUP_PLUGIN_SRC.replace(
+                "        print('call noise from plugin')",
+                "        os.write(2, b'x' * 262144)",
+            ),
+            encoding="utf-8",
+        )
+
+        with PluginExecutor(plugin_path=plugin) as executor:
+            assert executor.call("on_load") == "loaded"
+
     def test_native_stdout_write_during_import_does_not_break_handshake(
         self, tmp_path: Path
     ) -> None:
