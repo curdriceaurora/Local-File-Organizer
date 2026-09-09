@@ -43,7 +43,7 @@ from unittest.mock import patch
 import pytest
 
 from file_organizer.plugins.base import Plugin, PluginLoadError, PluginPermissionError
-from file_organizer.plugins.executor import PluginExecutor
+from file_organizer.plugins.executor import PluginExecutor, _build_worker_bootstrap
 from file_organizer.plugins.ipc import (
     PluginCall,
     PluginResult,
@@ -472,6 +472,8 @@ _PARENT_SRC_ROOT = (
 )
 
 
+@pytest.mark.ci
+@pytest.mark.unit
 class TestExecutorStartupHandshake:
     """Startup contract: worker signals readiness; start() enforces it.
 
@@ -489,7 +491,6 @@ class TestExecutorStartupHandshake:
         Runs the worker bootstrap directly with stdin closed: the worker
         must print the ready line, then exit cleanly on stdin EOF.
         """
-        import json
         import os
         import sys
 
@@ -501,11 +502,7 @@ class TestExecutorStartupHandshake:
             "allow_all_paths": True,
             "allow_all_operations": True,
         }
-        bootstrap = (
-            "import json; "
-            "from file_organizer.plugins.executor import _worker; "
-            f"_worker({str(plugin)!r}, json.loads({json.dumps(json.dumps(policy))!r}))"
-        )
+        bootstrap = _build_worker_bootstrap(str(plugin), policy)
         env = dict(os.environ)
         env["PYTHONPATH"] = str(_PARENT_SRC_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
         proc = subprocess.run(
@@ -534,18 +531,61 @@ class TestExecutorStartupHandshake:
         finally:
             executor.stop()
 
+    @pytest.mark.parametrize(
+        "noise",
+        [
+            "print('bootstrap dependency noise', flush=True)",
+            "import os; os.write(1, b'bootstrap dependency noise\\n')",
+        ],
+        ids=["python-stdout", "native-stdout"],
+    )
+    def test_dependency_import_before_worker_does_not_break_handshake(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, noise: str
+    ) -> None:
+        """Package initialization can emit noise before _worker is called.
+
+        The plugin package imports utils.readers through its SDK helpers.
+        Supply a noisy optional dependency in that graph so this reproduces
+        PyMuPDF's startup warning without requiring PyMuPDF to be installed.
+        """
+        import os
+
+        imported = tmp_path / "dependency-imported"
+        (tmp_path / "fitz.py").write_text(
+            f"{noise}\nfrom pathlib import Path\nPath({str(imported)!r}).write_text('imported')\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv(
+            "PYTHONPATH", str(tmp_path) + os.pathsep + os.environ.get("PYTHONPATH", "")
+        )
+        plugin = tmp_path / "benign_plugin.py"
+        plugin.write_text(_BENIGN_PLUGIN_SRC, encoding="utf-8")
+
+        with PluginExecutor(plugin_path=plugin) as executor:
+            assert imported.read_text() == "imported"
+            assert Path(executor.call("on_load")).is_relative_to(_PARENT_SRC_ROOT)
+
+    def test_native_stdout_during_call_does_not_pollute_ipc(self, tmp_path: Path) -> None:
+        """Native output remains separate from responses after readiness."""
+        plugin = tmp_path / "native_call_plugin.py"
+        plugin.write_text(
+            _NATIVE_STDOUT_NOISE_PLUGIN_SRC.replace(
+                "        return 'loaded'",
+                "        os.write(1, b'native call noise\\n')\n        return 'loaded'",
+            ),
+            encoding="utf-8",
+        )
+        with PluginExecutor(plugin_path=plugin) as executor:
+            assert executor.call("on_load") == "loaded"
+            assert executor.call("on_load") == "loaded"
+
     def test_native_stdout_write_during_import_does_not_break_handshake(
         self, tmp_path: Path
     ) -> None:
-        """A C-extension writing straight to fd 1 at import must not corrupt readiness.
+        """Native writes during plugin import must not corrupt readiness.
 
-        Reproduces the class of failure behind #1784: PyMuPDF's ``fitz``
-        deprecation notice is written directly to the OS-level stdout file
-        descriptor, bypassing ``sys.stdout`` entirely — so it survives the
-        existing ``sys.stdout = sys.stderr`` reassignment in ``_worker()``
-        (which only intercepts Python-level writes) and corrupts the
-        readiness handshake for *any* plugin whose import graph happens to
-        load such a dependency, regardless of what the plugin itself does.
+        Unlike the bootstrap dependency test, this emits output after
+        entering _worker. Both phases must keep fd 1 separate from IPC.
         """
         plugin = tmp_path / "native_noise_plugin.py"
         plugin.write_text(_NATIVE_STDOUT_NOISE_PLUGIN_SRC)
