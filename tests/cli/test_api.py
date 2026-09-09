@@ -306,6 +306,83 @@ def test_remote_preview_maps_complete_canonical_options(mock_client_cls):
     }
 
 
+def test_remote_organize_maps_complete_canonical_options(mock_client_cls):
+    """Remote organize (no --plan) must pass every behavior option, including
+    the tag flags, as one SDK payload unchanged (#1764)."""
+    mock_instance = MagicMock()
+    operation_result = MagicMock(processed_files=1, skipped_files=0, failed_files=0)
+    response = MagicMock(job_id=None, result=operation_result, status="completed")
+    response.model_dump.return_value = {
+        "status": "completed",
+        "job_id": None,
+        "result": {"processed_files": 1, "plan": None},
+    }
+    mock_instance.organize.return_value = response
+    mock_client_cls.return_value = mock_instance
+
+    result = runner.invoke(
+        api_app,
+        [
+            "organize",
+            "/remote/input",
+            "/remote/output",
+            "--foreground",
+            "--no-recursive",
+            "--include-hidden",
+            "--overwrite-existing",
+            "--transfer-mode",
+            "copy",
+            "--methodology",
+            "para",
+            "--no-vision",
+            "--transcribe-audio",
+            "--max-transcribe-seconds",
+            "0",
+            "--whisper-model",
+            "small",
+            "--sequential",
+            "--no-prefetch",
+            "--text-model",
+            "text-model",
+            "--vision-model",
+            "vision-model",
+            "--text-provider",
+            "ollama",
+            "--vision-provider",
+            "openai",
+            "--generate-tags",
+            "--tag-style",
+            "code",
+            "--tag-prompt",
+            "focus on languages",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    options = mock_instance.organize.call_args.kwargs["options"]
+    assert options.model_dump() == {
+        "recursive": False,
+        "include_hidden": True,
+        "skip_existing": False,
+        "transfer_mode": "copy",
+        "methodology": "para",
+        "enable_vision": False,
+        "transcribe_audio": True,
+        "max_transcribe_seconds": None,
+        "whisper_model": "small",
+        "parallel_workers": 1,
+        "prefetch_depth": 0,
+        "text_model": "text-model",
+        "vision_model": "vision-model",
+        "text_provider": "ollama",
+        "vision_provider": "openai",
+        "generate_tags": True,
+        "tag_style": "code",
+        "tag_prompt": "focus on languages",
+    }
+
+
 def test_remote_organize_applies_reviewed_plan_without_default_overrides(mock_client_cls, tmp_path):
     """A plan-only invocation must let the server resolve the reviewed options."""
     mock_instance = MagicMock()
