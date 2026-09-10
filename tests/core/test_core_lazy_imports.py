@@ -68,10 +68,20 @@ def test_importing_lightweight_core_module_does_not_pull_torch() -> None:
 
 def test_core_public_api_is_still_importable() -> None:
     """The lazy re-export must keep the public ``from core import ...`` API working."""
+    import file_organizer.core as core
+
+    # Explicitly invoke __getattr__ so coverage records the lazy dispatch
+    # branch within this unit test, even if a prior test in the same process
+    # already populated module globals.
+    fo = core.__getattr__("FileOrganizer")
+    res = core.__getattr__("OrganizationResult")
+    assert fo.__name__ == "FileOrganizer"
+    assert res.__name__ == "OrganizationResult"
+
     from file_organizer.core import FileOrganizer, OrganizationResult
 
-    assert FileOrganizer.__name__ == "FileOrganizer"
-    assert OrganizationResult.__name__ == "OrganizationResult"
+    assert FileOrganizer is fo
+    assert OrganizationResult is res
 
 
 def test_core_unknown_attribute_raises_attribute_error() -> None:
