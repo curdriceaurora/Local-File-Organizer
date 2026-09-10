@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.core.organizer import FileOrganizer
+from file_organizer.core.plan import OrganizationPlan
+from file_organizer.models.base import ModelType
 
 pytestmark = pytest.mark.unit
 
@@ -112,6 +114,20 @@ class TestCollectFiles:
         files = organizer._collect_files(tmp_path)
         assert len(files) == 0
 
+    def test_collect_files_passes_recursive_and_hidden(self, organizer, tmp_path):
+        organizer.recursive = False
+        organizer.include_hidden = True
+        with patch(
+            "file_organizer.core.organizer.file_ops.collect_files", return_value=[]
+        ) as mock_collect:
+            organizer._collect_files(tmp_path)
+            mock_collect.assert_called_once_with(
+                tmp_path,
+                organizer.console,
+                recursive=False,
+                include_hidden=True,
+            )
+
 
 # ---------------------------------------------------------------------------
 # _simulate_organization
@@ -185,14 +201,32 @@ class TestUndoRedo:
         organizer._undo_manager.undo_transaction.return_value = True
         organizer._last_transaction_id = "txn-1"
         organizer._last_output_path = tmp_path
-        assert organizer.undo() is True
-        organizer._undo_manager.undo_transaction.assert_called_once_with("txn-1")
+        with patch("file_organizer.core.file_ops.cleanup_empty_dirs") as mock_cleanup:
+            assert organizer.undo() is True
+            organizer._undo_manager.undo_transaction.assert_called_once_with("txn-1")
+            mock_cleanup.assert_called_once_with(tmp_path)
+
+    def test_undo_failure_does_not_clean_up(self, organizer, tmp_path):
+        organizer._undo_manager = MagicMock()
+        organizer._undo_manager.undo_transaction.return_value = False
+        organizer._last_transaction_id = "txn-1"
+        organizer._last_output_path = tmp_path
+        with patch("file_organizer.core.file_ops.cleanup_empty_dirs") as mock_cleanup:
+            assert organizer.undo() is False
+            mock_cleanup.assert_not_called()
 
     def test_redo_calls_manager(self, organizer):
         organizer._undo_manager = MagicMock()
         organizer._undo_manager.redo_transaction.return_value = True
         organizer._last_transaction_id = "txn-1"
         assert organizer.redo() is True
+        organizer._undo_manager.redo_transaction.assert_called_once_with("txn-1")
+
+    def test_redo_failure_returns_false(self, organizer):
+        organizer._undo_manager = MagicMock()
+        organizer._undo_manager.redo_transaction.return_value = False
+        organizer._last_transaction_id = "txn-1"
+        assert organizer.redo() is False
         organizer._undo_manager.redo_transaction.assert_called_once_with("txn-1")
 
 
@@ -249,6 +283,24 @@ class TestCategorizeFiles:
         assert [f.name for f in kwargs["cad_files"]] == ["drawing.dwg"]
         assert [f.name for f in kwargs["other_files"]] == ["archive.unknown"]
 
+    def test_categorize_case_insensitive(self, organizer, tmp_path):
+        in_dir = tmp_path / "input"
+        in_dir.mkdir()
+        (in_dir / "DOC.TXT").write_text("text")
+        (in_dir / "PHOTO.JPG").write_text("img")
+
+        with (
+            patch("file_organizer.core.display.show_file_breakdown") as mock_show,
+            patch.object(organizer, "_init_text_processor"),
+            patch.object(organizer, "_fallback_by_extension", return_value=[]),
+        ):
+            organizer.organize(in_dir, tmp_path / "output")
+
+        kwargs = mock_show.call_args[1]
+        assert [f.name for f in kwargs["text_files"]] == ["DOC.TXT"]
+        assert [f.name for f in kwargs["image_files"]] == ["PHOTO.JPG"]
+        assert len(kwargs["other_files"]) == 0
+
 
 # ---------------------------------------------------------------------------
 # organize execution & media pipeline tests
@@ -295,6 +347,82 @@ class TestOrganizePipelinesAndExecution:
         assert organizer.text_processor is None
         mock_proc_img.assert_called_once()
         assert result.total_files == 2
+        assert result.processed_files == 2
+        assert result.failed_files == 0
+        assert result.skipped_files == 0
+        assert result.organized_structure == {"Documents": ["doc.txt"], "Images": ["img.jpg"]}
+        assert result.plan is not None
+        assert result.plan.total_files == 2
+
+    def test_organize_text_files_fallback_when_not_ready(self, organizer, tmp_path):
+        f = tmp_path / "input" / "doc.txt"
+        f.parent.mkdir(parents=True)
+        f.write_text("hello")
+
+        mock_txt_proc = MagicMock()
+        mock_txt_proc.text_model.is_initialized = False
+
+        fallback_proc = MagicMock(error=None, folder_name="Documents", filename="doc", file_path=f)
+        with (
+            patch.object(
+                organizer,
+                "_init_text_processor",
+                side_effect=lambda: setattr(organizer, "text_processor", mock_txt_proc),
+            ),
+            patch.object(
+                organizer, "_fallback_by_extension", return_value=[fallback_proc]
+            ) as mock_fb,
+        ):
+            res = organizer.organize(tmp_path / "input", tmp_path / "output")
+
+        mock_fb.assert_called_once_with([f])
+        assert res.organized_structure == {"Documents": ["doc.txt"]}
+        assert res.processed_files == 1
+
+    def test_organize_cad_files_fallback_when_not_ready(self, organizer, tmp_path):
+        f = tmp_path / "input" / "model.dwg"
+        f.parent.mkdir(parents=True)
+        f.write_text("cad data")
+
+        mock_txt_proc = MagicMock()
+        mock_txt_proc.text_model.is_initialized = False
+
+        fallback_proc = MagicMock(error=None, folder_name="CAD", filename="model", file_path=f)
+        with (
+            patch.object(
+                organizer,
+                "_init_text_processor",
+                side_effect=lambda: setattr(organizer, "text_processor", mock_txt_proc),
+            ),
+            patch.object(
+                organizer, "_fallback_by_extension", return_value=[fallback_proc]
+            ) as mock_fb,
+        ):
+            res = organizer.organize(tmp_path / "input", tmp_path / "output")
+
+        mock_fb.assert_called_once_with([f])
+        assert res.organized_structure == {"CAD": ["model.dwg"]}
+        assert res.processed_files == 1
+
+    def test_organize_images_when_vision_disabled(self, organizer, tmp_path):
+        organizer.enable_vision = False
+        img = tmp_path / "input" / "photo.jpg"
+        img.parent.mkdir(parents=True)
+        img.write_text("img")
+
+        fallback_proc = MagicMock(error=None, folder_name="Images", filename="photo", file_path=img)
+        with (
+            patch.object(organizer, "_init_vision_processor") as mock_init_vis,
+            patch.object(
+                organizer, "_fallback_by_extension", return_value=[fallback_proc]
+            ) as mock_fb,
+        ):
+            res = organizer.organize(tmp_path / "input", tmp_path / "output")
+
+        mock_init_vis.assert_not_called()
+        mock_fb.assert_called_once_with([img])
+        assert res.organized_structure == {"Images": ["photo.jpg"]}
+        assert res.processed_files == 1
 
     def test_organize_vision_not_ready_falls_back(self, organizer, tmp_path):
         img = tmp_path / "input" / "img.jpg"
@@ -352,7 +480,14 @@ class TestOrganizePipelinesAndExecution:
         mock_aud.assert_called_once_with([aud])
         mock_vid.assert_called_once_with([vid])
         assert result.total_files == 4
+        assert result.processed_files == 3
+        assert result.failed_files == 0
         assert result.skipped_files == 1
+        assert result.organized_structure == {
+            "CAD": ["cad.dwg"],
+            "Audio": ["track.mp3"],
+            "Video": ["clip.mp4"],
+        }
 
     def test_organize_no_files_processed_returns_early(self, organizer, tmp_path):
         f = tmp_path / "input" / "f.txt"
@@ -396,7 +531,50 @@ class TestOrganizePipelinesAndExecution:
         assert result.failed_files == 1
         assert ("doc.txt", "minor-error") in result.errors
         assert organizer._last_transaction_id == "txn-real-1"
-        assert "Docs" in result.organized_structure
+        assert organizer._last_output_path == tmp_path / "output"
+        assert organizer._undo_manager is mock_undo
+        assert result.organized_structure == {"Docs": [tmp_path / "output" / "Docs" / "doc.txt"]}
+
+    def test_organize_real_run_raises_and_leaves_uncommitted(self, organizer, tmp_path):
+        organizer.dry_run = False
+        f = tmp_path / "input" / "doc.txt"
+        f.parent.mkdir(parents=True)
+        f.write_text("hello")
+
+        proc = MagicMock(error=None, folder_name="Docs", filename="doc", file_path=f)
+        with (
+            patch.object(organizer, "_init_text_processor"),
+            patch.object(organizer, "_process_text_files", return_value=[proc]),
+            patch("file_organizer.core.organizer.execute_plan", side_effect=OSError("Disk full")),
+        ):
+            with pytest.raises(OSError, match="Disk full"):
+                organizer.organize(tmp_path / "input", tmp_path / "output")
+        assert organizer._last_transaction_id is None
+
+    def test_organize_exception_still_cleans_up_processors(self, organizer, tmp_path):
+        img = tmp_path / "input" / "photo.jpg"
+        img.parent.mkdir(parents=True)
+        img.write_text("photo")
+
+        mock_vis_proc = MagicMock()
+        mock_vis_proc.vision_model.is_initialized = True
+
+        with (
+            patch.object(
+                organizer,
+                "_init_vision_processor",
+                side_effect=lambda: setattr(organizer, "vision_processor", mock_vis_proc),
+            ),
+            patch.object(
+                organizer,
+                "_process_image_files",
+                side_effect=RuntimeError("Vision crash"),
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="Vision crash"):
+                organizer.organize(tmp_path / "input", tmp_path / "output")
+
+        mock_vis_proc.cleanup.assert_called_once()
 
     def test_undo_when_output_path_is_none(self, organizer):
         organizer._undo_manager = MagicMock()
@@ -424,6 +602,141 @@ class TestOrganizePipelinesAndExecution:
             res = organizer.execute_plan(mock_plan)
         assert res.transaction_id == "txn-3"
         assert res.processed_files == 1
+        assert res.organized_structure == {"Docs": [tmp_path / "out" / "Docs" / "f.txt"]}
+
+    def test_execute_plan_creates_undo_manager_when_none(self, organizer, tmp_path):
+        organizer._undo_manager = None
+        mock_plan = MagicMock(
+            output_path=str(tmp_path / "out"),
+            total_files=1,
+            skipped_files=0,
+            failed_files=0,
+            deduplicated_files=0,
+            errors=[],
+        )
+        with (
+            patch("file_organizer.core.organizer.UndoManager") as mock_undo_cls,
+            patch(
+                "file_organizer.core.organizer.execute_plan",
+                return_value=({}, "txn-new", []),
+            ),
+        ):
+            mock_undo_inst = MagicMock()
+            mock_undo_cls.return_value = mock_undo_inst
+            res = organizer.execute_plan(mock_plan)
+        assert organizer._undo_manager is mock_undo_inst
+        assert res.transaction_id == "txn-new"
+
+    def test_execute_plan_accumulates_plan_and_execution_errors(self, organizer, tmp_path):
+        organizer._undo_manager = MagicMock()
+        mock_plan = MagicMock(
+            output_path=str(tmp_path / "out"),
+            total_files=3,
+            skipped_files=1,
+            failed_files=1,
+            deduplicated_files=1,
+            errors=[("plan_err.txt", "Plan error")],
+        )
+        with patch(
+            "file_organizer.core.organizer.execute_plan",
+            return_value=(
+                {"Docs": [tmp_path / "out" / "Docs" / "f.txt"]},
+                "txn-4",
+                [("exec_err.txt", "Exec error")],
+            ),
+        ):
+            res = organizer.execute_plan(mock_plan)
+        assert res.transaction_id == "txn-4"
+        assert res.total_files == 3
+        assert res.processed_files == 1
+        assert res.skipped_files == 1
+        assert res.failed_files == 2  # 1 from plan + 1 from execution
+        assert res.deduplicated_files == 1
+        assert res.errors == [("plan_err.txt", "Plan error"), ("exec_err.txt", "Exec error")]
+        assert res.organized_structure == {"Docs": [tmp_path / "out" / "Docs" / "f.txt"]}
+        assert organizer._last_transaction_id == "txn-4"
+        assert organizer._last_output_path == tmp_path / "out"
+
+    def test_build_plan_passes_skip_existing(self, organizer, tmp_path):
+        mock_plan = MagicMock(spec=OrganizationPlan)
+        mock_result = MagicMock(plan=mock_plan)
+        with patch.object(organizer, "organize", return_value=mock_result) as mock_org:
+            res = organizer.build_plan(tmp_path / "in", tmp_path / "out", skip_existing=False)
+        mock_org.assert_called_once_with(tmp_path / "in", tmp_path / "out", skip_existing=False)
+        assert res is mock_plan
+
+    def test_process_text_files_forwards_all_arguments(self, organizer, tmp_path):
+        f = tmp_path / "test.txt"
+        organizer.text_processor = MagicMock()
+        mock_parallel = MagicMock()
+        organizer.parallel_processor = mock_parallel
+
+        with patch(
+            "file_organizer.core.organizer.dispatcher.process_text_files",
+            return_value=[],
+        ) as mock_dispatch:
+            res = organizer._process_text_files(
+                [f],
+                scan_root=tmp_path,
+                generate_tags=True,
+                tag_style="compact",
+                tag_prompt="custom prompt",
+            )
+
+        assert res == []
+        mock_dispatch.assert_called_once_with(
+            [f],
+            organizer.text_processor,
+            mock_parallel,
+            organizer.console,
+            scan_root=tmp_path,
+            generate_tags=True,
+            tag_style="compact",
+            tag_prompt="custom prompt",
+        )
+
+    def test_process_image_files_forwards_all_arguments(self, organizer, tmp_path):
+        f = tmp_path / "img.png"
+        organizer.vision_processor = MagicMock()
+        mock_parallel = MagicMock()
+        organizer.parallel_processor = mock_parallel
+
+        with patch(
+            "file_organizer.core.organizer.dispatcher.process_image_files",
+            return_value=[],
+        ) as mock_dispatch:
+            res = organizer._process_image_files(
+                [f],
+                context_root=tmp_path,
+                generate_tags=True,
+                tag_style="detailed",
+                tag_prompt="image prompt",
+            )
+
+        assert res == []
+        mock_dispatch.assert_called_once_with(
+            [f],
+            organizer.vision_processor,
+            mock_parallel,
+            organizer.console,
+            context_root=tmp_path,
+            generate_tags=True,
+            tag_style="detailed",
+            tag_prompt="image prompt",
+        )
+
+    def test_process_video_files_forwards_all_arguments(self, organizer, tmp_path):
+        f = tmp_path / "clip.mp4"
+        with patch(
+            "file_organizer.core.organizer.dispatcher.process_video_files",
+            return_value=[],
+        ) as mock_dispatch:
+            from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+
+            res = organizer._process_video_files([f])
+
+        assert res == []
+        mock_dispatch.assert_called_once_with([f], extractor_cls=VideoMetadataExtractor)
 
     def test_hash_file_safedir_not_implemented_fallback(self, organizer, tmp_path):
         f = tmp_path / "test.txt"
@@ -442,6 +755,7 @@ class TestOrganizePipelinesAndExecution:
     def test_process_audio_files_initializes_transcriber(self, organizer, tmp_path):
         organizer.transcribe_audio = True
         organizer.whisper_model = "base"
+        organizer.max_transcribe_seconds = 120.0
         f = tmp_path / "sample.mp3"
 
         mock_audio_model = MagicMock()
@@ -457,17 +771,26 @@ class TestOrganizePipelinesAndExecution:
             res = organizer._process_audio_files([f])
 
             assert res == []
+            mock_audio_model_cls.assert_called_once()
+            call_config = mock_audio_model_cls.call_args[0][0]
+            assert call_config.name == "base"
+            assert call_config.model_type == ModelType.AUDIO
             mock_audio_model.initialize.assert_called_once()
             assert organizer._audio_model is mock_audio_model
             mock_disp.assert_called_once()
             assert mock_disp.call_args[1]["transcriber"] is mock_audio_model
+            assert mock_disp.call_args[1]["max_transcribe_seconds"] == 120.0
+            from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
 
-            # Second call reuses already initialized _audio_model
+            assert mock_disp.call_args[1]["extractor_cls"] is AudioMetadataExtractor
+
+            # Second call reuses already initialized _audio_model without recreating AudioModel
             with patch(
                 "file_organizer.core.dispatcher.process_audio_files", return_value=[]
             ) as mock_disp2:
                 organizer._process_audio_files([f])
             assert mock_disp2.call_args[1]["transcriber"] is mock_audio_model
+            assert mock_audio_model_cls.call_count == 1
 
     def test_organize_content_deduplication(self, organizer, tmp_path):
         f1 = tmp_path / "input" / "doc1.txt"
