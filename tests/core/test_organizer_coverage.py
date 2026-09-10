@@ -34,6 +34,57 @@ class TestInit:
         assert organizer.dry_run is True
         assert organizer._undo_manager is None
 
+    def test_tag_defaults_are_false_and_none(self, organizer):
+        """generate_tags/tag_style/tag_prompt default to off when not supplied."""
+        assert organizer.generate_tags is False
+        assert organizer.tag_style is None
+        assert organizer.tag_prompt is None
+
+    def test_generate_tags_kwarg_stored(self):
+        """Passing generate_tags=True directly is stored on the instance."""
+        with patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock()),
+        ):
+            org = FileOrganizer(dry_run=True, generate_tags=True)
+        assert org.generate_tags is True
+        assert org.organize_options.generate_tags is True
+
+    def test_tag_style_and_prompt_kwarg_stored(self):
+        """tag_style and tag_prompt are stored when passed alongside generate_tags."""
+        with patch(
+            "file_organizer.config.provider_env.get_model_configs",
+            return_value=(MagicMock(), MagicMock()),
+        ):
+            org = FileOrganizer(
+                dry_run=True,
+                generate_tags=True,
+                tag_style="descriptive",
+                tag_prompt="focus on content",
+            )
+        assert org.tag_style == "descriptive"
+        assert org.tag_prompt == "focus on content"
+        assert org.organize_options.tag_style == "descriptive"
+        assert org.organize_options.tag_prompt == "focus on content"
+
+    def test_tag_params_extracted_from_organize_options(self):
+        """When organize_options is supplied, tag fields are read from it."""
+        from file_organizer.core.organize_options import OrganizeOptions
+        from file_organizer.models.base import ModelConfig, ModelType
+
+        text_cfg = ModelConfig(name="text-model", model_type=ModelType.TEXT)
+        vision_cfg = ModelConfig(name="vision-model", model_type=ModelType.VISION)
+        opts = OrganizeOptions(generate_tags=True, tag_style="descriptive", tag_prompt="brief")
+        org = FileOrganizer(
+            dry_run=True,
+            text_model_config=text_cfg,
+            vision_model_config=vision_cfg,
+            organize_options=opts,
+        )
+        assert org.generate_tags is True
+        assert org.tag_style == "descriptive"
+        assert org.tag_prompt == "brief"
+
 
 # ---------------------------------------------------------------------------
 # _collect_files
