@@ -503,5 +503,7 @@ class TestCachedProviders:
         try:
             limiter = get_login_rate_limiter(settings)
             assert isinstance(limiter, InMemoryLoginRateLimiter)
+            assert limiter.max_attempts == 3
+            assert limiter.window_seconds == 30
         finally:
             _login_rate_limiter_cached.cache_clear()

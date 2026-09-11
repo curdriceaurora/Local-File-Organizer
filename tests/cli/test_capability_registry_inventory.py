@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import click
 import pytest
 import typer.core
 import typer.main
@@ -26,9 +27,12 @@ def _discover_entry_points(
     own group (and cli/lazy.py's LazyCommandProxy) are built on typer's
     vendored Click fork, not real click.Group, so that isinstance check
     would silently stop recursing into every lazy sub-app (see
-    cli/_typer_compat.py). Likewise, a parameter is checked against
-    ``typer.core.TyperOption`` -- the class typer's own Option decorator
-    actually produces -- instead of real ``click.Option``.
+    cli/_typer_compat.py). Likewise, a parameter is checked against both
+    ``typer.core.TyperOption`` (what typer's own ``Option`` decorator
+    produces) and real ``click.Option`` (what cli/profile.py's raw
+    ``@click.option()``-decorated commands produce) -- neither is a
+    subclass of the other post-0.26, so checking only one would silently
+    drop every option path from whichever kind of command isn't checked.
     """
     commands: set[str] = set()
     resolvable: set[str] = set()
@@ -42,7 +46,7 @@ def _discover_entry_points(
         resolvable.add(serialized_path)
         child_context = Context(command, parent=context)
         for parameter in command.get_params(child_context):
-            if isinstance(parameter, typer.core.TyperOption):
+            if isinstance(parameter, (typer.core.TyperOption, click.Option)):
                 resolvable.update(
                     f"{serialized_path} {option}"
                     for option in (*parameter.opts, *parameter.secondary_opts)

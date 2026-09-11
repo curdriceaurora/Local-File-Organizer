@@ -585,7 +585,8 @@ class TestOrganizePipelinesAndExecution:
             mock_cleanup.assert_not_called()
 
     def test_execute_plan_when_undo_manager_already_set(self, organizer, tmp_path):
-        organizer._undo_manager = MagicMock()
+        existing_manager = MagicMock()
+        organizer._undo_manager = existing_manager
         mock_plan = MagicMock(
             output_path=str(tmp_path / "out"),
             total_files=1,
@@ -597,8 +598,10 @@ class TestOrganizePipelinesAndExecution:
         with patch(
             "file_organizer.core.organizer.execute_plan",
             return_value=({"Docs": [tmp_path / "out" / "Docs" / "f.txt"]}, "txn-3", []),
-        ):
+        ) as mock_execute_plan:
             res = organizer.execute_plan(mock_plan)
+        mock_execute_plan.assert_called_once_with(mock_plan, undo_manager=existing_manager)
+        assert organizer._undo_manager is existing_manager
         assert res.transaction_id == "txn-3"
         assert res.processed_files == 1
         assert res.organized_structure == {"Docs": [tmp_path / "out" / "Docs" / "f.txt"]}
