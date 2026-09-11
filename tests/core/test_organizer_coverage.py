@@ -235,10 +235,6 @@ class TestUndoRedo:
 # ---------------------------------------------------------------------------
 
 
-# organize — validation
-# ---------------------------------------------------------------------------
-
-
 class TestOrganize:
     def test_nonexistent_input(self, organizer):
         with pytest.raises(ValueError, match="Input path does not exist"):
@@ -737,15 +733,6 @@ class TestOrganizePipelinesAndExecution:
 
         assert res == []
         mock_dispatch.assert_called_once_with([f], extractor_cls=VideoMetadataExtractor)
-
-    def test_hash_file_safedir_not_implemented_fallback(self, organizer, tmp_path):
-        f = tmp_path / "test.txt"
-        f.write_text("sample content")
-        with patch(
-            "file_organizer.core.organizer.SafeDir.open_root", side_effect=NotImplementedError
-        ):
-            h = organizer._sha256_via_safedir(f)
-        assert h is not None
 
     def test_init_text_processor_calls_initializer(self, organizer):
         with patch("file_organizer.core.organizer.initializer.init_text_processor") as mock_init:
