@@ -34,9 +34,9 @@ def _get_state() -> CLIState:
     Returns:
         CLIState: the active CLIState from the context, or a default `CLIState` instance when no applicable context exists.
     """
-    import click
+    from file_organizer.cli._typer_compat import get_current_context
 
-    ctx = click.get_current_context(silent=True)
+    ctx = get_current_context(silent=True)
     if ctx is not None and isinstance(ctx.obj, CLIState):
         return ctx.obj
     return CLIState()
