@@ -18,6 +18,25 @@ pytestmark = [pytest.mark.unit]
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _reload_config_cli_under_unit_context() -> None:
+    """Force config_cli's module-level code to execute under this file's unit context.
+
+    ``cli/lazy.py`` imports ``config_cli`` lazily on first ``fo config ...``
+    dispatch and Python only runs a module's top-level code once per
+    process; whichever test happens to be the first to trigger that import
+    in the full combined run is the only one whose coverage context sees
+    those lines. Reloading here pins that first execution to this
+    unit-marked file regardless of collection/run order (same pattern as
+    the ``file_organizer.api.db`` reload in tests/api/test_db_module.py).
+    """
+    import importlib
+
+    import file_organizer.cli.config_cli
+
+    importlib.reload(file_organizer.cli.config_cli)
+
+
 def _make_config(
     profile_name: str = "default",
     methodology: str = "none",
@@ -180,3 +199,21 @@ class TestConfigEdit:
         result = runner.invoke(app, ["config", "edit", "--methodology", "para"])
         assert result.exit_code == 0
         assert cfg.default_methodology == "para"
+
+    @patch("file_organizer.config.ConfigManager")
+    def test_edit_unsupported_config_version_exits_with_error(self, mock_cls: MagicMock) -> None:
+        from file_organizer.config.manager import UnsupportedConfigVersionError
+
+        mock_mgr = MagicMock()
+        mock_cls.return_value = mock_mgr
+        cfg = _make_config()
+        mock_mgr.load.return_value = cfg
+        mock_mgr.save.side_effect = UnsupportedConfigVersionError("default", 99)
+
+        result = runner.invoke(app, ["config", "edit", "--text-model", "llama3:8b"])
+
+        normalized = " ".join(result.output.split())
+        assert result.exit_code == 1
+        assert "unsupported config version" in normalized
+        assert "on-disk schema version 99 is unsupported" in normalized
+        assert "Saved" not in normalized

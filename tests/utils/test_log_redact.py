@@ -747,6 +747,7 @@ class TestContract:
         from file_organizer.utils.log_redact import install_on_root
 
         original_factory = logging.getLogRecordFactory()
+        logging.setLogRecordFactory(logging.LogRecord)
         try:
             installed = install_on_root()
             # The filter instance stashes the loguru patcher when the
@@ -991,8 +992,10 @@ class TestErrorHandlingFallbacks:
         from file_organizer.utils.log_redact import install_on_root
 
         original_factory = logging.getLogRecordFactory()
+        logging.setLogRecordFactory(logging.LogRecord)
         try:
             install_on_root()
+            logging.getLogger().warning("trigger redacting factory")
             factory_after_first = logging.getLogRecordFactory()
             install_on_root()  # second call — hits the 456->467 branch
             factory_after_second = logging.getLogRecordFactory()

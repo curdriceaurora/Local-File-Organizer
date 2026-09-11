@@ -16,6 +16,7 @@ from typing import NamedTuple
 import click
 import pytest
 import typer
+import typer.core
 
 from file_organizer.cli.lazy import LAZY_COMMANDS
 from tests.docs.conftest import DOCS_DIR
@@ -77,8 +78,13 @@ def _collect_commands(
         cmd = group.commands[name]
         full = f"{prefix} {name}".strip() if prefix else name
 
-        if isinstance(cmd, click.Group):
-            # Recurse into sub-groups
+        if isinstance(cmd, (click.Group, typer.core.TyperGroup)):
+            # Recurse into sub-groups. Checked against both real click.Group
+            # and typer.core.TyperGroup: under typer >= 0.26, TyperGroup is
+            # built on typer's own vendored Click fork and is no longer a
+            # subclass of real click.Group (see cli/_typer_compat.py) --
+            # checking only one would silently stop recursing into whichever
+            # kind of sub-group isn't checked.
             results.extend(_collect_commands(cmd, prefix=full))
         else:
             # Leaf command — collect required params
@@ -89,7 +95,16 @@ def _collect_commands(
                 # Skip the implicit --help flag
                 if p.name == "help":
                     continue
-                kind = "argument" if isinstance(p, click.Argument) else "option"
+                # Checked against both Argument classes for the same reason
+                # as the Group check above: typer.core.TyperArgument (what
+                # typer's own Argument() produces under typer >= 0.26) is
+                # not a subclass of real click.Argument (what cli/profile.py's
+                # raw @click.argument()-decorated commands produce).
+                kind = (
+                    "argument"
+                    if isinstance(p, (click.Argument, typer.core.TyperArgument))
+                    else "option"
+                )
                 # Get Click's rendered metavar (e.g., PROFILE_NAME vs NAME)
                 metavar = p.metavar if hasattr(p, "metavar") else None
                 params.append(_Param(name=p.name, kind=kind, metavar=metavar))
@@ -123,7 +138,7 @@ def _all_registered_commands() -> list[_Command]:
 
         if isinstance(obj, typer.Typer):
             lazy_commands = _collect_commands(typer.main.get_group(obj), prefix=name)
-        elif isinstance(obj, click.Group):
+        elif isinstance(obj, (click.Group, typer.core.TyperGroup)):
             lazy_commands = _collect_commands(obj, prefix=name)
         else:
             lazy_commands = [_Command(path=name, required_params=[])]

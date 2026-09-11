@@ -109,6 +109,7 @@ class TestGetEngine:
         engine = get_engine(":memory:", echo=True)
         assert engine.echo is True
         get_engine.cache_clear()
+        get_session_factory.cache_clear()
 
 
 class TestSqliteBusyTimeout:

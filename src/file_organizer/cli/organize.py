@@ -8,12 +8,11 @@ from io import StringIO
 from pathlib import Path
 from typing import Annotated, Any
 
-import click
 import typer
-from click.core import ParameterSource
 from rich.console import Console
 from rich.panel import Panel
 
+from file_organizer.cli._typer_compat import ParameterSource, get_current_context
 from file_organizer.cli.path_validation import (
     resolve_cli_path,
     validate_pair,
@@ -60,7 +59,7 @@ def _check_setup_completed() -> bool:
     config = ConfigManager().load()
     if not config.setup_completed:
         if _get_state().json_output:
-            context = click.get_current_context(silent=True)
+            context = get_current_context(silent=True)
             _emit_json(
                 {
                     "schema_version": _JSON_SCHEMA_VERSION,
