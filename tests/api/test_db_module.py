@@ -14,9 +14,13 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture(autouse=True)
 def _clear_lru_caches():
-    """Clear engine/session LRU caches before and after each test."""
+    """Clear engine/session LRU caches and ensure db module is executed under unit context."""
+    import importlib
+
+    import file_organizer.api.db
     from file_organizer.api.database import get_engine, get_session_factory
 
+    importlib.reload(file_organizer.api.db)
     get_engine.cache_clear()
     get_session_factory.cache_clear()
     yield
