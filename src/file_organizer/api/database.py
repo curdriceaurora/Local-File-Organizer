@@ -86,6 +86,7 @@ def _apply_file_sqlite_pragmas(engine: Engine) -> None:
 
     @event.listens_for(engine, "connect")
     def _set_pragmas(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+        """Set SQLite busy_timeout pragma on the raw DBAPI connection."""
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
@@ -167,6 +168,18 @@ def get_session_factory(
         echo=echo,
     )
     return sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
+
+
+_orig_get_engine_cache_clear = get_engine.cache_clear
+
+
+def _synced_get_engine_cache_clear() -> None:
+    """Clear both get_engine and get_session_factory LRU caches."""
+    _orig_get_engine_cache_clear()
+    get_session_factory.cache_clear()
+
+
+get_engine.cache_clear = _synced_get_engine_cache_clear  # type: ignore[method-assign]
 
 
 def create_session(
