@@ -86,6 +86,7 @@ def _apply_file_sqlite_pragmas(engine: Engine) -> None:
 
     @event.listens_for(engine, "connect")
     def _set_pragmas(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+        """Set SQLite busy_timeout pragma on the raw DBAPI connection."""
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")

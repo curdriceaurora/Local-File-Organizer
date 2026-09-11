@@ -323,26 +323,35 @@ class TestEntryPoint:
         assert exc_info.value.code == 130
 
     def test_main_click_abort_exits_130(self) -> None:
-        """click.Abort (Click's standalone_mode=False translation of Ctrl+C) exits 130."""
-        import click
+        """Click's standalone_mode=False translation of Ctrl+C exits 130.
 
+        Uses ``cli._typer_compat.Abort`` rather than real ``click.Abort``:
+        under typer >= 0.26, ``app(standalone_mode=False)`` raises typer's
+        own ``typer.Abort``, not real click's (see cli/_typer_compat.py) --
+        mocking with the real-click class would silently stop exercising
+        the except clause it is meant to test.
+        """
+        from file_organizer.cli._typer_compat import Abort
         from file_organizer.cli.main import main
 
         with (
             patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Abort),
+            patch("file_organizer.cli.main.app", side_effect=Abort),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
         assert exc_info.value.code == 130
 
     def test_main_usage_error_shows_and_exits_with_its_code(self) -> None:
-        """click.UsageError prints the usage message and exits with its own code."""
-        import click
+        """A usage error prints the usage message and exits with its own code.
 
+        Uses ``cli._typer_compat.UsageError`` -- see the Abort test above
+        for why the real-click class is the wrong one to mock with here.
+        """
+        from file_organizer.cli._typer_compat import UsageError
         from file_organizer.cli.main import main
 
-        usage_error = click.exceptions.UsageError("bad usage")
+        usage_error = UsageError("bad usage")
         with (
             patch("file_organizer.cli.main._register_profile_command"),
             patch("file_organizer.cli.main.app", side_effect=usage_error),
@@ -354,14 +363,17 @@ class TestEntryPoint:
         assert exc_info.value.code == usage_error.exit_code
 
     def test_main_click_exit_propagates_its_code(self) -> None:
-        """typer.Exit(code=N) round-trips through click.exceptions.Exit to sys.exit(N)."""
-        import click
+        """typer.Exit(code=N) round-trips to sys.exit(N).
 
+        Uses ``cli._typer_compat.Exit`` -- see the Abort test above for why
+        the real-click class is the wrong one to mock with here.
+        """
+        from file_organizer.cli._typer_compat import Exit
         from file_organizer.cli.main import main
 
         with (
             patch("file_organizer.cli.main._register_profile_command"),
-            patch("file_organizer.cli.main.app", side_effect=click.exceptions.Exit(code=3)),
+            patch("file_organizer.cli.main.app", side_effect=Exit(code=3)),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
