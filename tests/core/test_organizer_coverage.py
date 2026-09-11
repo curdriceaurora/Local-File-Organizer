@@ -466,13 +466,16 @@ class TestOrganizePipelinesAndExecution:
                 "_init_text_processor",
                 side_effect=lambda: setattr(organizer, "text_processor", mock_txt_proc),
             ),
-            patch.object(organizer, "_process_text_files", return_value=[proc_cad]) as mock_cad,
+            patch.object(
+                organizer, "_process_text_files", return_value=[proc_cad]
+            ) as mock_process_text,
             patch.object(organizer, "_process_audio_files", return_value=[proc_aud]) as mock_aud,
             patch.object(organizer, "_process_video_files", return_value=[proc_vid]) as mock_vid,
         ):
             result = organizer.organize(tmp_path / "input", tmp_path / "output")
 
-        mock_cad.assert_called_once()
+        mock_process_text.assert_called_once()
+        assert mock_process_text.call_args.args[0] == [cad]
         mock_aud.assert_called_once_with([aud])
         mock_vid.assert_called_once_with([vid])
         assert result.total_files == 4
@@ -735,9 +738,16 @@ class TestOrganizePipelinesAndExecution:
         mock_dispatch.assert_called_once_with([f], extractor_cls=VideoMetadataExtractor)
 
     def test_init_text_processor_calls_initializer(self, organizer):
+        from file_organizer.services import TextProcessor
+
         with patch("file_organizer.core.organizer.initializer.init_text_processor") as mock_init:
             organizer._init_text_processor()
-            mock_init.assert_called_once()
+            mock_init.assert_called_once_with(
+                organizer.text_model_config,
+                organizer.console,
+                processor_cls=TextProcessor,
+            )
+            assert organizer.text_processor is mock_init.return_value
 
     def test_process_audio_files_initializes_transcriber(self, organizer, tmp_path):
         organizer.transcribe_audio = True
@@ -786,16 +796,27 @@ class TestOrganizePipelinesAndExecution:
         f1.write_text("duplicate content")
         f2.write_text("duplicate content")
 
+        mock_txt_proc = MagicMock()
+        mock_txt_proc.text_model.is_initialized = True
+
         proc1 = MagicMock(error=None, folder_name="Docs", filename="doc1", file_path=f1)
         proc2 = MagicMock(error=None, folder_name="Docs", filename="doc2", file_path=f2)
 
         with (
-            patch.object(organizer, "_init_text_processor"),
-            patch.object(organizer, "_process_text_files", return_value=[proc1, proc2]),
+            patch.object(
+                organizer,
+                "_init_text_processor",
+                side_effect=lambda: setattr(organizer, "text_processor", mock_txt_proc),
+            ),
+            patch.object(
+                organizer, "_process_text_files", return_value=[proc1, proc2]
+            ) as mock_process_text,
             patch.object(organizer, "_sha256_via_safedir", return_value="hash-12345"),
         ):
             res = organizer.organize(tmp_path / "input", tmp_path / "output")
 
+        mock_process_text.assert_called_once()
         assert res.deduplicated_files == 1
         assert res.total_files == 2
         assert res.processed_files == 1
+        assert res.organized_structure == {"Docs": ["doc1.txt"]}
