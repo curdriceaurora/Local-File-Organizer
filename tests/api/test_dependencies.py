@@ -11,16 +11,22 @@ from fastapi import HTTPException
 from file_organizer.api.api_keys import generate_api_key, hash_api_key
 from file_organizer.api.auth import create_token_bundle
 from file_organizer.api.auth_models import User
+from file_organizer.api.auth_rate_limit import InMemoryLoginRateLimiter
 from file_organizer.api.auth_store import InMemoryTokenStore
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import (
     AnonymousUser,
     ApiKeyIdentity,
+    _login_rate_limiter_cached,
+    get_config_manager,
     get_current_active_user,
     get_current_user,
+    get_login_rate_limiter,
+    get_settings,
     get_setup_user,
     require_admin_user,
 )
+from file_organizer.config.manager import ConfigManager
 
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
@@ -432,3 +438,70 @@ class TestRequireAdminUser:
         result = require_admin_user(user, settings=settings)
 
         assert result is user
+
+
+# ---------------------------------------------------------------------------
+# Cached providers
+# ---------------------------------------------------------------------------
+#
+# get_settings/get_config_manager/_login_rate_limiter_cached are all
+# @lru_cache-wrapped module-level singletons. Whichever test in the whole
+# process happens to call one FIRST is the only one whose context actually
+# executes the function body -- every later call just returns the cached
+# result. That makes coverage of these bodies depend on pytest-randomly's
+# draw order instead of on any one test, unless a test explicitly clears the
+# cache immediately before calling (to force a fresh body execution in its
+# own context) and clears it again after (so the reset/rebuilt state doesn't
+# leak into whichever test runs next).
+
+
+class TestCachedProviders:
+    def test_get_settings_builds_and_caches(self) -> None:
+        get_settings.cache_clear()
+        try:
+            settings = get_settings()
+            assert isinstance(settings, ApiSettings)
+            assert get_settings() is settings
+        finally:
+            get_settings.cache_clear()
+
+    def test_get_config_manager_builds_and_caches(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("FO_CONFIG_DIR", raising=False)
+        get_config_manager.cache_clear()
+        try:
+            manager = get_config_manager()
+            assert isinstance(manager, ConfigManager)
+            assert get_config_manager() is manager
+        finally:
+            get_config_manager.cache_clear()
+
+    def test_get_config_manager_honors_fo_config_dir_env(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    ) -> None:
+        monkeypatch.setenv("FO_CONFIG_DIR", str(tmp_path))
+        get_config_manager.cache_clear()
+        try:
+            manager = get_config_manager()
+            assert manager.config_dir == tmp_path
+        finally:
+            get_config_manager.cache_clear()
+
+    def test_login_rate_limiter_cached_builds_and_caches(self) -> None:
+        _login_rate_limiter_cached.cache_clear()
+        try:
+            limiter = _login_rate_limiter_cached(None, 5, 60)
+            assert isinstance(limiter, InMemoryLoginRateLimiter)
+            assert _login_rate_limiter_cached(None, 5, 60) is limiter
+        finally:
+            _login_rate_limiter_cached.cache_clear()
+
+    def test_get_login_rate_limiter_forwards_settings_fields(self) -> None:
+        settings = _make_settings(
+            auth_redis_url=None, auth_login_max_attempts=3, auth_login_window_seconds=30
+        )
+        _login_rate_limiter_cached.cache_clear()
+        try:
+            limiter = get_login_rate_limiter(settings)
+            assert isinstance(limiter, InMemoryLoginRateLimiter)
+        finally:
+            _login_rate_limiter_cached.cache_clear()
