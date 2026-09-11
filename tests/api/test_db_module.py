@@ -12,6 +12,22 @@ from sqlalchemy.pool import QueuePool, StaticPool
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _clear_lru_caches():
+    """Clear engine/session LRU caches and ensure db module is executed under unit context."""
+    import importlib
+
+    import file_organizer.api.db
+    from file_organizer.api.database import get_engine, get_session_factory
+
+    importlib.reload(file_organizer.api.db)
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
+    yield
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
+
+
 class TestInitDb:
     """Tests for init_db()."""
 
@@ -114,12 +130,13 @@ class TestCreateSession:
         finally:
             session.close()
 
-    def test_session_can_query(self) -> None:
+    def test_session_can_query(self, tmp_path) -> None:
         """Session returned by create_session should be able to execute queries."""
         from file_organizer.api.db import create_session, init_db
 
-        init_db(":memory:")
-        session = create_session(":memory:")
+        db_url = str(tmp_path / "query_test.db")
+        init_db(db_url)
+        session = create_session(db_url)
         try:
             result = session.execute(text("SELECT COUNT(*) FROM users"))
             count = result.scalar()

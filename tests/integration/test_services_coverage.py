@@ -12,6 +12,7 @@ Files covered:
 from __future__ import annotations
 
 import builtins
+import gc
 import sys
 import types
 from pathlib import Path
@@ -950,6 +951,10 @@ class TestDocumentEmbedder:
         embedder3.clear_cache()
         assert len(embedder3.embedding_cache) == 0
 
+        # Prevent deferred __del__ cache writes on garbage collection
+        embedder.cache_path = None
+        embedder3.cache_path = None
+
     @pytest.mark.extras
     def test_embedder_error_and_edge_cases(self, tmp_path: Path, require_sklearn: None) -> None:
         # 1. fit_transform with 1 document (triggers length * max_df < 1)
@@ -977,17 +982,20 @@ class TestDocumentEmbedder:
 
         # 5. save_model raising pickling errors
         embedder.is_fitted = True
+        embedder.cache_path = None
+        gc.collect()
         with patch("builtins.open", side_effect=OSError("Save failed")):
             with patch.object(_embedder_mod.logger, "error") as mock_err:
                 embedder.save_model(tmp_path / "fail.pkl")
-                mock_err.assert_called_once()
+                mock_err.assert_called_with("Error saving vectorizer: Save failed")
 
         # 6. load_model raising unpickling errors
+        gc.collect()
         with patch("builtins.open", side_effect=OSError("Load failed")):
             with patch.object(_embedder_mod.logger, "error") as mock_err:
                 with pytest.raises(OSError, match="Load failed"):
                     embedder.load_model(tmp_path / "fail.pkl")
-                mock_err.assert_called_once()
+                mock_err.assert_called_with("Error loading vectorizer: Load failed")
 
         # 7. _save_cache with cache_path=None
         embedder.cache_path = None

@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 
 import httpx
 import typer
-from click.core import ParameterSource
 from rich.console import Console
 from rich.table import Table
 
+from file_organizer.cli._typer_compat import ParameterSource
 from file_organizer.cli.organize import (
     _PLAN_PARAMETER_FIELDS,
     _emit_json,
