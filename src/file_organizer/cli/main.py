@@ -11,10 +11,10 @@ import sys
 from pathlib import Path
 from typing import Annotated, Any, cast
 
-import click
 import typer
 from rich.console import Console
 
+from file_organizer.cli._typer_compat import Abort, Command, Exit, UsageError
 from file_organizer.cli.doctor import doctor
 from file_organizer.cli.lazy import LazyTyperGroup
 from file_organizer.cli.organize import organize, preview
@@ -578,7 +578,15 @@ def _register_profile_command() -> None:
                 "Skipping legacy profile registration because the guidance shim is already registered."
             )
             return
-        typer_click_object.add_command(_profile_click_group, "profile")
+        # ``_profile_click_group`` is a real ``click.Group`` (cli/profile.py
+        # predates the lazy-loading infra and is not a Typer app), while
+        # ``typer_click_object`` is built on typer's own vendored click fork
+        # under typer >= 0.26 (see cli/_typer_compat.py). The two Command
+        # base classes are structurally compatible but not the same type, so
+        # ``add_command``'s stricter (post-0.26) type hint rejects it even
+        # though it works fine at runtime -- assign into the same dict
+        # ``add_command`` itself would write to instead.
+        typer_click_object.commands["profile"] = cast(Command, _profile_click_group)
     except ImportError as exc:
         # Profile module may fail to import if intelligence services
         # are not installed; degrade gracefully but log so operators can
@@ -615,18 +623,18 @@ def main() -> None:
 
     try:
         app(standalone_mode=False)
-    except (KeyboardInterrupt, click.exceptions.Abort):
+    except (KeyboardInterrupt, Abort):
         # Click converts KeyboardInterrupt → click.Abort under
         # standalone_mode=False; the bare KeyboardInterrupt branch covers
         # any direct raise (and the unit-test mock path).
         console.print("\n[red]Operation cancelled by user.[/red]")
         sys.exit(130)
-    except click.exceptions.UsageError as e:
+    except UsageError as e:
         # Mimic Click's standalone-mode behavior: print the usage message
         # to stderr and exit with the typed exit code.
         e.show()
         sys.exit(e.exit_code)
-    except click.exceptions.Exit as e:
+    except Exit as e:
         # `typer.Exit(code=N)` round-trips through this branch.
         sys.exit(e.exit_code)
     except BrokenPipeError:

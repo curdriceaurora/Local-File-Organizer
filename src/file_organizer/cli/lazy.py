@@ -6,10 +6,11 @@ import importlib
 import typing
 from collections import OrderedDict
 
-import click
 import typer
 import typer.core
 import typer.main
+
+from file_organizer.cli._typer_compat import Command, Context, HelpFormatter, Parameter
 
 # Mapping of command/group name -> (module_path, attribute_name, short_help)
 LAZY_COMMANDS: dict[str, tuple[str, str, str]] = {
@@ -87,17 +88,25 @@ COMMAND_CATEGORIES: dict[str, str] = {
 HELP_CATEGORY_ORDER: tuple[str, ...] = ("Core", "Interfaces", "Automation", "Advanced")
 
 
-class LazyCommandProxy(click.Group):
-    """A proxy for a click Group that defers importing its module."""
+class LazyCommandProxy(typer.core.TyperGroup):
+    """A proxy for a Typer/Click group that defers importing its module.
+
+    Subclasses ``typer.core.TyperGroup`` (rather than a plain Click group)
+    so it is built on whichever Command base typer's own dispatch expects
+    for a given typer version -- see cli/_typer_compat.py. ``list_commands``/
+    ``get_command`` duck-type on the *loaded* command instead of asserting
+    a specific Group class, since the loaded command may itself be a real
+    ``click.Group`` (a hand-written, non-Typer command module).
+    """
 
     def __init__(self, name: str, module_name: str, attr_name: str, help_text: str) -> None:
         """Initialize the proxy with the target module and command name."""
-        super().__init__(name, help=help_text)
+        super().__init__(name=name, help=help_text)
         self.module_name = module_name
         self.attr_name = attr_name
-        self._real_cmd: click.Command | None = None
+        self._real_cmd: Command | None = None
 
-    def _load(self) -> click.Command:
+    def _load(self) -> Command:
         """Load and return the Click command or group referenced by this proxy, caching the result for subsequent calls.
 
         If the referenced attribute is a `typer.Typer`, it is converted to a Click group; otherwise the attribute is treated as a `click.Command` and returned as-is.
@@ -114,7 +123,7 @@ class LazyCommandProxy(click.Group):
                 self._real_cmd = obj
         return self._real_cmd
 
-    def invoke(self, ctx: click.Context) -> typing.Any:
+    def invoke(self, ctx: Context) -> typing.Any:
         """Invoke the proxied command using the provided Click context.
 
         Parameters:
@@ -125,7 +134,7 @@ class LazyCommandProxy(click.Group):
         """
         return self._load().invoke(ctx)
 
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    def parse_args(self, ctx: Context, args: list[str]) -> list[str]:
         """Delegate argument parsing to the lazily loaded command.
 
         Parameters:
@@ -137,7 +146,7 @@ class LazyCommandProxy(click.Group):
         """
         return self._load().parse_args(ctx, args)
 
-    def get_params(self, ctx: click.Context) -> list[click.Parameter]:
+    def get_params(self, ctx: Context) -> list[Parameter]:
         """Delegate parameter retrieval to the lazily-loaded command.
 
         Returns:
@@ -145,18 +154,24 @@ class LazyCommandProxy(click.Group):
         """
         return self._load().get_params(ctx)
 
-    def list_commands(self, ctx: click.Context) -> list[str]:
+    def list_commands(self, ctx: Context) -> list[str]:
         """Return the subcommand names from the loaded command when that command implements a group interface.
+
+        Duck-types on ``list_commands`` rather than checking against a
+        specific Group class: the loaded command may be a Typer app's own
+        group (built on typer's vendored Click fork) or a hand-written real
+        ``click.Group`` (e.g. cli/profile.py) -- both expose the same method.
 
         Returns:
             list[str]: The subcommand names provided by the loaded command, or an empty list if the loaded command does not provide `list_commands`.
         """
         cmd = self._load()
-        if isinstance(cmd, click.Group):
-            return cmd.list_commands(ctx)
+        list_commands = getattr(cmd, "list_commands", None)
+        if list_commands is not None:
+            return typing.cast("list[str]", list_commands(ctx))
         return []
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+    def get_command(self, ctx: Context, cmd_name: str) -> Command | None:
         """Delegate retrieval of a subcommand to the loaded command when that command is a group.
 
         Parameters:
@@ -167,15 +182,16 @@ class LazyCommandProxy(click.Group):
             click.Command | None: The resolved subcommand if found, `None` otherwise.
         """
         cmd = self._load()
-        if isinstance(cmd, click.Group):
-            return cmd.get_command(ctx, cmd_name)
+        get_command = getattr(cmd, "get_command", None)
+        if get_command is not None:
+            return typing.cast("Command | None", get_command(ctx, cmd_name))
         return None
 
 
 class LazyTyperGroup(typer.core.TyperGroup):
     """A TyperGroup that integrates with LazyCommandProxy for deferred loading."""
 
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    def parse_args(self, ctx: Context, args: list[str]) -> list[str]:
         """Stash presentation-flag presence in ctx.meta before Click consumes args.
 
         Click's ``Group.parse_args`` calls ``resolve_command``, which removes
@@ -211,7 +227,7 @@ class LazyTyperGroup(typer.core.TyperGroup):
         ctx.meta["json_requested"] = "--json" in args_before_terminator
         return super().parse_args(ctx, args)
 
-    def list_commands(self, ctx: click.Context) -> list[str]:
+    def list_commands(self, ctx: Context) -> list[str]:
         """Return a combined list of available command names including lazy-registered commands.
 
         Returns:
@@ -221,7 +237,7 @@ class LazyTyperGroup(typer.core.TyperGroup):
         rv.extend(LAZY_COMMANDS.keys())
         return sorted(set(rv))
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+    def get_command(self, ctx: Context, cmd_name: str) -> Command | None:
         """Resolve a command by name, returning a LazyCommandProxy for entries registered in LAZY_COMMANDS.
 
         If `cmd_name` is present in LAZY_COMMANDS, a LazyCommandProxy configured with the registered
@@ -234,7 +250,7 @@ class LazyTyperGroup(typer.core.TyperGroup):
         Returns:
             click.Command | None: A `LazyCommandProxy` or other `click.Command` when found, `None` if no command matches.
         """
-        command: click.Command | None
+        command: Command | None
         if cmd_name in LAZY_COMMANDS:
             module_name, attr_name, help_text = LAZY_COMMANDS[cmd_name]
             command = LazyCommandProxy(cmd_name, module_name, attr_name, help_text)
@@ -247,9 +263,9 @@ class LazyTyperGroup(typer.core.TyperGroup):
             )
         return command
 
-    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+    def format_commands(self, ctx: Context, formatter: HelpFormatter) -> None:
         """Render top-level commands grouped by user-facing complexity tiers."""
-        command_rows: list[tuple[str, click.Command]] = []
+        command_rows: list[tuple[str, Command]] = []
         for subcommand in self.list_commands(ctx):
             cmd = self.get_command(ctx, subcommand)
             if cmd is None or cmd.hidden:
