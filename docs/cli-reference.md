@@ -1205,7 +1205,7 @@ file-organizer marketplace review PLUGIN_NAME [OPTIONS]
 ```
 
 Arguments:
-- `PLUGIN_NAME` — Name of the plugin to review
+- `PLUGIN_NAME` — Name of the plugin to review (also referred to as `--name`; required)
 
 Options:
 - `--user TEXT` — Reviewer ID (required)
