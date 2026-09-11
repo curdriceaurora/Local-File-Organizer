@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from click import BadParameter
+from typer import BadParameter
 
 from file_organizer.cli.organize import _resolve_parallel_settings
 

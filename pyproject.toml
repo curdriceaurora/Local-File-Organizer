@@ -53,15 +53,17 @@ dependencies = [
     "defusedxml>=0.7",
 
     # CLI and UI
-    # Upper-bounded below 0.26: typer 0.26.0 switched to vendoring its own
-    # internal click fork (typer._click) instead of using the real `click`
-    # package for its Context/Command machinery. Our code calls real
-    # click.get_current_context() (cli/state.py) and builds real click.Context
-    # objects (cli/lazy.py) — under the vendored fork those never observe
-    # typer's own context stack, so state set in a callback silently reads
-    # back as defaults (issue: CLIState.debug/verbose always False, lazy
-    # subcommand --help exits 1 instead of 0). 0.25.x still uses real click.
-    "typer[all]>=0.12,<0.26",
+    # typer 0.26+ vendors its own internal click fork (typer._click) instead
+    # of using the real `click` package for its Context/Command/exception
+    # machinery. Code that needs to interoperate with typer's own dispatch
+    # (context-stack lookups, ParameterSource comparisons, the lazy command
+    # group in cli/lazy.py, and the raw-click `profile` sub-command registered
+    # in cli/main.py) goes through cli/_typer_compat.py, which resolves the
+    # correct Context/Command/ParameterSource/get_current_context for
+    # whichever typer is installed — real `click` below 0.26, `typer._click`
+    # at or above it. See cli/_typer_compat.py for the version-detection
+    # details.
+    "typer[all]>=0.12,<0.28",
     "rich~=15.0",
     "textual~=0.50",
 
@@ -655,6 +657,7 @@ DEP002 = [
 "src/file_organizer/api/service_facade.py" = 75
 "src/file_organizer/api/utils.py" = 80
 "src/file_organizer/cli/__init__.py" = 50
+"src/file_organizer/cli/_typer_compat.py" = 95
 "src/file_organizer/cli/analytics.py" = 85
 "src/file_organizer/cli/api.py" = 55
 "src/file_organizer/cli/api_keys.py" = 95
@@ -1113,6 +1116,7 @@ DEP002 = [
 "src/file_organizer/api/service_facade.py" = 100
 "src/file_organizer/api/utils.py" = 90
 "src/file_organizer/cli/__init__.py" = 100
+"src/file_organizer/cli/_typer_compat.py" = 95
 "src/file_organizer/cli/analytics.py" = 95
 "src/file_organizer/cli/api.py" = 25
 "src/file_organizer/cli/api_keys.py" = 45

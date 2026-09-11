@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import click
 import pytest
+import typer.core
 import typer.main
 
+from file_organizer.cli._typer_compat import Command, Context
 from file_organizer.cli.lazy import DEVELOPER_ONLY_COMMANDS
 from file_organizer.cli.main import app
 from file_organizer.core.capabilities import Surface, get_capability_registry
@@ -14,11 +15,21 @@ pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 def _discover_entry_points(
-    group: click.Group,
-    context: click.Context,
+    group: Command,
+    context: Context,
     path: tuple[str, ...] = ("fo",),
 ) -> tuple[set[str], set[str]]:
-    """Recursively discover command paths and resolvable command/option entry points."""
+    """Recursively discover command paths and resolvable command/option entry points.
+
+    Duck-types on ``list_commands``/``get_command`` rather than checking
+    ``isinstance(command, click.Group)``: under typer >= 0.26, a Typer app's
+    own group (and cli/lazy.py's LazyCommandProxy) are built on typer's
+    vendored Click fork, not real click.Group, so that isinstance check
+    would silently stop recursing into every lazy sub-app (see
+    cli/_typer_compat.py). Likewise, a parameter is checked against
+    ``typer.core.TyperOption`` -- the class typer's own Option decorator
+    actually produces -- instead of real ``click.Option``.
+    """
     commands: set[str] = set()
     resolvable: set[str] = set()
     for command_name in group.list_commands(context):
@@ -29,14 +40,14 @@ def _discover_entry_points(
         command_path = (*path, command_name)
         serialized_path = " ".join(command_path)
         resolvable.add(serialized_path)
-        child_context = click.Context(command, parent=context)
+        child_context = Context(command, parent=context)
         for parameter in command.get_params(child_context):
-            if isinstance(parameter, click.Option):
+            if isinstance(parameter, typer.core.TyperOption):
                 resolvable.update(
                     f"{serialized_path} {option}"
                     for option in (*parameter.opts, *parameter.secondary_opts)
                 )
-        if isinstance(command, click.Group):
+        if hasattr(command, "list_commands"):
             child_commands, child_resolvable = _discover_entry_points(
                 command, child_context, command_path
             )
@@ -49,7 +60,7 @@ def _discover_entry_points(
 
 def test_public_cli_commands_and_registry_entries_match() -> None:
     root = typer.main.get_group(app)
-    discovered, resolvable = _discover_entry_points(root, click.Context(root))
+    discovered, resolvable = _discover_entry_points(root, Context(root))
     registered = {
         entry_point
         for capability in get_capability_registry().capabilities
