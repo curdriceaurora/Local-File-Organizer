@@ -170,18 +170,6 @@ def get_session_factory(
     return sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
-_orig_get_engine_cache_clear = get_engine.cache_clear
-
-
-def _synced_get_engine_cache_clear() -> None:
-    """Clear both get_engine and get_session_factory LRU caches."""
-    _orig_get_engine_cache_clear()
-    get_session_factory.cache_clear()
-
-
-get_engine.cache_clear = _synced_get_engine_cache_clear  # type: ignore[method-assign]
-
-
 def create_session(
     database: str,
     *,

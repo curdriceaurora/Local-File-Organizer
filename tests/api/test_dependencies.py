@@ -22,7 +22,7 @@ from file_organizer.api.dependencies import (
     require_admin_user,
 )
 
-pytestmark = pytest.mark.ci
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 # ---------------------------------------------------------------------------
 # Helpers
