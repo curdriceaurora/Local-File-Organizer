@@ -8,7 +8,13 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.langextract_eval.corpus import CORPUS, ENTITY_CLASSES, GoldEntity, validate_corpus
+from scripts.langextract_eval.corpus import (
+    CORPUS,
+    ENTITY_CLASSES,
+    EvalCase,
+    GoldEntity,
+    validate_corpus,
+)
 from scripts.langextract_eval.extractors import BaselineExtractor
 from scripts.langextract_eval.scoring import (
     CaseResult,
@@ -19,6 +25,7 @@ from scripts.langextract_eval.scoring import (
     match_counts,
     normalize,
     offset_ok,
+    paired_bootstrap_f1,
     score_extractor,
 )
 from scripts.langextract_eval.stub import FABRICATED, OracleStubModel
@@ -113,6 +120,24 @@ class TestGroundedOnly:
         (kept,) = grounded_only([res])
         assert [p.text for p in kept.predictions] == ["Acme Corp"]
         assert (kept.case_id, kept.seconds, kept.llm_calls) == (case.case_id, 1.0, 1)
+
+
+class TestPairedBootstrap:
+    @staticmethod
+    def _perfect(case: EvalCase) -> CaseResult:
+        preds = [Prediction(g.entity_class, g.text) for g in case.gold]
+        return CaseResult(case.case_id, preds, 0.0, 1)
+
+    def test_identical_runs_have_zero_interval(self) -> None:
+        results = [self._perfect(c) for c in CORPUS]
+        assert paired_bootstrap_f1(CORPUS, results, results, samples=200) == (0.0, 0.0, 0.0)
+
+    def test_uniformly_better_run_is_resolved(self) -> None:
+        empty = [CaseResult(c.case_id, [], 0.0, 1) for c in CORPUS if c.gold]
+        perfect = [self._perfect(c) for c in CORPUS if c.gold]
+        diff, lo, hi = paired_bootstrap_f1(CORPUS, empty, perfect, samples=200)
+        assert diff == 1.0
+        assert lo > 0 and hi <= 1.0
 
 
 class TestBaselineWithStub:

@@ -42,11 +42,13 @@ from scripts.langextract_eval.scoring import (
     ExtractorScore,
     Prediction,
     grounded_only,
+    paired_bootstrap_f1,
     score_extractor,
 )
 
 BACKENDS = ("stub", "ollama", "openai", "llama_cpp", "mlx", "claude")
 EXTRACTORS = ("baseline", "lx-adapter", "lx-native")
+BASELINE_NAME = "baseline_generate_structured"
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -155,7 +157,11 @@ def _fmt(x: float | None) -> str:
     return "—" if x is None else f"{x:.3f}"
 
 
-def render_markdown(meta: dict[str, Any], scores: list[ExtractorScore]) -> str:
+def render_markdown(
+    meta: dict[str, Any],
+    scores: list[ExtractorScore],
+    comparisons: list[tuple[str, float, float, float]] | None = None,
+) -> str:
     """Render a human-readable summary of an evaluation run."""
     lines = [
         "# langextract evaluation run",
@@ -192,6 +198,17 @@ def render_markdown(meta: dict[str, Any], scores: list[ExtractorScore]) -> str:
     for cls in ENTITY_CLASSES:
         row = [_fmt(s.per_class[cls].f1) if cls in s.per_class else "—" for s in scores]
         lines.append(f"| {cls} | " + " | ".join(row) + " |")
+    if comparisons:
+        lines += [
+            "",
+            f"## Strict F1 vs {BASELINE_NAME} (paired bootstrap over documents)",
+            "",
+            "| Extractor | ΔF1 | 95% CI | Resolved? |",
+            "|---|---|---|---|",
+        ]
+        for name, diff, lo, hi in comparisons:
+            resolved = "yes" if lo > 0 or hi < 0 else "no (CI spans 0)"
+            lines.append(f"| {name} | {diff:+.3f} | [{lo:+.3f}, {hi:+.3f}] | {resolved} |")
     failures = [(s.name, s.failed_cases) for s in scores if s.failed_cases]
     if failures:
         lines += ["", "## Failed cases", ""]
@@ -276,14 +293,24 @@ def _score_and_write(
     raw: dict[str, list[CaseResult]],
     out_dir: Path,
 ) -> None:
-    scores = []
+    variants: dict[str, list[CaseResult]] = {}
     for name, results in raw.items():
-        scores.append(score_extractor(name, cases, results))
+        variants[name] = results
         if name.startswith("langextract"):
-            scores.append(score_extractor(f"{name}+grounded", cases, grounded_only(results)))
+            variants[f"{name}+grounded"] = grounded_only(results)
+    scores = [score_extractor(name, cases, results) for name, results in variants.items()]
+    comparisons = [
+        (name, *paired_bootstrap_f1(cases, variants[BASELINE_NAME], results))
+        for name, results in variants.items()
+        if BASELINE_NAME in variants and name != BASELINE_NAME
+    ]
     payload = {
         "meta": meta,
         "scores": [s.to_dict() for s in scores],
+        "comparisons": [
+            {"name": n, "delta_f1": round(d, 4), "ci95": [round(lo, 4), round(hi, 4)]}
+            for n, d, lo, hi in comparisons
+        ],
         "results": {
             name: [
                 {
@@ -299,8 +326,8 @@ def _score_and_write(
         },
     }
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "results.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    report = render_markdown(meta, scores)
+    (out_dir / "results.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    report = render_markdown(meta, scores, comparisons)
     (out_dir / "report.md").write_text(report, encoding="utf-8")
     print("\n" + report)
     print(f"Wrote {out_dir / 'results.json'} and {out_dir / 'report.md'}")

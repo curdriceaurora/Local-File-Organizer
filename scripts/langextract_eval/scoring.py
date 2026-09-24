@@ -222,6 +222,51 @@ def grounded_only(results: Iterable[CaseResult]) -> list[CaseResult]:
     ]
 
 
+def paired_bootstrap_f1(
+    cases: Sequence[EvalCase],
+    a: Sequence[CaseResult],
+    b: Sequence[CaseResult],
+    *,
+    samples: int = 2000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
+    """Paired bootstrap over documents for strict micro-F1(b) - F1(a).
+
+    Resamples case ids with replacement (all repeats of a case move
+    together) and returns ``(observed_diff, ci_low, ci_high)`` for a 95%
+    percentile interval. With a small corpus this interval is wide; treat
+    differences whose interval spans 0 as unresolved.
+    """
+    import random
+
+    by_id = {c.case_id: c for c in cases}
+
+    def per_case(results: Sequence[CaseResult]) -> dict[str, ClassCounts]:
+        out: dict[str, ClassCounts] = {}
+        for r in results:
+            total = out.setdefault(r.case_id, ClassCounts())
+            gold = by_id[r.case_id].gold
+            for counts in match_counts(r.predictions, gold, _strict_eq).values():
+                total.add(counts)
+        return out
+
+    ca, cb = per_case(a), per_case(b)
+    ids = sorted(set(ca) & set(cb))
+
+    def f1(counts: dict[str, ClassCounts], sample: Iterable[str]) -> float:
+        total = ClassCounts()
+        for cid in sample:
+            total.add(counts[cid])
+        return total.f1
+
+    observed = f1(cb, ids) - f1(ca, ids)
+    rng = random.Random(seed)
+    diffs = sorted(
+        f1(cb, s) - f1(ca, s) for s in ([rng.choice(ids) for _ in ids] for _ in range(samples))
+    )
+    return observed, diffs[int(0.025 * samples)], diffs[int(0.975 * samples) - 1]
+
+
 def score_extractor(
     name: str, cases: Iterable[EvalCase], results: Iterable[CaseResult]
 ) -> ExtractorScore:
