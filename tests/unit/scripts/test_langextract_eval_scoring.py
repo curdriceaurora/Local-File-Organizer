@@ -54,6 +54,15 @@ class TestCorpus:
         bad = CORPUS[0].__class__("x", "plain_text", "abc", (GoldEntity("person", "zzz"),))
         assert validate_corpus((bad,)) == ["x: gold span 'zzz' not in text"]
 
+    def test_validate_flags_duplicate_ids_and_unknown_classes(self) -> None:
+        first = EvalCase("same", "plain_text", "Acme", (GoldEntity("organization", "Acme"),))
+        second = EvalCase("same", "plain_text", "Acme", (GoldEntity("unsupported", "Acme"),))
+
+        assert validate_corpus((first, second)) == [
+            "duplicate case_id 'same'",
+            "same: unknown class 'unsupported'",
+        ]
+
 
 class TestNormalizeAndMatch:
     def test_normalize(self) -> None:
@@ -103,6 +112,44 @@ class TestScoreExtractor:
         assert score.failed_cases == [case.case_id]
         assert score.strict.fn == len(case.gold)
         assert score.to_dict()["seconds_per_case"] == 2.0
+
+    def test_aggregate_metrics_keep_distinct_denominators(self) -> None:
+        case = EvalCase(
+            "mixed",
+            "plain_text",
+            "Acme Corp paid $10.",
+            (GoldEntity("organization", "Acme Corp"), GoldEntity("amount", "$10")),
+        )
+        predictions = [
+            Prediction("organization", "Acme Corp", 0, 9, "match_exact"),
+            Prediction("organization", "Acme Corp"),  # duplicate is a false positive
+            Prediction("amount", "$10", 0, 3, "match_fuzzy"),  # incorrect offset
+            Prediction("person", "Invented Person"),
+        ]
+
+        score = score_extractor("mixed", [case], [CaseResult(case.case_id, predictions, 1.25, 2)])
+
+        assert (score.strict.tp, score.strict.fp, score.strict.fn) == (2, 2, 0)
+        assert (score.lenient.tp, score.lenient.fp, score.lenient.fn) == (2, 2, 0)
+        assert (score.per_class["organization"].tp, score.per_class["organization"].fp) == (
+            1,
+            1,
+        )
+        assert score.verbatim_rate == 0.75
+        assert score.offset_accuracy == 0.5
+        assert score.alignment_counts == {"match_exact": 1, "match_fuzzy": 1, "none": 2}
+        assert score.to_dict()["offset_coverage"] == 0.5
+        assert (score.seconds, score.llm_calls) == (1.25, 2)
+
+    def test_empty_case_has_defined_precision_and_no_offset_accuracy(self) -> None:
+        case = EvalCase("empty", "plain_text", "No entities here", ())
+
+        score = score_extractor("empty", [case], [CaseResult(case.case_id, [], 0.0, 0)])
+
+        assert (score.strict.precision, score.strict.recall, score.strict.f1) == (1.0, 1.0, 1.0)
+        assert score.verbatim_rate == 1.0
+        assert score.offset_accuracy is None
+        assert score.to_dict()["offset_coverage"] is None
 
 
 class TestGroundedOnly:
