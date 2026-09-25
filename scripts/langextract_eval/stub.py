@@ -39,7 +39,11 @@ class OracleStubModel(BaseModel):
         super().initialize()
 
     def generate(self, prompt: str, **kwargs: Any) -> str:
-        """Answer with gold spans present in the target text plus one fabrication."""
+        """Return gold spans in the target text plus one fabricated entity as JSON.
+
+        The JSON shape follows the baseline or langextract prompt format.
+        An uninitialized or shutting-down model raises ``RuntimeError``.
+        """
         self._enter_generate()
         try:
             target, lx_style = _target_text(prompt)
@@ -60,5 +64,5 @@ class OracleStubModel(BaseModel):
             self._exit_generate()
 
     def cleanup(self) -> None:
-        """Nothing to release."""
+        """Mark the stub uninitialized; it holds no external resources."""
         self._initialized = False

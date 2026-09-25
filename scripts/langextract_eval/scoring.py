@@ -102,18 +102,19 @@ class ExtractorScore:
 
     @property
     def verbatim_rate(self) -> float:
-        """Share of predictions found verbatim in the source text."""
+        """Share of predictions found in the source, or 1.0 with no predictions."""
         return self.verbatim / self.predictions if self.predictions else 1.0
 
     @property
     def offset_accuracy(self) -> float | None:
-        """Share of offset-carrying predictions whose span matches the text."""
+        """Share of offset spans matching their text, or ``None`` with no spans."""
         return self.offsets_correct / self.with_offsets if self.with_offsets else None
 
     def to_dict(self) -> dict[str, object]:
         """JSON-serializable summary."""
 
         def counts(c: ClassCounts) -> dict[str, float | int]:
+            """Serialize counts with rates rounded to four decimal places."""
             return {
                 "tp": c.tp,
                 "fp": c.fp,
@@ -151,10 +152,12 @@ def normalize(text: str) -> str:
 
 
 def _strict_eq(pred: str, gold: str) -> bool:
+    """Match entity text after the standard case, whitespace, and edge cleanup."""
     return normalize(pred) == normalize(gold)
 
 
 def _lenient_eq(pred: str, gold: str) -> bool:
+    """Match nonempty normalized text when either value contains the other."""
     p, g = normalize(pred), normalize(gold)
     return bool(p) and bool(g) and (p in g or g in p)
 
@@ -205,10 +208,10 @@ def offset_ok(pred: Prediction, source: str) -> bool:
 
 
 def grounded_only(results: Iterable[CaseResult]) -> list[CaseResult]:
-    """Keep only predictions langextract aligned to a source span.
+    """Keep predictions with a start offset while preserving case metadata.
 
-    Models what production code would do with langextract output: drop
-    anything that could not be located in the document.
+    Predictions lacking ``char_start`` are dropped; this does not check the
+    end offset or verify that the span matches the source text.
     """
     return [
         CaseResult(
@@ -242,6 +245,7 @@ def paired_bootstrap_f1(
     by_id = {c.case_id: c for c in cases}
 
     def per_case(results: Sequence[CaseResult]) -> dict[str, ClassCounts]:
+        """Group strict counts by case ID, combining repeats of each case."""
         out: dict[str, ClassCounts] = {}
         for r in results:
             total = out.setdefault(r.case_id, ClassCounts())
@@ -254,6 +258,7 @@ def paired_bootstrap_f1(
     ids = sorted(set(ca) & set(cb))
 
     def f1(counts: dict[str, ClassCounts], sample: Iterable[str]) -> float:
+        """Compute micro-F1 across the sampled case IDs."""
         total = ClassCounts()
         for cid in sample:
             total.add(counts[cid])
@@ -270,7 +275,11 @@ def paired_bootstrap_f1(
 def score_extractor(
     name: str, cases: Iterable[EvalCase], results: Iterable[CaseResult]
 ) -> ExtractorScore:
-    """Aggregate :class:`CaseResult` objects into an :class:`ExtractorScore`."""
+    """Aggregate strict and lenient matches, grounding, timing, and failures.
+
+    Failed case IDs are recorded while their predictions and gold entities
+    still contribute to the metrics.
+    """
     by_id = {c.case_id: c for c in cases}
     score = ExtractorScore(name=name, per_class={k: ClassCounts() for k in ENTITY_CLASSES})
     for res in results:

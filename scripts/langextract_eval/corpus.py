@@ -57,6 +57,7 @@ class EvalCase:
 
 
 def _g(entity_class: str, text: str) -> GoldEntity:
+    """Create an expected extraction for a corpus case."""
     return GoldEntity(entity_class, text)
 
 
@@ -274,7 +275,10 @@ CORPUS: tuple[EvalCase, ...] = (
 
 
 def validate_corpus(corpus: tuple[EvalCase, ...] = CORPUS) -> list[str]:
-    """Return a list of problems (empty when the corpus is well-formed)."""
+    """List duplicate IDs, unknown entity classes, and gold spans absent from text.
+
+    Return an empty list when every case satisfies these checks.
+    """
     problems: list[str] = []
     seen: set[str] = set()
     for case in corpus:

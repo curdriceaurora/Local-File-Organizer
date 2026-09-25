@@ -11,14 +11,12 @@ from file_organizer._compat import StrEnum
 
 
 def _validate_tag_options(tag_style: str | None, tag_prompt: str | None) -> str | None:
-    """Validate ``tag_style`` and return the normalized ``tag_prompt``.
+    """Validate the tag style and return the prompt stripped of surrounding whitespace.
 
-    The validators are imported here, and only for non-default values, because
-    importing ``file_organizer.services`` closes an import cycle (models ->
-    config -> core.organize_options -> services -> models): this module builds
-    a default ``OrganizeOptions()`` at import time, so a module-level import made
-    a cold ``import file_organizer.models`` fail. Both validators are no-ops for
-    ``None``, so skipping them then is equivalent.
+    An empty prompt becomes ``None``. Invalid styles, non-string prompts, and
+    prompts longer than 500 characters after trimming raise ``ValueError``.
+    When both inputs are ``None``, return ``None`` without loading the tagging
+    services.
     """
     if tag_style is None and tag_prompt is None:
         return None
@@ -120,7 +118,11 @@ class OrganizeOptions:
     tag_prompt: str | None = None
 
     def __post_init__(self) -> None:
-        """Reject invalid combinations before filesystem or model work starts."""
+        """Normalize option aliases and the tag prompt, rejecting invalid values.
+
+        Invalid tag styles or prompts raise ``ValueError``, as do conflicting
+        transfer selectors and other invalid option combinations.
+        """
         transfer_mode = _resolve_transfer_mode(self.transfer_mode, self.use_hardlinks)
         methodology = _resolve_methodology(self.methodology)
         object.__setattr__(self, "transfer_mode", transfer_mode)

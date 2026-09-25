@@ -90,7 +90,12 @@ class BaselineExtractor:
         self._max_tokens = max_tokens
 
     def run(self, case: EvalCase) -> CaseResult:
-        """Extract entities from ``case`` and time it."""
+        """Return predictions and elapsed seconds for one structured model call.
+
+        Errors from ``generate_structured`` become a failed result with no
+        predictions and the error text. Errors processing its return value
+        propagate to the caller.
+        """
         t0 = time.perf_counter()
         try:
             parsed = self._model.generate_structured(
@@ -112,6 +117,7 @@ class BaselineExtractor:
 
 
 def _lx() -> Any:
+    """Load langextract or raise ``SystemExit`` with installation guidance."""
     try:
         import langextract
     except ImportError as exc:  # pragma: no cover - exercised manually
@@ -135,12 +141,17 @@ def make_adapter(model: FoBaseModel, temperature: float, max_tokens: int) -> Any
         """Routes langextract inference through ``file_organizer`` models."""
 
         def __init__(self) -> None:
+            """Initialize the adapter with an empty model-call count."""
             super().__init__()
             self.calls = 0
 
         def infer(
             self, batch_prompts: Sequence[str], **kwargs: Any
         ) -> Iterator[Sequence[ScoredOutput]]:
+            """Yield one scored result per prompt and count each attempted model call.
+
+            Project model errors propagate as langextract ``InferenceRuntimeError``.
+            """
             for prompt in batch_prompts:
                 self.calls += 1
                 try:
@@ -155,7 +166,7 @@ def make_adapter(model: FoBaseModel, temperature: float, max_tokens: int) -> Any
 
 
 def make_native_ollama(model_id: str, temperature: float, url: str | None) -> Any:
-    """Return langextract's built-in Ollama provider wrapped with a call counter."""
+    """Return a counted native Ollama provider, using localhost when ``url`` is absent."""
     from langextract.core.base_model import BaseLanguageModel
     from langextract.core.types import ScoredOutput
     from langextract.providers.ollama import OllamaLanguageModel
@@ -168,17 +179,20 @@ def make_native_ollama(model_id: str, temperature: float, url: str | None) -> An
 
     class CountingOllama(BaseLanguageModel):
         def __init__(self) -> None:
+            """Initialize the native provider's model-call count."""
             super().__init__()
             self.calls = 0
 
         @property
         def requires_fence_output(self) -> bool:
+            """Return false because the native provider emits unfenced JSON."""
             # JSON-mode decoding emits raw JSON, never fenced blocks.
             return False
 
         def infer(
             self, batch_prompts: Sequence[str], **kwargs: Any
         ) -> Iterator[Sequence[ScoredOutput]]:
+            """Yield native Ollama responses one prompt at a time and count calls."""
             for prompt in batch_prompts:
                 self.calls += 1
                 yield from inner.infer([prompt], **kwargs)
@@ -199,7 +213,11 @@ class LangExtractExtractor:
         suppress_parse_errors: bool,
         context_window_chars: int | None = None,
     ) -> None:
-        """Configure chunking, passes and resolver strictness."""
+        """Set extraction passes, chunk size, prior context size, and parse handling.
+
+        ``max_char_buffer`` and ``context_window_chars`` are character counts;
+        a ``None`` context size is forwarded to langextract.
+        """
         self.name = name
         self._model = lx_model
         self._max_char_buffer = max_char_buffer
@@ -215,7 +233,12 @@ class LangExtractExtractor:
         ]
 
     def run(self, case: EvalCase) -> CaseResult:
-        """Extract entities from ``case`` and time it."""
+        """Return predictions with alignment data, elapsed seconds, and model calls.
+
+        Errors from ``langextract.extract`` become a failed result with no
+        predictions and the error text. Errors processing its return value
+        propagate to the caller.
+        """
         lx = _lx()
         calls_before = self._model.calls
         t0 = time.perf_counter()

@@ -52,6 +52,7 @@ BASELINE_NAME = "baseline_generate_structured"
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    """Parse evaluation options from ``argv`` or the process arguments."""
     from file_organizer.config.defaults import DEFAULT_TEXT_MODEL
 
     p = argparse.ArgumentParser(
@@ -92,6 +93,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def _make_project_model(args: argparse.Namespace) -> Any:
+    """Initialize the selected project model or offline oracle stub.
+
+    Model construction and initialization errors propagate to the caller.
+    """
     if args.backend == "stub":
         from scripts.langextract_eval.stub import OracleStubModel
 
@@ -114,6 +119,10 @@ def _make_project_model(args: argparse.Namespace) -> Any:
 
 
 def _build_extractors(args: argparse.Namespace, project_model: Any) -> list[Any]:
+    """Build requested extractors in order, omitting native Ollama for other backends.
+
+    Unknown extractor names raise ``SystemExit``; construction errors propagate.
+    """
     from scripts.langextract_eval import extractors as ex
 
     wanted = [e.strip() for e in args.extractors.split(",") if e.strip()]
@@ -144,6 +153,10 @@ def _build_extractors(args: argparse.Namespace, project_model: Any) -> list[Any]
 
 
 def _select_cases(spec: str) -> tuple[EvalCase, ...]:
+    """Select case IDs in corpus order, or return the full corpus when unspecified.
+
+    Unknown IDs raise ``SystemExit``.
+    """
     if not spec:
         return CORPUS
     ids = {s.strip() for s in spec.split(",") if s.strip()}
@@ -154,6 +167,7 @@ def _select_cases(spec: str) -> tuple[EvalCase, ...]:
 
 
 def _version(dist: str) -> str | None:
+    """Return an installed distribution's version, or ``None`` if absent."""
     try:
         return metadata.version(dist)
     except metadata.PackageNotFoundError:
@@ -161,6 +175,7 @@ def _version(dist: str) -> str | None:
 
 
 def _fmt(x: float | None) -> str:
+    """Format a metric to three decimals, using an em dash when undefined."""
     return "—" if x is None else f"{x:.3f}"
 
 
@@ -235,7 +250,13 @@ def render_markdown(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point; returns a process exit code."""
+    """Run or rescore an evaluation and return its process exit code.
+
+    Returns 0 when reports are written. For a new run, returns 2 when model
+    setup fails or 3 when langextract is missing. Individual extraction
+    failures are scored in the reports. Invalid corpus data or requested case
+    and extractor IDs raise ``SystemExit``.
+    """
     args = _parse_args(argv)
     problems = validate_corpus()
     if problems:
@@ -307,6 +328,11 @@ def _score_and_write(
     raw: dict[str, list[CaseResult]],
     out_dir: Path,
 ) -> None:
+    """Score raw runs and write JSON results and a Markdown report to ``out_dir``.
+
+    Langextract runs also receive a grounded-only score; comparisons are
+    included when baseline results are present.
+    """
     variants: dict[str, list[CaseResult]] = {}
     for name, results in raw.items():
         variants[name] = results
@@ -348,7 +374,12 @@ def _score_and_write(
 
 
 def rescore(results_json: Path, out_dir: Path | None) -> int:
-    """Re-score a saved run with the current scoring code (no model needed)."""
+    """Re-score saved results without model calls and return 0 after writing reports.
+
+    Results for cases absent from the current corpus are skipped with a warning.
+    Reports are written to ``results_json.parent`` unless ``out_dir`` is given.
+    Invalid or unreadable input errors propagate to the caller.
+    """
     payload = json.loads(results_json.read_text(encoding="utf-8"))
     by_id = {c.case_id: c for c in CORPUS}
     raw = {
