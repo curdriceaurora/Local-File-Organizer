@@ -8,10 +8,29 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from file_organizer._compat import StrEnum
-from file_organizer.services.auto_tagging.styles import (
-    normalize_tag_prompt,
-    validate_tag_style,
-)
+
+
+def _validate_tag_options(tag_style: str | None, tag_prompt: str | None) -> str | None:
+    """Validate ``tag_style`` and return the normalized ``tag_prompt``.
+
+    The validators are imported here, and only for non-default values, because
+    importing ``file_organizer.services`` closes an import cycle (models ->
+    config -> core.organize_options -> services -> models): this module builds
+    a default ``OrganizeOptions()`` at import time, so a module-level import made
+    a cold ``import file_organizer.models`` fail. Both validators are no-ops for
+    ``None``, so skipping them then is equivalent.
+    """
+    if tag_style is None and tag_prompt is None:
+        return None
+
+    from file_organizer.services.auto_tagging.styles import (
+        normalize_tag_prompt,
+        validate_tag_style,
+    )
+
+    validate_tag_style(tag_style)
+    return normalize_tag_prompt(tag_prompt)
+
 
 ModelProvider = Literal["ollama", "openai", "llama_cpp", "mlx", "claude"]
 
@@ -119,8 +138,7 @@ class OrganizeOptions:
             if not isinstance(getattr(self, field_name), bool):
                 raise ValueError(f"{field_name} must be a boolean")
 
-        validate_tag_style(self.tag_style)
-        normalized_prompt = normalize_tag_prompt(self.tag_prompt)
+        normalized_prompt = _validate_tag_options(self.tag_style, self.tag_prompt)
         object.__setattr__(self, "tag_prompt", normalized_prompt)
 
         if (self.tag_style is not None or normalized_prompt is not None) and not self.generate_tags:

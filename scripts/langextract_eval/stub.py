@@ -12,9 +12,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-# A cold `import file_organizer.models` hits a models <-> services import
-# cycle in src/; loading the config package first resolves it.
-import file_organizer.config  # noqa: F401
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from scripts.langextract_eval.corpus import CORPUS
 
