@@ -175,6 +175,8 @@ def render_markdown(
         f"suppress_parse_errors={meta['suppress_parse_errors']}",
         "",
     ]
+    if meta.get("note"):
+        lines += [f"> **Note:** {meta['note']}", ""]
     if meta["backend"] == "stub":
         lines += ["> **Stub run** — oracle model; metrics validate plumbing only.", ""]
     lines += [
@@ -244,6 +246,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         project_model = _make_project_model(args)
+        # Untimed warm-up: a cold weight load (minutes on CPU) otherwise lands
+        # in the first case's latency, or fails it outright on a load timeout.
+        project_model.generate("Reply with OK.", max_tokens=4)
     except Exception as exc:
         print(f"ERROR: could not initialize {args.backend} model {args.model!r}: {exc}")
         return 2

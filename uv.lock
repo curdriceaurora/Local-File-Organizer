@@ -3,10 +3,10 @@ revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine == 'ARM64' and sys_platform == 'win32'",
-    "python_full_version == '3.13.*' and platform_machine == 'ARM64' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_machine == 'ARM64' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_machine != 'ARM64' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
@@ -2651,7 +2651,7 @@ wheels = [
 
 [[package]]
 name = "langextract"
-version = "1.1.1"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -2672,9 +2672,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/d9/34ca6eb931591a2871bba8e767cd058c7062b04d27fb1abc8c6ff4d22420/langextract-1.1.1.tar.gz", hash = "sha256:6f80423bbde20eced908afcab20479d2c53afa960145ad0bbd72209567cf6961", size = 115244, upload-time = "2025-11-27T04:50:33.128Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/e7/6cf877cdd3d5d3a479c0688ff2b63c665c4319ae35ba00734c9fef36a1d2/langextract-1.7.0.tar.gz", hash = "sha256:cb6dc515583b0fdc0f9eff9dce61b2a3c7c84b0668add4dd4e7be364f4c188ba", size = 147514, upload-time = "2026-09-13T18:58:06.376Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/09/16b77c8914ca7a017349124ec8f23209d483e63a9a516a9d475e395d456d/langextract-1.1.1-py3-none-any.whl", hash = "sha256:cc915d3f2880cd3facc50592e8393148446663a7da1eda804d7b4b8deda52c14", size = 124636, upload-time = "2025-11-27T04:50:31.745Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/ec/2883a93872701045971ea77e30434d72556a557f188df575b154d179854c/langextract-1.7.0-py3-none-any.whl", hash = "sha256:908f8ec696ab13578cdc3862efcf1a4fda929ae426410d99e86977d50e52136d", size = 154297, upload-time = "2026-09-13T18:58:04.896Z" },
 ]
 
 [[package]]
@@ -3032,7 +3032,7 @@ requires-dist = [
     { name = "isort", marker = "extra == 'dev'", specifier = "~=9.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jinja2", marker = "extra == 'web'", specifier = "~=3.1" },
-    { name = "langextract", marker = "extra == 'eval'", specifier = "==1.1.1" },
+    { name = "langextract", marker = "extra == 'eval'", specifier = "==1.7.0" },
     { name = "llama-cpp-python", marker = "extra == 'llama'", specifier = ">=0.2.0" },
     { name = "local-file-organizer", extras = ["archive", "audio", "build", "cad", "claude", "cloud", "dedup", "dev", "gui", "llama", "mlx", "parsers", "scientific", "search", "video", "web"], marker = "extra == 'all'" },
     { name = "loguru", specifier = ">=0.7.0" },
@@ -6299,10 +6299,10 @@ version = "1.18.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine == 'ARM64' and sys_platform == 'win32'",
-    "python_full_version == '3.13.*' and platform_machine == 'ARM64' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_machine == 'ARM64' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_machine != 'ARM64' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",

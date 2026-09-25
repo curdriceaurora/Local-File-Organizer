@@ -268,7 +268,7 @@ search = [
 # Deliberately NOT part of [all]: langextract hard-depends on google-genai,
 # google-cloud-storage, pandas and aiohttp (+27 packages in the lockfile).
 eval = [
-    "langextract==1.1.1",
+    "langextract==1.7.0",
 ]
 
 all = [

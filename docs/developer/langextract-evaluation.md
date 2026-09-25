@@ -1,6 +1,6 @@
 # langextract Evaluation
 
-How we evaluate [langextract](https://pypi.org/project/langextract/) 1.1.1 as a grounded entity extractor for Local File Organizer, and what we found.
+How we evaluate [langextract](https://pypi.org/project/langextract/) (currently 1.7.0; first evaluated at 1.1.1) as a grounded entity extractor for Local File Organizer, and what we found.
 
 ---
 
@@ -14,7 +14,7 @@ This page is for maintainers deciding whether to adopt it. The harness lives in 
 
 ## Setup
 
-The `eval` extra pins `langextract==1.1.1`. It is deliberately not part of `all`.
+The `eval` extra pins `langextract==1.7.0`. It is deliberately not part of `all`.
 
 ```bash
 pip install -e ".[dev,eval]"
@@ -79,60 +79,103 @@ Metrics are defined in `scripts/langextract_eval/scoring.py`:
 
 ## Findings
 
-Recorded runs (raw predictions plus reports) are in `scripts/langextract_eval/results/2026-09-24/`. Re-score any of them without a model:
+Recorded runs (raw predictions plus reports) are committed so anyone can re-score them without a model:
+
+- `scripts/langextract_eval/results/2026-09-25-v1.7.0/`: langextract 1.7.0 (current pin)
+- `scripts/langextract_eval/results/2026-09-24/`: langextract 1.1.1 (first evaluation)
 
 ```bash
-python -m scripts.langextract_eval --rescore scripts/langextract_eval/results/2026-09-24/qwen7b/results.json --output-dir output/langextract_eval/rescored
+python -m scripts.langextract_eval --rescore scripts/langextract_eval/results/2026-09-25-v1.7.0/qwen7b/results.json --output-dir output/langextract_eval/rescored
 ```
 
-Run environment: 4 vCPU, no GPU, Ollama 0.34.4, Python 3.11.15, langextract 1.1.1, temperature 0, `max_char_buffer=1000`, 1 extraction pass, 12 documents with 76 gold entities.
+Run environment: 4 vCPU, no GPU, Ollama 0.34.4, Python 3.11.15, temperature 0, `max_char_buffer=1000`, 1 extraction pass, 12 documents with 76 gold entities.
 
-### Headline numbers
+### Headline numbers (langextract 1.7.0)
 
 `qwen2.5:3b-instruct-q4_K_M` (project default):
 
 | Extractor | Strict P | Strict R | Strict F1 | Lenient F1 | s/case |
 |---|---|---|---|---|---|
-| baseline | 0.754 | 0.645 | 0.695 | 0.738 | 13.5 |
-| langextract adapter | 0.671 | 0.697 | 0.684 | 0.787 | 16.3 |
-| langextract native Ollama | 0.713 | 0.750 | 0.731 | 0.808 | 16.8 |
-| langextract native Ollama, grounded-only | 0.750 | 0.750 | 0.750 | 0.829 | 16.8 |
+| baseline | 0.803 | 0.645 | 0.715 | 0.759 | 14.3 |
+| langextract adapter | 0.662 | 0.671 | 0.667 | 0.758 | 16.3 |
+| langextract native Ollama | 0.713 | 0.750 | 0.731 | 0.808 | 17.7 |
+| langextract native Ollama, grounded-only | 0.750 | 0.750 | 0.750 | 0.829 | 17.7 |
 
 `qwen2.5:7b-instruct-q4_K_M` (project large default):
 
 | Extractor | Strict P | Strict R | Strict F1 | Lenient F1 | s/case |
 |---|---|---|---|---|---|
-| baseline | 0.785 | 0.816 | 0.800 | 0.877 | 32.4 |
-| langextract adapter | 0.812 | 0.908 | 0.857 | 0.907 | 37.7 |
-| langextract native Ollama | 0.784 | 0.908 | 0.841 | 0.878 | 39.7 |
+| baseline | 0.786 | 0.868 | 0.825 | 0.888 | 34.6 |
+| langextract adapter | 0.812 | 0.908 | 0.857 | 0.907 | 39.9 |
+| langextract native Ollama | 0.784 | 0.908 | 0.841 | 0.878 | 41.0 |
 
-Paired bootstrap over documents (strict F1, langextract minus baseline): 3B native grounded-only +0.055, 95% CI [−0.058, +0.206]. 7B adapter +0.057, 95% CI [−0.007, +0.134]. **Every interval spans zero.** The direction favours langextract with both models, but 12 documents cannot resolve a difference of this size.
+The 7B baseline row comes from a separate warm run. Inside the batch run, the baseline's first document failed with an Ollama model-load timeout, so the recorded `results.json` notes this merge. The harness now makes an untimed warm-up call before any extractor runs, to prevent that.
+
+Paired bootstrap over documents (strict F1, langextract minus baseline): 3B native grounded-only +0.035, 95% CI [−0.078, +0.164]. 7B adapter +0.032, 95% CI [−0.030, +0.115]. **Every interval spans zero.**
+
+### 1.1.1 → 1.7.0
+
+- **Drop-in compatible.** The adapter, the native provider call and all tests work unchanged, with no deprecation warnings. The dependency list is identical, and `uv.lock` changes only the langextract line.
+- **Same extractions.** The native Ollama path produced the same entity text on every document with both models, and so did the adapter at 7B. The `--max-char-buffer 3000` ablation is also unchanged (native strict F1 0.703).
+- **Better alignment.** Spans that 1.1.1 labelled `match_fuzzy` are now `match_exact` at the same offsets. A repeated name ("Marcus" in the meeting notes) now points to its own occurrence instead of the first mention. This does not move any score, because matching is text-based.
+- **New options, not used here:** `context_window_chars` carries text from the previous chunk for coreference, and is off by default. `fetch_urls` now defaults to off (the harness already passed `False`).
+
+### Run-to-run variation
+
+At temperature 0, calls that go through the project model layer (the baseline and the langextract adapter) did not always reproduce. The native provider (Ollama JSON mode) reproduced exactly every time. The cause was not investigated.
+
+| Extractor | Strict F1 across runs |
+|---|---|
+| 3B baseline | 0.695, 0.695, 0.715 |
+| 3B langextract adapter | 0.684, 0.684, 0.667 |
+| 3B langextract native | 0.731, 0.731, 0.731 |
+| 7B baseline | 0.800, 0.825 |
+| 7B langextract adapter | 0.857, 0.857 |
+| 7B langextract native | 0.841, 0.841 |
+
+3B runs are: 1.1.1; a 1.7.0 run whose first document included a cold model load (not committed, and its scores match the 1.1.1 run); and the committed 1.7.0 warm run. The swing of up to about 0.025 F1 on a single extractor is the same order as the langextract-versus-baseline gaps, so comparisons need `--repeats` as well as more documents.
+
+### Initial results (langextract 1.1.1, 2026-09-24)
+
+| Model | Extractor | Strict F1 | s/case |
+|---|---|---|---|
+| 3B | baseline | 0.695 | 13.5 |
+| 3B | langextract adapter | 0.684 | 16.3 |
+| 3B | langextract native, grounded-only | 0.750 | 16.8 |
+| 7B | baseline | 0.800 | 32.4 |
+| 7B | langextract adapter | 0.857 | 37.7 |
+| 7B | langextract native | 0.841 | 39.7 |
+
+Bootstrap: 3B native grounded-only +0.055 [−0.058, +0.206]; 7B adapter +0.057 [−0.007, +0.134]. Part of these gaps came from the lower first 7B baseline run (see run-to-run variation).
 
 ### What drives the differences
 
-1. **Recall, via chunking, on long documents.** On the 1,572-character vendor report (two 1,000-character chunks), 3B baseline recall was 0.33, against 0.53 for langextract native. Re-running native with `--max-char-buffer 3000` (one chunk) dropped it to 0.20. At 7B the gap mostly disappears (baseline 0.93, adapter 1.00, native 0.87).
-2. **Small-model early stops.** On the lease, 3B baseline returned one entity (0/7 strict). Both langextract paths found 6/7.
-3. **Reference IDs at 7B.** Strict F1 for `reference_id` was 0.429 for the baseline, against 0.857 for both langextract paths.
-4. **Parse robustness is not a differentiator.** No extractor had a failed case with either model at temperature 0.
+These patterns hold in both the 1.1.1 and 1.7.0 runs:
+
+1. **Recall, via chunking, on long documents.** On the 1,572-character vendor report (two 1,000-character chunks), 3B baseline recall was 0.33, against 0.53 for langextract native, in both versions. Re-running native with `--max-char-buffer 3000` (one chunk) dropped it to 0.20. At 7B the gap mostly disappears.
+2. **Small-model early stops.** On the lease, the 3B baseline stopped early: 1 entity (0/7 strict) in the 1.1.1 run, and 3 entities (2/7) in the 1.7.0 run. Both langextract paths found 6/7 in both.
+3. **Reference IDs at 7B.** Strict F1 for `reference_id` was 0.429 for the baseline in both the 1.1.1 and the 1.7.0 run, against 0.857 for both langextract paths.
+4. **Parse robustness is not a differentiator.** No extractor failed a document on output parsing. The only failure was the model-load timeout described above.
 
 ### What grounding does and does not give you
 
 - **It catches few-shot leakage.** On the long report, 3B langextract emitted entities copied from the worked example ("Ana Silva", garbled "Coho Winery") and dates reformatted to ISO. langextract left these unaligned. Dropping unaligned predictions raised 3B native strict F1 from 0.731 to 0.750 with no recall loss. At 7B there were no unaligned predictions, so the filter changed nothing.
-- **Alignment is not verification.** Fuzzy or lesser alignment still attaches offsets to text that is not in the source. For example, 7B returned "$12,410.33" for a source "12,410.33", and one ISO date got `match_lesser`. Offset accuracy was 0.966–0.986, not 1.0. Code that relies on offsets must itself check that `text[start:end]` equals the extraction.
+- **Alignment is not verification.** Fuzzy or lesser alignment still attaches offsets to text that is not in the source. For example, 7B returned "$12,410.33" for a source "12,410.33", and one ISO date got `match_lesser`. Offset accuracy was 0.966–0.986, not 1.0, in both versions. Code that relies on offsets must itself check that `text[start:end]` equals the extraction.
 
 ### Adapter versus native provider
 
-There is no consistent winner: native led at 3B and the adapter led at 7B. The adapter (`FileOrganizerLanguageModel`) lets every provider we ship run langextract unchanged, so the native provider is not needed.
+There is no consistent quality winner: native led at 3B and the adapter led at 7B. The native provider was the only path that reproduced exactly across runs. The adapter (`FileOrganizerLanguageModel`) lets every provider we ship run langextract unchanged.
 
 ### Cost
 
-- **Calls and latency:** one extra call on the chunked document, and about 20% more wall time per document (3B: 13.5 → 16.3–16.8 s; 7B: 32.4 → 37.7–39.7 s).
-- **Dependencies:** the `eval` extra adds 27 packages to `uv.lock`, including google-genai, google-cloud-storage, pandas and aiohttp. `import langextract` loads pandas and absl eagerly.
+- **Calls and latency:** one extra call on the chunked document, and roughly 15–25% more wall time per document (1.7.0: 3B 14.3 → 16.3–17.7 s; 7B 34.6 → 39.9–41.0 s).
+- **Dependencies:** the `eval` extra adds 27 packages to `uv.lock`, including google-genai, google-cloud-storage, pandas and aiohttp. `import langextract` loaded pandas and absl eagerly in 1.1.1; this was not re-measured for 1.7.0.
 
 ### Recommendation
 
-Do not adopt into the core pipeline yet. The signal is consistently in langextract's favour for recall (long documents, reference IDs, small-model early stops), and its alignment works as a cheap hallucination filter. But no difference is statistically resolved, and it costs about 20% latency plus a heavy dependency tree. Next steps, in order:
+Do not adopt into the core pipeline yet. Upgrading to 1.7.0 changes alignment details, not extraction quality. langextract's advantages are specific: recall on long documents and reference IDs, small-model early stops, and a cheap hallucination filter. But no difference is statistically resolved, run-to-run variation is the same size as the gaps, and it costs 15–25% latency plus a heavy dependency tree. Next steps, in order:
 
 1. Grow the corpus to roughly 50–100 labelled documents from real sample files. This is a rough estimate: interval widths shrink about as 1/√n, and the observed 95% intervals are ±0.07–0.13 at 12 documents.
-2. Re-run on the current langextract release (1.1.1 is six releases behind; bumping the `eval` pin is a one-line change) and with `--passes 2`.
-3. If adoption follows, use it through the adapter in an optional extra with a lazy import, keep only grounded predictions, and verify offsets in our own code.
+2. Run every comparison with `--repeats 3` or more, and find out why the project model layer is not reproducible at temperature 0.
+3. Try `--passes 2`, and `context_window_chars` (new in 1.7.0) for multi-chunk documents.
+4. If adoption follows, use it through the adapter in an optional extra with a lazy import, keep only grounded predictions, and verify offsets in our own code.
