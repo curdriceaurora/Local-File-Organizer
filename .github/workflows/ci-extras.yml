@@ -34,6 +34,7 @@ jobs:
           - gui
           - desktop
           - llama  # sdist-only upstream: this is the real cmake build probe (#882)
+          - eval  # langextract evaluation tooling (scripts/langextract_eval)
     steps: &install-extra-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:

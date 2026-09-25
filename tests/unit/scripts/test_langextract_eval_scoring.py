@@ -1,0 +1,211 @@
+"""Unit tests for the langextract evaluation corpus, scoring and baseline path.
+
+None of these need langextract installed; see
+test_langextract_eval_pipeline.py for the langextract-backed checks.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from scripts.langextract_eval.corpus import (
+    CORPUS,
+    ENTITY_CLASSES,
+    EvalCase,
+    GoldEntity,
+    validate_corpus,
+)
+from scripts.langextract_eval.extractors import BaselineExtractor
+from scripts.langextract_eval.scoring import (
+    CaseResult,
+    ClassCounts,
+    Prediction,
+    grounded_only,
+    in_source,
+    match_counts,
+    normalize,
+    offset_ok,
+    paired_bootstrap_f1,
+    score_extractor,
+)
+from scripts.langextract_eval.stub import FABRICATED, OracleStubModel
+
+pytestmark = pytest.mark.unit
+
+
+def _strict(p: str, g: str) -> bool:
+    return normalize(p) == normalize(g)
+
+
+class TestCorpus:
+    def test_corpus_is_valid(self) -> None:
+        assert validate_corpus() == []
+
+    def test_every_class_has_gold(self) -> None:
+        present = {e.entity_class for c in CORPUS for e in c.gold}
+        assert present == set(ENTITY_CLASSES)
+
+    def test_corpus_exercises_chunking_and_empty_docs(self) -> None:
+        # langextract's default max_char_buffer is 1000 chars.
+        assert any(len(c.text) > 1000 for c in CORPUS)
+        assert any(not c.gold for c in CORPUS)
+
+    def test_validate_flags_bad_spans(self) -> None:
+        bad = CORPUS[0].__class__("x", "plain_text", "abc", (GoldEntity("person", "zzz"),))
+        assert validate_corpus((bad,)) == ["x: gold span 'zzz' not in text"]
+
+    def test_validate_flags_duplicate_ids_and_unknown_classes(self) -> None:
+        first = EvalCase("same", "plain_text", "Acme", (GoldEntity("organization", "Acme"),))
+        second = EvalCase("same", "plain_text", "Acme", (GoldEntity("unsupported", "Acme"),))
+
+        assert validate_corpus((first, second)) == [
+            "duplicate case_id 'same'",
+            "same: unknown class 'unsupported'",
+        ]
+
+
+class TestNormalizeAndMatch:
+    def test_normalize(self) -> None:
+        assert normalize("  Acme   Corp. ") == "acme corp"
+        assert normalize("$8,500.00") == "$8,500.00"
+        assert normalize('"Tenant"') == "tenant"
+
+    def test_duplicates_are_false_positives(self) -> None:
+        gold = [GoldEntity("organization", "Acme Corp")]
+        preds = [Prediction("organization", "Acme Corp"), Prediction("organization", "acme corp")]
+        counts = match_counts(preds, gold, _strict)
+        assert (counts["organization"].tp, counts["organization"].fp) == (1, 1)
+
+    def test_class_mismatch_is_fp_and_fn(self) -> None:
+        gold = [GoldEntity("person", "Acme Corp")]
+        counts = match_counts([Prediction("organization", "Acme Corp")], gold, _strict)
+        assert counts["organization"].fp == 1
+        assert counts["person"].fn == 1
+
+    def test_class_counts_edges(self) -> None:
+        empty = ClassCounts()
+        assert (empty.precision, empty.recall) == (1.0, 1.0)
+        assert ClassCounts(tp=0, fp=1, fn=1).f1 == 0.0
+
+    def test_in_source_and_offsets(self) -> None:
+        src = "Bill to:  Globex\nIndustries"
+        assert in_source("globex industries", src)
+        assert not in_source("Initech", src)
+        assert offset_ok(Prediction("organization", "Globex", 10, 16), src)
+        assert not offset_ok(Prediction("organization", "Globex", 0, 4), src)
+        assert not offset_ok(Prediction("organization", "Globex"), src)
+
+
+class TestScoreExtractor:
+    def test_lenient_credits_containment(self) -> None:
+        case = CORPUS[0]  # invoice_plain
+        preds = [Prediction("reference_id", "Invoice #INV-4821")]
+        score = score_extractor("x", [case], [CaseResult(case.case_id, preds, 1.0, 1)])
+        assert score.strict.tp == 0
+        assert score.lenient.tp == 1
+        assert score.verbatim_rate == 1.0
+
+    def test_errors_are_recorded_and_gold_counts_as_missed(self) -> None:
+        case = CORPUS[0]
+        res = CaseResult(case.case_id, [], 2.0, 1, error="boom")
+        score = score_extractor("x", [case], [res])
+        assert score.failed_cases == [case.case_id]
+        assert score.strict.fn == len(case.gold)
+        assert score.to_dict()["seconds_per_case"] == 2.0
+
+    def test_aggregate_metrics_keep_distinct_denominators(self) -> None:
+        case = EvalCase(
+            "mixed",
+            "plain_text",
+            "Acme Corp paid $10.",
+            (GoldEntity("organization", "Acme Corp"), GoldEntity("amount", "$10")),
+        )
+        predictions = [
+            Prediction("organization", "Acme Corp", 0, 9, "match_exact"),
+            Prediction("organization", "Acme Corp"),  # duplicate is a false positive
+            Prediction("amount", "$10", 0, 3, "match_fuzzy"),  # incorrect offset
+            Prediction("person", "Invented Person"),
+        ]
+
+        score = score_extractor("mixed", [case], [CaseResult(case.case_id, predictions, 1.25, 2)])
+
+        assert (score.strict.tp, score.strict.fp, score.strict.fn) == (2, 2, 0)
+        assert (score.lenient.tp, score.lenient.fp, score.lenient.fn) == (2, 2, 0)
+        assert (score.per_class["organization"].tp, score.per_class["organization"].fp) == (
+            1,
+            1,
+        )
+        assert score.verbatim_rate == 0.75
+        assert score.offset_accuracy == 0.5
+        assert score.alignment_counts == {"match_exact": 1, "match_fuzzy": 1, "none": 2}
+        assert score.to_dict()["offset_coverage"] == 0.5
+        assert (score.seconds, score.llm_calls) == (1.25, 2)
+
+    def test_empty_case_has_defined_precision_and_no_offset_accuracy(self) -> None:
+        case = EvalCase("empty", "plain_text", "No entities here", ())
+
+        score = score_extractor("empty", [case], [CaseResult(case.case_id, [], 0.0, 0)])
+
+        assert (score.strict.precision, score.strict.recall, score.strict.f1) == (1.0, 1.0, 1.0)
+        assert score.verbatim_rate == 1.0
+        assert score.offset_accuracy is None
+        assert score.to_dict()["offset_coverage"] is None
+
+
+class TestGroundedOnly:
+    def test_keeps_only_spans_that_reproduce_their_text(self) -> None:
+        case = CORPUS[0]  # invoice_plain
+        acme = case.text.index("Acme Corp")
+        globex = case.text.index("Globex Industries")
+        res = CaseResult(
+            case.case_id,
+            [
+                Prediction("organization", "Acme Corp", acme, acme + 9, "match_exact"),
+                Prediction("person", "Ana Silva"),  # unaligned: not in the text
+                # Aligned, but the offsets point at different text.
+                Prediction("organization", "Initech", globex, globex + 7, "match_fuzzy"),
+            ],
+            1.0,
+            1,
+        )
+        (kept,) = grounded_only([res], [case])
+        assert [p.text for p in kept.predictions] == ["Acme Corp"]
+        assert (kept.case_id, kept.seconds, kept.llm_calls) == (case.case_id, 1.0, 1)
+
+
+class TestPairedBootstrap:
+    @staticmethod
+    def _perfect(case: EvalCase) -> CaseResult:
+        preds = [Prediction(g.entity_class, g.text) for g in case.gold]
+        return CaseResult(case.case_id, preds, 0.0, 1)
+
+    def test_identical_runs_have_zero_interval(self) -> None:
+        results = [self._perfect(c) for c in CORPUS]
+        assert paired_bootstrap_f1(CORPUS, results, results, samples=200) == (0.0, 0.0, 0.0)
+
+    def test_uniformly_better_run_is_resolved(self) -> None:
+        empty = [CaseResult(c.case_id, [], 0.0, 1) for c in CORPUS if c.gold]
+        perfect = [self._perfect(c) for c in CORPUS if c.gold]
+        diff, lo, hi = paired_bootstrap_f1(CORPUS, empty, perfect, samples=200)
+        assert diff == 1.0
+        assert lo > 0 and hi <= 1.0
+
+
+class TestBaselineWithStub:
+    def test_baseline_end_to_end(self) -> None:
+        model = OracleStubModel()
+        model.initialize()
+        extractor = BaselineExtractor(model, temperature=0.0, max_tokens=512)
+        results = [extractor.run(c) for c in CORPUS]
+        model.safe_cleanup()
+
+        assert all(r.error is None for r in results)
+        score = score_extractor(extractor.name, CORPUS, results)
+        # Oracle returns every gold span, so recall is perfect ...
+        assert score.strict.recall == 1.0
+        # ... and the one fabricated entity per call is never in the source.
+        fabricated = sum(
+            1 for r in results for p in r.predictions if (p.entity_class, p.text) == FABRICATED
+        )
+        assert fabricated == len(CORPUS)
+        assert score.predictions - score.verbatim == fabricated
