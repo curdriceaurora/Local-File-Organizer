@@ -135,6 +135,29 @@ class TestCli:
         assert code == 0
         assert json.loads((again / "results.json").read_text(encoding="utf-8"))["scores"] == first
 
+    def test_rescore_skips_cases_removed_from_corpus(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from scripts.langextract_eval.__main__ import main
+
+        run = tmp_path / "run"
+        assert (
+            main(["--backend", "stub", "--cases", "invoice_plain", "--output-dir", str(run)]) == 0
+        )
+        payload = json.loads((run / "results.json").read_text(encoding="utf-8"))
+        for results in payload["results"].values():
+            stale = dict(results[0], case_id="removed_case")
+            results.append(stale)
+        (run / "results.json").write_text(json.dumps(payload), encoding="utf-8")
+        capsys.readouterr()
+
+        again = tmp_path / "again"
+        assert main(["--rescore", str(run / "results.json"), "--output-dir", str(again)]) == 0
+        assert "removed_case" in capsys.readouterr().err
+        rescored = json.loads((again / "results.json").read_text(encoding="utf-8"))
+        case_ids = {r["case_id"] for results in rescored["results"].values() for r in results}
+        assert case_ids == {"invoice_plain"}
+
     def test_unknown_case_is_rejected(self, tmp_path: Path) -> None:
         from scripts.langextract_eval.__main__ import main
 

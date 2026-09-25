@@ -365,6 +365,13 @@ def rescore(results_json: Path, out_dir: Path | None) -> int:
         for name, results in payload["results"].items()
     }
     seen = {r.case_id for results in raw.values() for r in results}
+    stale = sorted(seen - set(by_id))
+    if stale:
+        print(
+            f"warning: skipping case(s) no longer in the corpus: {', '.join(stale)}",
+            file=sys.stderr,
+        )
+        raw = {name: [r for r in results if r.case_id in by_id] for name, results in raw.items()}
     cases = tuple(by_id[c] for c in by_id if c in seen)
     _score_and_write(payload["meta"], cases, raw, out_dir or results_json.parent)
     return 0
