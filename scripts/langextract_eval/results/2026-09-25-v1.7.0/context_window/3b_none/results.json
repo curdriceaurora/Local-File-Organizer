@@ -106,19 +106,19 @@
       "name": "langextract_native_ollama+grounded",
       "strict": {
         "tp": 24,
-        "fp": 3,
+        "fp": 0,
         "fn": 21,
-        "precision": 0.8889,
+        "precision": 1.0,
         "recall": 0.5333,
-        "f1": 0.6667
+        "f1": 0.6957
       },
       "lenient": {
         "tp": 24,
-        "fp": 3,
+        "fp": 0,
         "fn": 21,
-        "precision": 0.8889,
+        "precision": 1.0,
         "recall": 0.5333,
-        "f1": 0.6667
+        "f1": 0.6957
       },
       "per_class_strict": {
         "amount": {
@@ -131,9 +131,9 @@
         },
         "date": {
           "tp": 0,
-          "fp": 3,
+          "fp": 0,
           "fn": 9,
-          "precision": 0.0,
+          "precision": 1.0,
           "recall": 0.0,
           "f1": 0.0
         },
@@ -170,14 +170,13 @@
           "f1": 1.0
         }
       },
-      "predictions": 27,
-      "verbatim_rate": 0.8889,
+      "predictions": 24,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.8889,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 18,
-        "match_fuzzy": 6,
-        "match_lesser": 3
+        "match_fuzzy": 6
       },
       "cases": 3,
       "failed_cases": [],
@@ -273,19 +272,19 @@
       "name": "langextract_adapter+grounded",
       "strict": {
         "tp": 12,
-        "fp": 9,
+        "fp": 6,
         "fn": 33,
-        "precision": 0.5714,
+        "precision": 0.6667,
         "recall": 0.2667,
-        "f1": 0.3636
+        "f1": 0.381
       },
       "lenient": {
         "tp": 15,
-        "fp": 6,
+        "fp": 3,
         "fn": 30,
-        "precision": 0.7143,
+        "precision": 0.8333,
         "recall": 0.3333,
-        "f1": 0.4545
+        "f1": 0.4762
       },
       "per_class_strict": {
         "amount": {
@@ -298,9 +297,9 @@
         },
         "date": {
           "tp": 0,
-          "fp": 3,
+          "fp": 0,
           "fn": 9,
-          "precision": 0.0,
+          "precision": 1.0,
           "recall": 0.0,
           "f1": 0.0
         },
@@ -337,14 +336,13 @@
           "f1": 0.0
         }
       },
-      "predictions": 21,
-      "verbatim_rate": 0.8571,
+      "predictions": 18,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.8571,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 15,
-        "match_fuzzy": 3,
-        "match_lesser": 3
+        "match_fuzzy": 3
       },
       "cases": 3,
       "failed_cases": [],

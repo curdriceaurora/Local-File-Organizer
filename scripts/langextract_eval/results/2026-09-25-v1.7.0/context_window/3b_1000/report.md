@@ -13,7 +13,7 @@
 | langextract_native_ollama | 0.792 | 0.422 | 0.551 | 0.609 | 1.000 | 1.000 | 0/3 | 25.622 | 6 |
 | langextract_native_ollama+grounded | 0.905 | 0.422 | 0.576 | 0.636 | 1.000 | 1.000 | 0/3 | 25.622 | 6 |
 | langextract_adapter | 0.533 | 0.178 | 0.267 | 0.367 | 0.933 | 0.917 | 0/3 | 18.78 | 6 |
-| langextract_adapter+grounded | 0.667 | 0.178 | 0.281 | 0.386 | 0.917 | 0.917 | 0/3 | 18.78 | 6 |
+| langextract_adapter+grounded | 0.727 | 0.178 | 0.286 | 0.393 | 1.000 | 1.000 | 0/3 | 18.78 | 6 |
 
 ## Strict F1 by class
 
@@ -26,4 +26,4 @@
 | amount | 0.800 | 0.800 | 0.000 | 0.000 |
 | reference_id | 1.000 | 1.000 | 0.000 | 0.000 |
 
-`+grounded` rows re-score the same run keeping only predictions langextract aligned to a source span (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.
+`+grounded` rows re-score the same run keeping only predictions langextract aligned to a span that reproduces their text (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.

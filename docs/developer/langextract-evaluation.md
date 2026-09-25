@@ -68,6 +68,7 @@ Metrics are defined in `scripts/langextract_eval/scoring.py`:
 - **Lenient F1**: same class, and one text contains the other ("Invoice #INV-4821" vs "INV-4821").
 - **Verbatim rate**: share of predictions that occur in the source text. Its complement is the hallucination rate.
 - **Offset accuracy**: for predictions with character offsets (langextract only), the share where `text[start:end]` reproduces the prediction.
+- **Grounded-only** (`+grounded` rows): the same run re-scored keeping only langextract predictions whose `text[start:end]` reproduces the prediction. Unaligned predictions and misplaced offsets are dropped. No extra model calls.
 - **Failed cases**: documents where the extractor raised an error (parse failure or model error). Their gold entities count as missed.
 - **s/case** and **LLM calls**: cost. langextract makes one call per chunk per pass.
 
@@ -99,7 +100,7 @@ Run environment: 4 vCPU, no GPU, Ollama 0.34.4, Python 3.11.15, temperature 0, `
 | baseline | 0.803 | 0.645 | 0.715 | 0.759 | 14.3 |
 | langextract adapter | 0.662 | 0.671 | 0.667 | 0.758 | 16.3 |
 | langextract native Ollama | 0.713 | 0.750 | 0.731 | 0.808 | 17.7 |
-| langextract native Ollama, grounded-only | 0.750 | 0.750 | 0.750 | 0.829 | 17.7 |
+| langextract native Ollama, grounded-only | 0.770 | 0.750 | 0.760 | 0.827 | 17.7 |
 
 `qwen2.5:7b-instruct-q4_K_M` (project large default):
 
@@ -111,7 +112,7 @@ Run environment: 4 vCPU, no GPU, Ollama 0.34.4, Python 3.11.15, temperature 0, `
 
 The 7B baseline row comes from a separate warm run. Inside the batch run, the baseline's first document failed with an Ollama model-load timeout, so the recorded `results.json` notes this merge. The harness now makes an untimed warm-up call before any extractor runs, to prevent that.
 
-Paired bootstrap over documents (strict F1, langextract minus baseline): 3B native grounded-only +0.035, 95% CI [−0.078, +0.164]. 7B adapter +0.032, 95% CI [−0.030, +0.115]. **Every interval spans zero.**
+Paired bootstrap over documents (strict F1, langextract minus baseline): 3B native grounded-only +0.045, 95% CI [−0.069, +0.172]. 7B adapter +0.032, 95% CI [−0.030, +0.115]. **Every interval spans zero.**
 
 ### 1.1.1 → 1.7.0
 
@@ -167,12 +168,12 @@ At temperature 0, calls that go through the project model layer (the baseline an
 |---|---|---|---|
 | 3B | baseline | 0.695 | 13.5 |
 | 3B | langextract adapter | 0.684 | 16.3 |
-| 3B | langextract native, grounded-only | 0.750 | 16.8 |
+| 3B | langextract native, grounded-only | 0.760 | 16.8 |
 | 7B | baseline | 0.800 | 32.4 |
 | 7B | langextract adapter | 0.857 | 37.7 |
 | 7B | langextract native | 0.841 | 39.7 |
 
-Bootstrap: 3B native grounded-only +0.055 [−0.058, +0.206]; 7B adapter +0.057 [−0.007, +0.134]. Part of these gaps came from the lower first 7B baseline run (see run-to-run variation).
+Bootstrap: 3B native grounded-only +0.065 [−0.051, +0.218]; 7B adapter +0.057 [−0.007, +0.134]. Part of these gaps came from the lower first 7B baseline run (see run-to-run variation).
 
 ### What drives the differences
 
@@ -185,8 +186,8 @@ These patterns hold in both the 1.1.1 and 1.7.0 runs:
 
 ### What grounding does and does not give you
 
-- **It catches few-shot leakage.** On the long report, 3B langextract emitted entities copied from the worked example ("Ana Silva", garbled "Coho Winery") and dates reformatted to ISO. langextract left these unaligned. Dropping unaligned predictions raised 3B native strict F1 from 0.731 to 0.750 with no recall loss. At 7B there were no unaligned predictions, so the filter changed nothing.
-- **Alignment is not verification.** Fuzzy or lesser alignment still attaches offsets to text that is not in the source. For example, 7B returned "$12,410.33" for a source "12,410.33", and one ISO date got `match_lesser`. Offset accuracy was 0.966–0.986, not 1.0, in both versions. Code that relies on offsets must itself check that `text[start:end]` equals the extraction.
+- **It catches few-shot leakage.** On the long report, 3B langextract emitted entities copied from the worked example ("Ana Silva", garbled "Coho Winery") and dates reformatted to ISO. langextract left these unaligned. The grounded-only filter raised 3B native strict F1 from 0.731 to 0.760 with no recall loss. At 7B there were no unaligned predictions; the filter only dropped spans with misplaced offsets (1.7.0: native 0.841 → 0.845, adapter 0.857 → 0.855, the adapter losing one correct match).
+- **Alignment is not verification.** Fuzzy or lesser alignment still attaches offsets to text that is not in the source. For example, 7B returned "$12,410.33" for a source "12,410.33", and one ISO date got `match_lesser`. Offset accuracy was 0.966–0.986, not 1.0, in both versions. Code that relies on offsets must itself check that `text[start:end]` equals the extraction. The grounded-only filter here does exactly that.
 
 ### Adapter versus native provider
 

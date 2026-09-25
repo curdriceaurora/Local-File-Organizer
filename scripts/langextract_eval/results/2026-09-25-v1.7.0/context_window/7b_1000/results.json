@@ -97,8 +97,8 @@
       },
       "cases": 3,
       "failed_cases": [],
-      "seconds_total": 352.918,
-      "seconds_per_case": 117.639,
+      "seconds_total": 352.919,
+      "seconds_per_case": 117.64,
       "llm_calls": 6
     },
     {
@@ -179,8 +179,8 @@
       },
       "cases": 3,
       "failed_cases": [],
-      "seconds_total": 352.918,
-      "seconds_per_case": 117.639,
+      "seconds_total": 352.919,
+      "seconds_per_case": 117.64,
       "llm_calls": 6
     },
     {

@@ -185,29 +185,29 @@
     {
       "name": "langextract_adapter+grounded",
       "strict": {
-        "tp": 69,
-        "fp": 16,
-        "fn": 7,
-        "precision": 0.8118,
-        "recall": 0.9079,
-        "f1": 0.8571
+        "tp": 68,
+        "fp": 15,
+        "fn": 8,
+        "precision": 0.8193,
+        "recall": 0.8947,
+        "f1": 0.8553
       },
       "lenient": {
-        "tp": 73,
+        "tp": 71,
         "fp": 12,
-        "fn": 3,
-        "precision": 0.8588,
-        "recall": 0.9605,
-        "f1": 0.9068
+        "fn": 5,
+        "precision": 0.8554,
+        "recall": 0.9342,
+        "f1": 0.8931
       },
       "per_class_strict": {
         "amount": {
           "tp": 11,
-          "fp": 7,
+          "fp": 6,
           "fn": 1,
-          "precision": 0.6111,
+          "precision": 0.6471,
           "recall": 0.9167,
-          "f1": 0.7333
+          "f1": 0.7586
         },
         "date": {
           "tp": 19,
@@ -234,12 +234,12 @@
           "f1": 0.9412
         },
         "person": {
-          "tp": 11,
+          "tp": 10,
           "fp": 2,
-          "fn": 1,
-          "precision": 0.8462,
-          "recall": 0.9167,
-          "f1": 0.88
+          "fn": 2,
+          "precision": 0.8333,
+          "recall": 0.8333,
+          "f1": 0.8333
         },
         "reference_id": {
           "tp": 6,
@@ -250,14 +250,13 @@
           "f1": 0.8571
         }
       },
-      "predictions": 85,
-      "verbatim_rate": 0.9882,
+      "predictions": 83,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.9765,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 74,
-        "match_fuzzy": 10,
-        "match_lesser": 1
+        "match_fuzzy": 9
       },
       "cases": 12,
       "failed_cases": [],
@@ -351,29 +350,29 @@
     {
       "name": "langextract_native_ollama+grounded",
       "strict": {
-        "tp": 69,
-        "fp": 19,
-        "fn": 7,
-        "precision": 0.7841,
-        "recall": 0.9079,
-        "f1": 0.8415
+        "tp": 68,
+        "fp": 17,
+        "fn": 8,
+        "precision": 0.8,
+        "recall": 0.8947,
+        "f1": 0.8447
       },
       "lenient": {
-        "tp": 72,
-        "fp": 16,
-        "fn": 4,
-        "precision": 0.8182,
-        "recall": 0.9474,
-        "f1": 0.878
+        "tp": 71,
+        "fp": 14,
+        "fn": 5,
+        "precision": 0.8353,
+        "recall": 0.9342,
+        "f1": 0.882
       },
       "per_class_strict": {
         "amount": {
           "tp": 12,
-          "fp": 9,
+          "fp": 7,
           "fn": 0,
-          "precision": 0.5714,
+          "precision": 0.6316,
           "recall": 1.0,
-          "f1": 0.7273
+          "f1": 0.7742
         },
         "date": {
           "tp": 19,
@@ -400,12 +399,12 @@
           "f1": 0.875
         },
         "person": {
-          "tp": 11,
+          "tp": 10,
           "fp": 3,
-          "fn": 1,
-          "precision": 0.7857,
-          "recall": 0.9167,
-          "f1": 0.8462
+          "fn": 2,
+          "precision": 0.7692,
+          "recall": 0.8333,
+          "f1": 0.8
         },
         "reference_id": {
           "tp": 6,
@@ -416,14 +415,13 @@
           "f1": 0.8571
         }
       },
-      "predictions": 88,
-      "verbatim_rate": 0.9773,
+      "predictions": 85,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.9659,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 75,
-        "match_fuzzy": 12,
-        "match_lesser": 1
+        "match_fuzzy": 10
       },
       "cases": 12,
       "failed_cases": [],
@@ -443,10 +441,10 @@
     },
     {
       "name": "langextract_adapter+grounded",
-      "delta_f1": 0.0321,
+      "delta_f1": 0.0303,
       "ci95": [
-        -0.0301,
-        0.1147
+        -0.0319,
+        0.1124
       ]
     },
     {
@@ -459,10 +457,10 @@
     },
     {
       "name": "langextract_native_ollama+grounded",
-      "delta_f1": 0.0165,
+      "delta_f1": 0.0197,
       "ci95": [
-        -0.0619,
-        0.1173
+        -0.0541,
+        0.1156
       ]
     }
   ],

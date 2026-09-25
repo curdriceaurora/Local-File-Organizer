@@ -153,18 +153,22 @@ class TestScoreExtractor:
 
 
 class TestGroundedOnly:
-    def test_drops_unaligned_predictions_only(self) -> None:
-        case = CORPUS[0]
+    def test_keeps_only_spans_that_reproduce_their_text(self) -> None:
+        case = CORPUS[0]  # invoice_plain
+        acme = case.text.index("Acme Corp")
+        globex = case.text.index("Globex Industries")
         res = CaseResult(
             case.case_id,
             [
-                Prediction("organization", "Acme Corp", 42, 51, "match_exact"),
+                Prediction("organization", "Acme Corp", acme, acme + 9, "match_exact"),
                 Prediction("person", "Ana Silva"),  # unaligned: not in the text
+                # Aligned, but the offsets point at different text.
+                Prediction("organization", "Initech", globex, globex + 7, "match_fuzzy"),
             ],
             1.0,
             1,
         )
-        (kept,) = grounded_only([res])
+        (kept,) = grounded_only([res], [case])
         assert [p.text for p in kept.predictions] == ["Acme Corp"]
         assert (kept.case_id, kept.seconds, kept.llm_calls) == (case.case_id, 1.0, 1)
 

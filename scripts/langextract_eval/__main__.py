@@ -241,7 +241,7 @@ def render_markdown(
     lines += [
         "",
         "`+grounded` rows re-score the same run keeping only predictions langextract "
-        "aligned to a source span (no extra LLM calls). "
+        "aligned to a span that reproduces their text (no extra LLM calls). "
         "Metric definitions: `scripts/langextract_eval/scoring.py`. "
         "Raw predictions and errors: `results.json`.",
         "",
@@ -337,7 +337,7 @@ def _score_and_write(
     for name, results in raw.items():
         variants[name] = results
         if name.startswith("langextract"):
-            variants[f"{name}+grounded"] = grounded_only(results)
+            variants[f"{name}+grounded"] = grounded_only(results, cases)
     scores = [score_extractor(name, cases, results) for name, results in variants.items()]
     comparisons = [
         (name, *paired_bootstrap_f1(cases, variants[BASELINE_NAME], results))

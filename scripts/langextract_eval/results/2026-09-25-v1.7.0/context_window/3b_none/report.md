@@ -11,9 +11,9 @@
 | Extractor | Strict P | Strict R | Strict F1 | Lenient F1 | Verbatim | Offset acc. | Failed cases | s/case | LLM calls |
 |---|---|---|---|---|---|---|---|---|---|
 | langextract_native_ollama | 0.667 | 0.533 | 0.593 | 0.593 | 0.667 | 0.889 | 0/3 | 33.291 | 6 |
-| langextract_native_ollama+grounded | 0.889 | 0.533 | 0.667 | 0.667 | 0.889 | 0.889 | 0/3 | 33.291 | 6 |
+| langextract_native_ollama+grounded | 1.000 | 0.533 | 0.696 | 0.696 | 1.000 | 1.000 | 0/3 | 33.291 | 6 |
 | langextract_adapter | 0.364 | 0.267 | 0.308 | 0.385 | 0.545 | 0.857 | 0/3 | 32.316 | 6 |
-| langextract_adapter+grounded | 0.571 | 0.267 | 0.364 | 0.455 | 0.857 | 0.857 | 0/3 | 32.316 | 6 |
+| langextract_adapter+grounded | 0.667 | 0.267 | 0.381 | 0.476 | 1.000 | 1.000 | 0/3 | 32.316 | 6 |
 
 ## Strict F1 by class
 
@@ -26,4 +26,4 @@
 | amount | 0.800 | 0.800 | 0.500 | 0.500 |
 | reference_id | 1.000 | 1.000 | 0.000 | 0.000 |
 
-`+grounded` rows re-score the same run keeping only predictions langextract aligned to a source span (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.
+`+grounded` rows re-score the same run keeping only predictions langextract aligned to a span that reproduces their text (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.

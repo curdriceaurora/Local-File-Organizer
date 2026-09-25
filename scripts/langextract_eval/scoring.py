@@ -207,16 +207,19 @@ def offset_ok(pred: Prediction, source: str) -> bool:
     return normalize(source[pred.char_start : pred.char_end]) == normalize(pred.text)
 
 
-def grounded_only(results: Iterable[CaseResult]) -> list[CaseResult]:
-    """Keep predictions with a start offset while preserving case metadata.
+def grounded_only(results: Iterable[CaseResult], cases: Iterable[EvalCase]) -> list[CaseResult]:
+    """Keep only predictions whose span verifiably reproduces their text.
 
-    Predictions lacking ``char_start`` are dropped; this does not check the
-    end offset or verify that the span matches the source text.
+    Models what production code should do with langextract output: drop
+    anything that was not located in the document, and anything whose
+    offsets point at different text (fuzzy or lesser alignments can attach
+    offsets to text that is not in the source). Case metadata is preserved.
     """
+    source_by_id = {case.case_id: case.text for case in cases}
     return [
         CaseResult(
             r.case_id,
-            [p for p in r.predictions if p.char_start is not None],
+            [p for p in r.predictions if offset_ok(p, source_by_id[r.case_id])],
             r.seconds,
             r.llm_calls,
             r.error,

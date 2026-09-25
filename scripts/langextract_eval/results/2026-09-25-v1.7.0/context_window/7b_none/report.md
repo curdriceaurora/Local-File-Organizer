@@ -26,4 +26,4 @@
 | amount | 1.000 | 1.000 | 1.000 | 1.000 |
 | reference_id | 1.000 | 1.000 | 1.000 | 1.000 |
 
-`+grounded` rows re-score the same run keeping only predictions langextract aligned to a source span (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.
+`+grounded` rows re-score the same run keeping only predictions langextract aligned to a span that reproduces their text (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.

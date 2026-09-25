@@ -202,19 +202,19 @@
       "name": "langextract_adapter+grounded",
       "strict": {
         "tp": 53,
-        "fp": 22,
+        "fp": 20,
         "fn": 23,
-        "precision": 0.7067,
+        "precision": 0.726,
         "recall": 0.6974,
-        "f1": 0.702
+        "f1": 0.7114
       },
       "lenient": {
-        "tp": 61,
-        "fp": 14,
-        "fn": 15,
-        "precision": 0.8133,
-        "recall": 0.8026,
-        "f1": 0.8079
+        "tp": 60,
+        "fp": 13,
+        "fn": 16,
+        "precision": 0.8219,
+        "recall": 0.7895,
+        "f1": 0.8054
       },
       "per_class_strict": {
         "amount": {
@@ -235,19 +235,19 @@
         },
         "date": {
           "tp": 14,
-          "fp": 1,
+          "fp": 0,
           "fn": 5,
-          "precision": 0.9333,
+          "precision": 1.0,
           "recall": 0.7368,
-          "f1": 0.8235
+          "f1": 0.8485
         },
         "document_type": {
           "tp": 6,
-          "fp": 6,
+          "fp": 5,
           "fn": 3,
-          "precision": 0.5,
+          "precision": 0.5455,
           "recall": 0.6667,
-          "f1": 0.5714
+          "f1": 0.6
         },
         "organization": {
           "tp": 12,
@@ -274,14 +274,13 @@
           "f1": 0.3077
         }
       },
-      "predictions": 75,
-      "verbatim_rate": 0.9733,
+      "predictions": 73,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.9733,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 62,
-        "match_fuzzy": 12,
-        "match_lesser": 1
+        "match_fuzzy": 11
       },
       "cases": 12,
       "failed_cases": [],
@@ -377,19 +376,19 @@
       "name": "langextract_native_ollama+grounded",
       "strict": {
         "tp": 57,
-        "fp": 19,
+        "fp": 17,
         "fn": 19,
-        "precision": 0.75,
+        "precision": 0.7703,
         "recall": 0.75,
-        "f1": 0.75
+        "f1": 0.76
       },
       "lenient": {
-        "tp": 63,
-        "fp": 13,
-        "fn": 13,
-        "precision": 0.8289,
-        "recall": 0.8289,
-        "f1": 0.8289
+        "tp": 62,
+        "fp": 12,
+        "fn": 14,
+        "precision": 0.8378,
+        "recall": 0.8158,
+        "f1": 0.8267
       },
       "per_class_strict": {
         "amount": {
@@ -402,19 +401,19 @@
         },
         "date": {
           "tp": 15,
-          "fp": 2,
+          "fp": 1,
           "fn": 4,
-          "precision": 0.8824,
+          "precision": 0.9375,
           "recall": 0.7895,
-          "f1": 0.8333
+          "f1": 0.8571
         },
         "document_type": {
           "tp": 6,
-          "fp": 4,
+          "fp": 3,
           "fn": 3,
-          "precision": 0.6,
+          "precision": 0.6667,
           "recall": 0.6667,
-          "f1": 0.6316
+          "f1": 0.6667
         },
         "organization": {
           "tp": 11,
@@ -441,14 +440,13 @@
           "f1": 0.5714
         }
       },
-      "predictions": 76,
-      "verbatim_rate": 0.9737,
+      "predictions": 74,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.9737,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 61,
-        "match_fuzzy": 14,
-        "match_lesser": 1
+        "match_fuzzy": 13
       },
       "cases": 12,
       "failed_cases": [],
@@ -468,10 +466,10 @@
     },
     {
       "name": "langextract_adapter+grounded",
-      "delta_f1": 0.007,
+      "delta_f1": 0.0164,
       "ci95": [
-        -0.1092,
-        0.1766
+        -0.0981,
+        0.1802
       ]
     },
     {
@@ -484,10 +482,10 @@
     },
     {
       "name": "langextract_native_ollama+grounded",
-      "delta_f1": 0.055,
+      "delta_f1": 0.065,
       "ci95": [
-        -0.0576,
-        0.2062
+        -0.0505,
+        0.2182
       ]
     }
   ],

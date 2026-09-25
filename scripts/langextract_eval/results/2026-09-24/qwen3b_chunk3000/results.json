@@ -104,19 +104,19 @@
       "name": "langextract_native_ollama+grounded",
       "strict": {
         "tp": 52,
-        "fp": 18,
+        "fp": 17,
         "fn": 24,
-        "precision": 0.7429,
+        "precision": 0.7536,
         "recall": 0.6842,
-        "f1": 0.7123
+        "f1": 0.7172
       },
       "lenient": {
-        "tp": 58,
+        "tp": 57,
         "fp": 12,
-        "fn": 18,
-        "precision": 0.8286,
-        "recall": 0.7632,
-        "f1": 0.7945
+        "fn": 19,
+        "precision": 0.8261,
+        "recall": 0.75,
+        "f1": 0.7862
       },
       "per_class_strict": {
         "amount": {
@@ -137,11 +137,11 @@
         },
         "document_type": {
           "tp": 6,
-          "fp": 4,
+          "fp": 3,
           "fn": 3,
-          "precision": 0.6,
+          "precision": 0.6667,
           "recall": 0.6667,
-          "f1": 0.6316
+          "f1": 0.6667
         },
         "organization": {
           "tp": 11,
@@ -168,13 +168,13 @@
           "f1": 0.4615
         }
       },
-      "predictions": 70,
-      "verbatim_rate": 0.9857,
+      "predictions": 69,
+      "verbatim_rate": 1.0,
       "offset_coverage": 1.0,
-      "offset_accuracy": 0.9857,
+      "offset_accuracy": 1.0,
       "alignment_counts": {
         "match_exact": 58,
-        "match_fuzzy": 12
+        "match_fuzzy": 11
       },
       "cases": 12,
       "failed_cases": [],
@@ -183,6 +183,7 @@
       "llm_calls": 12
     }
   ],
+  "comparisons": [],
   "results": {
     "langextract_native_ollama": [
       {
