@@ -49,6 +49,35 @@ class TestAdapterPipeline:
         # langextract cannot ground a span that is not in the text.
         assert all(p.char_start is None and p.alignment is None for p in fabricated)
 
+    def test_context_window_reaches_later_chunks(self, stub_model: OracleStubModel) -> None:
+        from scripts.langextract_eval.extractors import LangExtractExtractor, make_adapter
+
+        prompts: list[str] = []
+        generate = stub_model.generate
+
+        def spy(prompt: str, **kwargs: object) -> str:
+            prompts.append(prompt)
+            return generate(prompt, **kwargs)
+
+        stub_model.generate = spy  # type: ignore[method-assign]
+        lm = make_adapter(stub_model, temperature=0.0, max_tokens=512)
+        extractor = LangExtractExtractor(
+            "lx",
+            lm,
+            max_char_buffer=1000,
+            extraction_passes=1,
+            suppress_parse_errors=False,
+            context_window_chars=200,
+        )
+        long_case = next(c for c in CORPUS if c.case_id == "long_vendor_report")
+        result = extractor.run(long_case)
+
+        assert result.error is None
+        assert len(prompts) == 2
+        first_chunk_tail = long_case.text[:1000].rstrip()[-40:]
+        assert first_chunk_tail not in prompts[0].rsplit("Q: ", 1)[-1]
+        assert first_chunk_tail in prompts[1]
+
     def test_model_errors_are_scored_not_raised(self, stub_model: OracleStubModel) -> None:
         from scripts.langextract_eval.extractors import LangExtractExtractor, make_adapter
 

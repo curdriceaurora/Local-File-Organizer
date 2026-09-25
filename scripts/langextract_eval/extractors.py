@@ -197,6 +197,7 @@ class LangExtractExtractor:
         max_char_buffer: int,
         extraction_passes: int,
         suppress_parse_errors: bool,
+        context_window_chars: int | None = None,
     ) -> None:
         """Configure chunking, passes and resolver strictness."""
         self.name = name
@@ -204,6 +205,7 @@ class LangExtractExtractor:
         self._max_char_buffer = max_char_buffer
         self._passes = extraction_passes
         self._suppress = suppress_parse_errors
+        self._context_window_chars = context_window_chars
         lx = _lx()
         self._examples = [
             lx.data.ExampleData(
@@ -227,6 +229,7 @@ class LangExtractExtractor:
                 use_schema_constraints=False,
                 max_char_buffer=self._max_char_buffer,
                 extraction_passes=self._passes,
+                context_window_chars=self._context_window_chars,
                 batch_length=1,
                 max_workers=1,
                 show_progress=False,

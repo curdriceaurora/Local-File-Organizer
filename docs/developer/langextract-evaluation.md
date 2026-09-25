@@ -118,11 +118,37 @@ Paired bootstrap over documents (strict F1, langextract minus baseline): 3B nati
 - **Drop-in compatible.** The adapter, the native provider call and all tests work unchanged, with no deprecation warnings. The dependency list is identical, and `uv.lock` changes only the langextract line.
 - **Same extractions.** The native Ollama path produced the same entity text on every document with both models, and so did the adapter at 7B. The `--max-char-buffer 3000` ablation is also unchanged (native strict F1 0.703).
 - **Better alignment.** Spans that 1.1.1 labelled `match_fuzzy` are now `match_exact` at the same offsets. A repeated name ("Marcus" in the meeting notes) now points to its own occurrence instead of the first mention. This does not move any score, because matching is text-based.
-- **New options, not used here:** `context_window_chars` carries text from the previous chunk for coreference, and is off by default. `fetch_urls` now defaults to off (the harness already passed `False`).
+- **New options:** `context_window_chars` carries text from the previous chunk into the next chunk's prompt, for coreference, and is off by default; it is tested below. `fetch_urls` now defaults to off (the harness already passed `False`).
+
+### `context_window_chars` on the long document
+
+The option is exposed as `--context-window-chars`. It was tested on the vendor report, the only document that gets chunked. The report splits into a 922-character chunk ending "Fabrikam Logistics. Spend was $112,900.00, mostly freight." and a 648-character chunk starting "The rate card renegotiated…". Six of the report's 15 gold entities are in chunk 2, and none of them needs the previous chunk to be resolved.
+
+Setup: both langextract extractors, 3 repeats each, context off / 200 / 500 / 1,000 characters. Raw runs are in `scripts/langextract_eval/results/2026-09-25-v1.7.0/context_window/`.
+
+| Model | Context | Native strict F1 (3 runs) | Adapter strict F1 (3 runs) | Chunk-2 gold found (native) | Unaligned (native) |
+|---|---|---|---|---|---|
+| 3B | off | 0.59 / 0.59 / 0.59 | 0.31 / 0.31 / 0.31 | 1/6 | 3 |
+| 3B | 200 | 0.85 / 0.77 / 0.77 | 0.55 / 0.55 / 0.55 | 4/6 | 0 |
+| 3B | 500 | 0.81 / 0.74 / 0.74 | 0.58 / 0.52 / 0.52 | 4/6 | 0 |
+| 3B | 1000 | 0.61 / 0.52 / 0.52 | 0.36 / 0.21 / 0.21 | 0/6 | 1 |
+| 7B | off | 0.90 / 0.90 / 0.90 | 0.97 / 0.97 / 0.97 | 6/6 | 0 |
+| 7B | 200 | 0.62 / 0.62 / 0.62 | 0.97 / 0.93 / 0.93 | 0/6 | 4 |
+| 7B | 500 | 0.89 / 0.89 / 0.89 | 0.97 / 0.93 / 0.93 | 5/6 | 0 |
+| 7B | 1000 | 0.53 / 0.65 / 0.65 | 0.62 / 0.63 / 0.63 | 2–3/6 | 10–12 |
+
+What happened:
+
+- **3B, small window: helps.** Without context, 3B rewrote chunk 2's text instead of copying it ("Tailware Consulting" for "Litware Consulting", dates reformatted to ISO), so those spans could not be aligned. With 200–500 characters of context it copied them verbatim, and the few-shot leakage disappeared.
+- **Large window, or 7B: hurts.** The model extracts from the context passage instead of the chunk it was given. At 1,000 characters (the whole previous chunk), both models re-extracted chunk 1's entities; 7B also added the example's "Ana Silva". At 200 characters, 7B native returned only the four entities in the context window for chunk 2 and none of chunk 2's own.
+- **Grounding contains the damage but can't undo it.** The re-extracted context entities cannot be aligned inside the chunk, so the grounded-only filter removes them: 7B at 1,000 characters goes from precision 0.52 to 1.00 (native). Chunk-2 entities the model skipped stay missing.
+- **The native path stopped reproducing exactly** under some settings (for example, 3B at 200 characters: 0.85, then 0.77 twice). Without context it was identical across all runs. The cause was not investigated.
+
+This is one document with one chunk boundary, so treat it as anecdotal. The option is not a safe default here: it helps the small model only in a narrow window, and it hurts a model that already handles chunks well.
 
 ### Run-to-run variation
 
-At temperature 0, calls that go through the project model layer (the baseline and the langextract adapter) did not always reproduce. The native provider (Ollama JSON mode) reproduced exactly every time. The cause was not investigated.
+At temperature 0, calls that go through the project model layer (the baseline and the langextract adapter) did not always reproduce. The native provider (Ollama JSON mode) reproduced exactly in every run without `context_window_chars`, but not with it (see above). The cause was not investigated.
 
 | Extractor | Strict F1 across runs |
 |---|---|
@@ -164,7 +190,7 @@ These patterns hold in both the 1.1.1 and 1.7.0 runs:
 
 ### Adapter versus native provider
 
-There is no consistent quality winner: native led at 3B and the adapter led at 7B. The native provider was the only path that reproduced exactly across runs. The adapter (`FileOrganizerLanguageModel`) lets every provider we ship run langextract unchanged.
+There is no consistent quality winner: native led at 3B and the adapter led at 7B. The native provider was the only path that reproduced exactly across runs, as long as `context_window_chars` was off. The adapter (`FileOrganizerLanguageModel`) lets every provider we ship run langextract unchanged.
 
 ### Cost
 
@@ -177,5 +203,5 @@ Do not adopt into the core pipeline yet. Upgrading to 1.7.0 changes alignment de
 
 1. Grow the corpus to roughly 50–100 labelled documents from real sample files. This is a rough estimate: interval widths shrink about as 1/√n, and the observed 95% intervals are ±0.07–0.13 at 12 documents.
 2. Run every comparison with `--repeats 3` or more, and find out why the project model layer is not reproducible at temperature 0.
-3. Try `--passes 2`, and `context_window_chars` (new in 1.7.0) for multi-chunk documents.
+3. Try `--passes 2`. Leave `context_window_chars` off unless a larger corpus with real cross-chunk references shows a benefit; if it is used, keep it small (about 200–500 characters) and keep grounded-only filtering on.
 4. If adoption follows, use it through the adapter in an optional extra with a lazy import, keep only grounded predictions, and verify offsets in our own code.

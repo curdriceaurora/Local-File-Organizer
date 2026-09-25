@@ -69,6 +69,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--max-char-buffer", type=int, default=1000, help="langextract chunk size")
     p.add_argument("--passes", type=int, default=1, help="langextract extraction_passes")
     p.add_argument(
+        "--context-window-chars",
+        type=int,
+        default=None,
+        help="langextract context_window_chars: previous-chunk text carried into each chunk",
+    )
+    p.add_argument(
         "--suppress-parse-errors",
         action="store_true",
         help="Let langextract skip unparseable chunks instead of failing the document",
@@ -122,6 +128,7 @@ def _build_extractors(args: argparse.Namespace, project_model: Any) -> list[Any]
         "max_char_buffer": args.max_char_buffer,
         "extraction_passes": args.passes,
         "suppress_parse_errors": args.suppress_parse_errors,
+        "context_window_chars": args.context_window_chars,
     }
     built: list[Any] = []
     for name in wanted:
@@ -172,7 +179,8 @@ def render_markdown(
         f"- Cases: {meta['cases']} × repeats {meta['repeats']}",
         f"- Options: temperature={meta['temperature']}, max_char_buffer="
         f"{meta['max_char_buffer']}, passes={meta['passes']}, "
-        f"suppress_parse_errors={meta['suppress_parse_errors']}",
+        f"suppress_parse_errors={meta['suppress_parse_errors']}, "
+        f"context_window_chars={meta.get('context_window_chars')}",
         "",
     ]
     if meta.get("note"):
@@ -282,6 +290,7 @@ def main(argv: list[str] | None = None) -> int:
         "max_char_buffer": args.max_char_buffer,
         "passes": args.passes,
         "suppress_parse_errors": args.suppress_parse_errors,
+        "context_window_chars": args.context_window_chars,
         "versions": {
             "langextract": _version("langextract"),
             "local-file-organizer": _version("local-file-organizer"),

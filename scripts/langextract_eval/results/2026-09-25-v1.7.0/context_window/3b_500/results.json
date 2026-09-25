@@ -1,0 +1,836 @@
+{
+  "meta": {
+    "started_utc": "2026-09-25T02:49:17+00:00",
+    "backend": "ollama",
+    "model": "qwen2.5:3b-instruct-q4_K_M",
+    "cases": 1,
+    "repeats": 3,
+    "temperature": 0.0,
+    "max_tokens": 2048,
+    "max_char_buffer": 1000,
+    "passes": 1,
+    "suppress_parse_errors": false,
+    "context_window_chars": 500,
+    "versions": {
+      "langextract": "1.7.0",
+      "local-file-organizer": "2.2.0",
+      "python": "3.11.15"
+    }
+  },
+  "scores": [
+    {
+      "name": "langextract_native_ollama",
+      "strict": {
+        "tp": 31,
+        "fp": 5,
+        "fn": 14,
+        "precision": 0.8611,
+        "recall": 0.6889,
+        "f1": 0.7654
+      },
+      "lenient": {
+        "tp": 33,
+        "fp": 3,
+        "fn": 12,
+        "precision": 0.9167,
+        "recall": 0.7333,
+        "f1": 0.8148
+      },
+      "per_class_strict": {
+        "amount": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "date": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 6,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5
+        },
+        "document_type": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667
+        },
+        "organization": {
+          "tp": 4,
+          "fp": 2,
+          "fn": 8,
+          "precision": 0.6667,
+          "recall": 0.3333,
+          "f1": 0.4444
+        },
+        "person": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "reference_id": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "predictions": 36,
+      "verbatim_rate": 0.9444,
+      "offset_coverage": 1.0,
+      "offset_accuracy": 0.9444,
+      "alignment_counts": {
+        "match_exact": 22,
+        "match_fuzzy": 12,
+        "match_lesser": 2
+      },
+      "cases": 3,
+      "failed_cases": [],
+      "seconds_total": 97.938,
+      "seconds_per_case": 32.646,
+      "llm_calls": 6
+    },
+    {
+      "name": "langextract_native_ollama+grounded",
+      "strict": {
+        "tp": 31,
+        "fp": 5,
+        "fn": 14,
+        "precision": 0.8611,
+        "recall": 0.6889,
+        "f1": 0.7654
+      },
+      "lenient": {
+        "tp": 33,
+        "fp": 3,
+        "fn": 12,
+        "precision": 0.9167,
+        "recall": 0.7333,
+        "f1": 0.8148
+      },
+      "per_class_strict": {
+        "amount": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "date": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 6,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5
+        },
+        "document_type": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667
+        },
+        "organization": {
+          "tp": 4,
+          "fp": 2,
+          "fn": 8,
+          "precision": 0.6667,
+          "recall": 0.3333,
+          "f1": 0.4444
+        },
+        "person": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "reference_id": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "predictions": 36,
+      "verbatim_rate": 0.9444,
+      "offset_coverage": 1.0,
+      "offset_accuracy": 0.9444,
+      "alignment_counts": {
+        "match_exact": 22,
+        "match_fuzzy": 12,
+        "match_lesser": 2
+      },
+      "cases": 3,
+      "failed_cases": [],
+      "seconds_total": 97.938,
+      "seconds_per_case": 32.646,
+      "llm_calls": 6
+    },
+    {
+      "name": "langextract_adapter",
+      "strict": {
+        "tp": 19,
+        "fp": 6,
+        "fn": 26,
+        "precision": 0.76,
+        "recall": 0.4222,
+        "f1": 0.5429
+      },
+      "lenient": {
+        "tp": 22,
+        "fp": 3,
+        "fn": 23,
+        "precision": 0.88,
+        "recall": 0.4889,
+        "f1": 0.6286
+      },
+      "per_class_strict": {
+        "amount": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 8,
+          "precision": 1.0,
+          "recall": 0.1111,
+          "f1": 0.2
+        },
+        "date": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8
+        },
+        "document_type": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667
+        },
+        "organization": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 9,
+          "precision": 0.5,
+          "recall": 0.25,
+          "f1": 0.3333
+        },
+        "person": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8
+        },
+        "reference_id": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "predictions": 25,
+      "verbatim_rate": 0.88,
+      "offset_coverage": 1.0,
+      "offset_accuracy": 0.88,
+      "alignment_counts": {
+        "match_exact": 18,
+        "match_fuzzy": 4,
+        "match_lesser": 3
+      },
+      "cases": 3,
+      "failed_cases": [],
+      "seconds_total": 74.044,
+      "seconds_per_case": 24.681,
+      "llm_calls": 6
+    },
+    {
+      "name": "langextract_adapter+grounded",
+      "strict": {
+        "tp": 19,
+        "fp": 6,
+        "fn": 26,
+        "precision": 0.76,
+        "recall": 0.4222,
+        "f1": 0.5429
+      },
+      "lenient": {
+        "tp": 22,
+        "fp": 3,
+        "fn": 23,
+        "precision": 0.88,
+        "recall": 0.4889,
+        "f1": 0.6286
+      },
+      "per_class_strict": {
+        "amount": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 8,
+          "precision": 1.0,
+          "recall": 0.1111,
+          "f1": 0.2
+        },
+        "date": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8
+        },
+        "document_type": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667
+        },
+        "organization": {
+          "tp": 3,
+          "fp": 3,
+          "fn": 9,
+          "precision": 0.5,
+          "recall": 0.25,
+          "f1": 0.3333
+        },
+        "person": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8
+        },
+        "reference_id": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "predictions": 25,
+      "verbatim_rate": 0.88,
+      "offset_coverage": 1.0,
+      "offset_accuracy": 0.88,
+      "alignment_counts": {
+        "match_exact": 18,
+        "match_fuzzy": 4,
+        "match_lesser": 3
+      },
+      "cases": 3,
+      "failed_cases": [],
+      "seconds_total": 74.044,
+      "seconds_per_case": 24.681,
+      "llm_calls": 6
+    }
+  ],
+  "comparisons": [],
+  "results": {
+    "langextract_native_ollama": [
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 40.627,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders",
+            "char_start": 56,
+            "char_end": 73,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Luis Ortega",
+            "char_start": 810,
+            "char_end": 821,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$48,210.55",
+            "char_start": 571,
+            "char_end": 581,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$112,900.00",
+            "char_start": 894,
+            "char_end": 905,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "reference_id",
+            "text": "PO-77120",
+            "char_start": 744,
+            "char_end": 752,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "RATE CARD",
+            "char_start": 927,
+            "char_end": 936,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "\u20ac18,500",
+            "char_start": 1239,
+            "char_end": 1246,
+            "alignment": "match_exact"
+          }
+        ]
+      },
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 28.779,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders procurement committee",
+            "char_start": 56,
+            "char_end": 95,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Luis Ortega",
+            "char_start": 810,
+            "char_end": 821,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$48,210.55",
+            "char_start": 571,
+            "char_end": 581,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$112,900.00",
+            "char_start": 894,
+            "char_end": 905,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "reference_id",
+            "text": "PO-77120",
+            "char_start": 744,
+            "char_end": 752,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "committee report",
+            "char_start": 1051,
+            "char_end": 1060,
+            "alignment": "match_lesser"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "\u20ac18,500",
+            "char_start": 1239,
+            "char_end": 1246,
+            "alignment": "match_exact"
+          }
+        ]
+      },
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 28.531,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders procurement committee",
+            "char_start": 56,
+            "char_end": 95,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Luis Ortega",
+            "char_start": 810,
+            "char_end": 821,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$48,210.55",
+            "char_start": 571,
+            "char_end": 581,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "amount",
+            "text": "$112,900.00",
+            "char_start": 894,
+            "char_end": 905,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "reference_id",
+            "text": "PO-77120",
+            "char_start": 744,
+            "char_end": 752,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "committee report",
+            "char_start": 1051,
+            "char_end": 1060,
+            "alignment": "match_lesser"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "\u20ac18,500",
+            "char_start": 1239,
+            "char_end": 1246,
+            "alignment": "match_exact"
+          }
+        ]
+      }
+    ],
+    "langextract_adapter": [
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 34.76,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders procurement committee",
+            "char_start": 56,
+            "char_end": 95,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "committee report",
+            "char_start": 1051,
+            "char_end": 1060,
+            "alignment": "match_lesser"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "amount",
+            "text": "\u20ac18,500",
+            "char_start": 1239,
+            "char_end": 1246,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "date",
+            "text": "9 July 2026",
+            "char_start": 1405,
+            "char_end": 1416,
+            "alignment": "match_exact"
+          }
+        ]
+      },
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 19.946,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders procurement committee",
+            "char_start": 56,
+            "char_end": 95,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "committee report",
+            "char_start": 1051,
+            "char_end": 1060,
+            "alignment": "match_lesser"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "date",
+            "text": "9 July 2026",
+            "char_start": 1405,
+            "char_end": 1416,
+            "alignment": "match_exact"
+          }
+        ]
+      },
+      {
+        "case_id": "long_vendor_report",
+        "seconds": 19.337,
+        "llm_calls": 2,
+        "error": null,
+        "predictions": [
+          {
+            "entity_class": "document_type",
+            "text": "QUARTERLY VENDOR REVIEW",
+            "char_start": 0,
+            "char_end": 23,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Priya Raman",
+            "char_start": 36,
+            "char_end": 47,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Northwind Traders procurement committee",
+            "char_start": 56,
+            "char_end": 95,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "document_type",
+            "text": "committee report",
+            "char_start": 1051,
+            "char_end": 1060,
+            "alignment": "match_lesser"
+          },
+          {
+            "entity_class": "organization",
+            "text": "Litware Consulting",
+            "char_start": 1147,
+            "char_end": 1165,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "person",
+            "text": "Hannah Becker",
+            "char_start": 1303,
+            "char_end": 1316,
+            "alignment": "match_fuzzy"
+          },
+          {
+            "entity_class": "date",
+            "text": "12 March 2026",
+            "char_start": 1286,
+            "char_end": 1299,
+            "alignment": "match_exact"
+          },
+          {
+            "entity_class": "date",
+            "text": "9 July 2026",
+            "char_start": 1405,
+            "char_end": 1416,
+            "alignment": "match_exact"
+          }
+        ]
+      }
+    ]
+  }
+}

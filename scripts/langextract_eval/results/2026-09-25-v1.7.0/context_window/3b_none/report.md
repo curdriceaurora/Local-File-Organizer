@@ -1,0 +1,29 @@
+# langextract evaluation run
+
+- Started: 2026-09-25T02:43:07+00:00
+- Backend / model: `ollama` / `qwen2.5:3b-instruct-q4_K_M`
+- langextract: 1.7.0
+- Cases: 1 × repeats 3
+- Options: temperature=0.0, max_char_buffer=1000, passes=1, suppress_parse_errors=False, context_window_chars=None
+
+## Summary
+
+| Extractor | Strict P | Strict R | Strict F1 | Lenient F1 | Verbatim | Offset acc. | Failed cases | s/case | LLM calls |
+|---|---|---|---|---|---|---|---|---|---|
+| langextract_native_ollama | 0.667 | 0.533 | 0.593 | 0.593 | 0.667 | 0.889 | 0/3 | 33.291 | 6 |
+| langextract_native_ollama+grounded | 0.889 | 0.533 | 0.667 | 0.667 | 0.889 | 0.889 | 0/3 | 33.291 | 6 |
+| langextract_adapter | 0.364 | 0.267 | 0.308 | 0.385 | 0.545 | 0.857 | 0/3 | 32.316 | 6 |
+| langextract_adapter+grounded | 0.571 | 0.267 | 0.364 | 0.455 | 0.857 | 0.857 | 0/3 | 32.316 | 6 |
+
+## Strict F1 by class
+
+| Class | langextract_native_ollama | langextract_native_ollama+grounded | langextract_adapter | langextract_adapter+grounded |
+|---|---|---|---|---|
+| document_type | 1.000 | 1.000 | 0.667 | 0.667 |
+| organization | 0.333 | 0.400 | 0.000 | 0.000 |
+| person | 1.000 | 1.000 | 0.667 | 0.800 |
+| date | 0.000 | 0.000 | 0.000 | 0.000 |
+| amount | 0.800 | 0.800 | 0.500 | 0.500 |
+| reference_id | 1.000 | 1.000 | 0.000 | 0.000 |
+
+`+grounded` rows re-score the same run keeping only predictions langextract aligned to a source span (no extra LLM calls). Metric definitions: `scripts/langextract_eval/scoring.py`. Raw predictions and errors: `results.json`.
