@@ -118,7 +118,7 @@ parsers = [
     # The plugin worker no longer depends on this dependency staying quiet
     # on import (see #1784), but there's no reason to leave the door open
     # to further unreviewed drift.
-    "PyMuPDF~=1.28.0",
+    "PyMuPDF~=2.0.0",
     "python-docx~=1.0",
     "openpyxl~=3.1",
     "python-pptx>=0.6.0",  # 0.x — unstable API, keep >=
