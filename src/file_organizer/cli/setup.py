@@ -80,8 +80,22 @@ def setup_run(  # noqa: C901
     console.print(hw_table)
     console.print()
 
-    # Display Ollama status
-    if capabilities.ollama_status.running:
+    # Display backend status
+    uses_env_provider = capabilities.provider != "ollama"
+    if uses_env_provider:
+        console.print(
+            f"[green]\u2713[/green] Using FO_PROVIDER=[bold]{capabilities.provider}[/bold] "
+            f"(model: [bold]{capabilities.provider_text_model}[/bold])"
+        )
+        endpoint = capabilities.endpoint_status
+        if endpoint is not None and endpoint.reachable:
+            console.print(
+                f"[green]\u2713[/green] Endpoint {endpoint.base_url} is reachable "
+                f"({len(endpoint.models)} models)"
+            )
+        elif endpoint is not None:
+            console.print(f"[red]\u2717[/red] {endpoint.error}")
+    elif capabilities.ollama_status.running:
         console.print(
             f"[green]\u2713[/green] Ollama is running (v{capabilities.ollama_status.version})"
         )
@@ -103,13 +117,14 @@ def setup_run(  # noqa: C901
     else:
         console.print("[yellow]\u26a0[/yellow] Ollama is not installed")
 
-    recommended_model = capabilities.hardware.recommended_text_model()
-    for step in ollama_next_steps(
-        capabilities.ollama_status,
-        recommended_model,
-        capabilities.installed_models,
-    ):
-        console.print(f"  {step}")
+    if not uses_env_provider:
+        recommended_model = capabilities.hardware.recommended_text_model()
+        for step in ollama_next_steps(
+            capabilities.ollama_status,
+            recommended_model,
+            capabilities.installed_models,
+        ):
+            console.print(f"  {step}")
 
     console.print()
 
@@ -126,7 +141,12 @@ def setup_run(  # noqa: C901
         # Automatically select recommended model
         recommended = capabilities.hardware.recommended_text_model()
 
-        if capabilities.installed_models:
+        if uses_env_provider:
+            console.print(
+                f"[green]\u2713[/green] Using model from environment: "
+                f"[bold]{capabilities.provider_text_model}[/bold]"
+            )
+        elif capabilities.installed_models:
             model_choices = [m.name for m in capabilities.installed_models]
 
             # Use recommended model if available, otherwise first available
@@ -165,16 +185,30 @@ def setup_run(  # noqa: C901
         # Get user preferences
         custom_settings = {}
 
-        # Backend/Framework selection
-        framework = prompt_choice(
-            "Select AI backend framework",
-            ["ollama", "llama_cpp", "mlx"],
-            default="ollama",
-        )
-        custom_settings["framework"] = framework
+        # Backend/Framework selection (FO_PROVIDER, when set, decides it)
+        if uses_env_provider:
+            custom_settings["framework"] = capabilities.provider
+            endpoint_models = (
+                capabilities.endpoint_status.models if capabilities.endpoint_status else []
+            )
+            if endpoint_models:
+                custom_settings["text_model"] = prompt_choice(
+                    "Select text model",
+                    endpoint_models,
+                    default=capabilities.provider_text_model
+                    if capabilities.provider_text_model in endpoint_models
+                    else endpoint_models[0],
+                )
+        else:
+            framework = prompt_choice(
+                "Select AI backend framework",
+                ["ollama", "llama_cpp", "mlx"],
+                default="ollama",
+            )
+            custom_settings["framework"] = framework
 
         # Model selection
-        if capabilities.installed_models:
+        if not uses_env_provider and capabilities.installed_models:
             model_choices = [m.name for m in capabilities.installed_models]
             recommended = capabilities.hardware.recommended_text_model()
 

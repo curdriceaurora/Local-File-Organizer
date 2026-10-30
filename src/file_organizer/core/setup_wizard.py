@@ -8,6 +8,7 @@ profiling and backend detection to recommend optimal configurations.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -17,11 +18,14 @@ from loguru import logger
 from file_organizer.config.defaults import DEFAULT_TEXT_MODEL, DEFAULT_TEXT_MODEL_LARGE
 from file_organizer.config.manager import ConfigManager
 from file_organizer.config.methodology import normalize as normalize_methodology
+from file_organizer.config.provider_env import get_current_provider, get_model_configs_from_env
 from file_organizer.config.schema import AppConfig, ModelPreset
 from file_organizer.core.backend_detector import (
+    EndpointStatus,
     InstalledModel,
     OllamaStatus,
     detect_ollama,
+    detect_openai_endpoint,
     list_installed_models,
 )
 from file_organizer.core.hardware_profile import HardwareProfile, detect_hardware
@@ -76,12 +80,20 @@ class SystemCapabilities:
         hardware: Hardware profile with GPU, RAM, CPU info.
         ollama_status: Ollama installation and runtime status.
         installed_models: List of available Ollama models.
+        provider: Active provider from ``FO_PROVIDER`` (``"ollama"`` when unset).
+        provider_text_model: Text model named by the ``FO_*`` env vars (non-Ollama only).
+        provider_vision_model: Vision model named by the ``FO_*`` env vars (non-Ollama only).
+        endpoint_status: Probe result for an OpenAI-compatible endpoint (``openai`` only).
     """
 
     # Pyre 0.9.25 misclassifies standard dataclass field annotations.
     hardware: HardwareProfile  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
     ollama_status: OllamaStatus  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
     installed_models: list[InstalledModel] = field(default_factory=list)  # pyre-ignore[35]
+    provider: str = "ollama"  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    provider_text_model: str | None = None  # pyre-ignore[35]
+    provider_vision_model: str | None = None  # pyre-ignore[35]
+    endpoint_status: EndpointStatus | None = None  # pyre-ignore[35]
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize capabilities to a plain dictionary."""
@@ -124,6 +136,17 @@ def ollama_next_steps(
         steps.append(f"Pull the recommended model: ollama pull {recommended_model}")
 
     return steps
+
+
+def _apply_env_provider(models: ModelPreset, capabilities: SystemCapabilities) -> None:
+    """Point *models* at the provider selected by ``FO_PROVIDER``, if any."""
+    if capabilities.provider == "ollama":
+        return
+    models.framework = capabilities.provider
+    if capabilities.provider_text_model:
+        models.text_model = capabilities.provider_text_model
+    if capabilities.provider_vision_model:
+        models.vision_model = capabilities.provider_vision_model
 
 
 class SetupWizard:
@@ -186,6 +209,21 @@ class SetupWizard:
             installed_models=installed_models,
         )
 
+        # FO_PROVIDER overrides any saved profile at runtime, so setup must
+        # configure (and validate) that provider rather than Ollama.
+        provider = get_current_provider()
+        if provider != "ollama":
+            text_cfg, vision_cfg = get_model_configs_from_env()
+            self.capabilities.provider = provider
+            self.capabilities.provider_text_model = text_cfg.name
+            self.capabilities.provider_vision_model = vision_cfg.name
+            if provider == "openai":
+                self.capabilities.endpoint_status = detect_openai_endpoint(
+                    text_cfg.api_base_url,
+                    text_cfg.api_key or os.environ.get("OPENAI_API_KEY", "").strip() or None,
+                )
+            logger.info("Using provider from FO_PROVIDER: {}", provider)
+
         return self.capabilities
 
     def generate_config(
@@ -244,6 +282,7 @@ class SetupWizard:
             device="auto",
             framework=custom_settings.get("framework", "ollama") if custom_settings else "ollama",
         )
+        _apply_env_provider(models, capabilities)
 
         # Apply custom overrides if in POWER_USER mode
         if self.mode == WizardMode.POWER_USER and custom_settings:
@@ -298,8 +337,24 @@ class SetupWizard:
                     "Start it with: ollama serve"
                 )
 
+        # Validate the OpenAI-compatible endpoint named by FO_OPENAI_*
+        if config.models.framework == "openai" and self.capabilities:
+            endpoint = self.capabilities.endpoint_status
+            if endpoint is not None and not endpoint.reachable:
+                errors.append(f"OpenAI-compatible endpoint check failed: {endpoint.error}")
+            elif endpoint is not None and endpoint.models:
+                if config.models.text_model not in endpoint.models:
+                    errors.append(
+                        f"Model '{config.models.text_model}' is not served by {endpoint.base_url}. "
+                        f"Available: {', '.join(endpoint.models)}"
+                    )
+
         # Validate model availability
-        if self.capabilities and self.capabilities.ollama_status.running:
+        if (
+            config.models.framework == "ollama"
+            and self.capabilities
+            and self.capabilities.ollama_status.running
+        ):
             available_models = {m.name for m in self.capabilities.installed_models}
             if config.models.text_model not in available_models:
                 errors.append(f"Selected text model '{config.models.text_model}' is not installed")
@@ -370,13 +425,14 @@ class SetupWizard:
                 )
 
             recommended_model = capabilities.hardware.recommended_text_model()
-            for step in ollama_next_steps(
-                capabilities.ollama_status,
-                recommended_model,
-                getattr(capabilities, "installed_models", []),
-            ):
-                if step not in result.warnings:
-                    result.warnings.append(step)
+            if capabilities.provider == "ollama":
+                for step in ollama_next_steps(
+                    capabilities.ollama_status,
+                    recommended_model,
+                    getattr(capabilities, "installed_models", []),
+                ):
+                    if step not in result.warnings:
+                        result.warnings.append(step)
 
             # Step 2: Generate configuration
             result.messages.append("Generating configuration...")

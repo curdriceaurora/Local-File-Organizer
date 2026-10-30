@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import subprocess
-from dataclasses import dataclass
+import urllib.error
+import urllib.request
+from dataclasses import dataclass, field
 
 try:
     import ollama
@@ -132,6 +134,68 @@ def detect_ollama() -> OllamaStatus:
             version=version,
             models_count=0,
         )
+
+
+@dataclass
+class EndpointStatus:
+    """Status of an OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM, ...).
+
+    Args:
+        base_url: Endpoint base URL that was probed.
+        reachable: Whether ``GET {base_url}/models`` succeeded.
+        models: Model ids reported by the endpoint.
+        error: Human-readable failure reason when not reachable.
+    """
+
+    base_url: str  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    reachable: bool  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+    models: list[str] = field(default_factory=list)  # pyre-ignore[35]
+    error: str | None = None  # pyre-ignore[35]: Pyre 0.9.25 dataclass false positive.
+
+
+def detect_openai_endpoint(
+    base_url: str | None,
+    api_key: str | None,
+    timeout: float = 5.0,
+) -> EndpointStatus:
+    """Probe an OpenAI-compatible endpoint by listing its models.
+
+    Args:
+        base_url: Endpoint base URL; defaults to the public OpenAI API.
+        api_key: Bearer token, if the endpoint requires one.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        EndpointStatus describing reachability and available models.
+    """
+    base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
+    request = urllib.request.Request(f"{base_url}/models")
+    if api_key:
+        request.add_header("Authorization", f"Bearer {api_key}")
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            reason = (
+                "endpoint rejected the API key"
+                if api_key
+                else "endpoint requires an API key; set FO_OPENAI_API_KEY"
+            )
+        else:
+            reason = f"HTTP {e.code} from {base_url}/models"
+        return EndpointStatus(base_url=base_url, reachable=False, error=reason)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        reason = getattr(e, "reason", None) or e
+        return EndpointStatus(
+            base_url=base_url, reachable=False, error=f"cannot reach {base_url}: {reason}"
+        )
+
+    data = payload.get("data", []) if isinstance(payload, dict) else []
+    models = [str(m["id"]) for m in data if isinstance(m, dict) and "id" in m]
+    logger.debug("OpenAI-compatible endpoint {} lists {} models", base_url, len(models))
+    return EndpointStatus(base_url=base_url, reachable=True, models=models)
 
 
 def list_installed_models() -> list[InstalledModel]:
