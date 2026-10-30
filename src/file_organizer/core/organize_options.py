@@ -8,10 +8,6 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from file_organizer._compat import StrEnum
-from file_organizer.services.auto_tagging.styles import (
-    normalize_tag_prompt,
-    validate_tag_style,
-)
 
 ModelProvider = Literal["ollama", "openai", "llama_cpp", "mlx", "claude"]
 
@@ -118,6 +114,13 @@ class OrganizeOptions:
         ):
             if not isinstance(getattr(self, field_name), bool):
                 raise ValueError(f"{field_name} must be a boolean")
+
+        # Deferred: importing services.* runs services/__init__, whose model/config imports
+        # reach config.methodology, which imports this module back (circular at CLI startup).
+        from file_organizer.services.auto_tagging.styles import (
+            normalize_tag_prompt,
+            validate_tag_style,
+        )
 
         validate_tag_style(self.tag_style)
         normalized_prompt = normalize_tag_prompt(self.tag_prompt)
