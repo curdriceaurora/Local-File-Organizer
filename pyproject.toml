@@ -152,7 +152,7 @@ dev = [
     "pytest-randomly~=4.1",
     "mypy>=1.19,<1.20",  # 1.20.x compiled build flakily INTERNAL-ERRORs (crashes on exit after clean analysis) in the lint hook, ~75% of CI runs (#1509 raised it into 1.20.x); pin below until upstream fix
     "types-PyYAML~=6.0",
-    "ruff>=0.1.0",  # 0.x — unstable API, keep >=
+    "ruff~=0.17.4",  # 0.x formatting drifts between minors; CI and uv.lock must agree
     "black>=23.12,<27.0",
     "isort~=9.0",
     "pre-commit~=4.6",
