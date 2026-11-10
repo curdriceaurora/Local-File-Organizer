@@ -147,9 +147,7 @@ class TestFileSelectionManager:
         manager.toggle(path)
 
         selected = manager.selected_files
-        selected.add(
-            Path("/") / "tmp" / "fake.txt"
-        )  # Modify the returned set  # noqa: test-hardcoded-paths
+        selected.add(Path("/") / "tmp" / "fake.txt")  # Modify the returned set  # noqa: test-hardcoded-paths
 
         # Original should not be modified
         assert manager.count == 1
