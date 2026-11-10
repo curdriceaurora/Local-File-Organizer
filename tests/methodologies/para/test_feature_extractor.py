@@ -7,6 +7,7 @@ and structural feature extraction without any external dependencies.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -653,7 +654,7 @@ class TestEdgeCasesAndErrorHandling:
         now = 2_000_000_000.0
 
         # Mock os module in the feature_extractor namespace
-        monkeypatch.setattr(fe_module.os, "name", "nt")
+        monkeypatch.setattr(fe_module, "os", SimpleNamespace(name="nt"))
         monkeypatch.setattr(fe_module.time, "time", lambda: now)
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
@@ -695,7 +696,7 @@ class TestEdgeCasesAndErrorHandling:
         now = 2_000_000_000.0
 
         # Mock os module in the feature_extractor namespace
-        monkeypatch.setattr(fe_module.os, "name", "posix")
+        monkeypatch.setattr(fe_module, "os", SimpleNamespace(name="posix"))
         monkeypatch.setattr(fe_module.time, "time", lambda: now)
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
