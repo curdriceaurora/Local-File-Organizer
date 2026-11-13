@@ -29,6 +29,7 @@ def test_setup_run_prints_ollama_install_start_and_pull_commands() -> None:
         hardware=hardware,
         ollama_status=OllamaStatus(installed=False, running=False),
         installed_models=[],
+        provider="ollama",
     )
     config = AppConfig()
     config.models.text_model = "qwen2.5:3b"

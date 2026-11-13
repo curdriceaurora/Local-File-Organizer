@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 from file_organizer.config.schema import AppConfig
-from file_organizer.core.backend_detector import InstalledModel, OllamaStatus
+from file_organizer.core.backend_detector import EndpointStatus, InstalledModel, OllamaStatus
 from file_organizer.core.hardware_profile import GpuType, HardwareProfile
 from file_organizer.core.setup_wizard import (
     SetupStatus,
@@ -692,3 +692,68 @@ class TestWizardResult:
 
         assert result.success is True
         assert len(result.warnings) == 2
+
+
+class TestEnvProvider:
+    """Setup honors FO_PROVIDER instead of requiring Ollama."""
+
+    def _detect(self, monkeypatch, endpoint):
+        monkeypatch.setenv("FO_PROVIDER", "openai")
+        monkeypatch.setenv("FO_OPENAI_BASE_URL", "http://lm.local:1234/v1")
+        monkeypatch.setenv("FO_OPENAI_MODEL", "qwen3-14b-mlx")
+        monkeypatch.delenv("FO_OPENAI_VISION_MODEL", raising=False)
+        wizard = SetupWizard(mode=WizardMode.QUICK_START)
+        hardware = Mock(spec=HardwareProfile)
+        hardware.recommended_text_model.return_value = "qwen2.5:3b"
+        with (
+            patch("file_organizer.core.setup_wizard.detect_hardware", return_value=hardware),
+            patch(
+                "file_organizer.core.setup_wizard.detect_ollama",
+                return_value=OllamaStatus(installed=True, running=False),
+            ),
+            patch(
+                "file_organizer.core.setup_wizard.detect_openai_endpoint", return_value=endpoint
+            ) as mock_probe,
+        ):
+            wizard.detect_capabilities()
+        return wizard, mock_probe
+
+    def test_openai_provider_does_not_require_ollama(self, monkeypatch):
+        endpoint = EndpointStatus(
+            base_url="http://lm.local:1234/v1", reachable=True, models=["qwen3-14b-mlx"]
+        )
+        wizard, mock_probe = self._detect(monkeypatch, endpoint)
+
+        config = wizard.generate_config()
+        is_valid, errors = wizard.validate_config(config)
+
+        mock_probe.assert_called_once()
+        assert config.models.framework == "openai"
+        assert config.models.text_model == "qwen3-14b-mlx"
+        assert config.models.vision_model == "qwen3-14b-mlx"
+        assert is_valid, errors
+
+    def test_unreachable_endpoint_fails_validation(self, monkeypatch):
+        endpoint = EndpointStatus(
+            base_url="http://lm.local:1234/v1",
+            reachable=False,
+            error="endpoint requires an API key; set FO_OPENAI_API_KEY",
+        )
+        wizard, _ = self._detect(monkeypatch, endpoint)
+
+        is_valid, errors = wizard.validate_config(wizard.generate_config())
+
+        assert not is_valid
+        assert any("FO_OPENAI_API_KEY" in e for e in errors)
+        assert not any("Ollama" in e for e in errors)
+
+    def test_model_not_served_fails_validation(self, monkeypatch):
+        endpoint = EndpointStatus(
+            base_url="http://lm.local:1234/v1", reachable=True, models=["other-model"]
+        )
+        wizard, _ = self._detect(monkeypatch, endpoint)
+
+        is_valid, errors = wizard.validate_config(wizard.generate_config())
+
+        assert not is_valid
+        assert any("qwen3-14b-mlx" in e and "other-model" in e for e in errors)

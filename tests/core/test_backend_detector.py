@@ -405,3 +405,54 @@ class TestInstalledModel:
         assert model.name == "qwen2.5:3b"
         assert model.size == 1974030336
         assert model.modified == "2024-01-20T14:45:00Z"
+
+
+class TestDetectOpenAIEndpoint:
+    """Tests for detect_openai_endpoint() against a local HTTP server."""
+
+    @pytest.fixture
+    def server_url(self):
+        import http.server
+        import json
+        import threading
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.headers.get("Authorization") != "Bearer tok":
+                    self.send_response(401)
+                    self.end_headers()
+                    return
+                body = json.dumps({"data": [{"id": "qwen3-14b-mlx"}]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        yield f"http://127.0.0.1:{server.server_port}/v1"
+        server.shutdown()
+
+    def test_lists_models_with_valid_key(self, server_url):
+        status = backend_detector.detect_openai_endpoint(server_url, "tok")
+        assert status.reachable
+        assert status.models == ["qwen3-14b-mlx"]
+
+    def test_missing_key_reports_api_key_hint(self, server_url):
+        status = backend_detector.detect_openai_endpoint(server_url, None)
+        assert not status.reachable
+        assert "FO_OPENAI_API_KEY" in (status.error or "")
+
+    def test_wrong_key_reports_rejection(self, server_url):
+        status = backend_detector.detect_openai_endpoint(server_url, "bad")
+        assert not status.reachable
+        assert "rejected" in (status.error or "")
+
+    def test_unreachable_host(self):
+        status = backend_detector.detect_openai_endpoint("http://127.0.0.1:1/v1", None, timeout=1)
+        assert not status.reachable
+        assert "cannot reach" in (status.error or "")
