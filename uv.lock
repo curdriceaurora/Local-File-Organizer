@@ -2584,7 +2584,7 @@ requires-dist = [
     { name = "redis", specifier = "~=8.0" },
     { name = "redis", marker = "extra == 'web'", specifier = "~=8.0" },
     { name = "rich", specifier = "~=15.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = "~=0.17.4" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = "==0.17.4" },
     { name = "scenedetect", extras = ["opencv"], marker = "extra == 'video'", specifier = ">=0.6.0" },
     { name = "scikit-learn", marker = "extra == 'dedup'", specifier = "~=1.4" },
     { name = "scikit-learn", marker = "extra == 'search'", specifier = "~=1.4" },
