@@ -9,6 +9,7 @@ import json
 import os
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -20,6 +21,7 @@ from file_organizer.methodologies.para.detection.heuristics import (
     AIHeuristic,
     HeuristicEngine,
 )
+from file_organizer.utils import file_times
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1277,7 +1279,7 @@ class TestPlatformSpecificPaths:
                 self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         # Simulate Windows platform
-        monkeypatch.setattr(os, "name", "nt")
+        monkeypatch.setattr(file_times, "os", SimpleNamespace(name="nt"))
         now = time.time()
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
@@ -1304,7 +1306,7 @@ class TestPlatformSpecificPaths:
                 self.st_mode = 0o100644  # regular file — required by Path.is_dir()
 
         # Simulate Linux platform
-        monkeypatch.setattr(os, "name", "posix")
+        monkeypatch.setattr(file_times, "os", SimpleNamespace(name="posix"))
         now = time.time()
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat(now=now))
 
@@ -1386,7 +1388,7 @@ class TestPlatformSpecificBranches:
             # Explicitly no st_birthtime attribute
 
         # Monkeypatch both os.name and Path.stat
-        monkeypatch.setattr(os, "name", "nt")
+        monkeypatch.setattr(file_times, "os", SimpleNamespace(name="nt"))
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat())
 
         h = TemporalHeuristic(weight=0.25)
@@ -1417,7 +1419,7 @@ class TestPlatformSpecificBranches:
             # Explicitly no st_birthtime attribute
 
         # Monkeypatch both os.name and Path.stat
-        monkeypatch.setattr(os, "name", "posix")
+        monkeypatch.setattr(file_times, "os", SimpleNamespace(name="posix"))
         monkeypatch.setattr(Path, "stat", lambda _self, *args, **kwargs: MockStat())
 
         h = TemporalHeuristic(weight=0.25)
