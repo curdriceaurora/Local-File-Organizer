@@ -43,6 +43,7 @@ These commands use a source checkout. For PyPI installations, use `pip install "
 | `dev` | `pip install -e ".[dev]"` | Test, lint, and type code | Development |
 | `search` | `pip install -e ".[search]"` | Rank BM25 search results | Runtime |
 | `all` | `pip install -e ".[all]"` | Install all extras above | Aggregate |
+| `eval` | `pip install -e ".[eval]"` | Run the langextract evaluation (`scripts/langextract_eval`); not in `all` | Evaluation |
 
 ## Common installation combinations
 
