@@ -8,10 +8,27 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from file_organizer._compat import StrEnum
-from file_organizer.services.auto_tagging.styles import (
-    normalize_tag_prompt,
-    validate_tag_style,
-)
+
+
+def _validate_tag_options(tag_style: str | None, tag_prompt: str | None) -> str | None:
+    """Validate the tag style and return the prompt stripped of surrounding whitespace.
+
+    An empty prompt becomes ``None``. Invalid styles, non-string prompts, and
+    prompts longer than 500 characters after trimming raise ``ValueError``.
+    When both inputs are ``None``, return ``None`` without loading the tagging
+    services.
+    """
+    if tag_style is None and tag_prompt is None:
+        return None
+
+    from file_organizer.services.auto_tagging.styles import (
+        normalize_tag_prompt,
+        validate_tag_style,
+    )
+
+    validate_tag_style(tag_style)
+    return normalize_tag_prompt(tag_prompt)
+
 
 ModelProvider = Literal["ollama", "openai", "llama_cpp", "mlx", "claude"]
 
@@ -101,7 +118,11 @@ class OrganizeOptions:
     tag_prompt: str | None = None
 
     def __post_init__(self) -> None:
-        """Reject invalid combinations before filesystem or model work starts."""
+        """Normalize option aliases and the tag prompt, rejecting invalid values.
+
+        Invalid tag styles or prompts raise ``ValueError``, as do conflicting
+        transfer selectors and other invalid option combinations.
+        """
         transfer_mode = _resolve_transfer_mode(self.transfer_mode, self.use_hardlinks)
         methodology = _resolve_methodology(self.methodology)
         object.__setattr__(self, "transfer_mode", transfer_mode)
@@ -119,8 +140,7 @@ class OrganizeOptions:
             if not isinstance(getattr(self, field_name), bool):
                 raise ValueError(f"{field_name} must be a boolean")
 
-        validate_tag_style(self.tag_style)
-        normalized_prompt = normalize_tag_prompt(self.tag_prompt)
+        normalized_prompt = _validate_tag_options(self.tag_style, self.tag_prompt)
         object.__setattr__(self, "tag_prompt", normalized_prompt)
 
         if (self.tag_style is not None or normalized_prompt is not None) and not self.generate_tags:
