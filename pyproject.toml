@@ -226,7 +226,7 @@ dedup = [
     # font width ranges) and GHSA-fp3f-mc75-235c (large /ToUnicode streams).
     # Both are resource exhaustion reachable from a malformed PDF, and this
     # extractor runs over user-supplied files, so the floor is a real bound.
-    "pypdf>=6.15.0,<7",  # PDF text extraction fallback in dedup extractor
+    "pypdf>=6.15.0,<8",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # 0.x — unstable API, keep >=; RTF file text extraction in dedup extractor
 ]
 
